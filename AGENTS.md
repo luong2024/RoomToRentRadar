@@ -16,12 +16,11 @@ Project-wide rules for AI agents and human contributors. If a nested `AGENTS.md`
 
 ## Git rules
 
-### Never commit to main
+### Never commit and push
 
 - `main` is protected. Never commit, merge, or push directly to `main`.
 - Never force-push `main` or any shared branch.
-- All changes go through a feature branch and a pull request.
-
+- 
 ## Code quality
 
 - `dotnet build` must succeed with no new warnings.
