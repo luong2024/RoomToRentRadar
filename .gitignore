@@ -1,0 +1,20 @@
+# Build outputs
+**/[Bb]in/
+**/[Oo]bj/
+msbuild.binlog
+msbuild.log
+
+# Visual Studio & IDE
+.vs/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+
+# Test Results
+TestResults/
+[Tt]est[Rr]esult*
+
+# OS-generated files
+.DS_Store
+Thumbs.db
