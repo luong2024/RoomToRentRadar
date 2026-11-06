@@ -1,17 +1,44 @@
-# Team Roster & Sprint 1 Task Ownership (RoomToRentRadar - Group 3)
+# Team Roster & Sprint 1 Pure-Role Task Matrix (RoomToRentRadar - Group 3)
 
-| Member | Project Role | Weekly Hours | Primary Scope | Assigned Sprint 1 Tasks |
-| :--- | :--- | :---: | :--- | :--- |
-| **Vũ Huy Lượng** | Product Owner (PO) | 4 h/week | Product vision, Backlog prioritization, Sprint increment acceptance | Acceptance of US01-US12 increments at Sprint Review |
-| **Nguyễn Trung Thành** | Scrum Master (SM) | 10 h/week | Scrum facilitation, Burndown tracking, Blocker removal, Git guardrails | Sprint tracking, Daily Scrum, DoD verification |
-| **Nguyễn Minh Hiếu** | Developer | 15 h/week | Backend API & .NET MAUI Mobile | **T01.1** (Listing API), **T03.1** (Upload API), **T04.3** (Perf test), **T06.1** (Fav sync API), **T08.1** (Listing form MAUI), **T09.2** (Commute UI), **T11.2** (House rules UI) |
-| **Bế Văn Duy** | Developer | 15 h/week | .NET MAUI Mobile & Backend API | **T01.2** (Listing screen MAUI), **T03.2** (360 viewer MAUI), **T05.1** (Draw map polygon MAUI), **T06.2** (Fav 5s undo MAUI), **T08.2** (Listing API), **T10.1** (Compare UI), **T12.1** (Report API) |
-| **Phạm Anh Dũng** | Developer | 15 h/week | Backend API & QA / Testing | **T02.1** (Room detail API), **T04.1** (Filter API), **T05.2** (Spatial search API), **T07.1** (Alert rules API), **T08.3** (Moderation & tests), **T10.2** (Compare test), **T12.2** (Report UI) |
-| **Đặng Quang Anh** | Developer | 15 h/week | .NET MAUI Mobile & Integration | **T02.2** (Detail screen MAUI), **T04.2** (Filter panel MAUI), **T05.3** (Map pins MAUI), **T07.2** (Push alerts), **T09.1** (Routing service), **T11.1** (House rules API) |
+## 1. Pure-Role Team Roster & Priority Batch 1 (15h Target Before Sunday)
 
-## Out-of-Scope Features for MVP (Sprint 1-4)
-- Short-term rental / Homestay
-- Internet sharing
-- Administrative procedure assistant
-- Automated contract-clause scanning
-- Utility consumption AI prediction
+| Member | Position / Role | Tech Stack Scope (.NET 10 LTS) | Priority Batch 1 (~14-16h before Sunday) | Full Sprint 1 Assigned Tasks (Total Hours) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Vũ Huy Lượng** | Product Owner (PO) | Product Management | Review & accept US01, US02, US03, US04 | Acceptance of US01-US12 at Sprint Review (4h/wk) |
+| **Nguyễn Trung Thành** | Scrum Master (SM) | Agile / Scrum & Git Guardrails | Init `.sln` on `Group-3`, coordinate API DTOs, track Burndown | Scrum facilitation, Burndown tracking, DoD verification (10h/wk) |
+| **Nguyễn Minh Hiếu (02/11)** | Developer (Backend Lead) | ASP.NET Core MVC (`net10.0`), Cosmos DB, Push | **T01.1** (8h) + **T03.1** (6h) = **14h** *(+2h T06.1 = 16h)* | **T01.1** (8h), **T03.1** (6h), **T04.3** (4h), **T06.1** (6h), **T07.2** (8h), **T08.3** (5h), **T11.1** (4h) = **41h** |
+| **Bế Văn Duy** | Developer (Backend) | ASP.NET Core MVC (`net10.0`), Cosmos DB, GeoJSON | **T02.1** (6h) + **T04.1** (8h) = **14h** *(+2h T08.2 = 16h)* | **T02.1** (6h), **T04.1** (8h), **T05.2** (8h), **T07.1** (7h), **T08.2** (8h), **T09.1** (6h), **T12.1** (4h) = **47h** |
+| **Phạm Anh Dũng** | Developer (Frontend) | .NET MAUI (`net10.0-android` API 35), XAML, Appium | **T01.2** (8h) + **T05.1** (8h) = **16h** *(or T03.2 6h = 14h)* | **T01.2** (8h), **T03.2** (6h), **T05.1** (8h), **T06.2** (6h), **T09.2** (4h), **T10.2** (3h), **T12.2** (3h) = **38h** |
+| **Đặng Quang Anh** | Developer (Frontend) | .NET MAUI (`net10.0-android` API 35), XAML, Appium | **T02.2** (7h) + **T04.2** (7h) = **14h** *(+2h T08.1 = 16h)* | **T02.2** (7h), **T04.2** (7h), **T05.3** (7h), **T08.1** (8h), **T10.1** (6h), **T11.2** (4h) = **39h** |
+
+## 2. Complete 27-Task Sprint 1 Table (Pure Backend vs. Frontend Assignment)
+
+| Task ID | User Story | Task Description | Role Layer | Assignee | Est (h) | Priority |
+| :--- | :--- | :--- | :--- | :--- | :---: | :--- |
+| **T01.1** | US01 (5 SP) | Build listing API with pagination and sorting | **Backend** | Nguyễn Minh Hiếu (02/11) | 8 | High |
+| **T01.2** | US01 (5 SP) | Build listing screen, room cards, and infinite scroll | **Frontend** | Phạm Anh Dũng | 8 | High |
+| **T02.1** | US02 (4 SP) | Build room detail API (description, amenities, rules) | **Backend** | Bế Văn Duy | 6 | High |
+| **T02.2** | US02 (4 SP) | Build room detail screen and unavailable-listing handling | **Frontend** | Đặng Quang Anh | 7 | High |
+| **T03.1** | US03 (3 SP) | Build photo upload pipeline and gallery API | **Backend** | Nguyễn Minh Hiếu (02/11) | 6 | Medium |
+| **T03.2** | US03 (3 SP) | Build photo gallery UI and 360° viewer | **Frontend** | Phạm Anh Dũng | 6 | Medium |
+| **T04.1** | US04 (6 SP) | Build search API with price, area, and distance filters | **Backend** | Bế Văn Duy | 8 | High |
+| **T04.2** | US04 (6 SP) | Build filter panel, active filters, and result count | **Frontend** | Đặng Quang Anh | 7 | High |
+| **T04.3** | US04 (6 SP) | Test filter combinations and search performance | **Backend/QA** | Nguyễn Minh Hiếu (02/11) | 4 | High |
+| **T05.1** | US05 (6 SP) | Integrate map SDK and polygon drawing | **Frontend** | Phạm Anh Dũng | 8 | High |
+| **T05.2** | US05 (6 SP) | Build spatial search API for a drawn area | **Backend** | Bế Văn Duy | 8 | High |
+| **T05.3** | US05 (6 SP) | Build map pins, preview cards, and saved areas | **Frontend** | Đặng Quang Anh | 7 | High |
+| **T06.1** | US06 (4 SP) | Build favourites model, API, and account sync | **Backend** | Nguyễn Minh Hiếu (02/11) | 6 | Medium |
+| **T06.2** | US06 (4 SP) | Build favourite button, favourites screen, and undo | **Frontend** | Phạm Anh Dũng | 6 | Medium |
+| **T07.1** | US07 (5 SP) | Build saved-search model and alert rules | **Backend** | Bế Văn Duy | 7 | High |
+| **T07.2** | US07 (5 SP) | Build push-notification service and alert settings | **Backend** | Nguyễn Minh Hiếu (02/11) | 8 | High |
+| **T08.1** | US08 (6 SP) | Build listing creation form and validation | **Frontend** | Đặng Quang Anh | 8 | High |
+| **T08.2** | US08 (6 SP) | Build listing API and image upload | **Backend** | Bế Văn Duy | 8 | High |
+| **T08.3** | US08 (6 SP) | Build moderation status, listing management, and tests | **Backend/QA** | Nguyễn Minh Hiếu (02/11) | 5 | High |
+| **T09.1** | US09 (3 SP) | Build routing and travel-time service | **Backend** | Bế Văn Duy | 6 | Medium |
+| **T09.2** | US09 (3 SP) | Display travel time and fallback distance | **Frontend** | Phạm Anh Dũng | 4 | Medium |
+| **T10.1** | US10 (3 SP) | Build room comparison model and screen | **Frontend** | Đặng Quang Anh | 6 | Low |
+| **T10.2** | US10 (3 SP) | Test comparison and share-as-image | **Frontend/QA** | Phạm Anh Dũng | 3 | Low |
+| **T11.1** | US11 (3 SP) | Build house-rules model and API | **Backend** | Nguyễn Minh Hiếu (02/11) | 4 | Low |
+| **T11.2** | US11 (3 SP) | Build house-rules UI with versioning | **Frontend** | Đặng Quang Anh | 4 | Low |
+| **T12.1** | US12 (2 SP) | Build report API and moderation queue | **Backend** | Bế Văn Duy | 4 | Medium |
+| **T12.2** | US12 (2 SP) | Build report UI and confirmation | **Frontend** | Phạm Anh Dũng | 3 | Medium |
