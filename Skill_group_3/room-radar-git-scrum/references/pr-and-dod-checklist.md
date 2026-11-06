@@ -3,11 +3,18 @@
 ## 1. Pull Request Markdown Template (`.github/pull_request_template.md`)
 
 ```markdown
-## Thông tin Task (Scrum Traceability)
+## Thông tin Task & Branch (Shared Repo ICTU)
+- **Target Branch**: `Group-3` (MANDATORY: Tuyệt đối KHÔNG target vào `main` hoặc nhóm khác)
+- **Feature Branch**: `Group-3/feature/USxx-Txx.y-slug`
 - **User Story**: USxx - [Tên User Story]
 - **Task ID**: Txx.y - [Tên Task theo Sprint Backlog]
 - **Assignee**: [Tên thành viên]
 - **Actual Hours Spent**: [Số giờ thực tế] / [Số giờ Estimate]h
+
+## Xác nhận Giới hạn An toàn Git (Git Safety Guardrails)
+- [ ] KHÔNG commit trực tiếp vào `main` hoặc `Group-3`
+- [ ] Nhánh tính năng được tách ra từ `Group-3` mới nhất (`git pull origin Group-3`)
+- [ ] Đã nhận được sự xác nhận của người phụ trách trước khi commit & push
 
 ## Tóm tắt thay đổi (Summary of Changes)
 - [ ] Backend (ASP.NET Core MVC API / Azure Cosmos DB)
@@ -21,6 +28,7 @@
 - [ ] AC4: Đã kiểm tra và pass
 
 ## Checklist Chất lượng (Definition of Done)
+- [ ] Đã rebase / merge mới nhất từ `origin/Group-3` trước khi tạo PR
 - [ ] Code build thành công không có Warning nghiêm trọng (`dotnet build --configuration Release`)
 - [ ] Đã viết và chạy pass Unit Test / Appium UI Test cho luồng chính và edge cases
 - [ ] Không chứa hardcode connection string, API key (Google Maps, Cosmos DB, Payment)
@@ -29,7 +37,7 @@
 
 ## 2. Definition of Done (DoD) theo Mục tiêu Chất lượng Dự án
 
-Một User Story chỉ được chuyển sang trạng thái **Done** và trình bày tại buổi **Sprint Review** với Product Owner (Vũ Huy Lượng) khi thỏa mãn đầy đủ 6 tiêu chí:
+Một User Story chỉ được chuyển sang trạng thái **Done** và gộp vào `Group-3` để trình bày tại buổi **Sprint Review** với Product Owner (Vũ Huy Lượng) khi thỏa mãn đầy đủ 6 tiêu chí:
 
 1. **Đúng phạm vi & AC**: Thỏa mãn 100% các tiêu chí Acceptance Criteria (`AC1` - `AC4`) đã mô tả trong bảng kế hoạch.
 2. **Code Review chéo**: Có ít nhất 1 Developer cùng nhóm (ưu tiên người làm phần ghép nối FE/BE tương ứng) duyệt PR.
