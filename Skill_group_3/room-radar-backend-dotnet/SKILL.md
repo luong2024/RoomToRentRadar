@@ -1,6 +1,8 @@
-## name: room-radar-backend-dotnet
+---
+name: room-radar-backend-dotnet
 description: Architect, implement, and test ASP.NET Core MVC REST APIs and Azure Cosmos DB data models for RoomToRentRadar. Use when building backend tasks such as listing pagination (T01.1), room details (T02.1), photo upload pipeline (T03.1), multi-filter search (T04.1), GeoJSON polygon spatial queries (T05.2), favourites sync (T06.1), saved search alert rules (T07.1), landlord publishing (T08.2), routing service (T09.1), house rules versioning (T11.1), report moderation (T12.1), or Sprint 2-4 backend features.
 allowed-tools: default_api
+---
 
 # Room Radar Backend (.NET Core MVC & Azure Cosmos DB)
 
