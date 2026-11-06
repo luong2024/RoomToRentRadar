@@ -1,24 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\lvu\\Downloads\\RoomToRentRadar\\RoomToRentRadarUnitTests\\RoomToRentRadarUnitTests.csproj": {}
+    "C:\\Project\\RoomToRentRadar\\RoomToRentRadarUnitTests\\RoomToRentRadarUnitTests.csproj": {}
   },
   "projects": {
-    "C:\\Users\\lvu\\Downloads\\RoomToRentRadar\\RoomToRentRadarUnitTests\\RoomToRentRadarUnitTests.csproj": {
+    "C:\\Project\\RoomToRentRadar\\RoomToRentRadarUnitTests\\RoomToRentRadarUnitTests.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\lvu\\Downloads\\RoomToRentRadar\\RoomToRentRadarUnitTests\\RoomToRentRadarUnitTests.csproj",
+        "projectUniqueName": "C:\\Project\\RoomToRentRadar\\RoomToRentRadarUnitTests\\RoomToRentRadarUnitTests.csproj",
         "projectName": "RoomToRentRadarUnitTests",
-        "projectPath": "C:\\Users\\lvu\\Downloads\\RoomToRentRadar\\RoomToRentRadarUnitTests\\RoomToRentRadarUnitTests.csproj",
-        "packagesPath": "C:\\Users\\lvu\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\lvu\\Downloads\\RoomToRentRadar\\RoomToRentRadarUnitTests\\obj\\",
+        "projectPath": "C:\\Project\\RoomToRentRadar\\RoomToRentRadarUnitTests\\RoomToRentRadarUnitTests.csproj",
+        "packagesPath": "C:\\Users\\trung\\.nuget\\packages\\",
+        "outputPath": "C:\\Project\\RoomToRentRadar\\RoomToRentRadarUnitTests\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages",
-          "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\lvu\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\trung\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -26,8 +25,8 @@
           "net10.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "C:\\Program Files\\dotnet\\library-packs": {},
-          "https://3tgroup.pkgs.visualstudio.com/_packaging/3TLogisticsLtd/nuget/v3/index.json": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
