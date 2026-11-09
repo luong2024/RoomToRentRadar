@@ -24,10 +24,13 @@
 ## 3. PERMISSIONS & BOUNDARIES
 
 ### Allowed:
-- Create and edit classes within `RoomToRentRadar/Core/` (Domain Entities, Value Objects, Use Cases, Ports, Domain Exceptions) and `RoomToRentRadar/Contracts/` (DTOs, Requests, PagedResult).
-- **Phase 0 (Contract & Stub Authoring):** Create agreed DTOs, `I*UseCase`, `I*Port` interfaces, and `*UseCase` stub classes (throwing `NotImplementedException()`) prior to `@QA` Phase 1 RED test authoring so unit tests compile with zero errors.
-- **Phase 2 (GREEN Implementation):** Author pure business algorithms: Room filtering logic (US04), 3-room comparison rules (US10), Haversine spatial calculations (US09).
-- Register Core Use Cases (`builder.Services.AddTransient<I*UseCase, *UseCase>()`) in `RoomToRentRadar/MauiProgram.cs` (and `RoomToRentRadar.Api/Program.cs` when applicable).
+- Create and edit classes within:
+  - **`RoomToRentRadar.Domain/`** (`Aggregates/`, `Entities/`, `ValueObjects/`, `Enums/`, `Events/`, `Specifications/`, `Services/`, `Exceptions/`, `Primitives/`).
+  - **`RoomToRentRadar.Ports/`** (`Contracts/`, `Inbound/UseCases/I*UseCase.cs`, `Outbound/Repositories/I*Repository.cs`, `Outbound/ExternalServices/I*Port.cs`, `Outbound/Caching/I*Port.cs`).
+  - **`RoomToRentRadar.Application/`** (`UseCases/*UseCase.cs`, `Mappers/`, `DependencyInjection.cs`).
+- **Phase 0 (Contract & Stub Authoring):** Create agreed DTOs, `I*UseCase`, `I*Repository`, `I*Port` interfaces, and `*UseCase` stub classes (throwing `NotImplementedException()`) prior to `@QA` Phase 1 RED test authoring so unit tests compile with zero errors.
+- **Phase 2 (GREEN Implementation):** Author pure DDD domain models and business algorithms: Room filtering logic (US04), 3-room comparison rules (US10), Haversine spatial calculations (US09).
+- Register Application Use Cases inside `RoomToRentRadar.Application/DependencyInjection.cs` (`AddApplicationServices()`).
 
 ### Forbidden:
 - **FORBIDDEN:** `using Microsoft.Maui`, `using Microsoft.Maui.Controls`.

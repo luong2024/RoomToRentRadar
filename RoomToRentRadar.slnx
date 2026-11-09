@@ -1,8 +1,21 @@
 <Solution>
-  <Project Path="RoomToRentRadar/RoomToRentRadar.csproj">
-    <Deploy Solution="Debug|*" />
-  </Project>
-  <Project Path="RoomToRentRadar.Api/RoomToRentRadar.Api.csproj" />
-  <Project Path="RoomToRentRadarUIAppiumTests/RoomToRentRadarUIAppiumTests.csproj" />
-  <Project Path="RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj" />
+  <Folder Name="/1. Core Hexagon/">
+    <Project Path="RoomToRentRadar.Domain/RoomToRentRadar.Domain.csproj" />
+    <Project Path="RoomToRentRadar.Ports/RoomToRentRadar.Ports.csproj" />
+    <Project Path="RoomToRentRadar.Application/RoomToRentRadar.Application.csproj" />
+  </Folder>
+  <Folder Name="/2. Driven Adapters &amp; Persistence/">
+    <Project Path="RoomToRentRadar.Datastore/RoomToRentRadar.Datastore.csproj" />
+    <Project Path="RoomToRentRadar.Infrastructure/RoomToRentRadar.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/3. Driving Adapters (API &amp; UI)/">
+    <Project Path="RoomToRentRadar.Api/RoomToRentRadar.Api.csproj" />
+    <Project Path="RoomToRentRadar/RoomToRentRadar.csproj">
+      <Deploy Solution="Debug|*" />
+    </Project>
+  </Folder>
+  <Folder Name="/4. Quality Assurance (Tests)/">
+    <Project Path="RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj" />
+    <Project Path="RoomToRentRadarUIAppiumTests/RoomToRentRadarUIAppiumTests.csproj" />
+  </Folder>
 </Solution>

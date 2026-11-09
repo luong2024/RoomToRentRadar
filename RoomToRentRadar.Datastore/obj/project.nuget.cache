@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "dgSpecHash": "p4L+tYJTAhk=",
+  "success": true,
+  "projectFilePath": "F:\\Mobile Class Project\\RoomToRentRadar\\RoomToRentRadar.Datastore\\RoomToRentRadar.Datastore.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\admin\\.nuget\\packages\\microsoft.data.sqlite.core\\8.0.8\\microsoft.data.sqlite.core.8.0.8.nupkg.sha512",
+    "C:\\Users\\admin\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\10.0.0\\microsoft.extensions.dependencyinjection.abstractions.10.0.0.nupkg.sha512",
+    "C:\\Users\\admin\\.nuget\\packages\\sqlitepclraw.core\\2.1.6\\sqlitepclraw.core.2.1.6.nupkg.sha512"
+  ],
+  "logs": []
+}

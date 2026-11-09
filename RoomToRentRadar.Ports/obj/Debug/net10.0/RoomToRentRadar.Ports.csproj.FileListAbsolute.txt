@@ -1,0 +1,16 @@
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Ports\bin\Debug\net10.0\RoomToRentRadar.Ports.deps.json
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Ports\bin\Debug\net10.0\RoomToRentRadar.Ports.dll
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Ports\bin\Debug\net10.0\RoomToRentRadar.Ports.pdb
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Ports\bin\Debug\net10.0\RoomToRentRadar.Domain.dll
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Ports\bin\Debug\net10.0\RoomToRentRadar.Domain.pdb
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Ports\obj\Debug\net10.0\RoomToRentRadar.Ports.csproj.AssemblyReference.cache
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Ports\obj\Debug\net10.0\RoomToRentRadar.Ports.GeneratedMSBuildEditorConfig.editorconfig
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Ports\obj\Debug\net10.0\RoomToRentRadar.Ports.AssemblyInfoInputs.cache
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Ports\obj\Debug\net10.0\RoomToRentRadar.Ports.AssemblyInfo.cs
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Ports\obj\Debug\net10.0\RoomToRentRadar.Ports.csproj.CoreCompileInputs.cache
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Ports\obj\Debug\net10.0\RoomToRentRadar.Ports.sourcelink.json
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Ports\obj\Debug\net10.0\RoomToRe.2B61FE1B.Up2Date
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Ports\obj\Debug\net10.0\RoomToRentRadar.Ports.dll
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Ports\obj\Debug\net10.0\refint\RoomToRentRadar.Ports.dll
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Ports\obj\Debug\net10.0\RoomToRentRadar.Ports.pdb
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Ports\obj\Debug\net10.0\ref\RoomToRentRadar.Ports.dll

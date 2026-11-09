@@ -45,20 +45,33 @@ flowchart TD
 
 ---
 
-## 3. TARGET SOLUTION & DIRECTORY ARCHITECTURE
+## 3. TARGET SOLUTION & DIRECTORY ARCHITECTURE (9-PROJECT HEXAGONAL + DDD)
 
-- **`RoomToRentRadar/` (.NET MAUI 10 Mobile Client):**
-  - `Contracts/`: Immutable shared DTOs (`*Dto`, `*Request`, `PagedResult<T>`).
-  - `Core/`: Pure C# business layer (`Domain/Entities`, `Domain/ValueObjects`, `Application/Ports`, `Application/UseCases`).
-  - `Infrastructure/`: Client-side Driven Adapters (`HttpRoomApiAdapter`, `MockRoomApiAdapter`, `SqliteOfflineCacheAdapter`, `MauiMapRadarAdapter`).
-  - `Pages/` & `PageModels/`: Presentation layer (`.xaml` views and `*PageModel` classes).
-- **`RoomToRentRadar.Api/` (ASP.NET Core REST API Backend):**
-  - `Controllers/`: RESTful endpoints (`RoomsController`, etc.).
-  - `Adapters/`: Server-side Cosmos DB spatial and persistence adapters.
-- **`RoomToRentRadarUnitTests/` (NUnit 4 + NSubstitute Test Suite):**
-  - Unit tests targeting Core Use Cases, Domain Entities, and Adapter contracts.
-- **`RoomToRentRadarUIAppiumTests/` (NUnit 4 + Appium E2E Suite):**
-  - Automated mobile UI journey tests.
+1. **`RoomToRentRadar.Domain/` (Pure C# DDD Domain Layer — `net10.0`):**
+   - `Aggregates/`, `Entities/`, `ValueObjects/`, `Enums/`, `Events/`, `Specifications/`, `Services/`, `Exceptions/`, `Primitives/`.
+2. **`RoomToRentRadar.Ports/` (Hexagonal Boundaries & Contracts — `net10.0`):**
+   - `Contracts/Requests/`, `Contracts/Responses/`, `Contracts/Common/`: Immutable shared DTOs (`*Dto`, `*Request`, `PagedResult<T>`).
+   - `Inbound/UseCases/`: Driving Input Ports (`I*UseCase`).
+   - `Outbound/Repositories/`, `Outbound/ExternalServices/`, `Outbound/Caching/`: Driven Output Ports (`I*Repository`, `I*Port`).
+3. **`RoomToRentRadar.Application/` (UseCase Services Layer — `net10.0`):**
+   - `UseCases/Rooms/`, `UseCases/Bookmarks/`, `UseCases/Landlords/`: Implementations of `I*UseCase` (`*UseCase`).
+   - `Mappers/` & `DependencyInjection.cs` (`AddApplicationServices()`).
+4. **`RoomToRentRadar.Datastore/` (Dedicated Database Layer — `net10.0`):**
+   - `CosmosDb/` (`Documents/`, `Context/`, `Configurations/`) & `Sqlite/` (`Tables/`, `Context/`).
+   - `DependencyInjection.cs` (`AddDatastore()`).
+5. **`RoomToRentRadar.Infrastructure/` (Repositories & Driven Adapters — `net10.0`):**
+   - `Repositories/`: Implementations of `I*Repository` (`CosmosRoomRepository`, `SqliteBookmarkRepository`).
+   - `Adapters/Http/`, `Adapters/Caching/`, `Adapters/Mocks/`: Implementations of `I*Port` (`*Adapter`).
+   - `DependencyInjection.cs` (`AddInfrastructure()`).
+6. **`RoomToRentRadar.Api/` (ASP.NET Core REST API Backend — `net10.0`):**
+   - `Controllers/` & `Middlewares/`: RESTful endpoints (`RoomsController`, etc.).
+7. **`RoomToRentRadar/` (.NET MAUI 10 Mobile Client — MVVM UI):**
+   - `Pages/` & `PageModels/`: Presentation layer (`.xaml` views and `*PageModel` classes).
+   - `DeviceAdapters/`: Platform/device-specific adapters (`MauiMapRadarAdapter`).
+8. **`RoomToRentRadarUnitTests/` (NUnit 4 + NSubstitute Test Suite — `net10.0`):**
+   - `Domain/`, `Application/`, `Infrastructure/`.
+9. **`RoomToRentRadarUIAppiumTests/` (NUnit 4 + Appium E2E Suite — `net10.0`):**
+   - `Journeys/`.
 
 ---
 

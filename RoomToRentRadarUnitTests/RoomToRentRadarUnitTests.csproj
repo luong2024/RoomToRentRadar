@@ -18,9 +18,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Compile pure C# Contracts and Core layers directly for fast, isolated unit testing -->
-    <Compile Include="..\RoomToRentRadar\Contracts\**\*.cs" LinkBase="Contracts" />
-    <Compile Include="..\RoomToRentRadar\Core\**\*.cs" LinkBase="Core" />
+    <ProjectReference Include="..\RoomToRentRadar.Domain\RoomToRentRadar.Domain.csproj" />
+    <ProjectReference Include="..\RoomToRentRadar.Ports\RoomToRentRadar.Ports.csproj" />
+    <ProjectReference Include="..\RoomToRentRadar.Application\RoomToRentRadar.Application.csproj" />
+    <ProjectReference Include="..\RoomToRentRadar.Infrastructure\RoomToRentRadar.Infrastructure.csproj" />
+    <ProjectReference Include="..\RoomToRentRadar.Datastore\RoomToRentRadar.Datastore.csproj" />
   </ItemGroup>
 
   <ItemGroup>

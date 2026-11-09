@@ -76,5 +76,12 @@
 		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
 		<PackageReference Include="Syncfusion.Maui.Toolkit" Version="1.0.10" />
 	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\RoomToRentRadar.Ports\RoomToRentRadar.Ports.csproj" />
+		<ProjectReference Include="..\RoomToRentRadar.Application\RoomToRentRadar.Application.csproj" />
+		<ProjectReference Include="..\RoomToRentRadar.Infrastructure\RoomToRentRadar.Infrastructure.csproj" />
+		<ProjectReference Include="..\RoomToRentRadar.Datastore\RoomToRentRadar.Datastore.csproj" />
+	</ItemGroup>
 	
 </Project>

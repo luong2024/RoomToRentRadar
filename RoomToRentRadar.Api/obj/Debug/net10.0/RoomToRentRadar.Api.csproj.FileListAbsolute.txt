@@ -26,3 +26,17 @@ F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Api\obj\Debug\net10.0\re
 F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Api\obj\Debug\net10.0\RoomToRentRadar.Api.pdb
 F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Api\obj\Debug\net10.0\RoomToRentRadar.Api.genruntimeconfig.cache
 F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Api\obj\Debug\net10.0\ref\RoomToRentRadar.Api.dll
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Api\bin\Debug\net10.0\Microsoft.Data.Sqlite.dll
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Api\bin\Debug\net10.0\SQLitePCLRaw.core.dll
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Api\bin\Debug\net10.0\RoomToRentRadar.Application.dll
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Api\bin\Debug\net10.0\RoomToRentRadar.Datastore.dll
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Api\bin\Debug\net10.0\RoomToRentRadar.Domain.dll
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Api\bin\Debug\net10.0\RoomToRentRadar.Infrastructure.dll
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Api\bin\Debug\net10.0\RoomToRentRadar.Ports.dll
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Api\bin\Debug\net10.0\RoomToRentRadar.Ports.pdb
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Api\bin\Debug\net10.0\RoomToRentRadar.Application.pdb
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Api\bin\Debug\net10.0\RoomToRentRadar.Infrastructure.pdb
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Api\bin\Debug\net10.0\RoomToRentRadar.Datastore.pdb
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Api\bin\Debug\net10.0\RoomToRentRadar.Domain.pdb
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Api\obj\Debug\net10.0\RoomToRentRadar.Api.csproj.AssemblyReference.cache
+F:\Mobile Class Project\RoomToRentRadar\RoomToRentRadar.Api\obj\Debug\net10.0\RoomToRe.909DBF94.Up2Date

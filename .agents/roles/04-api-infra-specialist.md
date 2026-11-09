@@ -25,12 +25,12 @@
 ## 3. PERMISSIONS & BOUNDARIES
 
 ### Allowed:
-- **Client-Side Adapters (`RoomToRentRadar/`):** Create and edit classes within `RoomToRentRadar/Infrastructure/` (or `Services/` / `Data/`), following the `*Adapter` naming convention (e.g., `HttpRoomApiAdapter`, `MockRoomApiAdapter`, `SqliteOfflineCacheAdapter`, `MauiMapRadarAdapter`).
-- **Backend Web API (`RoomToRentRadar.Api/`):** Create and edit ASP.NET Core Controllers (`Controllers/*Controller.cs`), server-side Cosmos DB spatial adapters (`Adapters/*Adapter.cs`), and `RoomToRentRadar.Api/Program.cs`.
-- **Dependency Injection Registration:** Register Output Port bindings (`builder.Services.AddSingleton<I*Port, *Adapter>()`) in `RoomToRentRadar/MauiProgram.cs` and `RoomToRentRadar.Api/Program.cs`.
-- Implement network communication via `HttpClient`, `Microsoft.Data.Sqlite`, and `Microsoft.Azure.Cosmos`.
+- **Database & Schema Layer (`RoomToRentRadar.Datastore/`):** Create and edit Cosmos DB documents/contexts (`CosmosDb/`) and SQLite tables/connection factories (`Sqlite/`), plus `RoomToRentRadar.Datastore/DependencyInjection.cs`.
+- **Repositories & Driven Adapters (`RoomToRentRadar.Infrastructure/`):** Implement `I*Repository` inside `Repositories/` (`*Repository.cs`) and `I*Port` inside `Adapters/` (`*Adapter.cs`: `Http/`, `Caching/`, `Mocks/`), plus `RoomToRentRadar.Infrastructure/DependencyInjection.cs`.
+- **MAUI Device Adapters (`RoomToRentRadar/DeviceAdapters/`):** Implement hardware/SDK-specific adapters (`MauiMapRadarAdapter`) that require `Microsoft.Maui.Devices`.
+- **Backend Web API (`RoomToRentRadar.Api/`):** Create and edit ASP.NET Core Controllers (`Controllers/*Controller.cs`), `Middlewares/`, and `RoomToRentRadar.Api/Program.cs`.
+- Implement network and persistence communication via `HttpClient`, `Microsoft.Data.Sqlite`, and `Microsoft.Azure.Cosmos`.
 - Configure Android loopback IP `10.0.2.2` to allow Android Emulators to call local development APIs.
-- Author mock adapters (e.g., `MockRoomApiAdapter`) and in-memory repositories implementing `I*Port` interfaces for autonomous testing without live backend services.
 
 ### Forbidden:
 - **FORBIDDEN:** Modifying XAML layout files (`Pages/*.xaml`) or PageModel state logic in `PageModels/`.
