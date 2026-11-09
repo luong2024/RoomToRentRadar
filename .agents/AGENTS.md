@@ -23,7 +23,7 @@ The engineering team is composed of 5 specialized subagents with distinct respon
 ```mermaid
 flowchart TD
     Lead["01. Lead Orchestrator<br/>(Backlog, Planning, AC Review)"]
-    QA["05. QA & TDD Specialist<br/>(xUnit, Appium, TDD Red-Green)"]
+    QA["05. QA & TDD Specialist<br/>(NUnit, NSubstitute, Appium, TDD)"]
     Core["02. Core Domain Specialist<br/>(Entities, Use Cases, Ports)"]
     UI["03. MAUI UI Specialist<br/>(XAML, PageModels, Shell, Syncfusion)"]
     Infra["04. API & Infra Specialist<br/>(Web API, Cosmos DB, SQLite Cache)"]
@@ -40,7 +40,7 @@ flowchart TD
 2. **`roles/02-core-domain-specialist.md`**: Pure C# expert. Implements Entities, Value Objects, Use Cases, and defines Ports. Free of any UI or DB dependencies.
 3. **`roles/03-maui-ui-specialist.md`**: MAUI Frontend expert. Implements XAML layouts, PageModels (CommunityToolkit.Mvvm), Syncfusion controls, Compiled Bindings, and AppShell navigation.
 4. **`roles/04-api-infra-specialist.md`**: Backend & Adapter expert. Implements ASP.NET Core REST API, Cosmos DB spatial queries, Google Maps adapters, and SQLite offline caching.
-5. **`roles/05-qa-tdd-specialist.md`**: Independent test engineer. Writes Unit Tests and Appium UI tests following the TDD Red-Green-Refactor cycle. **FORBIDDEN from modifying production code.**
+5. **`roles/05-qa-tdd-specialist.md`**: Independent test engineer. Writes NUnit + NSubstitute Unit Tests and Appium UI tests following the TDD Red-Green-Refactor cycle. **FORBIDDEN from modifying production code.**
 
 ---
 

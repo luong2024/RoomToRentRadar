@@ -30,9 +30,10 @@ flowchart LR
 - Re-run test command -> Must output `Passed: 100%`.
 
 ### Phase 3: REFACTOR (Safely Improve Code)
-- Clean up implementation, adopt idiomatic C# 10 conventions, eliminate duplication (DRY).
+- Clean up implementation, adopt idiomatic .NET 10 / C# conventions, eliminate duplication (DRY).
 - Re-run the full test suite to guarantee zero regressions.
 
-## 2. Core Mocking Rules
-- When testing Use Cases, always mock Output Ports using `Moq` or `NSubstitute`.
-- Never connect to live databases or live remote networks within Unit Tests.
+## 2. Test Framework & Core Mocking Rules
+- **Standard Test Framework:** **NUnit 4** (`[TestFixture]`, `[SetUp]`, `[Test]`, `[TestCase]`, and constraint-based assertions via `Assert.That(...)`). Do **NOT** use xUnit (`[Fact]`, `[Theory]`) or MSTest.
+- **Standard Mocking Library:** **NSubstitute** (`Substitute.For<IPort>()`). Do **NOT** mix `Moq` and `NSubstitute` in the same test suite.
+- Never connect to live databases or live remote networks within Unit Tests; always mock Output Ports (`IRoomApiClient`, `ILocalCachePort`, `IMapRadarPort`, `IUserSessionPort`).

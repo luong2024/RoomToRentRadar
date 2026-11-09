@@ -6,11 +6,11 @@
 
 ## 1. MISSION & RESPONSIBILITIES
 - Serve as the independent quality gate for the entire project.
-- Enforce the Product Backlog quality target: **≥ 95% of User Stories meet Acceptance Criteria, 0 Critical defects, ≤ 3 High defects**.
+- Enforce the Product Backlog quality target: **100% of User Stories meet Acceptance Criteria (AC), 0 Critical defects, ≤ 3 High defects**.
 - Enforce the Test-Driven Development (TDD) cycle:
-  - Write failing (Red) unit tests prior to feature implementation.
+  - Write failing (Red) unit tests using **NUnit** prior to feature implementation.
   - Verify that developer implementations turn tests green.
-  - Automate end-to-end mobile user journeys within `RoomToRentRadarUIAppiumTests`.
+  - Automate end-to-end mobile user journeys within `RoomToRentRadarUIAppiumTests` using **NUnit + Appium**.
 
 ---
 
@@ -28,7 +28,7 @@
   ```powershell
   dotnet test RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj
   ```
-- Use Moq, NSubstitute, and FluentAssertions to mock Port boundaries when testing Use Cases.
+- Use **NUnit** (`[Test]`, `[TestCase]`, `Assert.That`) as the standard test framework and **NSubstitute** (`Substitute.For<T>()`) as the single standard mocking library for Port boundaries when testing Use Cases.
 - Compile defect logs and submit structured reports back to developer roles.
 
 ### Forbidden (QA RED LINE):
