@@ -21,12 +21,12 @@ Every Agent and Subagent operating within this project MUST strictly comply with
 - **QA Subagent Sandbox:** The QA subagent is only permitted to create and modify test files within `RoomToRentRadarUnitTests` and `RoomToRentRadarUIAppiumTests`. The QA subagent **MUST NEVER modify production code in `RoomToRentRadar`**. If a test fails (Red), QA must output a defect report to the Dev roles.
 
 ### 1.3. Clean / Hexagonal Architectural Boundaries
-- **Core Layer (Domain / Application):**
+- **Core Layer (`RoomToRentRadar.Domain/`, `RoomToRentRadar.Ports/`, `RoomToRentRadar.Application/`):**
   - **FORBIDDEN:** `using Microsoft.Maui`, `using Microsoft.Maui.Controls`.
   - **FORBIDDEN:** `using Microsoft.Data.Sqlite`, `using Microsoft.Azure.Cosmos`.
   - **FORBIDDEN:** `using System.Net.Http`.
-  - **Implicit / Global Usings Isolation:** Even when `Core/` resides inside a single-project MAUI structure with `<ImplicitUsings>enable</ImplicitUsings>` or `GlobalUsings.cs`, classes in `Core/` and `Contracts/` **MUST NOT** reference any types from `Microsoft.Maui.*`, `System.Net.Http.*`, `RoomToRentRadar.Pages`, `RoomToRentRadar.PageModels`, or `RoomToRentRadar.Data`.
-  - Core MUST remain Pure C# (POCOs), containing only Business Rules, Entities, Value Objects, and Ports (Interfaces).
+  - **Implicit / Global Usings Isolation:** Even with `<ImplicitUsings>enable</ImplicitUsings>`, classes in `RoomToRentRadar.Domain/`, `RoomToRentRadar.Ports/`, and `RoomToRentRadar.Application/` **MUST NOT** reference any types from `Microsoft.Maui.*`, `System.Net.Http.*`, `RoomToRentRadar.Pages`, `RoomToRentRadar.PageModels`, or `RoomToRentRadar.Data`.
+  - Core MUST remain Pure C# (POCOs), containing only Business Rules, Entities, Value Objects, Use Cases, and Ports (Interfaces).
 - **Presentation Layer (UI / PageModels):**
   - **FORBIDDEN:** Direct SQL queries, SQLite database connections, or direct `HttpClient` calls in XAML code-behind (`*.xaml.cs`) or `PageModel`.
   - All data retrieval and command execution must pass through Use Case Input Ports.
@@ -55,7 +55,7 @@ Agents **MUST NOT GUESS**. Agents MUST pause execution and ask the user in the f
 Before completing any turn, the agent must verify:
 - [ ] Code compiles cleanly with 0 errors (`dotnet build RoomToRentRadar/RoomToRentRadar.csproj`)?
 - [ ] All relevant unit tests compile and execute (`dotnet test RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj`)?
-- [ ] The Core layer (`Core/`, `Contracts/`) has zero explicit or implicit references to UI (`Microsoft.Maui.*`), HTTP (`System.Net.Http.*`), or Database libraries?
-- [ ] Any newly created Use Case (`I*UseCase` -> `*UseCase`) or Adapter (`I*Port` -> `*Adapter`) is properly registered in `MauiProgram.cs` (or `RoomToRentRadar.Api/Program.cs`)?
+- [ ] The Core layer (`RoomToRentRadar.Domain/`, `RoomToRentRadar.Ports/`, `RoomToRentRadar.Application/`) has zero explicit or implicit references to UI (`Microsoft.Maui.*`), HTTP (`System.Net.Http.*`), or Database libraries?
+- [ ] Any newly created Use Case (`I*UseCase` -> `*UseCase`), Repository (`I*Repository` -> `*Repository`), or Adapter (`I*Port` -> `*Adapter`) is properly registered in `RoomToRentRadar.Application/DependencyInjection.cs`, `RoomToRentRadar.Datastore/DependencyInjection.cs`, `RoomToRentRadar.Infrastructure/DependencyInjection.cs`, `MauiProgram.cs`, or `RoomToRentRadar.Api/Program.cs`?
 - [ ] All new `CollectionView` / `ListView` elements and root `ContentPage` files declare `x:DataType`?
 - [ ] No files outside the assigned task scope were modified (Two-File Rule respected)?

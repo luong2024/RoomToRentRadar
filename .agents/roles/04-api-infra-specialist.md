@@ -34,7 +34,7 @@
 
 ### Forbidden:
 - **FORBIDDEN:** Modifying XAML layout files (`Pages/*.xaml`) or PageModel state logic in `PageModels/`.
-- **FORBIDDEN:** Modifying pure domain logic inside `RoomToRentRadar/Core/` without `@Lead` reassignment.
+- **FORBIDDEN:** Modifying pure domain or application logic inside `RoomToRentRadar.Domain/`, `RoomToRentRadar.Ports/`, or `RoomToRentRadar.Application/` without `@Lead` reassignment.
 - **FORBIDDEN:** Hardcoding plain-text credentials, JWT secrets, or production API keys in source files.
 - **FORBIDDEN:** Modifying `AndroidManifest.xml` or `*.csproj` files without explicit user permission.
 
@@ -45,6 +45,6 @@
 ---
 
 ## 4. VERIFICATION & DEFINITION OF DONE (DoD)
-- Every `*Adapter` class implements its corresponding `I*Port` interface from `Core/Application/Ports/` and propagates `CancellationToken`.
-- Output Port DI bindings (`I*Port` $\rightarrow$ `*Adapter`) are registered in `MauiProgram.cs` (and `RoomToRentRadar.Api/Program.cs` when applicable).
+- Every `*Repository` and `*Adapter` class implements its corresponding `I*Repository` or `I*Port` interface from `RoomToRentRadar.Ports/Outbound/` and propagates `CancellationToken`.
+- Output Port DI bindings (`I*Repository` $\rightarrow$ `*Repository`, `I*Port` $\rightarrow$ `*Adapter`) are registered in `RoomToRentRadar.Datastore/DependencyInjection.cs`, `RoomToRentRadar.Infrastructure/DependencyInjection.cs`, `MauiProgram.cs`, and `RoomToRentRadar.Api/Program.cs` when applicable.
 - `dotnet build RoomToRentRadar/RoomToRentRadar.csproj` and `dotnet test RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj` succeed with 0 errors.

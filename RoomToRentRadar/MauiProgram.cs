@@ -1,5 +1,8 @@
-﻿using CommunityToolkit.Maui;
+using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
+using RoomToRentRadar.Application;
+using RoomToRentRadar.Datastore;
+using RoomToRentRadar.Infrastructure;
 using Syncfusion.Maui.Toolkit.Hosting;
 
 namespace RoomToRentRadar
@@ -43,12 +46,21 @@ namespace RoomToRentRadar
     		builder.Services.AddLogging(configure => configure.AddDebug());
 #endif
 
+            // Register Hexagonal Architecture Layers
+            builder.Services.AddApplicationServices();
+            builder.Services.AddDatastore();
+            builder.Services.AddInfrastructure();
+
+            // Core UI Services
+            builder.Services.AddSingleton<ModalErrorHandler>();
+
+            // TODO [Template Cleanup Plan]: Remove legacy template repositories and PageModels below
+            // once MainPage/AppShell is migrated to RoomToRentRadar Sprint 1 pages (US01).
             builder.Services.AddSingleton<ProjectRepository>();
             builder.Services.AddSingleton<TaskRepository>();
             builder.Services.AddSingleton<CategoryRepository>();
             builder.Services.AddSingleton<TagRepository>();
             builder.Services.AddSingleton<SeedDataService>();
-            builder.Services.AddSingleton<ModalErrorHandler>();
             builder.Services.AddSingleton<MainPageModel>();
             builder.Services.AddSingleton<ProjectListPageModel>();
             builder.Services.AddSingleton<ManageMetaPageModel>();

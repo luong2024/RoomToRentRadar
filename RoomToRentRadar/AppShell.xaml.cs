@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Maui.Alerts;
+using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
 using Font = Microsoft.Maui.Font;
 
@@ -9,7 +9,7 @@ namespace RoomToRentRadar
         public AppShell()
         {
             InitializeComponent();
-            var currentTheme = Application.Current!.RequestedTheme;
+            var currentTheme = Microsoft.Maui.Controls.Application.Current!.RequestedTheme;
             ThemeSegmentedControl.SelectedIndex = currentTheme == AppTheme.Light ? 0 : 1;
         }
         public static async Task DisplaySnackbarAsync(string message)
@@ -45,7 +45,7 @@ namespace RoomToRentRadar
 
         private void SfSegmentedControl_SelectionChanged(object? sender, Syncfusion.Maui.Toolkit.SegmentedControl.SelectionChangedEventArgs e)
         {
-            Application.Current!.UserAppTheme = e.NewIndex == 0 ? AppTheme.Light : AppTheme.Dark;
+            Microsoft.Maui.Controls.Application.Current!.UserAppTheme = e.NewIndex == 0 ? AppTheme.Light : AppTheme.Dark;
         }
     }
 }
