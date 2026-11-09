@@ -24,9 +24,14 @@
 
 ### Allowed:
 - Read all project documentation, repository structures, and source files.
-- Author and update plan files (`PLAN.md`, `TASK_BREAKDOWN.md`).
+- Author and update plan files in `.agents/plans/` (`PLAN.md`, `TASK_BREAKDOWN.md`).
 - Intervene and halt execution if an agent violates architectural or scope boundaries.
-- Run the build verification command: `dotnet build RoomToRentRadar/RoomToRentRadar.csproj`.
+- Receive structured Defect Reports from `@QA` and re-delegate targeted fixes to `@Core`, `@Infra`, or `@UI`.
+- Run the build and test verification commands:
+  ```powershell
+  dotnet build RoomToRentRadar/RoomToRentRadar.csproj
+  dotnet test RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj
+  ```
 
 ### Forbidden:
 - **FORBIDDEN:** Directly authoring or refactoring XAML layout or database code on behalf of specialists.
@@ -35,3 +40,13 @@
 ### Stop-and-Ask Triggers:
 - When two User Stories present conflicting requirements or contradictory logic.
 - When an incoming request exceeds the Sprint 1 MVP scope (e.g., short-term rental sharing ideas).
+
+---
+
+## 4. HANDOFF CONTRACT & DEFINITION OF DONE (DoD)
+Before delegating any User Story to `@Core`, `@QA`, `@Infra`, or `@UI`, `@Lead` MUST produce a **Mini-Spec Contract Table** locking down:
+1. **Shared DTOs (`RoomToRentRadar/Contracts/`):** Exact `record` names and property signatures (`*Dto`, `*Request`).
+2. **Input Ports & Use Cases (`RoomToRentRadar/Core/Application/UseCases/`):** Exact `I*UseCase` and `*UseCase` names.
+3. **Output Ports (`RoomToRentRadar/Core/Application/Ports/`):** Exact `I*Port` interface names and method signatures.
+4. **Adapters & Presentation (`Infrastructure/`, `Pages/`, `PageModels/`):** Exact `*Adapter`, `*Page`, and `*PageModel` names.
+5. **Task Sequence:** Phase 0 (`@Core` Contracts & Stubs) $\rightarrow$ Phase 1 (`@QA` RED Tests) $\rightarrow$ Phase 2 (`@Core`/`@Infra` GREEN Implementation) $\rightarrow$ Phase 3 (`@UI` Presentation) $\rightarrow$ Final Verification (`@QA`).

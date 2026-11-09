@@ -40,3 +40,10 @@
 ### Stop-and-Ask Triggers:
 - When considering new third-party UI NuGet packages beyond CommunityToolkit and Syncfusion.
 - When altering global navigation structures, root tabs, or shell flyout items in `AppShell.xaml`.
+
+---
+
+## 4. VERIFICATION & DEFINITION OF DONE (DoD)
+- Every new or modified `.xaml` file declares `x:DataType` on both the root `ContentPage` (pointing to its `*PageModel`) and every `DataTemplate` inside `CollectionView` / `CarouselView` / `ListView`.
+- All new Pages and PageModels are registered in `MauiProgram.cs` and non-tab routes are registered in `AppShell.xaml.cs`.
+- `dotnet build RoomToRentRadar/RoomToRentRadar.csproj` completes with 0 compilation or XamlC binding errors.

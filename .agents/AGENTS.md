@@ -22,29 +22,58 @@ The engineering team is composed of 5 specialized subagents with distinct respon
 
 ```mermaid
 flowchart TD
-    Lead["01. Lead Orchestrator<br/>(Backlog, Planning, AC Review)"]
-    QA["05. QA & TDD Specialist<br/>(NUnit, NSubstitute, Appium, TDD)"]
+    Lead["01. Lead Orchestrator<br/>(Backlog, Mini-Spec, AC Review)"]
     Core["02. Core Domain Specialist<br/>(Entities, Use Cases, Ports)"]
-    UI["03. MAUI UI Specialist<br/>(XAML, PageModels, Shell, Syncfusion)"]
+    QA["05. QA & TDD Specialist<br/>(NUnit, NSubstitute, Appium, TDD)"]
     Infra["04. API & Infra Specialist<br/>(Web API, Cosmos DB, SQLite Cache)"]
+    UI["03. MAUI UI Specialist<br/>(XAML, PageModels, Shell, Syncfusion)"]
 
-    Lead -->|1. Test requirements| QA
-    Lead -->|2. Domain assignment| Core
-    Core -->|3. Provides Input Ports| UI
-    Core -->|4. Defines Output Ports| Infra
-    QA -->|5. Independent verification| Core
-    QA -->|6. E2E UI verification| UI
+    Lead -->|1. Mini-Spec & Contracts| Core
+    Core -->|2. Phase 0: Ports & Stubs| QA
+    QA -->|3. Phase 1: Failing RED Tests| Core
+    Core -->|4. Phase 2: GREEN Domain Logic| Infra
+    Core -->|5. Input Ports Ready| UI
+    Infra -->|6. Output Adapters & API| QA
+    UI -->|7. XAML & PageModels| QA
 ```
 
-1. **`roles/01-lead-orchestrator.md`**: Acts as PO & Scrum Master. Analyzes backlog requirements, enforces Acceptance Criteria, decomposes micro-tasks, and monitors architectural boundaries.
-2. **`roles/02-core-domain-specialist.md`**: Pure C# expert. Implements Entities, Value Objects, Use Cases, and defines Ports. Free of any UI or DB dependencies.
+1. **`roles/01-lead-orchestrator.md`**: Acts as PO & Scrum Master. Analyzes backlog requirements, enforces Acceptance Criteria, locks down Mini-Spec type signatures, decomposes micro-tasks, and monitors architectural boundaries.
+2. **`roles/02-core-domain-specialist.md`**: Pure C# expert. Authors Phase 0 Contracts/Stubs, then implements Entities, Value Objects, Use Cases, and defines Ports. Free of any UI or DB dependencies.
 3. **`roles/03-maui-ui-specialist.md`**: MAUI Frontend expert. Implements XAML layouts, PageModels (CommunityToolkit.Mvvm), Syncfusion controls, Compiled Bindings, and AppShell navigation.
-4. **`roles/04-api-infra-specialist.md`**: Backend & Adapter expert. Implements ASP.NET Core REST API, Cosmos DB spatial queries, Google Maps adapters, and SQLite offline caching.
-5. **`roles/05-qa-tdd-specialist.md`**: Independent test engineer. Writes NUnit + NSubstitute Unit Tests and Appium UI tests following the TDD Red-Green-Refactor cycle. **FORBIDDEN from modifying production code.**
+4. **`roles/04-api-infra-specialist.md`**: Backend & Adapter expert. Implements ASP.NET Core REST API (`RoomToRentRadar.Api`), Cosmos DB spatial queries, Google Maps adapters, and client-side HTTP/SQLite offline caching adapters.
+5. **`roles/05-qa-tdd-specialist.md`**: Independent test engineer. Writes NUnit + NSubstitute Unit Tests and Appium UI tests following the C# TDD Contract-Red-Green-Refactor cycle. **FORBIDDEN from modifying production code.**
 
 ---
 
-## 3. PROJECT BASELINE PARAMETERS
+## 3. TARGET SOLUTION & DIRECTORY ARCHITECTURE
+
+- **`RoomToRentRadar/` (.NET MAUI 10 Mobile Client):**
+  - `Contracts/`: Immutable shared DTOs (`*Dto`, `*Request`, `PagedResult<T>`).
+  - `Core/`: Pure C# business layer (`Domain/Entities`, `Domain/ValueObjects`, `Application/Ports`, `Application/UseCases`).
+  - `Infrastructure/`: Client-side Driven Adapters (`HttpRoomApiAdapter`, `MockRoomApiAdapter`, `SqliteOfflineCacheAdapter`, `MauiMapRadarAdapter`).
+  - `Pages/` & `PageModels/`: Presentation layer (`.xaml` views and `*PageModel` classes).
+- **`RoomToRentRadar.Api/` (ASP.NET Core REST API Backend):**
+  - `Controllers/`: RESTful endpoints (`RoomsController`, etc.).
+  - `Adapters/`: Server-side Cosmos DB spatial and persistence adapters.
+- **`RoomToRentRadarUnitTests/` (NUnit 4 + NSubstitute Test Suite):**
+  - Unit tests targeting Core Use Cases, Domain Entities, and Adapter contracts.
+- **`RoomToRentRadarUIAppiumTests/` (NUnit 4 + Appium E2E Suite):**
+  - Automated mobile UI journey tests.
+
+---
+
+## 4. MULTI-AGENT HANDOFF & ESCALATION PROTOCOL
+
+1. **Contract-First Handoff (Zero Compilation Deadlocks):**
+   - `@Lead` publishes a Mini-Spec locking down exact interface, DTO, and class names.
+   - `@Core` creates **Phase 0 Stubs** (interfaces + classes throwing `NotImplementedException`) and verifies `dotnet build` = 0 errors before handing off to `@QA`.
+   - `@QA` writes **Phase 1 RED Tests** against those stubs (`dotnet test` compiles cleanly and fails on assertions/`NotImplementedException`), then hands off to `@Core` and `@Infra` for **Phase 2 GREEN Implementation**.
+2. **Failure Escalation Loop:**
+   - If any test fails during verification, `@QA` is **strictly forbidden** from editing production files. `@QA` emits a structured **Defect Report** (Test Name, Expected vs. Actual, Suspected Layer, Assigned Role) to `@Lead` for re-delegation.
+
+---
+
+## 5. PROJECT BASELINE PARAMETERS
 
 - **Target University:** University of Information and Communication Technology (ICTU)
 - **ICTU Campus Coordinates:** `Latitude = 21.5851`, `Longitude = 105.8066` (default origin for distance calculation in US01, US09).
@@ -54,11 +83,15 @@ flowchart TD
 
 ---
 
-## 4. STANDARD EXECUTION COMMANDS
+## 6. STANDARD EXECUTION COMMANDS
 
 - **Compile MAUI Client:**
   ```powershell
   dotnet build RoomToRentRadar/RoomToRentRadar.csproj
+  ```
+- **Compile Web API (when present in solution):**
+  ```powershell
+  dotnet build RoomToRentRadar.Api/RoomToRentRadar.Api.csproj
   ```
 - **Execute Unit Tests:**
   ```powershell

@@ -25,6 +25,7 @@ Every Agent and Subagent operating within this project MUST strictly comply with
   - **FORBIDDEN:** `using Microsoft.Maui`, `using Microsoft.Maui.Controls`.
   - **FORBIDDEN:** `using Microsoft.Data.Sqlite`, `using Microsoft.Azure.Cosmos`.
   - **FORBIDDEN:** `using System.Net.Http`.
+  - **Implicit / Global Usings Isolation:** Even when `Core/` resides inside a single-project MAUI structure with `<ImplicitUsings>enable</ImplicitUsings>` or `GlobalUsings.cs`, classes in `Core/` and `Contracts/` **MUST NOT** reference any types from `Microsoft.Maui.*`, `System.Net.Http.*`, `RoomToRentRadar.Pages`, `RoomToRentRadar.PageModels`, or `RoomToRentRadar.Data`.
   - Core MUST remain Pure C# (POCOs), containing only Business Rules, Entities, Value Objects, and Ports (Interfaces).
 - **Presentation Layer (UI / PageModels):**
   - **FORBIDDEN:** Direct SQL queries, SQLite database connections, or direct `HttpClient` calls in XAML code-behind (`*.xaml.cs`) or `PageModel`.
@@ -52,7 +53,9 @@ Agents **MUST NOT GUESS**. Agents MUST pause execution and ask the user in the f
 
 ## 3. POST-FLIGHT VERIFICATION CHECKLIST
 Before completing any turn, the agent must verify:
-- [ ] Code compiles cleanly with 0 errors (`dotnet build`)?
-- [ ] The Core layer has zero dependencies on UI or Database libraries?
-- [ ] All new `CollectionView` elements declare `x:DataType`?
-- [ ] No files outside the assigned task scope were modified?
+- [ ] Code compiles cleanly with 0 errors (`dotnet build RoomToRentRadar/RoomToRentRadar.csproj`)?
+- [ ] All relevant unit tests compile and execute (`dotnet test RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj`)?
+- [ ] The Core layer (`Core/`, `Contracts/`) has zero explicit or implicit references to UI (`Microsoft.Maui.*`), HTTP (`System.Net.Http.*`), or Database libraries?
+- [ ] Any newly created Use Case (`I*UseCase` -> `*UseCase`) or Adapter (`I*Port` -> `*Adapter`) is properly registered in `MauiProgram.cs` (or `RoomToRentRadar.Api/Program.cs`)?
+- [ ] All new `CollectionView` / `ListView` elements and root `ContentPage` files declare `x:DataType`?
+- [ ] No files outside the assigned task scope were modified (Two-File Rule respected)?

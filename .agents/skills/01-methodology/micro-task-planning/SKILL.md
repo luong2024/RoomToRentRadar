@@ -10,7 +10,7 @@ Derived from `obra/superpowers/writing-plans`. Breaks broad User Stories into is
 ## 1. Decomposition Principles
 - Each micro-task should represent no more than 2 hours of engineering effort.
 - Every micro-task must include a clear **Definition of Done (DoD)**.
-- Strictly adhere to the implementation order: **TDD Test -> Core UseCase -> Infrastructure Adapter -> UI Presentation**.
+- Strictly adhere to the C# implementation order: **Phase 0: Core Contracts & Stubs -> Phase 1: QA TDD Test (RED) -> Phase 2: Core UseCase (GREEN) -> Infrastructure Adapter -> Phase 3: UI Presentation**.
 
 ## 2. Standard Task Breakdown Template for a User Story (Example)
 
@@ -19,21 +19,29 @@ Derived from `obra/superpowers/writing-plans`. Breaks broad User Stories into is
 Example for **US04: Search rooms by filters (Price, Area, Distance)**:
 
 ```markdown
-### Task 1: [QA] Author Unit Tests for Filter UseCase (Estimate: 1h)
+### Task 1: [Core] Author Phase 0 DTOs, Port Interfaces & UseCase Stubs (Estimate: 0.5h)
+- File: `RoomToRentRadar/Contracts/RoomFilterRequest.cs`
+- File: `RoomToRentRadar/Core/Application/Ports/IRoomApiClientPort.cs`
+- File: `RoomToRentRadar/Core/Application/UseCases/SearchRooms/ISearchRoomsUseCase.cs`
+- File: `RoomToRentRadar/Core/Application/UseCases/SearchRooms/SearchRoomsUseCase.cs` (throws `NotImplementedException`)
+- DoD: `dotnet build RoomToRentRadar/RoomToRentRadar.csproj` succeeds with 0 errors.
+
+### Task 2: [QA] Author Unit Tests for Filter UseCase — RED Phase (Estimate: 1h)
 - File: `RoomToRentRadarUnitTests/UseCases/SearchRoomsUseCaseTests.cs`
-- DoD: Running `dotnet test` fails due to the missing UseCase behavior (Red phase).
+- DoD: Test project compiles with 0 build errors; running `dotnet test` fails at runtime due to `NotImplementedException` (Red phase).
 
-### Task 2: [Core] Implement Request DTO and UseCase (Estimate: 1.5h)
-- File: `Core/Application/UseCases/SearchRooms/RoomFilterRequest.cs`
-- File: `Core/Application/UseCases/SearchRooms/SearchRoomsUseCase.cs`
-- DoD: Task 1 tests transition to passing (Green phase).
+### Task 3: [Core] Implement SearchRoomsUseCase Business Logic — GREEN Phase (Estimate: 1h)
+- File: `RoomToRentRadar/Core/Application/UseCases/SearchRooms/SearchRoomsUseCase.cs`
+- File: `RoomToRentRadar/MauiProgram.cs` (register `ISearchRoomsUseCase`)
+- DoD: Task 2 unit tests transition to 100% passing (Green phase).
 
-### Task 3: [Infra] Build SQLite / Web API Filter Adapter (Estimate: 1.5h)
-- File: `Infrastructure/Services/HttpRoomApiAdapter.cs`
-- DoD: API call succeeds with valid query parameters.
+### Task 4: [Infra] Build SQLite / Web API Filter Adapter (Estimate: 1.5h)
+- File: `RoomToRentRadar/Infrastructure/Services/HttpRoomApiAdapter.cs`
+- File: `RoomToRentRadar/MauiProgram.cs` (register `IRoomApiClientPort`)
+- DoD: Adapter compiles cleanly and satisfies `IRoomApiClientPort` contract.
 
-### Task 4: [UI] Design Filter Dialog & Wire Up PageModel (Estimate: 2h)
-- File: `Pages/FilterPopupPage.xaml`, `PageModels/FilterPageModel.cs`
+### Task 5: [UI] Design Filter Dialog & Wire Up PageModel (Estimate: 2h)
+- File: `RoomToRentRadar/Pages/FilterPopupPage.xaml`, `RoomToRentRadar/PageModels/FilterPageModel.cs`
 - DoD: Filter popup opens, Syncfusion range slider updates values, applying filters displays the correct result count.
 ```
 

@@ -7,27 +7,32 @@ description: Mandatory Test-Driven Development cycle enforcing failing tests bef
 
 Derived from `obra/superpowers/test-driven-development`. Guarantees automated test coverage for all features and eliminates superfluous code.
 
-## 1. Mandatory 3-Phase Cycle
+## 1. Mandatory 4-Phase C# TDD Cycle
 
 ```mermaid
 flowchart LR
-    Red["Phase 1: RED<br/>(Write Failing Test)"] --> Green["Phase 2: GREEN<br/>(Minimal Code to Pass)"]
+    Stub["Phase 0: STUB<br/>(@Core Contracts & Stubs)"] --> Red["Phase 1: RED<br/>(@QA Failing Test)"]
+    Red --> Green["Phase 2: GREEN<br/>(@Core/@Infra Minimal Code)"]
     Green --> Refactor["Phase 3: REFACTOR<br/>(Clean Code, Tests Stay Green)"]
-    Refactor --> Red
+    Refactor --> Stub
 ```
 
+### Phase 0: STUB (Contract & Throw-NotImplemented Stubs)
+- Because C# is statically typed, `@Core` first creates the agreed DTOs (`Contracts/`), Interfaces (`I*UseCase`, `I*Port`), and `*UseCase` stub classes whose methods throw `new NotImplementedException()`.
+- Verify `dotnet build RoomToRentRadar/RoomToRentRadar.csproj` succeeds with `0` errors before handing off to `@QA`.
+
 ### Phase 1: RED (Write a Failing Test)
-- QA Agent authors the test case within `RoomToRentRadarUnitTests`.
+- `@QA` authors the unit test cases within `RoomToRentRadarUnitTests/` referencing the Phase 0 contracts and stubs.
 - Execute:
   ```powershell
   dotnet test RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj
   ```
-- **Prerequisite:** The test **MUST FAIL** due to missing feature behavior, NOT due to compilation errors.
+- **Prerequisite:** The test project **MUST COMPILE CLEANLY (0 build errors)** and **MUST FAIL** at runtime due to `NotImplementedException` or unmet assertion criteria.
 
 ### Phase 2: GREEN (Make the Test Pass)
-- The developer agent (@Core or @Infra) writes the **minimal** production code required to satisfy the test.
+- The developer agent (`@Core` or `@Infra`) replaces `NotImplementedException` with the **minimal** production code required to satisfy the test.
 - No speculative coding beyond what is verified by the test case.
-- Re-run test command -> Must output `Passed: 100%`.
+- Re-run test command -> Must output `Failed: 0`, `Passed: 100%`.
 
 ### Phase 3: REFACTOR (Safely Improve Code)
 - Clean up implementation, adopt idiomatic .NET 10 / C# conventions, eliminate duplication (DRY).
