@@ -36,11 +36,12 @@ private async Task OpenRoomDetailAsync(string roomId)
 }
 ```
 
-## 3. Receiving Parameters in `RoomDetailViewModel`
+## 3. Receiving Parameters in `*PageModel` (Example)
 
 ```csharp
+// Example PageModel following the *PageModel naming convention
 [QueryProperty(nameof(RoomId), "id")]
-public partial class RoomDetailViewModel : ObservableObject
+public partial class RoomDetailPageModel : ObservableObject
 {
     private readonly IGetRoomDetailUseCase _getRoomDetailUseCase;
 

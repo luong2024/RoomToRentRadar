@@ -7,15 +7,16 @@ description: Enforces Compiled Bindings (x:DataType) to maximize runtime renderi
 
 Derived from `davidortinau/maui-skills/maui-data-binding`. Enables compile-time type checking in XAML, replacing slow reflection-based bindings with fast generated code and catching property typos at build time.
 
-## 1. Mandatory Root Page Declaration
-At the root of every `ContentPage`, declare the XML namespace and ViewModel `x:DataType`:
+## 1. Mandatory Root Page Declaration (Example)
+At the root of every `ContentPage`, declare the XML namespace and PageModel `x:DataType` (always following the `*PageModel` naming convention):
 
 ```xml
+<!-- Example Page binding to its corresponding *PageModel -->
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:vm="clr-namespace:RoomToRentRadar.PageModels"
+             xmlns:pm="clr-namespace:RoomToRentRadar.PageModels"
              x:Class="RoomToRentRadar.Pages.RoomListPage"
-             x:DataType="vm:RoomListViewModel"
+             x:DataType="pm:RoomListPageModel"
              Title="Find Rooms Near ICTU">
     ...
 </ContentPage>

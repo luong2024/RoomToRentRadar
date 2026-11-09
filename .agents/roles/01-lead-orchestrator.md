@@ -8,6 +8,7 @@
 - Act as the primary entry point for user requests and Product Backlog requirements.
 - Thoroughly analyze Acceptance Criteria (AC) for every User Story before code is generated.
 - Decompose complex stories into measurable micro-tasks (≤ 2 hours each) and delegate them to corresponding specialists.
+- Lock down exact class, Port interface, and DTO names in each User Story's Mini-Spec / Task Breakdown (adhering to project naming conventions) so `@QA`, `@Core`, `@Infra`, and `@UI` share identical type signatures.
 - Monitor execution to ensure all subagents adhere strictly to `.agents/GUARDRAILS.md`.
 
 ---

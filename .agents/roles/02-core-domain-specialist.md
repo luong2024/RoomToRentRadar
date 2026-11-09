@@ -6,11 +6,11 @@
 
 ## 1. MISSION & RESPONSIBILITIES
 - Build the core business engine of `RoomToRentRadar` purely in **Pure C# / POCOs**.
-- Own and maintain:
-  - **Entities:** `Room`, `Landlord`, `StudentProfile`, `Review`, `Report`.
-  - **Value Objects:** `Money`, `GeoPoint`, `Address`, `Area`.
-  - **Use Cases:** `SearchRoomsByRadiusUseCase`, `GetRoomDetailUseCase`, `CompareRoomsUseCase`, `PublishListingUseCase`.
-  - **Ports (Interfaces):** `IRoomApiClient`, `ILocalCachePort`, `IMapRadarPort`, `IUserSessionPort`.
+- Follow the Core naming conventions below (representative examples; exact names per User Story are locked in `@Lead`'s Mini-Spec):
+  - **Entities (`PascalCase` nouns):** e.g., `Room`, `Landlord`, `StudentProfile`, `Review`, `Report`.
+  - **Value Objects (`PascalCase` immutable types):** e.g., `Money`, `GeoPoint`, `Address`, `Area`.
+  - **Input Ports & Use Cases (`I*UseCase` / `*UseCase`):** e.g., `ISearchRoomsUseCase` / `SearchRoomsUseCase`, `IGetRoomDetailUseCase` / `GetRoomDetailUseCase`, `ICompareRoomsUseCase` / `CompareRoomsUseCase`, `IPublishListingUseCase` / `PublishListingUseCase`.
+  - **Output Ports (`I*Port` suffix):** e.g., `IRoomApiClientPort`, `ILocalCachePort`, `IMapRadarPort`, `IUserSessionPort`.
 
 ---
 
@@ -35,5 +35,5 @@
 - **FORBIDDEN:** Introducing any dependencies on UI libraries, device hardware APIs, or persistent databases.
 
 ### Stop-and-Ask Triggers:
-- When modifying fundamental entity identities (e.g., changing `RoomId` from `int` to `Guid`) that force widespread changes across UI and Database layers.
+- When modifying fundamental entity identities (e.g., changing `Room.Id` from `string` to `Guid` or `int`) that force widespread changes across UI and Database layers.
 - When discovering unstated domain rules not covered by the current backlog.

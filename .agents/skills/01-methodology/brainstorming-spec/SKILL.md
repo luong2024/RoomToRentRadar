@@ -24,7 +24,8 @@ Ask only critical questions that impact architecture or core user experience:
 3. If GPS permissions are denied by the user, what fallback coordinates should be used (e.g., default ICTU coordinates)?
 
 ### Step 3: Produce an Agreed Specification (Mini-Spec)
-Before delegating tasks to developers, output a concise summary:
-- **Input:** Incoming user data and filter parameters.
+Before delegating tasks to developers, output a concise summary that locks down exact type names (following project naming conventions):
+- **Input:** Incoming user data, filter parameters, and request DTO names (`*Request`).
+- **Contracts & Ports:** Exact `I*UseCase`, `I*Port`, `*Adapter`, and `*PageModel` names to be used by `@QA`, `@Core`, `@Infra`, and `@UI`.
 - **Rules:** Business constraints that must be upheld (e.g., maximum of 3 rooms in side-by-side comparison).
-- **Output:** Resulting data structure or UI response.
+- **Output:** Resulting response DTO (`*Dto` / `PagedResult<T>`) or UI state.

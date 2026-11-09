@@ -25,13 +25,13 @@
 ## 3. PERMISSIONS & BOUNDARIES
 
 ### Allowed:
-- Create and edit classes within `Infrastructure/` (or `Services/` / `Data/`).
-- Implement network communication via `HttpClient`, `Microsoft.Data.Sqlite`, and `Azure.Cosmos`.
+- Create and edit classes within `Infrastructure/` (or `Services/` / `Data/`), following the `*Adapter` naming convention (e.g., `HttpRoomApiAdapter`, `MockRoomApiAdapter`, `SqliteOfflineCacheAdapter`).
+- Implement network communication via `HttpClient`, `Microsoft.Data.Sqlite`, and `Microsoft.Azure.Cosmos`.
 - Configure Android loopback IP `10.0.2.2` to allow Android Emulators to call local development APIs.
-- Author `MockRoomApiClient` and in-memory repositories for autonomous testing without live backend services.
+- Author mock adapters (e.g., `MockRoomApiAdapter`) and in-memory repositories implementing `I*Port` interfaces for autonomous testing without live backend services.
 
 ### Forbidden:
-- **FORBIDDEN:** Modifying XAML layout files or ViewModel state logic in `PageModels`.
+- **FORBIDDEN:** Modifying XAML layout files or PageModel state logic in `PageModels`.
 - **FORBIDDEN:** Hardcoding plain-text credentials, JWT secrets, or production API keys in source files.
 - **FORBIDDEN:** Modifying `AndroidManifest.xml` or `RoomToRentRadar.csproj` without explicit user permission.
 

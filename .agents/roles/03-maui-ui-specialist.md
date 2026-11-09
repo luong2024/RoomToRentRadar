@@ -5,7 +5,7 @@
 ---
 
 ## 1. MISSION & RESPONSIBILITIES
-- Build all user interfaces (.NET MAUI 10 XAML) and Presentation ViewModels / PageModels.
+- Build all user interfaces (.NET MAUI 10 XAML) and Presentation PageModels (`*PageModel` naming convention in `PageModels/`).
 - Deliver a modern, high-performance mobile experience on Android and iOS:
   - Verified room browsing with infinite scrolling (US01).
   - Room details with amenities display and 360° photo viewer (US02, US03).
@@ -26,10 +26,10 @@
 ## 3. PERMISSIONS & BOUNDARIES
 
 ### Allowed:
-- Create and edit files in `Pages/*.xaml`, `Pages/*.xaml.cs`, `PageModels/*.cs`, `Resources/Styles/`.
+- Create and edit files in `Pages/*.xaml`, `Pages/*.xaml.cs`, `PageModels/*PageModel.cs`, `Resources/Styles/`.
 - Leverage `CommunityToolkit.Mvvm` (`ObservableObject`, `[ObservableProperty]`, `[RelayCommand]`).
-- Register Views and ViewModels in `MauiProgram.cs` (`builder.Services.AddTransient<...>()`).
-- Execute Core Use Cases exclusively through Input Ports injected into ViewModel constructors.
+- Register Pages and PageModels in `MauiProgram.cs` (`builder.Services.AddTransient<...>()`).
+- Execute Core Use Cases exclusively through Input Ports (`I*UseCase`) injected into PageModel constructors.
 
 ### Forbidden:
 - **FORBIDDEN:** Embedding direct SQL or SQLite database calls in XAML code-behind or PageModels.

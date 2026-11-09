@@ -36,4 +36,4 @@ flowchart LR
 ## 2. Test Framework & Core Mocking Rules
 - **Standard Test Framework:** **NUnit 4** (`[TestFixture]`, `[SetUp]`, `[Test]`, `[TestCase]`, and constraint-based assertions via `Assert.That(...)`). Do **NOT** use xUnit (`[Fact]`, `[Theory]`) or MSTest.
 - **Standard Mocking Library:** **NSubstitute** (`Substitute.For<IPort>()`). Do **NOT** mix `Moq` and `NSubstitute` in the same test suite.
-- Never connect to live databases or live remote networks within Unit Tests; always mock Output Ports (`IRoomApiClient`, `ILocalCachePort`, `IMapRadarPort`, `IUserSessionPort`).
+- Never connect to live databases or live remote networks within Unit Tests; always mock Output Ports (`I*Port`, e.g., `IRoomApiClientPort`, `ILocalCachePort`, `IMapRadarPort`, `IUserSessionPort`).

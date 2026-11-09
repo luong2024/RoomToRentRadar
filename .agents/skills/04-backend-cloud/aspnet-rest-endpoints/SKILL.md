@@ -7,7 +7,9 @@ description: Design principles for ASP.NET Core REST API controllers implementin
 
 Derived from `dotnet/skills/aspnet-core`. Guides the implementation of RESTful endpoints serving Sprint 1 User Stories (US01, US04, US08).
 
-## 1. REST Controller Template for Browsing & Filtering (US01, US04)
+## 1. REST Controller Template for Browsing & Filtering (Example for US01, US04)
+
+> **Note:** Controller, UseCase (`I*UseCase`), and DTO (`*Request`, `*Dto`) names below illustrate the standard pattern. Actual names for each endpoint are aligned with the User Story Mini-Spec.
 
 ```csharp
 [ApiController]
