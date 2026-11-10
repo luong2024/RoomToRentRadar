@@ -11,17 +11,17 @@ Derived from `davidortinau/maui-skills/maui-aspire`. Addresses the most frequent
 - When running inside the Android Emulator, `localhost` (or `127.0.0.1`) refers to the loopback interface of the **virtual device itself**, not the host machine running Visual Studio or ASP.NET Core.
 - Calling `https://localhost:5001/api/rooms` from the Android Emulator throws `HttpRequestException: Connection refused`.
 
-## 2. Standardized Configuration
+## 2. Standardized Configuration (Example)
 The Android Emulator maps host IP `127.0.0.1` to internal alias **`10.0.2.2`**.
 
-In the API client configuration (`ApiConfiguration.cs`):
+Example API client configuration (ensure the port matches the active profile in `RoomToRentRadar.Api/Properties/launchSettings.json`):
 
 ```csharp
 public static class ApiConfiguration
 {
     public static string BaseUrl =>
         DeviceInfo.Platform == DevicePlatform.Android
-            ? "http://10.0.2.2:5000/api"      // Android Emulator host loopback
+            ? "http://10.0.2.2:5000/api"      // Android Emulator host loopback (adjust port as configured)
             : "http://localhost:5000/api";    // Windows Desktop / iOS Simulator
 }
 ```

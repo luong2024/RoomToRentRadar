@@ -18,8 +18,8 @@ flowchart LR
 ```
 
 ### Phase 0: STUB (Contract & Throw-NotImplemented Stubs)
-- Because C# is statically typed, `@Core` first creates the agreed DTOs (`Contracts/`), Interfaces (`I*UseCase`, `I*Port`), and `*UseCase` stub classes whose methods throw `new NotImplementedException()`.
-- Verify `dotnet build RoomToRentRadar/RoomToRentRadar.csproj` succeeds with `0` errors before handing off to `@QA`.
+- Because C# is statically typed, `@Core` first creates the agreed DTOs (`RoomToRentRadar.Ports/Contracts/`), Interfaces (`I*UseCase`, `I*Repository`, `I*Port` in `RoomToRentRadar.Ports/`), and `*UseCase` stub classes in `RoomToRentRadar.Application/` whose methods throw `new NotImplementedException()`.
+- Verify `dotnet build RoomToRentRadar/RoomToRentRadar.csproj` and `dotnet build RoomToRentRadar.Api/RoomToRentRadar.Api.csproj` succeed with `0` errors before handing off to `@QA`.
 
 ### Phase 1: RED (Write a Failing Test)
 - `@QA` authors the unit test cases within `RoomToRentRadarUnitTests/` referencing the Phase 0 contracts and stubs.
@@ -41,4 +41,4 @@ flowchart LR
 ## 2. Test Framework & Core Mocking Rules
 - **Standard Test Framework:** **NUnit 4** (`[TestFixture]`, `[SetUp]`, `[Test]`, `[TestCase]`, and constraint-based assertions via `Assert.That(...)`). Do **NOT** use xUnit (`[Fact]`, `[Theory]`) or MSTest.
 - **Standard Mocking Library:** **NSubstitute** (`Substitute.For<IPort>()`). Do **NOT** mix `Moq` and `NSubstitute` in the same test suite.
-- Never connect to live databases or live remote networks within Unit Tests; always mock Output Ports (`I*Port`, e.g., `IRoomApiClientPort`, `ILocalCachePort`, `IMapRadarPort`, `IUserSessionPort`).
+- Never connect to live databases or live remote networks within Unit Tests; always mock Output Ports (`I*Repository` and `I*Port`, e.g., `IRoomRepository`, `IUserRepository`, `IRoomApiClientPort`, `ILocalCachePort`, `IMapRadarPort`, `IUserSessionPort`).

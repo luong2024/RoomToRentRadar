@@ -20,24 +20,24 @@ Example for **US04: Search rooms by filters (Price, Area, Distance)**:
 
 ```markdown
 ### Task 1: [Core] Author Phase 0 DTOs, Port Interfaces & UseCase Stubs (Estimate: 0.5h)
-- File: `RoomToRentRadar/Contracts/RoomFilterRequest.cs`
-- File: `RoomToRentRadar/Core/Application/Ports/IRoomApiClientPort.cs`
-- File: `RoomToRentRadar/Core/Application/UseCases/SearchRooms/ISearchRoomsUseCase.cs`
-- File: `RoomToRentRadar/Core/Application/UseCases/SearchRooms/SearchRoomsUseCase.cs` (throws `NotImplementedException`)
-- DoD: `dotnet build RoomToRentRadar/RoomToRentRadar.csproj` succeeds with 0 errors.
+- File: `RoomToRentRadar.Ports/Contracts/Requests/Rooms/RoomFilterRequest.cs`
+- File: `RoomToRentRadar.Ports/Outbound/ExternalServices/IRoomApiClientPort.cs`
+- File: `RoomToRentRadar.Ports/Inbound/UseCases/Rooms/ISearchRoomsUseCase.cs`
+- File: `RoomToRentRadar.Application/UseCases/Rooms/SearchRoomsUseCase.cs` (throws `NotImplementedException`)
+- DoD: `dotnet build RoomToRentRadar/RoomToRentRadar.csproj` and `dotnet build RoomToRentRadar.Api/RoomToRentRadar.Api.csproj` succeed with 0 errors.
 
 ### Task 2: [QA] Author Unit Tests for Filter UseCase — RED Phase (Estimate: 1h)
-- File: `RoomToRentRadarUnitTests/UseCases/SearchRoomsUseCaseTests.cs`
+- File: `RoomToRentRadarUnitTests/Application/Rooms/SearchRoomsUseCaseTests.cs`
 - DoD: Test project compiles with 0 build errors; running `dotnet test` fails at runtime due to `NotImplementedException` (Red phase).
 
 ### Task 3: [Core] Implement SearchRoomsUseCase Business Logic — GREEN Phase (Estimate: 1h)
-- File: `RoomToRentRadar/Core/Application/UseCases/SearchRooms/SearchRoomsUseCase.cs`
-- File: `RoomToRentRadar/MauiProgram.cs` (register `ISearchRoomsUseCase`)
+- File: `RoomToRentRadar.Application/UseCases/Rooms/SearchRoomsUseCase.cs`
+- File: `RoomToRentRadar.Application/DependencyInjection.cs` (register `ISearchRoomsUseCase`)
 - DoD: Task 2 unit tests transition to 100% passing (Green phase).
 
 ### Task 4: [Infra] Build SQLite / Web API Filter Adapter (Estimate: 1.5h)
-- File: `RoomToRentRadar/Infrastructure/Services/HttpRoomApiAdapter.cs`
-- File: `RoomToRentRadar/MauiProgram.cs` (register `IRoomApiClientPort`)
+- File: `RoomToRentRadar.Infrastructure/Adapters/Http/HttpRoomApiAdapter.cs`
+- File: `RoomToRentRadar.Infrastructure/DependencyInjection.cs` (register `IRoomApiClientPort`)
 - DoD: Adapter compiles cleanly and satisfies `IRoomApiClientPort` contract.
 
 ### Task 5: [UI] Design Filter Dialog & Wire Up PageModel (Estimate: 2h)

@@ -19,10 +19,10 @@ Ensures architectural integrity by keeping business domain logic completely deco
 - The **Core** layer knows nothing about the **Presentation** (UI) or **Infrastructure** (Database/Network) layers.
 
 ## 2. Red Line Violation Checklist
-If any file in the Core layer violates any of the following checks, the build is considered **architecturally broken**:
+If any file in the Core layer (`RoomToRentRadar.Domain/`, `RoomToRentRadar.Ports/`, `RoomToRentRadar.Application/`) violates any of the following checks, the build is considered **architecturally broken**:
 - [ ] Contains `using Microsoft.Maui` or `using Microsoft.Maui.Controls` in Core -> **VIOLATION**.
 - [ ] Contains `using Microsoft.Data.Sqlite` or `using Microsoft.Azure.Cosmos` in Core -> **VIOLATION**.
-- [ ] Contains `using System.Net.Http` in Core -> **VIOLATION**.
+- [ ] Contains `using System.Net.Http`, `using Microsoft.AspNetCore.*`, or `using Microsoft.IdentityModel.*` in Core -> **VIOLATION**.
 - [ ] A PageModel invokes SQL commands or manages database connections directly without an Input Port -> **VIOLATION**.
 
 ## 3. Remediation Pattern (Inversion of Control — Example)

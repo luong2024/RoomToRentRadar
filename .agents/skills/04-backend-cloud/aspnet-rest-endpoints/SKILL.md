@@ -5,7 +5,7 @@ description: Design principles for ASP.NET Core REST API controllers implementin
 
 # ASP.NET Core Clean REST API Endpoints
 
-Derived from `dotnet/skills/aspnet-core`. Guides the implementation of RESTful endpoints serving Sprint 1 User Stories (US01, US04, US08).
+Derived from `dotnet/skills/aspnet-core`. Guides the implementation of RESTful endpoints serving Product Backlog User Stories (e.g., US01, US04, US08, US13).
 
 ## 1. REST Controller Template for Browsing & Filtering (Example for US01, US04)
 

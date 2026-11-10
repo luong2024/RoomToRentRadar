@@ -6,11 +6,11 @@
 
 ---
 
-## 1. OBJECTIVES AND QUALITY STANDARDS (SPRINT 1)
+## 1. OBJECTIVES AND QUALITY STANDARDS
 
-- **Sprint 1 Goal:** Deliver the core room-discovery experience (US01 – US12), including: verified listing browse, room details and 360° photo viewer, price/area/map search, favourite bookmarks, side-by-side room comparison, new-listing alerts, and landlord publishing.
+- **Product Backlog Goal:** Deliver the end-to-end room-discovery, landlord publishing, and platform security experience across all Product Backlog User Stories (e.g., verified listing browse, room details and 360° photo viewer, price/area/map search, favourite bookmarks, side-by-side room comparison, new-listing alerts, landlord publishing, and role-based authentication).
 - **Quality Targets:**
-  - 100% of User Stories meet Acceptance Criteria (AC).
+  - 100% of User Stories in scope meet Acceptance Criteria (AC).
   - 0 Critical defects, ≤ 3 High defects prior to handover.
   - Strict decoupling between Core business logic and external adapters.
 
@@ -50,26 +50,26 @@ flowchart TD
 1. **`RoomToRentRadar.Domain/` (Pure C# DDD Domain Layer — `net10.0`):**
    - `Aggregates/`, `Entities/`, `ValueObjects/`, `Enums/`, `Events/`, `Specifications/`, `Services/`, `Exceptions/`, `Primitives/`.
 2. **`RoomToRentRadar.Ports/` (Hexagonal Boundaries & Contracts — `net10.0`):**
-   - `Contracts/Requests/`, `Contracts/Responses/`, `Contracts/Common/`: Immutable shared DTOs (`*Dto`, `*Request`, `PagedResult<T>`).
-   - `Inbound/UseCases/`: Driving Input Ports (`I*UseCase`).
+   - `Contracts/Requests/[<Feature>/]`, `Contracts/Responses/[<Feature>/]`, `Contracts/Common/`: Immutable shared DTOs (`*Dto`, `*Request`, `PagedResult<T>`), optionally grouped by feature subfolder (e.g., `Rooms/`, `Auth/`, `Bookmarks/`).
+   - `Inbound/UseCases/[<Feature>/]`: Driving Input Ports (`I*UseCase`), organized flat or by feature subfolder.
    - `Outbound/Repositories/`, `Outbound/ExternalServices/`, `Outbound/Caching/`: Driven Output Ports (`I*Repository`, `I*Port`).
 3. **`RoomToRentRadar.Application/` (UseCase Services Layer — `net10.0`):**
-   - `UseCases/Rooms/`, `UseCases/Bookmarks/`, `UseCases/Landlords/`: Implementations of `I*UseCase` (`*UseCase`).
+   - `UseCases/<Feature>/`: Feature-grouped implementations of `I*UseCase` (`*UseCase`, e.g., `UseCases/Rooms/`, `UseCases/Bookmarks/`, `UseCases/Landlords/`, `UseCases/Auth/`, etc.).
    - `Mappers/` & `DependencyInjection.cs` (`AddApplicationServices()`).
 4. **`RoomToRentRadar.Datastore/` (Dedicated Database Layer — `net10.0`):**
    - `CosmosDb/` (`Documents/`, `Context/`, `Configurations/`) & `Sqlite/` (`Tables/`, `Context/`).
    - `DependencyInjection.cs` (`AddDatastore()`).
 5. **`RoomToRentRadar.Infrastructure/` (Repositories & Driven Adapters — `net10.0`):**
-   - `Repositories/`: Implementations of `I*Repository` (`CosmosRoomRepository`, `SqliteBookmarkRepository`).
-   - `Adapters/Http/`, `Adapters/Caching/`, `Adapters/Mocks/`: Implementations of `I*Port` (`*Adapter`).
+   - `Repositories/`: Implementations of `I*Repository` (e.g., `CosmosRoomRepository`, `SqliteBookmarkRepository`, `CosmosUserRepository`).
+   - `Adapters/<Category>/`: Implementations of `I*Port` (`*Adapter`), grouped by technical capability (e.g., `Adapters/Http/`, `Adapters/Caching/`, `Adapters/Mocks/`, `Adapters/Security/`, etc.).
    - `DependencyInjection.cs` (`AddInfrastructure()`).
 6. **`RoomToRentRadar.Api/` (ASP.NET Core REST API Backend — `net10.0`):**
-   - `Controllers/` & `Middlewares/`: RESTful endpoints (`RoomsController`, etc.).
+   - `Controllers/`, `Middlewares/`, & `Authorization/` (or feature-specific API infrastructure): RESTful endpoints (`RoomsController`, `AuthController`, etc.), exception handling, and security policies.
 7. **`RoomToRentRadar/` (.NET MAUI 10 Mobile Client — MVVM UI):**
-   - `Pages/` & `PageModels/`: Presentation layer (`.xaml` views and `*PageModel` classes).
-   - `DeviceAdapters/`: Platform/device-specific adapters (`MauiMapRadarAdapter`).
+   - `Pages/` (including `Pages/Controls/`), `PageModels/`, `Resources/Styles/`, `Converters/`, & `AppShell.xaml(.cs)`: Presentation layer (`.xaml` views and `*PageModel` classes).
+   - `DeviceAdapters/`: Platform/device-specific adapters (e.g., `MauiMapRadarAdapter`).
 8. **`RoomToRentRadarUnitTests/` (NUnit 4 + NSubstitute Test Suite — `net10.0`):**
-   - `Domain/`, `Application/`, `Infrastructure/`.
+   - `Domain/[<Feature>/]`, `Application/[<Feature>/]`, `Infrastructure/[<Feature>/]`.
 9. **`RoomToRentRadarUIAppiumTests/` (NUnit 4 + Appium E2E Suite — `net10.0`):**
    - `Journeys/`.
 
@@ -102,7 +102,7 @@ flowchart TD
   ```powershell
   dotnet build RoomToRentRadar/RoomToRentRadar.csproj
   ```
-- **Compile Web API (when present in solution):**
+- **Compile Web API:**
   ```powershell
   dotnet build RoomToRentRadar.Api/RoomToRentRadar.Api.csproj
   ```

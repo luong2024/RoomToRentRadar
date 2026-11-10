@@ -16,12 +16,12 @@ Prevents synchronization drift between mobile client and backend teams. Both MAU
 - Keep DTOs free of business logic.
 - Ensure seamless JSON serialization and deserialization across HTTP and SQLite cache boundaries.
 
-## 2. Reference DTO Templates for Sprint 1 (Examples)
+## 2. Reference DTO Templates (Examples)
 
-> **Note:** The records below serve as the baseline reference templates for Sprint 1 stories. Any additions or modifications for a specific User Story must be agreed upon in the Mini-Spec and follow `.agents/GUARDRAILS.md` (Trigger #3).
+> **Note:** The records below serve as baseline reference templates in `RoomToRentRadar.Ports/Contracts/` (`Common/`, `Requests/[<Feature>/]`, `Responses/[<Feature>/]`). Any additions or modifications for a specific User Story must be agreed upon in the Mini-Spec and follow `.agents/GUARDRAILS.md` (Trigger #3).
 
 ```csharp
-namespace RoomToRentRadar.Contracts;
+namespace RoomToRentRadar.Ports.Contracts;
 
 public record PagedResult<T>(
     IReadOnlyList<T> Items,

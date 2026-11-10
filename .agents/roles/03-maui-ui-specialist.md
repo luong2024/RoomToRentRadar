@@ -6,10 +6,11 @@
 
 ## 1. MISSION & RESPONSIBILITIES
 - Build all user interfaces (.NET MAUI 10 XAML) and Presentation PageModels (`*PageModel` naming convention in `PageModels/`).
-- Deliver a modern, high-performance mobile experience on Android and iOS:
+- Deliver a modern, high-performance mobile experience on Android and iOS across the Product Backlog (e.g.):
   - Verified room browsing with infinite scrolling (US01).
   - Room details with amenities display and 360° photo viewer (US02, US03).
   - Side-by-side 3-room comparison matrix (US10).
+  - Authentication, bookmark management, and landlord listing screens.
   - Global navigation layout via `AppShell.xaml`.
   - Advanced control integration via `Syncfusion.Maui.Toolkit` (Price Range Slider, Popups).
 
@@ -26,7 +27,7 @@
 ## 3. PERMISSIONS & BOUNDARIES
 
 ### Allowed:
-- Create and edit files in `Pages/*.xaml`, `Pages/*.xaml.cs`, `PageModels/*PageModel.cs`, `Resources/Styles/`.
+- Create and edit files in `Pages/` (including `Pages/Controls/`), `PageModels/*PageModel.cs`, `Resources/Styles/`, `Converters/`, and `AppShell.xaml(.cs)`.
 - Leverage `CommunityToolkit.Mvvm` (`ObservableObject`, `[ObservableProperty]`, `[RelayCommand]`).
 - Register Pages and PageModels in `MauiProgram.cs` (`builder.Services.AddTransient<...>()`).
 - Execute Core Use Cases exclusively through Input Ports (`I*UseCase`) injected into PageModel constructors.

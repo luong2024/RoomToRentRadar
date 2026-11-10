@@ -24,12 +24,13 @@
 
 ### Allowed:
 - Read all project documentation, repository structures, and source files.
-- Author and update plan files in `.agents/plans/` (`PLAN.md`, `TASK_BREAKDOWN.md`).
+- Author and update plan/specification files in `.agents/plans/` (e.g., `*_MINI_SPEC.md`, `PLAN.md`, `TASK_BREAKDOWN.md`).
 - Intervene and halt execution if an agent violates architectural or scope boundaries.
 - Receive structured Defect Reports from `@QA` and re-delegate targeted fixes to `@Core`, `@Infra`, or `@UI`.
 - Run the build and test verification commands:
   ```powershell
   dotnet build RoomToRentRadar/RoomToRentRadar.csproj
+  dotnet build RoomToRentRadar.Api/RoomToRentRadar.Api.csproj
   dotnet test RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj
   ```
 
@@ -39,14 +40,14 @@
 
 ### Stop-and-Ask Triggers:
 - When two User Stories present conflicting requirements or contradictory logic.
-- When an incoming request exceeds the Sprint 1 MVP scope (e.g., short-term rental sharing ideas).
+- When an incoming request exceeds the agreed Product Backlog / Sprint scope (e.g., short-term rental sharing ideas).
 
 ---
 
 ## 4. HANDOFF CONTRACT & DEFINITION OF DONE (DoD)
 Before delegating any User Story to `@Core`, `@QA`, `@Infra`, or `@UI`, `@Lead` MUST produce a **Mini-Spec Contract Table** locking down:
-1. **Shared DTOs (`RoomToRentRadar.Ports/Contracts/`):** Exact `record` names and property signatures (`*Dto`, `*Request`, `PagedResult<T>`).
-2. **Input Ports & Use Cases (`RoomToRentRadar.Ports/Inbound/UseCases/` & `RoomToRentRadar.Application/UseCases/`):** Exact `I*UseCase` and `*UseCase` names.
+1. **Shared DTOs (`RoomToRentRadar.Ports/Contracts/`):** Exact `record` names and property signatures (`*Dto`, `*Request`, `PagedResult<T>`), organized in `Requests/[<Feature>/]`, `Responses/[<Feature>/]`, or `Common/`.
+2. **Input Ports & Use Cases (`RoomToRentRadar.Ports/Inbound/UseCases/[<Feature>/]` & `RoomToRentRadar.Application/UseCases/<Feature>/`):** Exact `I*UseCase` and `*UseCase` names.
 3. **Output Ports (`RoomToRentRadar.Ports/Outbound/`):** Exact `I*Repository` and `I*Port` interface names and method signatures.
-4. **Adapters & Presentation (`RoomToRentRadar.Datastore/`, `RoomToRentRadar.Infrastructure/`, `RoomToRentRadar/Pages/`, `RoomToRentRadar/PageModels/`):** Exact `*Repository`, `*Adapter`, `*Page`, and `*PageModel` names.
-5. **Task Sequence:** Phase 0 (`@Core` Contracts & Stubs) $\rightarrow$ Phase 1 (`@QA` RED Tests) $\rightarrow$ Phase 2 (`@Core`/`@Infra` GREEN Implementation) $\rightarrow$ Phase 3 (`@UI` Presentation) $\rightarrow$ Final Verification (`@QA`).
+4. **Adapters & Presentation (`RoomToRentRadar.Datastore/`, `RoomToRentRadar.Infrastructure/`, `RoomToRentRadar.Api/`, `RoomToRentRadar/Pages/`, `RoomToRentRadar/PageModels/`):** Exact `*Repository`, `*Adapter`, `*Controller`, `*Page`, and `*PageModel` names.
+5. **Task Sequence:** Phase 0 (`@Core` Contracts & Stubs) $\rightarrow$ Phase 1 (`@QA` RED Tests) $\rightarrow$ Phase 2 (`@Core`/`@Infra` GREEN Implementation) $\rightarrow$ Phase 3 (`@UI` Presentation, if applicable) $\rightarrow$ Final Verification (`@QA`).

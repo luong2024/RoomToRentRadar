@@ -7,7 +7,7 @@ description: Guide for designing Driving Input Ports (UseCases) and Driven Outpu
 
 Standardizes naming conventions and structural patterns for Ports (interfaces) and Adapters (implementations) within `RoomToRentRadar`.
 
-> **Convention Note:** All code snippets below are reference examples illustrating naming conventions (`I*UseCase`, `I*Port`, `*Adapter`). Concrete type names and method signatures for each feature are specified per User Story in the Mini-Spec.
+> **Convention Note:** All code snippets below are reference examples illustrating naming conventions (`I*UseCase`, `I*Repository`, `I*Port`, `*Repository`, `*Adapter`). Concrete type names and method signatures for each feature are specified per User Story in the Mini-Spec.
 
 ## 1. Differentiating the Two Port Categories
 
@@ -22,10 +22,10 @@ Standardizes naming conventions and structural patterns for Ports (interfaces) a
   }
   ```
 
-### 1.2. Driven / Output Ports (`I*Port`)
+### 1.2. Driven / Output Ports (`I*Repository` & `I*Port`)
 - Interfaces through which the Core layer asks external infrastructure (Databases, Networks, Hardware sensors) to persist or deliver data:
   ```csharp
-  // Example Output Port pattern
+  // Example Output Port pattern (External Services / Caching / Device)
   public interface IRoomApiClientPort
   {
       Task<PagedResult<RoomCardDto>> SearchRoomsAsync(RoomFilterRequest request, CancellationToken ct = default);
@@ -33,9 +33,12 @@ Standardizes naming conventions and structural patterns for Ports (interfaces) a
   }
   ```
 
-## 2. Adapter Naming & Implementation Rules (`*Adapter`)
-- **Adapter names MUST end with `Adapter` and prefix the concrete technology:**
+## 2. Repository & Adapter Naming Rules (`*Repository` & `*Adapter`)
+- **Repository names MUST end with `Repository` and prefix the persistence technology (implementing `I*Repository`):**
+  - `CosmosRoomRepository` implements `IRoomRepository`.
+  - `SqliteBookmarkRepository` implements `IBookmarkRepository`.
+- **Adapter names MUST end with `Adapter` and prefix the concrete technology (implementing `I*Port`):**
   - `SqliteOfflineCacheAdapter` implements `ILocalCachePort`.
   - `HttpRoomApiAdapter` implements `IRoomApiClientPort`.
   - `MockRoomApiAdapter` implements `IRoomApiClientPort`.
-- When offline testing or mocking is required, swap adapters inside Dependency Injection registration without modifying a single line of business logic in Use Cases.
+- When offline testing or mocking is required, swap repositories/adapters inside Dependency Injection registration without modifying a single line of business logic in Use Cases.
