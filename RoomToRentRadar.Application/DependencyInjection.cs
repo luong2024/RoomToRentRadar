@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
+using RoomToRentRadar.Application.UseCases.Audit;
 using RoomToRentRadar.Application.UseCases.Auth;
+using RoomToRentRadar.Ports.Inbound.UseCases.Audit;
 using RoomToRentRadar.Ports.Inbound.UseCases.Auth;
 
 namespace RoomToRentRadar.Application;
@@ -15,6 +17,7 @@ public static class DependencyInjection
         services.AddScoped<IRevokeTokenUseCase, RevokeTokenUseCase>();
         services.AddScoped<IGetCurrentUserProfileUseCase, GetCurrentUserProfileUseCase>();
         services.AddScoped<IApproveLandlordUseCase, ApproveLandlordUseCase>();
+        services.AddScoped<IGetAuditLogsUseCase, GetAuditLogsUseCase>();
 
         return services;
     }
