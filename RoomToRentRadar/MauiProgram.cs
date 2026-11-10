@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Maui;
+using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
 using Syncfusion.Maui.Toolkit.Hosting;
 
@@ -55,6 +55,20 @@ namespace RoomToRentRadar
 
             builder.Services.AddTransientWithShellRoute<ProjectDetailPage, ProjectDetailPageModel>("project");
             builder.Services.AddTransientWithShellRoute<TaskDetailPage, TaskDetailPageModel>("task");
+
+            // =========================================================================
+            // ROOMTORENTRADAR SPRINT 1 CORE FOUNDATION (LOCKED BY LEAD DEV QUANG / @architect)
+            // =========================================================================
+            builder.Services.AddSingleton<RentalDatabaseService>();
+            builder.Services.AddSingleton<ComparisonBasketService>();
+
+            // --- [ZONE 1: LEAD DEV NGUYEN DANG QUANG - T01.1, T04.1, T07.1, T09.1, T10.2, T12.2] ---
+
+            // --- [ZONE 2: DEV LAM MINH HIEU - T02.2, T04.2, T06.1, T07.2, T09.2, T11.1, T13.1] ---
+
+            // --- [ZONE 3: DEV PHAM THI THUY - T02.1, T03.1, T05.1, T08.1, T10.1, T11.2, T13.2] ---
+
+            // --- [ZONE 4: DEV LIEU HAI NAM - T01.2, T03.2, T05.2, T06.2, T08.2, T12.1] ---
 
             return builder.Build();
         }

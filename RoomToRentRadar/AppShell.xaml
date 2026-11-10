@@ -6,31 +6,44 @@
     xmlns:sf="clr-namespace:Syncfusion.Maui.Toolkit.SegmentedControl;assembly=Syncfusion.Maui.Toolkit"
     xmlns:pages="clr-namespace:RoomToRentRadar.Pages"
     Shell.FlyoutBehavior="Flyout"
-    Title="RoomToRentRadar">
+    Title="RoomToRentRadar - ICTU">
 
+    <!-- ========================================================================= -->
+    <!-- ROOMTORENTRADAR SPRINT 1 MENU ZONES (CONFLICT-FREE DEVELOPER ZONES)       -->
+    <!-- Each developer only adds ShellContent inside their own designated zone.   -->
+    <!-- ========================================================================= -->
+
+    <!-- [ZONE 2: LAM MINH HIEU - T02.2 RoomListPage, T06.1 RoomMapPage, T07.2 FavoritesPage, T11.1 RoomComparePage] -->
+
+    <!-- [ZONE 1: LEAD DEV NGUYEN DANG QUANG - T09.1 PublishListingPage] -->
+
+    <!-- [ZONE 3: PHAM THI THUY - T13.2 ReportListingModalPage] -->
+
+    <!-- [ZONE 4: LIEU HAI NAM - T01.2 LoginPage, T08.2 SearchAlertsPage] -->
+
+    <!-- Baseline Home Screen (Visible until T02.2 RoomListPage is added above) -->
     <ShellContent
-        Title="Dashboard"
+        Title="Trang chủ ICTU Radar"
         Icon="{StaticResource IconDashboard}"
         ContentTemplate="{DataTemplate pages:MainPage}"
         Route="main"
-        SemanticProperties.Description="Dashboard"
-        SemanticProperties.Hint="Navigate to dashboard"/>
+        SemanticProperties.Description="Trang chủ RoomToRentRadar"
+        SemanticProperties.Hint="Màn hình khởi động RoomToRentRadar"/>
 
+    <!-- Legacy template pages hidden from Flyout Menu -->
     <ShellContent
         Title="Projects"
+        FlyoutItemIsVisible="False"
         Icon="{StaticResource IconProjects}"
         ContentTemplate="{DataTemplate pages:ProjectListPage}"
-        Route="projects"
-        SemanticProperties.Description="Projects"
-        SemanticProperties.Hint="Navigate to projects"/>
+        Route="projects" />
 
     <ShellContent
         Title="Manage Meta"
+        FlyoutItemIsVisible="False"
         Icon="{StaticResource IconMeta}"
         ContentTemplate="{DataTemplate pages:ManageMetaPage}"
-        Route="manage"
-        SemanticProperties.Description="Manage Meta"
-        SemanticProperties.Hint="Navigate to manage meta"/>
+        Route="manage" />
 
     <Shell.FlyoutFooter>
         <Grid Padding="15">

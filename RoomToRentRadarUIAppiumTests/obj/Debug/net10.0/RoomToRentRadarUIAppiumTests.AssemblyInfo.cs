@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("RoomToRentRadarUIAppiumTests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cefaa0a59ed1f4d9e44e317a81142d199d653701")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7ab71c9de47386fcad2fb3fc8687a80909e0f175")]
 [assembly: System.Reflection.AssemblyProductAttribute("RoomToRentRadarUIAppiumTests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("RoomToRentRadarUIAppiumTests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

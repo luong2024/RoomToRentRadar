@@ -1,33 +1,26 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\lvu\\Downloads\\RoomToRentRadar\\RoomToRentRadarUnitTests\\RoomToRentRadarUnitTests.csproj": {}
+    "C:\\Users\\Admin\\source\\repos\\RoomToRentRadar\\RoomToRentRadarUnitTests\\RoomToRentRadarUnitTests.csproj": {}
   },
   "projects": {
-    "C:\\Users\\lvu\\Downloads\\RoomToRentRadar\\RoomToRentRadarUnitTests\\RoomToRentRadarUnitTests.csproj": {
+    "C:\\Users\\Admin\\source\\repos\\RoomToRentRadar\\RoomToRentRadarUnitTests\\RoomToRentRadarUnitTests.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\lvu\\Downloads\\RoomToRentRadar\\RoomToRentRadarUnitTests\\RoomToRentRadarUnitTests.csproj",
+        "projectUniqueName": "C:\\Users\\Admin\\source\\repos\\RoomToRentRadar\\RoomToRentRadarUnitTests\\RoomToRentRadarUnitTests.csproj",
         "projectName": "RoomToRentRadarUnitTests",
-        "projectPath": "C:\\Users\\lvu\\Downloads\\RoomToRentRadar\\RoomToRentRadarUnitTests\\RoomToRentRadarUnitTests.csproj",
-        "packagesPath": "C:\\Users\\lvu\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\lvu\\Downloads\\RoomToRentRadar\\RoomToRentRadarUnitTests\\obj\\",
+        "projectPath": "C:\\Users\\Admin\\source\\repos\\RoomToRentRadar\\RoomToRentRadarUnitTests\\RoomToRentRadarUnitTests.csproj",
+        "packagesPath": "C:\\Users\\Admin\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Admin\\source\\repos\\RoomToRentRadar\\RoomToRentRadarUnitTests\\obj\\",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages",
-          "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
-        ],
         "configFilePaths": [
-          "C:\\Users\\lvu\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "C:\\Users\\Admin\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
         ],
         "sources": {
           "C:\\Program Files\\dotnet\\library-packs": {},
-          "https://3tgroup.pkgs.visualstudio.com/_packaging/3TLogisticsLtd/nuget/v3/index.json": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {

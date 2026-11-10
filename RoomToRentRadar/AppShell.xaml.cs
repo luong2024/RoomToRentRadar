@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Maui.Alerts;
+using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
 using Font = Microsoft.Maui.Font;
 
@@ -11,6 +11,14 @@ namespace RoomToRentRadar
             InitializeComponent();
             var currentTheme = Application.Current!.RequestedTheme;
             ThemeSegmentedControl.SelectedIndex = currentTheme == AppTheme.Light ? 0 : 1;
+
+            // --- [ROUTE ZONE 1: LEAD DEV NGUYEN DANG QUANG] ---
+
+            // --- [ROUTE ZONE 2: DEV LAM MINH HIEU] ---
+
+            // --- [ROUTE ZONE 3: DEV PHAM THI THUY] ---
+
+            // --- [ROUTE ZONE 4: DEV LIEU HAI NAM] ---
         }
         public static async Task DisplaySnackbarAsync(string message)
         {

@@ -165,7 +165,6 @@ C:\Users\Admin\source\repos\RoomToRentRadar\RoomToRentRadarUIAppiumTests\bin\Deb
 C:\Users\Admin\source\repos\RoomToRentRadar\RoomToRentRadarUIAppiumTests\bin\Debug\net10.0\NUnit3.TestAdapter.dll
 C:\Users\Admin\source\repos\RoomToRentRadar\RoomToRentRadarUIAppiumTests\bin\Debug\net10.0\RoomToRentRadarUIAppiumTests.deps.json
 C:\Users\Admin\source\repos\RoomToRentRadar\RoomToRentRadarUIAppiumTests\bin\Debug\net10.0\RoomToRentRadarUIAppiumTests.runtimeconfig.json
-C:\Users\Admin\source\repos\RoomToRentRadar\RoomToRentRadarUIAppiumTests\bin\Debug\net10.0\RoomToRentRadarUIAppiumTests.runtimeconfig.dev.json
 C:\Users\Admin\source\repos\RoomToRentRadar\RoomToRentRadarUIAppiumTests\bin\Debug\net10.0\RoomToRentRadarUIAppiumTests.dll
 C:\Users\Admin\source\repos\RoomToRentRadar\RoomToRentRadarUIAppiumTests\bin\Debug\net10.0\RoomToRentRadarUIAppiumTests.pdb
 C:\Users\Admin\source\repos\RoomToRentRadar\RoomToRentRadarUIAppiumTests\bin\Debug\net10.0\Microsoft.ApplicationInsights.dll
