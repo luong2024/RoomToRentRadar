@@ -1,6 +1,10 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using RoomToRentRadar.Adapters.Inbound.WebApi.Controllers;
 using RoomToRentRadar.Adapters.Outbound.Authentication;
+using RoomToRentRadar.Adapters.Outbound.Persistence;
+using RoomToRentRadar.Adapters.Outbound.Persistence.Repositories;
+using RoomToRentRadar.Application.Ports.Outbound;
 
 namespace RoomToRentRadar.Bootstrap.DependencyInjection;
 
@@ -26,6 +30,18 @@ public static class ServiceCollectionExtensions
         services
             .AddOptions<GoogleAuthOptions>()
             .Bind(configuration.GetSection(GoogleAuthOptions.SectionName));
+
+        var connectionString = configuration.GetConnectionString("DefaultConnection")
+            ?? "Data Source=roomtorentradar.db";
+
+        services.AddDbContext<AppDbContext>(options =>
+            options.UseSqlite(
+                connectionString,
+                sqlite => sqlite.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
+
+        services.AddScoped<IUserRepository, EfUserRepository>();
+        services.AddScoped<IRefreshTokenRepository, EfRefreshTokenRepository>();
+        services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 
         return services;
     }
