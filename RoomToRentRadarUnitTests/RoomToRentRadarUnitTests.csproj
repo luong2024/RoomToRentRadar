@@ -24,6 +24,7 @@
     <ProjectReference Include="..\RoomToRentRadar.Infrastructure\RoomToRentRadar.Infrastructure.csproj" />
     <ProjectReference Include="..\RoomToRentRadar.Datastore.CosmosDb\RoomToRentRadar.Datastore.CosmosDb.csproj" />
     <ProjectReference Include="..\RoomToRentRadar.Datastore.Sqlite\RoomToRentRadar.Datastore.Sqlite.csproj" />
+    <ProjectReference Include="..\RoomToRentRadar.Api\RoomToRentRadar.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>
