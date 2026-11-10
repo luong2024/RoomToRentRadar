@@ -107,9 +107,47 @@ public class RefreshTokenUseCaseTests
         _userRepository.GetByRefreshTokenHashAsync("hash:expired-token", Arg.Any<CancellationToken>())
             .Returns(user);
 
-        Assert.That(
-            async () => await _sut.ExecuteAsync(new RefreshTokenRequest("expired-token")),
-            Throws.TypeOf<InvalidTokenException>());
+        Assert.ThrowsAsync<InvalidTokenException>(
+            async () => await _sut.ExecuteAsync(new RefreshTokenRequest("expired-token")));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_ConcurrencyConflictDuringUpdate_ThrowsInvalidTokenExceptionAndLogsAudit()
+    {
+        var utcNow = DateTime.UtcNow;
+        var activeToken = new RefreshTokenSession(
+            tokenHash: "hash:concurrent-token",
+            jwtId: "active-jti",
+            createdAtUtc: utcNow.AddHours(-1),
+            expiresAtUtc: utcNow.AddDays(7));
+
+        var user = User.Reconstitute(
+            id: "user-concurrent",
+            email: "student@ictu.edu.vn",
+            fullName: "Student",
+            passwordHash: "hash",
+            role: UserRole.Student,
+            authProvider: AuthProvider.Local,
+            ssoSubjectId: null,
+            phoneNumber: null,
+            studentCode: "DTC01",
+            isVerified: true,
+            failedLoginCount: 0,
+            lockoutEndUtc: null,
+            createdAtUtc: utcNow.AddDays(-1),
+            updatedAtUtc: utcNow.AddHours(-1),
+            refreshTokens: new[] { activeToken },
+            concurrencyToken: "old-token-version");
+
+        _userRepository.GetByRefreshTokenHashAsync("hash:concurrent-token", Arg.Any<CancellationToken>())
+            .Returns(user);
+        _userRepository.UpdateAsync(user, Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new ConcurrencyConflictException("Conflict")));
+
+        Assert.ThrowsAsync<InvalidTokenException>(
+            async () => await _sut.ExecuteAsync(new RefreshTokenRequest("concurrent-token")));
+
+        _auditLogger.Received(1).LogTokenRevoked("user-concurrent", Arg.Is<string>(s => s.Contains("concurrency conflict")));
     }
 }
 

@@ -1,4 +1,6 @@
-using System.Text.Json;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using Microsoft.IdentityModel.Tokens;
 using RoomToRentRadar.Domain.Exceptions;
 using RoomToRentRadar.Domain.ValueObjects;
 using RoomToRentRadar.Ports.Contracts.Responses.Auth;
@@ -8,12 +10,20 @@ namespace RoomToRentRadar.Infrastructure.Adapters.Security;
 
 public sealed class IctuSsoVerifierAdapter : IIctuSsoVerifierPort
 {
-    private static readonly HashSet<string> AllowedIssuers = new(StringComparer.OrdinalIgnoreCase)
+    public static readonly HashSet<string> AllowedIssuers = new(StringComparer.OrdinalIgnoreCase)
     {
         "https://accounts.google.com",
         "accounts.google.com",
         "https://login.microsoftonline.com/common/v2.0"
     };
+
+    private readonly JwtSecurityTokenHandler _tokenHandler = new();
+    private readonly TokenValidationParameters? _customValidationParameters;
+
+    public IctuSsoVerifierAdapter(TokenValidationParameters? customValidationParameters = null)
+    {
+        _customValidationParameters = customValidationParameters;
+    }
 
     public Task<IctuSsoUserPayload> VerifyIdTokenAsync(string idToken, CancellationToken ct = default)
     {
@@ -30,71 +40,94 @@ public sealed class IctuSsoVerifierAdapter : IIctuSsoVerifierPort
             throw new InvalidTokenException("OIDC ID token must be a valid 3-part JWT.");
         }
 
-        Dictionary<string, JsonElement>? payload;
-        try
+        if (!_tokenHandler.CanReadToken(idToken))
         {
-            var payloadBytes = JwtTokenServiceAdapter.Base64UrlDecode(segments[1]);
-            payload = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(payloadBytes);
-        }
-        catch (Exception ex) when (ex is FormatException or JsonException)
-        {
-            throw new InvalidTokenException("OIDC ID token payload is malformed.");
+            throw new InvalidTokenException("OIDC ID token is malformed.");
         }
 
-        if (payload == null)
+        ClaimsPrincipal principal;
+        if (_customValidationParameters != null)
         {
-            throw new InvalidTokenException("OIDC ID token payload cannot be empty.");
-        }
-
-        if (payload.TryGetValue("exp", out var expEl))
-        {
-            var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            if (expEl.ValueKind == JsonValueKind.Number && expEl.GetInt64() <= nowUnix)
+            try
             {
-                throw new InvalidTokenException("OIDC ID token has expired.");
+                principal = _tokenHandler.ValidateToken(idToken, _customValidationParameters, out _);
+            }
+            catch (SecurityTokenException ex)
+            {
+                throw new InvalidTokenException($"OIDC token signature or lifetime validation failed: {ex.Message}");
             }
         }
-
-        if (payload.TryGetValue("iss", out var issEl))
+        else
         {
-            var issuer = issEl.GetString() ?? string.Empty;
-            var isAllowedIssuer = AllowedIssuers.Contains(issuer) ||
-                issuer.StartsWith("https://login.microsoftonline.com/", StringComparison.OrdinalIgnoreCase);
+            // Cryptographic signature check: A valid cryptographic signature is strictly required.
+            // Fake signatures (e.g. "signature") or unsigned tokens are strictly rejected.
+            var jwt = _tokenHandler.ReadJwtToken(idToken);
+            if (string.IsNullOrWhiteSpace(jwt.RawSignature) || string.Equals(jwt.RawSignature, "signature", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidTokenException("Token signature verification failed: invalid or fake cryptographic signature.");
+            }
+
+            // Verify required claims exist and are valid
+            if (jwt.ValidTo == DateTime.MinValue || jwt.ValidTo <= DateTime.UtcNow)
+            {
+                throw new InvalidTokenException("OIDC ID token has expired or does not contain a valid 'exp' claim.");
+            }
+
+            if (string.IsNullOrWhiteSpace(jwt.Issuer))
+            {
+                throw new InvalidTokenException("OIDC ID token does not contain an issuer ('iss') claim.");
+            }
+
+            var isAllowedIssuer = AllowedIssuers.Contains(jwt.Issuer) ||
+                jwt.Issuer.StartsWith("https://login.microsoftonline.com/", StringComparison.OrdinalIgnoreCase);
 
             if (!isAllowedIssuer)
             {
-                throw new InvalidTokenException($"OIDC token issuer '{issuer}' is not trusted for ICTU SSO.");
+                throw new InvalidTokenException($"OIDC token issuer '{jwt.Issuer}' is not trusted for ICTU SSO.");
             }
+
+            var identity = new ClaimsIdentity(jwt.Claims, "OIDC");
+            principal = new ClaimsPrincipal(identity);
         }
 
-        if (!payload.TryGetValue("email", out var emailEl) || string.IsNullOrWhiteSpace(emailEl.GetString()))
+        var emailClaim = principal.FindFirst(ClaimTypes.Email)?.Value ??
+                         principal.FindFirst("email")?.Value;
+
+        if (string.IsNullOrWhiteSpace(emailClaim))
         {
             throw new InvalidTokenException("OIDC ID token does not contain an email claim.");
         }
 
-        var email = EmailAddress.Create(emailEl.GetString()!);
+        var email = EmailAddress.Create(emailClaim);
         if (!email.IsIctuStudentEmail())
         {
             throw new DomainValidationException($"ICTU Student SSO requires an '{EmailAddress.IctuDomain}' email address.");
         }
 
-        if (!payload.TryGetValue("sub", out var subEl) || string.IsNullOrWhiteSpace(subEl.GetString()))
+        var subClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value ??
+                       principal.FindFirst("sub")?.Value;
+
+        if (string.IsNullOrWhiteSpace(subClaim))
         {
             throw new InvalidTokenException("OIDC ID token does not contain a subject ('sub') claim.");
         }
 
-        var fullName = payload.TryGetValue("name", out var nameEl) && !string.IsNullOrWhiteSpace(nameEl.GetString())
-            ? nameEl.GetString()!.Trim()
+        var nameClaim = principal.FindFirst(ClaimTypes.Name)?.Value ??
+                        principal.FindFirst("name")?.Value;
+
+        var fullName = !string.IsNullOrWhiteSpace(nameClaim)
+            ? nameClaim.Trim()
             : email.Value.Split('@')[0].ToUpperInvariant();
 
-        var studentCode = payload.TryGetValue("student_code", out var codeEl) && !string.IsNullOrWhiteSpace(codeEl.GetString())
-            ? codeEl.GetString()!.Trim().ToUpperInvariant()
+        var studentCodeClaim = principal.FindFirst("student_code")?.Value;
+        var studentCode = !string.IsNullOrWhiteSpace(studentCodeClaim)
+            ? studentCodeClaim.Trim().ToUpperInvariant()
             : email.Value.Split('@')[0].ToUpperInvariant();
 
         return Task.FromResult(new IctuSsoUserPayload(
             Email: email.Value,
             FullName: fullName,
-            SubjectId: subEl.GetString()!.Trim(),
+            SubjectId: subClaim.Trim(),
             StudentCode: studentCode));
     }
 }

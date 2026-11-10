@@ -84,10 +84,24 @@ public sealed class CosmosUserRepository : IUserRepository
     {
         var container = _dbContext.GetUsersContainer();
         var document = MapToDocument(user);
-        await container.UpsertItemAsync(
-            document,
-            new PartitionKey(document.Id),
-            cancellationToken: ct);
+        var requestOptions = !string.IsNullOrWhiteSpace(user.ConcurrencyToken)
+            ? new ItemRequestOptions { IfMatchEtag = user.ConcurrencyToken }
+            : null;
+
+        try
+        {
+            var response = await container.UpsertItemAsync(
+                document,
+                new PartitionKey(document.Id),
+                requestOptions,
+                cancellationToken: ct);
+
+            user.SetConcurrencyToken(response.ETag);
+        }
+        catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.PreconditionFailed)
+        {
+            throw new ConcurrencyConflictException($"Optimistic concurrency conflict occurred updating user '{user.Id}'.");
+        }
     }
 
     private async Task<UserDocument?> QuerySingleAsync(QueryDefinition query, CancellationToken ct)
@@ -168,7 +182,8 @@ public sealed class CosmosUserRepository : IUserRepository
             lockoutEndUtc: doc.LockoutEndUtc,
             createdAtUtc: doc.CreatedAtUtc,
             updatedAtUtc: doc.UpdatedAtUtc,
-            refreshTokens: tokens);
+            refreshTokens: tokens,
+            concurrencyToken: doc.ETag);
     }
 }
 

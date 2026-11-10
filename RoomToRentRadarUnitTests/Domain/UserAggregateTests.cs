@@ -1,4 +1,5 @@
 using RoomToRentRadar.Domain.Aggregates;
+using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.Exceptions;
 
@@ -168,6 +169,59 @@ public class UserAggregateTests
             Throws.TypeOf<InvalidTokenException>());
 
         Assert.That(user.RefreshTokens.All(t => t.IsRevoked), Is.True);
+    }
+
+    [Test]
+    public void RegisterLocal_WithUndefinedRoleInteger_ThrowsDomainValidationException()
+    {
+        Assert.Throws<DomainValidationException>(() => User.RegisterLocal(
+            email: "student@ictu.edu.vn",
+            passwordHash: "hash",
+            fullName: "Test",
+            role: (UserRole)999,
+            phoneNumber: null,
+            studentCode: null,
+            utcNow: FixedNow));
+    }
+
+    [TestCase("", "valid-jti")]
+    [TestCase("   ", "valid-jti")]
+    [TestCase(null, "valid-jti")]
+    public void RefreshTokenSession_WithInvalidTokenHash_ThrowsDomainValidationException(string? tokenHash, string jwtId)
+    {
+        Assert.Throws<DomainValidationException>(() => new RefreshTokenSession(
+            tokenHash: tokenHash!,
+            jwtId: jwtId,
+            createdAtUtc: FixedNow,
+            expiresAtUtc: FixedNow.AddDays(7)));
+    }
+
+    [TestCase("valid-hash", "")]
+    [TestCase("valid-hash", "   ")]
+    [TestCase("valid-hash", null)]
+    public void RefreshTokenSession_WithInvalidJwtId_ThrowsDomainValidationException(string tokenHash, string? jwtId)
+    {
+        Assert.Throws<DomainValidationException>(() => new RefreshTokenSession(
+            tokenHash: tokenHash,
+            jwtId: jwtId!,
+            createdAtUtc: FixedNow,
+            expiresAtUtc: FixedNow.AddDays(7)));
+    }
+
+    [Test]
+    public void RefreshTokenSession_WithExpirationNotGreaterThanCreation_ThrowsDomainValidationException()
+    {
+        Assert.Throws<DomainValidationException>(() => new RefreshTokenSession(
+            tokenHash: "valid-hash",
+            jwtId: "valid-jti",
+            createdAtUtc: FixedNow,
+            expiresAtUtc: FixedNow));
+
+        Assert.Throws<DomainValidationException>(() => new RefreshTokenSession(
+            tokenHash: "valid-hash",
+            jwtId: "valid-jti",
+            createdAtUtc: FixedNow,
+            expiresAtUtc: FixedNow.AddMinutes(-5)));
     }
 }
 

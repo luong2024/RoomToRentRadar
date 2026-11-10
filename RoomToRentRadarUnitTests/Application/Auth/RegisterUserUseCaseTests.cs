@@ -97,7 +97,7 @@ public class RegisterUserUseCaseTests
     }
 
     [Test]
-    public void ExecuteAsync_DuplicateEmail_ThrowsDuplicateEmailException()
+    public async Task ExecuteAsync_DuplicateEmail_ThrowsDuplicateEmailException()
     {
         _userRepository.ExistsByEmailAsync("existing@ictu.edu.vn", Arg.Any<CancellationToken>()).Returns(true);
 
@@ -107,9 +107,8 @@ public class RegisterUserUseCaseTests
             FullName: "Duplicate User",
             Role: "Student");
 
-        Assert.That(
-            async () => await _sut.ExecuteAsync(request),
-            Throws.TypeOf<DuplicateEmailException>());
+        Assert.ThrowsAsync<DuplicateEmailException>(
+            async () => await _sut.ExecuteAsync(request));
     }
 
     [Test]
@@ -121,9 +120,21 @@ public class RegisterUserUseCaseTests
             FullName: "Fake Admin",
             Role: "Admin");
 
-        Assert.That(
-            async () => await _sut.ExecuteAsync(request),
-            Throws.TypeOf<ForbiddenRoleException>());
+        Assert.ThrowsAsync<ForbiddenRoleException>(
+            async () => await _sut.ExecuteAsync(request));
+    }
+
+    [Test]
+    public void ExecuteAsync_InvalidRoleIntegerString_ThrowsDomainValidationException()
+    {
+        var request = new RegisterUserRequest(
+            Email: "attacker@ictu.edu.vn",
+            Password: "StrongPass123",
+            FullName: "Attacker",
+            Role: "999");
+
+        Assert.ThrowsAsync<DomainValidationException>(
+            async () => await _sut.ExecuteAsync(request));
     }
 
     [Test]
@@ -139,9 +150,8 @@ public class RegisterUserUseCaseTests
             Role: "Landlord",
             PhoneNumber: null);
 
-        Assert.That(
-            async () => await _sut.ExecuteAsync(request),
-            Throws.TypeOf<DomainValidationException>());
+        Assert.ThrowsAsync<DomainValidationException>(
+            async () => await _sut.ExecuteAsync(request));
     }
 }
 

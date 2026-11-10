@@ -63,7 +63,7 @@ public class LoginUserUseCaseTests
     }
 
     [Test]
-    public void ExecuteAsync_WrongPassword_IncrementsFailedLoginCountAndThrowsInvalidCredentialsException()
+    public async Task ExecuteAsync_WrongPassword_IncrementsFailedLoginCountAndThrowsInvalidCredentialsException()
     {
         var user = User.RegisterLocal(
             email: "student@ictu.edu.vn",
@@ -77,16 +77,15 @@ public class LoginUserUseCaseTests
         _userRepository.GetByEmailAsync("student@ictu.edu.vn", Arg.Any<CancellationToken>()).Returns(user);
         _passwordHasher.VerifyPassword("WrongPassword1", "stored-password-hash").Returns(false);
 
-        Assert.That(
-            async () => await _sut.ExecuteAsync(new LoginRequest("student@ictu.edu.vn", "WrongPassword1")),
-            Throws.TypeOf<InvalidCredentialsException>());
+        Assert.ThrowsAsync<InvalidCredentialsException>(
+            async () => await _sut.ExecuteAsync(new LoginRequest("student@ictu.edu.vn", "WrongPassword1")));
 
         Assert.That(user.FailedLoginCount, Is.EqualTo(1));
-        _userRepository.Received(1).UpdateAsync(user, Arg.Any<CancellationToken>());
+        await _userRepository.Received(1).UpdateAsync(user, Arg.Any<CancellationToken>());
     }
 
     [Test]
-    public void ExecuteAsync_FifthConsecutiveWrongPassword_LocksAccountAndThrowsAccountLockedException()
+    public async Task ExecuteAsync_FifthConsecutiveWrongPassword_LocksAccountAndThrowsAccountLockedException()
     {
         var utcNow = DateTime.UtcNow;
         var user = User.Reconstitute(
@@ -108,9 +107,8 @@ public class LoginUserUseCaseTests
         _userRepository.GetByEmailAsync("student@ictu.edu.vn", Arg.Any<CancellationToken>()).Returns(user);
         _passwordHasher.VerifyPassword("WrongPassword5", "stored-password-hash").Returns(false);
 
-        Assert.That(
-            async () => await _sut.ExecuteAsync(new LoginRequest("student@ictu.edu.vn", "WrongPassword5")),
-            Throws.TypeOf<AccountLockedException>());
+        Assert.ThrowsAsync<AccountLockedException>(
+            async () => await _sut.ExecuteAsync(new LoginRequest("student@ictu.edu.vn", "WrongPassword5")));
 
         Assert.That(user.FailedLoginCount, Is.EqualTo(5));
         Assert.That(user.LockoutEndUtc, Is.Not.Null);

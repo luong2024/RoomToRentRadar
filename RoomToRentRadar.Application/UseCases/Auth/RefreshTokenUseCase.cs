@@ -60,11 +60,27 @@ public sealed class RefreshTokenUseCase : IRefreshTokenUseCase
         }
         catch (InvalidTokenException)
         {
-            await _userRepository.UpdateAsync(user, ct);
+            try
+            {
+                await _userRepository.UpdateAsync(user, ct);
+            }
+            catch (ConcurrencyConflictException)
+            {
+                // Concurrency conflict during token revocation - ignore to preserve the original InvalidTokenException
+            }
             throw;
         }
 
-        await _userRepository.UpdateAsync(user, ct);
+        try
+        {
+            await _userRepository.UpdateAsync(user, ct);
+        }
+        catch (ConcurrencyConflictException)
+        {
+            _auditLogger.LogTokenRevoked(user.Id, "Token refresh concurrency conflict");
+            throw new InvalidTokenException("Refresh token was already used or rotated concurrently. Please re-authenticate.");
+        }
+
         _auditLogger.LogTokenRefreshed(user.Id, accessToken.JwtId);
 
         return new AuthTokensDto(

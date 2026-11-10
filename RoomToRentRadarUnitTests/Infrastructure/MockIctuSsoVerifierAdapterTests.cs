@@ -1,5 +1,8 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using Microsoft.IdentityModel.Tokens;
 using RoomToRentRadar.Domain.Exceptions;
 using RoomToRentRadar.Infrastructure.Adapters.Mocks;
 using RoomToRentRadar.Infrastructure.Adapters.Security;
@@ -32,7 +35,7 @@ public class MockIctuSsoVerifierAdapterTests
     }
 
     [Test]
-    public async Task VerifyIdTokenAsync_WithValidOidcJwtForIctuDomain_ReturnsStudentPayload()
+    public async Task VerifyIdTokenAsync_WithFakeSignature_ThrowsInvalidTokenException()
     {
         var header = JwtTokenServiceAdapter.Base64UrlEncode(Encoding.UTF8.GetBytes("""{"alg":"RS256","typ":"JWT"}"""));
         var bodyObj = new
@@ -46,13 +49,53 @@ public class MockIctuSsoVerifierAdapterTests
         var body = JwtTokenServiceAdapter.Base64UrlEncode(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(bodyObj)));
         var fakeJwt = $"{header}.{body}.signature";
 
-        var payload = await _sut.VerifyIdTokenAsync(fakeJwt);
+        Assert.ThrowsAsync<InvalidTokenException>(
+            async () => await _sut.VerifyIdTokenAsync(fakeJwt));
+    }
+
+    [Test]
+    public async Task VerifyIdTokenAsync_WithCryptographicallySignedJwt_ReturnsStudentPayload()
+    {
+        var testKeyBytes = Encoding.UTF8.GetBytes("a-very-secret-test-key-of-at-least-32-bytes!");
+        var securityKey = new SymmetricSecurityKey(testKeyBytes);
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Issuer = "https://accounts.google.com",
+            Expires = DateTime.UtcNow.AddHours(1),
+            Subject = new ClaimsIdentity(new[]
+            {
+                new Claim("sub", "google-oidc-signed-999"),
+                new Claim("email", "dtc225180@ictu.edu.vn"),
+                new Claim("name", "Sinh Vien Chinh Chu"),
+                new Claim("student_code", "DTC225180")
+            }),
+            SigningCredentials = credentials
+        };
+
+        var signedToken = tokenHandler.CreateToken(tokenDescriptor);
+        var rawSignedJwt = tokenHandler.WriteToken(signedToken);
+
+        var validationParams = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = securityKey,
+            ValidateIssuer = true,
+            ValidIssuer = "https://accounts.google.com",
+            ValidateAudience = false,
+            ValidateLifetime = true
+        };
+
+        var verifierWithSigningKey = new IctuSsoVerifierAdapter(validationParams);
+        var payload = await verifierWithSigningKey.VerifyIdTokenAsync(rawSignedJwt);
 
         Assert.Multiple(() =>
         {
             Assert.That(payload.Email, Is.EqualTo("dtc225180@ictu.edu.vn"));
-            Assert.That(payload.FullName, Is.EqualTo("Sinh Vien OIDC"));
-            Assert.That(payload.SubjectId, Is.EqualTo("google-oidc-12345"));
+            Assert.That(payload.FullName, Is.EqualTo("Sinh Vien Chinh Chu"));
+            Assert.That(payload.SubjectId, Is.EqualTo("google-oidc-signed-999"));
             Assert.That(payload.StudentCode, Is.EqualTo("DTC225180"));
         });
     }
@@ -60,9 +103,8 @@ public class MockIctuSsoVerifierAdapterTests
     [Test]
     public void VerifyIdTokenAsync_WithNonIctuDomain_ThrowsDomainValidationException()
     {
-        Assert.That(
-            async () => await _sut.VerifyIdTokenAsync("mock-ictu:outsider@gmail.com:Outsider"),
-            Throws.TypeOf<DomainValidationException>());
+        Assert.ThrowsAsync<DomainValidationException>(
+            async () => await _sut.VerifyIdTokenAsync("mock-ictu:outsider@gmail.com:Outsider"));
     }
 }
 

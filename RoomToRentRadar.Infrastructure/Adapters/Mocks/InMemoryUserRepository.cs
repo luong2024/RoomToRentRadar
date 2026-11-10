@@ -68,6 +68,18 @@ public sealed class InMemoryUserRepository : IUserRepository
         ct.ThrowIfCancellationRequested();
         lock (_writeLock)
         {
+            if (_usersById.TryGetValue(user.Id, out var existing))
+            {
+                if (!string.IsNullOrWhiteSpace(user.ConcurrencyToken) &&
+                    !string.IsNullOrWhiteSpace(existing.ConcurrencyToken) &&
+                    user.ConcurrencyToken != existing.ConcurrencyToken)
+                {
+                    throw new ConcurrencyConflictException($"Optimistic concurrency conflict occurred updating user '{user.Id}'.");
+                }
+            }
+
+            var nextToken = Guid.NewGuid().ToString("N");
+            user.SetConcurrencyToken(nextToken);
             _usersById[user.Id] = Clone(user);
         }
 
@@ -99,6 +111,7 @@ public sealed class InMemoryUserRepository : IUserRepository
             lockoutEndUtc: source.LockoutEndUtc,
             createdAtUtc: source.CreatedAtUtc,
             updatedAtUtc: source.UpdatedAtUtc,
-            refreshTokens: clonedTokens);
+            refreshTokens: clonedTokens,
+            concurrencyToken: source.ConcurrencyToken);
     }
 }

@@ -135,28 +135,60 @@ public sealed class SqliteUserRepository : IUserRepository
             await using var tx = conn.BeginTransaction();
             await using var cmd = conn.CreateCommand();
             cmd.Transaction = tx;
-            cmd.CommandText = """
-                UPDATE Users SET
-                    Email = @email,
-                    NormalizedEmail = @normalizedEmail,
-                    FullName = @fullName,
-                    PasswordHash = @passwordHash,
-                    Role = @role,
-                    AuthProvider = @authProvider,
-                    SsoSubjectId = @ssoSubjectId,
-                    PhoneNumber = @phoneNumber,
-                    StudentCode = @studentCode,
-                    IsVerified = @isVerified,
-                    FailedLoginCount = @failedLoginCount,
-                    LockoutEndUtc = @lockoutEndUtc,
-                    UpdatedAtUtc = @updatedAtUtc
-                WHERE Id = @id;
-                """;
+
+            if (!string.IsNullOrWhiteSpace(user.ConcurrencyToken))
+            {
+                cmd.CommandText = """
+                    UPDATE Users SET
+                        Email = @email,
+                        NormalizedEmail = @normalizedEmail,
+                        FullName = @fullName,
+                        PasswordHash = @passwordHash,
+                        Role = @role,
+                        AuthProvider = @authProvider,
+                        SsoSubjectId = @ssoSubjectId,
+                        PhoneNumber = @phoneNumber,
+                        StudentCode = @studentCode,
+                        IsVerified = @isVerified,
+                        FailedLoginCount = @failedLoginCount,
+                        LockoutEndUtc = @lockoutEndUtc,
+                        UpdatedAtUtc = @updatedAtUtc
+                    WHERE Id = @id AND UpdatedAtUtc = @expectedUpdatedAt;
+                    """;
+                cmd.Parameters.AddWithValue("@expectedUpdatedAt", user.ConcurrencyToken);
+            }
+            else
+            {
+                cmd.CommandText = """
+                    UPDATE Users SET
+                        Email = @email,
+                        NormalizedEmail = @normalizedEmail,
+                        FullName = @fullName,
+                        PasswordHash = @passwordHash,
+                        Role = @role,
+                        AuthProvider = @authProvider,
+                        SsoSubjectId = @ssoSubjectId,
+                        PhoneNumber = @phoneNumber,
+                        StudentCode = @studentCode,
+                        IsVerified = @isVerified,
+                        FailedLoginCount = @failedLoginCount,
+                        LockoutEndUtc = @lockoutEndUtc,
+                        UpdatedAtUtc = @updatedAtUtc
+                    WHERE Id = @id;
+                    """;
+            }
+
             BindUserParameters(cmd, user);
-            await cmd.ExecuteNonQueryAsync(ct);
+            var rowsAffected = await cmd.ExecuteNonQueryAsync(ct);
+            if (rowsAffected == 0 && !string.IsNullOrWhiteSpace(user.ConcurrencyToken))
+            {
+                await tx.RollbackAsync(ct);
+                throw new ConcurrencyConflictException($"Optimistic concurrency conflict occurred updating user '{user.Id}'.");
+            }
 
             await ReplaceRefreshTokensAsync(conn, tx, user, ct);
             await tx.CommitAsync(ct);
+            user.SetConcurrencyToken(user.UpdatedAtUtc.ToString("O"));
         }
         finally
         {
@@ -200,7 +232,8 @@ public sealed class SqliteUserRepository : IUserRepository
         var failedLoginCount = reader.GetInt32(10);
         var lockoutEndUtc = reader.IsDBNull(11) ? (DateTime?)null : ParseUtc(reader.GetString(11));
         var createdAtUtc = ParseUtc(reader.GetString(12));
-        var updatedAtUtc = ParseUtc(reader.GetString(13));
+        var rawUpdatedAt = reader.GetString(13);
+        var updatedAtUtc = ParseUtc(rawUpdatedAt);
         await reader.CloseAsync();
 
         var tokens = await ReadRefreshTokensAsync(conn, id, ct);
@@ -220,7 +253,8 @@ public sealed class SqliteUserRepository : IUserRepository
             lockoutEndUtc: lockoutEndUtc,
             createdAtUtc: createdAtUtc,
             updatedAtUtc: updatedAtUtc,
-            refreshTokens: tokens);
+            refreshTokens: tokens,
+            concurrencyToken: rawUpdatedAt);
     }
 
     private static async Task<List<RefreshTokenSession>> ReadRefreshTokensAsync(

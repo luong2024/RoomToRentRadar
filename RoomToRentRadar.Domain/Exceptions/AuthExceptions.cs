@@ -63,6 +63,14 @@ public class LandlordNotApprovedException : Exception
     }
 }
 
+public class ConcurrencyConflictException : Exception
+{
+    public ConcurrencyConflictException(string message = "A concurrency conflict occurred. The resource was modified by another operation.")
+        : base(message)
+    {
+    }
+}
+
 public class UserNotFoundException : Exception
 {
     public string UserId { get; }

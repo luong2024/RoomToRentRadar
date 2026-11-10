@@ -87,12 +87,13 @@ public sealed class RegisterUserUseCase : IRegisterUserUseCase
             throw new DomainValidationException("Role is required ('Student' or 'Landlord').");
         }
 
-        if (!Enum.TryParse<UserRole>(rawRole.Trim(), ignoreCase: true, out var parsedRole))
+        if (!Enum.TryParse<UserRole>(rawRole.Trim(), ignoreCase: true, out var parsedRole) ||
+            !Enum.IsDefined(typeof(UserRole), parsedRole))
         {
             throw new DomainValidationException($"Role '{rawRole}' is invalid. Supported public roles are 'Student' and 'Landlord'.");
         }
 
-        if (parsedRole == UserRole.Admin)
+        if (parsedRole != UserRole.Student && parsedRole != UserRole.Landlord)
         {
             throw new ForbiddenRoleException("Public self-registration is only permitted for Student and Landlord roles.");
         }

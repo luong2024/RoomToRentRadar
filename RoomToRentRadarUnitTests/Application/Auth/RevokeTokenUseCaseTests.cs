@@ -65,7 +65,7 @@ public class RevokeTokenUseCaseTests
     }
 
     [Test]
-    public void ExecuteAsync_UnknownToken_ThrowsInvalidTokenException()
+    public async Task ExecuteAsync_UnknownToken_ThrowsInvalidTokenException()
     {
         var utcNow = DateTime.UtcNow;
         var user = User.Reconstitute(
@@ -86,9 +86,8 @@ public class RevokeTokenUseCaseTests
 
         _userRepository.GetByIdAsync("user-1", Arg.Any<CancellationToken>()).Returns(user);
 
-        Assert.That(
-            async () => await _sut.ExecuteAsync("user-1", new RevokeTokenRequest("non-existent-token")),
-            Throws.TypeOf<InvalidTokenException>());
+        Assert.ThrowsAsync<InvalidTokenException>(
+            async () => await _sut.ExecuteAsync("user-1", new RevokeTokenRequest("non-existent-token")));
     }
 }
 

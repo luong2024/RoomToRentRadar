@@ -32,6 +32,7 @@ public sealed class User
     public DateTime? LockoutEndUtc { get; private set; }
     public DateTime CreatedAtUtc { get; private set; }
     public DateTime UpdatedAtUtc { get; private set; }
+    public string? ConcurrencyToken { get; private set; }
 
     public IReadOnlyList<RefreshTokenSession> RefreshTokens => _refreshTokens.AsReadOnly();
 
@@ -50,7 +51,8 @@ public sealed class User
         DateTime? lockoutEndUtc,
         DateTime createdAtUtc,
         DateTime updatedAtUtc,
-        IEnumerable<RefreshTokenSession>? refreshTokens = null)
+        IEnumerable<RefreshTokenSession>? refreshTokens = null,
+        string? concurrencyToken = null)
     {
         Id = id;
         Email = email;
@@ -66,6 +68,7 @@ public sealed class User
         LockoutEndUtc = lockoutEndUtc;
         CreatedAtUtc = createdAtUtc;
         UpdatedAtUtc = updatedAtUtc;
+        ConcurrencyToken = concurrencyToken;
 
         if (refreshTokens != null)
         {
@@ -82,7 +85,12 @@ public sealed class User
         string? studentCode,
         DateTime utcNow)
     {
-        if (role == UserRole.Admin)
+        if (!Enum.IsDefined(typeof(UserRole), role))
+        {
+            throw new DomainValidationException($"Role '{(int)role}' is not a recognized role.");
+        }
+
+        if (role != UserRole.Student && role != UserRole.Landlord)
         {
             throw new ForbiddenRoleException("Public self-registration is only permitted for Student and Landlord roles.");
         }
@@ -180,7 +188,8 @@ public sealed class User
         DateTime? lockoutEndUtc,
         DateTime createdAtUtc,
         DateTime updatedAtUtc,
-        IEnumerable<RefreshTokenSession>? refreshTokens = null)
+        IEnumerable<RefreshTokenSession>? refreshTokens = null,
+        string? concurrencyToken = null)
     {
         return new User(
             id,
@@ -197,7 +206,13 @@ public sealed class User
             lockoutEndUtc,
             createdAtUtc,
             updatedAtUtc,
-            refreshTokens);
+            refreshTokens,
+            concurrencyToken);
+    }
+
+    public void SetConcurrencyToken(string? token)
+    {
+        ConcurrencyToken = token;
     }
 
     public bool IsLockedOut(DateTime utcNow) =>

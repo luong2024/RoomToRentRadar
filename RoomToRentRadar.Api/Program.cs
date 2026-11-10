@@ -20,6 +20,12 @@ builder.Services.AddEndpointsApiExplorer();
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new JwtSettings();
 if (string.IsNullOrWhiteSpace(jwtSettings.SigningKey))
 {
+    if (!builder.Environment.IsDevelopment())
+    {
+        throw new InvalidOperationException("CRITICAL: JWT SigningKey must be configured in Production/Staging environments.");
+    }
+
+    Console.WriteLine("DEVELOPMENT WARNING: No JWT SigningKey was configured. Generating ephemeral in-memory signing key.");
     jwtSettings.SigningKey = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
 }
 
@@ -35,7 +41,11 @@ else
     builder.Services.AddSqliteDatastore(sqliteSettings);
 }
 
-var useMockSso = builder.Configuration.GetValue("IctuSso:UseMockVerifier", defaultValue: builder.Environment.IsDevelopment());
+var useMockSso = builder.Configuration.GetValue("IctuSso:UseMockVerifier", defaultValue: false);
+if (useMockSso && !builder.Environment.IsDevelopment())
+{
+    throw new InvalidOperationException("CRITICAL: Mock SSO verifier is strictly prohibited outside the Development environment.");
+}
 
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructure(jwtSettings, useMockSsoVerifier: useMockSso);

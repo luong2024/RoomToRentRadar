@@ -84,8 +84,26 @@ public class SqliteUserRepositoryTests
 
         await repo.AddAsync(user1);
 
-        Assert.That(
-            async () => await repo.AddAsync(user2),
-            Throws.TypeOf<DuplicateEmailException>());
+        Assert.ThrowsAsync<DuplicateEmailException>(
+            async () => await repo.AddAsync(user2));
+    }
+
+    [Test]
+    public async Task SqliteUserRepository_UpdateWithStaleConcurrencyToken_ThrowsConcurrencyConflictException()
+    {
+        using var dbContext = new SqliteDbContext(new SqliteSettings { ConnectionString = "Data Source=:memory:" });
+        IUserRepository repo = new SqliteUserRepository(dbContext);
+
+        var user = User.RegisterLocal("student@ictu.edu.vn", "hash", "Student", UserRole.Student, null, "DTC1", FixedNow);
+        await repo.AddAsync(user);
+
+        var loaded1 = await repo.GetByIdAsync(user.Id);
+        var loaded2 = await repo.GetByIdAsync(user.Id);
+
+        loaded1!.RecordLoginSuccess(FixedNow.AddMinutes(1));
+        await repo.UpdateAsync(loaded1);
+
+        loaded2!.RecordLoginSuccess(FixedNow.AddMinutes(2));
+        Assert.ThrowsAsync<ConcurrencyConflictException>(async () => await repo.UpdateAsync(loaded2));
     }
 }

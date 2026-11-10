@@ -101,7 +101,7 @@ public class LoginWithIctuSsoUseCaseTests
     }
 
     [Test]
-    public void ExecuteAsync_NonIctuEmailDomain_ThrowsDomainValidationException()
+    public async Task ExecuteAsync_NonIctuEmailDomain_ThrowsDomainValidationException()
     {
         _ssoVerifier.VerifyIdTokenAsync("gmail-oidc-token", Arg.Any<CancellationToken>())
             .Returns(new IctuSsoUserPayload(
@@ -109,9 +109,8 @@ public class LoginWithIctuSsoUseCaseTests
                 FullName: "Outsider",
                 SubjectId: "sub-999"));
 
-        Assert.That(
-            async () => await _sut.ExecuteAsync(new IctuSsoLoginRequest("gmail-oidc-token")),
-            Throws.TypeOf<DomainValidationException>());
+        Assert.ThrowsAsync<DomainValidationException>(
+            async () => await _sut.ExecuteAsync(new IctuSsoLoginRequest("gmail-oidc-token")));
     }
 }
 

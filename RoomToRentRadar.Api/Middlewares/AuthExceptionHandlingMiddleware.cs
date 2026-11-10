@@ -79,8 +79,9 @@ public sealed class AuthExceptionHandlingMiddleware
                 return true;
 
             case DuplicateEmailException:
+            case ConcurrencyConflictException:
                 statusCode = StatusCodes.Status409Conflict;
-                title = "Duplicate Email";
+                title = "Conflict";
                 return true;
 
             default:

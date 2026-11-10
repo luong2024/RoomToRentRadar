@@ -174,6 +174,7 @@ public class AuthControllerAndRbacTests
     [TestCase(typeof(LandlordNotApprovedException), StatusCodes.Status403Forbidden)]
     [TestCase(typeof(UserNotFoundException), StatusCodes.Status404NotFound)]
     [TestCase(typeof(DuplicateEmailException), StatusCodes.Status409Conflict)]
+    [TestCase(typeof(ConcurrencyConflictException), StatusCodes.Status409Conflict)]
     public async Task AuthExceptionHandlingMiddleware_MapsDomainExceptionsToExpectedProblemDetails(
         Type exceptionType,
         int expectedStatusCode)

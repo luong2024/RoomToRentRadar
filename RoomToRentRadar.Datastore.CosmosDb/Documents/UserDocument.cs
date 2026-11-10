@@ -49,6 +49,9 @@ public sealed class UserDocument
     [JsonProperty("updatedAtUtc")]
     public DateTime UpdatedAtUtc { get; set; }
 
+    [JsonProperty("_etag")]
+    public string? ETag { get; set; }
+
     [JsonProperty("refreshTokens")]
     public List<RefreshTokenDocument> RefreshTokens { get; set; } = new();
 }

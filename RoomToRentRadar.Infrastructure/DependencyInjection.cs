@@ -12,7 +12,7 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         JwtSettings? jwtSettings = null,
-        bool useMockSsoVerifier = true)
+        bool useMockSsoVerifier = false)
     {
         if (jwtSettings != null)
         {
