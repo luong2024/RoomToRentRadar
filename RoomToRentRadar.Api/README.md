@@ -52,6 +52,17 @@ Database files are ignored by git. Never commit a seeded database.
     `min_price`, `max_price`, `bedrooms`
   - Only `published` listings are returned.
   - Errors use RFC 9457 `ProblemDetails` with a stable `code` extension.
+- `GET /api/v1/listings/{id}`
+  - Returns the full detail of one `published` listing.
+  - Response fields: `id`, `title`, `description`, `price`, `areaM2`, `bedrooms`, `address`, `lat`,
+    `lng`, `createdAt`, `updatedAt`, `amenities`, `rules`. Photos are not part of the detail payload.
+  - `amenities` is an ordered array of wire codes: `wifi`, `air_conditioner`, `parking`,
+    `washing_machine`, `refrigerator`, `kitchen`, `private_bathroom`, `balcony`, `elevator`,
+    `security`, `gym`, `pool`, `pet_allowed`.
+  - `rules` is an ordered array of free-text strings (`sort_order`, max 300 characters each).
+  - A missing id and a draft/hidden/removed listing return `404` `application/problem+json` with
+    `code` = `listing_not_found`; the response never reveals whether the row exists. A malformed id
+    also returns `404` but without the `code` extension.
 - `GET /health`
 - `GET /openapi/v1.json` (Development only)
 - `GET /swagger` (Swagger UI, Development only)

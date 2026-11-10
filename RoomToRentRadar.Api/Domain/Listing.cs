@@ -18,4 +18,6 @@ public sealed class Listing
     public DateTime UpdatedAt { get; set; }
     public Guid? OwnerId { get; set; }
     public ICollection<ListingPhoto> Photos { get; set; } = [];
+    public ICollection<ListingAmenity> Amenities { get; set; } = [];
+    public ICollection<ListingRule> Rules { get; set; } = [];
 }

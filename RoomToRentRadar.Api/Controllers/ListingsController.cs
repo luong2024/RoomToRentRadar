@@ -44,6 +44,23 @@ public sealed class ListingsController(ListingsQueryService listingsQueryService
         return Ok(page);
     }
 
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(ListingDetailDto), StatusCodes.Status200OK, "application/json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError, "application/problem+json")]
+    public async Task<ActionResult<ListingDetailDto>> GetListing(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var listing = await listingsQueryService.GetDetailAsync(id, cancellationToken);
+        if (listing is null)
+        {
+            return ToProblem(ListingProblemFactory.NotFound());
+        }
+
+        return Ok(listing);
+    }
+
     private ObjectResult ToProblem(ProblemDetails problem)
         => Problem(
             statusCode: problem.Status,
