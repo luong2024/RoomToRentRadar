@@ -1,31 +1,31 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+namespace RoomToRentRadar;
 
-namespace RoomToRentRadar
+public partial class App : Application
 {
-    public partial class App : Application
+    public App(AppShell appShell)
     {
-        public App()
-        {
-            InitializeComponent();
-            UserAppTheme = AppTheme.Light;
-        }
+        InitializeComponent();
+        UserAppTheme = AppTheme.Light;
+        _appShell = appShell;
+    }
 
-        protected override Window CreateWindow(IActivationState? activationState)
+    private readonly AppShell _appShell;
+
+    protected override Window CreateWindow(IActivationState? activationState)
+    {
+        return new Window(_appShell)
         {
-            return new Window(new AppShell())
+            Title = "Room Radar",
+            TitleBar = new TitleBar
             {
                 Title = "Room Radar",
-                TitleBar = new TitleBar
-                {
-                    Title = "Room Radar",
-                    BackgroundColor = Colors.White,
-                    ForegroundColor = Color.FromArgb("#252E2A")
-                },
-                Width = 1200,
-                Height = 850,
-                MinimumWidth = 360,
-                MinimumHeight = 540
-            };
-        }
+                BackgroundColor = Colors.White,
+                ForegroundColor = Color.FromArgb("#252E2A")
+            },
+            Width = 1200,
+            Height = 850,
+            MinimumWidth = 360,
+            MinimumHeight = 540
+        };
     }
 }

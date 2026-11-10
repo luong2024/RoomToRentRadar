@@ -1,4 +1,7 @@
 <Solution>
+  <Project Path="RoomToRentRadar.Api.Tests/RoomToRentRadar.Api.Tests.csproj" />
+  <Project Path="RoomToRentRadar.Api/RoomToRentRadar.Api.csproj" />
+  <Project Path="RoomToRentRadar.Shared/RoomToRentRadar.Shared.csproj" />
   <Project Path="RoomToRentRadar/RoomToRentRadar.csproj">
     <Deploy Solution="Debug|*" />
   </Project>

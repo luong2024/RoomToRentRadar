@@ -4,5 +4,5 @@
        xmlns:pages="clr-namespace:RoomToRentRadar.Pages"
        x:Class="RoomToRentRadar.AppShell" Title="Room Radar"
        FlyoutBehavior="Disabled" Shell.NavBarIsVisible="False">
-    <ShellContent Title="Khám phá phòng" Route="rooms" ContentTemplate="{DataTemplate pages:RoomListingPage}" />
+    <ShellContent Title="Khám phá phòng" Route="home" ContentTemplate="{DataTemplate pages:RoomListingPage}" />
 </Shell>

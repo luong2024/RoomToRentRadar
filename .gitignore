@@ -1,3 +1,65 @@
-**/bin/
-**/obj/
+# Build output
+[Bb]in/
+[Oo]bj/
+artifacts/
+publish/
+*.binlog
+*.nupkg
+*.snupkg
+
+# Test output
+[TestRr]esult*/
+*.trx
+*.coverage
+*.coveragexml
+coverage/
+coverage*.json
+coverage*.xml
+coverage*.info
+coverage*.cobertura.xml
+[Cc]overageReport/
+
+# IDE files
 .vs/
+.idea/
+.vscode/*
+
+# MAUI packages
+*.apk
+*.aab
+*.ipa
+*.app
+*.appx
+*.appxbundle
+*.msix
+*.msixbundle
+*.dSYM/
+*.xcarchive/
+
+# Signing keys and local secrets
+*.keystore
+*.jks
+*.p12
+*.pfx
+.env
+.env.*
+!.env.example
+secrets.json
+appsettings.*.local.json
+
+# Runtime data and logs
+*.db
+*.sqlite
+*.log
+logs/
+*.dmp
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.orig
+*.rej
+*.bak
+*.tmp
+~$*
