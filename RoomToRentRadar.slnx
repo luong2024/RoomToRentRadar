@@ -1,7 +1,21 @@
 <Solution>
-  <Project Path="RoomToRentRadar/RoomToRentRadar.csproj">
-    <Deploy Solution="Debug|*" />
-  </Project>
-  <Project Path="RoomToRentRadarUIAppiumTests/RoomToRentRadarUIAppiumTests.csproj" />
-  <Project Path="RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj" />
+  <Folder Name="/Mobile/">
+    <Project Path="RoomToRentRadar/RoomToRentRadar.csproj">
+      <Deploy Solution="Debug|*" />
+    </Project>
+  </Folder>
+  <Folder Name="/Backend/">
+    <Project Path="src/RoomToRentRadar.Domain/RoomToRentRadar.Domain.csproj" />
+    <Project Path="src/RoomToRentRadar.Application/RoomToRentRadar.Application.csproj" />
+    <Project Path="src/RoomToRentRadar.Adapters/RoomToRentRadar.Adapters.csproj" />
+    <Project Path="src/RoomToRentRadar.Bootstrap/RoomToRentRadar.Bootstrap.csproj" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj" />
+    <Project Path="RoomToRentRadarUIAppiumTests/RoomToRentRadarUIAppiumTests.csproj" />
+    <Project Path="tests/RoomToRentRadar.Domain.Tests/RoomToRentRadar.Domain.Tests.csproj" />
+    <Project Path="tests/RoomToRentRadar.Application.Tests/RoomToRentRadar.Application.Tests.csproj" />
+    <Project Path="tests/RoomToRentRadar.Adapters.Tests/RoomToRentRadar.Adapters.Tests.csproj" />
+    <Project Path="tests/RoomToRentRadar.IntegrationTests/RoomToRentRadar.IntegrationTests.csproj" />
+  </Folder>
 </Solution>
