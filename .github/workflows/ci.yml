@@ -42,13 +42,10 @@ jobs:
           dotnet restore RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj
 
       - name: Build Web API & Core Layers
-        run: dotnet build RoomToRentRadar.Api/RoomToRentRadar.Api.csproj --configuration Release --no-restore
-
-      - name: Build Unit Tests
-        run: dotnet build RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj --configuration Release --no-restore
+        run: dotnet build RoomToRentRadar.Api/RoomToRentRadar.Api.csproj --configuration Release
 
       - name: Execute Unit Tests (NUnit)
-        run: dotnet test RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
+        run: dotnet test RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
 
   maui-client-build:
     name: MAUI Client Build (Android)
@@ -67,8 +64,8 @@ jobs:
         run: dotnet workload install maui-android
 
       - name: Restore MAUI Client
-        run: dotnet restore RoomToRentRadar/RoomToRentRadar.csproj -p:TargetFrameworks=net10.0-android
+        run: dotnet restore RoomToRentRadar/RoomToRentRadar.csproj
 
       - name: Build MAUI Client (net10.0-android)
-        run: dotnet build RoomToRentRadar/RoomToRentRadar.csproj -f net10.0-android --configuration Release --no-restore
+        run: dotnet build RoomToRentRadar/RoomToRentRadar.csproj -f net10.0-android --configuration Release
 
