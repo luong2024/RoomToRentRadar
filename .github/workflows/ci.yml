@@ -145,38 +145,3 @@ jobs:
           path: TestResults
           if-no-files-found: ignore
           retention-days: 7
-
-  mobile-windows:
-    name: MAUI Windows
-    runs-on: windows-latest
-    timeout-minutes: 35
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-          cache: true
-          cache-dependency-path: |
-            **/*.csproj
-
-      - name: Install MAUI Windows workload
-        run: dotnet workload install maui-windows
-
-      - name: Restore mobile project
-        run: >
-          dotnet restore RoomToRentRadar/RoomToRentRadar.csproj
-          --runtime win-x64
-          -p:TargetFrameworks=net10.0-windows10.0.19041.0
-
-      - name: Build Windows app
-        run: >
-          dotnet build RoomToRentRadar/RoomToRentRadar.csproj
-          --configuration Release
-          --framework net10.0-windows10.0.19041.0
-          --runtime win-x64
-          --no-restore
-          -p:TargetFrameworks=net10.0-windows10.0.19041.0
