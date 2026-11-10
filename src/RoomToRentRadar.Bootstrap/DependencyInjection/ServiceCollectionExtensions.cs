@@ -1,6 +1,14 @@
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using RoomToRentRadar.Adapters.Inbound.WebApi.Authentication;
+using RoomToRentRadar.Adapters.Inbound.WebApi.Authorization;
 using RoomToRentRadar.Adapters.Inbound.WebApi.Controllers;
+using RoomToRentRadar.Adapters.Inbound.WebApi.Middleware;
+using RoomToRentRadar.Adapters.Inbound.WebApi.RateLimiting;
 using RoomToRentRadar.Adapters.Outbound.Authentication;
 using RoomToRentRadar.Adapters.Outbound.Persistence;
 using RoomToRentRadar.Adapters.Outbound.Persistence.Repositories;
@@ -23,6 +31,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ILoginWithGoogleUseCase, LoginWithGoogleUseCase>();
         services.AddScoped<IRefreshSessionUseCase, RefreshSessionUseCase>();
         services.AddScoped<ILogoutUseCase, LogoutUseCase>();
+        services.AddScoped<IAccountSecurityValidator, AccountSecurityValidator>();
         return services;
     }
 
@@ -56,9 +65,89 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddInboundAdapters(this IServiceCollection services)
+    public static IServiceCollection AddInboundAdapters(
+        this IServiceCollection services,
+        IConfiguration? configuration = null)
     {
         services.AddProblemDetails();
+        services.AddExceptionHandler<GlobalExceptionHandler>();
+
+        if (configuration is not null)
+        {
+            services
+                .AddOptions<RateLimitingOptions>()
+                .Bind(configuration.GetSection(RateLimitingOptions.SectionName));
+        }
+        else
+        {
+            services.AddOptions<RateLimitingOptions>();
+        }
+
+        services.AddSingleton<IConfigureOptions<JwtBearerOptions>, JwtBearerOptionsSetup>();
+
+        services
+            .AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultForbidScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer();
+
+        services.AddAuthorizationBuilder()
+            .AddPolicy(AuthorizationPolicies.AuthenticatedUser, policy =>
+                policy.RequireAuthenticatedUser())
+            .AddPolicy(AuthorizationPolicies.StudentOnly, policy =>
+                policy.RequireAuthenticatedUser()
+                      .RequireRole(AuthorizationPolicies.Roles.Student))
+            .AddPolicy(AuthorizationPolicies.LandlordOnly, policy =>
+                policy.RequireAuthenticatedUser()
+                      .RequireRole(AuthorizationPolicies.Roles.Landlord))
+            .AddPolicy(AuthorizationPolicies.AdminOnly, policy =>
+                policy.RequireAuthenticatedUser()
+                      .RequireRole(AuthorizationPolicies.Roles.Admin));
+
+        services.AddRateLimiter(limiterOptions =>
+        {
+            limiterOptions.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            limiterOptions.OnRejected = async (context, cancellationToken) =>
+            {
+                context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                var problem = new ProblemDetails
+                {
+                    Status = StatusCodes.Status429TooManyRequests,
+                    Title = "Too Many Requests",
+                    Detail = "Rate limit exceeded for authentication requests. Please try again later.",
+                    Instance = context.HttpContext.Request.Path
+                };
+
+                await context.HttpContext.Response.WriteAsJsonAsync(problem, cancellationToken);
+            };
+
+            limiterOptions.AddPolicy(RateLimitingPolicies.Authentication, httpContext =>
+            {
+                var rateOptions = httpContext.RequestServices
+                    .GetRequiredService<IOptions<RateLimitingOptions>>()
+                    .Value;
+
+                var permitLimit = rateOptions.AuthPermitLimit > 0 ? rateOptions.AuthPermitLimit : 30;
+                var windowSeconds = rateOptions.AuthWindowSeconds > 0 ? rateOptions.AuthWindowSeconds : 60;
+
+                var partitionKey = httpContext.Connection.RemoteIpAddress?.ToString() ?? "local-client";
+
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey,
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = permitLimit,
+                        Window = TimeSpan.FromSeconds(windowSeconds),
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                        AutoReplenishment = true
+                    });
+            });
+        });
+
         services
             .AddControllers()
             .AddApplicationPart(typeof(HealthController).Assembly);
