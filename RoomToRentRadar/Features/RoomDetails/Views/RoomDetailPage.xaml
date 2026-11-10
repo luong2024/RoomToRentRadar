@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.Features.RoomDetails.ViewModels"
+             xmlns:models="clr-namespace:RoomToRentRadar.Features.RoomDetails.Models"
+             x:Class="RoomToRentRadar.Features.RoomDetails.Views.RoomDetailPage"
+             x:DataType="vm:RoomDetailViewModel"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{AppThemeBinding Light=#F8F9FA, Dark=#121212}">
+
+    <Grid RowDefinitions="Auto, *, Auto">
+
+        <!-- 1. Header Tùy Biến (Back Button + Tiêu Đề) -->
+        <Grid Grid.Row="0" HeightRequest="60" Padding="16, 8" ColumnDefinitions="Auto, *">
+            <Border WidthRequest="40" HeightRequest="40" StrokeShape="RoundRectangle 20"
+                    BackgroundColor="{AppThemeBinding Light=White, Dark=#242424}"
+                    Stroke="Transparent">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding GoBackCommand}" />
+                </Border.GestureRecognizers>
+                <Label Text="←" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center"
+                       TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+            </Border>
+
+            <Label Grid.Column="1" Text="Chi tiết phòng trọ" 
+                   FontSize="18" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"
+                   Margin="-40, 0, 0, 0"
+                   TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+        </Grid>
+
+        <!-- 2. Nội dung cuộn chính -->
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="16" Spacing="16">
+
+                <!-- 2.1 Khu vực ảnh lớn kèm Badge số lượng ảnh -->
+                <Grid HeightRequest="240">
+                    <Border StrokeShape="RoundRectangle 16" StrokeThickness="0">
+                        <CarouselView ItemsSource="{Binding Room.ImageUrls}" x:Name="RoomCarousel">
+                            <CarouselView.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <Image Source="{Binding .}" Aspect="AspectFill" />
+                                </DataTemplate>
+                            </CarouselView.ItemTemplate>
+                        </CarouselView>
+                    </Border>
+
+                    <!-- Badge Đếm ảnh góc trái dưới -->
+                    <Border HorizontalOptions="Start" VerticalOptions="End" Margin="12"
+                            Padding="8, 4" StrokeShape="RoundRectangle 12" BackgroundColor="#80000000" StrokeThickness="0">
+                        <Label Text="📷 Xem ảnh" TextColor="White" FontSize="12" FontAttributes="Bold"/>
+                    </Border>
+                </Grid>
+
+                <!-- 2.2 Banner Cảnh báo Trạng thái phòng (AC2, AC3) -->
+                <Border IsVisible="{Binding IsRented}" StrokeShape="RoundRectangle 12" BackgroundColor="#FFF3CD" StrokeThickness="0" Padding="12">
+                    <Label Text="⚠️ Phòng này đã được thuê! Mời bạn tham khảo các phòng tương tự bên dưới." TextColor="#856404" FontAttributes="Bold"/>
+                </Border>
+
+                <Border IsVisible="{Binding IsUnavailable}" StrokeShape="RoundRectangle 12" BackgroundColor="#F8D7DA" StrokeThickness="0" Padding="12">
+                    <Label Text="🚫 Tin đăng này hiện không còn khả dụng!" TextColor="#721C24" FontAttributes="Bold"/>
+                </Border>
+
+                <!-- 2.3 Tên phòng, Giá & Ngày cập nhật -->
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="{Binding Room.Title}" FontSize="20" FontAttributes="Bold" 
+                           TextColor="{AppThemeBinding Light=#1E1E1E, Dark=White}" />
+                    
+                    <Label Text="{Binding Room.Address}" FontSize="13" TextColor="#6C757D" />
+
+                    <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+                        <Label Text="{Binding Room.FormattedPrice}" FontSize="18" FontAttributes="Bold" TextColor="#512BD4" />
+                        <Label Text="{Binding Room.FormattedLastUpdated}" FontSize="12" TextColor="#888888" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+
+                <!-- 2.4 Thanh thông số nhanh (Quick Specs) -->
+                <Grid ColumnDefinitions="*, *, *" ColumnSpacing="8">
+                    <Border Grid.Column="0" StrokeShape="RoundRectangle 12" BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}" StrokeThickness="0" Padding="10">
+                        <VerticalStackLayout Spacing="4" HorizontalOptions="Center">
+                            <Label Text="Diện tích" FontSize="11" TextColor="#888888"/>
+                            <Label Text="{Binding Room.FormattedArea}" FontSize="13" FontAttributes="Bold" HorizontalOptions="Center"/>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Grid.Column="1" StrokeShape="RoundRectangle 12" BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}" StrokeThickness="0" Padding="10">
+                        <VerticalStackLayout Spacing="4" HorizontalOptions="Center">
+                            <Label Text="Tiền cọc" FontSize="11" TextColor="#888888"/>
+                            <Label Text="{Binding Room.FormattedDeposit}" FontSize="13" FontAttributes="Bold" HorizontalOptions="Center"/>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Grid.Column="2" StrokeShape="RoundRectangle 12" BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}" StrokeThickness="0" Padding="10">
+                        <VerticalStackLayout Spacing="4" HorizontalOptions="Center">
+                            <Label Text="Loại phòng" FontSize="11" TextColor="#888888"/>
+                            <Label Text="Khép kín" FontSize="13" FontAttributes="Bold" HorizontalOptions="Center"/>
+                        </VerticalStackLayout>
+                    </Border>
+                </Grid>
+
+                <!-- 2.5 Mô tả chi tiết (Description) -->
+                <Border StrokeShape="RoundRectangle 12" BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}" StrokeThickness="0" Padding="14">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="Mô tả chi tiết" FontSize="15" FontAttributes="Bold"/>
+                        <Label Text="{Binding Room.Description}" FontSize="13" TextColor="#666666" LineBreakMode="WordWrap"/>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- 2.6 Tiện nghi (Amenities) -->
+                <Border StrokeShape="RoundRectangle 12" BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}" StrokeThickness="0" Padding="14">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="Tiện nghi phòng trọ" FontSize="15" FontAttributes="Bold"/>
+                        <CollectionView ItemsSource="{Binding Room.Amenities}">
+                            <CollectionView.ItemsLayout>
+                                <GridItemsLayout Orientation="Vertical" Span="2" VerticalItemSpacing="8" HorizontalItemSpacing="8"/>
+                            </CollectionView.ItemsLayout>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="models:RoomAmenityModel">
+                                    <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                                        <Label Text="✔" TextColor="#512BD4" FontSize="12" VerticalOptions="Center"/>
+                                        <Label Text="{Binding Name}" FontSize="13" VerticalOptions="Center"/>
+                                    </HorizontalStackLayout>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- 2.7 Nội quy phòng trọ (House Rules) -->
+                <Border StrokeShape="RoundRectangle 12" BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}" StrokeThickness="0" Padding="14">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="Nội quy phòng trọ" FontSize="15" FontAttributes="Bold"/>
+                        <BindableLayout.ItemsSource>
+                            <Binding Path="Room.HouseRules"/>
+                        </BindableLayout.ItemsSource>
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <HorizontalStackLayout Spacing="6" Margin="0, 2">
+                                    <Label Text="•" TextColor="#512BD4"/>
+                                    <Label Text="{Binding .}" FontSize="13" TextColor="#666666"/>
+                                </HorizontalStackLayout>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- 2.8 Thông tin chủ trọ & Kiểm tra quyền xem SĐT (AC4) -->
+                <Border StrokeShape="RoundRectangle 12" BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}" StrokeThickness="0" Padding="14">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="Thông tin chủ trọ" FontSize="15" FontAttributes="Bold"/>
+                        <Grid ColumnDefinitions="50, *" ColumnSpacing="12">
+                            <Border Grid.Column="0" WidthRequest="50" HeightRequest="50" StrokeShape="RoundRectangle 25" StrokeThickness="0">
+                                <Image Source="{Binding Room.LandlordAvatar}" Aspect="AspectFill"/>
+                            </Border>
+                            <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                                <Label Text="{Binding Room.LandlordName}" FontSize="15" FontAttributes="Bold"/>
+                                <Label Text="Chủ nhà trọ" FontSize="12" TextColor="#888888"/>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <BoxView HeightRequest="1" BackgroundColor="#E0E0E0" Margin="0, 4"/>
+
+                        <!-- Số điện thoại: Ẩn/Hiện theo trạng thái đăng nhập (AC4) -->
+                        <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
+                            <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                <Label Text="Số điện thoại liên hệ:" FontSize="11" TextColor="#888888"/>
+                                <Label Text="{Binding DisplayPhoneNumber}" 
+                                       FontSize="14" FontAttributes="Bold"
+                                       TextColor="{Binding CanViewPhoneNumber, Converter={x:Null}}"/>
+                            </VerticalStackLayout>
+
+                            <!-- Nút gọi nếu đã đăng nhập; Nút giả lập đổi trạng thái auth nếu chưa -->
+                            <Button Grid.Column="1" Text="Gọi ngay" HeightRequest="36" Padding="12, 0"
+                                    IsVisible="{Binding CanViewPhoneNumber}"
+                                    Command="{Binding CallLandlordCommand}" BackgroundColor="#28A745" TextColor="White"/>
+                            
+                            <Button Grid.Column="1" Text="Mô phỏng Đăng nhập" HeightRequest="32" Padding="8, 0"
+                                    IsVisible="{Binding CanViewPhoneNumber, Converter={x:Null}}"
+                                    Command="{Binding ToggleAuthSimulationCommand}" BackgroundColor="#6C757D" TextColor="White" FontSize="11"/>
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- 2.9 Danh sách gợi ý phòng tương tự khi phòng Rented/Unavailable (AC3) -->
+                <VerticalStackLayout IsVisible="{Binding ShowSimilarRooms}" Spacing="10" Margin="0, 8">
+                    <Label Text="Gợi ý phòng tương tự gần bạn" FontSize="16" FontAttributes="Bold"/>
+                    <CollectionView ItemsSource="{Binding SimilarRooms}" HeightRequest="170">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Horizontal" ItemSpacing="12"/>
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:SimilarRoomModel">
+                                <Border WidthRequest="220" StrokeShape="RoundRectangle 12" BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}" StrokeThickness="0" Padding="8">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:RoomDetailViewModel}}, Path=SelectSimilarRoomCommand}"
+                                                              CommandParameter="{Binding .}"/>
+                                    </Border.GestureRecognizers>
+                                    <VerticalStackLayout Spacing="6">
+                                        <Border HeightRequest="90" StrokeShape="RoundRectangle 8" StrokeThickness="0">
+                                            <Image Source="{Binding ThumbnailUrl}" Aspect="AspectFill"/>
+                                        </Border>
+                                        <Label Text="{Binding Title}" FontSize="12" FontAttributes="Bold" MaxLines="1" LineBreakMode="TailTruncation"/>
+                                        <Label Text="{Binding FormattedPrice}" FontSize="12" TextColor="#512BD4" FontAttributes="Bold"/>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- 3. Sticky Bottom Action Bar (Cố định dưới đáy màn hình) -->
+        <Border Grid.Row="2" BackgroundColor="{AppThemeBinding Light=White, Dark=#1A1A1A}" Padding="16, 12" StrokeThickness="0">
+            <Button Text="Đặt lịch xem phòng ngay" 
+                    HeightRequest="48"
+                    CornerRadius="12"
+                    FontSize="16"
+                    FontAttributes="Bold"
+                    BackgroundColor="#512BD4"
+                    TextColor="White"
+                    IsEnabled="{Binding CanBookOrContact}"
+                    Command="{Binding BookInspectionCommand}" />
+        </Border>
+
+    </Grid>
+</ContentPage>
