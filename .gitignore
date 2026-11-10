@@ -1,0 +1,53 @@
+# Visual Studio
+.vs/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+*.sln.docstates
+
+# Build Results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Testing & Coverage
+TestResults/
+*.trx
+coverage.cobertura.xml
+*.coverage
+*.coveragexml
+
+# Android & MAUI Packages
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Keystores & Signing Secrets (CRITICAL SECURITY)
+*.keystore
+*.jks
+*.p12
+*.pfx
+*.cer
+*.crt
+*.mobileprovision
+release.keystore
+debug.keystore
+
+# macOS / iOS
+.DS_Store
+*.app
+*.dSYM/
+*.ipa
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
+
+# Ignored Markdown Documentation Files
+README.md
+CI-CD.md
+**/CI-CD.md
+

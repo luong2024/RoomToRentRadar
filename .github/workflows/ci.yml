@@ -1,0 +1,159 @@
+name: CI - .NET MAUI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+      - 'bugfix/**'
+      - 'group-*'
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    name: Run Automated Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-tests-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-tests-
+
+      - name: Restore Test Projects
+        run: |
+          dotnet restore RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj
+          dotnet restore RoomToRentRadarUIAppiumTests/RoomToRentRadarUIAppiumTests.csproj
+
+      - name: Execute Unit Tests
+        run: |
+          dotnet test RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj \
+            --configuration Release \
+            --no-restore \
+            --logger "trx;LogFileName=unit-tests.trx" \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults
+
+      - name: Execute UI Appium Tests
+        run: |
+          dotnet test RoomToRentRadarUIAppiumTests/RoomToRentRadarUIAppiumTests.csproj \
+            --configuration Release \
+            --no-restore \
+            --logger "trx;LogFileName=ui-appium-tests.trx" \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults
+
+      - name: Upload Test Results Artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: TestResults-${{ github.run_number }}
+          path: ./TestResults
+          if-no-files-found: ignore
+          retention-days: 7
+
+  build-android:
+    name: Build MAUI Android APK
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21 (JDK)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-maui-${{ hashFiles('RoomToRentRadar/RoomToRentRadar.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-maui-
+
+      - name: Install .NET MAUI Android Workload
+        run: |
+          dotnet workload install maui-android
+
+      - name: Restore MAUI Dependencies
+        run: |
+          dotnet restore RoomToRentRadar/RoomToRentRadar.csproj
+
+      - name: Build MAUI Android Application (Release)
+        run: |
+          dotnet build RoomToRentRadar/RoomToRentRadar.csproj \
+            --configuration Release \
+            --framework net10.0-android \
+            --no-restore \
+            -p:AndroidPackageFormat=apk
+
+      - name: Locate & Verify Android APK Artifact
+        id: locate-apk
+        run: |
+          echo "Inspecting output directory for APK files..."
+          OUTPUT_DIR="RoomToRentRadar/bin/Release/net10.0-android"
+          if [ ! -d "$OUTPUT_DIR" ]; then
+            echo "::error::Output directory $OUTPUT_DIR does not exist!"
+            exit 1
+          fi
+
+          # Find signed (debug-signed by default) or standard apk
+          APK_FILE=$(find "$OUTPUT_DIR" -maxdepth 2 -name "*Signed.apk" | head -n 1)
+          if [ -z "$APK_FILE" ]; then
+            APK_FILE=$(find "$OUTPUT_DIR" -maxdepth 2 -name "*.apk" | head -n 1)
+          fi
+
+          if [ -z "$APK_FILE" ] || [ ! -f "$APK_FILE" ]; then
+            echo "::error::No APK artifact found in $OUTPUT_DIR!"
+            ls -la "$OUTPUT_DIR"
+            exit 1
+          fi
+
+          echo "Found Android APK: $APK_FILE"
+          APK_SIZE=$(stat -c%s "$APK_FILE" 2>/dev/null || stat -f%z "$APK_FILE" 2>/dev/null)
+          echo "APK size: $APK_SIZE bytes"
+          echo "apk_path=$APK_FILE" >> $GITHUB_OUTPUT
+
+      - name: Upload Android Testing APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RoomToRentRadar-Android-CI-Build.${{ github.run_number }}-${{ github.sha }}
+          path: ${{ steps.locate-apk.outputs.apk_path }}
+          if-no-files-found: error
+          retention-days: 14

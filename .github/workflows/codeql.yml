@@ -1,0 +1,67 @@
+name: Security - CodeQL Analysis
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: CodeQL Security Scan (C#)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21 (JDK)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Install .NET MAUI Android Workload
+        run: |
+          dotnet workload install maui-android
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: csharp
+          build-mode: manual
+
+      - name: Build Projects for CodeQL Analysis
+        run: |
+          # Build test projects
+          dotnet build RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj -c Release
+          dotnet build RoomToRentRadarUIAppiumTests/RoomToRentRadarUIAppiumTests.csproj -c Release
+          # Build MAUI app for Android target
+          dotnet build RoomToRentRadar/RoomToRentRadar.csproj -c Release -f net10.0-android -p:TargetFrameworks=net10.0-android
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:csharp"

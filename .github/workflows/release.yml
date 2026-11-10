@@ -1,0 +1,218 @@
+name: CD - Production Release Pipeline
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release version tag (e.g., v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref_name || inputs.release_tag }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build, Sign & Publish Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate Version Tag & Determine Release Version
+        id: version-check
+        run: |
+          TAG="${{ github.ref_name }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.release_tag }}"
+          fi
+
+          echo "Validating tag format: $TAG"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "::error::Invalid version tag '$TAG'. Expected semantic version tag like 'v1.0.0' or 'v1.0.0-rc1'."
+            exit 1
+          fi
+
+          # Strip leading 'v' for assembly versioning
+          VERSION="${TAG#v}"
+          echo "Validated Version: $VERSION"
+          echo "release_tag=$TAG" >> $GITHUB_OUTPUT
+          echo "app_version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Validate Android Signing Secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          MISSING_SECRETS=()
+          [ -z "$KEYSTORE_BASE64" ] && MISSING_SECRETS+=("ANDROID_KEYSTORE_BASE64")
+          [ -z "$KEYSTORE_PASSWORD" ] && MISSING_SECRETS+=("ANDROID_KEYSTORE_PASSWORD")
+          [ -z "$KEY_ALIAS" ] && MISSING_SECRETS+=("ANDROID_KEY_ALIAS")
+          [ -z "$KEY_PASSWORD" ] && MISSING_SECRETS+=("ANDROID_KEY_PASSWORD")
+
+          if [ ${#MISSING_SECRETS[@]} -gt 0 ]; then
+            echo "::error::Required Android release signing secret(s) missing: ${MISSING_SECRETS[*]}"
+            echo "::error::Configure these secrets in GitHub Repository Settings -> Secrets and variables -> Actions."
+            echo "::error::See docs/CI-CD.md for full instructions on generating and configuring Android signing keys."
+            exit 1
+          fi
+          echo "All required signing secrets are present."
+
+      - name: Setup Java 21 (JDK)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Install .NET MAUI Android Workload
+        run: |
+          dotnet workload install maui-android
+
+      - name: Prepare Keystore File Securely
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          KEYSTORE_DIR="$RUNNER_TEMP/keystore"
+          mkdir -p "$KEYSTORE_DIR"
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_DIR/release.keystore"
+          chmod 600 "$KEYSTORE_DIR/release.keystore"
+          echo "KEYSTORE_PATH=$KEYSTORE_DIR/release.keystore" >> $GITHUB_ENV
+          echo "Keystore successfully placed into secure runner temp directory."
+
+      - name: Restore MAUI Dependencies
+        run: |
+          dotnet restore RoomToRentRadar/RoomToRentRadar.csproj
+
+      - name: Build & Publish Signed Android APK
+        env:
+          APP_VERSION: ${{ steps.version-check.outputs.app_version }}
+          STORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          dotnet publish RoomToRentRadar/RoomToRentRadar.csproj \
+            --configuration Release \
+            --framework net10.0-android \
+            --no-restore \
+            -p:AndroidPackageFormat=apk \
+            -p:ApplicationDisplayVersion="${APP_VERSION}" \
+            -p:ApplicationVersion="${{ github.run_number }}" \
+            -p:AndroidKeyStore=true \
+            -p:AndroidSigningKeyStore="${KEYSTORE_PATH}" \
+            -p:AndroidSigningStorePass="${STORE_PASS}" \
+            -p:AndroidSigningKeyAlias="${KEY_ALIAS}" \
+            -p:AndroidSigningKeyPass="${KEY_PASS}"
+
+      - name: Build & Publish Signed Android AAB (Google Play)
+        env:
+          APP_VERSION: ${{ steps.version-check.outputs.app_version }}
+          STORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          dotnet publish RoomToRentRadar/RoomToRentRadar.csproj \
+            --configuration Release \
+            --framework net10.0-android \
+            --no-restore \
+            -p:AndroidPackageFormat=aab \
+            -p:ApplicationDisplayVersion="${APP_VERSION}" \
+            -p:ApplicationVersion="${{ github.run_number }}" \
+            -p:AndroidKeyStore=true \
+            -p:AndroidSigningKeyStore="${KEYSTORE_PATH}" \
+            -p:AndroidSigningStorePass="${STORE_PASS}" \
+            -p:AndroidSigningKeyAlias="${KEY_ALIAS}" \
+            -p:AndroidSigningKeyPass="${KEY_PASS}"
+
+      - name: Secure Cleanup of Keystore
+        if: always()
+        run: |
+          if [ -d "$RUNNER_TEMP/keystore" ]; then
+            rm -rf "$RUNNER_TEMP/keystore"
+            echo "Keystore directory cleaned up."
+          fi
+
+      - name: Stage & Verify Release Packages
+        id: stage-assets
+        env:
+          APP_VERSION: ${{ steps.version-check.outputs.app_version }}
+        run: |
+          OUTPUT_DIR="RoomToRentRadar/bin/Release/net10.0-android/publish"
+          if [ ! -d "$OUTPUT_DIR" ]; then
+            OUTPUT_DIR="RoomToRentRadar/bin/Release/net10.0-android"
+          fi
+
+          echo "Searching for signed APK and AAB in $OUTPUT_DIR..."
+          APK_SRC=$(find "$OUTPUT_DIR" -name "*.apk" | head -n 1)
+          AAB_SRC=$(find "$OUTPUT_DIR" -name "*.aab" | head -n 1)
+
+          if [ -z "$APK_SRC" ] || [ ! -f "$APK_SRC" ]; then
+            echo "::error::Signed APK not found in $OUTPUT_DIR!"
+            ls -la "$OUTPUT_DIR"
+            exit 1
+          fi
+
+          if [ -z "$AAB_SRC" ] || [ ! -f "$AAB_SRC" ]; then
+            echo "::error::Signed AAB not found in $OUTPUT_DIR!"
+            ls -la "$OUTPUT_DIR"
+            exit 1
+          fi
+
+          mkdir -p release-assets
+          APK_DEST="release-assets/RoomToRentRadar-${APP_VERSION}.apk"
+          AAB_DEST="release-assets/RoomToRentRadar-${APP_VERSION}.aab"
+
+          cp "$APK_SRC" "$APK_DEST"
+          cp "$AAB_SRC" "$AAB_DEST"
+
+          echo "Staged Release APK: $APK_DEST ($(stat -c%s "$APK_DEST" 2>/dev/null || stat -f%z "$APK_DEST" 2>/dev/null) bytes)"
+          echo "Staged Release AAB: $AAB_DEST ($(stat -c%s "$AAB_DEST" 2>/dev/null || stat -f%z "$AAB_DEST" 2>/dev/null) bytes)"
+
+          echo "apk_file=$APK_DEST" >> $GITHUB_OUTPUT
+          echo "aab_file=$AAB_DEST" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release & Upload Assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ steps.version-check.outputs.release_tag }}
+          APP_VERSION: ${{ steps.version-check.outputs.app_version }}
+        run: |
+          echo "Creating GitHub Release for tag $TAG_NAME..."
+          gh release create "$TAG_NAME" \
+            release-assets/RoomToRentRadar-${APP_VERSION}.apk \
+            release-assets/RoomToRentRadar-${APP_VERSION}.aab \
+            --title "Release $TAG_NAME" \
+            --notes "### RoomToRentRadar Release $TAG_NAME
+
+#### Release Artifacts
+- **APK (Direct Android install):** \`RoomToRentRadar-${APP_VERSION}.apk\`
+- **AAB (Google Play bundle):** \`RoomToRentRadar-${APP_VERSION}.aab\`
+
+Build Number: \`${{ github.run_number }}\`
+Commit: \`${{ github.sha }}\`"
+
+      - name: Upload Release Artifacts to Workflow Run
+        uses: actions/upload-artifact@v4
+        with:
+          name: RoomToRentRadar-Release-Assets-${{ steps.version-check.outputs.release_tag }}
+          path: release-assets/
+          if-no-files-found: error
+          retention-days: 90
