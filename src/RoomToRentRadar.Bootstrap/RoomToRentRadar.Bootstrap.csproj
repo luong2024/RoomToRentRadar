@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>RoomToRentRadar.Bootstrap</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RoomToRentRadar.Adapters\RoomToRentRadar.Adapters.csproj" />
+    <ProjectReference Include="..\RoomToRentRadar.Application\RoomToRentRadar.Application.csproj" />
+    <ProjectReference Include="..\RoomToRentRadar.Domain\RoomToRentRadar.Domain.csproj" />
+  </ItemGroup>
+
+</Project>
