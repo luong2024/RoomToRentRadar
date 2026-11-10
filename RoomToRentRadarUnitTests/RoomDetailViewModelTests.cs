@@ -122,7 +122,7 @@ public class RoomDetailViewModelTests
 
         // Assert
         Assert.That(_viewModel.CanViewPhoneNumber, Is.False);
-        Assert.That(_viewModel.DisplayPhoneNumber, Is.EqualTo("Đăng nhập để xem số điện thoại"));
+        Assert.That(_viewModel.DisplayPhoneNumber, Is.EqualTo("Login to view phone number"));
 
         // Act: Đăng nhập
         _viewModel.IsUserLoggedIn = true;

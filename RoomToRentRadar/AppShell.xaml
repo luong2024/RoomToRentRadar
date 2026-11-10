@@ -5,9 +5,15 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:sf="clr-namespace:Syncfusion.Maui.Toolkit.SegmentedControl;assembly=Syncfusion.Maui.Toolkit"
     xmlns:homeViews="clr-namespace:RoomToRentRadar.Features.Home.Views"
+    xmlns:roomViews="clr-namespace:RoomToRentRadar.Features.RoomDetails.Views"
     Shell.FlyoutBehavior="Flyout"
     Title="RoomToRentRadar">
 
+    <ShellContent
+        Title="Chi tiết phòng"
+        Icon="{StaticResource IconProjects}"
+        ContentTemplate="{DataTemplate roomViews:RoomDetailPage}"
+        Route="room-detail" />  
     <ShellContent
         Title="Home"
         Icon="{StaticResource IconDashboard}"

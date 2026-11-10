@@ -6,7 +6,6 @@ public class MockRoomDetailService : IRoomDetailService
 {
     public Task<RoomDetailModel?> GetRoomDetailAsync(string roomId, CancellationToken cancellationToken = default)
     {
-        // Giả lập dữ liệu theo từng trạng thái để bạn test
         var status = roomId switch
         {
             "rented" => ListingStatus.Rented,
@@ -17,40 +16,45 @@ public class MockRoomDetailService : IRoomDetailService
         var room = new RoomDetailModel
         {
             Id = roomId,
-            Title = "Phòng trọ cao cấp gần ĐH CNTT & TT (ICTU)",
-            Description = "Phòng trọ khép kín mới xây, thoáng mát, an ninh tốt, giờ giấc tự do, có chỗ để xe rộng rãi, camera an ninh 24/7. Rất phù hợp cho sinh viên ICTU.",
-            Price = 1800000,
-            Deposit = 1000000,
-            AreaSquareMeters = 22,
-            RoomType = "Phòng trọ đơn khép kín",
-            Address = "Đường Z115, Xã Quyết Thắng, TP. Thái Nguyên (Cách cổng ICTU 300m)",
+            Title = "2 Bedroom Apartment",
+            Description = "A beautiful modern apartment located at Kunle Ajasin estate, Akobo, Ibadan. Close to campus, 24/7 security surveillance, perimeter fencing, treated water supply, and uninterrupted power supply.",
+            Price = 450000,
+            Deposit = 15000,
+            AreaSquareMeters = 35,
+            RoomType = "2 Bedroom Modern Flat",
+            Address = "Kunle Ajasin estate, Akobo, Ibadan",
             Status = status,
-            LastUpdated = DateTime.Now.AddDays(-2),
-            LandlordName = "Nguyễn Văn An",
-            LandlordPhone = "0987654321",
-            LandlordEmail = "chutro.an@gmail.com",
-            LandlordAvatar = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+            LastUpdated = DateTime.Now.AddDays(-1),
+            SittingRooms = 1,
+            Bedrooms = 2,
+            Bathrooms = 2,
+            Kitchens = 1,
+            Rating = 4.95,
+            ReviewCount = 22,
+            LandlordName = "John Adebayo",
+            LandlordPhone = "+234 0000 0000 000",
+            LandlordEmail = "johnade45@gmail.com",
+            LandlordAvatar = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200",
             ImageUrls =
             [
-                "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800",
-                "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800",
-                "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800"
+                "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1000",
+                "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1000",
+                "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=1000"
             ],
             Amenities =
             [
-                new() { Name = "Điều hòa", IconGlyph = "\uf108" },
-                new() { Name = "Bình nóng lạnh", IconGlyph = "\uf8fe" },
-                new() { Name = "Wifi tốc độ cao", IconGlyph = "\uf871" },
-                new() { Name = "Camera 24/7", IconGlyph = "\uf837" },
-                new() { Name = "Chỗ để xe", IconGlyph = "\uf2a3" },
-                new() { Name = "Giờ giấc tự do", IconGlyph = "\uf2c6" }
+                new() { Name = "Pool side", IconGlyph = "🏊" },
+                new() { Name = "Parking space", IconGlyph = "🚗" },
+                new() { Name = "Free Wi-Fi", IconGlyph = "📶" },
+                new() { Name = "Air conditioning", IconGlyph = "❄️" },
+                new() { Name = "Garden", IconGlyph = "🌿" },
+                new() { Name = "Security", IconGlyph = "🛡️" }
             ],
             HouseRules =
             [
-                "Không làm ồn sau 23:00",
-                "Giữ gìn vệ sinh chung khu hành lang",
-                "Không nuôi thú cưng gây ồn",
-                "Đóng tiền phòng trước ngày mùng 5 hàng tháng"
+                "Quiet hours after 11:00 PM",
+                "Maintain cleanliness in common spaces",
+                "No loud parties without prior notice"
             ]
         };
 
@@ -64,19 +68,19 @@ public class MockRoomDetailService : IRoomDetailService
             new()
             {
                 Id = "sim-1",
-                Title = "Phòng khép kín ban công ICTU",
-                Price = 1700000,
-                AreaSquareMeters = 20,
-                Address = "Ngõ 1 Đường Z115, Thái Nguyên",
+                Title = "1 Bedroom Modern Flat",
+                Price = 380000,
+                AreaSquareMeters = 25,
+                Address = "Akobo Estate, Ibadan",
                 ThumbnailUrl = "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400"
             },
             new()
             {
                 Id = "sim-2",
-                Title = "Phòng trọ sinh viên gần cổng trường",
-                Price = 1600000,
-                AreaSquareMeters = 18,
-                Address = "Đường Z115, Thái Nguyên",
+                Title = "Studio Apartment Near Campus",
+                Price = 280000,
+                AreaSquareMeters = 20,
+                Address = "University Road, Ibadan",
                 ThumbnailUrl = "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=400"
             }
         };

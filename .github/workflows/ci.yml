@@ -22,6 +22,9 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # ==========================================
+  # JOB 1: RESTORE AND RUN AUTOMATED TESTS
+  # ==========================================
   test:
     name: Run Automated Tests
     runs-on: ubuntu-latest
@@ -44,6 +47,10 @@ jobs:
           key: ${{ runner.os }}-nuget-tests-${{ hashFiles('**/*.csproj') }}
           restore-keys: |
             ${{ runner.os }}-nuget-tests-
+
+      - name: Restore .NET MAUI Workloads
+        run: |
+          dotnet workload restore RoomToRentRadar/RoomToRentRadar.csproj
 
       - name: Restore Test Projects
         run: |
@@ -77,6 +84,9 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  # ==========================================
+  # JOB 2: BUILD ANDROID APK
+  # ==========================================
   build-android:
     name: Build MAUI Android APK
     needs: test
@@ -109,7 +119,7 @@ jobs:
 
       - name: Install .NET MAUI Android Workload
         run: |
-          dotnet workload install maui-android
+          dotnet workload install maui-android maui-tizen
 
       - name: Restore MAUI Dependencies
         run: |
@@ -133,7 +143,6 @@ jobs:
             exit 1
           fi
 
-          # Find signed (debug-signed by default) or standard apk
           APK_FILE=$(find "$OUTPUT_DIR" -maxdepth 2 -name "*Signed.apk" | head -n 1)
           if [ -z "$APK_FILE" ]; then
             APK_FILE=$(find "$OUTPUT_DIR" -maxdepth 2 -name "*.apk" | head -n 1)

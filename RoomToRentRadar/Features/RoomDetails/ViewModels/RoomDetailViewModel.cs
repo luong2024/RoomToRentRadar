@@ -22,21 +22,21 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     public partial RoomDetailModel? Room { get; set; }
 
     [ObservableProperty]
-    public partial bool IsUserLoggedIn { get; set; } = false; // Giả lập trạng thái auth
+    public partial bool IsUserLoggedIn { get; set; } = false; // Auth simulation toggle
 
     [ObservableProperty]
     public partial List<SimilarRoomModel> SimilarRooms { get; set; } = [];
 
-    // Trạng thái hiển thị (AC2, AC3)
+    // Listing Status & Visibility (AC2, AC3)
     public bool IsAvailable => Room?.Status == ListingStatus.Available;
     public bool IsRented => Room?.Status == ListingStatus.Rented;
     public bool IsUnavailable => Room?.Status == ListingStatus.Unavailable;
     public bool CanBookOrContact => IsAvailable;
     public bool ShowSimilarRooms => IsRented || IsUnavailable;
 
-    // Trạng thái xem số điện thoại (AC4)
+    // Landlord Phone Visibility based on Authentication (AC4)
     public bool CanViewPhoneNumber => IsUserLoggedIn && !string.IsNullOrWhiteSpace(Room?.LandlordPhone);
-    public string DisplayPhoneNumber => CanViewPhoneNumber ? Room!.LandlordPhone! : "Đăng nhập để xem số điện thoại";
+    public string DisplayPhoneNumber => CanViewPhoneNumber ? Room!.LandlordPhone! : "Login to view phone number";
 
     public RoomDetailViewModel(IRoomDetailService roomDetailService, IErrorHandler errorHandler)
     {
@@ -57,7 +57,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     public async Task LoadRoomDetailsAsync()
     {
         if (string.IsNullOrWhiteSpace(RoomId))
-            RoomId = "default-1"; // ID mặc định khi chạy test màn hình
+            RoomId = "default-1"; // Default test ID
 
         try
         {
@@ -66,14 +66,14 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
 
             if (Room is null)
             {
-                await Shell.Current.DisplayAlert("Thông báo", "Không tìm thấy phòng trọ này.", "OK");
+                await Shell.Current.DisplayAlert("Notice", "Property details could not be found.", "OK");
                 return;
             }
 
-            // Cập nhật các computed properties
+            // Refresh computed properties
             NotifyStatusPropertiesChanged();
 
-            // Nếu phòng không khả dụng hoặc đã thuê, tự động tải phòng tương tự (AC3)
+            // Load similar properties when property is rented or unavailable (AC3)
             if (ShowSimilarRooms)
             {
                 SimilarRooms = await _roomDetailService.GetSimilarRoomsAsync(RoomId);
@@ -92,7 +92,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     private void ToggleAuthSimulation()
     {
-        // Nút toggle để bạn và giảng viên test AC4 ngay trên UI
+        // Toggle simulation for instructor and automated verification (AC4)
         IsUserLoggedIn = !IsUserLoggedIn;
         OnPropertyChanged(nameof(CanViewPhoneNumber));
         OnPropertyChanged(nameof(DisplayPhoneNumber));
@@ -109,7 +109,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     private async Task BookInspectionAsync()
     {
         if (!CanBookOrContact) return;
-        await Shell.Current.DisplayAlert("Đặt lịch hẹn", $"Bạn muốn đặt lịch xem {Room?.Title}?", "Xác nhận", "Hủy");
+        await Shell.Current.DisplayAlert("Book Inspection", $"Would you like to book an inspection for {Room?.Title}?", "Confirm", "Cancel");
     }
 
     [RelayCommand]
@@ -117,7 +117,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     {
         if (!IsUserLoggedIn)
         {
-            await Shell.Current.DisplayAlert("Yêu cầu đăng nhập", "Vui lòng đăng nhập để xem và gọi số chủ trọ.", "Đóng");
+            await Shell.Current.DisplayAlert("Authentication Required", "Please log in to view and call the agent.", "Close");
             return;
         }
 
