@@ -82,8 +82,11 @@ appsettings.*.local.json
 secrets.json
 
 # --------------------------- Runtime data files ----------------------------
+App_Data/
+*.db
 *.db-shm
 *.db-wal
+*.sqlite
 *.sqlite-shm
 *.sqlite-wal
 
