@@ -25,13 +25,22 @@ public sealed class RefreshTokenSession
         ReplacedByTokenHash = replacedByTokenHash;
     }
 
-    public bool IsExpired(DateTime utcNow) => throw new NotImplementedException();
+    public bool IsExpired(DateTime utcNow) => utcNow >= ExpiresAtUtc;
 
-    public bool IsRevoked => throw new NotImplementedException();
+    public bool IsRevoked => RevokedAtUtc.HasValue;
 
-    public bool IsActive(DateTime utcNow) => throw new NotImplementedException();
+    public bool IsActive(DateTime utcNow) => !IsRevoked && !IsExpired(utcNow);
 
-    public void Revoke(DateTime utcNow, string? replacedByTokenHash = null) =>
-        throw new NotImplementedException();
+    public void Revoke(DateTime utcNow, string? replacedByTokenHash = null)
+    {
+        if (!RevokedAtUtc.HasValue)
+        {
+            RevokedAtUtc = utcNow;
+        }
+
+        if (!string.IsNullOrWhiteSpace(replacedByTokenHash))
+        {
+            ReplacedByTokenHash = replacedByTokenHash;
+        }
+    }
 }
-

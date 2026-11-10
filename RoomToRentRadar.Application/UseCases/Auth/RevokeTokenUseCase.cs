@@ -1,3 +1,4 @@
+using RoomToRentRadar.Domain.Exceptions;
 using RoomToRentRadar.Ports.Contracts.Requests.Auth;
 using RoomToRentRadar.Ports.Inbound.UseCases.Auth;
 using RoomToRentRadar.Ports.Outbound.ExternalServices;
@@ -21,7 +22,30 @@ public sealed class RevokeTokenUseCase : IRevokeTokenUseCase
         _auditLogger = auditLogger;
     }
 
-    public Task ExecuteAsync(string userId, RevokeTokenRequest request, CancellationToken ct = default) =>
-        throw new NotImplementedException();
-}
+    public async Task ExecuteAsync(string userId, RevokeTokenRequest request, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
 
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            throw new DomainValidationException("Authenticated user ID is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.RefreshToken))
+        {
+            throw new DomainValidationException("Refresh token is required.");
+        }
+
+        var user = await _userRepository.GetByIdAsync(userId, ct);
+        if (user == null)
+        {
+            throw new UserNotFoundException(userId);
+        }
+
+        var tokenHash = _jwtTokenService.ComputeTokenHash(request.RefreshToken);
+        user.RevokeRefreshToken(tokenHash, DateTime.UtcNow);
+
+        await _userRepository.UpdateAsync(user, ct);
+        _auditLogger.LogTokenRevoked(user.Id, "UserInitiatedLogout");
+    }
+}
