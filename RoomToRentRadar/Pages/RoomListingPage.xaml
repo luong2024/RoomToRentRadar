@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:RoomToRentRadar.Models"
+             xmlns:vm="clr-namespace:RoomToRentRadar.PageModels"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Pages.Controls"
+             x:Class="RoomToRentRadar.Pages.RoomListingPage" x:DataType="vm:RoomListingPageModel" Title="Room Radar">
+    <Grid RowDefinitions="Auto,*,Auto">
+        <Border StrokeShape="Rectangle" StrokeThickness="0" BackgroundColor="{StaticResource Surface}">
+            <Grid x:Name="TopBar" Padding="40,18" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"
+                  MaximumWidthRequest="1360" HorizontalOptions="Fill">
+                <Image Source="radar_mark.png" HeightRequest="34" WidthRequest="34" />
+                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="0">
+                    <Label Text="room radar" FontFamily="OpenSansSemibold" FontSize="21" CharacterSpacing="-0.5" />
+                    <Label Text="Một nơi ở. Một khởi đầu mới." Style="{StaticResource Caption}" FontSize="10" />
+                </VerticalStackLayout>
+                <Label x:Name="NavCaption" Grid.Column="2" Text="KHÔNG GIAN NHỎ, CUỘC SỐNG LỚN"
+                       Style="{StaticResource Eyebrow}" VerticalOptions="Center" IsVisible="False" />
+            </Grid>
+        </Border>
+        <RefreshView x:Name="ListingRefresh" Grid.Row="1" IsRefreshing="{Binding IsRefreshing}" Command="{Binding RefreshCommand}"
+                     Margin="40,0,22,0" MaximumWidthRequest="1280" HorizontalOptions="Fill">
+            <CollectionView x:Name="Listings" ItemsSource="{Binding Rooms}" SelectionMode="None"
+                            RemainingItemsThreshold="5" RemainingItemsThresholdReachedCommand="{Binding LoadMoreCommand}">
+                <CollectionView.ItemsLayout>
+                    <GridItemsLayout x:Name="CardsLayout" Orientation="Vertical" Span="1" />
+                </CollectionView.ItemsLayout>
+                <CollectionView.Header>
+                    <VerticalStackLayout Padding="0,20,18,20" Spacing="20">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="28" Padding="0,6,0,4">
+                            <VerticalStackLayout Spacing="12" VerticalOptions="Center">
+                                <HorizontalStackLayout Spacing="8">
+                                    <BoxView Color="{StaticResource Accent}" WidthRequest="22" HeightRequest="2" VerticalOptions="Center" />
+                                    <Label Text="TÌM PHÒNG GẦN TRƯỜNG" Style="{StaticResource Eyebrow}" TextColor="{StaticResource Accent}" />
+                                </HorizontalStackLayout>
+                                <Label x:Name="HeroTitle" Text="Gần trường hơn.&#10;Thảnh thơi hơn." FontSize="34"
+                                       FontFamily="OpenSansSemibold" CharacterSpacing="-0.5" />
+                                <Label Text="Tìm một góc riêng ưng ý, để mỗi ngày đi học nhẹ nhàng hơn."
+                                       Style="{StaticResource Caption}" FontSize="13" MaxLines="2" />
+                            </VerticalStackLayout>
+                            <Image x:Name="HeroArt" Grid.Column="1" Source="campus_scene.png"
+                                   WidthRequest="220" HeightRequest="150" IsVisible="False" Aspect="AspectFit"
+                                   SemanticProperties.Description="Minh họa khuôn viên trường" />
+                        </Grid>
+                        <Border Padding="16,10" StrokeShape="RoundRectangle 14">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+                                <Border BackgroundColor="{StaticResource AccentSoft}" StrokeThickness="0" StrokeShape="RoundRectangle 12"
+                                        HeightRequest="46" WidthRequest="46" VerticalOptions="Center">
+                                    <Image Source="location_pin.png" WidthRequest="21" HeightRequest="21" />
+                                </Border>
+                                <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                    <Label Text="CAMPUS CỦA BẠN" Style="{StaticResource Eyebrow}" FontSize="9" />
+                                    <Picker ItemsSource="{Binding Campuses}" Title="" Loaded="CampusPickerLoaded"
+                                            ItemDisplayBinding="{Binding Name, x:DataType=models:Campus}" SelectedItem="{Binding SelectedCampus}"
+                                            SemanticProperties.Description="Chọn campus để tìm phòng gần trường" />
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Border>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <VerticalStackLayout Spacing="5">
+                                <Label Text="Phòng dành cho bạn" FontSize="22" FontFamily="OpenSansSemibold" CharacterSpacing="-0.5" />
+                                <Label Text="{Binding ResultsText}" Style="{StaticResource Caption}" FontSize="11" />
+                            </VerticalStackLayout>
+                            <HorizontalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="6">
+                                <Image Source="location_pin.png" WidthRequest="14" HeightRequest="14" />
+                                <Label Text="Gần nhất trước" FontSize="11" TextColor="{StaticResource Muted}" />
+                            </HorizontalStackLayout>
+                        </Grid>
+                    </VerticalStackLayout>
+                </CollectionView.Header>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:RoomListingItem"><controls:RoomCardView /></DataTemplate>
+                </CollectionView.ItemTemplate>
+                <CollectionView.EmptyView>
+                    <VerticalStackLayout Padding="24,32" Spacing="12" HorizontalOptions="Center">
+                        <Image Source="location_pin.png" WidthRequest="32" HeightRequest="32" />
+                        <Label Text="{Binding EmptyMessage}" HorizontalTextAlignment="Center" TextColor="{StaticResource Muted}" />
+                    </VerticalStackLayout>
+                </CollectionView.EmptyView>
+                <CollectionView.Footer>
+                    <VerticalStackLayout Padding="0,12,18,32" Spacing="16">
+                        <ActivityIndicator IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}" HeightRequest="32" />
+                        <Button Text="Xem thêm phòng" Command="{Binding LoadMoreCommand}" IsVisible="{Binding CanLoadMore}"
+                                HorizontalOptions="Center" />
+                        <Label Text="Chỉ hiển thị phòng còn trống, đã xác minh." Style="{StaticResource Caption}" HorizontalTextAlignment="Center" />
+                        <Label Text="Khoảng cách đường chim bay đến campus đã chọn." Style="{StaticResource Caption}" FontSize="10" HorizontalTextAlignment="Center" />
+                    </VerticalStackLayout>
+                </CollectionView.Footer>
+            </CollectionView>
+        </RefreshView>
+        <Border Grid.Row="2" IsVisible="{Binding HasError}" Margin="20,8" Padding="16">
+            <VerticalStackLayout Spacing="8">
+                <Label Text="{Binding ErrorMessage}" HorizontalTextAlignment="Center" />
+                <Button Text="Thử lại" Command="{Binding RetryCommand}" HorizontalOptions="Center" />
+            </VerticalStackLayout>
+        </Border>
+    </Grid>
+</ContentPage>

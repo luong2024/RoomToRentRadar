@@ -18,6 +18,10 @@
 
   <ItemGroup>
     <Using Include="NUnit.Framework" />
+    <Compile Include="..\RoomToRentRadar\Models\RoomListing.cs" Link="Models\RoomListing.cs" />
+    <Compile Include="..\RoomToRentRadar\Services\RoomListingService.cs" Link="Services\RoomListingService.cs" />
+    <Compile Include="..\RoomToRentRadar\PageModels\RoomListingPageModel.cs" Link="PageModels\RoomListingPageModel.cs" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
   </ItemGroup>
 
 </Project>
