@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewModels="clr-namespace:RoomToRentRadar.Features.Home.ViewModels"
+             xmlns:listings="clr-namespace:RoomToRentRadar.Shared.Listings;assembly=RoomToRentRadar.Shared"
+             x:Class="RoomToRentRadar.Features.Home.Views.HomePage"
+             x:DataType="viewModels:HomeViewModel"
+             Title="Home"
+             SafeAreaEdges="All">
+
+    <Grid Padding="{StaticResource LayoutPadding}"
+          RowSpacing="{StaticResource LayoutSpacing}"
+          RowDefinitions="Auto,Auto,*">
+
+        <VerticalStackLayout Spacing="{StaticResource size40}">
+            <Label Text="RoomToRentRadar"
+                   Style="{StaticResource LargeTitle}"
+                   SemanticProperties.HeadingLevel="Level1" />
+            <Label Text="Student room rental radar"
+                   Style="{StaticResource Body1}" />
+            <Label Text="{Binding StatusMessage}"
+                   Style="{StaticResource Caption1}" />
+        </VerticalStackLayout>
+
+        <ActivityIndicator Grid.Row="1"
+                           IsRunning="{Binding IsBusy}"
+                           IsVisible="{Binding IsBusy}"
+                           HorizontalOptions="Start" />
+
+        <RefreshView Grid.Row="2"
+                     Command="{Binding LoadCommand}"
+                     IsRefreshing="{Binding IsBusy}">
+            <CollectionView ItemsSource="{Binding Listings}"
+                            SelectionMode="None">
+                <CollectionView.EmptyView>
+                    <Label Text="No listings to show."
+                           Style="{StaticResource Body2}"
+                           Margin="0,24,0,0" />
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="listings:ListingSummaryDto">
+                        <Border Style="{StaticResource CardStyle}"
+                                Margin="0,0,0,8">
+                            <VerticalStackLayout Spacing="{StaticResource size20}">
+                                <Label Text="{Binding Title}"
+                                       Style="{StaticResource Title3}"
+                                       LineBreakMode="TailTruncation" />
+                                <Label Text="{Binding Address}"
+                                       Style="{StaticResource Body2}"
+                                       LineBreakMode="TailTruncation" />
+                                <HorizontalStackLayout Spacing="{StaticResource size120}">
+                                    <Label Text="{Binding Price, StringFormat='{0:N0} VND'}"
+                                           Style="{StaticResource Body2Strong}" />
+                                    <Label Text="{Binding AreaM2, StringFormat='{0:N0} m²'}"
+                                           Style="{StaticResource Body2}" />
+                                    <Label Text="{Binding Bedrooms, StringFormat='{0} BR'}"
+                                           Style="{StaticResource Body2}" />
+                                </HorizontalStackLayout>
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+    </Grid>
+</ContentPage>
