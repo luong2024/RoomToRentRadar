@@ -8,7 +8,7 @@ using RoomToRentRadar.Domain.Exceptions;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 using User = RoomToRentRadar.Domain.Aggregates.User;
 
-namespace RoomToRentRadar.Infrastructure.Repositories;
+namespace RoomToRentRadar.Datastore.CosmosDb.Repositories;
 
 public sealed class CosmosUserRepository : IUserRepository
 {
@@ -171,3 +171,4 @@ public sealed class CosmosUserRepository : IUserRepository
             refreshTokens: tokens);
     }
 }
+

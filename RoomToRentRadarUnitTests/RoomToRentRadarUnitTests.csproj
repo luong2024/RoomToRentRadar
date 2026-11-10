@@ -22,7 +22,8 @@
     <ProjectReference Include="..\RoomToRentRadar.Ports\RoomToRentRadar.Ports.csproj" />
     <ProjectReference Include="..\RoomToRentRadar.Application\RoomToRentRadar.Application.csproj" />
     <ProjectReference Include="..\RoomToRentRadar.Infrastructure\RoomToRentRadar.Infrastructure.csproj" />
-    <ProjectReference Include="..\RoomToRentRadar.Datastore\RoomToRentRadar.Datastore.csproj" />
+    <ProjectReference Include="..\RoomToRentRadar.Datastore.CosmosDb\RoomToRentRadar.Datastore.CosmosDb.csproj" />
+    <ProjectReference Include="..\RoomToRentRadar.Datastore.Sqlite\RoomToRentRadar.Datastore.Sqlite.csproj" />
   </ItemGroup>
 
   <ItemGroup>

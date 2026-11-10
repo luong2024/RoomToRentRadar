@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using Microsoft.Azure.Cosmos;
 using RoomToRentRadar.Datastore.CosmosDb.Configurations;
 

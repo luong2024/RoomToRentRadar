@@ -1,5 +1,5 @@
 using RoomToRentRadar.Application;
-using RoomToRentRadar.Datastore;
+using RoomToRentRadar.Datastore.Sqlite;
 using RoomToRentRadar.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,7 +9,7 @@ builder.Services.AddEndpointsApiExplorer();
 
 // Register Hexagonal Architecture Layers
 builder.Services.AddApplicationServices();
-builder.Services.AddDatastore();
+builder.Services.AddSqliteDatastore();
 builder.Services.AddInfrastructure();
 
 var app = builder.Build();

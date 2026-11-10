@@ -14,8 +14,6 @@
   <ItemGroup>
     <ProjectReference Include="..\RoomToRentRadar.Domain\RoomToRentRadar.Domain.csproj" />
     <ProjectReference Include="..\RoomToRentRadar.Ports\RoomToRentRadar.Ports.csproj" />
-    <ProjectReference Include="..\RoomToRentRadar.Datastore\RoomToRentRadar.Datastore.csproj" />
   </ItemGroup>
 
 </Project>
-

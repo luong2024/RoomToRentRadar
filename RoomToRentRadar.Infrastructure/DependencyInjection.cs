@@ -1,8 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
-using RoomToRentRadar.Datastore.CosmosDb.Context;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using RoomToRentRadar.Infrastructure.Adapters.Mocks;
 using RoomToRentRadar.Infrastructure.Adapters.Security;
-using RoomToRentRadar.Infrastructure.Repositories;
 using RoomToRentRadar.Ports.Outbound.ExternalServices;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 
@@ -34,16 +33,7 @@ public static class DependencyInjection
         }
 
         services.AddSingleton<InMemoryUserRepository>();
-        services.AddScoped<IUserRepository>(sp =>
-        {
-            var cosmosContext = sp.GetService<CosmosDbContext>();
-            if (cosmosContext is { IsConfigured: true })
-            {
-                return new CosmosUserRepository(cosmosContext);
-            }
-
-            return sp.GetRequiredService<InMemoryUserRepository>();
-        });
+        services.TryAddScoped<IUserRepository>(sp => sp.GetRequiredService<InMemoryUserRepository>());
 
         return services;
     }
