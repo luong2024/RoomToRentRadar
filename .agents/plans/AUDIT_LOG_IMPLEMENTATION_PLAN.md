@@ -190,13 +190,12 @@ flowchart TD
 
 ## 4. DỰ TOÁN THỜI GIAN & PHÂN CÔNG TỔNG QUAN
 
-| Giai đoạn | Nội dung | Phụ trách | Thời gian |
+| Giai đoạn | Nội dung | Phụ trách | Trạng thái |
 |---|---|---|---|
-| **Stage 1** | Mini-Spec, Domain Entities, Ports & DTO Contracts | `@Core` | 1.0h |
-| **Stage 2** | Viết Unit Test Suite (RED Phase) | `@QA` | 1.5h |
-| **Stage 3** | Cài đặt Table SQLite, Cosmos DB Document & Repositories | `@Infra` | 2.0h |
-| **Stage 4** | Nâng cấp SecurityAuditLoggerAdapter & Hiện thực UseCase | `@Core` / `@Infra` | 1.5h |
-| **Stage 5** | Xây dựng AuditLoggingMiddleware & Admin Controller | `@Infra` | 1.5h |
-| **Stage 6** | Chạy toàn bộ Unit Tests & Đánh giá hồi quy | `@QA` | 1.0h |
-| **Tổng cộng** | | | **8.5h** |
+| **Stage 1** | Mini-Spec, Domain Entities, Ports & DTO Contracts | `@Core` | **DONE (0 Errors)** |
+| **Stage 2** | Viết Unit Test Suite (RED Phase) | `@QA` | **DONE (RED Verified)** |
+| **Stage 3** | Cài đặt Table SQLite, Cosmos DB Document & Repositories | `@Infra` | **DONE (Passed)** |
+| **Stage 4** | Nâng cấp SecurityAuditLoggerAdapter & Hiện thực UseCase | `@Core` / `@Infra` | **DONE (Passed)** |
+| **Stage 5** | Xây dựng AuditLoggingMiddleware & Admin Controller | `@Infra` | **DONE (Passed)** |
+| **Stage 6** | Chạy toàn bộ Unit Tests & Đánh giá hồi quy | `@QA` | **DONE (100/100 PASS)** |
 

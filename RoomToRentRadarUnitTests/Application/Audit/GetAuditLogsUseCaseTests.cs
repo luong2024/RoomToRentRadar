@@ -17,7 +17,7 @@ public class GetAuditLogsUseCaseTests
     public void SetUp()
     {
         _repository = Substitute.For<IAuditLogRepository>();
-        _sut = new GetAuditLogsUseCase();
+        _sut = new GetAuditLogsUseCase(_repository);
     }
 
     [Test]

@@ -78,6 +78,7 @@ var app = builder.Build();
 app.UseMiddleware<AuthExceptionHandlingMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<AuditLoggingMiddleware>();
 
 app.MapControllers();
 app.MapGet("/api/health", () => Results.Ok(new { Status = "Healthy", Service = "RoomToRentRadar.Api" }));

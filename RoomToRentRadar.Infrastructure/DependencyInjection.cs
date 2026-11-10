@@ -21,7 +21,8 @@ public static class DependencyInjection
         }
 
         services.AddSingleton<IPasswordHasherPort, Pbkdf2PasswordHasherAdapter>();
-        services.AddSingleton<ISecurityAuditLoggerPort, SecurityAuditLoggerAdapter>();
+        services.AddSingleton<ISecurityAuditLoggerPort>(sp =>
+            new SecurityAuditLoggerAdapter(scopeFactory: sp.GetService<IServiceScopeFactory>()));
 
         if (useMockSsoVerifier)
         {
@@ -34,6 +35,8 @@ public static class DependencyInjection
 
         services.AddSingleton<InMemoryUserRepository>();
         services.TryAddScoped<IUserRepository>(sp => sp.GetRequiredService<InMemoryUserRepository>());
+        services.AddSingleton<InMemoryAuditLogRepository>();
+        services.TryAddScoped<IAuditLogRepository>(sp => sp.GetRequiredService<InMemoryAuditLogRepository>());
 
         return services;
     }
