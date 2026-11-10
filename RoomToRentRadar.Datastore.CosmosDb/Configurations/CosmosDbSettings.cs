@@ -9,5 +9,6 @@ public sealed class CosmosDbSettings
     public string DatabaseName { get; set; } = "RoomToRentRadarDb";
     public string ContainerName { get; set; } = "Rooms";
     public string UsersContainerName { get; set; } = "Users";
+    public string AuditLogsContainerName { get; set; } = "AuditLogs";
 }
 

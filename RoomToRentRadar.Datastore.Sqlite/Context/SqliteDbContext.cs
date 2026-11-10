@@ -98,8 +98,29 @@ public sealed class SqliteDbContext : IDisposable
                         FOREIGN KEY (UserId) REFERENCES Users(Id) ON DELETE CASCADE
                     );
 
+                    CREATE TABLE IF NOT EXISTS AuditLogs (
+                        Id TEXT PRIMARY KEY NOT NULL,
+                        UserId TEXT NULL,
+                        UserEmail TEXT NULL,
+                        Role TEXT NOT NULL,
+                        Action TEXT NOT NULL,
+                        EntityType TEXT NOT NULL,
+                        EntityId TEXT NULL,
+                        DetailsJson TEXT NULL,
+                        IpAddress TEXT NULL,
+                        UserAgent TEXT NULL,
+                        StatusCode INTEGER NULL,
+                        DurationMs INTEGER NULL,
+                        IsSuccess INTEGER NOT NULL,
+                        ErrorMessage TEXT NULL,
+                        TimestampUtc TEXT NOT NULL
+                    );
+
                     CREATE INDEX IF NOT EXISTS IX_Users_NormalizedEmail ON Users(NormalizedEmail);
                     CREATE INDEX IF NOT EXISTS IX_UserRefreshTokens_UserId ON UserRefreshTokens(UserId);
+                    CREATE INDEX IF NOT EXISTS IX_AuditLogs_TimestampUtc ON AuditLogs(TimestampUtc DESC);
+                    CREATE INDEX IF NOT EXISTS IX_AuditLogs_UserId ON AuditLogs(UserId);
+                    CREATE INDEX IF NOT EXISTS IX_AuditLogs_Action ON AuditLogs(Action);
                     """;
                 cmd.ExecuteNonQuery();
                 _schemaInitialized = true;

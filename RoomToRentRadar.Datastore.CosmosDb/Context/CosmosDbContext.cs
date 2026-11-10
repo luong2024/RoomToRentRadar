@@ -10,6 +10,7 @@ public sealed class CosmosDbContext : IDisposable
 
     public const string UsersPartitionKeyPath = "/id";
     public const string UsersUniqueEmailPath = "/normalizedEmail";
+    public const string AuditLogsPartitionKeyPath = "/userId";
 
     public bool IsConfigured => _client != null;
 
@@ -35,6 +36,16 @@ public sealed class CosmosDbContext : IDisposable
         return _client.GetContainer(_settings.DatabaseName, _settings.UsersContainerName);
     }
 
+    public Container GetAuditLogsContainer()
+    {
+        if (_client == null)
+        {
+            throw new InvalidOperationException("CosmosClient is not configured with EndpointUri and PrimaryKey.");
+        }
+
+        return _client.GetContainer(_settings.DatabaseName, _settings.AuditLogsContainerName);
+    }
+
     public static ContainerProperties BuildUsersContainerProperties(string containerName)
     {
         var uniqueKeyPolicy = new UniqueKeyPolicy
@@ -52,6 +63,28 @@ public sealed class CosmosDbContext : IDisposable
         {
             UniqueKeyPolicy = uniqueKeyPolicy
         };
+    }
+
+    public static ContainerProperties BuildAuditLogsContainerProperties(string containerName)
+    {
+        return new ContainerProperties(containerName, AuditLogsPartitionKeyPath);
+    }
+
+    public async Task EnsureAuditLogsContainerAsync(CancellationToken ct = default)
+    {
+        if (_client == null)
+        {
+            return;
+        }
+
+        var dbResponse = await _client.CreateDatabaseIfNotExistsAsync(
+            _settings.DatabaseName,
+            cancellationToken: ct);
+
+        var containerProperties = BuildAuditLogsContainerProperties(_settings.AuditLogsContainerName);
+        await dbResponse.Database.CreateContainerIfNotExistsAsync(
+            containerProperties,
+            cancellationToken: ct);
     }
 
     public async Task EnsureUsersContainerAsync(CancellationToken ct = default)

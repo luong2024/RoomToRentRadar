@@ -16,6 +16,7 @@ public static class DependencyInjection
         services.AddSingleton(effectiveSettings);
         services.AddSingleton<CosmosDbContext>();
         services.AddScoped<IUserRepository, CosmosUserRepository>();
+        services.AddScoped<IAuditLogRepository, CosmosAuditLogRepository>();
 
         return services;
     }
