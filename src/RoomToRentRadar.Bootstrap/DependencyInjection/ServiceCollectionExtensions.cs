@@ -21,6 +21,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRegisterUserUseCase, RegisterUserUseCase>();
         services.AddScoped<ILoginWithEmailUseCase, LoginWithEmailUseCase>();
         services.AddScoped<ILoginWithGoogleUseCase, LoginWithGoogleUseCase>();
+        services.AddScoped<IRefreshSessionUseCase, RefreshSessionUseCase>();
+        services.AddScoped<ILogoutUseCase, LogoutUseCase>();
         return services;
     }
 
@@ -49,6 +51,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
         services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
         services.AddSingleton<IGoogleIdentityVerifier, GoogleIdentityVerifier>();
+        services.AddSingleton<ITokenService, JwtTokenService>();
 
         return services;
     }

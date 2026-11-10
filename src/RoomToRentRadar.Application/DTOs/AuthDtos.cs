@@ -19,6 +19,12 @@ public sealed record LoginWithGoogleCommand(
     string IdToken,
     string? Role = null);
 
+public sealed record RefreshSessionCommand(
+    string RefreshToken);
+
+public sealed record LogoutCommand(
+    string RefreshToken);
+
 public sealed record AuthenticationResult(
     Guid UserId,
     string Email,
