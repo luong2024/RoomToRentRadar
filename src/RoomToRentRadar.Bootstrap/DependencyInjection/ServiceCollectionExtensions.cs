@@ -4,7 +4,9 @@ using RoomToRentRadar.Adapters.Inbound.WebApi.Controllers;
 using RoomToRentRadar.Adapters.Outbound.Authentication;
 using RoomToRentRadar.Adapters.Outbound.Persistence;
 using RoomToRentRadar.Adapters.Outbound.Persistence.Repositories;
+using RoomToRentRadar.Application.Ports.Inbound;
 using RoomToRentRadar.Application.Ports.Outbound;
+using RoomToRentRadar.Application.UseCases.Authentication;
 
 namespace RoomToRentRadar.Bootstrap.DependencyInjection;
 
@@ -15,7 +17,9 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddApplicationUseCases(this IServiceCollection services)
     {
-        // Register Application use cases (Inbound Ports -> UseCase implementations) here.
+        services.AddSingleton(TimeProvider.System);
+        services.AddScoped<IRegisterUserUseCase, RegisterUserUseCase>();
+        services.AddScoped<ILoginWithEmailUseCase, LoginWithEmailUseCase>();
         return services;
     }
 
@@ -42,6 +46,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserRepository, EfUserRepository>();
         services.AddScoped<IRefreshTokenRepository, EfRefreshTokenRepository>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
+        services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
 
         return services;
     }
