@@ -51,6 +51,13 @@ public class GetRoomDetailUseCaseTests
     }
 
     [Test]
+    public void Constructor_WhenNullDependencies_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => new GetRoomDetailUseCase(null!, _currentUserContext));
+        Assert.Throws<ArgumentNullException>(() => new GetRoomDetailUseCase(_roomRepository, null!));
+    }
+
+    [Test]
     public async Task ExecuteAsync_WhenRoomExistsAndAvailable_ReturnsFullDetailsWithEmptySimilarRooms()
     {
         // Arrange (AC1, AC2)
@@ -174,6 +181,62 @@ public class GetRoomDetailUseCaseTests
         Assert.That(firstSimilar.MonthlyRent, Is.EqualTo(1750000m));
         Assert.That(firstSimilar.ThumbnailUrl, Is.EqualTo("https://cdn.example.com/sim1.jpg"));
         Assert.That(firstSimilar.AddressSummary, Is.EqualTo("Đường Z115"));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WhenRoomIsRented_TreatsAsUnavailableAndSuggestsSimilarRooms()
+    {
+        // Arrange (AC3: RoomStatus.Rented is also unavailable)
+        var rentedRoom = CreateSampleRoom(id: "room-rented", status: RoomStatus.Rented);
+        _roomRepository.GetByIdAsync("room-rented", Arg.Any<CancellationToken>()).Returns(rentedRoom);
+        _currentUserContext.IsAuthenticated.Returns(true);
+
+        var similarRooms = new List<Room>
+        {
+            new()
+            {
+                Id = "room-sim-01",
+                Title = "Phòng trọ tương tự 01",
+                MonthlyRent = 1800000m,
+                AreaSquareMeters = 25.0,
+                DistanceToCampusKm = 0.5,
+                IsVerified = true,
+                PhotoUrls = new List<string> { "https://cdn.example.com/sim.jpg" },
+                FullAddress = "Đường Z115"
+            }
+        };
+
+        _roomRepository.GetSimilarRoomsAsync("room-rented", 1800000m, 25.5, 3, Arg.Any<CancellationToken>())
+            .Returns(similarRooms);
+
+        // Act
+        var result = await _sut.ExecuteAsync("room-rented");
+
+        // Assert
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!.IsAvailable, Is.False);
+        Assert.That(result.Status, Is.EqualTo("Rented"));
+        Assert.That(result.UnavailableMessage, Is.Not.Null.And.Not.Empty);
+        Assert.That(result.SimilarRooms, Has.Count.EqualTo(1));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WhenUnavailableAndNoSimilarRoomsFound_ReturnsEmptySimilarList()
+    {
+        // Arrange (AC3: Unavailable room but 0 similar rooms in repository)
+        var unavailableRoom = CreateSampleRoom(id: "room-isolated", status: RoomStatus.Unavailable);
+        _roomRepository.GetByIdAsync("room-isolated", Arg.Any<CancellationToken>()).Returns(unavailableRoom);
+        _roomRepository.GetSimilarRoomsAsync("room-isolated", 1800000m, 25.5, 3, Arg.Any<CancellationToken>())
+            .Returns(new List<Room>());
+
+        // Act
+        var result = await _sut.ExecuteAsync("room-isolated");
+
+        // Assert
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!.IsAvailable, Is.False);
+        Assert.That(result.UnavailableMessage, Is.Not.Null.And.Not.Empty);
+        Assert.That(result.SimilarRooms, Is.Not.Null.And.Empty);
     }
 
     [Test]
