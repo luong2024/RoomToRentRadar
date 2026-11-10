@@ -1,6 +1,4 @@
 global using Fonts;
-global using RoomToRentRadar.Data;
-global using RoomToRentRadar.PageModels;
-global using RoomToRentRadar.Pages;
-global using RoomToRentRadar.Services;
-global using RoomToRentRadar.Utilities;
+global using RoomToRentRadar.Core.Constants;
+global using RoomToRentRadar.Core.Extensions;
+global using RoomToRentRadar.Core.Interfaces;
