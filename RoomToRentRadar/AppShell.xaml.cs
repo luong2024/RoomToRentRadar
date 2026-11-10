@@ -9,6 +9,7 @@ namespace RoomToRentRadar
         public AppShell()
         {
             InitializeComponent();
+            Routing.RegisterRoute(Core.Constants.AppRoutes.RoomDetail, typeof(Features.RoomDetails.Views.RoomDetailPage));
             var currentTheme = Application.Current!.RequestedTheme;
             ThemeSegmentedControl.SelectedIndex = currentTheme == AppTheme.Light ? 0 : 1;
         }
