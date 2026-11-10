@@ -80,4 +80,32 @@ public sealed class ListingsQueryService(AppDbContext dbContext)
             items,
             new PaginationInfo(query.Limit, nextCursor, hasMore));
     }
+
+    public async Task<ListingDetailDto?> GetDetailAsync(Guid id, CancellationToken cancellationToken)
+        => await dbContext.Listings
+            .AsNoTracking()
+            .Where(x => x.Id == id && x.Status == ListingStatus.Published)
+            .Select(x => new ListingDetailDto(
+                x.Id,
+                x.Title,
+                x.Description,
+                x.Price,
+                x.AreaM2,
+                x.Bedrooms,
+                x.Address,
+                x.Lat,
+                x.Lng,
+                x.CreatedAt,
+                x.UpdatedAt,
+                x.Amenities
+                    .OrderBy(amenity => amenity.SortOrder)
+                    .ThenBy(amenity => amenity.Id)
+                    .Select(amenity => amenity.Code)
+                    .ToList(),
+                x.Rules
+                    .OrderBy(rule => rule.SortOrder)
+                    .ThenBy(rule => rule.Id)
+                    .Select(rule => rule.Text)
+                    .ToList()))
+            .FirstOrDefaultAsync(cancellationToken);
 }

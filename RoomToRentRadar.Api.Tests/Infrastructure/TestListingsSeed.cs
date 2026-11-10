@@ -61,6 +61,24 @@ public static class TestListingsSeed
                 listing.Photos.Add(CreatePhoto(index, 0, $"cover-{index}.jpg", isCover: true));
             }
 
+            if (index == 0)
+            {
+                // Added out of sort order so the detail endpoint has to order both lists.
+                listing.Amenities.Add(CreateAmenity(index, AmenityCode.Parking, 1));
+                listing.Amenities.Add(CreateAmenity(index, AmenityCode.Wifi, 0));
+                listing.Rules.Add(CreateRule(index, 1, "No pets"));
+                listing.Rules.Add(CreateRule(index, 0, "No smoking"));
+            }
+            else if (index == 1)
+            {
+                // Deliberately has no amenities or rules.
+            }
+            else if (index == 2)
+            {
+                listing.Amenities.Add(CreateAmenity(index, AmenityCode.AirConditioner, 0));
+                listing.Rules.Add(CreateRule(index, 0, "No smoking"));
+            }
+
             dbContext.Listings.Add(listing);
         }
 
@@ -87,5 +105,23 @@ public static class TestListingsSeed
             Alt = $"Photo {sortOrder} for test listing {listingIndex}",
             SortOrder = sortOrder,
             IsCover = isCover
+        };
+
+    private static ListingAmenity CreateAmenity(int listingIndex, AmenityCode code, int sortOrder)
+        => new()
+        {
+            Id = new Guid($"22222222-0000-0000-0000-{(listingIndex * 100 + sortOrder):D12}"),
+            ListingId = IdFor(listingIndex),
+            Code = code,
+            SortOrder = sortOrder
+        };
+
+    private static ListingRule CreateRule(int listingIndex, int sortOrder, string text)
+        => new()
+        {
+            Id = new Guid($"33333333-0000-0000-0000-{(listingIndex * 100 + sortOrder):D12}"),
+            ListingId = IdFor(listingIndex),
+            Text = text,
+            SortOrder = sortOrder
         };
 }
