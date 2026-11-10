@@ -15,6 +15,10 @@ public sealed record LoginWithEmailCommand(
     string Email,
     string Password);
 
+public sealed record LoginWithGoogleCommand(
+    string IdToken,
+    string? Role = null);
+
 public sealed record AuthenticationResult(
     Guid UserId,
     string Email,

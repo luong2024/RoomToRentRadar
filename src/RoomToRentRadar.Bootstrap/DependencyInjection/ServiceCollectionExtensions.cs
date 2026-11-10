@@ -20,6 +20,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<IRegisterUserUseCase, RegisterUserUseCase>();
         services.AddScoped<ILoginWithEmailUseCase, LoginWithEmailUseCase>();
+        services.AddScoped<ILoginWithGoogleUseCase, LoginWithGoogleUseCase>();
         return services;
     }
 
@@ -47,6 +48,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRefreshTokenRepository, EfRefreshTokenRepository>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
         services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
+        services.AddSingleton<IGoogleIdentityVerifier, GoogleIdentityVerifier>();
 
         return services;
     }
