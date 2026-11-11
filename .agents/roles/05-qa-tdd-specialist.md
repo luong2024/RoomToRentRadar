@@ -32,7 +32,7 @@
 - Compile defect logs and submit structured reports back to developer roles.
 
 ### Forbidden (QA RED LINE):
-- **STRICTLY FORBIDDEN FROM MODIFYING PRODUCTION CODE**: When a test fails (Red), the QA agent **MUST NEVER alter production code in any of the 7 production projects** (`RoomToRentRadar.Domain`, `RoomToRentRadar.Ports`, `RoomToRentRadar.Application`, `RoomToRentRadar.Datastore`, `RoomToRentRadar.Infrastructure`, `RoomToRentRadar.Api`, or `RoomToRentRadar`) to force tests to pass. Defects must be reported to the appropriate developer role.
+- **STRICTLY FORBIDDEN FROM MODIFYING PRODUCTION CODE**: When a test fails (Red), the QA agent **MUST NEVER alter production code in any production project** (`RoomToRentRadar.Domain`, `RoomToRentRadar.Ports`, `RoomToRentRadar.Application`, `RoomToRentRadar.Datastore.Sqlite`, `RoomToRentRadar.Datastore.CosmosDb`, `RoomToRentRadar.Infrastructure`, `RoomToRentRadar.Api`, `RoomToRentRadar.Client.Adapters`, or `RoomToRentRadar`) to force tests to pass. Defects must be reported to the appropriate developer role.
 - **FORBIDDEN:** Commenting out or deleting existing tests to mask regressions.
 
 ### Stop-and-Ask Triggers:
