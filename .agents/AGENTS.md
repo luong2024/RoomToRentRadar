@@ -103,8 +103,14 @@ flowchart TD
    - **G4 (Secure-by-Default & Fail-Fast):** All Mock adapters MUST default to `false`. Missing secrets/keys outside `Development` MUST throw `InvalidOperationException` and terminate startup immediately.
    - **G5 (Realistic Adversarial Testing & Async Purity):** No illusion tests with dummy strings. Async test methods MUST be `public async Task` and use `Assert.ThrowsAsync<T>()`.
    - **G6 (Anti-IDOR & Least Privilege Data Projection):** Queries on user resources MUST scope by owner ID (`WHERE Id = @id AND OwnerId = @currentUserId`). Controllers MUST project via Response DTOs.
-4. **Post-Flight Verification Checklist:**
-   - Every task handoff MUST verify compilation, test passes (100%), invariant validation, concurrency check, ownership scope, and absence of hardcoded mock configurations.
+4. **The 5 SOLID Architectural Principles:**
+   - **S (Single Responsibility):** 1 Use Case = 1 Inbound Port = 1 `ExecuteAsync` method. Multi-action "Services" are strictly prohibited. Entities only protect business rules and invariants.
+   - **O (Open/Closed):** Extend functionality via Ports, Specifications (`ISpecification<T>`), or Adapters without modifying stable Core code with cascading `if/switch` blocks.
+   - **L (Liskov Substitution):** All Port implementations (Cosmos DB, SQLite, Mocks) must satisfy identical behavioral contracts, return semantics, and concurrency exception handling.
+   - **I (Interface Segregation):** Single-action Input Ports; cohesive, capability-focused Output Ports without unused methods.
+   - **D (Dependency Inversion):** High-level modules (`Domain`, `Application`) depend exclusively on abstractions (`Ports`), never on low-level `Infrastructure`, `Datastore`, `Api`, or UI.
+5. **Post-Flight Verification Checklist:**
+   - Every task handoff MUST verify compilation, test passes (100%), invariant validation, concurrency check, ownership scope, absence of hardcoded mock configurations, and SOLID compliance.
 
 ---
 

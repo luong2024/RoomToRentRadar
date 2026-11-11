@@ -66,6 +66,35 @@ Every feature implementation (Auth, Listings, Search, Maps, Media, Booking, Noti
 - **Ownership Verification (Anti-IDOR):** Read, update, and delete operations on user-owned resources (Favourites, Private Bookings, User Reports, Draft Listings) MUST scope queries by the authenticated user's ID (`WHERE Id = @id AND OwnerId = @currentUserId`).
 - **Least Privilege DTO Projection:** Domain entities and database documents MUST NEVER be returned directly from API controllers. Responses MUST always be projected through dedicated Response DTOs that omit sensitive information (national ID numbers, bank details, internal hashes, unmasked phone numbers).
 
+### 1.6. SOLID Architectural Principles for Hexagonal DDD
+Every component, interface, and class implementation across all layers MUST strictly adhere to the 5 SOLID principles:
+
+#### 1.6.1. Single Responsibility Principle (SRP)
+- **Use Case Segregation:** Every Use Case class (`*UseCase`) in `RoomToRentRadar.Application` MUST serve exactly one business capability and expose exactly one public execution method: `Task<TResult> ExecuteAsync(TRequest request, CancellationToken ct)`. Creating multipurpose "Service" classes (e.g., `RoomService`, `UserService` containing multiple arbitrary business operations) is STRICTLY PROHIBITED.
+- **Domain Invariant Purity:** Aggregates and Entities in `RoomToRentRadar.Domain` MUST solely own business rules, domain state transitions, and internal invariant validations. They MUST NEVER contain DTO mapping, persistence logic, UI formatting, or external communication.
+- **DTO Separation:** Request DTOs are strictly input carriers; Response DTOs are strictly output projections. Never reuse the same DTO for both inbound mutations and outbound projections.
+
+#### 1.6.2. Open / Closed Principle (OCP)
+- **Extensibility via Abstractions:** The system is open for extension but closed for modification. Introducing new business rules, sorting/filtering criteria, or external integrations MUST be achieved by implementing existing abstractions or adding new Ports/Adapters, NOT by mutating stable domain models with growing `if-else` or `switch-case` branches.
+- **Specification & Strategy Patterns:** Complex business queries (e.g., room discovery filters, pricing algorithms) MUST be composed using Domain Specifications (`ISpecification<T>`) or Strategies rather than embedding monolithic conditional logic in Use Cases.
+- **Pluggable Adapters:** Adding new storage providers (e.g., PostgreSQL), media engines (Cloudinary), or notification channels (Firebase/SMS) must be achieved entirely within `Infrastructure`/`Datastore` via new `I*Port`/`I*Repository` implementations without touching a single line of `Domain` or `Application` code.
+
+#### 1.6.3. Liskov Substitution Principle (LSP)
+- **Behavioral Equivalence of Adapters:** Any implementation of an Outbound Port (`I*Repository`, `I*Port`) MUST be fully substitutable for any other implementation without altering the correctness or behavior of the consuming Use Case.
+- **Prohibited Pseudo-Implementations:** No repository or adapter implementation is permitted to throw `NotImplementedException`, `NotSupportedException`, or silently swallow operations for methods defined on its Port interface.
+- **Consistent Contract Semantics:** 
+  - If a resource is missing, all repository implementations of `GetByIdAsync` MUST return `null` (or throw `EntityNotFoundException` where explicitly mandated by the Port contract). One implementation returning `null` while another throws an unhandled database exception is a direct violation of LSP.
+  - Concurrency token checks (`ConcurrencyConflictException`) must be enforced identically across Cosmos DB, SQLite, and In-Memory implementations.
+
+#### 1.6.4. Interface Segregation Principle (ISP)
+- **Single-Action Inbound Ports:** Every driving interface in `RoomToRentRadar.Ports/Inbound/UseCases/` MUST contain exactly 1 method (`ExecuteAsync`). Clients, API controllers, and MAUI PageModels must depend only on the specific UseCase interface they invoke, preventing coupling to unused methods.
+- **Cohesive Driven Ports:** Driven interfaces in `RoomToRentRadar.Ports/Outbound/` MUST be cohesive and finely targeted. Avoid bloated "God Interfaces" (e.g., an `IRoomRepository` with 30 methods covering search, statistics, media, and moderation). Where appropriate, segregate read operations from write operations or separate specialized queries into dedicated query ports.
+
+#### 1.6.5. Dependency Inversion Principle (DIP)
+- **Dependency Flow Toward Abstractions:** High-level modules (`Domain`, `Ports`, `Application`) MUST NOT depend on low-level modules (`Datastore`, `Infrastructure`, `Api`, `RoomToRentRadar` MAUI). Both high-level and low-level modules depend exclusively on abstractions defined in `RoomToRentRadar.Ports`.
+- **Pure Constructor Injection:** UseCases and Adapters MUST receive all external dependencies via constructor injection typed strictly as Interfaces (Ports). Instantiating concrete infrastructure services or datastore contexts directly via `new` within `Application` or `Domain` is STRICTLY PROHIBITED.
+- **No Inverted Framework References:** Core assemblies MUST NOT directly reference SDKs or frameworks (e.g., EF Core, Cosmos SDK, SQLite, ASP.NET Core Http, MAUI controls). Frameworks adapt to Core, never Core to frameworks.
+
 ---
 
 ## 2. STOP-AND-ASK TRIGGERS (WHEN TO PAUSE AND PROMPT)
@@ -94,4 +123,5 @@ Before completing any turn, the agent must verify:
 - [ ] Mock services default to `false` in base configuration and fail fast outside `Development` if external secrets/dependencies are missing?
 - [ ] Unit tests for async methods use `public async Task` and `Assert.ThrowsAsync<T>()` without sync wrappers or fake string shortcuts?
 - [ ] Read/update operations on user-owned resources enforce ownership checks against the authenticated `sub` ID (Anti-IDOR)?
+- [ ] SOLID Principles strictly respected: Single-action Inbound Ports with 1 `ExecuteAsync` (SRP/ISP), extensible via Specifications/Ports without modifying stable core (OCP), Port implementations maintain identical contract and exception behavior (LSP), and Core depends strictly on Port abstractions (DIP)?
 - [ ] No files outside the assigned task scope were modified (Two-File Rule respected)?

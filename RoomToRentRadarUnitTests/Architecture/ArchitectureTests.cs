@@ -14,6 +14,8 @@ public class ArchitectureTests
     private static readonly Assembly PortsAssembly = typeof(RoomToRentRadar.Ports.Outbound.Repositories.IUserRepository).Assembly;
     private static readonly Assembly ApplicationAssembly = typeof(RoomToRentRadar.Application.DependencyInjection).Assembly;
     private static readonly Assembly InfrastructureAssembly = typeof(DependencyInjection).Assembly;
+    private static readonly Assembly DatastoreCosmosAssembly = typeof(RoomToRentRadar.Datastore.CosmosDb.Repositories.CosmosUserRepository).Assembly;
+    private static readonly Assembly DatastoreSqliteAssembly = typeof(RoomToRentRadar.Datastore.Sqlite.Repositories.SqliteUserRepository).Assembly;
     private static readonly Assembly ApiAssembly = typeof(RoomToRentRadar.Api.Controllers.AuthController).Assembly;
 
     private static bool IsCandidateClass(Type t) =>
@@ -209,6 +211,115 @@ public class ArchitectureTests
             }
 
             return false;
+        }
+    }
+
+    [Test]
+    public void InboundUseCaseInterfaces_MustHaveSingleExecuteAsyncMethod_EnforcingSrpAndIsp()
+    {
+        var inboundUseCaseInterfaces = PortsAssembly.GetTypes()
+            .Where(t => t.IsInterface && t.Namespace != null && t.Namespace.Contains("Inbound.UseCases"))
+            .ToList();
+
+        Assert.That(inboundUseCaseInterfaces, Is.Not.Empty, "Expected to find Inbound UseCase interfaces in Ports assembly.");
+
+        foreach (var useCaseInterface in inboundUseCaseInterfaces)
+        {
+            var methods = useCaseInterface.GetMethods(BindingFlags.Public | BindingFlags.Instance);
+            Assert.That(
+                methods.Length,
+                Is.EqualTo(1),
+                $"Inbound UseCase interface '{useCaseInterface.Name}' has {methods.Length} methods. Under SRP and ISP, it MUST define exactly 1 method.");
+
+            Assert.That(
+                methods[0].Name,
+                Is.EqualTo("ExecuteAsync"),
+                $"Inbound UseCase interface '{useCaseInterface.Name}' method must be named 'ExecuteAsync'.");
+        }
+    }
+
+    [Test]
+    public void ApplicationUseCases_MustOnlyExposeExecuteAsync_EnforcingSrp()
+    {
+        var useCaseTypes = ApplicationAssembly.GetTypes()
+            .Where(t => IsCandidateClass(t) && t.Namespace != null && t.Namespace.Contains("UseCases"))
+            .ToList();
+
+        Assert.That(useCaseTypes, Is.Not.Empty, "Expected to find Application UseCase classes.");
+
+        foreach (var useCaseType in useCaseTypes)
+        {
+            var publicMethods = useCaseType.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+                .Where(m => !m.IsSpecialName)
+                .ToList();
+
+            Assert.That(
+                publicMethods.Count,
+                Is.EqualTo(1),
+                $"UseCase '{useCaseType.Name}' defines {publicMethods.Count} public methods ({string.Join(", ", publicMethods.Select(m => m.Name))}). Under SRP, it MUST expose only 1 public execution method.");
+
+            Assert.That(
+                publicMethods[0].Name,
+                Is.EqualTo("ExecuteAsync"),
+                $"UseCase '{useCaseType.Name}' public method must be 'ExecuteAsync'.");
+        }
+    }
+
+    [Test]
+    public void CoreAssemblies_MustNotReferenceLowLevelAssemblies_EnforcingDip()
+    {
+        var lowLevelAssemblyNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "RoomToRentRadar.Infrastructure",
+            "RoomToRentRadar.Datastore.CosmosDb",
+            "RoomToRentRadar.Datastore.Sqlite",
+            "RoomToRentRadar.Api",
+            "RoomToRentRadar"
+        };
+
+        var coreAssemblies = new[] { DomainAssembly, PortsAssembly, ApplicationAssembly };
+
+        foreach (var assembly in coreAssemblies)
+        {
+            var referencedAssemblies = assembly.GetReferencedAssemblies();
+            foreach (var reference in referencedAssemblies)
+            {
+                var isLowLevel = reference.Name != null && lowLevelAssemblyNames.Contains(reference.Name);
+                Assert.That(
+                    isLowLevel,
+                    Is.False,
+                    $"Core assembly '{assembly.GetName().Name}' violates Dependency Inversion Principle (DIP) by referencing low-level assembly '{reference.Name}'.");
+            }
+        }
+    }
+
+    [Test]
+    public void RepositoryImplementations_MustImplementPortInterfacesConsistently_EnforcingLsp()
+    {
+        var repoAssemblies = new[] { InfrastructureAssembly, DatastoreCosmosAssembly, DatastoreSqliteAssembly };
+        var repoPortType = typeof(RoomToRentRadar.Ports.Outbound.Repositories.IUserRepository);
+        var expectedMethodNames = repoPortType.GetMethods().Select(m => m.Name).ToHashSet();
+
+        var repoImplementations = repoAssemblies
+            .SelectMany(a => a.GetTypes())
+            .Where(t => IsCandidateClass(t) && repoPortType.IsAssignableFrom(t))
+            .ToList();
+
+        Assert.That(repoImplementations.Count, Is.GreaterThanOrEqualTo(3), "Expected at least 3 implementations of IUserRepository (Cosmos, SQLite, InMemory).");
+
+        foreach (var repoImpl in repoImplementations)
+        {
+            var methods = repoImpl.GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                .Select(m => m.Name)
+                .ToHashSet();
+
+            foreach (var expectedMethod in expectedMethodNames)
+            {
+                Assert.That(
+                    methods.Contains(expectedMethod),
+                    Is.True,
+                    $"Repository implementation '{repoImpl.FullName}' does not declare public method '{expectedMethod}' from '{repoPortType.Name}', violating Liskov Substitution Principle (LSP).");
+            }
         }
     }
 
