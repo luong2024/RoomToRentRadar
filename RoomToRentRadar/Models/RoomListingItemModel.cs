@@ -22,7 +22,17 @@ public sealed class RoomListingItemModel
     public string Status { get; init; } = "Available";
     public bool IsVerified { get; init; }
 
-    // Thuộc tính định dạng sẵn cho UI & AutomationId cho Appium (US01 AC2)
+    // Thuộc tính định dạng sẵn cho UI Mobile & fallback ảnh (US01 AC2)
+    public string EffectiveThumbnail => string.IsNullOrWhiteSpace(ThumbnailUrl)
+        ? "placeholder_room.png"
+        : ThumbnailUrl;
+
+    public string FormattedRentAmount => string.Format(ViCulture, "{0:N0}đ", Rent);
+
+    public string FormattedShortDistance => DistanceMeters < 1000
+        ? $"{DistanceMeters:0} m"
+        : $"{DistanceMeters / 1000.0:0.1} km";
+
     public string FormattedRent => string.Format(ViCulture, "{0:N0} đ/tháng", Rent);
     public string FormattedArea => $"{Area:0.#} m²";
     public string FormattedDistance => DistanceMeters < 1000

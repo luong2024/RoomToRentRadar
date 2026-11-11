@@ -98,7 +98,7 @@ public sealed class MockListingsService : IListingsService
                 DistanceMeters = distanceMeters,
                 RoomType = roomType,
                 Address = $"{street}, TP. Thái Nguyên",
-                ThumbnailUrl = string.Empty,
+                ThumbnailUrl = $"room_sample_{((i - 1) % 4) + 1}.png",
                 Status = "Available",
                 IsVerified = true
             });
