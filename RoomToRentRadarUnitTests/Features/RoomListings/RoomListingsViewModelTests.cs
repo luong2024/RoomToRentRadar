@@ -172,10 +172,7 @@ public class RoomListingsViewModelTests
         var priceAscOption = vm.SortOptions.First(o => o.Option == RoomSortOption.PriceAsc);
 
         // Act
-        vm.SelectSortCommand.Execute(priceAscOption);
-
-        // Wait briefly for the triggered reload task to complete
-        await Task.Delay(30);
+        await vm.SelectSortCommand.ExecuteAsync(priceAscOption);
 
         // Assert
         Assert.Multiple(() =>

@@ -24,6 +24,7 @@ public partial class RoomListingsViewModel : ObservableObject
     private readonly Func<string, Task>? _navigateAsync;
     private CancellationTokenSource? _paginationCts;
     private bool _isInitialized;
+    private bool _suppressAutoSortReload;
 
     public RoomListingsViewModel(
         IRoomListingsService roomListingsService,
@@ -125,7 +126,7 @@ public partial class RoomListingsViewModel : ObservableObject
         OnPropertyChanged(nameof(IsPriceSortSelected));
         OnPropertyChanged(nameof(PriceSortLabel));
 
-        if (!_isInitialized || value is null)
+        if (!_isInitialized || value is null || _suppressAutoSortReload)
         {
             return;
         }
@@ -134,7 +135,7 @@ public partial class RoomListingsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    public void SelectSort(RoomSortOptionItem? option)
+    public async Task SelectSortAsync(RoomSortOptionItem? option)
     {
         IsPriceMenuOpen = false;
 
@@ -143,7 +144,20 @@ public partial class RoomListingsViewModel : ObservableObject
             return;
         }
 
-        SelectedSortOptionItem = option;
+        _suppressAutoSortReload = true;
+        try
+        {
+            SelectedSortOptionItem = option;
+        }
+        finally
+        {
+            _suppressAutoSortReload = false;
+        }
+
+        if (_isInitialized)
+        {
+            await LoadFirstPageAsync(isPullToRefresh: false);
+        }
     }
 
     [RelayCommand]
