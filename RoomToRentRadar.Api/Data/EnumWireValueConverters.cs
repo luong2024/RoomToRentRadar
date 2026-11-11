@@ -54,3 +54,49 @@ public sealed class ListingPhotoKindConverter : ValueConverter<ListingPhotoKind,
         _ => throw new InvalidOperationException($"Unknown listing photo kind '{value}'.")
     };
 }
+
+public sealed class AmenityCodeConverter : ValueConverter<AmenityCode, string>
+{
+    public AmenityCodeConverter()
+        : base(
+            value => ToWireValue(value),
+            value => FromWireValue(value))
+    {
+    }
+
+    public static string ToWireValue(AmenityCode code) => code switch
+    {
+        AmenityCode.Wifi => "wifi",
+        AmenityCode.AirConditioner => "air_conditioner",
+        AmenityCode.Parking => "parking",
+        AmenityCode.WashingMachine => "washing_machine",
+        AmenityCode.Refrigerator => "refrigerator",
+        AmenityCode.Kitchen => "kitchen",
+        AmenityCode.PrivateBathroom => "private_bathroom",
+        AmenityCode.Balcony => "balcony",
+        AmenityCode.Elevator => "elevator",
+        AmenityCode.Security => "security",
+        AmenityCode.Gym => "gym",
+        AmenityCode.Pool => "pool",
+        AmenityCode.PetAllowed => "pet_allowed",
+        _ => throw new ArgumentOutOfRangeException(nameof(code), code, null)
+    };
+
+    public static AmenityCode FromWireValue(string value) => value switch
+    {
+        "wifi" => AmenityCode.Wifi,
+        "air_conditioner" => AmenityCode.AirConditioner,
+        "parking" => AmenityCode.Parking,
+        "washing_machine" => AmenityCode.WashingMachine,
+        "refrigerator" => AmenityCode.Refrigerator,
+        "kitchen" => AmenityCode.Kitchen,
+        "private_bathroom" => AmenityCode.PrivateBathroom,
+        "balcony" => AmenityCode.Balcony,
+        "elevator" => AmenityCode.Elevator,
+        "security" => AmenityCode.Security,
+        "gym" => AmenityCode.Gym,
+        "pool" => AmenityCode.Pool,
+        "pet_allowed" => AmenityCode.PetAllowed,
+        _ => throw new InvalidOperationException($"Unknown amenity code '{value}'.")
+    };
+}

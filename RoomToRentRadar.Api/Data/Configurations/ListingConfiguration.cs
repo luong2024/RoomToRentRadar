@@ -57,5 +57,15 @@ public sealed class ListingConfiguration : IEntityTypeConfiguration<Listing>
 
         builder.HasIndex(x => new { x.Status, x.Bedrooms })
             .HasDatabaseName("ix_listings_status_bedrooms");
+
+        // Area search is a bounding-box range scan on the two coordinates after the
+        // status equality, so the leading column matches the published filter. The
+        // lat/lng index serves range queries on both axes; the lng-only index covers
+        // narrow longitude slices where the planner prefers a single range column.
+        builder.HasIndex(x => new { x.Status, x.Lat, x.Lng })
+            .HasDatabaseName("ix_listings_status_lat_lng");
+
+        builder.HasIndex(x => new { x.Status, x.Lng })
+            .HasDatabaseName("ix_listings_status_lng");
     }
 }

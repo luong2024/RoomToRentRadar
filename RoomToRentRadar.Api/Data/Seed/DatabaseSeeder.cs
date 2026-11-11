@@ -13,6 +13,9 @@ public static class DatabaseSeeder
     private const int SampleHiddenCount = 3;
     private const int BenchmarkBatchSize = 1000;
 
+    // One sample listing keeps an empty amenity and rule list to cover the empty detail case.
+    private const int NoDetailIndex = 7;
+
     private static readonly (string District, string Address, double Lat, double Lng)[] Locations =
     [
         ("Quận 1", "123 Nguyễn Trãi", 10.7769, 106.7009),
@@ -32,6 +35,31 @@ public static class DatabaseSeeder
         "Nhà nguyên căn {Bedrooms}PN hẻm xe hơi {District}",
         "Căn hộ dịch vụ cao cấp {District}",
         "Phòng trọ mới xây gần đại học {District}"
+    ];
+
+    private static readonly AmenityCode[] SampleAmenities =
+    [
+        AmenityCode.Wifi,
+        AmenityCode.AirConditioner,
+        AmenityCode.Parking,
+        AmenityCode.WashingMachine,
+        AmenityCode.Refrigerator,
+        AmenityCode.Kitchen,
+        AmenityCode.PrivateBathroom,
+        AmenityCode.Balcony,
+        AmenityCode.Elevator,
+        AmenityCode.Security,
+        AmenityCode.Gym,
+        AmenityCode.Pool,
+        AmenityCode.PetAllowed
+    ];
+
+    private static readonly string[] SampleRuleTexts =
+    [
+        "Không hút thuốc trong nhà",
+        "Không nuôi thú cưng",
+        "Giữ yên tĩnh sau 22 giờ",
+        "Không tổ chức tiệc tùng"
     ];
 
     public static async Task<bool> SeedSampleAsync(AppDbContext dbContext, CancellationToken cancellationToken = default)
@@ -135,7 +163,7 @@ public static class DatabaseSeeder
             .AddHours(-(index % 24))
             .AddMinutes(-(index % 60));
 
-        return new Listing
+        var listing = new Listing
         {
             Id = CreateDeterministicGuid($"sample-listing-{index}"),
             Title = title,
@@ -152,6 +180,11 @@ public static class DatabaseSeeder
             CreatedAt = createdAt,
             UpdatedAt = createdAt.AddHours(1)
         };
+
+        AddSampleAmenities(listing, index);
+        AddSampleRules(listing, index);
+
+        return listing;
     }
 
     private static Listing CreateBenchmarkListing(int index, DateTime baseDate)
@@ -217,6 +250,47 @@ public static class DatabaseSeeder
                 Alt = $"{listing.Title} - ảnh {photoIndex + 1}",
                 SortOrder = photoIndex,
                 IsCover = photoIndex == 0
+            });
+        }
+    }
+
+    private static void AddSampleAmenities(Listing listing, int index)
+    {
+        if (index == NoDetailIndex)
+        {
+            return;
+        }
+
+        var amenityCount = 3 + index % 3;
+        for (var amenityIndex = 0; amenityIndex < amenityCount; amenityIndex++)
+        {
+            var code = SampleAmenities[(index + amenityIndex) % SampleAmenities.Length];
+            listing.Amenities.Add(new ListingAmenity
+            {
+                Id = CreateDeterministicGuid($"sample-listing-{index}-amenity-{code}"),
+                ListingId = listing.Id,
+                Code = code,
+                SortOrder = amenityIndex
+            });
+        }
+    }
+
+    private static void AddSampleRules(Listing listing, int index)
+    {
+        if (index == NoDetailIndex)
+        {
+            return;
+        }
+
+        var ruleCount = 2 + index % 2;
+        for (var ruleIndex = 0; ruleIndex < ruleCount; ruleIndex++)
+        {
+            listing.Rules.Add(new ListingRule
+            {
+                Id = CreateDeterministicGuid($"sample-listing-{index}-rule-{ruleIndex}"),
+                ListingId = listing.Id,
+                Text = SampleRuleTexts[(index + ruleIndex) % SampleRuleTexts.Length],
+                SortOrder = ruleIndex
             });
         }
     }

@@ -85,6 +85,9 @@ namespace RoomToRentRadar.Api.Data.Migrations
                     b.HasIndex("Status", "Bedrooms")
                         .HasDatabaseName("ix_listings_status_bedrooms");
 
+                    b.HasIndex("Status", "Lng")
+                        .HasDatabaseName("ix_listings_status_lng");
+
                     b.HasIndex("Status", "AreaM2", "Id")
                         .IsDescending(false, true, false)
                         .HasDatabaseName("ix_listings_status_area_m2_desc_id");
@@ -92,6 +95,9 @@ namespace RoomToRentRadar.Api.Data.Migrations
                     b.HasIndex("Status", "CreatedAt", "Id")
                         .IsDescending(false, true, false)
                         .HasDatabaseName("ix_listings_status_created_at_id");
+
+                    b.HasIndex("Status", "Lat", "Lng")
+                        .HasDatabaseName("ix_listings_status_lat_lng");
 
                     b.HasIndex("Status", "Price", "Id")
                         .IsDescending(false, true, false)
@@ -106,6 +112,44 @@ namespace RoomToRentRadar.Api.Data.Migrations
                             t.HasCheckConstraint("ck_listings_price_non_negative", "price >= 0");
 
                             t.HasCheckConstraint("ck_listings_status", "status IN ('draft', 'published', 'hidden', 'removed')");
+                        });
+                });
+
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.ListingAmenity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("code");
+
+                    b.Property<Guid>("ListingId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("listing_id");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("sort_order");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ListingId", "Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_listing_amenities_listing_code");
+
+                    b.HasIndex("ListingId", "SortOrder", "Id")
+                        .HasDatabaseName("ix_listing_amenities_listing_sort_order_id");
+
+                    b.ToTable("listing_amenities", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_listing_amenities_code", "code IN ('wifi', 'air_conditioner', 'parking', 'washing_machine', 'refrigerator', 'kitchen', 'private_bathroom', 'balcony', 'elevator', 'security', 'gym', 'pool', 'pet_allowed')");
+
+                            t.HasCheckConstraint("ck_listing_amenities_sort_order_non_negative", "sort_order >= 0");
                         });
                 });
 
@@ -176,6 +220,49 @@ namespace RoomToRentRadar.Api.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.ListingRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ListingId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("listing_id");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("sort_order");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ListingId", "SortOrder", "Id")
+                        .HasDatabaseName("ix_listing_rules_listing_sort_order_id");
+
+                    b.ToTable("listing_rules", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_listing_rules_sort_order_non_negative", "sort_order >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.ListingAmenity", b =>
+                {
+                    b.HasOne("RoomToRentRadar.Api.Domain.Listing", "Listing")
+                        .WithMany("Amenities")
+                        .HasForeignKey("ListingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Listing");
+                });
+
             modelBuilder.Entity("RoomToRentRadar.Api.Domain.ListingPhoto", b =>
                 {
                     b.HasOne("RoomToRentRadar.Api.Domain.Listing", "Listing")
@@ -187,9 +274,24 @@ namespace RoomToRentRadar.Api.Data.Migrations
                     b.Navigation("Listing");
                 });
 
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.ListingRule", b =>
+                {
+                    b.HasOne("RoomToRentRadar.Api.Domain.Listing", "Listing")
+                        .WithMany("Rules")
+                        .HasForeignKey("ListingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Listing");
+                });
+
             modelBuilder.Entity("RoomToRentRadar.Api.Domain.Listing", b =>
                 {
+                    b.Navigation("Amenities");
+
                     b.Navigation("Photos");
+
+                    b.Navigation("Rules");
                 });
 #pragma warning restore 612, 618
         }

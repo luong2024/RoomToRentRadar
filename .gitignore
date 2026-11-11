@@ -1,8 +1,4 @@
-# ===========================================================================
-# RoomToRentRadar - .NET MAUI app, NUnit unit tests, NUnit/Appium UI tests
-# ===========================================================================
-
-# ---------------------------- .NET build output ----------------------------
+# Build output
 [Bb]in/
 [Oo]bj/
 artifacts/
@@ -11,103 +7,57 @@ publish/
 *.nupkg
 *.snupkg
 
-# ----------------------- Test results and coverage -------------------------
-[Tt]est[Rr]esult*/
+# Test output
+[TestRr]esult*/
 *.trx
 *.coverage
 *.coveragexml
+coverage/
 coverage*.json
 coverage*.xml
 coverage*.info
 coverage*.cobertura.xml
 [Cc]overageReport/
-allure-results/
-allure-report/
 
-# -------------------- Visual Studio / Rider / VS Code ----------------------
+# IDE files
 .vs/
 .idea/
-*.suo
-*.user
-*.userosscache
-*.sln.docstates
-*.rsuser
-*.DotSettings.user
-*.VC.db
-*.VC.VC.opendb
 .vscode/*
-!.vscode/extensions.json
-!.vscode/launch.json
-!.vscode/settings.json
-!.vscode/tasks.json
 
-# ---------------------------- MAUI / mobile --------------------------------
+# MAUI packages
 *.apk
 *.aab
 *.ipa
 *.app
 *.appx
 *.appxbundle
-*.appxupload
 *.msix
 *.msixbundle
-*.msixupload
-*.msi
 *.dSYM/
-*.dSYM.zip
 *.xcarchive/
-*.mobileprovision
 
-# --------------------- Signing keys and certificates -----------------------
+# Signing keys and local secrets
 *.keystore
 *.jks
 *.p12
 *.pfx
-*.snk
-
-# ------------------------- Logs and diagnostics ----------------------------
-*.log
-logs/
-*.dmp
-*.mdmp
-*.nettrace
-*.speedscope.json
-
-# ------------------------ Local config and secrets -------------------------
 .env
 .env.*
 !.env.example
-*.local
-appsettings.*.local.json
 secrets.json
+appsettings.*.local.json
 
-# --------------------------- Runtime data files ----------------------------
-App_Data/
+# Runtime data and logs
 *.db
-*.db-shm
-*.db-wal
 *.sqlite
-*.sqlite-shm
-*.sqlite-wal
+*.log
+logs/
+*.dmp
 
-# -------------------------------- OS files ---------------------------------
+# OS/editor files
 .DS_Store
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 Desktop.ini
-$RECYCLE.BIN/
-
-# ------------------------------- Node/npm ----------------------------------
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# ---------------------------- Editor backups -------------------------------
 *.orig
 *.rej
 *.bak

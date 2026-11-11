@@ -46,6 +46,8 @@ public sealed class ListingsApiFactory : WebApplicationFactory<Program>
     {
         await using var scope = Services.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await dbContext.ListingAmenities.ExecuteDeleteAsync();
+        await dbContext.ListingRules.ExecuteDeleteAsync();
         await dbContext.ListingPhotos.ExecuteDeleteAsync();
         await dbContext.Listings.ExecuteDeleteAsync();
         QueryCounter.Reset();

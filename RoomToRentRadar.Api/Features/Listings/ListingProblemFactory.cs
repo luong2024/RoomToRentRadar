@@ -11,6 +11,7 @@ public static class ListingProblemFactory
     public const string InvalidPriceRange = "invalid_price_range";
     public const string InvalidBedrooms = "invalid_bedrooms";
     public const string InvalidParameterFormat = "invalid_parameter_format";
+    public const string ListingNotFound = "listing_not_found";
 
     public static ProblemDetails InvalidQuery(string code, string detail)
     {
@@ -22,6 +23,19 @@ public static class ListingProblemFactory
             Detail = detail
         };
         problem.Extensions["code"] = code;
+        return problem;
+    }
+
+    public static ProblemDetails NotFound()
+    {
+        var problem = new ProblemDetails
+        {
+            Type = "https://tools.ietf.org/html/rfc9110#section-15.5.4",
+            Status = StatusCodes.Status404NotFound,
+            Title = "Listing not found",
+            Detail = "The listing does not exist or is not published."
+        };
+        problem.Extensions["code"] = ListingNotFound;
         return problem;
     }
 }

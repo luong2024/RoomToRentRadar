@@ -33,7 +33,7 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
     {
         var problem = ListingProblemFactory.InvalidQuery(
             ListingProblemFactory.InvalidParameterFormat,
-            "One or more query parameters have an invalid format.");
+            "One or more request parameters have an invalid format.");
         return new ObjectResult(problem)
         {
             StatusCode = StatusCodes.Status400BadRequest,
@@ -76,6 +76,7 @@ builder.Services.AddSingleton(serviceProvider => PhotoStorageOptions.Resolve(
 builder.Services.AddSingleton<PhotoStorage>();
 builder.Services.AddSingleton<PhotoProcessor>();
 builder.Services.AddScoped<ListingPhotosService>();
+builder.Services.AddScoped<AreaSearchQueryService>();
 
 var app = builder.Build();
 
