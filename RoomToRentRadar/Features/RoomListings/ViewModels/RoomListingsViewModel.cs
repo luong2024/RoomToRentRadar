@@ -259,14 +259,17 @@ public partial class RoomListingsViewModel : ObservableObject
         {
             // Superseded by a newer refresh or sort operation
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!token.IsCancellationRequested && ReferenceEquals(_paginationCts, cts))
         {
             // Rule 5: Preserve existing items and CurrentPage when page > 1 fails
             _errorHandler.HandleError(ex);
         }
         finally
         {
-            IsLoadingMore = false;
+            if (ReferenceEquals(_paginationCts, cts))
+            {
+                IsLoadingMore = false;
+            }
         }
     }
 
@@ -304,21 +307,24 @@ public partial class RoomListingsViewModel : ObservableObject
     private async Task LoadFirstPageAsync(bool isPullToRefresh)
     {
         // Rule 4: Cancel any in-flight pagination request when refreshing or changing sort
-        var previousCts = Interlocked.Exchange(ref _paginationCts, new CancellationTokenSource());
+        var currentCts = new CancellationTokenSource();
+        var previousCts = Interlocked.Exchange(ref _paginationCts, currentCts);
         previousCts?.Cancel();
         previousCts?.Dispose();
 
-        var token = _paginationCts!.Token;
+        var token = currentCts.Token;
 
         try
         {
             if (isPullToRefresh)
             {
                 IsRefreshing = true;
+                IsLoading = false;
             }
             else
             {
                 IsLoading = true;
+                IsRefreshing = false;
             }
 
             IsLoadingMore = false;
@@ -333,7 +339,7 @@ public partial class RoomListingsViewModel : ObservableObject
                 search: GetActiveSearchTerm(),
                 cancellationToken: token);
 
-            if (token.IsCancellationRequested)
+            if (token.IsCancellationRequested || !ReferenceEquals(_paginationCts, currentCts))
             {
                 return;
             }
@@ -359,7 +365,7 @@ public partial class RoomListingsViewModel : ObservableObject
         {
             // Superseded by a newer request
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!token.IsCancellationRequested && ReferenceEquals(_paginationCts, currentCts))
         {
             if (Rooms.Count == 0)
             {
@@ -370,13 +376,16 @@ public partial class RoomListingsViewModel : ObservableObject
         }
         finally
         {
-            if (isPullToRefresh)
+            if (ReferenceEquals(_paginationCts, currentCts))
             {
-                IsRefreshing = false;
-            }
-            else
-            {
-                IsLoading = false;
+                if (isPullToRefresh)
+                {
+                    IsRefreshing = false;
+                }
+                else
+                {
+                    IsLoading = false;
+                }
             }
         }
     }

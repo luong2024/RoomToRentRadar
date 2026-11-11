@@ -301,6 +301,50 @@ public class RoomListingsViewModelTests
         });
     }
 
+    [Test]
+    public async Task LoadFirstPage_WhenSupersededByNewerRequest_KeepsIsLoadingTrueUntilNewerRequestCompletes()
+    {
+        // Arrange
+        var firstRequestTcs = new TaskCompletionSource<PagedResponse<RoomListItemModel>>();
+        var secondRequestTcs = new TaskCompletionSource<PagedResponse<RoomListItemModel>>();
+        var callIndex = 0;
+
+        _fakeService.Handler = (_, _, _, cancellationToken) =>
+        {
+            callIndex++;
+            if (callIndex == 1)
+            {
+                cancellationToken.Register(() => firstRequestTcs.TrySetCanceled(cancellationToken));
+                return firstRequestTcs.Task;
+            }
+
+            return secondRequestTcs.Task;
+        };
+
+        var vm = CreateViewModel(pageSize: 2);
+
+        // Act: start first request, then supersede it with a second search request
+        var firstTask = vm.ApplySearchCommand.ExecuteAsync("z115");
+        var secondTask = vm.ApplySearchCommand.ExecuteAsync("quyết thắng");
+
+        await firstTask;
+
+        // Assert while second request is still in-flight: canceled first request must NOT reset IsLoading
+        Assert.That(vm.IsLoading, Is.True);
+
+        // Complete second request and verify final state
+        secondRequestTcs.SetResult(new PagedResponse<RoomListItemModel>(
+            CreateRooms(1, 2), Page: 1, PageSize: 2, TotalCount: 2));
+        await secondTask;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.IsLoading, Is.False);
+            Assert.That(vm.Rooms, Has.Count.EqualTo(2));
+            Assert.That(vm.SearchQuery, Is.EqualTo("quyết thắng"));
+        });
+    }
+
     private RoomListingsViewModel CreateViewModel(int pageSize) =>
         new(_fakeService, _fakeErrorHandler, route =>
         {
