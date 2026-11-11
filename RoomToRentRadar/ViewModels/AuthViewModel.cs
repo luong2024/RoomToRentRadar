@@ -1,0 +1,426 @@
+using System.Text;
+using System.Text.RegularExpressions;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using RoomToRentRadar.Core.Interfaces;
+using RoomToRentRadar.Core.Models.Authentication;
+
+namespace RoomToRentRadar.ViewModels;
+
+public partial class AuthViewModel : ObservableObject
+{
+    private static readonly Regex EmailRegex = new(
+        @"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    private readonly IAuthenticationPort _authenticationPort;
+    private readonly IGoogleAuthAdapter _googleAuthAdapter;
+
+    public AuthViewModel(
+        IAuthenticationPort authenticationPort,
+        IGoogleAuthAdapter googleAuthAdapter)
+    {
+        _authenticationPort = authenticationPort;
+        _googleAuthAdapter = googleAuthAdapter;
+    }
+
+    [ObservableProperty]
+    public partial bool IsSignUpView { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsLoading { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasError { get; set; }
+
+    [ObservableProperty]
+    public partial string? ErrorMessage { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsSuccess { get; set; }
+
+    [ObservableProperty]
+    public partial string? SuccessMessage { get; set; }
+
+    // Login fields
+    [ObservableProperty]
+    public partial string LoginEmail { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string LoginPassword { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string? LoginEmailError { get; set; }
+
+    [ObservableProperty]
+    public partial string? LoginPasswordError { get; set; }
+
+    // Sign Up fields
+    [ObservableProperty]
+    public partial string SignUpEmail { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string SignUpPassword { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string SignUpConfirmPassword { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string? SignUpEmailError { get; set; }
+
+    [ObservableProperty]
+    public partial string? SignUpPasswordError { get; set; }
+
+    [ObservableProperty]
+    public partial string? SignUpConfirmPasswordError { get; set; }
+
+    [ObservableProperty]
+    public partial string? SelectedRole { get; set; }
+
+    [ObservableProperty]
+    public partial string? RoleError { get; set; }
+
+    // Google Role Selection Dialog fields
+    [ObservableProperty]
+    public partial bool IsRoleSelectionDialogOpen { get; set; }
+
+    [ObservableProperty]
+    public partial string? GoogleSelectedRole { get; set; }
+
+    [ObservableProperty]
+    public partial string? GoogleRoleError { get; set; }
+
+    [ObservableProperty]
+    public partial string? PendingGoogleIdToken { get; set; }
+
+    [RelayCommand]
+    public void ToggleForm()
+    {
+        ClearErrors();
+        IsSignUpView = !IsSignUpView;
+    }
+
+    [RelayCommand]
+    public void SelectRole(string? role)
+    {
+        if (role is UserRoleConstants.Student or UserRoleConstants.Landlord)
+        {
+            SelectedRole = role;
+            RoleError = null;
+        }
+    }
+
+    [RelayCommand]
+    public void SelectGoogleRole(string? role)
+    {
+        if (role is UserRoleConstants.Student or UserRoleConstants.Landlord)
+        {
+            GoogleSelectedRole = role;
+            GoogleRoleError = null;
+        }
+    }
+
+    [RelayCommand]
+    public void CancelGoogleRole()
+    {
+        IsRoleSelectionDialogOpen = false;
+        GoogleSelectedRole = null;
+        GoogleRoleError = null;
+        PendingGoogleIdToken = null;
+    }
+
+    [RelayCommand]
+    public async Task SignInAsync(CancellationToken cancellationToken)
+    {
+        if (IsLoading) return;
+
+        ClearErrors();
+
+        if (!ValidateLoginForm())
+        {
+            return;
+        }
+
+        try
+        {
+            IsLoading = true;
+            var normalizedEmail = LoginEmail.Trim().ToLowerInvariant();
+            var request = new LoginWithEmailRequest(normalizedEmail, LoginPassword);
+
+            var result = await _authenticationPort.LoginWithEmailAsync(request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                IsSuccess = true;
+                SuccessMessage = "Signed in successfully!";
+            }
+            else
+            {
+                SetError(result.ErrorMessage ?? "Sign in failed. Please check your credentials.");
+            }
+        }
+        catch (Exception ex)
+        {
+            SetError(ex.Message);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    public async Task SignUpAsync(CancellationToken cancellationToken)
+    {
+        if (IsLoading) return;
+
+        ClearErrors();
+
+        if (!ValidateSignUpForm())
+        {
+            return;
+        }
+
+        try
+        {
+            IsLoading = true;
+            var normalizedEmail = SignUpEmail.Trim().ToLowerInvariant();
+            var request = new RegisterUserRequest(normalizedEmail, SignUpPassword, SelectedRole!);
+
+            var result = await _authenticationPort.RegisterAsync(request, cancellationToken);
+            if (result.IsSuccess)
+            {
+                IsSuccess = true;
+                SuccessMessage = "Account created successfully! You can now sign in.";
+            }
+            else
+            {
+                SetError(result.ErrorMessage ?? "Account creation failed.");
+            }
+        }
+        catch (Exception ex)
+        {
+            SetError(ex.Message);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    public async Task GoogleSignInAsync(CancellationToken cancellationToken)
+    {
+        if (IsLoading) return;
+
+        ClearErrors();
+
+        try
+        {
+            IsLoading = true;
+            var googleAuthResult = await _googleAuthAdapter.AuthenticateWithGoogleAsync(cancellationToken);
+
+            if (!googleAuthResult.IsSuccess || string.IsNullOrWhiteSpace(googleAuthResult.IdToken))
+            {
+                SetError(googleAuthResult.ErrorMessage ?? "Google sign-in was canceled or failed. Please try again.");
+                return;
+            }
+
+            var loginRequest = new LoginWithGoogleRequest(googleAuthResult.IdToken);
+            var result = await _authenticationPort.LoginWithGoogleAsync(loginRequest, cancellationToken);
+
+            if (result.IsSuccess)
+            {
+                IsSuccess = true;
+                SuccessMessage = "Google sign-in successful!";
+            }
+            else if (result.RequiresRoleSelection || !string.IsNullOrWhiteSpace(result.PendingGoogleIdToken))
+            {
+                // New user flow: Backend requires role selection
+                PendingGoogleIdToken = result.PendingGoogleIdToken ?? googleAuthResult.IdToken;
+                GoogleSelectedRole = null;
+                GoogleRoleError = null;
+                IsRoleSelectionDialogOpen = true;
+            }
+            else
+            {
+                SetError(result.ErrorMessage ?? "Google sign-in was canceled or failed. Please try again.");
+            }
+        }
+        catch (Exception ex)
+        {
+            SetError(ex.Message);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    public async Task ConfirmGoogleRoleAsync(CancellationToken cancellationToken)
+    {
+        if (IsLoading) return;
+
+        if (string.IsNullOrWhiteSpace(GoogleSelectedRole) ||
+            !UserRoleConstants.IsValidRegistrationRole(GoogleSelectedRole))
+        {
+            GoogleRoleError = "Please select whether you are a Student or a Landlord.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(PendingGoogleIdToken))
+        {
+            SetError("Google session expired. Please sign in again.");
+            IsRoleSelectionDialogOpen = false;
+            return;
+        }
+
+        try
+        {
+            IsLoading = true;
+            var request = new LoginWithGoogleRequest(PendingGoogleIdToken, GoogleSelectedRole);
+            var result = await _authenticationPort.LoginWithGoogleAsync(request, cancellationToken);
+
+            if (result.IsSuccess)
+            {
+                IsRoleSelectionDialogOpen = false;
+                PendingGoogleIdToken = null;
+                IsSuccess = true;
+                SuccessMessage = "Account created and signed in with Google!";
+            }
+            else
+            {
+                GoogleRoleError = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            GoogleRoleError = ex.Message;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    public bool ValidateLoginForm()
+    {
+        var isValid = true;
+
+        if (string.IsNullOrWhiteSpace(LoginEmail))
+        {
+            LoginEmailError = "Email address is required.";
+            isValid = false;
+        }
+        else if (LoginEmail.Trim().Length > 254 || !EmailRegex.IsMatch(LoginEmail.Trim()))
+        {
+            LoginEmailError = "Please enter a valid email address (maximum 254 characters).";
+            isValid = false;
+        }
+        else
+        {
+            LoginEmailError = null;
+        }
+
+        if (string.IsNullOrEmpty(LoginPassword))
+        {
+            LoginPasswordError = "Password is required.";
+            isValid = false;
+        }
+        else
+        {
+            LoginPasswordError = null;
+        }
+
+        return isValid;
+    }
+
+    public bool ValidateSignUpForm()
+    {
+        var isValid = true;
+
+        // Email validation
+        if (string.IsNullOrWhiteSpace(SignUpEmail))
+        {
+            SignUpEmailError = "Email address is required.";
+            isValid = false;
+        }
+        else if (SignUpEmail.Trim().Length > 254 || !EmailRegex.IsMatch(SignUpEmail.Trim()))
+        {
+            SignUpEmailError = "Please enter a valid email address (maximum 254 characters).";
+            isValid = false;
+        }
+        else
+        {
+            SignUpEmailError = null;
+        }
+
+        // Password validation
+        if (string.IsNullOrEmpty(SignUpPassword))
+        {
+            SignUpPasswordError = "Password is required.";
+            isValid = false;
+        }
+        else
+        {
+            var byteCount = Encoding.UTF8.GetByteCount(SignUpPassword);
+            if (SignUpPassword.Length < 8 || byteCount > 72)
+            {
+                SignUpPasswordError = "Password must be at least 8 characters long and not exceed 72 bytes.";
+                isValid = false;
+            }
+            else if (!SignUpPassword.Any(char.IsLetter) || !SignUpPassword.Any(char.IsDigit))
+            {
+                SignUpPasswordError = "Password must contain at least one letter and one number.";
+                isValid = false;
+            }
+            else
+            {
+                SignUpPasswordError = null;
+            }
+        }
+
+        // Confirm Password validation
+        if (SignUpPassword != SignUpConfirmPassword)
+        {
+            SignUpConfirmPasswordError = "Passwords do not match.";
+            isValid = false;
+        }
+        else
+        {
+            SignUpConfirmPasswordError = null;
+        }
+
+        // Role validation
+        if (string.IsNullOrWhiteSpace(SelectedRole) || !UserRoleConstants.IsValidRegistrationRole(SelectedRole))
+        {
+            RoleError = "Please select whether you are a Student or a Landlord.";
+            isValid = false;
+        }
+        else
+        {
+            RoleError = null;
+        }
+
+        return isValid;
+    }
+
+    public void ClearErrors()
+    {
+        HasError = false;
+        ErrorMessage = null;
+        LoginEmailError = null;
+        LoginPasswordError = null;
+        SignUpEmailError = null;
+        SignUpPasswordError = null;
+        SignUpConfirmPasswordError = null;
+        RoleError = null;
+        GoogleRoleError = null;
+    }
+
+    private void SetError(string message)
+    {
+        HasError = true;
+        ErrorMessage = message;
+    }
+}

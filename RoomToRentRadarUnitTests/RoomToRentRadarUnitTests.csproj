@@ -9,11 +9,19 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.0" />
     <PackageReference Include="NUnit" Version="4.3.2" />
     <PackageReference Include="NUnit.Analyzers" Version="4.7.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\RoomToRentRadar\Core\Models\Authentication\AuthContracts.cs" Link="Linked\AuthContracts.cs" />
+    <Compile Include="..\RoomToRentRadar\Core\Interfaces\IAuthenticationPort.cs" Link="Linked\IAuthenticationPort.cs" />
+    <Compile Include="..\RoomToRentRadar\Core\Interfaces\IGoogleAuthAdapter.cs" Link="Linked\IGoogleAuthAdapter.cs" />
+    <Compile Include="..\RoomToRentRadar\ViewModels\AuthViewModel.cs" Link="Linked\AuthViewModel.cs" />
   </ItemGroup>
 
   <ItemGroup>
