@@ -275,4 +275,4 @@ RoomsController.Search(query) → ISearchRoomsUseCase.ExecuteAsync(RoomSearchReq
 4. Introduce migration runner + `Users.SelectedCampusId`, `Users.Version`.
 5. Generalise `AuthExceptionHandlingMiddleware` → `ProblemDetailsMiddleware` with `errorCode`.
 6. **PR #16 (US04) is the foundation for `Room`** (team decision 2026-11-11): it is aligned to [erd.md](erd.md) §4.4 and merged first; PR #6 (US02) and PR #13 (US03) then rebase onto it and keep only their own use cases/endpoints.
-7. Update `.agents/AGENTS.md` project map and GUARDRAILS wording (Datastore split, client gateways, SQLite only).
+7. ~~Update `AGENTS.md` project map~~ (done — moved to repo root, 2026-11-11). Still to do: GUARDRAILS wording (Datastore split, client gateways, SQLite only).

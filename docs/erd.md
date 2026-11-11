@@ -93,7 +93,7 @@ erDiagram
 | IsDefault | INTEGER | NN | exactly one row = 1 (BR-CMP-01) |
 | SortOrder | INTEGER | NN | |
 
-**Seed data** (coordinates from OpenStreetMap/Nominatim, collected 2026-11-11; `ICTU` keeps the project baseline from `.agents/AGENTS.md` — OSM gives `21.58602, 105.80664`, a ~100 m difference). Coordinates are the main campus building; the team should verify them on a map before the pilot and correct the seed file if needed. All are in Thái Nguyên city, so no extra rules apply.
+**Seed data** (coordinates from OpenStreetMap/Nominatim, collected 2026-11-11; `ICTU` keeps the project baseline from `AGENTS.md` — OSM gives `21.58602, 105.80664`, a ~100 m difference). Coordinates are the main campus building; the team should verify them on a map before the pilot and correct the seed file if needed. All are in Thái Nguyên city, so no extra rules apply.
 
 | Id | Name | Latitude | Longitude | IsDefault | SortOrder |
 |---|---|---|---|---|---|
