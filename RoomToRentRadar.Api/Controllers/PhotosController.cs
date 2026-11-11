@@ -28,6 +28,7 @@ public sealed class PhotosController : ControllerBase
         _deletePhotoUseCase = deletePhotoUseCase;
     }
 
+    // uploadPhoto — UC-30, BR-MED-01..03.
     [HttpPost]
     [Authorize(Policy = AuthorizationPolicies.VerifiedLandlordPolicy)]
     [Consumes("multipart/form-data")]
@@ -67,6 +68,7 @@ public sealed class PhotosController : ControllerBase
         return Created(dto.MediumUrl, dto);
     }
 
+    // deletePhoto — BR-MED-03.
     [HttpDelete("{photoId}")]
     [Authorize(Policy = AuthorizationPolicies.VerifiedLandlordPolicy)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

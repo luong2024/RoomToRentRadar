@@ -13,7 +13,10 @@ using RoomToRentRadar.Ports.Outbound.Repositories;
 
 namespace RoomToRentRadarUnitTests.Api;
 
+// uploadPhoto/deletePhoto — UC-30, BR-MED-01..03.
+// NonParallelizable: PhotoApiFactory overrides process-wide environment variables.
 [TestFixture]
+[NonParallelizable]
 public class PhotosControllerHttpTests
 {
     private const string SigningKey = "0123456789abcdef0123456789abcdef";
@@ -44,7 +47,15 @@ public class PhotosControllerHttpTests
     public void SetUp()
     {
         _factory = new PhotoApiFactory();
-        _client = _factory.CreateClient();
+        try
+        {
+            _client = _factory.CreateClient();
+        }
+        catch
+        {
+            _factory.Dispose();
+            throw;
+        }
     }
 
     [TearDown]
@@ -204,12 +215,7 @@ public class PhotosControllerHttpTests
     public async Task Delete_OtherUsersPhoto_Returns404()
     {
         var ownerToken = CreateToken("landlord-a", "Landlord", isVerified: true);
-        var (json, _) = await UploadCreatedAsync(ownerToken, MinimalJpeg, "room.jpg", "Standard");
-        string photoId;
-        using (json)
-        {
-            photoId = json.RootElement.GetProperty("id").GetString()!;
-        }
+        var (photoId, _) = await UploadAndGetUrlsAsync(ownerToken);
 
         var otherToken = CreateToken("landlord-b", "Landlord", isVerified: true);
         using var response = await DeleteAsync(photoId, otherToken);
@@ -221,12 +227,7 @@ public class PhotosControllerHttpTests
     public async Task Delete_AttachedPhoto_Returns409()
     {
         var token = CreateToken("landlord-a", "Landlord", isVerified: true);
-        var (json, _) = await UploadCreatedAsync(token, MinimalJpeg, "room.jpg", "Standard");
-        string photoId;
-        using (json)
-        {
-            photoId = json.RootElement.GetProperty("id").GetString()!;
-        }
+        var (photoId, _) = await UploadAndGetUrlsAsync(token);
 
         using (var scope = _factory.Services.CreateScope())
         {
@@ -244,14 +245,7 @@ public class PhotosControllerHttpTests
     public async Task Delete_OwnUnattachedPhoto_Returns204()
     {
         var token = CreateToken("landlord-a", "Landlord", isVerified: true);
-        var (json, _) = await UploadCreatedAsync(token, MinimalJpeg, "room.jpg", "Standard");
-        string photoId;
-        string thumbUrl;
-        using (json)
-        {
-            photoId = json.RootElement.GetProperty("id").GetString()!;
-            thumbUrl = json.RootElement.GetProperty("thumbUrl").GetString()!;
-        }
+        var (photoId, thumbUrl) = await UploadAndGetUrlsAsync(token);
 
         using (var response = await DeleteAsync(photoId, token))
         {
@@ -335,6 +329,17 @@ public class PhotosControllerHttpTests
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created), body);
 
         return (JsonDocument.Parse(body), response.Headers.Location?.ToString());
+    }
+
+    private async Task<(string Id, string ThumbUrl)> UploadAndGetUrlsAsync(string token)
+    {
+        var (json, _) = await UploadCreatedAsync(token, MinimalJpeg, "room.jpg", "Standard");
+        using (json)
+        {
+            return (
+                json.RootElement.GetProperty("id").GetString()!,
+                json.RootElement.GetProperty("thumbUrl").GetString()!);
+        }
     }
 
     private async Task<HttpResponseMessage> DeleteAsync(string photoId, string? token)

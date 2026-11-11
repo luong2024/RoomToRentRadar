@@ -10,6 +10,7 @@ using RoomToRentRadar.Ports.Outbound.Repositories;
 
 namespace RoomToRentRadarUnitTests.Application.Photos;
 
+// uploadPhoto — UC-30, BR-MED-01..03.
 [TestFixture]
 public class UploadPhotoUseCaseTests
 {

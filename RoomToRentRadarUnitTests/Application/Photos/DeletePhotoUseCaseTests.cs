@@ -10,6 +10,7 @@ using RoomToRentRadar.Ports.Outbound.Repositories;
 
 namespace RoomToRentRadarUnitTests.Application.Photos;
 
+// deletePhoto — BR-MED-03.
 [TestFixture]
 public class DeletePhotoUseCaseTests
 {

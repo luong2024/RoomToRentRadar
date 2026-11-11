@@ -10,6 +10,7 @@ using RoomToRentRadar.Ports.Outbound.Repositories;
 
 namespace RoomToRentRadar.Application.UseCases.Photos;
 
+// uploadPhoto — UC-30, BR-MED-01..03.
 public sealed class UploadPhotoUseCase : IUploadPhotoUseCase
 {
     private const int HeaderLength = 16;
