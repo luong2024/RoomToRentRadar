@@ -121,6 +121,19 @@ public sealed class SqliteDbContext : IDisposable
                     CREATE INDEX IF NOT EXISTS IX_AuditLogs_TimestampUtc ON AuditLogs(TimestampUtc DESC);
                     CREATE INDEX IF NOT EXISTS IX_AuditLogs_UserId ON AuditLogs(UserId);
                     CREATE INDEX IF NOT EXISTS IX_AuditLogs_Action ON AuditLogs(Action);
+
+                    CREATE TABLE IF NOT EXISTS RoomPhotos (
+                        Id TEXT PRIMARY KEY NOT NULL,
+                        RoomId TEXT NOT NULL,
+                        FileName TEXT NOT NULL,
+                        Url TEXT NOT NULL,
+                        ContentType TEXT NOT NULL,
+                        SizeBytes INTEGER NOT NULL,
+                        UploadedByUserId TEXT NOT NULL,
+                        UploadedAtUtc TEXT NOT NULL
+                    );
+
+                    CREATE INDEX IF NOT EXISTS IX_RoomPhotos_RoomId ON RoomPhotos(RoomId);
                     """;
                 cmd.ExecuteNonQuery();
                 _schemaInitialized = true;
