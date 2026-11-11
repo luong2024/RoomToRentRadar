@@ -86,10 +86,8 @@ Thumbs.db
 .env.*
 appsettings.Development.Local.json
 
-# Local SQLite & Database Artifacts (SEC-002)
+# Local Database Artifacts (SEC-002)
 *.db
-*.sqlite
-*.sqlite3
 *.db-wal
 *.db-shm
 
