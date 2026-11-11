@@ -190,7 +190,7 @@ Each UC: **Actor · Story/AC · Preconditions · Main flow · Alternatives (A) �
 - **Pre:** `is_verified = true` (else SCR-LL-01 shows "Chờ xác minh" and *Đăng tin* disabled — `403` server-side).
 - **Main (wizard SCR-LL-02, 4 steps):** 1) *Ảnh*: pick ≥ 3 photos (+ optional 360°) → each uploads immediately in background via `uploadPhoto` (progress per photo). 2) *Thông tin*: title, room type, rent, deposit, area, occupants, furnishing, available-from, description. 3) *Vị trí*: address line, ward, district; drag pin on map (starts at campus). 4) *Tiện ích & an ninh*: amenities, safety features, utilities pricing, house rules (optional, can be added later). 5) *Gửi duyệt* → `createListing { photoIds, … }` → status `PendingReview` → success screen "Tin đang chờ duyệt (thường < 24h)".
 - **A1:** leave mid-way → draft kept on device (not server) and offered next time.
-- **E1:** photo > 10 MB / not JPG-PNG → rejected client-side and server `400` (magic bytes). **E2:** < 3 photos → *Gửi duyệt* disabled. **E3:** validation `400` per field.
+- **E1:** photo problems are rejected client-side first, and always re-checked by the server: > 10 MB → `413 FILE_TOO_LARGE`; not a real JPEG/PNG (magic bytes, even if named `.jpg`) → `415 UNSUPPORTED_MEDIA_TYPE`; other invalid input (empty file, panorama not 2:1, missing `kind`) → `400 VALIDATION_FAILED`. **E2:** < 3 photos → *Gửi duyệt* disabled. **E3:** validation `400` per field.
 - **Rules:** BR-LST-01..03, -11, BR-MED-01..03, BR-AUTH-03.
 
 #### UC-31 Manage my listings

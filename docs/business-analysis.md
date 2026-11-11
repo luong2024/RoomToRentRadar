@@ -132,7 +132,7 @@ To-be: register as Landlord (phone required) → Admin approves the landlord →
 | ID | Rule |
 |---|---|
 | BR-MED-01 | Per listing: 3–20 standard photos, 0–3 panoramas (360°). Gallery supports ≥ 8 (US03 AC1). |
-| BR-MED-02 | Accepted: JPEG or PNG, ≤ 10 MB each, validated by **magic bytes** (not file extension). Panorama must have aspect ratio 2:1 (±2%). (US08 AC4) |
+| BR-MED-02 | Accepted: JPEG or PNG, ≤ 10 MB each, validated by **magic bytes** (not file extension). Panorama must have aspect ratio 2:1 (±2%). (US08 AC4) Errors: > 10 MB → `413 FILE_TOO_LARGE`; wrong content/magic bytes → `415 UNSUPPORTED_MEDIA_TYPE`; any other invalid upload (empty, panorama ratio, missing `kind`) → `400 VALIDATION_FAILED`. |
 | BR-MED-03 | Uploaded photos belong to the uploading landlord; unattached uploads expire after 24 h. A photo can be attached only to the uploader's own listing. |
 | BR-MED-04 | Server stores original and generates `thumb` (400 px, ≤ 60 KB) and `medium` (1280 px, ≤ 300 KB) JPEG renditions; EXIF (incl. GPS) is stripped. Client loads `thumb` first then `medium` (progressive, US03 AC3). |
 | BR-MED-05 | First photo by `SortOrder` is the cover. Listing with no photo (legacy/edge) shows a placeholder (US03 AC4). |
