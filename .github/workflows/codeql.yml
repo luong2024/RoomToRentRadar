@@ -5,9 +5,12 @@ on:
     branches:
       - main
       - develop
+      - 'group-*'
   pull_request:
     branches:
       - main
+      - develop
+      - 'group-*'
   schedule:
     - cron: '0 6 * * 1'
   workflow_dispatch:
@@ -23,22 +26,22 @@ concurrency:
 
 jobs:
   analyze:
-    name: CodeQL Security Scan (C#)
+    name: CodeQL Security Scan (Full-Stack C#)
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup Java 21 (JDK)
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@c5195efecf7bdfc987ee827a71cb8b11521c002f # v4.7.0
         with:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
           dotnet-version: '10.0.x'
           dotnet-quality: 'preview'
@@ -48,20 +51,28 @@ jobs:
           dotnet workload install maui-android
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@096a89ea781ad15884828b1490898d6948bd1605 # v3.39.3
         with:
           languages: csharp
+          queries: security-and-quality
           build-mode: manual
 
-      - name: Build Projects for CodeQL Analysis
+      - name: Build Full-Stack Solution Projects for CodeQL Analysis
         run: |
-          # Build test projects
+          # Build Backend projects & test suites
+          dotnet build src/RoomToRentRadar.Bootstrap/RoomToRentRadar.Bootstrap.csproj -c Release
+          dotnet build tests/RoomToRentRadar.Domain.Tests/RoomToRentRadar.Domain.Tests.csproj -c Release
+          dotnet build tests/RoomToRentRadar.Application.Tests/RoomToRentRadar.Application.Tests.csproj -c Release
+          dotnet build tests/RoomToRentRadar.Adapters.Tests/RoomToRentRadar.Adapters.Tests.csproj -c Release
+          dotnet build tests/RoomToRentRadar.IntegrationTests/RoomToRentRadar.IntegrationTests.csproj -c Release
+
+          # Build MAUI Client test suites & Android target
           dotnet build RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj -c Release
           dotnet build RoomToRentRadarUIAppiumTests/RoomToRentRadarUIAppiumTests.csproj -c Release
-          # Build MAUI app for Android target
           dotnet build RoomToRentRadar/RoomToRentRadar.csproj -c Release -f net10.0-android -p:TargetFrameworks=net10.0-android
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@096a89ea781ad15884828b1490898d6948bd1605 # v3.39.3
         with:
           category: "/language:csharp"
+          fail-on: error

@@ -1,4 +1,4 @@
-name: CI - .NET MAUI Pipeline
+name: CI - Full-Stack Quality & Security Gate
 
 on:
   push:
@@ -7,11 +7,13 @@ on:
       - develop
       - 'feature/**'
       - 'bugfix/**'
+      - 'refactor/**'
       - 'group-*'
   pull_request:
     branches:
       - main
       - develop
+      - 'group-*'
   workflow_dispatch:
 
 permissions:
@@ -19,88 +21,381 @@ permissions:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/v')) }}
 
 jobs:
-  test:
-    name: Run Automated Tests
+  # ==========================================================================
+  # JOB 1: Backend General Tests (Domain, Application, Adapters, Integration)
+  # ==========================================================================
+  backend-general-tests:
+    name: Backend General Tests (Unit & Integration)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: radar_test
+          POSTGRES_PASSWORD: radar_test_pwd
+          POSTGRES_DB: roomradar_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U radar_test -d roomradar_test"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      ASPNETCORE_ENVIRONMENT: Testing
+      ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=roomradar_test;Username=radar_test;Password=radar_test_pwd"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-backend-${{ hashFiles('src/**/*.csproj', 'tests/**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-backend-
+
+      - name: Restore Backend Test Projects
+        run: |
+          dotnet restore tests/RoomToRentRadar.Domain.Tests/RoomToRentRadar.Domain.Tests.csproj
+          dotnet restore tests/RoomToRentRadar.Application.Tests/RoomToRentRadar.Application.Tests.csproj
+          dotnet restore tests/RoomToRentRadar.Adapters.Tests/RoomToRentRadar.Adapters.Tests.csproj
+          dotnet restore tests/RoomToRentRadar.IntegrationTests/RoomToRentRadar.IntegrationTests.csproj
+
+      - name: Run Backend General Tests (Excluding AuthSecurity)
+        run: |
+          dotnet test tests/RoomToRentRadar.Domain.Tests/RoomToRentRadar.Domain.Tests.csproj \
+            --configuration Release \
+            --no-restore \
+            --filter "TestCategory!=AuthSecurity" \
+            --logger "trx;LogFileName=backend-domain.trx" \
+            --results-directory ./TestResults/Backend/General \
+            --collect:"XPlat Code Coverage" \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+          dotnet test tests/RoomToRentRadar.Application.Tests/RoomToRentRadar.Application.Tests.csproj \
+            --configuration Release \
+            --no-restore \
+            --filter "TestCategory!=AuthSecurity" \
+            --logger "trx;LogFileName=backend-application.trx" \
+            --results-directory ./TestResults/Backend/General \
+            --collect:"XPlat Code Coverage" \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+          dotnet test tests/RoomToRentRadar.Adapters.Tests/RoomToRentRadar.Adapters.Tests.csproj \
+            --configuration Release \
+            --no-restore \
+            --filter "TestCategory!=AuthSecurity" \
+            --logger "trx;LogFileName=backend-adapters.trx" \
+            --results-directory ./TestResults/Backend/General \
+            --collect:"XPlat Code Coverage" \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+          dotnet test tests/RoomToRentRadar.IntegrationTests/RoomToRentRadar.IntegrationTests.csproj \
+            --configuration Release \
+            --no-restore \
+            --filter "TestCategory!=AuthSecurity" \
+            --logger "trx;LogFileName=backend-integration.trx" \
+            --results-directory ./TestResults/Backend/General \
+            --collect:"XPlat Code Coverage" \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+      - name: Enforce Non-Zero Executed Tests (Backend General)
+        run: |
+          command -v xmllint >/dev/null 2>&1 || (sudo apt-get update && sudo apt-get install -y libxml2-utils)
+          shopt -s nullglob
+          TRX_FILES=(./TestResults/Backend/General/*.trx)
+          if [ ${#TRX_FILES[@]} -eq 0 ]; then
+            echo "::error::No TRX files generated for Backend General Tests!"
+            exit 1
+          fi
+          TOTAL_EXECUTED=0
+          for trx in "${TRX_FILES[@]}"; do
+            EXEC=$(xmllint --xpath "string(//*[local-name()='Counters']/@executed)" "$trx" 2>/dev/null || echo "0")
+            EXEC=${EXEC:-0}
+            echo "TRX $(basename "$trx"): executed=$EXEC"
+            TOTAL_EXECUTED=$((TOTAL_EXECUTED + EXEC))
+          done
+          if [ "$TOTAL_EXECUTED" -lt 1 ]; then
+            echo "::error::Zero backend general tests executed! Check test filter or test discovery."
+            exit 1
+          fi
+          echo "Verified Backend General Tests executed count: $TOTAL_EXECUTED"
+
+      - name: Upload Backend General Coverage & Test Results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage-backend-general
+          path: |
+            ./TestResults/Backend/General/**/*.trx
+            ./TestResults/Backend/General/**/coverage.opencover.xml
+          if-no-files-found: error
+          retention-days: 7
+
+  # ==========================================================================
+  # JOB 2: Backend Auth Security Gate (Isolated Mandatory Gate)
+  # ==========================================================================
+  backend-auth-security-tests:
+    name: Backend Auth Security Gate (Refresh Token & Crypto)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: radar_test
+          POSTGRES_PASSWORD: radar_test_pwd
+          POSTGRES_DB: roomradar_auth_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U radar_test -d roomradar_auth_test"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      ASPNETCORE_ENVIRONMENT: Testing
+      ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=roomradar_auth_test;Username=radar_test;Password=radar_test_pwd"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-backend-${{ hashFiles('src/**/*.csproj', 'tests/**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-backend-
+
+      - name: Restore Integration Tests Project
+        run: |
+          dotnet restore tests/RoomToRentRadar.IntegrationTests/RoomToRentRadar.IntegrationTests.csproj
+
+      - name: Run AuthSecurity Suite (Token Rotation, Reuse Detection, Cryptographic Hashing)
+        run: |
+          dotnet test tests/RoomToRentRadar.IntegrationTests/RoomToRentRadar.IntegrationTests.csproj \
+            --configuration Release \
+            --no-restore \
+            --filter "TestCategory=AuthSecurity" \
+            --logger "trx;LogFileName=backend-auth.trx" \
+            --results-directory ./TestResults/Backend/Auth \
+            --collect:"XPlat Code Coverage" \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+      - name: Enforce Non-Zero Executed AuthSecurity Tests
+        run: |
+          command -v xmllint >/dev/null 2>&1 || (sudo apt-get update && sudo apt-get install -y libxml2-utils)
+          TRX_FILE="./TestResults/Backend/Auth/backend-auth.trx"
+          if [ ! -f "$TRX_FILE" ]; then
+            echo "::error::AuthSecurity TRX file not found at $TRX_FILE!"
+            exit 1
+          fi
+          EXECUTED=$(xmllint --xpath "string(//*[local-name()='Counters']/@executed)" "$TRX_FILE" 2>/dev/null || echo "0")
+          EXECUTED=${EXECUTED:-0}
+          if [ "$EXECUTED" -lt 1 ]; then
+            echo "::error::Zero AuthSecurity tests executed! Failing security gate."
+            exit 1
+          fi
+          echo "Verified AuthSecurity executed test count: $EXECUTED"
+
+      - name: Upload AuthSecurity Coverage & Test Results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage-backend-auth
+          path: |
+            ./TestResults/Backend/Auth/**/*.trx
+            ./TestResults/Backend/Auth/**/coverage.opencover.xml
+          if-no-files-found: error
+          retention-days: 7
+
+  # ==========================================================================
+  # JOB 3: MAUI Client Tests (Core DI Validation & File-Based SQLite WAL)
+  # ==========================================================================
+  maui-client-tests:
+    name: MAUI Client Tests (ViewModels, DI, SQLite WAL)
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
           dotnet-version: '10.0.x'
           dotnet-quality: 'preview'
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-tests-${{ hashFiles('**/*.csproj') }}
+          key: ${{ runner.os }}-nuget-maui-tests-${{ hashFiles('RoomToRentRadarUnitTests/**/*.csproj', 'RoomToRentRadarUIAppiumTests/**/*.csproj') }}
           restore-keys: |
-            ${{ runner.os }}-nuget-tests-
+            ${{ runner.os }}-nuget-maui-tests-
 
-      - name: Restore Test Projects
+      - name: Restore MAUI Client Test Projects
         run: |
           dotnet restore RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj
           dotnet restore RoomToRentRadarUIAppiumTests/RoomToRentRadarUIAppiumTests.csproj
 
-      - name: Execute Unit Tests
+      - name: Run MAUI Client Unit & SQLite WAL Concurrency Tests
         run: |
           dotnet test RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj \
             --configuration Release \
             --no-restore \
-            --logger "trx;LogFileName=unit-tests.trx" \
+            --logger "trx;LogFileName=maui-client.trx" \
+            --results-directory ./TestResults/Maui \
             --collect:"XPlat Code Coverage" \
-            --results-directory ./TestResults
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover \
+               DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.IncludeTestAssembly=true
 
-      - name: Execute UI Appium Tests
-        run: |
           dotnet test RoomToRentRadarUIAppiumTests/RoomToRentRadarUIAppiumTests.csproj \
             --configuration Release \
             --no-restore \
-            --logger "trx;LogFileName=ui-appium-tests.trx" \
-            --collect:"XPlat Code Coverage" \
-            --results-directory ./TestResults
+            --logger "trx;LogFileName=maui-ui-appium.trx" \
+            --results-directory ./TestResults/Maui
 
-      - name: Upload Test Results Artifact
-        uses: actions/upload-artifact@v4
+      - name: Enforce Non-Zero Executed MAUI Client Tests
+        run: |
+          command -v xmllint >/dev/null 2>&1 || (sudo apt-get update && sudo apt-get install -y libxml2-utils)
+          TRX_FILE="./TestResults/Maui/maui-client.trx"
+          if [ ! -f "$TRX_FILE" ]; then
+            echo "::error::MAUI Client TRX file not found at $TRX_FILE!"
+            exit 1
+          fi
+          EXECUTED=$(xmllint --xpath "string(//*[local-name()='Counters']/@executed)" "$TRX_FILE" 2>/dev/null || echo "0")
+          EXECUTED=${EXECUTED:-0}
+          if [ "$EXECUTED" -lt 1 ]; then
+            echo "::error::Zero MAUI client tests executed!"
+            exit 1
+          fi
+          echo "Verified MAUI Client Tests executed count: $EXECUTED"
+
+      - name: Upload MAUI Coverage & Test Results
         if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: TestResults-${{ github.run_number }}
-          path: ./TestResults
-          if-no-files-found: ignore
+          name: coverage-maui-client
+          path: |
+            ./TestResults/Maui/**/*.trx
+            ./TestResults/Maui/**/coverage.opencover.xml
+          if-no-files-found: error
           retention-days: 7
 
-  build-android:
-    name: Build MAUI Android APK
-    needs: test
+  # ==========================================================================
+  # JOB 4: Dependency Vulnerability Audit & CycloneDX SBOM Generation
+  # ==========================================================================
+  dependency-security-scan:
+    name: NuGet Vulnerability Audit & SBOM
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Install .NET MAUI Android Workload for Full-Solution Audit
+        run: |
+          dotnet workload install maui-android
+
+      - name: Restore Solution with Strict NuGet Audit Enforcement
+        run: |
+          dotnet restore RoomToRentRadar.slnx \
+            -p:NuGetAudit=true \
+            -p:NuGetAuditMode=all \
+            -p:NuGetAuditLevel=moderate \
+            -p:WarningsAsErrors="NU1901;NU1902;NU1903;NU1904"
+
+      - name: Verify Zero Vulnerable Direct or Transitive Packages
+        run: |
+          mkdir -p ./security-reports
+          dotnet list RoomToRentRadar.slnx package \
+            --vulnerable \
+            --include-transitive \
+            --format json > ./security-reports/nuget-audit.json
+
+          VULN_COUNT=$(jq '[.projects[].frameworks[]? | (.topLevelPackages[]?, .transitivePackages[]?) | select(.vulnerabilities != null and (.vulnerabilities | length > 0))] | length' ./security-reports/nuget-audit.json)
+          echo "Detected vulnerable packages count: $VULN_COUNT"
+          if [ "$VULN_COUNT" -gt 0 ]; then
+            echo "::error::Detected $VULN_COUNT vulnerable NuGet package(s) in RoomToRentRadar.slnx!"
+            cat ./security-reports/nuget-audit.json
+            exit 1
+          fi
+
+      - name: Generate CycloneDX SBOM for CI Verification
+        run: |
+          dotnet tool install --global CycloneDX --version 4.1.0 || dotnet tool install --global CycloneDX
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          dotnet CycloneDX RoomToRentRadar.slnx -o ./security-reports -fn sbom-ci-cyclonedx.json --json
+          test -s ./security-reports/sbom-ci-cyclonedx.json
+
+      - name: Upload NuGet Audit Report & SBOM Artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dependency-security-reports
+          path: ./security-reports/*
+          if-no-files-found: error
+          retention-days: 14
+
+  # ==========================================================================
+  # JOB 5: Build MAUI Android APK (Unsigned CI Verification Build)
+  # ==========================================================================
+  build-android-apk:
+    name: Build MAUI Android APK (Unsigned CI Gate)
+    needs: [maui-client-tests]
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Setup Java 21 (JDK)
-        uses: actions/setup-java@v4
+      - name: Setup Java 21 (Temurin JDK)
+        uses: actions/setup-java@c5195efecf7bdfc987ee827a71cb8b11521c002f # v4.7.0
         with:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
           dotnet-version: '10.0.x'
           dotnet-quality: 'preview'
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-maui-${{ hashFiles('RoomToRentRadar/RoomToRentRadar.csproj') }}
@@ -111,49 +406,172 @@ jobs:
         run: |
           dotnet workload install maui-android
 
-      - name: Restore MAUI Dependencies
+      - name: Restore MAUI Project
         run: |
-          dotnet restore RoomToRentRadar/RoomToRentRadar.csproj
+          dotnet restore RoomToRentRadar/RoomToRentRadar.csproj -p:TargetFrameworks=net10.0-android
 
-      - name: Build MAUI Android Application (Release)
+      - name: Build & Package Android Release APK (Trimming & AOT Analyzers Enabled)
         run: |
-          dotnet build RoomToRentRadar/RoomToRentRadar.csproj \
-            --configuration Release \
+          dotnet publish RoomToRentRadar/RoomToRentRadar.csproj \
             --framework net10.0-android \
+            --configuration Release \
             --no-restore \
-            -p:AndroidPackageFormat=apk
+            -p:TargetFrameworks=net10.0-android \
+            -p:AndroidPackageFormat=apk \
+            -p:AndroidKeyStore=false
 
-      - name: Locate & Verify Android APK Artifact
-        id: locate-apk
+      - name: Verify Non-Empty APK & Stage as Unsigned CI Artifact
         run: |
-          echo "Inspecting output directory for APK files..."
           OUTPUT_DIR="RoomToRentRadar/bin/Release/net10.0-android"
           if [ ! -d "$OUTPUT_DIR" ]; then
-            echo "::error::Output directory $OUTPUT_DIR does not exist!"
+            echo "::error::Android output directory $OUTPUT_DIR does not exist!"
             exit 1
           fi
 
-          # Find signed (debug-signed by default) or standard apk
-          APK_FILE=$(find "$OUTPUT_DIR" -maxdepth 2 -name "*Signed.apk" | head -n 1)
-          if [ -z "$APK_FILE" ]; then
-            APK_FILE=$(find "$OUTPUT_DIR" -maxdepth 2 -name "*.apk" | head -n 1)
+          APK_PATH=$(find "$OUTPUT_DIR" -name "*.apk" ! -name "*-Signed.apk" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            APK_PATH=$(find "$OUTPUT_DIR" -name "*.apk" | head -n 1)
           fi
-
-          if [ -z "$APK_FILE" ] || [ ! -f "$APK_FILE" ]; then
-            echo "::error::No APK artifact found in $OUTPUT_DIR!"
+          if [ -z "$APK_PATH" ] || [ ! -s "$APK_PATH" ]; then
+            echo "::error::No non-empty APK artifact found under $OUTPUT_DIR!"
             ls -la "$OUTPUT_DIR"
             exit 1
           fi
 
-          echo "Found Android APK: $APK_FILE"
-          APK_SIZE=$(stat -c%s "$APK_FILE" 2>/dev/null || stat -f%z "$APK_FILE" 2>/dev/null)
-          echo "APK size: $APK_SIZE bytes"
-          echo "apk_path=$APK_FILE" >> $GITHUB_OUTPUT
+          mkdir -p ci-artifacts
+          cp "$APK_PATH" ci-artifacts/RoomToRentRadar-android-ci-unsigned.apk
+          APK_BYTES=$(stat -c%s "ci-artifacts/RoomToRentRadar-android-ci-unsigned.apk" 2>/dev/null || stat -f%z "ci-artifacts/RoomToRentRadar-android-ci-unsigned.apk")
+          echo "Verified CI unsigned APK size: ${APK_BYTES} bytes"
 
-      - name: Upload Android Testing APK Artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload Unsigned Android CI APK Artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: RoomToRentRadar-Android-CI-Build.${{ github.run_number }}-${{ github.sha }}
-          path: ${{ steps.locate-apk.outputs.apk_path }}
+          name: RoomToRentRadar-android-ci-unsigned
+          path: ci-artifacts/RoomToRentRadar-android-ci-unsigned.apk
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 7
+
+  # ==========================================================================
+  # JOB 6: SonarCloud Quality Gate (Aggregated Full-Stack Coverage & SAST)
+  # ==========================================================================
+  sonarcloud-quality-gate:
+    name: SonarCloud Quality Gate & Coverage Verification
+    needs:
+      - backend-general-tests
+      - backend-auth-security-tests
+      - maui-client-tests
+      - dependency-security-scan
+      - build-android-apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository (Full History for Blame & New Code Period)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java 21 (Required by SonarScanner CLI)
+        uses: actions/setup-java@c5195efecf7bdfc987ee827a71cb8b11521c002f # v4.7.0
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Download Backend General Coverage Artifact
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: coverage-backend-general
+          path: ./coverage-artifacts/backend-general
+
+      - name: Download Backend AuthSecurity Coverage Artifact
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: coverage-backend-auth
+          path: ./coverage-artifacts/backend-auth
+
+      - name: Download MAUI Client Coverage Artifact
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: coverage-maui-client
+          path: ./coverage-artifacts/maui-client
+
+      - name: Verify Non-Empty OpenCover XML & Non-Zero Visited Sequence Points (Backend & MAUI)
+        run: |
+          command -v xmllint >/dev/null 2>&1 || (sudo apt-get update && sudo apt-get install -y libxml2-utils)
+
+          BACKEND_COV_FILES=$(find ./coverage-artifacts/backend-general ./coverage-artifacts/backend-auth -name "coverage.opencover.xml")
+          MAUI_COV_FILES=$(find ./coverage-artifacts/maui-client -name "coverage.opencover.xml")
+
+          if [ -z "$BACKEND_COV_FILES" ]; then
+            echo "::error::Missing Backend coverage.opencover.xml artifacts!"
+            exit 1
+          fi
+          if [ -z "$MAUI_COV_FILES" ]; then
+            echo "::error::Missing MAUI coverage.opencover.xml artifacts!"
+            exit 1
+          fi
+
+          BACKEND_VISITED=0
+          for f in $BACKEND_COV_FILES; do
+            xmllint --noout "$f"
+            PTS=$(xmllint --xpath "string(/CoverageSession/Summary/@visitedSequencePoints)" "$f" 2>/dev/null || echo "0")
+            PTS=${PTS:-0}
+            echo "Backend OpenCover $f visitedSequencePoints=$PTS"
+            BACKEND_VISITED=$((BACKEND_VISITED + PTS))
+          done
+
+          MAUI_VISITED=0
+          for f in $MAUI_COV_FILES; do
+            xmllint --noout "$f"
+            PTS=$(xmllint --xpath "string(/CoverageSession/Summary/@visitedSequencePoints)" "$f" 2>/dev/null || echo "0")
+            PTS=${PTS:-0}
+            echo "MAUI OpenCover $f visitedSequencePoints=$PTS"
+            MAUI_VISITED=$((MAUI_VISITED + PTS))
+          done
+
+          if [ "$BACKEND_VISITED" -le 0 ]; then
+            echo "::error::Backend visitedSequencePoints is 0! Failing coverage integrity check."
+            exit 1
+          fi
+          if [ "$MAUI_VISITED" -le 0 ]; then
+            echo "::error::MAUI visitedSequencePoints is 0! Failing coverage integrity check."
+            exit 1
+          fi
+          echo "Verified non-zero coverage: Backend visitedSequencePoints=$BACKEND_VISITED, MAUI visitedSequencePoints=$MAUI_VISITED"
+
+      - name: Run SonarCloud Analysis & Enforce Quality Gate (Fail-Closed)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+          SONAR_ORG: ${{ secrets.SONAR_ORG }}
+        run: |
+          if [ -z "$SONAR_TOKEN" ] || [ -z "$SONAR_PROJECT_KEY" ] || [ -z "$SONAR_ORG" ]; then
+            echo "::error::Missing required SonarCloud configuration (SONAR_TOKEN, SONAR_PROJECT_KEY, or SONAR_ORG). Quality Gate is fail-closed."
+            exit 1
+          fi
+
+          dotnet tool install --global dotnet-sonarscanner --version 9.0.2 || dotnet tool install --global dotnet-sonarscanner
+          export PATH="$PATH:$HOME/.dotnet/tools"
+
+          dotnet sonarscanner begin \
+            /k:"${SONAR_PROJECT_KEY}" \
+            /o:"${SONAR_ORG}" \
+            /d:sonar.token="${SONAR_TOKEN}" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.cs.opencover.reportsPaths="${GITHUB_WORKSPACE}/coverage-artifacts/**/coverage.opencover.xml" \
+            /d:sonar.cs.vstest.reportsPaths="${GITHUB_WORKSPACE}/coverage-artifacts/**/*.trx" \
+            /d:sonar.exclusions="**/Migrations/**,**/Platforms/**,**/Resources/**,**/*.xaml.g.cs,**/obj/**,**/bin/**" \
+            /d:sonar.qualitygate.wait=true \
+            /d:sonar.qualitygate.timeout=300
+
+          dotnet build src/RoomToRentRadar.Bootstrap/RoomToRentRadar.Bootstrap.csproj --configuration Release
+          dotnet build RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj --configuration Release
+
+          dotnet sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
