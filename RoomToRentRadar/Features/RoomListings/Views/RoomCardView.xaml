@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView
+    x:Class="RoomToRentRadar.Features.RoomListings.Views.RoomCardView"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:f="clr-namespace:Fonts"
+    xmlns:models="clr-namespace:RoomToRentRadar.Features.RoomListings.Models"
+    x:DataType="models:RoomListItemModel">
+
+    <Border
+        Padding="0"
+        BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+        Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+        StrokeShape="RoundRectangle 16"
+        StrokeThickness="1">
+        <Border.Shadow>
+            <Shadow
+                Brush="{StaticResource Black}"
+                Offset="0,4"
+                Opacity="0.06"
+                Radius="12" />
+        </Border.Shadow>
+
+        <VerticalStackLayout Spacing="0">
+            <!-- Edge-to-Edge Thumbnail Section -->
+            <Border
+                Padding="0"
+                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}"
+                HeightRequest="184"
+                StrokeShape="RoundRectangle 16,16,0,0"
+                StrokeThickness="0">
+                <Grid>
+                    <!-- Placeholder Icon -->
+                    <Label
+                        FontFamily="{x:Static f:FluentUI.FontFamily}"
+                        FontSize="32"
+                        HorizontalOptions="Center"
+                        Text="{x:Static f:FluentUI.building_24_regular}"
+                        TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
+                        VerticalOptions="Center" />
+
+                    <!-- Room Photo -->
+                    <Image
+                        Aspect="AspectFill"
+                        HeightRequest="184"
+                        Source="{Binding ThumbnailUrl}" />
+
+                    <!-- Top Gradient Scrim for Badge Contrast -->
+                    <BoxView HeightRequest="68" VerticalOptions="Start">
+                        <BoxView.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                <GradientStop Offset="0.0" Color="{StaticResource ScrimStart}" />
+                                <GradientStop Offset="1.0" Color="{StaticResource ScrimEnd}" />
+                            </LinearGradientBrush>
+                        </BoxView.Background>
+                    </BoxView>
+
+                    <!-- Top Overlay Badges -->
+                    <Grid
+                        Padding="12"
+                        ColumnDefinitions="Auto,*,Auto"
+                        VerticalOptions="Start">
+
+                        <!-- Verified Badge -->
+                        <Border
+                            Grid.Column="0"
+                            Padding="8,4"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource VerifiedBadgeBg}, Dark={StaticResource VerifiedBadgeBgDark}}"
+                            IsVisible="{Binding IsVerified}"
+                            StrokeShape="RoundRectangle 8"
+                            StrokeThickness="0">
+                            <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+                                <Label
+                                    FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                    FontSize="16"
+                                    Text="{x:Static f:FluentUI.shield_checkmark_16_regular}"
+                                    TextColor="{AppThemeBinding Light={StaticResource VerifiedBadgeText}, Dark={StaticResource VerifiedBadgeTextDark}}"
+                                    VerticalOptions="Center" />
+                                <Label
+                                    FontAttributes="Bold"
+                                    FontSize="12"
+                                    Text="Đã xác thực"
+                                    TextColor="{AppThemeBinding Light={StaticResource VerifiedBadgeText}, Dark={StaticResource VerifiedBadgeTextDark}}"
+                                    VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                        </Border>
+
+                        <!-- Distance to ICTU Badge -->
+                        <Border
+                            Grid.Column="2"
+                            Padding="8,4"
+                            BackgroundColor="{StaticResource DistanceOverlayBg}"
+                            StrokeShape="RoundRectangle 8"
+                            StrokeThickness="0">
+                            <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+                                <Label
+                                    FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                    FontSize="16"
+                                    Text="{x:Static f:FluentUI.my_location_16_regular}"
+                                    TextColor="{StaticResource White}"
+                                    VerticalOptions="Center" />
+                                <Label
+                                    FontAttributes="Bold"
+                                    FontSize="12"
+                                    Text="{Binding FormattedDistance}"
+                                    TextColor="{StaticResource White}"
+                                    VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <!-- Card Content -->
+            <VerticalStackLayout Padding="16,14,16,16" Spacing="8">
+
+                <!-- Price + Status & Area Pills Row -->
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" VerticalOptions="Center">
+                    <Label
+                        Grid.Column="0"
+                        FontAttributes="Bold"
+                        FontSize="19"
+                        Text="{Binding FormattedPrice}"
+                        TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                        VerticalOptions="Center" />
+
+                    <HorizontalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Center">
+                        <Border
+                            Padding="8,4"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource AccentTealSoft}, Dark={StaticResource AccentTealSoftDark}}"
+                            IsVisible="{Binding IsAvailable}"
+                            StrokeShape="RoundRectangle 8"
+                            StrokeThickness="0"
+                            VerticalOptions="Center">
+                            <Label
+                                FontAttributes="Bold"
+                                FontSize="11.5"
+                                Text="Còn trống"
+                                TextColor="{AppThemeBinding Light={StaticResource AccentTeal}, Dark={StaticResource AccentTealDark}}"
+                                VerticalOptions="Center" />
+                        </Border>
+
+                        <Border
+                            Padding="8,4"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}"
+                            StrokeShape="RoundRectangle 8"
+                            StrokeThickness="0"
+                            VerticalOptions="Center">
+                            <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+                                <Label
+                                    FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                    FontSize="15"
+                                    Text="{x:Static f:FluentUI.ruler_20_regular}"
+                                    TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}"
+                                    VerticalOptions="Center" />
+                                <Label
+                                    FontAttributes="Bold"
+                                    FontSize="12"
+                                    Text="{Binding FormattedArea}"
+                                    TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}"
+                                    VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                        </Border>
+                    </HorizontalStackLayout>
+                </Grid>
+
+                <!-- Room Title -->
+                <Label
+                    FontAttributes="Bold"
+                    FontSize="15"
+                    LineBreakMode="TailTruncation"
+                    LineHeight="1.25"
+                    MaxLines="2"
+                    Text="{Binding Title}"
+                    TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+
+                <!-- Address -->
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6">
+                    <Label
+                        Grid.Column="0"
+                        FontFamily="{x:Static f:FluentUI.FontFamily}"
+                        FontSize="16"
+                        Text="{x:Static f:FluentUI.location_16_regular}"
+                        TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
+                        VerticalOptions="Center" />
+                    <Label
+                        Grid.Column="1"
+                        FontSize="13"
+                        LineBreakMode="TailTruncation"
+                        MaxLines="1"
+                        Text="{Binding Address}"
+                        TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
+                        VerticalOptions="Center" />
+                </Grid>
+
+                <!-- Divider -->
+                <BoxView
+                    Margin="0,4,0,4"
+                    HeightRequest="1"
+                    Color="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" />
+
+                <!-- Amenity Tags + Details Link -->
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" VerticalOptions="Center">
+                    <FlexLayout
+                        Grid.Column="0"
+                        AlignItems="Center"
+                        BindableLayout.ItemsSource="{Binding PreviewAmenities}"
+                        Direction="Row"
+                        Wrap="Wrap">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <Border
+                                    Margin="0,0,6,4"
+                                    Padding="8,4"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}"
+                                    StrokeShape="RoundRectangle 8"
+                                    StrokeThickness="0">
+                                    <Label
+                                        FontSize="12"
+                                        Text="{Binding .}"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </FlexLayout>
+
+                    <Border
+                        Grid.Column="1"
+                        Padding="10,6"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}"
+                        StrokeShape="RoundRectangle 10"
+                        StrokeThickness="0"
+                        VerticalOptions="Center">
+                        <HorizontalStackLayout Spacing="3" VerticalOptions="Center">
+                            <Label
+                                FontAttributes="Bold"
+                                FontSize="12"
+                                Text="Xem chi tiết"
+                                TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                VerticalOptions="Center" />
+                            <Label
+                                FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                FontSize="15"
+                                Text="{x:Static f:FluentUI.chevron_right_16_regular}"
+                                TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                    </Border>
+                </Grid>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </Border>
+</ContentView>
