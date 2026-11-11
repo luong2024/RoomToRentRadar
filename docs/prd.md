@@ -220,7 +220,7 @@ Rules: `BR-CHT-01..07`, [ADR-009](adr/adr-009-in-app-chat.md). Text only in MVP.
 ## 8. Assumptions & dependencies
 
 - A1: ICTU student SSO is **Google sign-in (OIDC)** restricted to the `ictu.edu.vn` Google Workspace domain; student e-mails look like `DTC235210045@ictu.edu.vn`. The team registers its own Google Cloud OAuth client; the mock verifier is used in Development only.
-- A2: Campus coordinates other than ICTU (`21.5851, 105.8066`) are provided by the team before release (see [business-analysis.md §9](business-analysis.md#9-open-questions)).
+- A2: Campus coordinates are seeded in [erd.md §4.1](erd.md#41-campuses-reference-seeded) (ICTU baseline `21.5851, 105.8066` + 7 other Thái Nguyên University campuses from OpenStreetMap); the team verifies them before release (see [business-analysis.md §9](business-analysis.md#9-open-questions)).
 - A3: A Google Cloud project with Maps SDK for Android enabled (free for mobile dynamic maps, billing account required) is available; otherwise see fallback in [ADR-006](adr/adr-006-maps-and-spatial-search.md).
 - A4: Pilot data (100 listings) is entered by real landlords or by the team on their behalf.
 

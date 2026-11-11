@@ -108,7 +108,7 @@ To-be: register as Landlord (phone required) → Admin approves the landlord →
 ### 7.2 Campus (`BR-CMP`)
 | ID | Rule |
 |---|---|
-| BR-CMP-01 | Campuses are reference data (seeded). Default campus is **ICTU** (`21.5851, 105.8066`). |
+| BR-CMP-01 | Campuses are reference data seeded from [erd.md §4.1](erd.md#41-campuses-reference-seeded) (8 Thái Nguyên University campuses). Default campus is **ICTU** (`21.5851, 105.8066`). Adding a campus = adding one seed row; no code change. |
 | BR-CMP-02 | A signed-in user's selected campus is stored in the profile (`Users.SelectedCampusId`) and syncs across devices; a guest's selection is stored on the device only. |
 | BR-CMP-03 | Every distance, distance filter, distance sort and travel time is relative to the *selected* campus at request time; it is never stored on the listing. |
 
@@ -232,8 +232,9 @@ To-be: register as Landlord (phone required) → Admin approves the landlord →
 | # | Question | Owner | Default if unanswered |
 |---|---|---|---|
 | OQ-1 | Story points for US14 (chat) — not in the plan sheet. | Scrum Team | Estimate at next backlog refinement. |
-| OQ-2 | Which campuses besides ICTU, and their coordinates? | Team | Seed ICTU only; other campuses are added to the seed file when the team supplies name + coordinates (copy from Google Maps → right-click the campus gate → first line). |
+| OQ-2 | Verify the 7 non-ICTU campus coordinates (seed in [erd.md §4.1](erd.md#41-campuses-reference-seeded)) before the pilot. | Team | Seed as listed; fix the seed file if a pin is off. |
 
 Resolved decisions (2026-11-11):
+- **Campuses:** ICTU plus the other Thái Nguyên University member schools in the city (8 campuses). Coordinates were looked up once from OpenStreetMap (free, no API key) — a one-time seed list, not a runtime dependency.
 - **SSO provider:** Google (OIDC), domain `ictu.edu.vn`; student e-mail format `DTC<digits>@ictu.edu.vn` (see BR-AUTH-04).
 - **Admin during the pilot:** one team member signs in with a seeded Admin account (`Admin:SeedAccounts` configuration) and performs all approvals/moderation.

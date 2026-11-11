@@ -93,6 +93,19 @@ erDiagram
 | IsDefault | INTEGER | NN | exactly one row = 1 (BR-CMP-01) |
 | SortOrder | INTEGER | NN | |
 
+**Seed data** (coordinates from OpenStreetMap/Nominatim, collected 2026-11-11; `ICTU` keeps the project baseline from `.agents/AGENTS.md` — OSM gives `21.58602, 105.80664`, a ~100 m difference). Coordinates are the main campus building; the team should verify them on a map before the pilot and correct the seed file if needed. All are in Thái Nguyên city, so no extra rules apply.
+
+| Id | Name | Latitude | Longitude | IsDefault | SortOrder |
+|---|---|---|---|---|---|
+| `ICTU` | Trường Đại học Công nghệ Thông tin và Truyền thông | 21.5851 | 105.8066 | 1 | 1 |
+| `TNUS` | Trường Đại học Khoa học | 21.58870 | 105.80979 | 0 | 2 |
+| `SFL` | Trường Ngoại ngữ | 21.59120 | 105.80744 | 0 | 3 |
+| `TUEBA` | Trường Đại học Kinh tế và Quản trị Kinh doanh | 21.59007 | 105.81299 | 0 | 4 |
+| `TUAF` | Trường Đại học Nông Lâm | 21.59462 | 105.80550 | 0 | 5 |
+| `TNUE` | Trường Đại học Sư phạm | 21.59861 | 105.82163 | 0 | 6 |
+| `TUMP` | Trường Đại học Y Dược | 21.58827 | 105.82712 | 0 | 7 |
+| `TNUT` | Trường Đại học Kỹ thuật Công nghiệp | 21.54954 | 105.84350 | 0 | 8 |
+
 ### 4.2 `Users` *(exists — migration adds 2 columns)*
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
