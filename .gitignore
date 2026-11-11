@@ -66,4 +66,5 @@ Thumbs.db
 implementation_plan.md
 *.zip
 .qoder/
-.superpowers/RoomToRentRadar.Api/uploads/
+.superpowers/
+RoomToRentRadar.Api/uploads/
