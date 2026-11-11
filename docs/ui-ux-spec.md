@@ -67,25 +67,50 @@ References: UniHomes/StuRents ("search near your university" as the first questi
 
 ## 3. Design tokens (`Resources/Styles/Colors.xaml`, `Styles.xaml`)
 
-Use semantic tokens only; method in `.agents/skills/ui/02-design-system`.
+Use semantic tokens only; method in `.agents/skills/ui/02-design-system`. The palette is the team's **"Navy Blue + Ocean Blue + Teal"** design system implemented in PR #22 (`Resources/Styles/Colors.xaml`, plan `.agents/plans/UI_DESIGN_SYSTEM_PLAN.md`). This document is the single source for *which pairs are allowed*; the XAML files are the single source for the values. If the two disagree, fix the XAML or open a docs PR — do not invent colours.
 
-### 3.1 Colour (light / dark)
-| Token | Light | Dark | Use |
+### 3.1 Colour (light / dark) — values from `Colors.xaml`
+| Token (XAML key) | Light | Dark | Use |
 |---|---|---|---|
-| `Primary` | `#0B6E5F` | `#4FD1B5` | primary buttons, active tab, links |
-| `OnPrimary` | `#FFFFFF` | `#00201A` | text on primary |
-| `Surface` | `#FFFFFF` | `#121414` | page background |
-| `SurfaceVariant` | `#F2F5F4` | `#1E2221` | cards, sheets |
-| `OnSurface` | `#1A1C1C` | `#E2E3E2` | body text |
-| `OnSurfaceMuted` | `#5B6461` | `#A9B1AE` | secondary text |
-| `Outline` | `#D5DBD9` | `#3A403E` | borders, dividers |
-| `Price` | `#1A1C1C` | `#FFFFFF` | price text (bold, not coloured) |
-| `Verified` | `#1E7D32` | `#81C995` | verified badge |
-| `Warning` | `#A15C00` | `#FFB95C` | pending, unavailable banners |
-| `Error` | `#B3261E` | `#F2B8B5` | errors, destructive |
-| `Favourite` | `#D93A4A` | `#FF8A95` | filled heart |
+| `ActionPrimary` | `#163A5F` (Navy) | `#3572A5` | primary buttons, active tab |
+| `ActionSecondary` | `#256D85` (Ocean) | `#256D85` | secondary buttons, focus ring (`BorderFocus`) |
+| `ActionAccent` | `#4CB5AE` (Teal) | `#5CE1D6` | highlights, badges, selected chips, illustrations |
+| `TextBrand` | `#163A5F` | `#5CE1D6` | links, brand text |
+| `SurfaceCanvas` | `#F4F7FA` | `#0B131E` | page background |
+| `SurfaceCard` | `#FFFFFF` | `#162234` | cards |
+| `SurfaceElevated` | `#FFFFFF` | `#22334B` | sheets, dialogs |
+| `SurfaceSubtle` | `#E8EEF5` | `#1A283C` | chips, input fill |
+| `TextPrimary` | `#1E293B` | `#F4F7FA` | body text, **prices** (bold, not coloured) |
+| `TextSecondary` | `#475569` | `#CBD5E1` | secondary text |
+| `TextMuted` | `#94A3B8` | `#64748B` | **non-essential** hints and disabled only |
+| `TextInverse` | `#FFFFFF` | `#0B131E` | text on primary/secondary |
+| `BorderSubtle` | `#E2E8F0` | `#273B55` | borders, dividers |
+| `StatusSuccess` | `#16A34A` | `#4CB5AE` | verified badge (icon + text) |
+| `StatusWarning` | `#D97706` | `#F59E0B` | pending/unavailable banners |
+| `StatusDanger` | `#DC2626` | `#EF4444` | errors, destructive |
+| `StatusInfo` | `#0284C7` | `#38BDF8` | info |
+| `Favourite` *(to add)* | `#DC2626` | `#EF4444` | filled heart (reuse danger red) |
 
-All text/background pairs meet WCAG 2.2 AA (≥ 4.5:1 body, ≥ 3:1 large/icons). No gradients, no neon.
+### 3.1.1 Allowed text/background pairs (WCAG 2.2 AA — contrast measured 2026-11-11)
+| Pair | Ratio | Rule |
+|---|---|---|
+| `TextPrimary` on `SurfaceCanvas` / `SurfaceCard` | 13.6 : 1 | ✅ default body text |
+| `TextSecondary` on white | 7.6 : 1 | ✅ |
+| `TextInverse` on `ActionPrimary` (light) | 11.6 : 1 | ✅ primary button |
+| `TextInverse` on `ActionSecondary` | 5.8 : 1 | ✅ secondary button |
+| **`ActionPrimary` (Navy) text on `ActionAccent` (Teal)** | 4.7 : 1 | ✅ **accent button/badge text must be Navy** |
+| ~~White on `ActionAccent` (light)~~ | 2.5 : 1 | ❌ **forbidden** (PR #22 `AccentButton` currently violates this) |
+| ~~`ActionAccent` Teal used as text on white/canvas~~ | 2.3–2.5 : 1 | ❌ forbidden — Teal is a fill colour, not a text colour in light mode |
+| `TextMuted` on white (light) | 2.6 : 1 | ⚠️ only for non-essential decoration; never for price, status, form errors or required info |
+| `StatusSuccess`/`StatusWarning` as **text** on white | 3.3 / 3.2 : 1 | ⚠️ large text/icons only. For small text use darker variants `#15803D` (5.0 : 1) and `#B45309` (5.0 : 1) — add as `StatusSuccessText`/`StatusWarningText` |
+| `StatusDanger` text on white | 4.8 : 1 | ✅ |
+| Dark: `TextPrimary` on `SurfaceCanvas` | 17.3 : 1 | ✅ |
+| Dark: `TextSecondary` on `SurfaceCard` | 10.8 : 1 | ✅ |
+| Dark: `TextInverse` on `ActionAccent` | 11.7 : 1 | ✅ |
+| Dark: `TextMuted` on `SurfaceCard` | 3.4 : 1 | ⚠️ non-essential only |
+| Dark: `StatusDanger` on `SurfaceCard` | 4.3 : 1 | ⚠️ use for icons/large text, or lighten to ≥ `#F87171` for small text |
+
+Icons and large text (≥ 18 pt or 14 pt bold) need ≥ 3 : 1. No gradients, no neon.
 
 ### 3.2 Typography (bundled Open Sans — full Vietnamese diacritics)
 | Token | Size / weight | Use |
