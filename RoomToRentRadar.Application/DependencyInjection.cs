@@ -20,9 +20,8 @@ public static class DependencyInjection
         services.AddScoped<IGetCurrentUserProfileUseCase, GetCurrentUserProfileUseCase>();
         services.AddScoped<IApproveLandlordUseCase, ApproveLandlordUseCase>();
         services.AddScoped<IGetAuditLogsUseCase, GetAuditLogsUseCase>();
-        services.AddScoped<IUploadRoomPhotosUseCase, UploadRoomPhotosUseCase>();
-        services.AddScoped<IGetRoomGalleryUseCase, GetRoomGalleryUseCase>();
-        services.AddScoped<IDeleteRoomPhotoUseCase, DeleteRoomPhotoUseCase>();
+        services.AddScoped<IUploadPhotoUseCase, UploadPhotoUseCase>();
+        services.AddScoped<IDeletePhotoUseCase, DeletePhotoUseCase>();
 
         return services;
     }
