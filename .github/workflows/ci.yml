@@ -9,15 +9,6 @@ on:
       - group-4
       - group-1
       - 'group-*'
-      - 'feature/**'
-      - 'task/**'
-      - 'fix/**'
-      - 'bugfix/**'
-      - 'hotfix/**'
-      - 'chore/**'
-      - 'ci/**'
-      - 'refactor/**'
-      - 'test/**'
   pull_request:
     branches:
       - main
