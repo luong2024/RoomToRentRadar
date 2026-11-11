@@ -223,6 +223,8 @@ RoomsController.Search(query) → ISearchRoomsUseCase.ExecuteAsync(RoomSearchReq
 | `EntityNotFoundException`, `UserNotFoundException` | 404 | `ROOM_NOT_FOUND`, `CONVERSATION_NOT_FOUND` |
 | `DuplicateEmailException`, `ConcurrencyConflictException`, `InvalidStateTransitionException`, `LimitExceededException` | 409 | `EMAIL_TAKEN`, `CONCURRENCY_CONFLICT`, `INVALID_STATE_TRANSITION`, `LISTING_NOT_AVAILABLE`, `ALREADY_REPORTED`, `LIMIT_EXCEEDED` |
 | precondition failures | 412 / 428 | `ETAG_MISMATCH`, `IF_MATCH_REQUIRED` |
+| `FileTooLargeException` (> 10 MB, BR-MED-02) | 413 | `FILE_TOO_LARGE` |
+| `UnsupportedMediaTypeException` (not JPEG/PNG by magic bytes) | 415 | `UNSUPPORTED_MEDIA_TYPE` |
 | rate limiter | 429 | `RATE_LIMITED` |
 
 ### 7.3 Concurrency & idempotency
