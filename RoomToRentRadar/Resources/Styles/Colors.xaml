@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8" ?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <ResourceDictionary 
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
@@ -49,4 +49,69 @@
     <SolidColorBrush x:Key="Gray600Brush" Color="{StaticResource Gray600}"/>
     <SolidColorBrush x:Key="Gray900Brush" Color="{StaticResource Gray900}"/>
     <SolidColorBrush x:Key="Gray950Brush" Color="{StaticResource Gray950}"/>
+
+    <!-- UI Polish Design System Tokens (Slate & Modern Tech Blue) -->
+    <Color x:Key="PageBackground">#F8FAFC</Color>
+    <Color x:Key="PageBackgroundDark">#0F172A</Color>
+
+    <Color x:Key="CardBackground">#FFFFFF</Color>
+    <Color x:Key="CardBackgroundDark">#1E293B</Color>
+
+    <Color x:Key="SurfaceSubtle">#F1F5F9</Color>
+    <Color x:Key="SurfaceSubtleDark">#334155</Color>
+
+    <Color x:Key="BorderSubtle">#E2E8F0</Color>
+    <Color x:Key="BorderSubtleDark">#334155</Color>
+
+    <Color x:Key="PrimaryBrand">#2563EB</Color>
+    <Color x:Key="PrimaryBrandDark">#60A5FA</Color>
+    <Color x:Key="PrimaryBrandPressed">#1D4ED8</Color>
+    <Color x:Key="PrimaryBrandSoft">#EFF6FF</Color>
+    <Color x:Key="PrimaryBrandSoftDark">#1E3A8A</Color>
+
+    <LinearGradientBrush x:Key="PrimaryBrandGradient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Offset="0.0" Color="#2563EB" />
+        <GradientStop Offset="1.0" Color="#1D4ED8" />
+    </LinearGradientBrush>
+
+    <Color x:Key="TextPrimarySlate">#0F172A</Color>
+    <Color x:Key="TextPrimarySlateDark">#F8FAFC</Color>
+    <Color x:Key="TextSecondarySlate">#475569</Color>
+    <Color x:Key="TextSecondarySlateDark">#CBD5E1</Color>
+    <Color x:Key="TextMutedSlate">#64748B</Color>
+    <Color x:Key="TextMutedSlateDark">#94A3B8</Color>
+
+    <Color x:Key="AccentTeal">#0F766E</Color>
+    <Color x:Key="AccentTealDark">#5EEAD4</Color>
+    <Color x:Key="AccentTealSoft">#F0FDFA</Color>
+    <Color x:Key="AccentTealSoftDark">#134E4A</Color>
+
+    <Color x:Key="VerifiedBadgeBg">#DCFCE7</Color>
+    <Color x:Key="VerifiedBadgeBgDark">#14532D</Color>
+    <Color x:Key="VerifiedBadgeText">#166534</Color>
+    <Color x:Key="VerifiedBadgeTextDark">#86EFAC</Color>
+
+    <Color x:Key="HeroOverlayGlass">#26FFFFFF</Color>
+    <Color x:Key="HeroSubtitleLight">#DBEAFE</Color>
+    <Color x:Key="DistanceOverlayBg">#CC0F172A</Color>
+    <Color x:Key="ScrimStart">#590F172A</Color>
+    <Color x:Key="ScrimEnd">#000F172A</Color>
+
+    <!-- Desktop Window TitleBar & Shell Frame Tokens -->
+    <Color x:Key="TitleBarBackground">#F1F5F9</Color>
+    <Color x:Key="TitleBarBackgroundDark">#0F172A</Color>
+    <Color x:Key="TitleBarForeground">#0F172A</Color>
+    <Color x:Key="TitleBarForegroundDark">#F8FAFC</Color>
+    <Color x:Key="TitleBarSearchBackground">#FFFFFF</Color>
+    <Color x:Key="TitleBarSearchBackgroundDark">#1E293B</Color>
+    <Color x:Key="TitleBarSearchBorder">#CBD5E1</Color>
+    <Color x:Key="TitleBarSearchBorderDark">#334155</Color>
+    <Color x:Key="TitleBarPlaceholder">#64748B</Color>
+    <Color x:Key="TitleBarPlaceholderDark">#94A3B8</Color>
+    <Color x:Key="TitleBarAccentIcon">#2563EB</Color>
+    <Color x:Key="TitleBarAccentIconDark">#60A5FA</Color>
+    <Color x:Key="DesktopFrameBackdrop">#F1F5F9</Color>
+    <Color x:Key="DesktopFrameBackdropDark">#0F172A</Color>
+    <Color x:Key="DesktopRailBackground">#F1F5F9</Color>
+    <Color x:Key="DesktopRailBackgroundDark">#1E293B</Color>
 </ResourceDictionary>
