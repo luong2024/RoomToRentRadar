@@ -65,18 +65,18 @@ public class InMemoryRoomRepositoryTests
     public async Task AddAsync_ThenGetByIdAsync_ReturnsRoom()
     {
         var repository = new InMemoryRoomRepository();
-        var room = new Room
-        {
-            Id = "room-new",
-            Title = "Phòng mới",
-            Price = 1_800_000m,
-            Area = 20,
-            Latitude = 21.5851,
-            Longitude = 105.8066
-        };
+        var room = Room.Create(
+            title: "Phòng mới",
+            description: "Mô tả phòng mới",
+            price: 1_800_000m,
+            area: 20,
+            address: "Tân Thịnh, Thái Nguyên",
+            latitude: 21.5851,
+            longitude: 105.8066,
+            landlordId: "landlord-1");
 
         await repository.AddAsync(room);
-        var found = await repository.GetByIdAsync("room-new");
+        var found = await repository.GetByIdAsync(room.Id);
 
         Assert.Multiple(() =>
         {

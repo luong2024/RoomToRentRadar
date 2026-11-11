@@ -37,19 +37,17 @@ public sealed class InMemoryRoomRepository : IRoomRepository
         return Task.CompletedTask;
     }
 
-    private static Room Clone(Room source) => new()
-    {
-        Id = source.Id,
-        Title = source.Title,
-        Description = source.Description,
-        Price = source.Price,
-        Area = source.Area,
-        Address = source.Address,
-        Latitude = source.Latitude,
-        Longitude = source.Longitude,
-        LandlordId = source.LandlordId,
-        IsAvailable = source.IsAvailable,
-        IsVerified = source.IsVerified,
-        CreatedAtUtc = source.CreatedAtUtc
-    };
+    private static Room Clone(Room source) => Room.Reconstitute(
+        id: source.Id,
+        title: source.Title,
+        description: source.Description,
+        price: source.Price,
+        area: source.Area,
+        address: source.Address,
+        latitude: source.Latitude,
+        longitude: source.Longitude,
+        landlordId: source.LandlordId,
+        isAvailable: source.IsAvailable,
+        isVerified: source.IsVerified,
+        createdAtUtc: source.CreatedAtUtc);
 }

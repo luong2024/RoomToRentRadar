@@ -67,21 +67,19 @@ public class SearchRoomsUseCaseTests
         bool isVerified = true,
         bool isAvailable = true,
         DateTime? createdAt = null)
-        => new()
-        {
-            Id = id,
-            Title = title,
-            Description = $"{title} - mô tả",
-            Price = price,
-            Area = area,
-            Address = address,
-            Latitude = latitude,
-            Longitude = longitude,
-            LandlordId = "landlord-1",
-            IsVerified = isVerified,
-            IsAvailable = isAvailable,
-            CreatedAtUtc = createdAt ?? DateTime.UtcNow
-        };
+        => Room.Reconstitute(
+            id: id,
+            title: title,
+            description: $"{title} - mô tả",
+            price: price,
+            area: area,
+            address: address,
+            latitude: latitude,
+            longitude: longitude,
+            landlordId: "landlord-1",
+            isAvailable: isAvailable,
+            isVerified: isVerified,
+            createdAtUtc: createdAt ?? DateTime.UtcNow);
 
     private static string[] Ids(params string[] ids) => ids;
 

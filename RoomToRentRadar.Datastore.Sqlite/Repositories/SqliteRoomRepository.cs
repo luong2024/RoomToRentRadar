@@ -105,21 +105,19 @@ public sealed class SqliteRoomRepository : IRoomRepository
         }
     }
 
-    private static Room ReadRoom(SqliteDataReader reader) => new()
-    {
-        Id = reader.GetString(0),
-        Title = reader.GetString(1),
-        Description = reader.GetString(2),
-        Price = Convert.ToDecimal(reader.GetValue(3), CultureInfo.InvariantCulture),
-        Area = Convert.ToDouble(reader.GetValue(4), CultureInfo.InvariantCulture),
-        Address = reader.GetString(5),
-        Latitude = Convert.ToDouble(reader.GetValue(6), CultureInfo.InvariantCulture),
-        Longitude = Convert.ToDouble(reader.GetValue(7), CultureInfo.InvariantCulture),
-        LandlordId = reader.GetString(8),
-        IsAvailable = Convert.ToInt64(reader.GetValue(9), CultureInfo.InvariantCulture) != 0,
-        IsVerified = Convert.ToInt64(reader.GetValue(10), CultureInfo.InvariantCulture) != 0,
-        CreatedAtUtc = ParseUtc(reader.GetString(11))
-    };
+    private static Room ReadRoom(SqliteDataReader reader) => Room.Reconstitute(
+        id: reader.GetString(0),
+        title: reader.GetString(1),
+        description: reader.GetString(2),
+        price: Convert.ToDecimal(reader.GetValue(3), CultureInfo.InvariantCulture),
+        area: Convert.ToDouble(reader.GetValue(4), CultureInfo.InvariantCulture),
+        address: reader.GetString(5),
+        latitude: Convert.ToDouble(reader.GetValue(6), CultureInfo.InvariantCulture),
+        longitude: Convert.ToDouble(reader.GetValue(7), CultureInfo.InvariantCulture),
+        landlordId: reader.GetString(8),
+        isAvailable: Convert.ToInt64(reader.GetValue(9), CultureInfo.InvariantCulture) != 0,
+        isVerified: Convert.ToInt64(reader.GetValue(10), CultureInfo.InvariantCulture) != 0,
+        createdAtUtc: ParseUtc(reader.GetString(11)));
 
     private static DateTime ParseUtc(string iso8601) =>
         DateTime.Parse(iso8601, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);

@@ -1,49 +1,111 @@
+using System.Reflection;
 using RoomToRentRadar.Domain.Entities;
+using RoomToRentRadar.Domain.Exceptions;
 
 namespace RoomToRentRadarUnitTests.Domain;
 
 [TestFixture]
 public class RoomTests
 {
+    private static Room CreateValidRoom() => Room.Create(
+        title: "Phòng trọ Sinh viên Z115",
+        description: "Phòng sạch sẽ",
+        price: 1_500_000m,
+        area: 18.0,
+        address: "Z115, Thái Nguyên",
+        latitude: 21.5875,
+        longitude: 105.8080,
+        landlordId: "landlord-1");
+
     [Test]
-    public void NewRoom_HasSafeDefaults()
+    public void Room_HasNoPublicParameterlessConstructor()
     {
-        var room = new Room();
+        var publicParameterlessCtors = typeof(Room)
+            .GetConstructors(BindingFlags.Public | BindingFlags.Instance)
+            .Where(c => c.GetParameters().Length == 0)
+            .ToList();
+
+        Assert.That(publicParameterlessCtors, Is.Empty,
+            "Room phải được khởi tạo qua Room.Create hoặc Room.Reconstitute (Guardrail 1.5.3).");
+    }
+
+    [Test]
+    public void Create_WithValidData_GeneratesIdAndDefaults()
+    {
+        var before = DateTime.UtcNow;
+
+        var room = CreateValidRoom();
 
         Assert.Multiple(() =>
         {
             Assert.That(room.Id, Is.Not.Empty.And.Length.EqualTo(32));
-            Assert.That(room.Title, Is.EqualTo(string.Empty));
-            Assert.That(room.Description, Is.EqualTo(string.Empty));
-            Assert.That(room.Address, Is.EqualTo(string.Empty));
-            Assert.That(room.LandlordId, Is.EqualTo(string.Empty));
             Assert.That(room.IsAvailable, Is.True);
             Assert.That(room.IsVerified, Is.True);
-            Assert.That(room.Price, Is.EqualTo(0m));
-            Assert.That(room.Area, Is.EqualTo(0.0));
+            Assert.That(room.CreatedAtUtc.Kind, Is.EqualTo(DateTimeKind.Utc));
+            Assert.That(room.CreatedAtUtc, Is.InRange(before, DateTime.UtcNow));
         });
     }
 
     [Test]
-    public void Room_WithInitProperties_StoresValues()
+    public void Create_WithEmptyTitleOrLandlord_ThrowsDomainValidationException()
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.Throws<DomainValidationException>(() => Room.Create(
+                title: " ", description: "d", price: 1_000_000m, area: 10, address: "a",
+                latitude: 21.5, longitude: 105.8, landlordId: "landlord-1"));
+            Assert.Throws<DomainValidationException>(() => Room.Create(
+                title: "Phòng", description: "d", price: 1_000_000m, area: 10, address: "a",
+                latitude: 21.5, longitude: 105.8, landlordId: ""));
+        });
+    }
+
+    [Test]
+    public void Create_WithNonPositivePriceOrArea_ThrowsDomainValidationException()
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.Throws<DomainValidationException>(() => Room.Create(
+                title: "Phòng", description: "d", price: 0m, area: 10, address: "a",
+                latitude: 21.5, longitude: 105.8, landlordId: "landlord-1"));
+            Assert.Throws<DomainValidationException>(() => Room.Create(
+                title: "Phòng", description: "d", price: 1_000_000m, area: 0, address: "a",
+                latitude: 21.5, longitude: 105.8, landlordId: "landlord-1"));
+        });
+    }
+
+    [Test]
+    public void Create_WithOutOfRangeCoordinates_ThrowsDomainValidationException()
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.Throws<DomainValidationException>(() => Room.Create(
+                title: "Phòng", description: "d", price: 1_000_000m, area: 10, address: "a",
+                latitude: 91, longitude: 105.8, landlordId: "landlord-1"));
+            Assert.Throws<DomainValidationException>(() => Room.Create(
+                title: "Phòng", description: "d", price: 1_000_000m, area: 10, address: "a",
+                latitude: 21.5, longitude: -181, landlordId: "landlord-1"));
+        });
+    }
+
+    [Test]
+    public void Reconstitute_StoresAllValues()
     {
         var createdAt = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc);
 
-        var room = new Room
-        {
-            Id = "room-1",
-            Title = "Phòng trọ Sinh viên Z115",
-            Description = "Phòng sạch sẽ",
-            Price = 1_500_000m,
-            Area = 18.0,
-            Address = "Z115, Thái Nguyên",
-            Latitude = 21.5875,
-            Longitude = 105.8080,
-            LandlordId = "landlord-1",
-            IsAvailable = false,
-            IsVerified = false,
-            CreatedAtUtc = createdAt
-        };
+        var room = Room.Reconstitute(
+            id: "room-1",
+            title: "Phòng trọ Sinh viên Z115",
+            description: "Phòng sạch sẽ",
+            price: 1_500_000m,
+            area: 18.0,
+            address: "Z115, Thái Nguyên",
+            latitude: 21.5875,
+            longitude: 105.8080,
+            landlordId: "landlord-1",
+            isAvailable: false,
+            isVerified: false,
+            createdAtUtc: createdAt);
 
         Assert.Multiple(() =>
         {

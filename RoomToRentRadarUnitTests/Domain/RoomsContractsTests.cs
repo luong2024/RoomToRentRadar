@@ -71,13 +71,21 @@ public class RoomsContractsTests
     public async Task IRoomRepository_CanBeSubstitutedWithNSubstitute()
     {
         var repository = Substitute.For<IRoomRepository>();
-        var room = new Room { Id = "room-1" };
+        var room = Room.Create(
+            title: "Phòng hợp đồng",
+            description: "Mô tả",
+            price: 1_000_000m,
+            area: 20,
+            address: "Tân Thịnh, Thái Nguyên",
+            latitude: 21.5851,
+            longitude: 105.8066,
+            landlordId: "landlord-1");
 
         repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(new List<Room> { room });
-        repository.GetByIdAsync("room-1", Arg.Any<CancellationToken>()).Returns(room);
+        repository.GetByIdAsync(room.Id, Arg.Any<CancellationToken>()).Returns(room);
 
         var all = await repository.GetAllAsync();
-        var found = await repository.GetByIdAsync("room-1");
+        var found = await repository.GetByIdAsync(room.Id);
 
         Assert.Multiple(() =>
         {

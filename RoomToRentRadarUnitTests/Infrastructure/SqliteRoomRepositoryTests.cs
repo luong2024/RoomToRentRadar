@@ -74,21 +74,19 @@ public class SqliteRoomRepositoryTests
         using var dbContext = new SqliteDbContext(InMemorySettings);
         IRoomRepository repo = new SqliteRoomRepository(dbContext);
 
-        var room = new Room
-        {
-            Id = "room-new",
-            Title = "Phòng mới SQLite",
-            Description = "Mô tả phòng mới",
-            Price = 1_850_000m,
-            Area = 20.5,
-            Address = "Tân Thịnh, Thái Nguyên",
-            Latitude = 21.5851,
-            Longitude = 105.8066,
-            LandlordId = "landlord-1",
-            IsAvailable = false,
-            IsVerified = true,
-            CreatedAtUtc = new DateTime(2026, 11, 2, 9, 30, 0, DateTimeKind.Utc)
-        };
+        var room = Room.Reconstitute(
+            id: "room-new",
+            title: "Phòng mới SQLite",
+            description: "Mô tả phòng mới",
+            price: 1_850_000m,
+            area: 20.5,
+            address: "Tân Thịnh, Thái Nguyên",
+            latitude: 21.5851,
+            longitude: 105.8066,
+            landlordId: "landlord-1",
+            isAvailable: false,
+            isVerified: true,
+            createdAtUtc: new DateTime(2026, 11, 2, 9, 30, 0, DateTimeKind.Utc));
 
         await repo.AddAsync(room);
         var found = await repo.GetByIdAsync("room-new");

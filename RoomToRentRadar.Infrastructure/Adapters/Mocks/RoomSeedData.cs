@@ -43,19 +43,17 @@ internal static class RoomSeedData
         double latitude,
         double longitude,
         bool isVerified = true,
-        bool isAvailable = true) => new()
-    {
-        Id = id,
-        Title = title,
-        Description = description,
-        Price = price,
-        Area = area,
-        Address = address,
-        Latitude = latitude,
-        Longitude = longitude,
-        LandlordId = LandlordId,
-        IsAvailable = isAvailable,
-        IsVerified = isVerified,
-        CreatedAtUtc = BaseCreatedAtUtc.AddMinutes(minuteOffset)
-    };
+        bool isAvailable = true) => Room.Reconstitute(
+        id: id,
+        title: title,
+        description: description,
+        price: price,
+        area: area,
+        address: address,
+        latitude: latitude,
+        longitude: longitude,
+        landlordId: LandlordId,
+        isAvailable: isAvailable,
+        isVerified: isVerified,
+        createdAtUtc: BaseCreatedAtUtc.AddMinutes(minuteOffset));
 }
