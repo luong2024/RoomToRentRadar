@@ -231,6 +231,7 @@ public partial class RoomListingsViewModel : ObservableObject
                 nextPage,
                 PageSize,
                 sortOption,
+                GetActiveSearchTerm(),
                 token);
 
             if (token.IsCancellationRequested)
@@ -323,13 +324,13 @@ public partial class RoomListingsViewModel : ObservableObject
             IsLoadingMore = false;
 
             var sortOption = SelectedSortOptionItem?.Option ?? RoomSortOption.Newest;
-            var isSearching = HasSearchQuery;
-            var requestPageSize = isSearching ? Math.Max(PageSize, 50) : PageSize;
 
+            // Search is executed server-side so results cover the whole catalog and stay paginated.
             var response = await _roomListingsService.GetRoomListingsAsync(
                 page: 1,
-                pageSize: requestPageSize,
+                pageSize: PageSize,
                 sortBy: sortOption,
+                search: GetActiveSearchTerm(),
                 cancellationToken: token);
 
             if (token.IsCancellationRequested)
@@ -337,16 +338,9 @@ public partial class RoomListingsViewModel : ObservableObject
                 return;
             }
 
-            IEnumerable<RoomListItemModel> itemsToDisplay = response.Items;
-            if (isSearching)
-            {
-                var term = SearchQuery.Trim();
-                itemsToDisplay = response.Items.Where(r => MatchesSearch(r, term));
-            }
-
             Rooms.Clear();
             var existingIds = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var room in itemsToDisplay)
+            foreach (var room in response.Items)
             {
                 if (existingIds.Add(room.Id))
                 {
@@ -355,8 +349,8 @@ public partial class RoomListingsViewModel : ObservableObject
             }
 
             CurrentPage = 1;
-            TotalCount = isSearching ? Rooms.Count : response.TotalCount;
-            HasMoreItems = !isSearching && response.Items.Count >= PageSize && Rooms.Count < response.TotalCount;
+            TotalCount = response.TotalCount;
+            HasMoreItems = response.Items.Count >= PageSize && Rooms.Count < response.TotalCount;
             EmptyStateMessage = Rooms.Count == 0
                 ? "Không tìm thấy phòng trọ nào phù hợp."
                 : string.Empty;
@@ -387,14 +381,6 @@ public partial class RoomListingsViewModel : ObservableObject
         }
     }
 
-    private static bool MatchesSearch(RoomListItemModel room, string term)
-    {
-        if (room.Title.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-            room.Address.Contains(term, StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        return room.Amenities?.Any(a => a.Contains(term, StringComparison.OrdinalIgnoreCase)) == true;
-    }
+    private string? GetActiveSearchTerm() =>
+        HasSearchQuery ? SearchQuery.Trim() : null;
 }

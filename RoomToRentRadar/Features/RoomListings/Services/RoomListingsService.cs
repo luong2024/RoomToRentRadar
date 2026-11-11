@@ -27,13 +27,19 @@ public sealed class RoomListingsService : IRoomListingsService
         int page,
         int pageSize,
         RoomSortOption sortBy = RoomSortOption.Newest,
+        string? search = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(page, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(pageSize, 1);
 
         var sortQuery = GetSortQueryValue(sortBy);
+        var searchTerm = search?.Trim();
         var endpoint = $"api/rooms?page={page}&pageSize={pageSize}&sortBy={sortQuery}";
+        if (!string.IsNullOrEmpty(searchTerm))
+        {
+            endpoint += $"&search={Uri.EscapeDataString(searchTerm)}";
+        }
 
         try
         {
@@ -48,7 +54,7 @@ public sealed class RoomListingsService : IRoomListingsService
             !cancellationToken.IsCancellationRequested &&
             (ex is HttpRequestException or InvalidOperationException or TaskCanceledException))
         {
-            return GetFallbackMockPage(page, pageSize, sortBy);
+            return GetFallbackMockPage(page, pageSize, sortBy, searchTerm);
         }
     }
 
@@ -64,9 +70,16 @@ public sealed class RoomListingsService : IRoomListingsService
     private static PagedResponse<RoomListItemModel> GetFallbackMockPage(
         int page,
         int pageSize,
-        RoomSortOption sortBy)
+        RoomSortOption sortBy,
+        string? searchTerm)
     {
         IEnumerable<RoomListItemModel> query = MockRooms;
+
+        // Filter the full mock catalog before paging, mirroring server-side search semantics.
+        if (!string.IsNullOrEmpty(searchTerm))
+        {
+            query = query.Where(r => MatchesSearch(r, searchTerm));
+        }
 
         query = sortBy switch
         {
@@ -87,6 +100,17 @@ public sealed class RoomListingsService : IRoomListingsService
             Page: page,
             PageSize: pageSize,
             TotalCount: ordered.Count);
+    }
+
+    private static bool MatchesSearch(RoomListItemModel room, string term)
+    {
+        if (room.Title.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+            room.Address.Contains(term, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return room.Amenities?.Any(a => a.Contains(term, StringComparison.OrdinalIgnoreCase)) == true;
     }
 
     private static readonly IReadOnlyList<RoomListItemModel> MockRooms =

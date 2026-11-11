@@ -3,7 +3,7 @@ using RoomToRentRadar.Features.RoomListings.Models;
 namespace RoomToRentRadar.Features.RoomListings.Services;
 
 /// <summary>
-/// Service contract for fetching paginated and sorted room listings.
+/// Service contract for fetching paginated, sorted, and server-side searched room listings.
 /// </summary>
 public interface IRoomListingsService
 {
@@ -11,5 +11,6 @@ public interface IRoomListingsService
         int page,
         int pageSize,
         RoomSortOption sortBy = RoomSortOption.Newest,
+        string? search = null,
         CancellationToken cancellationToken = default);
 }

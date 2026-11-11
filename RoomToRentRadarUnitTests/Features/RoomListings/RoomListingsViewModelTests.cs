@@ -235,45 +235,45 @@ public class RoomListingsViewModelTests
     }
 
     [Test]
-    public async Task ApplySearch_WhenKeywordMatchesTitleOrAmenity_FiltersRoomsAndSetsHasSearchQuery()
+    public async Task ApplySearch_WhenKeywordProvided_SendsKeywordToServiceAndUsesServerTotals()
     {
-        // Arrange
-        var rooms = new List<RoomListItemModel>
-        {
-            new()
-            {
-                Id = "r1",
-                Title = "Phòng trọ khép kín có điều hòa",
-                Price = 1_600_000m,
-                AreaSqm = 20,
-                Address = "Ngõ 5 đường Z115",
-                DistanceToCampusKm = 0.4,
-                Amenities = ["Điều hòa", "Nóng lạnh"]
-            },
-            new()
-            {
-                Id = "r2",
-                Title = "Phòng đơn giá rẻ",
-                Price = 1_100_000m,
-                AreaSqm = 16,
-                Address = "Xã Quyết Thắng",
-                DistanceToCampusKm = 1.2,
-                Amenities = ["Wifi"]
-            }
-        };
-        _fakeService.SetupPages(totalCount: 2, pageSize: 50, rooms);
+        // Arrange: server reports 9 matches across the whole catalog, returned page by page
+        _fakeService.SetupPages(totalCount: 9, pageSize: 2, CreateRooms(1, 9));
         var vm = CreateViewModel(pageSize: 2);
 
         // Act
-        await vm.ApplySearchCommand.ExecuteAsync("điều hòa");
+        await vm.ApplySearchCommand.ExecuteAsync("  điều hòa  ");
 
         // Assert
         Assert.Multiple(() =>
         {
             Assert.That(vm.HasSearchQuery, Is.True);
             Assert.That(vm.SearchQuery, Is.EqualTo("điều hòa"));
-            Assert.That(vm.Rooms.Select(r => r.Id), Is.EqualTo(new[] { "r1" }));
-            Assert.That(vm.TotalCount, Is.EqualTo(1));
+            Assert.That(_fakeService.RequestedSearches, Is.EqualTo(new[] { "điều hòa" }));
+            Assert.That(vm.Rooms, Has.Count.EqualTo(2));
+            Assert.That(vm.TotalCount, Is.EqualTo(9));
+            Assert.That(vm.HasMoreItems, Is.True);
+            Assert.That(vm.ResultSummaryText, Is.EqualTo("Tìm thấy 9 phòng cho \"điều hòa\""));
+        });
+    }
+
+    [Test]
+    public async Task LoadMoreRooms_WhenSearchActive_RequestsNextPageWithSameKeyword()
+    {
+        // Arrange
+        _fakeService.SetupPages(totalCount: 4, pageSize: 2, CreateRooms(1, 4));
+        var vm = CreateViewModel(pageSize: 2);
+        await vm.ApplySearchCommand.ExecuteAsync("gác xép");
+
+        // Act
+        await vm.LoadMoreRoomsCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(_fakeService.RequestedSearches, Is.EqualTo(new[] { "gác xép", "gác xép" }));
+            Assert.That(vm.Rooms, Has.Count.EqualTo(4));
+            Assert.That(vm.CurrentPage, Is.EqualTo(2));
             Assert.That(vm.HasMoreItems, Is.False);
         });
     }
@@ -297,6 +297,7 @@ public class RoomListingsViewModelTests
             Assert.That(vm.Rooms, Has.Count.EqualTo(2));
             Assert.That(vm.TotalCount, Is.EqualTo(4));
             Assert.That(vm.HasMoreItems, Is.True);
+            Assert.That(_fakeService.RequestedSearches[^1], Is.Null);
         });
     }
 
@@ -333,6 +334,8 @@ public class RoomListingsViewModelTests
 
         public RoomSortOption LastRequestedSort { get; private set; }
 
+        public List<string?> RequestedSearches { get; } = [];
+
         public Func<int, int, RoomSortOption, CancellationToken, Task<PagedResponse<RoomListItemModel>>>? Handler { get; set; }
 
         public void SetupPages(int totalCount, int pageSize, IReadOnlyList<RoomListItemModel> allRooms)
@@ -348,10 +351,12 @@ public class RoomListingsViewModelTests
             int page,
             int pageSize,
             RoomSortOption sortBy = RoomSortOption.Newest,
+            string? search = null,
             CancellationToken cancellationToken = default)
         {
             CallCount++;
             LastRequestedSort = sortBy;
+            RequestedSearches.Add(search);
 
             if (Handler is not null)
             {

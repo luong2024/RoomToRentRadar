@@ -83,6 +83,72 @@ public class RoomListingsServiceTests
             service.GetRoomListingsAsync(1, 6, RoomSortOption.Newest));
     }
 
+    [Test]
+    public async Task GetRoomListingsAsync_WhenSearchProvided_AppendsEscapedSearchQuery()
+    {
+        // Arrange
+        string? capturedEndpoint = null;
+        var fakeApiClient = new FakeApiClient(endpoint =>
+        {
+            capturedEndpoint = endpoint;
+            return new PagedResponse<RoomListItemModel>([], 1, 6, 0);
+        });
+        var service = new RoomListingsService(fakeApiClient, enableDebugFallback: false);
+
+        // Act
+        await service.GetRoomListingsAsync(1, 6, RoomSortOption.Newest, search: "  điều hòa & gác  ");
+
+        // Assert
+        Assert.That(capturedEndpoint, Is.EqualTo(
+            "api/rooms?page=1&pageSize=6&sortBy=newest&search=" + Uri.EscapeDataString("điều hòa & gác")));
+    }
+
+    [TestCase(null)]
+    [TestCase("")]
+    [TestCase("   ")]
+    public async Task GetRoomListingsAsync_WhenSearchEmpty_OmitsSearchQuery(string? search)
+    {
+        // Arrange
+        string? capturedEndpoint = null;
+        var fakeApiClient = new FakeApiClient(endpoint =>
+        {
+            capturedEndpoint = endpoint;
+            return new PagedResponse<RoomListItemModel>([], 1, 6, 0);
+        });
+        var service = new RoomListingsService(fakeApiClient, enableDebugFallback: false);
+
+        // Act
+        await service.GetRoomListingsAsync(1, 6, RoomSortOption.Newest, search);
+
+        // Assert
+        Assert.That(capturedEndpoint, Is.EqualTo("api/rooms?page=1&pageSize=6&sortBy=newest"));
+    }
+
+    [Test]
+    public async Task GetRoomListingsAsync_WhenFallbackSearch_FiltersWholeCatalogBeforePaging()
+    {
+        // Arrange
+        var fakeApiClient = new FakeApiClient(_ => throw new HttpRequestException("Backend offline"));
+        var service = new RoomListingsService(fakeApiClient, enableDebugFallback: true);
+
+        // Act: page size 1 forces matches beyond the first page to be reachable only via paging
+        var page1 = await service.GetRoomListingsAsync(1, 1, RoomSortOption.Newest, "Điều hòa");
+        var page2 = await service.GetRoomListingsAsync(2, 1, RoomSortOption.Newest, "Điều hòa");
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(page1.TotalCount, Is.GreaterThan(1));
+            Assert.That(page1.Items, Has.Count.EqualTo(1));
+            Assert.That(page2.Items, Has.Count.EqualTo(1));
+            Assert.That(page2.Items[0].Id, Is.Not.EqualTo(page1.Items[0].Id));
+            Assert.That(page1.Items.Concat(page2.Items).All(r =>
+                r.Title.Contains("Điều hòa", StringComparison.OrdinalIgnoreCase) ||
+                r.Address.Contains("Điều hòa", StringComparison.OrdinalIgnoreCase) ||
+                r.Amenities.Any(a => a.Contains("Điều hòa", StringComparison.OrdinalIgnoreCase))), Is.True);
+        });
+    }
+
     private sealed class FakeApiClient(Func<string, object?> handler) : IApiClient
     {
         public Task<TResponse?> GetAsync<TResponse>(string endpoint, CancellationToken cancellationToken = default)
