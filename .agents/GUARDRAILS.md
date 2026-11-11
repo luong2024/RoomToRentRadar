@@ -37,6 +37,35 @@ Every Agent and Subagent operating within this project MUST strictly comply with
 - **Compiled Bindings:** Every `DataTemplate` in a `CollectionView` / `ListView` MUST specify `x:DataType`.
 - **Android Emulator Networking:** API calls from the Android Emulator to localhost services MUST use IP `10.0.2.2`, never `localhost`.
 
+### 1.5. Universal Production-Grade Engineering Principles (Across All Features)
+Every feature implementation (Auth, Listings, Search, Maps, Media, Booking, Notifications) MUST strictly enforce the following 6 core architectural principles:
+
+#### 1.5.1. Strict Input Boundaries & Explicit Whitelisting (No Mass Assignment)
+- **Zero Trust on Request DTOs:** Request DTOs from clients MUST ONLY contain fields that the client is explicitly permitted to supply. NEVER include server-controlled state flags, security status, audit timestamps, or role claims (e.g., `IsVerified`, `Status`, `CreatedAt`, `CreatedBy`, `ApprovedAt`, `Role`) in public request contracts.
+- **Whitelist Validation:** For any string representing an enum or discrete set of states (e.g., room types, sort orders, user roles), validation MUST use explicit whitelisting via `Enum.IsDefined` and explicit allowed value sets. Blacklisting (checking only for disallowed values) is STRICTLY PROHIBITED.
+
+#### 1.5.2. Concurrency Control & Idempotency by Design
+- **Mandatory Optimistic Locking on State Mutations:** Any Aggregate or entity whose state evolves over time (e.g., Listings, Refresh Tokens, Booking/Deposits, User Profiles) MUST maintain a concurrency token (`_etag` on Azure Cosmos DB, `UpdatedAtUtc`/RowVersion on SQLite/RDBMS).
+- **Conflict Handling:** Every `UpdateAsync` operation MUST enforce concurrency conditions. Upon detecting a version mismatch, the repository MUST throw `ConcurrencyConflictException` mapped to HTTP `409 Conflict`.
+- **Idempotency for Side-Effects:** Endpoints and operations that perform financial, booking, or notification actions MUST support idempotent retries to prevent duplicate processing (e.g., double booking, duplicate push alerts).
+
+#### 1.5.3. Defensive Domain Design & State Machine Integrity (Make Invalid States Unrepresentable)
+- **Invariant Self-Protection:** Entity constructors and factory methods MUST act as guards, throwing `DomainValidationException` immediately when encountering invalid invariants (e.g., Price <= 0, Area <= 0, EndDate < StartDate, empty/whitespace IDs or hashes).
+- **Explicit State Transitions:** Direct mutation of status fields is FORBIDDEN. Status transitions MUST occur through explicit domain methods (e.g., `listing.SubmitForReview()`, `listing.Approve()`, `listing.MarkAsRented()`) that validate prerequisite states.
+
+#### 1.5.4. Secure-by-Default & Fail-Fast Configuration
+- **Mock Adapters Disabled by Default:** All mock implementations (Mock SSO, Mock Geolocation, Mock Storage, Mock Payment, Mock Push) MUST default to disabled (`false`). Mocks are STRICTLY FORBIDDEN from being enabled in root `appsettings.json` and are only permitted in `appsettings.Development.json` or automated test fixtures.
+- **Fail-Fast on Missing Secrets/Dependencies:** In Non-Development environments, if critical configurations (signing keys, database connection strings, cloud storage credentials, third-party API keys) are missing, the application MUST throw `InvalidOperationException` and terminate startup immediately. Generating ephemeral in-memory keys or silently falling back to mock services in production is STRICTLY PROHIBITED.
+
+#### 1.5.5. Realistic Adversarial Testing & Async Hygiene
+- **No Illusion Tests:** Test suites MUST NOT use dummy strings or bypass real validation to achieve a green test pass. Tests MUST supply cryptographically valid tokens, real binary headers for file uploads, and valid coordinates.
+- **Mandatory Negative Testing:** In addition to Happy Path tests, every feature MUST include negative test suites: malformed payloads, unauthorized roles, expired/corrupted tokens, boundary values, and concurrent execution collisions.
+- **Async Test Purity:** All test methods exercising asynchronous operations (`Task`, `ValueTask`) MUST be declared `public async Task` and await results. Exception assertions on async methods MUST use `Assert.ThrowsAsync<TException>(async () => await ...)`.
+
+#### 1.5.6. Data Scoping & Least Privilege Information Projection (Anti-IDOR & Privacy)
+- **Ownership Verification (Anti-IDOR):** Read, update, and delete operations on user-owned resources (Favourites, Private Bookings, User Reports, Draft Listings) MUST scope queries by the authenticated user's ID (`WHERE Id = @id AND OwnerId = @currentUserId`).
+- **Least Privilege DTO Projection:** Domain entities and database documents MUST NEVER be returned directly from API controllers. Responses MUST always be projected through dedicated Response DTOs that omit sensitive information (national ID numbers, bank details, internal hashes, unmasked phone numbers).
+
 ---
 
 ## 2. STOP-AND-ASK TRIGGERS (WHEN TO PAUSE AND PROMPT)
@@ -59,4 +88,10 @@ Before completing any turn, the agent must verify:
 - [ ] The Core layer (`RoomToRentRadar.Domain/`, `RoomToRentRadar.Ports/`, `RoomToRentRadar.Application/`) has zero explicit or implicit references to UI (`Microsoft.Maui.*`), HTTP/Web (`System.Net.Http.*`, `Microsoft.AspNetCore.*`), Identity/JWT (`Microsoft.IdentityModel.*`), or Database libraries?
 - [ ] Any newly created Use Case (`I*UseCase` -> `*UseCase`), Repository (`I*Repository` -> `*Repository`), or Adapter (`I*Port` -> `*Adapter`) is properly registered in `RoomToRentRadar.Application/DependencyInjection.cs`, `RoomToRentRadar.Datastore/DependencyInjection.cs`, `RoomToRentRadar.Infrastructure/DependencyInjection.cs`, `MauiProgram.cs`, or `RoomToRentRadar.Api/Program.cs`?
 - [ ] All new `CollectionView` / `ListView` elements and root `ContentPage` files declare `x:DataType`?
+- [ ] No server-managed fields (`Status`, `IsVerified`, `Role`, `CreatedAt`) exposed in public Request DTOs (Zero Trust & Whitelisting respected)?
+- [ ] Mutations on evolving state implement optimistic concurrency (ETag / version check) and throw `ConcurrencyConflictException` on collision?
+- [ ] Domain entities and value objects enforce invariants in constructors, rejecting invalid states with `DomainValidationException`?
+- [ ] Mock services default to `false` in base configuration and fail fast outside `Development` if external secrets/dependencies are missing?
+- [ ] Unit tests for async methods use `public async Task` and `Assert.ThrowsAsync<T>()` without sync wrappers or fake string shortcuts?
+- [ ] Read/update operations on user-owned resources enforce ownership checks against the authenticated `sub` ID (Anti-IDOR)?
 - [ ] No files outside the assigned task scope were modified (Two-File Rule respected)?
