@@ -106,4 +106,29 @@ public sealed class RefreshToken
         ReplacedByTokenId = replacementTokenId;
         RevocationReason = "Rotated";
     }
+
+    public static RefreshToken Reconstitute(
+        Guid id,
+        Guid userId,
+        string tokenHash,
+        Guid tokenFamily,
+        DateTimeOffset createdAt,
+        DateTimeOffset expiresAt,
+        DateTimeOffset? revokedAt,
+        Guid? replacedByTokenId,
+        string? revocationReason)
+    {
+        return new RefreshToken
+        {
+            Id = id,
+            UserId = userId,
+            TokenHash = tokenHash,
+            TokenFamily = tokenFamily,
+            CreatedAt = createdAt,
+            ExpiresAt = expiresAt,
+            RevokedAt = revokedAt,
+            ReplacedByTokenId = replacedByTokenId,
+            RevocationReason = revocationReason
+        };
+    }
 }

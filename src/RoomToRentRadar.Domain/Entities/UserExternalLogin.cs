@@ -61,4 +61,23 @@ public sealed class UserExternalLogin
             CreatedAt = utcNow
         };
     }
+
+    public static UserExternalLogin Reconstitute(
+        Guid id,
+        Guid userId,
+        string provider,
+        string providerSubject,
+        EmailAddress providerEmail,
+        DateTimeOffset createdAt)
+    {
+        return new UserExternalLogin
+        {
+            Id = id,
+            UserId = userId,
+            Provider = provider,
+            ProviderSubject = providerSubject,
+            ProviderEmail = providerEmail,
+            CreatedAt = createdAt
+        };
+    }
 }

@@ -216,5 +216,38 @@ public sealed class User
                string.Equals(SecurityStamp, tokenSecurityStamp, StringComparison.Ordinal);
     }
 
+    public static User Reconstitute(
+        Guid id,
+        EmailAddress email,
+        string? passwordHash,
+        UserRole role,
+        bool isActive,
+        string securityStamp,
+        DateTimeOffset createdAt,
+        DateTimeOffset updatedAt,
+        DateTimeOffset? lastLoginAt,
+        IEnumerable<UserExternalLogin>? externalLogins = null)
+    {
+        var user = new User
+        {
+            Id = id,
+            Email = email,
+            PasswordHash = passwordHash,
+            Role = role,
+            IsActive = isActive,
+            SecurityStamp = securityStamp,
+            CreatedAt = createdAt,
+            UpdatedAt = updatedAt,
+            LastLoginAt = lastLoginAt
+        };
+
+        if (externalLogins is not null)
+        {
+            user._externalLogins.AddRange(externalLogins);
+        }
+
+        return user;
+    }
+
     private static string GenerateSecurityStamp() => Guid.NewGuid().ToString("N");
 }
