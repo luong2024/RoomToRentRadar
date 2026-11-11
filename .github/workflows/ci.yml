@@ -23,6 +23,26 @@ env:
   DOTNET_NOLOGO: true
 
 jobs:
+  forbidden-files:
+    name: Forbidden Files Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Block databases, secrets and build output (AGENTS.md section 7)
+        run: |
+          set -euo pipefail
+          patterns='\.(db|db3|sqlite|sqlite3|db-shm|db-wal)$|(^|/)google-services\.json$|(^|/)GoogleService-Info\.plist$|\.(keystore|jks|pfx|p12)$|(^|/)\.env$|(^|/)appsettings\.[^/]*\.local\.json$|(^|/)(bin|obj)/'
+          found=$(git ls-files | grep -E -i "$patterns" || true)
+          if [ -n "$found" ]; then
+            echo "::error::Forbidden files are tracked in git. Remove them with 'git rm --cached <file>' and keep them ignored:"
+            echo "$found"
+            exit 1
+          fi
+          echo "No forbidden files found."
+
   api-and-unit-tests:
     name: Core, API & Unit Tests
     runs-on: ubuntu-latest

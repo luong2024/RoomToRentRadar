@@ -1,0 +1,1987 @@
+openapi: 3.1.0
+info:
+  title: RoomToRentRadar API
+  version: 1.0.0-draft
+  summary: REST contract between the RoomToRentRadar MAUI app and the ASP.NET Core API.
+  description: |
+    Design-first contract (ADR-012). Rules:
+    - JSON camelCase, enums as strings, dates ISO-8601 UTC, money as integer VND.
+    - Errors are `application/problem+json` with `errorCode` (see ProblemDetails schema).
+    - Mutable landlord/admin resources return `ETag`; state changes require `If-Match`.
+    - Ownership is always taken from the JWT `sub`; resources not owned return 404.
+    - Business rules referenced as BR-* live in docs/business-analysis.md.
+    Real-time chat events use the SignalR hub `/hubs/chat` (documented in x-signalr below).
+    Photos are served as static files under `/media/...` with immutable cache headers.
+servers:
+  - url: http://10.0.2.2:5000
+    description: Android emulator → local API (Development)
+  - url: http://localhost:5000
+    description: Local API (Development)
+tags:
+  - name: Auth
+  - name: Profile
+  - name: Campuses
+  - name: Rooms
+  - name: Favourites
+  - name: SavedSearches
+  - name: Notifications
+  - name: Chat
+  - name: Landlord
+  - name: Admin
+  - name: System
+security:
+  - {}
+x-signalr:
+  hub: /hubs/chat
+  auth: JWT access token in `access_token` query string
+  serverToClient:
+    MessageReceived: MessageDto
+    ConversationRead: "{ conversationId: string, userId: string, lastReadAtUtc: date-time }"
+  clientToServer: none (messages are sent with POST /api/conversations/{conversationId}/messages)
+
+paths:
+  # ---------------------------------------------------------------- System
+  /api/health:
+    get:
+      tags: [System]
+      operationId: getHealth
+      summary: Liveness probe
+      responses:
+        '200':
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, examples: [Healthy] }
+                  service: { type: string }
+
+  # ---------------------------------------------------------------- Auth (implemented on develop2)
+  /api/auth/register:
+    post:
+      tags: [Auth]
+      operationId: registerUser
+      summary: Register a Student or Landlord (US13 AC1, BR-AUTH-01..03, BR-AUTH-05)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterUserRequest' }
+      responses:
+        '201':
+          description: Registered and signed in
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthTokensDto' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      operationId: loginUser
+      summary: Email/password sign-in (US13 AC1, AC4, BR-AUTH-05)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Signed in
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthTokensDto' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /api/auth/sso/ictu:
+    post:
+      tags: [Auth]
+      operationId: loginWithIctuSso
+      summary: Sign in with an ICTU OIDC id_token (BR-AUTH-04)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IctuSsoLoginRequest' }
+      responses:
+        '200':
+          description: Signed in
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthTokensDto' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/auth/refresh:
+    post:
+      tags: [Auth]
+      operationId: refreshToken
+      summary: Rotate refresh token (BR-AUTH-06)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefreshTokenRequest' }
+      responses:
+        '200':
+          description: New token pair
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthTokensDto' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/auth/revoke:
+    post:
+      tags: [Auth]
+      operationId: revokeToken
+      summary: Sign out (revoke a refresh token)
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RevokeTokenRequest' }
+      responses:
+        '204': { description: Revoked }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      operationId: getCurrentUser
+      summary: Current user profile
+      security: [ { bearerAuth: [] } ]
+      responses:
+        '200':
+          description: Profile
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserProfileDto' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/auth/admin/landlords/{userId}/approve:
+    patch:
+      tags: [Admin]
+      operationId: approveLandlord
+      summary: Approve a landlord account (BR-AUTH-03, UC-40) — existing path kept for compatibility
+      security: [ { bearerAuth: [] } ]
+      x-policy: AdminPolicy
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Approved landlord profile
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserProfileDto' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------- Profile
+  /api/me/profile:
+    patch:
+      tags: [Profile]
+      operationId: updateMyProfile
+      summary: Update own profile incl. selected campus (BR-CMP-02, UC-24) — planned
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateMyProfileRequest' }
+      responses:
+        '200':
+          description: Updated profile
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserProfileDto' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ---------------------------------------------------------------- Campuses
+  /api/campuses:
+    get:
+      tags: [Campuses]
+      operationId: listCampuses
+      summary: Campus reference list (BR-CMP-01)
+      responses:
+        '200':
+          description: Campuses ordered by sortOrder
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/CampusDto' }
+
+  # ---------------------------------------------------------------- Rooms (public)
+  /api/rooms:
+    get:
+      tags: [Rooms]
+      operationId: searchRooms
+      summary: Browse/search Available verified rooms (US01, US04; BR-SRCH-01..06)
+      description: Anonymous allowed. Returns only Status=Available listings of verified landlords. Distance is relative to campusId.
+      security: [ {}, { bearerAuth: [] } ]
+      parameters:
+        - $ref: '#/components/parameters/CampusIdQuery'
+        - { name: minRentVnd, in: query, schema: { type: integer, minimum: 0 } }
+        - { name: maxRentVnd, in: query, schema: { type: integer, minimum: 0 } }
+        - { name: minAreaM2, in: query, schema: { type: number, minimum: 0 } }
+        - { name: maxAreaM2, in: query, schema: { type: number, minimum: 0 } }
+        - name: roomTypes
+          in: query
+          style: form
+          explode: false
+          description: Comma-separated RoomType values
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/RoomType' }
+        - { name: maxDistanceKm, in: query, schema: { type: number, minimum: 0.1, maximum: 50 } }
+        - name: sort
+          in: query
+          schema: { $ref: '#/components/schemas/SortBy' }
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Page of room cards with totalCount (US04 AC3)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PagedRoomCards' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /api/rooms/area-search:
+    post:
+      tags: [Rooms]
+      operationId: searchRoomsInArea
+      summary: Search inside a drawn polygon (US05 AC1–AC3; BR-SRCH-07)
+      security: [ {}, { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AreaSearchRequest' }
+      responses:
+        '200':
+          description: Up to 200 rooms inside the polygon
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AreaSearchResultDto' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /api/rooms/compare:
+    get:
+      tags: [Rooms]
+      operationId: compareRooms
+      summary: Comparison data for 2–3 rooms (US10 AC1–AC2; BR-CPR-02)
+      security: [ {}, { bearerAuth: [] } ]
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          style: form
+          explode: false
+          schema:
+            type: array
+            minItems: 2
+            maxItems: 3
+            items: { type: string }
+        - $ref: '#/components/parameters/CampusIdQuery'
+      responses:
+        '200':
+          description: Comparison table data (unavailable rooms included with their status)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ComparisonDto' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /api/rooms/{roomId}:
+    get:
+      tags: [Rooms]
+      operationId: getRoomDetail
+      summary: Room detail (US02, US03, US11; BR-AUTH-07 phone gating)
+      description: |
+        Visible for Available, Rented and Unpublished listings (status shown, US02 AC3).
+        PendingReview/Rejected/Suspended are 404 for everyone except the owner and Admin (BR-LST-04a).
+        `landlord.phoneNumber` and `landlord.zaloUrl` are null for anonymous callers.
+      security: [ {}, { bearerAuth: [] } ]
+      parameters:
+        - $ref: '#/components/parameters/RoomId'
+        - $ref: '#/components/parameters/CampusIdQuery'
+        - { name: If-None-Match, in: header, schema: { type: string } }
+      responses:
+        '200':
+          description: Detail
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomDetailDto' }
+        '304': { description: Not modified }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/rooms/{roomId}/similar:
+    get:
+      tags: [Rooms]
+      operationId: getSimilarRooms
+      summary: Similar Available rooms (US02 AC3; BR-LST-10)
+      security: [ {}, { bearerAuth: [] } ]
+      parameters:
+        - $ref: '#/components/parameters/RoomId'
+        - $ref: '#/components/parameters/CampusIdQuery'
+      responses:
+        '200':
+          description: Up to 5 cards
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 5
+                items: { $ref: '#/components/schemas/RoomCardDto' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/rooms/{roomId}/travel-times:
+    get:
+      tags: [Rooms]
+      operationId: getRoomTravelTimes
+      summary: Distance and travel time to campus (US09; BR-TRV-01..04)
+      security: [ {}, { bearerAuth: [] } ]
+      parameters:
+        - $ref: '#/components/parameters/RoomId'
+        - $ref: '#/components/parameters/CampusIdQuery'
+      responses:
+        '200':
+          description: Travel times or straight-line fallback
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TravelTimesDto' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/rooms/{roomId}/reports:
+    post:
+      tags: [Rooms]
+      operationId: reportRoom
+      summary: Report a listing (US12; BR-RPT-01..03)
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - $ref: '#/components/parameters/RoomId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateReportRequest' }
+      responses:
+        '201':
+          description: Report queued
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReportCreatedDto' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /api/rooms/{roomId}/conversations:
+    post:
+      tags: [Chat]
+      operationId: startConversation
+      summary: Get or create the conversation for (room, current student) (US14 AC1; BR-CHT-01)
+      security: [ { bearerAuth: [] } ]
+      x-policy: StudentPolicy
+      parameters:
+        - $ref: '#/components/parameters/RoomId'
+      responses:
+        '200':
+          description: Existing conversation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConversationDto' }
+        '201':
+          description: New conversation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConversationDto' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  # ---------------------------------------------------------------- Favourites
+  /api/me/favourites:
+    get:
+      tags: [Favourites]
+      operationId: listMyFavourites
+      summary: Favourites with current price/availability (US06 AC2–AC3)
+      security: [ { bearerAuth: [] } ]
+      x-policy: StudentPolicy
+      parameters:
+        - $ref: '#/components/parameters/CampusIdQuery'
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Page of favourites (newest first)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PagedFavourites' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/me/favourites/{roomId}:
+    put:
+      tags: [Favourites]
+      operationId: addFavourite
+      summary: Add favourite — idempotent (BR-FAV-02)
+      security: [ { bearerAuth: [] } ]
+      x-policy: StudentPolicy
+      parameters:
+        - $ref: '#/components/parameters/RoomId'
+      responses:
+        '204': { description: Saved (or already saved) }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    delete:
+      tags: [Favourites]
+      operationId: removeFavourite
+      summary: Remove favourite — idempotent (BR-FAV-02)
+      security: [ { bearerAuth: [] } ]
+      x-policy: StudentPolicy
+      parameters:
+        - $ref: '#/components/parameters/RoomId'
+      responses:
+        '204': { description: Removed (or not present) }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ---------------------------------------------------------------- Saved searches & alerts
+  /api/me/saved-searches:
+    get:
+      tags: [SavedSearches]
+      operationId: listMySavedSearches
+      security: [ { bearerAuth: [] } ]
+      x-policy: StudentPolicy
+      responses:
+        '200':
+          description: Saved searches (max 10)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SavedSearchDto' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [SavedSearches]
+      operationId: createSavedSearch
+      summary: Save filters and/or drawn area (US05 AC4, US07 AC1; BR-SRCH-08)
+      security: [ { bearerAuth: [] } ]
+      x-policy: StudentPolicy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateSavedSearchRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SavedSearchDto' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/me/saved-searches/{savedSearchId}:
+    parameters:
+      - $ref: '#/components/parameters/SavedSearchId'
+    put:
+      tags: [SavedSearches]
+      operationId: updateSavedSearch
+      security: [ { bearerAuth: [] } ]
+      x-policy: StudentPolicy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateSavedSearchRequest' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SavedSearchDto' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    delete:
+      tags: [SavedSearches]
+      operationId: deleteSavedSearch
+      summary: Delete saved search and its alert (US07 AC3)
+      security: [ { bearerAuth: [] } ]
+      x-policy: StudentPolicy
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/me/saved-searches/{savedSearchId}/alert:
+    put:
+      tags: [SavedSearches]
+      operationId: setSavedSearchAlert
+      summary: Turn alert on / pause / off (US07 AC1, AC3; BR-ALR-01)
+      security: [ { bearerAuth: [] } ]
+      x-policy: StudentPolicy
+      parameters:
+        - $ref: '#/components/parameters/SavedSearchId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetAlertStateRequest' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SavedSearchDto' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------- Devices & notifications
+  /api/me/devices/{installationId}:
+    parameters:
+      - name: installationId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    put:
+      tags: [Notifications]
+      operationId: registerDevice
+      summary: Register/refresh push token — idempotent upsert (BR-ALR-06)
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterDeviceRequest' }
+      responses:
+        '204': { description: Registered }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [Notifications]
+      operationId: unregisterDevice
+      security: [ { bearerAuth: [] } ]
+      responses:
+        '204': { description: Removed }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/me/notifications:
+    get:
+      tags: [Notifications]
+      operationId: listMyNotifications
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Inbox, newest first
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PagedNotifications' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/me/notifications/read:
+    post:
+      tags: [Notifications]
+      operationId: markNotificationsRead
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MarkNotificationsReadRequest' }
+      responses:
+        '204': { description: Marked }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ---------------------------------------------------------------- Chat
+  /api/me/conversations:
+    get:
+      tags: [Chat]
+      operationId: listMyConversations
+      summary: Conversations of the current user (US14 AC3)
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Ordered by lastMessageAtUtc desc
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PagedConversations' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/conversations/{conversationId}:
+    get:
+      tags: [Chat]
+      operationId: getConversation
+      summary: One conversation header (deep link from a push notification) — participants only (BR-CHT-02)
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      responses:
+        '200':
+          description: Conversation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConversationDto' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/conversations/{conversationId}/messages:
+    parameters:
+      - $ref: '#/components/parameters/ConversationId'
+    get:
+      tags: [Chat]
+      operationId: getConversationMessages
+      summary: Message history, keyset paging (US14 AC4)
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - name: before
+          in: query
+          description: Opaque cursor from the previous page's nextBefore
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 30 }
+      responses:
+        '200':
+          description: Newest first
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessagePage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Chat]
+      operationId: sendMessage
+      summary: Send a message — idempotent by clientMessageId (BR-CHT-03..05)
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SendMessageRequest' }
+      responses:
+        '201':
+          description: Stored (or the previously stored message for the same clientMessageId)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageDto' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /api/conversations/{conversationId}/read:
+    post:
+      tags: [Chat]
+      operationId: markConversationRead
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      responses:
+        '204': { description: Marked as read up to now }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------- Landlord
+  /api/landlord/photos:
+    post:
+      tags: [Landlord]
+      operationId: uploadPhoto
+      summary: Upload one photo before attaching it to a listing (US08 AC4; BR-MED-01..04)
+      security: [ { bearerAuth: [] } ]
+      x-policy: VerifiedLandlordPolicy
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, kind]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: JPEG or PNG (magic bytes checked), ≤ 10 MB
+                kind: { $ref: '#/components/schemas/PhotoKind' }
+      responses:
+        '201':
+          description: Stored; expires in 24 h if not attached
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PhotoUploadDto' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '415': { $ref: '#/components/responses/UnsupportedMediaType' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /api/landlord/photos/{photoId}:
+    delete:
+      tags: [Landlord]
+      operationId: deletePhoto
+      summary: Delete an unattached own photo
+      security: [ { bearerAuth: [] } ]
+      x-policy: VerifiedLandlordPolicy
+      parameters:
+        - name: photoId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/landlord/rooms:
+    get:
+      tags: [Landlord]
+      operationId: listMyListings
+      summary: Own listings with status (UC-31)
+      security: [ { bearerAuth: [] } ]
+      x-policy: LandlordPolicy
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/ListingStatus' }
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Page of own listings
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PagedMyListings' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Landlord]
+      operationId: createListing
+      summary: Create listing → PendingReview (US08 AC1–AC2; BR-LST-01..03)
+      security: [ { bearerAuth: [] } ]
+      x-policy: VerifiedLandlordPolicy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpsertListingRequest' }
+      responses:
+        '201':
+          description: Created with status PendingReview
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+            Location: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyListingDetailDto' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/landlord/rooms/{roomId}:
+    parameters:
+      - $ref: '#/components/parameters/RoomId'
+    get:
+      tags: [Landlord]
+      operationId: getMyListing
+      security: [ { bearerAuth: [] } ]
+      x-policy: LandlordPolicy
+      responses:
+        '200':
+          description: Editable listing
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyListingDetailDto' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Landlord]
+      operationId: updateListing
+      summary: Edit own listing (US08 AC3; BR-LST-05)
+      security: [ { bearerAuth: [] } ]
+      x-policy: LandlordPolicy
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpsertListingRequest' }
+      responses:
+        '200':
+          description: Updated
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyListingDetailDto' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '412': { $ref: '#/components/responses/PreconditionFailed' }
+        '428': { $ref: '#/components/responses/PreconditionRequired' }
+  /api/landlord/rooms/{roomId}/mark-rented:
+    post:
+      tags: [Landlord]
+      operationId: markListingRented
+      summary: Available → Rented (BR-LST-04)
+      security: [ { bearerAuth: [] } ]
+      x-policy: LandlordPolicy
+      parameters: [ { $ref: '#/components/parameters/RoomId' }, { $ref: '#/components/parameters/IfMatch' } ]
+      responses: &transitionResponses
+        '200':
+          description: Transition applied; returns the listing
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyListingDetailDto' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '412': { $ref: '#/components/responses/PreconditionFailed' }
+        '428': { $ref: '#/components/responses/PreconditionRequired' }
+  /api/landlord/rooms/{roomId}/mark-available:
+    post:
+      tags: [Landlord]
+      operationId: markListingAvailable
+      summary: Rented → Available (BR-LST-04)
+      security: [ { bearerAuth: [] } ]
+      x-policy: LandlordPolicy
+      parameters: [ { $ref: '#/components/parameters/RoomId' }, { $ref: '#/components/parameters/IfMatch' } ]
+      responses: *transitionResponses
+  /api/landlord/rooms/{roomId}/unpublish:
+    post:
+      tags: [Landlord]
+      operationId: unpublishListing
+      summary: Available/Rented → Unpublished (US08 AC3)
+      security: [ { bearerAuth: [] } ]
+      x-policy: LandlordPolicy
+      parameters: [ { $ref: '#/components/parameters/RoomId' }, { $ref: '#/components/parameters/IfMatch' } ]
+      responses: *transitionResponses
+  /api/landlord/rooms/{roomId}/republish:
+    post:
+      tags: [Landlord]
+      operationId: republishListing
+      summary: Unpublished → Available (BR-LST-04)
+      security: [ { bearerAuth: [] } ]
+      x-policy: VerifiedLandlordPolicy
+      parameters: [ { $ref: '#/components/parameters/RoomId' }, { $ref: '#/components/parameters/IfMatch' } ]
+      responses: *transitionResponses
+  /api/landlord/rooms/{roomId}/resubmit:
+    post:
+      tags: [Landlord]
+      operationId: resubmitListing
+      summary: Rejected/Suspended → PendingReview (BR-LST-04)
+      security: [ { bearerAuth: [] } ]
+      x-policy: VerifiedLandlordPolicy
+      parameters: [ { $ref: '#/components/parameters/RoomId' }, { $ref: '#/components/parameters/IfMatch' } ]
+      responses: *transitionResponses
+  /api/landlord/rooms/{roomId}/house-rules:
+    put:
+      tags: [Landlord]
+      operationId: updateHouseRules
+      summary: Create a new house-rules version (US11 AC3; BR-HR-01..02)
+      security: [ { bearerAuth: [] } ]
+      x-policy: LandlordPolicy
+      parameters:
+        - $ref: '#/components/parameters/RoomId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateHouseRulesRequest' }
+      responses:
+        '200':
+          description: New current version
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HouseRulesDto' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/landlord/rooms/{roomId}/house-rules/versions:
+    get:
+      tags: [Landlord]
+      operationId: listHouseRulesVersions
+      security: [ { bearerAuth: [] } ]
+      x-policy: LandlordPolicy
+      parameters:
+        - $ref: '#/components/parameters/RoomId'
+      responses:
+        '200':
+          description: All versions, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/HouseRulesDto' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------- Admin
+  /api/admin/landlords:
+    get:
+      tags: [Admin]
+      operationId: listPendingLandlords
+      summary: Landlords waiting for approval (UC-40)
+      security: [ { bearerAuth: [] } ]
+      x-policy: AdminPolicy
+      parameters:
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Oldest first
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PagedPendingLandlords' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/admin/rooms:
+    get:
+      tags: [Admin]
+      operationId: listModerationRooms
+      summary: Moderation queues (UC-41)
+      security: [ { bearerAuth: [] } ]
+      x-policy: AdminPolicy
+      parameters:
+        - name: queue
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [pending, rereview]
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Oldest first
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PagedModerationRooms' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/admin/rooms/{roomId}:
+    get:
+      tags: [Admin]
+      operationId: getModerationRoom
+      security: [ { bearerAuth: [] } ]
+      x-policy: AdminPolicy
+      parameters:
+        - $ref: '#/components/parameters/RoomId'
+      responses:
+        '200':
+          description: Full listing for review
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ModerationRoomDto' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/admin/rooms/{roomId}/approve:
+    post:
+      tags: [Admin]
+      operationId: approveListing
+      summary: PendingReview → Available; sets VerifiedAtUtc; triggers alerts (BR-LST-06, BR-ALR-02)
+      security: [ { bearerAuth: [] } ]
+      x-policy: AdminPolicy
+      parameters: [ { $ref: '#/components/parameters/RoomId' }, { $ref: '#/components/parameters/IfMatch' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApproveListingRequest' }
+      responses: *transitionResponses
+  /api/admin/rooms/{roomId}/reject:
+    post:
+      tags: [Admin]
+      operationId: rejectListing
+      security: [ { bearerAuth: [] } ]
+      x-policy: AdminPolicy
+      parameters: [ { $ref: '#/components/parameters/RoomId' }, { $ref: '#/components/parameters/IfMatch' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReasonRequest' }
+      responses: *transitionResponses
+  /api/admin/rooms/{roomId}/suspend:
+    post:
+      tags: [Admin]
+      operationId: suspendListing
+      security: [ { bearerAuth: [] } ]
+      x-policy: AdminPolicy
+      parameters: [ { $ref: '#/components/parameters/RoomId' }, { $ref: '#/components/parameters/IfMatch' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReasonRequest' }
+      responses: *transitionResponses
+  /api/admin/rooms/{roomId}/acknowledge-changes:
+    post:
+      tags: [Admin]
+      operationId: acknowledgeListingChanges
+      summary: Clear NeedsReReview (BR-LST-05)
+      security: [ { bearerAuth: [] } ]
+      x-policy: AdminPolicy
+      parameters: [ { $ref: '#/components/parameters/RoomId' }, { $ref: '#/components/parameters/IfMatch' } ]
+      responses: *transitionResponses
+  /api/admin/reports:
+    get:
+      tags: [Admin]
+      operationId: listReports
+      summary: Report queue (UC-42; BR-RPT-05 high priority first)
+      security: [ { bearerAuth: [] } ]
+      x-policy: AdminPolicy
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/ReportStatus' }
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Page of reports
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PagedReports' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/admin/reports/{reportId}/resolve:
+    post:
+      tags: [Admin]
+      operationId: resolveReport
+      summary: Dismiss or act on a report (BR-RPT-04)
+      security: [ { bearerAuth: [] } ]
+      x-policy: AdminPolicy
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ResolveReportRequest' }
+      responses:
+        '200':
+          description: Resolved
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReportDto' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/admin/audit-logs:
+    get:
+      tags: [Admin]
+      operationId: getAuditLogs
+      summary: Query audit logs (BR-AUD-02) — implemented on develop2
+      security: [ { bearerAuth: [] } ]
+      x-policy: AdminPolicy
+      parameters:
+        - { name: userId, in: query, schema: { type: string } }
+        - { name: action, in: query, schema: { type: string } }
+        - { name: entityType, in: query, schema: { type: string } }
+        - { name: fromUtc, in: query, schema: { type: string, format: date-time } }
+        - { name: toUtc, in: query, schema: { type: string, format: date-time } }
+        - $ref: '#/components/parameters/PageNumber'
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        '200':
+          description: Page of audit entries
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PagedAuditLogs' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "Access token (30 min). Claims: sub, email, role, is_verified, jti."
+
+  headers:
+    ETag:
+      description: Quoted aggregate version, e.g. "3"
+      schema: { type: string }
+
+  parameters:
+    RoomId:
+      name: roomId
+      in: path
+      required: true
+      schema: { type: string, pattern: '^[0-9a-f]{32}$' }
+    SavedSearchId:
+      name: savedSearchId
+      in: path
+      required: true
+      schema: { type: string }
+    ConversationId:
+      name: conversationId
+      in: path
+      required: true
+      schema: { type: string }
+    CampusIdQuery:
+      name: campusId
+      in: query
+      description: Selected campus; defaults to the user's profile campus, else the default campus (BR-CMP-01..03)
+      schema: { type: string, examples: [ICTU] }
+    PageNumber:
+      name: pageNumber
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    PageSize:
+      name: pageSize
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: ETag from the last GET (ADR-012)
+      schema: { type: string }
+
+  responses:
+    BadRequest:
+      description: Validation failed (errorCode VALIDATION_FAILED or specific)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    Unauthorized:
+      description: Missing/invalid token or credentials
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    Forbidden:
+      description: Role/policy not satisfied, account locked, landlord not approved
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    NotFound:
+      description: Not found or not owned by the caller
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    Conflict:
+      description: Duplicate, limit exceeded, invalid state transition or concurrency conflict
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    PreconditionFailed:
+      description: If-Match does not match the current version (ETAG_MISMATCH)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    PreconditionRequired:
+      description: If-Match header missing (IF_MATCH_REQUIRED)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    PayloadTooLarge:
+      description: File larger than 10 MB (FILE_TOO_LARGE)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    UnsupportedMediaType:
+      description: Not a JPEG/PNG (UNSUPPORTED_MEDIA_TYPE)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    TooManyRequests:
+      description: Rate limited (RATE_LIMITED)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+
+  schemas:
+    # ------------------------------------------------ common
+    ProblemDetails:
+      type: object
+      description: RFC 9457 problem details with project extensions (ADR-012)
+      required: [title, status, errorCode]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string, description: Developer-oriented; never shown to end users }
+        instance: { type: string }
+        errorCode:
+          type: string
+          description: Stable machine code mapped to Vietnamese text by the client (ui-ux-spec §6)
+          examples: [VALIDATION_FAILED, INVALID_CREDENTIALS, INVALID_TOKEN, ACCOUNT_LOCKED, FORBIDDEN_ROLE, LANDLORD_NOT_APPROVED, EMAIL_TAKEN, ROOM_NOT_FOUND, LISTING_NOT_AVAILABLE, INVALID_STATE_TRANSITION, ALREADY_REPORTED, LIMIT_EXCEEDED, CONCURRENCY_CONFLICT, ETAG_MISMATCH, IF_MATCH_REQUIRED, FILE_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, RATE_LIMITED]
+        errors:
+          type: object
+          description: Field-level validation messages
+          additionalProperties:
+            type: array
+            items: { type: string }
+    PageMeta:
+      type: object
+      required: [totalCount, pageNumber, pageSize]
+      properties:
+        totalCount: { type: integer }
+        pageNumber: { type: integer }
+        pageSize: { type: integer }
+        totalPages: { type: integer }
+        hasPreviousPage: { type: boolean }
+        hasNextPage: { type: boolean }
+    GeoPointDto:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude: { type: number, minimum: -90, maximum: 90 }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+
+    # ------------------------------------------------ enums
+    UserRole: { type: string, enum: [Student, Landlord, Admin] }
+    PublicRole: { type: string, enum: [Student, Landlord], description: BR-AUTH-02 }
+    AuthProvider: { type: string, enum: [Local, IctuSso] }
+    RoomType: { type: string, enum: [BoardingRoom, MiniApartment, WholeHouse, Dormitory] }
+    ListingStatus: { type: string, enum: [PendingReview, Rejected, Available, Rented, Unpublished, Suspended] }
+    Furnishing: { type: string, enum: [Unfurnished, Basic, Full] }
+    WaterPriceUnit: { type: string, enum: [PerCubicMeter, PerPerson, Included] }
+    Amenity:
+      type: string
+      enum: [AirConditioner, WaterHeater, PrivateBathroom, Wifi, Kitchen, WashingMachine, Fridge, Bed, Wardrobe, Desk, Balcony, Window, MotorbikeParking, Elevator, DryingArea]
+    SafetyFeature: { type: string, enum: [Cctv, SecureEntrance, FireSafety, OwnerOrGuardOnSite, WellLitAccess] }
+    SortBy: { type: string, enum: [distance, price_asc, price_desc, newest], default: distance }
+    PhotoKind: { type: string, enum: [Standard, Panorama] }
+    TravelMode: { type: string, enum: [Motorbike, Bus, Walking] }
+    AlertState: { type: string, enum: ['Off', Active, Paused] }
+    GuestPolicy: { type: string, enum: [Allowed, DaytimeOnly, NotAllowed] }
+    CookingPolicy: { type: string, enum: [Allowed, SharedKitchenOnly, NotAllowed] }
+    ReportReason: { type: string, enum: [Scam, IncorrectInformation, AlreadyRented, Duplicate, InappropriateContent, Other] }
+    ReportStatus: { type: string, enum: [Open, Dismissed, ActionTaken] }
+    NotificationType:
+      type: string
+      enum: [NewListingMatch, ListingApproved, ListingRejected, ListingSuspended, LandlordApproved, ReportResolved, NewMessage]
+    DevicePlatform: { type: string, enum: [Android, iOS] }
+
+    # ------------------------------------------------ auth (existing records in RoomToRentRadar.Ports)
+    RegisterUserRequest:
+      type: object
+      required: [email, password, fullName, role]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        password: { type: string, minLength: 8, maxLength: 128, description: '≥1 upper, ≥1 lower, ≥1 digit (BR-AUTH-05)' }
+        fullName: { type: string, minLength: 1, maxLength: 100 }
+        role: { $ref: '#/components/schemas/PublicRole' }
+        phoneNumber: { type: [string, 'null'], pattern: '^(0|\+84)[0-9]{9}$', description: Required for Landlord }
+        studentCode: { type: [string, 'null'], maxLength: 20 }
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+    IctuSsoLoginRequest:
+      type: object
+      required: [idToken]
+      properties:
+        idToken: { type: string }
+        deviceInfo: { type: [string, 'null'] }
+    RefreshTokenRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken: { type: string }
+    RevokeTokenRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken: { type: string }
+    UserProfileDto:
+      type: object
+      required: [id, email, fullName, role, authProvider, isVerified, createdAtUtc]
+      properties:
+        id: { type: string }
+        email: { type: string }
+        fullName: { type: string }
+        role: { $ref: '#/components/schemas/UserRole' }
+        authProvider: { $ref: '#/components/schemas/AuthProvider' }
+        phoneNumber: { type: [string, 'null'] }
+        studentCode: { type: [string, 'null'] }
+        isVerified: { type: boolean }
+        createdAtUtc: { type: string, format: date-time }
+        selectedCampusId: { type: string, description: 'PLANNED addition (BR-CMP-02) — shared DTO change requires approval' }
+    AuthTokensDto:
+      type: object
+      required: [accessToken, refreshToken, accessTokenExpiresAtUtc, refreshTokenExpiresAtUtc, user]
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        accessTokenExpiresAtUtc: { type: string, format: date-time }
+        refreshTokenExpiresAtUtc: { type: string, format: date-time }
+        user: { $ref: '#/components/schemas/UserProfileDto' }
+    UpdateMyProfileRequest:
+      type: object
+      description: Only provided fields are changed. Role/isVerified/email are not updatable (GUARDRAILS 1.5.1).
+      properties:
+        fullName: { type: string, minLength: 1, maxLength: 100 }
+        phoneNumber: { type: [string, 'null'], pattern: '^(0|\+84)[0-9]{9}$' }
+        selectedCampusId: { type: string }
+
+    # ------------------------------------------------ campus
+    CampusDto:
+      type: object
+      required: [id, name, shortName, latitude, longitude, isDefault]
+      properties:
+        id: { type: string, examples: [ICTU] }
+        name: { type: string }
+        shortName: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
+        isDefault: { type: boolean }
+
+    # ------------------------------------------------ rooms (read side)
+    RoomCardDto:
+      type: object
+      description: Lightweight list/map/preview item (~0.5 KB)
+      required: [id, title, monthlyRentVnd, areaM2, roomType, distanceKm, isVerified, status, latitude, longitude]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        monthlyRentVnd: { type: integer }
+        areaM2: { type: number }
+        roomType: { $ref: '#/components/schemas/RoomType' }
+        distanceKm: { type: number, description: Haversine to the requested campus, 0.1 km precision }
+        isVerified: { type: boolean }
+        status: { $ref: '#/components/schemas/ListingStatus' }
+        coverThumbUrl: { type: [string, 'null'], format: uri }
+        latitude: { type: number }
+        longitude: { type: number }
+        publishedAtUtc: { type: [string, 'null'], format: date-time }
+        isFavourite: { type: boolean, description: false for anonymous callers }
+    PagedRoomCards:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/RoomCardDto' }
+    SearchCriteriaDto:
+      type: object
+      required: [campusId, sort]
+      properties:
+        campusId: { type: string }
+        minRentVnd: { type: [integer, 'null'], minimum: 0 }
+        maxRentVnd: { type: [integer, 'null'], minimum: 0 }
+        minAreaM2: { type: [number, 'null'], minimum: 0 }
+        maxAreaM2: { type: [number, 'null'], minimum: 0 }
+        roomTypes:
+          type: array
+          items: { $ref: '#/components/schemas/RoomType' }
+        maxDistanceKm: { type: [number, 'null'], minimum: 0.1, maximum: 50 }
+        sort: { $ref: '#/components/schemas/SortBy' }
+        polygon:
+          type: [array, 'null']
+          minItems: 3
+          maxItems: 20
+          items: { $ref: '#/components/schemas/GeoPointDto' }
+    AreaSearchRequest:
+      allOf:
+        - $ref: '#/components/schemas/SearchCriteriaDto'
+        - type: object
+          required: [polygon]
+          description: polygon is required; sort limited to distance, price_asc, price_desc (BR-SRCH-04)
+    AreaSearchResultDto:
+      type: object
+      required: [items, totalCount, truncated]
+      properties:
+        items:
+          type: array
+          maxItems: 200
+          items: { $ref: '#/components/schemas/RoomCardDto' }
+        totalCount: { type: integer }
+        truncated: { type: boolean, description: true when more than 200 matched }
+    AddressDto:
+      type: object
+      required: [addressLine, ward, district]
+      properties:
+        addressLine: { type: string, maxLength: 200 }
+        ward: { type: string, maxLength: 100 }
+        district: { type: string, maxLength: 100, default: TP. Thái Nguyên }
+    UtilitiesDto:
+      type: object
+      properties:
+        electricityPriceVndPerKwh: { type: [integer, 'null'], minimum: 0, maximum: 10000 }
+        waterPriceVnd: { type: [integer, 'null'], minimum: 0 }
+        waterPriceUnit: { $ref: '#/components/schemas/WaterPriceUnit' }
+        internetFeeVnd: { type: [integer, 'null'], minimum: 0 }
+        parkingFeeVnd: { type: [integer, 'null'], minimum: 0 }
+        otherFeesNote: { type: [string, 'null'], maxLength: 200 }
+    UtilitiesView:
+      allOf:
+        - $ref: '#/components/schemas/UtilitiesDto'
+        - type: object
+          properties:
+            estimatedMonthlyTotalVnd:
+              type: integer
+              description: rent + 100 kWh electricity + 4 m³ (or 1 person) water + internet + parking — documented estimate formula
+    SafetyDto:
+      type: object
+      required: [score, isVerified, features]
+      properties:
+        score: { type: integer, minimum: 0, maximum: 5 }
+        isVerified: { type: boolean }
+        features:
+          type: array
+          items: { $ref: '#/components/schemas/SafetyFeature' }
+    PhotoDto:
+      type: object
+      required: [id, kind, thumbUrl, mediumUrl, originalUrl, sortOrder]
+      properties:
+        id: { type: string }
+        kind: { $ref: '#/components/schemas/PhotoKind' }
+        thumbUrl: { type: string, format: uri }
+        mediumUrl: { type: string, format: uri }
+        originalUrl: { type: string, format: uri }
+        width: { type: integer }
+        height: { type: integer }
+        sortOrder: { type: integer }
+    HouseRulesFields:
+      type: object
+      required: [guestPolicy, cookingPolicy, parkingAvailable, petsAllowed, smokingAllowed]
+      properties:
+        quietHoursStart: { type: [string, 'null'], pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$' }
+        quietHoursEnd: { type: [string, 'null'], pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$' }
+        curfewTime: { type: [string, 'null'], pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$' }
+        guestPolicy: { $ref: '#/components/schemas/GuestPolicy' }
+        guestPolicyNote: { type: [string, 'null'], maxLength: 200 }
+        cookingPolicy: { $ref: '#/components/schemas/CookingPolicy' }
+        parkingAvailable: { type: boolean }
+        parkingRules: { type: [string, 'null'], maxLength: 300 }
+        petsAllowed: { type: boolean }
+        smokingAllowed: { type: boolean }
+        otherRules: { type: [string, 'null'], maxLength: 1000 }
+    UpdateHouseRulesRequest:
+      $ref: '#/components/schemas/HouseRulesFields'
+    HouseRulesDto:
+      allOf:
+        - $ref: '#/components/schemas/HouseRulesFields'
+        - type: object
+          required: [versionNumber, updatedAtUtc]
+          properties:
+            versionNumber: { type: integer, minimum: 1 }
+            updatedAtUtc: { type: string, format: date-time }
+    LandlordContactDto:
+      type: object
+      required: [id, displayName, isVerified, memberSinceUtc]
+      properties:
+        id: { type: string }
+        displayName: { type: string }
+        isVerified: { type: boolean }
+        memberSinceUtc: { type: string, format: date-time }
+        phoneNumber: { type: [string, 'null'], description: null for anonymous callers (US02 AC4) }
+        zaloUrl: { type: [string, 'null'], format: uri, description: 'https://zalo.me/<phone>; null for anonymous callers' }
+    RoomDetailDto:
+      type: object
+      required: [id, title, roomType, status, isVerified, monthlyRentVnd, depositVnd, areaM2, address, location, distanceKm, utilities, amenities, safety, photos, landlord, lastUpdatedAtUtc]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        description: { type: [string, 'null'] }
+        roomType: { $ref: '#/components/schemas/RoomType' }
+        status: { $ref: '#/components/schemas/ListingStatus' }
+        isVerified: { type: boolean }
+        monthlyRentVnd: { type: integer }
+        depositVnd: { type: integer }
+        areaM2: { type: number }
+        maxOccupants: { type: [integer, 'null'] }
+        furnishing: { $ref: '#/components/schemas/Furnishing' }
+        availableFrom: { type: [string, 'null'], format: date }
+        address: { $ref: '#/components/schemas/AddressDto' }
+        location: { $ref: '#/components/schemas/GeoPointDto' }
+        distanceKm: { type: number }
+        utilities: { $ref: '#/components/schemas/UtilitiesView' }
+        amenities:
+          type: array
+          items: { $ref: '#/components/schemas/Amenity' }
+        safety: { $ref: '#/components/schemas/SafetyDto' }
+        houseRules:
+          oneOf:
+            - $ref: '#/components/schemas/HouseRulesDto'
+            - type: 'null'
+        photos:
+          type: array
+          items: { $ref: '#/components/schemas/PhotoDto' }
+        landlord: { $ref: '#/components/schemas/LandlordContactDto' }
+        isFavourite: { type: boolean }
+        publishedAtUtc: { type: [string, 'null'], format: date-time }
+        lastUpdatedAtUtc: { type: string, format: date-time }
+    TravelTimeItemDto:
+      type: object
+      required: [mode, distanceMeters, durationSeconds, isEstimate]
+      properties:
+        mode: { $ref: '#/components/schemas/TravelMode' }
+        distanceMeters: { type: integer }
+        durationSeconds: { type: integer }
+        isEstimate: { type: boolean, description: true for Bus (BR-TRV-02) }
+    TravelTimesDto:
+      type: object
+      required: [campusId, straightLineDistanceKm, isFallback, items]
+      properties:
+        campusId: { type: string }
+        straightLineDistanceKm: { type: number }
+        isFallback: { type: boolean, description: true when routing unavailable → items is empty (US09 AC3) }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/TravelTimeItemDto' }
+    CompareRoomDto:
+      type: object
+      required: [id, title, status, monthlyRentVnd, depositVnd, areaM2, roomType, distanceKm, amenities, safetyScore, isSafetyVerified, estimatedMonthlyTotalVnd]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        coverThumbUrl: { type: [string, 'null'], format: uri }
+        status: { $ref: '#/components/schemas/ListingStatus' }
+        monthlyRentVnd: { type: integer }
+        depositVnd: { type: integer }
+        areaM2: { type: number }
+        roomType: { $ref: '#/components/schemas/RoomType' }
+        distanceKm: { type: number }
+        amenities:
+          type: array
+          items: { $ref: '#/components/schemas/Amenity' }
+        safetyScore: { type: integer, minimum: 0, maximum: 5 }
+        isSafetyVerified: { type: boolean }
+        estimatedMonthlyTotalVnd: { type: integer }
+    ComparisonDto:
+      type: object
+      required: [campusId, rooms]
+      properties:
+        campusId: { type: string }
+        rooms:
+          type: array
+          minItems: 2
+          maxItems: 3
+          items: { $ref: '#/components/schemas/CompareRoomDto' }
+
+    # ------------------------------------------------ reports
+    CreateReportRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { $ref: '#/components/schemas/ReportReason' }
+        note: { type: [string, 'null'], maxLength: 500, description: Required when reason = Other }
+    ReportCreatedDto:
+      type: object
+      required: [id, status, createdAtUtc]
+      properties:
+        id: { type: string }
+        status: { $ref: '#/components/schemas/ReportStatus' }
+        createdAtUtc: { type: string, format: date-time }
+    ReportDto:
+      type: object
+      required: [id, roomId, roomTitle, reporterId, reporterName, reason, status, isHighPriority, createdAtUtc]
+      properties:
+        id: { type: string }
+        roomId: { type: string }
+        roomTitle: { type: string }
+        roomStatus: { $ref: '#/components/schemas/ListingStatus' }
+        reporterId: { type: string }
+        reporterName: { type: string }
+        reason: { $ref: '#/components/schemas/ReportReason' }
+        note: { type: [string, 'null'] }
+        status: { $ref: '#/components/schemas/ReportStatus' }
+        isHighPriority: { type: boolean, description: BR-RPT-05 }
+        createdAtUtc: { type: string, format: date-time }
+        resolvedAtUtc: { type: [string, 'null'], format: date-time }
+        resolutionNote: { type: [string, 'null'] }
+    PagedReports:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/ReportDto' }
+    ResolveReportRequest:
+      type: object
+      required: [resolution, note]
+      properties:
+        resolution:
+          type: string
+          enum: [Dismissed, ActionTaken]
+        note: { type: string, minLength: 1, maxLength: 500 }
+        suspendListing: { type: boolean, default: false, description: Only with ActionTaken }
+
+    # ------------------------------------------------ favourites
+    FavouriteDto:
+      type: object
+      required: [room, savedAtUtc]
+      properties:
+        room: { $ref: '#/components/schemas/RoomCardDto' }
+        savedAtUtc: { type: string, format: date-time }
+    PagedFavourites:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/FavouriteDto' }
+
+    # ------------------------------------------------ saved searches
+    CreateSavedSearchRequest:
+      type: object
+      required: [name, criteria, alertState]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 50 }
+        criteria: { $ref: '#/components/schemas/SearchCriteriaDto' }
+        alertState: { $ref: '#/components/schemas/AlertState' }
+    UpdateSavedSearchRequest:
+      type: object
+      required: [name, criteria]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 50 }
+        criteria: { $ref: '#/components/schemas/SearchCriteriaDto' }
+    SetAlertStateRequest:
+      type: object
+      required: [alertState]
+      properties:
+        alertState: { $ref: '#/components/schemas/AlertState' }
+    SavedSearchDto:
+      type: object
+      required: [id, name, criteria, alertState, createdAtUtc, updatedAtUtc]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        criteria: { $ref: '#/components/schemas/SearchCriteriaDto' }
+        alertState: { $ref: '#/components/schemas/AlertState' }
+        createdAtUtc: { type: string, format: date-time }
+        updatedAtUtc: { type: string, format: date-time }
+
+    # ------------------------------------------------ devices & notifications
+    RegisterDeviceRequest:
+      type: object
+      required: [pushToken, platform]
+      properties:
+        pushToken: { type: string, maxLength: 4096 }
+        platform: { $ref: '#/components/schemas/DevicePlatform' }
+    NotificationDto:
+      type: object
+      required: [id, type, title, body, isRead, createdAtUtc]
+      properties:
+        id: { type: string }
+        type: { $ref: '#/components/schemas/NotificationType' }
+        title: { type: string }
+        body: { type: string }
+        targetType:
+          type: [string, 'null']
+          enum: [Room, Conversation, SavedSearch, null]
+        targetId: { type: [string, 'null'] }
+        isRead: { type: boolean }
+        createdAtUtc: { type: string, format: date-time }
+    PagedNotifications:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items, unreadCount]
+          properties:
+            unreadCount: { type: integer }
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/NotificationDto' }
+    MarkNotificationsReadRequest:
+      type: object
+      description: Either ids or all = true
+      properties:
+        ids:
+          type: array
+          maxItems: 100
+          items: { type: string }
+        all: { type: boolean }
+
+    # ------------------------------------------------ chat
+    ConversationRoomDto:
+      type: object
+      required: [id, title, monthlyRentVnd, status]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        coverThumbUrl: { type: [string, 'null'], format: uri }
+        monthlyRentVnd: { type: integer }
+        status: { $ref: '#/components/schemas/ListingStatus' }
+    ConversationPartyDto:
+      type: object
+      required: [id, displayName, role]
+      properties:
+        id: { type: string }
+        displayName: { type: string }
+        role: { $ref: '#/components/schemas/UserRole' }
+    ConversationDto:
+      type: object
+      required: [id, room, otherParty, unreadCount, createdAtUtc]
+      properties:
+        id: { type: string }
+        room: { $ref: '#/components/schemas/ConversationRoomDto' }
+        otherParty: { $ref: '#/components/schemas/ConversationPartyDto' }
+        lastMessagePreview: { type: [string, 'null'] }
+        lastMessageAtUtc: { type: [string, 'null'], format: date-time }
+        unreadCount: { type: integer }
+        canSend: { type: boolean, description: false 30 days after the listing became unavailable (BR-CHT-07) }
+        createdAtUtc: { type: string, format: date-time }
+    PagedConversations:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/ConversationDto' }
+    SendMessageRequest:
+      type: object
+      required: [clientMessageId, body]
+      properties:
+        clientMessageId: { type: string, format: uuid, description: Idempotency key generated on the device (BR-CHT-04) }
+        body: { type: string, minLength: 1, maxLength: 2000 }
+    MessageDto:
+      type: object
+      required: [id, conversationId, senderId, clientMessageId, body, sentAtUtc]
+      properties:
+        id: { type: string }
+        conversationId: { type: string }
+        senderId: { type: string }
+        clientMessageId: { type: string }
+        body: { type: string }
+        sentAtUtc: { type: string, format: date-time }
+    MessagePage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/MessageDto' }
+        nextBefore: { type: [string, 'null'], description: Cursor for older messages; null when no more }
+
+    # ------------------------------------------------ landlord (write side)
+    UpsertListingRequest:
+      type: object
+      description: Create/update payload. Never contains status, isVerified, landlordId, timestamps (GUARDRAILS 1.5.1).
+      required: [title, roomType, monthlyRentVnd, depositVnd, areaM2, address, location, photoIds]
+      properties:
+        title: { type: string, minLength: 10, maxLength: 100 }
+        description: { type: [string, 'null'], maxLength: 2000 }
+        roomType: { $ref: '#/components/schemas/RoomType' }
+        monthlyRentVnd: { type: integer, minimum: 100000, maximum: 50000000 }
+        depositVnd: { type: integer, minimum: 0, description: '≤ 3 × monthlyRentVnd (BR-LST-01)' }
+        areaM2: { type: number, minimum: 5, maximum: 200 }
+        maxOccupants: { type: [integer, 'null'], minimum: 1, maximum: 10 }
+        furnishing: { $ref: '#/components/schemas/Furnishing' }
+        availableFrom: { type: [string, 'null'], format: date }
+        address: { $ref: '#/components/schemas/AddressDto' }
+        location: { $ref: '#/components/schemas/GeoPointDto' }
+        utilities: { $ref: '#/components/schemas/UtilitiesDto' }
+        amenities:
+          type: array
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/Amenity' }
+        safetyFeatures:
+          type: array
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/SafetyFeature' }
+        photoIds:
+          type: array
+          description: Ordered (first = cover). 3–20 Standard + 0–3 Panorama, all uploaded by the caller (BR-MED-01, BR-MED-03)
+          minItems: 3
+          maxItems: 23
+          uniqueItems: true
+          items: { type: string }
+        houseRules:
+          oneOf:
+            - $ref: '#/components/schemas/HouseRulesFields'
+            - type: 'null'
+          description: Optional on create (creates version 1). Ignored by updateListing — change rules with updateHouseRules so every change is versioned (BR-HR-02).
+    PhotoUploadDto:
+      type: object
+      required: [id, kind, thumbUrl, mediumUrl, width, height, sizeBytes]
+      properties:
+        id: { type: string }
+        kind: { $ref: '#/components/schemas/PhotoKind' }
+        thumbUrl: { type: string, format: uri }
+        mediumUrl: { type: string, format: uri }
+        width: { type: integer }
+        height: { type: integer }
+        sizeBytes: { type: integer }
+    MyListingSummaryDto:
+      type: object
+      required: [id, title, status, needsReReview, isVerified, monthlyRentVnd, lastUpdatedAtUtc, createdAtUtc]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        status: { $ref: '#/components/schemas/ListingStatus' }
+        statusReason: { type: [string, 'null'] }
+        needsReReview: { type: boolean }
+        isVerified: { type: boolean }
+        coverThumbUrl: { type: [string, 'null'], format: uri }
+        monthlyRentVnd: { type: integer }
+        lastUpdatedAtUtc: { type: string, format: date-time }
+        createdAtUtc: { type: string, format: date-time }
+    PagedMyListings:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items, countsByStatus]
+          properties:
+            countsByStatus:
+              type: object
+              additionalProperties: { type: integer }
+              description: ListingStatus → count
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/MyListingSummaryDto' }
+    MyListingDetailDto:
+      type: object
+      required: [id, status, needsReReview, isVerified, version, listing, photos, lastUpdatedAtUtc, createdAtUtc]
+      properties:
+        id: { type: string }
+        status: { $ref: '#/components/schemas/ListingStatus' }
+        statusReason: { type: [string, 'null'] }
+        needsReReview: { type: boolean }
+        isVerified: { type: boolean }
+        isSafetyVerified: { type: boolean }
+        version: { type: integer, description: Same value as the ETag }
+        listing: { $ref: '#/components/schemas/UpsertListingRequest' }
+        photos:
+          type: array
+          items: { $ref: '#/components/schemas/PhotoDto' }
+        houseRules:
+          oneOf:
+            - $ref: '#/components/schemas/HouseRulesDto'
+            - type: 'null'
+        publishedAtUtc: { type: [string, 'null'], format: date-time }
+        lastUpdatedAtUtc: { type: string, format: date-time }
+        createdAtUtc: { type: string, format: date-time }
+
+    # ------------------------------------------------ admin
+    PendingLandlordDto:
+      type: object
+      required: [id, fullName, email, phoneNumber, createdAtUtc]
+      properties:
+        id: { type: string }
+        fullName: { type: string }
+        email: { type: string }
+        phoneNumber: { type: string }
+        createdAtUtc: { type: string, format: date-time }
+    PagedPendingLandlords:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/PendingLandlordDto' }
+    ModerationRoomSummaryDto:
+      type: object
+      required: [id, title, status, needsReReview, landlordId, landlordName, openReportCount, createdAtUtc, lastUpdatedAtUtc]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        status: { $ref: '#/components/schemas/ListingStatus' }
+        needsReReview: { type: boolean }
+        coverThumbUrl: { type: [string, 'null'], format: uri }
+        landlordId: { type: string }
+        landlordName: { type: string }
+        openReportCount: { type: integer }
+        createdAtUtc: { type: string, format: date-time }
+        lastUpdatedAtUtc: { type: string, format: date-time }
+    PagedModerationRooms:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/ModerationRoomSummaryDto' }
+    ModerationRoomDto:
+      allOf:
+        - $ref: '#/components/schemas/MyListingDetailDto'
+        - type: object
+          required: [landlord]
+          properties:
+            landlord:
+              type: object
+              required: [id, fullName, email, phoneNumber, isVerified]
+              properties:
+                id: { type: string }
+                fullName: { type: string }
+                email: { type: string }
+                phoneNumber: { type: string }
+                isVerified: { type: boolean }
+    ApproveListingRequest:
+      type: object
+      required: [confirmedSafetyFeatures]
+      properties:
+        confirmedSafetyFeatures:
+          type: array
+          uniqueItems: true
+          description: Subset of the declared features the Admin verified (BR-LST-08); empty array = none confirmed
+          items: { $ref: '#/components/schemas/SafetyFeature' }
+    ReasonRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 5, maxLength: 500 }
+
+    # ------------------------------------------------ audit (existing)
+    AuditLogDto:
+      type: object
+      required: [id, role, action, entityType, isSuccess, timestampUtc]
+      properties:
+        id: { type: string }
+        userId: { type: [string, 'null'] }
+        userEmail: { type: [string, 'null'] }
+        role: { type: string }
+        action: { type: string }
+        entityType: { type: string }
+        entityId: { type: [string, 'null'] }
+        detailsJson: { type: [string, 'null'] }
+        ipAddress: { type: [string, 'null'] }
+        statusCode: { type: [integer, 'null'] }
+        durationMs: { type: [integer, 'null'] }
+        isSuccess: { type: boolean }
+        errorMessage: { type: [string, 'null'] }
+        timestampUtc: { type: string, format: date-time }
+    PagedAuditLogs:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/AuditLogDto' }
