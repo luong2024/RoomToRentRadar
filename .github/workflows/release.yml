@@ -131,7 +131,7 @@ jobs:
           fi
 
       - name: Setup Java 21 (Temurin JDK)
-        uses: actions/setup-java@c5195efecf7bdfc987ee827a71cb8b11521c002f # v4.7.0
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
         with:
           distribution: 'temurin'
           java-version: '21'
@@ -212,11 +212,12 @@ jobs:
 
       - name: Generate Mobile Release CycloneDX SBOM
         env:
+          DOTNET_ROLL_FORWARD: Major
           VERSION_TAG: ${{ needs.validate-release.outputs.version_tag }}
         run: |
-          dotnet tool install --global CycloneDX --version 4.1.0 || dotnet tool install --global CycloneDX
+          dotnet tool install --global CycloneDX
           export PATH="$PATH:$HOME/.dotnet/tools"
-          dotnet CycloneDX RoomToRentRadar/RoomToRentRadar.csproj -o ./release-mobile -fn "sbom-mobile-${VERSION_TAG}.cdx.json" --json
+          dotnet CycloneDX RoomToRentRadar/RoomToRentRadar.csproj -dpr -o ./release-mobile -fn "sbom-mobile-${VERSION_TAG}.cdx.json" --json
           test -s "./release-mobile/sbom-mobile-${VERSION_TAG}.cdx.json"
 
       - name: Shred & Cleanup Temporary Keystore (Intra-Job Fail-Safe)
@@ -316,11 +317,13 @@ jobs:
 
       - name: Generate Backend CycloneDX SBOM
         env:
+          DOTNET_ROLL_FORWARD: Major
           VERSION_TAG: ${{ needs.validate-release.outputs.version_tag }}
         run: |
-          dotnet tool install --global CycloneDX --version 4.1.0 || dotnet tool install --global CycloneDX
+          dotnet restore src/RoomToRentRadar.Bootstrap/RoomToRentRadar.Bootstrap.csproj
+          dotnet tool install --global CycloneDX
           export PATH="$PATH:$HOME/.dotnet/tools"
-          dotnet CycloneDX src/RoomToRentRadar.Bootstrap/RoomToRentRadar.Bootstrap.csproj -o ./release-backend -fn "sbom-backend-${VERSION_TAG}.cdx.json" --json
+          dotnet CycloneDX src/RoomToRentRadar.Bootstrap/RoomToRentRadar.Bootstrap.csproj -dpr -o ./release-backend -fn "sbom-backend-${VERSION_TAG}.cdx.json" --json
           test -s "./release-backend/sbom-backend-${VERSION_TAG}.cdx.json"
 
       - name: Record Pre-Deployment Image Digest, Apply EF Migration Bundle & Rollout Container
