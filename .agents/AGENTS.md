@@ -86,7 +86,29 @@ flowchart TD
 
 ---
 
-## 5. PROJECT BASELINE PARAMETERS
+## 5. INVIOLABLE OPERATIONAL GUARDRAILS & PRODUCTION STANDARDS (MANDATORY)
+> All agents MUST strictly comply with `.agents/GUARDRAILS.md`. Violations will fail automated architectural verification.
+
+1. **Compilation First & Sandboxing:**
+   - Every task cycle must conclude with `dotnet build` passing (0 errors) for both Client and API.
+   - **The Two-File Rule:** Cascading refactoring outside task scope (>2 files) is strictly prohibited.
+   - **QA Sandbox:** `@QA` is forbidden from modifying production code.
+2. **Hexagonal Boundary Isolation:**
+   - Core layers (`Domain`, `Ports`, `Application`) MUST remain pure C# POCOs with ZERO dependencies on `Microsoft.Maui.*`, `Microsoft.AspNetCore.*`, `System.Net.Http.*`, `Microsoft.IdentityModel.*`, `Microsoft.Data.Sqlite`, or `Microsoft.Azure.Cosmos`.
+   - UI / PageModels MUST NOT perform direct SQL queries, SQLite connections, or direct HTTP calls.
+3. **The 6 Universal Production-Grade Principles:**
+   - **G1 (Input Boundaries & Whitelisting):** Request DTOs MUST NOT contain server-managed fields (`Status`, `IsVerified`, `CreatedAt`, `Role`). Enums MUST be validated with `Enum.IsDefined`.
+   - **G2 (Optimistic Concurrency & Idempotency):** Every mutable Aggregate MUST maintain a `ConcurrencyToken` (`_etag` on Cosmos DB, `UpdatedAtUtc`/RowVersion on SQLite). Conflicts throw `ConcurrencyConflictException` (HTTP 409).
+   - **G3 (Defensive Domain Invariants):** Entity constructors MUST reject invalid invariants (`DomainValidationException`). State mutations MUST occur via explicit domain methods (State Machine).
+   - **G4 (Secure-by-Default & Fail-Fast):** All Mock adapters MUST default to `false`. Missing secrets/keys outside `Development` MUST throw `InvalidOperationException` and terminate startup immediately.
+   - **G5 (Realistic Adversarial Testing & Async Purity):** No illusion tests with dummy strings. Async test methods MUST be `public async Task` and use `Assert.ThrowsAsync<T>()`.
+   - **G6 (Anti-IDOR & Least Privilege Data Projection):** Queries on user resources MUST scope by owner ID (`WHERE Id = @id AND OwnerId = @currentUserId`). Controllers MUST project via Response DTOs.
+4. **Post-Flight Verification Checklist:**
+   - Every task handoff MUST verify compilation, test passes (100%), invariant validation, concurrency check, ownership scope, and absence of hardcoded mock configurations.
+
+---
+
+## 6. PROJECT BASELINE PARAMETERS
 
 - **Target University:** University of Information and Communication Technology (ICTU)
 - **ICTU Campus Coordinates:** `Latitude = 21.5851`, `Longitude = 105.8066` (default origin for distance calculation in US01, US09).
@@ -96,7 +118,7 @@ flowchart TD
 
 ---
 
-## 6. STANDARD EXECUTION COMMANDS
+## 7. STANDARD EXECUTION COMMANDS
 
 - **Compile MAUI Client:**
   ```powershell
