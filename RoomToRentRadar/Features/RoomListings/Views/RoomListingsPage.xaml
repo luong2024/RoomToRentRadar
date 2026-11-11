@@ -56,7 +56,7 @@
                     <Border
                         Grid.Column="1"
                         Padding="10,6"
-                        BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource AccentHighlightSoft}, Dark={StaticResource AccentHighlightSoftDark}}"
                         StrokeShape="RoundRectangle 20"
                         StrokeThickness="0"
                         VerticalOptions="Center">
@@ -65,13 +65,13 @@
                                 FontFamily="{x:Static f:FluentUI.FontFamily}"
                                 FontSize="16"
                                 Text="{x:Static f:FluentUI.location_16_regular}"
-                                TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                TextColor="{AppThemeBinding Light={StaticResource AccentHighlight}, Dark={StaticResource AccentHighlightDark}}"
                                 VerticalOptions="Center" />
                             <Label
                                 FontAttributes="Bold"
                                 FontSize="12"
                                 Text="Thái Nguyên"
-                                TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                TextColor="{AppThemeBinding Light={StaticResource AccentHighlightPillText}, Dark={StaticResource AccentHighlightPillTextDark}}"
                                 VerticalOptions="Center" />
                         </HorizontalStackLayout>
                     </Border>

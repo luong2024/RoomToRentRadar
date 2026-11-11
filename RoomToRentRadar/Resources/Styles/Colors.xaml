@@ -86,6 +86,21 @@
     <Color x:Key="AccentTealSoft">#F0FDFA</Color>
     <Color x:Key="AccentTealSoftDark">#134E4A</Color>
 
+    <!-- Highlight Accent (#F42902 Coral-Vermilion — ~10% visual emphasis over White 60% & Blue 30%) -->
+    <Color x:Key="AccentHighlight">#F42902</Color>
+    <Color x:Key="AccentHighlightCtaStart">#E02602</Color>
+    <Color x:Key="AccentHighlightCtaEnd">#C92202</Color>
+    <Color x:Key="AccentHighlightDark">#FF7A59</Color>
+    <Color x:Key="AccentHighlightSoft">#FFF1EE</Color>
+    <Color x:Key="AccentHighlightSoftDark">#3F140A</Color>
+    <Color x:Key="AccentHighlightPillText">#B91C02</Color>
+    <Color x:Key="AccentHighlightPillTextDark">#FDA494</Color>
+
+    <LinearGradientBrush x:Key="AccentHighlightGradient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Offset="0.0" Color="#E02602" />
+        <GradientStop Offset="1.0" Color="#C92202" />
+    </LinearGradientBrush>
+
     <Color x:Key="VerifiedBadgeBg">#DCFCE7</Color>
     <Color x:Key="VerifiedBadgeBgDark">#14532D</Color>
     <Color x:Key="VerifiedBadgeText">#166534</Color>

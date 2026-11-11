@@ -99,7 +99,7 @@
                             FontAttributes="Bold"
                             FontSize="22"
                             Text="{Binding Room.FormattedPrice}"
-                            TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                            TextColor="{AppThemeBinding Light={StaticResource AccentHighlight}, Dark={StaticResource AccentHighlightDark}}" />
 
                         <Label
                             FontAttributes="Bold"

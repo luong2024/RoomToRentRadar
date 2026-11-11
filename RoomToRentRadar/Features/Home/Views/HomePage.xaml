@@ -38,13 +38,15 @@
                         HorizontalOptions="Start"
                         StrokeShape="RoundRectangle 20"
                         StrokeThickness="0">
-                        <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
-                            <Label
-                                FontFamily="{x:Static f:FluentUI.FontFamily}"
-                                FontSize="16"
-                                Text="{x:Static f:FluentUI.building_home_24_regular}"
-                                TextColor="{StaticResource White}"
-                                VerticalOptions="Center" />
+                        <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                            <Border
+                                BackgroundColor="{StaticResource AccentHighlight}"
+                                HeightRequest="8"
+                                Stroke="{StaticResource White}"
+                                StrokeShape="RoundRectangle 4"
+                                StrokeThickness="1.5"
+                                VerticalOptions="Center"
+                                WidthRequest="8" />
                             <Label
                                 FontAttributes="Bold"
                                 FontSize="12"
@@ -107,10 +109,17 @@
                             <Border
                                 Grid.Column="2"
                                 Padding="16,11"
-                                BackgroundColor="{StaticResource PrimaryBrand}"
+                                Background="{StaticResource AccentHighlightGradient}"
                                 StrokeShape="RoundRectangle 12"
                                 StrokeThickness="0"
                                 VerticalOptions="Center">
+                                <Border.Shadow>
+                                    <Shadow
+                                        Brush="{StaticResource AccentHighlight}"
+                                        Offset="0,4"
+                                        Opacity="0.28"
+                                        Radius="10" />
+                                </Border.Shadow>
                                 <Border.GestureRecognizers>
                                     <TapGestureRecognizer Command="{Binding SearchFromHomeCommand}" />
                                 </Border.GestureRecognizers>
@@ -362,7 +371,7 @@
                     <HorizontalStackLayout Spacing="14" VerticalOptions="Center">
                         <Border
                             Padding="12"
-                            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource AccentHighlightSoft}, Dark={StaticResource AccentHighlightSoftDark}}"
                             StrokeShape="RoundRectangle 14"
                             StrokeThickness="0"
                             VerticalOptions="Center">
@@ -370,7 +379,7 @@
                                 FontFamily="{x:Static f:FluentUI.FontFamily}"
                                 FontSize="22"
                                 Text="{x:Static f:FluentUI.money_20_regular}"
-                                TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                                TextColor="{AppThemeBinding Light={StaticResource AccentHighlight}, Dark={StaticResource AccentHighlightDark}}" />
                         </Border>
                         <VerticalStackLayout Spacing="2" VerticalOptions="Center">
                             <Label
