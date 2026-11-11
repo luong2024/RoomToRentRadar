@@ -2,11 +2,13 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.OpenApi;
 using RoomToRentRadar.Api.Data;
 using RoomToRentRadar.Api.Data.Seed;
 using RoomToRentRadar.Api.Features.Auth;
 using RoomToRentRadar.Api.Features.Listings;
+using RoomToRentRadar.Api.Features.Photos;
 using RoomToRentRadar.Shared.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,7 +35,7 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
     {
         var problem = ListingProblemFactory.InvalidQuery(
             ListingProblemFactory.InvalidParameterFormat,
-            "One or more query parameters have an invalid format.");
+            "One or more request parameters have an invalid format.");
         return new ObjectResult(problem)
         {
             StatusCode = StatusCodes.Status400BadRequest,
@@ -77,6 +79,13 @@ builder.Services
         BearerTokenAuthenticationHandler.SchemeName,
         _ => { });
 builder.Services.AddAuthorization();
+builder.Services.AddSingleton(serviceProvider => PhotoStorageOptions.Resolve(
+    serviceProvider.GetRequiredService<IConfiguration>()[PhotoStorageOptions.ConfigKey],
+    serviceProvider.GetRequiredService<IHostEnvironment>().ContentRootPath));
+builder.Services.AddSingleton<PhotoStorage>();
+builder.Services.AddSingleton<PhotoProcessor>();
+builder.Services.AddScoped<ListingPhotosService>();
+builder.Services.AddScoped<AreaSearchQueryService>();
 
 var app = builder.Build();
 
@@ -114,6 +123,13 @@ if (app.Environment.IsDevelopment())
         options.RoutePrefix = "swagger";
     });
 }
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        app.Services.GetRequiredService<PhotoStorageOptions>().RootPath),
+    RequestPath = PhotoStorage.RequestPath
+});
 
 app.UseAuthentication();
 app.UseAuthorization();

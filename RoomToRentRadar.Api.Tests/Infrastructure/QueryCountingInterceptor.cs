@@ -6,17 +6,24 @@ namespace RoomToRentRadar.Api.Tests.Infrastructure;
 public sealed class QueryCountingInterceptor : DbCommandInterceptor
 {
     private int _listingsSelectCount;
+    private int _listingPhotoSelectCount;
 
     public int ListingsSelectCount => Volatile.Read(ref _listingsSelectCount);
 
-    public void Reset() => Interlocked.Exchange(ref _listingsSelectCount, 0);
+    public int ListingPhotoSelectCount => Volatile.Read(ref _listingPhotoSelectCount);
+
+    public void Reset()
+    {
+        Interlocked.Exchange(ref _listingsSelectCount, 0);
+        Interlocked.Exchange(ref _listingPhotoSelectCount, 0);
+    }
 
     public override InterceptionResult<DbDataReader> ReaderExecuting(
         DbCommand command,
         CommandEventData eventData,
         InterceptionResult<DbDataReader> result)
     {
-        CountListingsSelect(command);
+        CountSelects(command);
         return base.ReaderExecuting(command, eventData, result);
     }
 
@@ -26,15 +33,20 @@ public sealed class QueryCountingInterceptor : DbCommandInterceptor
         InterceptionResult<DbDataReader> result,
         CancellationToken cancellationToken = default)
     {
-        CountListingsSelect(command);
+        CountSelects(command);
         return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
     }
 
-    private void CountListingsSelect(DbCommand command)
+    private void CountSelects(DbCommand command)
     {
         if (command.CommandText.Contains("FROM \"listings\"", StringComparison.OrdinalIgnoreCase))
         {
             Interlocked.Increment(ref _listingsSelectCount);
+        }
+
+        if (command.CommandText.Contains("FROM \"listing_photos\"", StringComparison.OrdinalIgnoreCase))
+        {
+            Interlocked.Increment(ref _listingPhotoSelectCount);
         }
     }
 }
