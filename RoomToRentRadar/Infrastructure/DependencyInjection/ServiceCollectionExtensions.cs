@@ -1,6 +1,9 @@
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Features.Home.ViewModels;
 using RoomToRentRadar.Features.Home.Views;
+using RoomToRentRadar.Features.RoomListings.Services;
+using RoomToRentRadar.Features.RoomListings.ViewModels;
+using RoomToRentRadar.Features.RoomListings.Views;
 using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Shared.Services;
 
@@ -20,6 +23,10 @@ public static class ServiceCollectionExtensions
     {
         services.AddTransient<HomeViewModel>();
         services.AddTransient<HomePage>();
+
+        services.AddTransient<IRoomListingsService, RoomListingsService>();
+        services.AddTransient<RoomListingsViewModel>();
+        services.AddTransient<RoomListingsPage>();
         return services;
     }
 }
