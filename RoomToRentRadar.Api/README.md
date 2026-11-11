@@ -5,8 +5,9 @@ The OpenAPI document is generated with the built-in ASP.NET Core OpenAPI support
 
 ## Project layout
 
-- `Controllers/` — API controllers (`ListingsController`, `HealthController`).
+- `Controllers/` — API controllers (`ListingsController`, `ListingPhotosController`, `HealthController`).
 - `Features/Listings/` — listing query validation, cursor codec, sort strategy and query service.
+- `Features/Photos/` — photo upload limits, validation, image processing, storage and gallery service.
 - `Data/` — EF Core context, configurations, migrations, SQLite setup and seeding.
 - `Domain/` — EF Core entities.
 
@@ -52,9 +53,78 @@ Database files are ignored by git. Never commit a seeded database.
     `min_price`, `max_price`, `bedrooms`
   - Only `published` listings are returned.
   - Errors use RFC 9457 `ProblemDetails` with a stable `code` extension.
+- `GET /api/v1/listings/{listingId}/photos` — gallery for a listing (see [Photos](#photos)).
+- `POST /api/v1/listings/{listingId}/photos` — multipart photo upload (see [Photos](#photos)).
+- `GET /media/**` — stored photo files served as static files.
 - `GET /health`
 - `GET /openapi/v1.json` (Development only)
 - `GET /swagger` (Swagger UI, Development only)
+
+## Photos
+
+Photo endpoints are currently **unauthenticated**: anyone who can reach the API can upload photos to
+any listing. Add authentication/authorization before exposing the API outside a trusted network.
+
+### `POST /api/v1/listings/{listingId}/photos`
+
+`multipart/form-data` with these fields:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `files` | one or more files | yes | 1–10 files per request, 10 MB per file |
+| `kind` | string | no | `photo` (default) or `panorama`, case-insensitive |
+
+Accepted inputs are JPEG, PNG and WebP. Every upload is decoded server-side (the declared content
+type is checked, then the file signature), auto-oriented using the EXIF orientation tag, and
+re-encoded as JPEG at quality 85. A JPEG thumbnail limited to 480 px on the longest edge (quality 80)
+is generated for every photo. Animated or multi-frame images, images above 40 megapixels and
+undecodable files are rejected.
+
+Successful uploads return `201 Created` with a `Location` header pointing at the gallery and a JSON
+array of the created `ListingPhotoDto`. New photos continue the `sortOrder` sequence, and the first
+photo of a listing that has no cover yet becomes the cover. Uploads are all-or-nothing: if any file
+in the batch fails, or the database write fails, no rows are persisted and every file written during
+the request is deleted. A listing can hold at most 20 photos.
+
+Storage layout (client file names are never used):
+
+```text
+{Storage:PhotoRootPath}/listings/{listingId}/photo-{photoId:N}.jpg
+{Storage:PhotoRootPath}/listings/{listingId}/thumbs/photo-{photoId:N}.jpg
+```
+
+### `GET /api/v1/listings/{listingId}/photos`
+
+Returns `200 OK` with the photos of the listing ordered by cover first, then `sortOrder`, then `id`.
+
+### Storage configuration
+
+The storage root defaults to `RoomToRentRadar.Api/App_Data/media` (resolved against the content root)
+and is served under `/media`. Override it with configuration or an environment variable:
+
+```bash
+Storage__PhotoRootPath="D:/data/rtrr-media" dotnet run --project RoomToRentRadar.Api
+```
+
+`App_Data/` is gitignored. Point the root at durable storage (or a mounted volume) in any deployed
+environment, and make sure the process can write to it.
+
+### Photo error codes
+
+All photo failures use `application/problem+json` with a stable `code` extension:
+
+| Status | `code` | Cause |
+| --- | --- | --- |
+| 400 | `empty_upload` | no files were sent |
+| 400 | `invalid_photo_kind` | `kind` is not `photo` or `panorama` |
+| 400 | `invalid_photo` | empty file, more than 10 files, corrupt/animated image or more than 40 megapixels |
+| 404 | `listing_not_found` | the listing does not exist |
+| 409 | `photo_limit_exceeded` | the listing already has 20 photos |
+| 413 | `photo_too_large` | a file is larger than 10 MB |
+| 415 | `unsupported_photo_type` | the declared content type is not `image/jpeg`, `image/png` or `image/webp` |
+
+The request body limit for uploads is 100 MB. A body that is not valid `multipart/form-data` is
+rejected with `400` before the endpoint runs.
 
 ## SQLite concurrency
 
