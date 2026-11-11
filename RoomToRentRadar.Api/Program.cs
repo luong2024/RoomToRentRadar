@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using RoomToRentRadar.Api.Authorization;
 using RoomToRentRadar.Api.Middlewares;
@@ -12,6 +13,7 @@ using RoomToRentRadar.Datastore.Sqlite;
 using RoomToRentRadar.Datastore.Sqlite.Configurations;
 using RoomToRentRadar.Infrastructure;
 using RoomToRentRadar.Infrastructure.Adapters.Security;
+using RoomToRentRadar.Ports.Outbound.ExternalServices;
 using RoomToRentRadar.Ports.Outbound.Security;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,7 +21,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<ICurrentUserContext, HttpContextUserContextAdapter>();
+builder.Services.AddScoped<ICurrentUserContextPort, HttpContextUserContextAdapter>();
+builder.Services.AddScoped<ICurrentUserContext>(sp => (HttpContextUserContextAdapter)sp.GetRequiredService<ICurrentUserContextPort>());
 
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new JwtSettings();
 if (string.IsNullOrWhiteSpace(jwtSettings.SigningKey))

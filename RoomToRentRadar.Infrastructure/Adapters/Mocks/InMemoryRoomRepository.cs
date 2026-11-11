@@ -1,7 +1,10 @@
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Ports.Outbound.Repositories;
+
+[assembly: InternalsVisibleTo("RoomToRentRadarUnitTests")]
 
 namespace RoomToRentRadar.Infrastructure.Adapters.Mocks;
 

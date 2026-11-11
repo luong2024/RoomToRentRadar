@@ -1,10 +1,11 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
+using RoomToRentRadar.Ports.Outbound.ExternalServices;
 using RoomToRentRadar.Ports.Outbound.Security;
 
 namespace RoomToRentRadar.Api.Security;
 
-public sealed class HttpContextUserContextAdapter : ICurrentUserContext
+public sealed class HttpContextUserContextAdapter : ICurrentUserContextPort, ICurrentUserContext
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
 
