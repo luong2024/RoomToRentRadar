@@ -1,19 +1,25 @@
+using Microsoft.Extensions.DependencyInjection;
+using RoomToRentRadar.Infrastructure.Auth;
+
 namespace RoomToRentRadar;
 
 public partial class App : Application
 {
-    public App(AppShell appShell)
+    private readonly IServiceProvider _services;
+
+    public App(IServiceProvider services)
     {
         InitializeComponent();
         UserAppTheme = AppTheme.Light;
-        _appShell = appShell;
+        _services = services;
     }
-
-    private readonly AppShell _appShell;
 
     protected override Window CreateWindow(IActivationState? activationState)
     {
-        return new Window(_appShell)
+        _ = _services.GetRequiredService<AuthService>().EnsureSignedInAsync();
+
+        // Resolved here so the Shell is built after App.xaml resource dictionaries load.
+        return new Window(_services.GetRequiredService<AppShell>())
         {
             Title = "Room Radar",
             TitleBar = new TitleBar

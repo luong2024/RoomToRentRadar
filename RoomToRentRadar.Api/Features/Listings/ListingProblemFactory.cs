@@ -12,6 +12,7 @@ public static class ListingProblemFactory
     public const string InvalidBedrooms = "invalid_bedrooms";
     public const string InvalidParameterFormat = "invalid_parameter_format";
     public const string ListingNotFound = "listing_not_found";
+    public const string ListingUnavailable = "listing_unavailable";
 
     public static ProblemDetails InvalidQuery(string code, string detail)
     {
@@ -30,12 +31,25 @@ public static class ListingProblemFactory
     {
         var problem = new ProblemDetails
         {
-            Type = "https://tools.ietf.org/html/rfc9110#section-15.5.4",
+            Type = "https://tools.ietf.org/html/rfc9110#section-15.5.5",
             Status = StatusCodes.Status404NotFound,
             Title = "Listing not found",
-            Detail = "The listing does not exist or is not published."
+            Detail = "No listing exists with the requested identifier."
         };
         problem.Extensions["code"] = ListingNotFound;
+        return problem;
+    }
+
+    public static ProblemDetails Unavailable()
+    {
+        var problem = new ProblemDetails
+        {
+            Type = "https://tools.ietf.org/html/rfc9110#section-15.5.11",
+            Status = StatusCodes.Status410Gone,
+            Title = "Listing is no longer available",
+            Detail = "The requested listing is not published and is therefore no longer available."
+        };
+        problem.Extensions["code"] = ListingUnavailable;
         return problem;
     }
 }

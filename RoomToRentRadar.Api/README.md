@@ -26,6 +26,32 @@ Override the database with configuration or an environment variable:
 ConnectionStrings__Default="Data Source=C:/data/roomtorentradar.db" dotnet run --project RoomToRentRadar.Api
 ```
 
+## Demo sign-in
+
+The landlord phone number is only available through an authenticated endpoint. In Development a
+demo account is seeded on startup when credentials are configured; nothing is seeded otherwise.
+
+```bash
+Auth__DemoEmail="demo@example.test" \
+Auth__DemoPassword="choose-a-local-password" \
+Auth__DemoDisplayName="Demo renter" \
+dotnet run --project RoomToRentRadar.Api
+```
+
+Locally, user-secrets keep the password out of the shell history:
+
+```bash
+dotnet user-secrets set "Auth:DemoPassword" "choose-a-local-password" --project RoomToRentRadar.Api
+```
+
+Never commit these values. The API stores only a PBKDF2-SHA256 hash and salt, and stores only a
+SHA-256 hash of each issued opaque bearer token. Sessions expire after 7 days.
+
+When a demo account and credentials are configured, the app signs in automatically at startup via
+`POST /api/v1/auth/demo-login`. The endpoint returns a session like `/login` and is only available
+in Development with demo credentials configured; anywhere else it returns `404`. No credentials are
+stored in the app.
+
 ## Seed
 
 ```bash
@@ -53,16 +79,40 @@ Database files are ignored by git. Never commit a seeded database.
   - Only `published` listings are returned.
   - Errors use RFC 9457 `ProblemDetails` with a stable `code` extension.
 - `GET /api/v1/listings/{id}`
-  - Returns the full detail of one `published` listing.
-  - Response fields: `id`, `title`, `description`, `price`, `areaM2`, `bedrooms`, `address`, `lat`,
-    `lng`, `createdAt`, `updatedAt`, `amenities`, `rules`. Photos are not part of the detail payload.
+  - Returns the full listing detail (`Content-Type: application/json`).
+  - Response fields: `id`, `title`, `description`, `price`, `deposit`, `areaM2`, `roomType`,
+    `bedrooms`, `address`, `lat`, `lng`, `status`, `createdAt`, `updatedAt`, `amenities`, `rules`,
+    `landlordName`. Photos are not part of the detail payload, and the landlord phone is never
+    included (see the contact endpoint).
+  - `roomType` is one of `studio`, `apartment`, `house`, `shared_room`; `status` is one of `draft`,
+    `published`, `hidden`, `removed`.
   - `amenities` is an ordered array of wire codes: `wifi`, `air_conditioner`, `parking`,
     `washing_machine`, `refrigerator`, `kitchen`, `private_bathroom`, `balcony`, `elevator`,
     `security`, `gym`, `pool`, `pet_allowed`.
   - `rules` is an ordered array of free-text strings (`sort_order`, max 300 characters each).
-  - A missing id and a draft/hidden/removed listing return `404` `application/problem+json` with
-    `code` = `listing_not_found`; the response never reveals whether the row exists. A malformed id
-    also returns `404` but without the `code` extension.
+  - `200` — the listing exists and is `published`.
+  - `404` — no listing has that id; `code` is `listing_not_found`. A malformed id also returns
+    `404` but without the `code` extension.
+  - `410` — the listing exists but is not `published` (draft, hidden, removed); `code` is
+    `listing_unavailable`. The body never contains the listing content.
+  - Error responses use `application/problem+json` with a stable `code` extension.
+- `GET /api/v1/listings/{id}/similar?limit=4`
+  - Returns published listings with the same `bedrooms`, `price` within ±20% and `areaM2` within
+    ±30% of the requested listing, closest price first. The requested listing is excluded.
+  - `limit` defaults to 4 (max 10). Works for unpublished listings too, so the app can suggest
+    alternatives when a listing is unavailable.
+  - `404` — no listing has that id (`listing_not_found`); `400` — invalid limit (`invalid_limit`).
+- `GET /api/v1/listings/{id}/contact` — requires `Authorization: Bearer <token>`
+  - Returns `{ "landlordName": "...", "landlordPhone": "..." }` for a published listing.
+  - `401` — missing or invalid token (`unauthorized`); `404` — unknown listing (`listing_not_found`);
+    `410` — listing is not published (`listing_unavailable`).
+- `POST /api/v1/auth/login` — body `{ "email": "...", "password": "..." }`
+  - Returns `{ "accessToken": "...", "expiresAt": "...", "displayName": "..." }`.
+  - `401` — invalid email or password (`invalid_credentials`); `400` — missing fields.
+- `POST /api/v1/auth/demo-login` — Development only; signs in the configured demo account.
+  - Returns the same payload as `/login`; `404` outside Development or when demo credentials are
+    not configured.
+- `POST /api/v1/auth/logout` — requires a bearer token; returns `204` and invalidates the session.
 - `GET /health`
 - `GET /openapi/v1.json` (Development only)
 - `GET /swagger` (Swagger UI, Development only)

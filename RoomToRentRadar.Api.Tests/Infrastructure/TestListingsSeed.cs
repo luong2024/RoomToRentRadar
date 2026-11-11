@@ -26,20 +26,32 @@ public static class TestListingsSeed
                 _ => ListingStatus.Published
             };
 
+            var price = 5_000_000L + index % 4 * 1_000_000L;
+
             var listing = new Listing
             {
                 Id = IdFor(index),
                 Title = $"Test listing {index}",
                 Description = $"Test listing {index} description",
-                Price = 5_000_000L + index % 4 * 1_000_000L,
+                Price = price,
+                Deposit = price,
                 AreaM2 = 30 + index % 5 * 5,
+                RoomType = (index % 4) switch
+                {
+                    0 => RoomType.Apartment,
+                    1 => RoomType.Studio,
+                    2 => RoomType.House,
+                    _ => RoomType.SharedRoom
+                },
                 Bedrooms = index % 4,
                 Address = $"Test address {index}, District {index % 3}",
                 Lat = 10.7 + index * 0.001,
                 Lng = 106.7 + index * 0.001,
                 Status = status,
                 CreatedAt = baseDate.AddHours(-(index % 6)),
-                UpdatedAt = baseDate.AddHours(-(index % 6)).AddMinutes(5)
+                UpdatedAt = baseDate.AddHours(-(index % 6)).AddMinutes(5),
+                LandlordName = $"Landlord {index}",
+                LandlordPhone = $"+84 900 000 {index:D3}"
             };
 
             if (index == 0)

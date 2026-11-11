@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.OpenApi;
 using RoomToRentRadar.Api.Data;
 using RoomToRentRadar.Api.Data.Seed;
+using RoomToRentRadar.Api.Features.Auth;
 using RoomToRentRadar.Api.Features.Listings;
 using RoomToRentRadar.Shared.Serialization;
 
@@ -68,6 +70,13 @@ builder.Services.AddCors(options =>
         .AllowAnyMethod());
 });
 builder.Services.AddScoped<ListingsQueryService>();
+builder.Services.AddScoped<AuthService>();
+builder.Services
+    .AddAuthentication(BearerTokenAuthenticationHandler.SchemeName)
+    .AddScheme<AuthenticationSchemeOptions, BearerTokenAuthenticationHandler>(
+        BearerTokenAuthenticationHandler.SchemeName,
+        _ => { });
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
@@ -88,6 +97,8 @@ if (app.Environment.IsDevelopment())
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await dbContext.Database.MigrateAsync();
     await DatabaseSeeder.SeedSampleAsync(dbContext);
+    await DatabaseSeeder.BackfillSampleDetailsAsync(dbContext);
+    await DemoUserSeeder.SeedAsync(dbContext, app.Configuration, app.Logger);
 }
 
 app.UseExceptionHandler();
@@ -103,6 +114,9 @@ if (app.Environment.IsDevelopment())
         options.RoutePrefix = "swagger";
     });
 }
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 

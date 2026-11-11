@@ -52,8 +52,33 @@ public sealed class ListingDetailEndpointTests
             Assert.That(detail.Id, Is.EqualTo(id));
             Assert.That(detail.Title, Is.EqualTo("Test listing 0"));
             Assert.That(detail.Description, Is.EqualTo("Test listing 0 description"));
+            Assert.That(detail.Price, Is.EqualTo(5_000_000L));
+            Assert.That(detail.Deposit, Is.EqualTo(5_000_000L));
+            Assert.That(detail.RoomType, Is.EqualTo(RoomType.Apartment));
+            Assert.That(detail.Status, Is.EqualTo(ListingStatus.Published));
+            Assert.That(detail.CreatedAt, Is.EqualTo(DateTime.SpecifyKind(new DateTime(2026, 1, 1), DateTimeKind.Utc)));
+            Assert.That(detail.UpdatedAt, Is.EqualTo(DateTime.SpecifyKind(new DateTime(2026, 1, 1, 0, 5, 0), DateTimeKind.Utc)));
             Assert.That(detail.Amenities, Is.EqualTo(new[] { AmenityCode.Wifi, AmenityCode.Parking }));
             Assert.That(detail.Rules, Is.EqualTo(new[] { "No smoking", "No pets" }));
+            Assert.That(detail.LandlordName, Is.EqualTo("Landlord 0"));
+        });
+    }
+
+    [Test]
+    public async Task GetDetail_PublishedListing_DoesNotExposeLandlordPhone()
+    {
+        var response = await _client.GetAsync($"/api/v1/listings/{await SeededIdAsync(0)}");
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var detail = document.RootElement;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(detail.TryGetProperty("landlordPhone", out _), Is.False);
+            Assert.That(detail.GetProperty("landlordName").GetString(), Is.EqualTo("Landlord 0"));
+            Assert.That(detail.GetProperty("roomType").GetString(), Is.EqualTo("apartment"));
+            Assert.That(detail.GetProperty("status").GetString(), Is.EqualTo("published"));
         });
     }
 
@@ -77,13 +102,13 @@ public sealed class ListingDetailEndpointTests
     [TestCase(22)]
     [TestCase(23)]
     [TestCase(24)]
-    public async Task GetDetail_NonPublishedListing_ReturnsNotFound(int listingIndex)
+    public async Task GetDetail_NonPublishedListing_ReturnsGone(int listingIndex)
     {
         var response = await _client.GetAsync($"/api/v1/listings/{await SeededIdAsync(listingIndex)}");
 
         Assert.Multiple(() =>
         {
-            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Gone));
             Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
         });
 
@@ -91,8 +116,8 @@ public sealed class ListingDetailEndpointTests
         var problem = document.RootElement;
         Assert.Multiple(() =>
         {
-            Assert.That(problem.GetProperty("status").GetInt32(), Is.EqualTo(404));
-            Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo("listing_not_found"));
+            Assert.That(problem.GetProperty("status").GetInt32(), Is.EqualTo(410));
+            Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo("listing_unavailable"));
         });
     }
 

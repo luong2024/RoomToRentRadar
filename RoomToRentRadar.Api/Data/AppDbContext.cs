@@ -9,6 +9,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<ListingPhoto> ListingPhotos => Set<ListingPhoto>();
     public DbSet<ListingAmenity> ListingAmenities => Set<ListingAmenity>();
     public DbSet<ListingRule> ListingRules => Set<ListingRule>();
+    public DbSet<User> Users => Set<User>();
+    public DbSet<AuthSession> AuthSessions => Set<AuthSession>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
