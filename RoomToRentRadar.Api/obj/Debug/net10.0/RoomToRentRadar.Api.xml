@@ -14,6 +14,21 @@
             <response code="200">Trả về một trang dữ liệu kèm metadata phân trang.</response>
             <response code="400">Tham số phân trang không hợp lệ.</response>
         </member>
+        <member name="M:RoomToRentRadar.Api.Controllers.RoomPhotosController.Upload(System.String,RoomToRentRadar.Api.DTOs.UploadPhotosRequest,System.Threading.CancellationToken)">
+            <summary>Tải lên một hoặc nhiều ảnh (JPEG/PNG, kể cả ảnh 360°) cho phòng trọ.</summary>
+            <remarks>
+            multipart/form-data: <c>files</c> (nhiều tệp), <c>is360</c> (true/false).
+            Ảnh được kiểm tra, xoay đúng chiều, resize, nén JPEG rồi mới lưu.
+            </remarks>
+            <response code="200">Upload thành công, trả về thông tin các ảnh.</response>
+            <response code="400">Tệp không hợp lệ (sai định dạng, quá lớn, quá nhiều tệp, ...).</response>
+            <response code="404">Phòng trọ không tồn tại.</response>
+        </member>
+        <member name="M:RoomToRentRadar.Api.Controllers.RoomPhotosController.GetGallery(System.String,System.Threading.CancellationToken)">
+            <summary>Lấy danh sách ảnh (gallery) của một phòng trọ.</summary>
+            <response code="200">Danh sách ảnh (có thể rỗng).</response>
+            <response code="404">Phòng trọ không tồn tại.</response>
+        </member>
         <member name="T:RoomToRentRadar.Api.DTOs.ListingDto">
             <summary>Dữ liệu rút gọn của một phòng trọ trả về cho app (card trong danh sách).</summary>
         </member>
@@ -50,6 +65,33 @@
             App MAUI dùng <see cref="P:RoomToRentRadar.Api.DTOs.PagedResponse`1.HasNextPage"/> để quyết định có gọi trang tiếp theo khi cuộn hay không.
             </summary>
         </member>
+        <member name="T:RoomToRentRadar.Api.DTOs.UploadPhotosRequest">
+            <summary>Request DTO (multipart/form-data) cho POST /api/rooms/{roomId}/photos.</summary>
+        </member>
+        <member name="P:RoomToRentRadar.Api.DTOs.UploadPhotosRequest.Files">
+            <summary>Một hoặc nhiều tệp ảnh (JPEG/PNG), field name: "files".</summary>
+        </member>
+        <member name="P:RoomToRentRadar.Api.DTOs.UploadPhotosRequest.Is360">
+            <summary>true nếu là ảnh 360° (equirectangular, tỉ lệ ~2:1). Ảnh 360 được giữ độ phân giải cao hơn.</summary>
+        </member>
+        <member name="T:RoomToRentRadar.Api.DTOs.PhotoDto">
+            <summary>Thông tin một ảnh trong gallery.</summary>
+        </member>
+        <member name="M:RoomToRentRadar.Api.DTOs.PhotoDto.#ctor(System.String,System.String,System.String,System.Boolean,System.Int32,System.Int32,System.Int64,System.DateTime)">
+            <summary>Thông tin một ảnh trong gallery.</summary>
+        </member>
+        <member name="T:RoomToRentRadar.Api.DTOs.UploadPhotosResponse">
+            <summary>Response DTO của API upload.</summary>
+        </member>
+        <member name="M:RoomToRentRadar.Api.DTOs.UploadPhotosResponse.#ctor(System.String,System.Int32,System.Collections.Generic.IReadOnlyList{RoomToRentRadar.Api.DTOs.PhotoDto})">
+            <summary>Response DTO của API upload.</summary>
+        </member>
+        <member name="T:RoomToRentRadar.Api.DTOs.PhotoGalleryResponse">
+            <summary>Response DTO của Gallery API.</summary>
+        </member>
+        <member name="M:RoomToRentRadar.Api.DTOs.PhotoGalleryResponse.#ctor(System.String,System.Int32,System.Collections.Generic.IReadOnlyList{RoomToRentRadar.Api.DTOs.PhotoDto})">
+            <summary>Response DTO của Gallery API.</summary>
+        </member>
         <member name="T:RoomToRentRadar.Api.Models.Listing">
             <summary>
             Document phòng trọ lưu trong Azure Cosmos DB (container "Listings", partition key "/city").
@@ -64,6 +106,46 @@
         <member name="P:RoomToRentRadar.Api.Models.Listing.City">
             <summary>Partition key.</summary>
         </member>
+        <member name="T:RoomToRentRadar.Api.Models.RoomPhoto">
+            <summary>
+            Metadata ảnh lưu trong Cosmos DB (container "Photos", partition key "/roomId").
+            Tệp ảnh nằm ở storage; DB chỉ giữ đường dẫn tương đối (<see cref="P:RoomToRentRadar.Api.Models.RoomPhoto.StoragePath"/>)
+            để dễ chuyển sang Azure Blob Storage.
+            </summary>
+        </member>
+        <member name="P:RoomToRentRadar.Api.Models.RoomPhoto.RoomId">
+            <summary>Partition key.</summary>
+        </member>
+        <member name="P:RoomToRentRadar.Api.Models.RoomPhoto.StoragePath">
+            <summary>Đường dẫn tương đối trong storage, ví dụ "rooms/{roomId}/{id}.jpg".</summary>
+        </member>
+        <member name="P:RoomToRentRadar.Api.Models.RoomPhoto.SizeBytes">
+            <summary>Kích thước sau khi nén (byte).</summary>
+        </member>
+        <member name="P:RoomToRentRadar.Api.Options.CosmosDbOptions.PhotosContainer">
+            <summary>Container lưu metadata ảnh, partition key "/roomId".</summary>
+        </member>
+        <member name="P:RoomToRentRadar.Api.Options.PhotoOptions.MaxFileSizeBytes">
+            <summary>Dung lượng tối đa mỗi tệp tải lên (byte). Mặc định 10 MB.</summary>
+        </member>
+        <member name="P:RoomToRentRadar.Api.Options.PhotoOptions.MaxFilesPerRequest">
+            <summary>Số ảnh tối đa mỗi lần upload.</summary>
+        </member>
+        <member name="P:RoomToRentRadar.Api.Options.PhotoOptions.MaxDimension">
+            <summary>Cạnh dài tối đa của ảnh thường (px).</summary>
+        </member>
+        <member name="P:RoomToRentRadar.Api.Options.PhotoOptions.Max360Dimension">
+            <summary>Cạnh dài tối đa của ảnh 360° (px) - cần cao hơn để xem panorama còn nét.</summary>
+        </member>
+        <member name="P:RoomToRentRadar.Api.Options.PhotoOptions.JpegQuality">
+            <summary>Chất lượng JPEG sau nén (1-100).</summary>
+        </member>
+        <member name="P:RoomToRentRadar.Api.Options.PhotoOptions.StorageRoot">
+            <summary>Thư mục gốc lưu ảnh (tương đối so với ContentRoot nếu không phải đường dẫn tuyệt đối).</summary>
+        </member>
+        <member name="P:RoomToRentRadar.Api.Options.PhotoOptions.RequestPath">
+            <summary>URL công khai tương ứng với StorageRoot.</summary>
+        </member>
         <member name="T:RoomToRentRadar.Api.Repositories.CosmosListingRepository">
             <summary>
             Repository đọc phòng trọ từ Azure Cosmos DB bằng Cosmos LINQ provider.
@@ -74,6 +156,9 @@
         <member name="M:RoomToRentRadar.Api.Repositories.IListingRepository.GetPagedAsync(RoomToRentRadar.Api.DTOs.ListingQueryParameters,System.Threading.CancellationToken)">
             <summary>Lấy 1 trang phòng trọ đã sắp xếp và tổng số bản ghi (để tính metadata).</summary>
         </member>
+        <member name="M:RoomToRentRadar.Api.Repositories.IListingRepository.ExistsAsync(System.String,System.Threading.CancellationToken)">
+            <summary>Kiểm tra phòng trọ có tồn tại không (truy vấn xuyên partition theo id).</summary>
+        </member>
         <member name="T:RoomToRentRadar.Api.Repositories.ListingQueryExtensions">
             <summary>
             Các extension LINQ thuần trên <see cref="T:System.Linq.IQueryable`1"/>.
@@ -81,10 +166,109 @@
             sẽ dịch toàn bộ thành SQL: ORDER BY ... OFFSET ... LIMIT ...
             </summary>
         </member>
+        <member name="M:RoomToRentRadar.Api.Services.IPhotoService.UploadAsync(System.String,RoomToRentRadar.Api.DTOs.UploadPhotosRequest,System.String,System.Threading.CancellationToken)">
+            <exception cref="T:RoomToRentRadar.Api.Services.Photos.RoomNotFoundException"/>
+            <exception cref="T:RoomToRentRadar.Api.Services.Photos.PhotoValidationException"/>
+        </member>
+        <member name="M:RoomToRentRadar.Api.Services.IPhotoService.GetGalleryAsync(System.String,System.String,System.Threading.CancellationToken)">
+            <exception cref="T:RoomToRentRadar.Api.Services.Photos.RoomNotFoundException"/>
+        </member>
+        <member name="M:RoomToRentRadar.Api.Services.PhotoService.SafeIdRegex">
+            <remarks>
+            Pattern:<br/>
+            <code>^[A-Za-z0-9_-]{1,64}$</code><br/>
+            Explanation:<br/>
+            <code>
+            ○ Match if at the beginning of the string.<br/>
+            ○ Match a character in the set [\-0-9A-Z_a-z] atomically at least 1 and at most 64 times.<br/>
+            ○ Match if at the end of the string or if before an ending newline.<br/>
+            </code>
+            </remarks>
+        </member>
+        <member name="T:RoomToRentRadar.Api.Services.Photos.ProcessedImage">
+            <summary>Kết quả sau khi kiểm tra và nén ảnh.</summary>
+        </member>
+        <member name="M:RoomToRentRadar.Api.Services.Photos.ProcessedImage.#ctor(System.Byte[],System.Int32,System.Int32,System.String,System.String)">
+            <summary>Kết quả sau khi kiểm tra và nén ảnh.</summary>
+        </member>
+        <member name="M:RoomToRentRadar.Api.Services.Photos.IImageProcessor.ProcessAsync(System.IO.Stream,System.Boolean,System.Threading.CancellationToken)">
+            <summary>
+            Kiểm tra ảnh hợp lệ (đọc nội dung thật, không tin đuôi file) rồi resize + nén.
+            </summary>
+            <exception cref="T:RoomToRentRadar.Api.Services.Photos.PhotoValidationException">Tệp không phải JPEG/PNG hợp lệ.</exception>
+        </member>
+        <member name="T:RoomToRentRadar.Api.Services.Photos.IPhotoStorage">
+            <summary>
+            Trừu tượng hóa nơi lưu tệp. Hiện có <see cref="T:RoomToRentRadar.Api.Services.Photos.LocalPhotoStorage"/>;
+            sau này chỉ cần viết thêm AzureBlobPhotoStorage và đổi DI là chuyển sang cloud.
+            </summary>
+        </member>
+        <member name="M:RoomToRentRadar.Api.Services.Photos.IPhotoStorage.SaveAsync(System.String,System.String,System.Byte[],System.Threading.CancellationToken)">
+            <summary>Lưu tệp, trả về đường dẫn tương đối (lưu vào DB).</summary>
+        </member>
+        <member name="M:RoomToRentRadar.Api.Services.Photos.IPhotoStorage.GetPublicUrl(System.String,System.String)">
+            <summary>Đổi đường dẫn tương đối thành URL công khai.</summary>
+        </member>
+        <member name="M:RoomToRentRadar.Api.Services.Photos.LocalPhotoStorage.ResolveSafe(System.String)">
+            <summary>Chặn path traversal: đường dẫn cuối cùng bắt buộc nằm trong thư mục gốc.</summary>
+        </member>
+        <member name="T:RoomToRentRadar.Api.Services.Photos.PhotoValidationException">
+            <summary>Dữ liệu client gửi lên không hợp lệ -> HTTP 400.</summary>
+        </member>
+        <member name="M:RoomToRentRadar.Api.Services.Photos.PhotoValidationException.#ctor(System.String)">
+            <summary>Dữ liệu client gửi lên không hợp lệ -> HTTP 400.</summary>
+        </member>
+        <member name="T:RoomToRentRadar.Api.Services.Photos.RoomNotFoundException">
+            <summary>Phòng trọ không tồn tại -> HTTP 404.</summary>
+        </member>
+        <member name="M:RoomToRentRadar.Api.Services.Photos.RoomNotFoundException.#ctor(System.String)">
+            <summary>Phòng trọ không tồn tại -> HTTP 404.</summary>
+        </member>
         <member name="T:Program">
             <summary>
             Auto-generated public partial Program class for top-level statement apps.
             </summary>
+        </member>
+        <member name="T:System.Text.RegularExpressions.Generated.SafeIdRegex_0">
+            <summary>Custom <see cref="T:System.Text.RegularExpressions.Regex"/>-derived type for the SafeIdRegex method.</summary>
+        </member>
+        <member name="F:System.Text.RegularExpressions.Generated.SafeIdRegex_0.Instance">
+            <summary>Cached, thread-safe singleton instance.</summary>
+        </member>
+        <member name="M:System.Text.RegularExpressions.Generated.SafeIdRegex_0.#ctor">
+            <summary>Initializes the instance.</summary>
+        </member>
+        <member name="T:System.Text.RegularExpressions.Generated.SafeIdRegex_0.RunnerFactory">
+            <summary>Provides a factory for creating <see cref="T:System.Text.RegularExpressions.RegexRunner"/> instances to be used by methods on <see cref="T:System.Text.RegularExpressions.Regex"/>.</summary>
+        </member>
+        <member name="M:System.Text.RegularExpressions.Generated.SafeIdRegex_0.RunnerFactory.CreateInstance">
+            <summary>Creates an instance of a <see cref="T:System.Text.RegularExpressions.RegexRunner"/> used by methods on <see cref="T:System.Text.RegularExpressions.Regex"/>.</summary>
+        </member>
+        <member name="T:System.Text.RegularExpressions.Generated.SafeIdRegex_0.RunnerFactory.Runner">
+            <summary>Provides the runner that contains the custom logic implementing the specified regular expression.</summary>
+        </member>
+        <member name="M:System.Text.RegularExpressions.Generated.SafeIdRegex_0.RunnerFactory.Runner.Scan(System.ReadOnlySpan{System.Char})">
+            <summary>Scan the <paramref name="inputSpan"/> starting from base.runtextstart for the next match.</summary>
+            <param name="inputSpan">The text being scanned by the regular expression.</param>
+        </member>
+        <member name="M:System.Text.RegularExpressions.Generated.SafeIdRegex_0.RunnerFactory.Runner.TryFindNextPossibleStartingPosition(System.ReadOnlySpan{System.Char})">
+            <summary>Search <paramref name="inputSpan"/> starting from base.runtextpos for the next location a match could possibly start.</summary>
+            <param name="inputSpan">The text being scanned by the regular expression.</param>
+            <returns>true if a possible match was found; false if no more matches are possible.</returns>
+        </member>
+        <member name="M:System.Text.RegularExpressions.Generated.SafeIdRegex_0.RunnerFactory.Runner.TryMatchAtCurrentPosition(System.ReadOnlySpan{System.Char})">
+            <summary>Determine whether <paramref name="inputSpan"/> at base.runtextpos is a match for the regular expression.</summary>
+            <param name="inputSpan">The text being scanned by the regular expression.</param>
+            <returns>true if the regular expression matches at the current position; otherwise, false.</returns>
+        </member>
+        <member name="T:System.Text.RegularExpressions.Generated.Utilities">
+            <summary>Helper methods used by generated <see cref="T:System.Text.RegularExpressions.Regex"/>-derived implementations.</summary>
+        </member>
+        <member name="F:System.Text.RegularExpressions.Generated.Utilities.s_defaultTimeout">
+            <summary>Default timeout value set in <see cref="T:System.AppContext"/>, or <see cref="F:System.Text.RegularExpressions.Regex.InfiniteMatchTimeout"/> if none was set.</summary>
+        </member>
+        <member name="F:System.Text.RegularExpressions.Generated.Utilities.s_hasTimeout">
+            <summary>Whether <see cref="F:System.Text.RegularExpressions.Generated.Utilities.s_defaultTimeout"/> is non-infinite.</summary>
         </member>
     </members>
 </doc>

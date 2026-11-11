@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "28J6xYldP3g=",
+  "dgSpecHash": "UyQaH38oKDM=",
   "success": true,
   "projectFilePath": "C:\\Users\\FPTSHOP\\source\\repos\\RoomToRentRadar\\RoomToRentRadar.Api\\RoomToRentRadar.Api.csproj",
   "expectedPackageFiles": [
@@ -12,6 +12,7 @@
     "C:\\Users\\FPTSHOP\\.nuget\\packages\\microsoft.openapi\\2.4.1\\microsoft.openapi.2.4.1.nupkg.sha512",
     "C:\\Users\\FPTSHOP\\.nuget\\packages\\microsoft.win32.systemevents\\6.0.0\\microsoft.win32.systemevents.6.0.0.nupkg.sha512",
     "C:\\Users\\FPTSHOP\\.nuget\\packages\\newtonsoft.json\\13.0.3\\newtonsoft.json.13.0.3.nupkg.sha512",
+    "C:\\Users\\FPTSHOP\\.nuget\\packages\\sixlabors.imagesharp\\3.2.0\\sixlabors.imagesharp.3.2.0.nupkg.sha512",
     "C:\\Users\\FPTSHOP\\.nuget\\packages\\swashbuckle.aspnetcore\\10.1.7\\swashbuckle.aspnetcore.10.1.7.nupkg.sha512",
     "C:\\Users\\FPTSHOP\\.nuget\\packages\\swashbuckle.aspnetcore.swagger\\10.1.7\\swashbuckle.aspnetcore.swagger.10.1.7.nupkg.sha512",
     "C:\\Users\\FPTSHOP\\.nuget\\packages\\swashbuckle.aspnetcore.swaggergen\\10.1.7\\swashbuckle.aspnetcore.swaggergen.10.1.7.nupkg.sha512",

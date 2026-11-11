@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("RoomToRentRadar.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cefaa0a59ed1f4d9e44e317a81142d199d653701")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+dc2e8dc5a1b633dc4e150e33d32210b33aac93e9")]
 [assembly: System.Reflection.AssemblyProductAttribute("RoomToRentRadar.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("RoomToRentRadar.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

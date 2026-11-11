@@ -53,6 +53,19 @@ public class CosmosListingRepository : IListingRepository
         return (await itemsTask, countResponse.Resource);
     }
 
+    public async Task<bool> ExistsAsync(string roomId, CancellationToken cancellationToken = default)
+    {
+        // Partition key của Listings là /city nên chưa biết city -> truy vấn xuyên partition, chỉ trả 1 số.
+        var query = new QueryDefinition("SELECT VALUE COUNT(1) FROM c WHERE c.id = @id").WithParameter("@id", roomId);
+        using var iterator = _container.GetItemQueryIterator<int>(query);
+        while (iterator.HasMoreResults)
+        {
+            var page = await iterator.ReadNextAsync(cancellationToken);
+            if (page.Any(c => c > 0)) return true;
+        }
+        return false;
+    }
+
     private async Task<List<Listing>> ExecuteAsync(IQueryable<Listing> query, CancellationToken cancellationToken)
     {
         var results = new List<Listing>();

@@ -11,4 +11,7 @@ public class CosmosDbOptions
     public string DatabaseName { get; set; } = "RoomToRentRadar";
 
     public string ListingsContainer { get; set; } = "Listings";
+
+    /// <summary>Container lưu metadata ảnh, partition key "/roomId".</summary>
+    public string PhotosContainer { get; set; } = "Photos";
 }
