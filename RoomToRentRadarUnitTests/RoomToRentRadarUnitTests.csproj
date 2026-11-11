@@ -9,11 +9,23 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="8.0.8" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.0" />
     <PackageReference Include="NUnit" Version="4.3.2" />
     <PackageReference Include="NUnit.Analyzers" Version="4.7.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\RoomToRentRadar\Core\Interfaces\IErrorHandler.cs" Link="Linked\Core\Interfaces\IErrorHandler.cs" />
+    <Compile Include="..\RoomToRentRadar\Infrastructure\Api\IApiClient.cs" Link="Linked\Infrastructure\Api\IApiClient.cs" />
+    <Compile Include="..\RoomToRentRadar\Infrastructure\Api\ApiClient.cs" Link="Linked\Infrastructure\Api\ApiClient.cs" />
+    <Compile Include="..\RoomToRentRadar\Features\Home\ViewModels\HomeViewModel.cs" Link="Linked\Features\Home\ViewModels\HomeViewModel.cs" />
+    <Compile Include="..\RoomToRentRadar\Infrastructure\DependencyInjection\CoreServiceCollectionExtensions.cs" Link="Linked\Infrastructure\DependencyInjection\CoreServiceCollectionExtensions.cs" />
   </ItemGroup>
 
   <ItemGroup>

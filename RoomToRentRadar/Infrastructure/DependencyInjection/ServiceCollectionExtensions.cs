@@ -10,15 +10,14 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddMobileInfrastructure(this IServiceCollection services)
     {
+        services.AddRoomToRentRadarCore();
         services.AddSingleton<IErrorHandler, ModalErrorHandler>();
-        services.AddSingleton<HttpClient>();
-        services.AddSingleton<IApiClient, ApiClient>();
         return services;
     }
 
     public static IServiceCollection AddMobileFeatures(this IServiceCollection services)
     {
-        services.AddTransient<HomeViewModel>();
+        services.AddRoomToRentRadarViewModels();
         services.AddTransient<HomePage>();
         return services;
     }
