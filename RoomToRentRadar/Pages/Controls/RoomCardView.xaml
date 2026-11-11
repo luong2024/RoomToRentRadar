@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Border xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+        xmlns:models="clr-namespace:RoomToRentRadar.Models"
+        xmlns:fonts="clr-namespace:Fonts"
+        x:Class="RoomToRentRadar.Pages.Controls.RoomCardView"
+        x:DataType="models:RoomListingItemModel"
+        AutomationId="{Binding CardAutomationId}"
+        Style="{StaticResource CardStyle}"
+        Padding="14">
+
+    <Grid ColumnDefinitions="*,Auto"
+          RowDefinitions="Auto,Auto,Auto,Auto"
+          ColumnSpacing="10"
+          RowSpacing="6">
+
+        <!-- Huy hiệu Đã xác minh (US01 AC2) -->
+        <Border Grid.Row="0"
+                Grid.Column="0"
+                HorizontalOptions="Start"
+                IsVisible="{Binding IsVerified}"
+                AutomationId="{Binding VerifiedBadgeAutomationId}"
+                BackgroundColor="#16A34A"
+                StrokeThickness="0"
+                StrokeShape="RoundRectangle 8"
+                Padding="8,3">
+            <HorizontalStackLayout Spacing="4">
+                <Image HeightRequest="14" WidthRequest="14" VerticalOptions="Center">
+                    <Image.Source>
+                        <FontImageSource Glyph="{x:Static fonts:FluentUI.checkmark_circle_16_regular}"
+                                         FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                         Color="White"
+                                         Size="14" />
+                    </Image.Source>
+                </Image>
+                <Label Text="Đã xác minh"
+                       TextColor="White"
+                       FontSize="12"
+                       FontAttributes="Bold"
+                       VerticalOptions="Center" />
+            </HorizontalStackLayout>
+        </Border>
+
+        <!-- Loại phòng -->
+        <Label Grid.Row="0"
+               Grid.Column="1"
+               Text="{Binding RoomType}"
+               Style="{StaticResource Caption1}"
+               TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}"
+               VerticalOptions="Center" />
+
+        <!-- Tiêu đề phòng trọ -->
+        <Label Grid.Row="1"
+               Grid.ColumnSpan="2"
+               Text="{Binding Title}"
+               Style="{StaticResource Body1Strong}"
+               MaxLines="2"
+               LineBreakMode="TailTruncation" />
+
+        <!-- Giá thuê & Diện tích -->
+        <HorizontalStackLayout Grid.Row="2"
+                               Grid.ColumnSpan="2"
+                               Spacing="12">
+            <Label Text="{Binding FormattedRent}"
+                   Style="{StaticResource Body2Strong}"
+                   TextColor="{StaticResource Primary}" />
+            <Label Text="•"
+                   Style="{StaticResource Body2}"
+                   TextColor="{StaticResource Gray400}" />
+            <Label Text="{Binding FormattedArea}"
+                   Style="{StaticResource Body2}" />
+        </HorizontalStackLayout>
+
+        <!-- Khoảng cách tới ICTU & Địa chỉ -->
+        <HorizontalStackLayout Grid.Row="3"
+                               Grid.ColumnSpan="2"
+                               Spacing="6">
+            <Image HeightRequest="16" WidthRequest="16" VerticalOptions="Center">
+                <Image.Source>
+                    <FontImageSource Glyph="{x:Static fonts:FluentUI.location_16_regular}"
+                                     FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                     Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                                     Size="16" />
+                </Image.Source>
+            </Image>
+            <Label Text="{Binding FormattedDistance}"
+                   Style="{StaticResource Caption1Strong}" />
+            <Label Text="{Binding Address, StringFormat='— {0}'}"
+                   Style="{StaticResource Caption1}"
+                   TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}"
+                   LineBreakMode="TailTruncation" />
+        </HorizontalStackLayout>
+    </Grid>
+</Border>

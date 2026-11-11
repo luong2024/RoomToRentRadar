@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pageModels="clr-namespace:RoomToRentRadar.PageModels"
+             xmlns:models="clr-namespace:RoomToRentRadar.Models"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Pages.Controls"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             x:Class="RoomToRentRadar.Pages.RoomListPage"
+             x:Name="RoomListPageRoot"
+             x:DataType="pageModels:RoomListViewModel"
+             Title="Phòng trọ quanh ICTU">
+
+    <ContentPage.Behaviors>
+        <toolkit:EventToCommandBehavior
+            BindingContext="{Binding Path=BindingContext, Source={x:Reference RoomListPageRoot}, x:DataType=ContentPage}"
+            EventName="Appearing"
+            Command="{Binding AppearingCommand}" />
+    </ContentPage.Behaviors>
+
+    <Grid RowDefinitions="Auto,Auto,*"
+          Padding="{StaticResource LayoutPadding}"
+          RowSpacing="10">
+
+        <!-- Thanh thông tin & Sắp xếp (SortPicker) -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+            <VerticalStackLayout VerticalOptions="Center">
+                <Label Text="Phòng đã xác minh"
+                       Style="{StaticResource Title3}" />
+                <Label Text="{Binding TotalCount, StringFormat='Hiển thị {0} phòng khả dụng'}"
+                       Style="{StaticResource Caption1}"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}" />
+            </VerticalStackLayout>
+
+            <Picker Grid.Column="1"
+                    AutomationId="SortPicker"
+                    Title="Sắp xếp"
+                    FontSize="14"
+                    ItemsSource="{Binding SortOptions}"
+                    SelectedItem="{Binding SelectedSortOption}"
+                    VerticalOptions="Center" />
+        </Grid>
+
+        <!-- Banner lỗi mất mạng êm ái -->
+        <Border Grid.Row="1"
+                IsVisible="{Binding HasError}"
+                BackgroundColor="#FEF2F2"
+                Stroke="#EF4444"
+                StrokeThickness="1"
+                StrokeShape="RoundRectangle 12"
+                Padding="12">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <Label Text="{Binding ErrorMessage}"
+                       Style="{StaticResource Caption1}"
+                       TextColor="#991B1B"
+                       VerticalOptions="Center" />
+                <Button Grid.Column="1"
+                        Text="Thử lại"
+                        FontSize="13"
+                        Padding="10,6"
+                        Command="{Binding LoadInitialListingsCommand}" />
+            </Grid>
+        </Border>
+
+        <!-- Danh sách phòng với Pull-to-Refresh + Infinite Scroll -->
+        <RefreshView Grid.Row="2"
+                     IsRefreshing="{Binding IsRefreshing}"
+                     Command="{Binding LoadInitialListingsCommand}">
+            <CollectionView AutomationId="ListingCollectionView"
+                            ItemsSource="{Binding Listings}"
+                            RemainingItemsThreshold="5"
+                            RemainingItemsThresholdReachedCommand="{Binding LoadMoreListingsCommand}"
+                            SelectionMode="Single"
+                            SelectedItem="{Binding SelectedRoom}">
+                <CollectionView.ItemsLayout>
+                    <LinearItemsLayout Orientation="Vertical" ItemSpacing="10" />
+                </CollectionView.ItemsLayout>
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:RoomListingItemModel">
+                        <controls:RoomCardView />
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+
+                <CollectionView.EmptyView>
+                    <VerticalStackLayout VerticalOptions="Center"
+                                         HorizontalOptions="Center"
+                                         Padding="24"
+                                         Spacing="8">
+                        <ActivityIndicator IsRunning="{Binding IsLoading}"
+                                           IsVisible="{Binding IsLoading}" />
+                        <Label Text="Không tìm thấy phòng trọ phù hợp quanh ICTU."
+                               Style="{StaticResource Body2}"
+                               HorizontalTextAlignment="Center" />
+                    </VerticalStackLayout>
+                </CollectionView.EmptyView>
+
+                <CollectionView.Footer>
+                    <VerticalStackLayout Padding="12" Spacing="6" HorizontalOptions="Center">
+                        <ActivityIndicator IsRunning="{Binding IsLoadingMore}"
+                                           IsVisible="{Binding IsLoadingMore}" />
+                        <Label Text="Đã hiển thị toàn bộ phòng trọ khả dụng."
+                               Style="{StaticResource Caption1}"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}"
+                               IsVisible="{Binding HasReachedEnd}"
+                               HorizontalTextAlignment="Center" />
+                    </VerticalStackLayout>
+                </CollectionView.Footer>
+            </CollectionView>
+        </RefreshView>
+    </Grid>
+</ContentPage>

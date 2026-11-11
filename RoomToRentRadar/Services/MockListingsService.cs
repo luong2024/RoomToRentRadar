@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -9,7 +9,7 @@ using RoomToRentRadar.Models.Contracts;
 namespace RoomToRentRadar.Services;
 
 /// <summary>
-/// Sinh sẵn 45 phòng trọ mẫu quanh ĐH CNTT&TT Thái Nguyên (ICTU - Đường Z115, Quyết Thắng).
+/// Sinh sẵn 45 phòng trọ mẫu quanh ĐH CNTT&amp;TT Thái Nguyên (ICTU - Đường Z115, Quyết Thắng).
 /// Tất cả phòng đều Available và IsVerified = true theo US01 AC4.
 /// </summary>
 public sealed class MockListingsService : IListingsService

@@ -9,6 +9,13 @@
     Title="RoomToRentRadar">
 
     <ShellContent
+        Title="Tìm phòng"
+        Icon="{StaticResource IconRooms}"
+        ContentTemplate="{DataTemplate pages:RoomListPage}"
+        Route="rooms"
+        SemanticProperties.Description="Danh sách phòng trọ"
+        SemanticProperties.Hint="Xem danh sách phòng trọ quanh ICTU"/>
+    <ShellContent
         Title="Dashboard"
         Icon="{StaticResource IconDashboard}"
         ContentTemplate="{DataTemplate pages:MainPage}"
