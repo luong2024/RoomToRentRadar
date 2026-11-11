@@ -38,6 +38,7 @@ if (string.Equals(databaseProvider, "CosmosDb", StringComparison.OrdinalIgnoreCa
 {
     var cosmosSettings = builder.Configuration.GetSection(CosmosDbSettings.SectionName).Get<CosmosDbSettings>() ?? new CosmosDbSettings();
     builder.Services.AddCosmosDatastore(cosmosSettings);
+    Console.WriteLine("WARNING: CosmosDb provider has no photo repository; photo metadata uses in-memory storage and will be lost on restart.");
 }
 else
 {

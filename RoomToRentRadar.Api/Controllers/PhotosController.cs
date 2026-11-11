@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using RoomToRentRadar.Api.Authorization;
+using RoomToRentRadar.Domain.Exceptions;
+using RoomToRentRadar.Domain.Services;
 using RoomToRentRadar.Ports.Contracts.Requests.Photos;
 using RoomToRentRadar.Ports.Contracts.Responses.Photos;
 using RoomToRentRadar.Ports.Inbound.UseCases.Photos;
@@ -44,6 +46,17 @@ public sealed class PhotosController : ControllerBase
         CancellationToken ct)
     {
         var userId = User.GetRequiredUserId();
+
+        if (files is null || files.Count == 0)
+        {
+            throw new DomainValidationException("At least one photo file is required.");
+        }
+
+        if (files.Count > PhotoFileRules.MaxPhotosPerRoom)
+        {
+            throw new DomainValidationException($"A room can have at most {PhotoFileRules.MaxPhotosPerRoom} photos.");
+        }
+
         var streams = new List<MemoryStream>(files.Count);
 
         try
@@ -51,7 +64,12 @@ public sealed class PhotosController : ControllerBase
             var inputs = new List<PhotoFileInput>(files.Count);
             foreach (var file in files)
             {
-                var buffer = new MemoryStream();
+                if (file.Length > PhotoFileRules.MaxFileBytes)
+                {
+                    throw new DomainValidationException("Each photo must be 10 MB or smaller.");
+                }
+
+                var buffer = new MemoryStream((int)file.Length);
                 streams.Add(buffer);
 
                 await file.CopyToAsync(buffer, ct);

@@ -58,6 +58,7 @@ public class PhotoFileRulesTests
     [TestCase("../etc/passwd")]
     [TestCase("a/b")]
     [TestCase("room.1")]
+    [TestCase("room-1\n")]
     public void IsValidRoomId_WithInvalidId_ReturnsFalse(string? roomId)
     {
         Assert.That(PhotoFileRules.IsValidRoomId(roomId), Is.False);

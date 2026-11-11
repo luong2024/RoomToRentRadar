@@ -12,7 +12,7 @@ public static class PhotoFileRules
     private static readonly byte[] PngMagicBytes = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
 
     private static readonly Regex RoomIdPattern = new(
-        "^[A-Za-z0-9_-]{1,64}$",
+        @"\A[A-Za-z0-9_-]{1,64}\z",
         RegexOptions.CultureInvariant);
 
     public static string? DetectExtension(ReadOnlySpan<byte> header)

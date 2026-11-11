@@ -76,7 +76,7 @@ public sealed class UploadRoomPhotosUseCase : IUploadRoomPhotosUseCase
             }
             catch
             {
-                await _storage.DeleteAsync(request.RoomId, fileName, ct);
+                await _storage.DeleteAsync(request.RoomId, fileName, CancellationToken.None);
                 throw;
             }
 
