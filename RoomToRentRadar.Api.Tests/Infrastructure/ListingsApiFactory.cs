@@ -20,12 +20,15 @@ public sealed class ListingsApiFactory : WebApplicationFactory<Program>
 
     public string DatabasePath => Path.Combine(_directory, "test.db");
 
+    public string MediaRootPath => Path.Combine(_directory, "media");
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         Directory.CreateDirectory(_directory);
 
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:Default", $"Data Source={DatabasePath}");
+        builder.UseSetting("Storage:PhotoRootPath", MediaRootPath);
         builder.ConfigureTestServices(services =>
         {
             services.AddSingleton<DbCommandInterceptor>(QueryCounter);
@@ -48,6 +51,25 @@ public sealed class ListingsApiFactory : WebApplicationFactory<Program>
         await dbContext.ListingPhotos.ExecuteDeleteAsync();
         await dbContext.Listings.ExecuteDeleteAsync();
         QueryCounter.Reset();
+        ClearMediaDirectory();
+    }
+
+    private void ClearMediaDirectory()
+    {
+        if (!Directory.Exists(MediaRootPath))
+        {
+            return;
+        }
+
+        foreach (var directory in Directory.GetDirectories(MediaRootPath))
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+
+        foreach (var file in Directory.GetFiles(MediaRootPath))
+        {
+            File.Delete(file);
+        }
     }
 
     protected override void Dispose(bool disposing)

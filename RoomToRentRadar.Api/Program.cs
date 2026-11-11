@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.OpenApi;
 using RoomToRentRadar.Api.Data;
 using RoomToRentRadar.Api.Data.Seed;
 using RoomToRentRadar.Api.Features.Listings;
+using RoomToRentRadar.Api.Features.Photos;
 using RoomToRentRadar.Shared.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -68,6 +70,12 @@ builder.Services.AddCors(options =>
         .AllowAnyMethod());
 });
 builder.Services.AddScoped<ListingsQueryService>();
+builder.Services.AddSingleton(serviceProvider => PhotoStorageOptions.Resolve(
+    serviceProvider.GetRequiredService<IConfiguration>()[PhotoStorageOptions.ConfigKey],
+    serviceProvider.GetRequiredService<IHostEnvironment>().ContentRootPath));
+builder.Services.AddSingleton<PhotoStorage>();
+builder.Services.AddSingleton<PhotoProcessor>();
+builder.Services.AddScoped<ListingPhotosService>();
 builder.Services.AddScoped<AreaSearchQueryService>();
 
 var app = builder.Build();
@@ -104,6 +112,13 @@ if (app.Environment.IsDevelopment())
         options.RoutePrefix = "swagger";
     });
 }
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        app.Services.GetRequiredService<PhotoStorageOptions>().RootPath),
+    RequestPath = PhotoStorage.RequestPath
+});
 
 app.MapControllers();
 
