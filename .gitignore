@@ -63,3 +63,7 @@ launchSettings.json.user
 .DS_Store
 Thumbs.db
 
+implementation_plan.md
+*.zip
+.qoder/
+.superpowers/
