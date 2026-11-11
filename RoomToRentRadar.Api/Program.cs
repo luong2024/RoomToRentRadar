@@ -31,7 +31,7 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
     {
         var problem = ListingProblemFactory.InvalidQuery(
             ListingProblemFactory.InvalidParameterFormat,
-            "One or more query parameters have an invalid format.");
+            "One or more request parameters have an invalid format.");
         return new ObjectResult(problem)
         {
             StatusCode = StatusCodes.Status400BadRequest,
@@ -68,6 +68,7 @@ builder.Services.AddCors(options =>
         .AllowAnyMethod());
 });
 builder.Services.AddScoped<ListingsQueryService>();
+builder.Services.AddScoped<AreaSearchQueryService>();
 
 var app = builder.Build();
 

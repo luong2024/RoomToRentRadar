@@ -85,6 +85,9 @@ namespace RoomToRentRadar.Api.Data.Migrations
                     b.HasIndex("Status", "Bedrooms")
                         .HasDatabaseName("ix_listings_status_bedrooms");
 
+                    b.HasIndex("Status", "Lng")
+                        .HasDatabaseName("ix_listings_status_lng");
+
                     b.HasIndex("Status", "AreaM2", "Id")
                         .IsDescending(false, true, false)
                         .HasDatabaseName("ix_listings_status_area_m2_desc_id");
@@ -92,6 +95,9 @@ namespace RoomToRentRadar.Api.Data.Migrations
                     b.HasIndex("Status", "CreatedAt", "Id")
                         .IsDescending(false, true, false)
                         .HasDatabaseName("ix_listings_status_created_at_id");
+
+                    b.HasIndex("Status", "Lat", "Lng")
+                        .HasDatabaseName("ix_listings_status_lat_lng");
 
                     b.HasIndex("Status", "Price", "Id")
                         .IsDescending(false, true, false)
