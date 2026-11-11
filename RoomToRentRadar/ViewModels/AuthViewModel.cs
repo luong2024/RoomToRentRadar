@@ -53,6 +53,15 @@ public partial class AuthViewModel : ObservableObject
     public partial string LoginPassword { get; set; } = string.Empty;
 
     [ObservableProperty]
+    public partial bool RememberMe { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsPasswordHidden { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool IsConfirmPasswordHidden { get; set; } = true;
+
+    [ObservableProperty]
     public partial string? LoginEmailError { get; set; }
 
     [ObservableProperty]
@@ -106,11 +115,34 @@ public partial class AuthViewModel : ObservableObject
     [ObservableProperty]
     public partial string? PendingGoogleIdToken { get; set; }
 
+    public Func<Task>? NavigateToHomeHandler { get; set; }
+
     [RelayCommand]
     public void ToggleForm()
     {
         ClearErrors();
         IsSignUpView = !IsSignUpView;
+    }
+
+    [RelayCommand]
+    public void TogglePasswordVisibility()
+    {
+        IsPasswordHidden = !IsPasswordHidden;
+    }
+
+    [RelayCommand]
+    public void ToggleConfirmPasswordVisibility()
+    {
+        IsConfirmPasswordHidden = !IsConfirmPasswordHidden;
+    }
+
+    [RelayCommand]
+    public async Task SkipAuthAsync()
+    {
+        if (NavigateToHomeHandler != null)
+        {
+            await NavigateToHomeHandler.Invoke();
+        }
     }
 
     [RelayCommand]

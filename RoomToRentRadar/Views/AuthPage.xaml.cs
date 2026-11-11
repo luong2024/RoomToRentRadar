@@ -5,12 +5,22 @@ namespace RoomToRentRadar.Views;
 public partial class AuthPage : ContentPage
 {
     private bool _isFlipping;
-    private readonly Color _primaryColor = Color.FromArgb("#512BD4");
-    private readonly Color _gradientAccentColor = Color.FromArgb("#D600AA");
+    private readonly Color _primaryFocusColor = Color.FromArgb("#2563EB"); // Modern Royal Blue
+    private readonly Color _defaultBorderColor = Color.FromArgb("#E2E8F0");
+    private readonly Color _defaultLabelColor = Color.FromArgb("#334155");
+    private readonly Color _focusedBackground = Color.FromArgb("#FFFFFF");
+    private readonly Color _defaultBackground = Color.FromArgb("#F8FAFC");
 
     public AuthPage(AuthViewModel viewModel)
     {
         InitializeComponent();
+        viewModel.NavigateToHomeHandler = async () =>
+        {
+            if (Shell.Current != null)
+            {
+                await Shell.Current.GoToAsync("//home");
+            }
+        };
         BindingContext = viewModel;
     }
 
@@ -25,20 +35,34 @@ public partial class AuthPage : ContentPage
 
         try
         {
-            // Phase 1: Rotate to edge-on (90 deg)
-            await MainAuthCard.RotateYToAsync(90, 220, Easing.CubicIn);
+            // Phase 1: 3D perspective rotation + scale depth + soft fade
+            await Task.WhenAll(
+                MainAuthCard.RotateYToAsync(90, 220, Easing.CubicIn),
+                MainAuthCard.ScaleToAsync(0.92, 220, Easing.CubicIn),
+                MainAuthCard.FadeToAsync(0.85, 220, Easing.CubicIn)
+            );
 
-            // Phase 2: Toggle ViewModel state between Login and Sign Up
+            // Phase 2: Swap active face in ViewModel
             if (BindingContext is AuthViewModel vm)
             {
                 vm.ToggleForm();
             }
 
-            // Phase 3: Set position to opposite edge (-90 deg)
+            // Phase 3: Set transform to opposite angle
             MainAuthCard.RotationY = -90;
 
-            // Phase 4: Rotate back to facing user (0 deg)
-            await MainAuthCard.RotateYToAsync(0, 220, Easing.CubicOut);
+            // Phase 4: Rotate back to front + restore full scale & opacity
+            await Task.WhenAll(
+                MainAuthCard.RotateYToAsync(0, 250, Easing.CubicOut),
+                MainAuthCard.ScaleToAsync(1.0, 250, Easing.CubicOut),
+                MainAuthCard.FadeToAsync(1.0, 250, Easing.CubicOut)
+            );
+        }
+        catch
+        {
+            MainAuthCard.RotationY = 0;
+            MainAuthCard.Scale = 1.0;
+            MainAuthCard.Opacity = 1.0;
         }
         finally
         {
@@ -46,7 +70,7 @@ public partial class AuthPage : ContentPage
         }
     }
 
-    private void OnInputFocused(object? sender, FocusEventArgs e)
+    private async void OnInputFocused(object? sender, FocusEventArgs e)
     {
         if (sender is not Entry entry) return;
 
@@ -56,82 +80,36 @@ public partial class AuthPage : ContentPage
         // Highlight label
         if (label != null)
         {
-            label.TextColor = _primaryColor;
+            label.TextColor = _primaryFocusColor;
         }
 
-        // Apply animated focus border with LinearGradientBrush
-        StartAnimatedFocusBorder(border);
+        // Apply focused border styling & subtle spring scale
+        border.Stroke = new SolidColorBrush(_primaryFocusColor);
+        border.StrokeThickness = 2.0;
+        border.BackgroundColor = _focusedBackground;
+
+        await border.ScaleToAsync(1.012, 140, Easing.CubicOut);
     }
 
-    private void OnInputUnfocused(object? sender, FocusEventArgs e)
+    private async void OnInputUnfocused(object? sender, FocusEventArgs e)
     {
         if (sender is not Entry entry) return;
 
         var (border, label) = GetBorderAndLabelForEntry(entry);
         if (border == null) return;
 
-        // Restore label color
+        // Restore default label color
         if (label != null)
         {
-            label.SetAppThemeColor(
-                Label.TextColorProperty,
-                (Color)Application.Current!.Resources["Gray900"],
-                (Color)Application.Current!.Resources["Gray100"]);
+            label.TextColor = _defaultLabelColor;
         }
 
-        // Stop focus animation and reset border stroke
-        StopAnimatedFocusBorder(border);
-    }
+        // Restore default border styling
+        border.Stroke = new SolidColorBrush(_defaultBorderColor);
+        border.StrokeThickness = 1.5;
+        border.BackgroundColor = _defaultBackground;
 
-    private void StartAnimatedFocusBorder(Border border)
-    {
-        border.AbortAnimation("BorderFocusAnimation");
-
-        var animation = new Animation(v =>
-        {
-            var startX = 0.5 + 0.5 * Math.Cos(v);
-            var startY = 0.5 + 0.5 * Math.Sin(v);
-            var endX = 0.5 - 0.5 * Math.Cos(v);
-            var endY = 0.5 - 0.5 * Math.Sin(v);
-
-            border.Stroke = new LinearGradientBrush
-            {
-                StartPoint = new Point(startX, startY),
-                EndPoint = new Point(endX, endY),
-                GradientStops = new GradientStopCollection
-                {
-                    new GradientStop(_primaryColor, 0.0f),
-                    new GradientStop(_gradientAccentColor, 1.0f)
-                }
-            };
-        }, 0, 2 * Math.PI);
-
-        animation.Commit(
-            border,
-            "BorderFocusAnimation",
-            length: 2500,
-            repeat: () => border.IsFocused || IsAnyChildFocused(border));
-    }
-
-    private static void StopAnimatedFocusBorder(Border border)
-    {
-        border.AbortAnimation("BorderFocusAnimation");
-
-        var isDark = Application.Current?.RequestedTheme == AppTheme.Dark;
-        var defaultBorderColor = isDark
-            ? (Color)Application.Current!.Resources["Gray600"]
-            : (Color)Application.Current!.Resources["Gray300"];
-
-        border.Stroke = new SolidColorBrush(defaultBorderColor);
-    }
-
-    private static bool IsAnyChildFocused(Border border)
-    {
-        if (border.Content is VisualElement visual && visual.IsFocused)
-        {
-            return true;
-        }
-        return false;
+        await border.ScaleToAsync(1.0, 140, Easing.CubicIn);
     }
 
     private (Border? border, Label? label) GetBorderAndLabelForEntry(Entry entry)

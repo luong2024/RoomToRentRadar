@@ -8,57 +8,67 @@
     x:DataType="vm:AuthViewModel"
     Title="Authentication"
     Shell.NavBarIsVisible="False"
-    BackgroundColor="{AppThemeBinding Light={StaticResource LightBackground}, Dark={StaticResource DarkBackground}}">
+    BackgroundColor="#F8FAFC">
 
     <ContentPage.Resources>
         <ResourceDictionary>
             <converters:StringHasValueConverter x:Key="StringHasValueConverter" />
             <converters:RoleBorderBrushConverter x:Key="RoleBorderBrushConverter" />
             <converters:RoleBackgroundBrushConverter x:Key="RoleBackgroundBrushConverter" />
+            <converters:EyeIconConverter x:Key="EyeIconConverter" />
         </ResourceDictionary>
     </ContentPage.Resources>
 
     <Grid>
-        <!-- Background decorative ambient circles -->
-        <BoxView
-            HorizontalOptions="Start"
-            VerticalOptions="Start"
-            WidthRequest="220"
-            HeightRequest="220"
-            CornerRadius="110"
-            TranslationX="-60"
-            TranslationY="-60"
-            Opacity="0.18"
-            Color="{StaticResource Primary}" />
-
+        <!-- Soft top decorative gradient blob -->
         <BoxView
             HorizontalOptions="End"
-            VerticalOptions="End"
-            WidthRequest="260"
-            HeightRequest="260"
-            CornerRadius="130"
-            TranslationX="70"
-            TranslationY="70"
-            Opacity="0.12"
-            Color="{StaticResource Magenta}" />
+            VerticalOptions="Start"
+            WidthRequest="280"
+            HeightRequest="280"
+            CornerRadius="140"
+            TranslationX="80"
+            TranslationY="-80"
+            Opacity="0.08"
+            Color="#2563EB" />
 
         <ScrollView
-            Padding="20,24"
+            Padding="20,16"
             VerticalOptions="Center">
 
             <VerticalStackLayout
-                Spacing="20"
-                MaximumWidthRequest="460"
+                Spacing="16"
+                MaximumWidthRequest="420"
                 HorizontalOptions="Center">
 
-                <!-- Main Authentication Card (RoundRectangle 24) -->
+                <!-- Top back / skip navigation button -->
+                <HorizontalStackLayout Spacing="6" HorizontalOptions="Start">
+                    <HorizontalStackLayout.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding SkipAuthCommand}" />
+                    </HorizontalStackLayout.GestureRecognizers>
+                    <Label
+                        Text="←"
+                        FontSize="16"
+                        TextColor="#64748B"
+                        VerticalOptions="Center" />
+                    <Label
+                        Text="Back to Home"
+                        FontFamily="OpenSansSemibold"
+                        FontSize="13"
+                        TextColor="#64748B"
+                        VerticalOptions="Center" />
+                </HorizontalStackLayout>
+
+                <!-- ============================================================== -->
+                <!-- MAIN AUTHENTICATION CARD (Clean White, RoundRectangle 24)      -->
+                <!-- ============================================================== -->
                 <Border
                     x:Name="MainAuthCard"
                     StrokeThickness="1"
-                    Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
-                    BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource DarkSecondaryBackground}}"
+                    Stroke="#E2E8F0"
+                    BackgroundColor="#FFFFFF"
                     Padding="24,28"
-                    Shadow="{Shadow Brush=Black, Offset='0,8', Radius=16, Opacity=0.1}">
+                    Shadow="{Shadow Brush='#0F172A', Offset='0,10', Radius=24, Opacity=0.06}">
                     <Border.StrokeShape>
                         <RoundRectangle CornerRadius="24" />
                     </Border.StrokeShape>
@@ -69,38 +79,38 @@
                         <!-- ============================================== -->
                         <VerticalStackLayout
                             x:Name="LoginFace"
-                            Spacing="18"
+                            Spacing="16"
                             IsVisible="{Binding IsLoginView}">
 
                             <!-- Header -->
-                            <VerticalStackLayout Spacing="6">
+                            <VerticalStackLayout Spacing="4" Margin="0,0,0,4">
                                 <Label
                                     Text="Welcome Back"
                                     FontFamily="SegoeSemibold"
                                     FontSize="26"
-                                    TextColor="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}"
-                                    HorizontalTextAlignment="Center" />
+                                    TextColor="#0F172A"
+                                    HorizontalTextAlignment="Start" />
                                 <Label
                                     Text="Sign in to find or manage your rental rooms"
                                     FontFamily="OpenSansRegular"
                                     FontSize="14"
-                                    TextColor="{StaticResource Gray500}"
-                                    HorizontalTextAlignment="Center" />
+                                    TextColor="#64748B"
+                                    HorizontalTextAlignment="Start" />
                             </VerticalStackLayout>
 
                             <!-- Global Status Messages -->
                             <Border
                                 IsVisible="{Binding HasError}"
-                                BackgroundColor="#FFEBEE"
-                                Stroke="#EF5350"
+                                BackgroundColor="#FEF2F2"
+                                Stroke="#FCA5A5"
                                 StrokeThickness="1"
                                 Padding="12,8">
                                 <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="8" />
+                                    <RoundRectangle CornerRadius="10" />
                                 </Border.StrokeShape>
                                 <Label
                                     Text="{Binding ErrorMessage}"
-                                    TextColor="#C62828"
+                                    TextColor="#DC2626"
                                     FontSize="13"
                                     FontFamily="OpenSansRegular"
                                     HorizontalTextAlignment="Center" />
@@ -108,155 +118,266 @@
 
                             <Border
                                 IsVisible="{Binding IsSuccess}"
-                                BackgroundColor="#E8F5E9"
-                                Stroke="#66BB6A"
+                                BackgroundColor="#F0FDF4"
+                                Stroke="#86EFAC"
                                 StrokeThickness="1"
                                 Padding="12,8">
                                 <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="8" />
+                                    <RoundRectangle CornerRadius="10" />
                                 </Border.StrokeShape>
                                 <Label
                                     Text="{Binding SuccessMessage}"
-                                    TextColor="#2E7D32"
+                                    TextColor="#16A34A"
                                     FontSize="13"
                                     FontFamily="OpenSansRegular"
                                     HorizontalTextAlignment="Center" />
                             </Border>
 
                             <!-- Email Field -->
-                            <VerticalStackLayout Spacing="6">
+                            <VerticalStackLayout Spacing="4">
                                 <Label
                                     x:Name="LoginEmailLabel"
                                     Text="Email Address"
                                     FontSize="13"
                                     FontFamily="OpenSansSemibold"
-                                    TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource Gray100}}" />
+                                    TextColor="#334155" />
 
                                 <Border
                                     x:Name="LoginEmailBorder"
-                                    Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
+                                    Stroke="#E2E8F0"
                                     StrokeThickness="1.5"
-                                    BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray950}}"
+                                    BackgroundColor="#F8FAFC"
+                                    HeightRequest="50"
                                     Padding="14,0">
                                     <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="12" />
+                                        <RoundRectangle CornerRadius="14" />
                                     </Border.StrokeShape>
-                                    <Entry
-                                        x:Name="LoginEmailEntry"
-                                        Text="{Binding LoginEmail, Mode=TwoWay}"
-                                        Placeholder="name@example.com"
-                                        PlaceholderColor="{StaticResource Gray400}"
-                                        Keyboard="Email"
-                                        HeightRequest="48"
-                                        TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}"
-                                        Focused="OnInputFocused"
-                                        Unfocused="OnInputUnfocused" />
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" VerticalOptions="Center">
+                                        <Label
+                                            Text="✉"
+                                            FontSize="16"
+                                            TextColor="#94A3B8"
+                                            VerticalOptions="Center" />
+                                        <Entry
+                                            x:Name="LoginEmailEntry"
+                                            Grid.Column="1"
+                                            Text="{Binding LoginEmail, Mode=TwoWay}"
+                                            Placeholder="name@example.com"
+                                            PlaceholderColor="#94A3B8"
+                                            Keyboard="Email"
+                                            TextColor="#0F172A"
+                                            VerticalOptions="Center"
+                                            Focused="OnInputFocused"
+                                            Unfocused="OnInputUnfocused" />
+                                    </Grid>
                                 </Border>
 
                                 <Label
                                     Text="{Binding LoginEmailError}"
                                     IsVisible="{Binding LoginEmailError, Converter={StaticResource StringHasValueConverter}}"
-                                    TextColor="#D32F2F"
+                                    TextColor="#DC2626"
                                     FontSize="12" />
                             </VerticalStackLayout>
 
                             <!-- Password Field -->
-                            <VerticalStackLayout Spacing="6">
+                            <VerticalStackLayout Spacing="4">
                                 <Label
                                     x:Name="LoginPasswordLabel"
                                     Text="Password"
                                     FontSize="13"
                                     FontFamily="OpenSansSemibold"
-                                    TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource Gray100}}" />
+                                    TextColor="#334155" />
 
                                 <Border
                                     x:Name="LoginPasswordBorder"
-                                    Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
+                                    Stroke="#E2E8F0"
                                     StrokeThickness="1.5"
-                                    BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray950}}"
+                                    BackgroundColor="#F8FAFC"
+                                    HeightRequest="50"
                                     Padding="14,0">
                                     <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="12" />
+                                        <RoundRectangle CornerRadius="14" />
                                     </Border.StrokeShape>
-                                    <Entry
-                                        x:Name="LoginPasswordEntry"
-                                        Text="{Binding LoginPassword, Mode=TwoWay}"
-                                        Placeholder="Enter your password"
-                                        PlaceholderColor="{StaticResource Gray400}"
-                                        IsPassword="True"
-                                        HeightRequest="48"
-                                        TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}"
-                                        Focused="OnInputFocused"
-                                        Unfocused="OnInputUnfocused" />
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" VerticalOptions="Center">
+                                        <Label
+                                            Text="🔒"
+                                            FontSize="15"
+                                            TextColor="#94A3B8"
+                                            VerticalOptions="Center" />
+                                        <Entry
+                                            x:Name="LoginPasswordEntry"
+                                            Grid.Column="1"
+                                            Text="{Binding LoginPassword, Mode=TwoWay}"
+                                            Placeholder="Enter your password"
+                                            PlaceholderColor="#94A3B8"
+                                            IsPassword="{Binding IsPasswordHidden}"
+                                            TextColor="#0F172A"
+                                            VerticalOptions="Center"
+                                            Focused="OnInputFocused"
+                                            Unfocused="OnInputUnfocused" />
+                                        <Button
+                                            Grid.Column="2"
+                                            Text="{Binding IsPasswordHidden, Converter={StaticResource EyeIconConverter}}"
+                                            Command="{Binding TogglePasswordVisibilityCommand}"
+                                            BackgroundColor="Transparent"
+                                            TextColor="#64748B"
+                                            FontSize="16"
+                                            WidthRequest="40"
+                                            HeightRequest="40"
+                                            Padding="0" />
+                                    </Grid>
                                 </Border>
 
                                 <Label
                                     Text="{Binding LoginPasswordError}"
                                     IsVisible="{Binding LoginPasswordError, Converter={StaticResource StringHasValueConverter}}"
-                                    TextColor="#D32F2F"
+                                    TextColor="#DC2626"
                                     FontSize="12" />
                             </VerticalStackLayout>
 
-                            <!-- Primary Button: Sign In (RoundRectangle 12) -->
-                            <Button
-                                Text="Sign In"
-                                Command="{Binding SignInCommand}"
-                                BackgroundColor="{StaticResource Primary}"
-                                TextColor="{StaticResource White}"
-                                FontFamily="OpenSansSemibold"
-                                FontSize="15"
-                                HeightRequest="48"
-                                CornerRadius="12"
-                                Margin="0,6,0,0" />
-
-                            <!-- Divider with OR -->
-                            <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="12" Margin="0,4">
-                                <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}" VerticalOptions="Center" />
-                                <Label Grid.Column="1" Text="or" FontSize="12" TextColor="{StaticResource Gray400}" VerticalOptions="Center" />
-                                <BoxView Grid.Column="2" HeightRequest="1" Color="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}" VerticalOptions="Center" />
+                            <!-- Options Row: Remember Me & Forgot Password -->
+                            <Grid ColumnDefinitions="Auto,*,Auto" VerticalOptions="Center" Margin="0,2,0,4">
+                                <CheckBox
+                                    IsChecked="{Binding RememberMe}"
+                                    Color="#2563EB"
+                                    VerticalOptions="Center" />
+                                <Label
+                                    Grid.Column="1"
+                                    Text="Remember me"
+                                    FontSize="13"
+                                    FontFamily="OpenSansRegular"
+                                    TextColor="#475569"
+                                    VerticalOptions="Center" />
+                                <Label
+                                    Grid.Column="2"
+                                    Text="Forgot password?"
+                                    FontSize="13"
+                                    FontFamily="OpenSansSemibold"
+                                    TextColor="#2563EB"
+                                    VerticalOptions="Center" />
                             </Grid>
 
-                            <!-- Google Button (RoundRectangle 12) -->
-                            <Border
-                                Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
-                                StrokeThickness="1"
-                                BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray900}}"
-                                HeightRequest="48"
-                                Padding="14,0">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="12" />
-                                </Border.StrokeShape>
-                                <Border.GestureRecognizers>
-                                    <TapGestureRecognizer Command="{Binding GoogleSignInCommand}" />
-                                </Border.GestureRecognizers>
-                                <HorizontalStackLayout
-                                    Spacing="10"
-                                    HorizontalOptions="Center"
-                                    VerticalOptions="Center">
-                                    <Label
-                                        Text="G"
-                                        FontFamily="SegoeSemibold"
-                                        FontSize="18"
-                                        TextColor="#4285F4"
-                                        VerticalOptions="Center" />
-                                    <Label
-                                        Text="Continue with Google"
-                                        FontFamily="OpenSansSemibold"
-                                        FontSize="14"
-                                        TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}"
-                                        VerticalOptions="Center" />
-                                </HorizontalStackLayout>
-                            </Border>
-
-                            <!-- Toggle to Sign Up -->
+                            <!-- Primary Button: Sign In (Vibrant Royal Blue, RoundRectangle 14) -->
                             <Button
-                                Text="Don't have an account? Sign Up"
-                                Clicked="OnToggleCardClicked"
-                                BackgroundColor="Transparent"
-                                TextColor="{StaticResource Primary}"
-                                FontFamily="OpenSansSemibold"
-                                FontSize="13"
-                                Margin="0,4,0,0" />
+                                Text="Sign In  ➔"
+                                Command="{Binding SignInCommand}"
+                                BackgroundColor="#2563EB"
+                                TextColor="#FFFFFF"
+                                FontFamily="SegoeSemibold"
+                                FontSize="15"
+                                HeightRequest="50"
+                                CornerRadius="14"
+                                Shadow="{Shadow Brush='#2563EB', Offset='0,4', Radius=12, Opacity=0.25}" />
+
+                            <!-- Modern Divider with Centered Badge -->
+                            <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="8" Margin="0,6">
+                                <BoxView HeightRequest="1" Color="#E2E8F0" VerticalOptions="Center" />
+                                <Border
+                                    Grid.Column="1"
+                                    StrokeThickness="0"
+                                    BackgroundColor="#F1F5F9"
+                                    Padding="12,3">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="10" />
+                                    </Border.StrokeShape>
+                                    <Label
+                                        Text="Or sign in with"
+                                        FontSize="12"
+                                        FontFamily="OpenSansRegular"
+                                        TextColor="#64748B" />
+                                </Border>
+                                <BoxView Grid.Column="2" HeightRequest="1" Color="#E2E8F0" VerticalOptions="Center" />
+                            </Grid>
+
+                            <!-- Social Buttons Row: Google + Guest Explore -->
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                                <!-- Google Button -->
+                                <Border
+                                    Grid.Column="0"
+                                    Stroke="#E2E8F0"
+                                    StrokeThickness="1"
+                                    BackgroundColor="#FFFFFF"
+                                    HeightRequest="48"
+                                    Padding="10,0">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="14" />
+                                    </Border.StrokeShape>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding GoogleSignInCommand}" />
+                                    </Border.GestureRecognizers>
+                                    <HorizontalStackLayout
+                                        Spacing="8"
+                                        HorizontalOptions="Center"
+                                        VerticalOptions="Center">
+                                        <Label
+                                            Text="G"
+                                            FontFamily="SegoeSemibold"
+                                            FontSize="18"
+                                            TextColor="#4285F4"
+                                            VerticalOptions="Center" />
+                                        <Label
+                                            Text="Google"
+                                            FontFamily="OpenSansSemibold"
+                                            FontSize="14"
+                                            TextColor="#1E293B"
+                                            VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
+                                </Border>
+
+                                <!-- Guest / Skip Button -->
+                                <Border
+                                    Grid.Column="1"
+                                    Stroke="#E2E8F0"
+                                    StrokeThickness="1"
+                                    BackgroundColor="#FFFFFF"
+                                    HeightRequest="48"
+                                    Padding="10,0">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="14" />
+                                    </Border.StrokeShape>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding SkipAuthCommand}" />
+                                    </Border.GestureRecognizers>
+                                    <HorizontalStackLayout
+                                        Spacing="8"
+                                        HorizontalOptions="Center"
+                                        VerticalOptions="Center">
+                                        <Label
+                                            Text="🚀"
+                                            FontSize="16"
+                                            VerticalOptions="Center" />
+                                        <Label
+                                            Text="Explore"
+                                            FontFamily="OpenSansSemibold"
+                                            FontSize="14"
+                                            TextColor="#1E293B"
+                                            VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
+                                </Border>
+                            </Grid>
+
+                            <!-- Footer Toggle: Don't have an account? Sign Up -->
+                            <HorizontalStackLayout
+                                Spacing="5"
+                                HorizontalOptions="Center"
+                                Margin="0,6,0,0">
+                                <Label
+                                    Text="Don't have an account?"
+                                    FontSize="13"
+                                    FontFamily="OpenSansRegular"
+                                    TextColor="#64748B"
+                                    VerticalOptions="Center" />
+                                <Label
+                                    Text="Sign Up"
+                                    FontSize="13"
+                                    FontFamily="OpenSansSemibold"
+                                    TextColor="#2563EB"
+                                    VerticalOptions="Center">
+                                    <Label.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnToggleCardClicked" />
+                                    </Label.GestureRecognizers>
+                                </Label>
+                            </HorizontalStackLayout>
 
                         </VerticalStackLayout>
 
@@ -265,38 +386,38 @@
                         <!-- ============================================== -->
                         <VerticalStackLayout
                             x:Name="SignUpFace"
-                            Spacing="16"
+                            Spacing="15"
                             IsVisible="{Binding IsSignUpView}">
 
                             <!-- Header -->
-                            <VerticalStackLayout Spacing="4">
+                            <VerticalStackLayout Spacing="4" Margin="0,0,0,2">
                                 <Label
                                     Text="Create Account"
                                     FontFamily="SegoeSemibold"
                                     FontSize="26"
-                                    TextColor="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}"
-                                    HorizontalTextAlignment="Center" />
+                                    TextColor="#0F172A"
+                                    HorizontalTextAlignment="Start" />
                                 <Label
                                     Text="Join RoomToRentRadar as a student or landlord"
                                     FontFamily="OpenSansRegular"
                                     FontSize="14"
-                                    TextColor="{StaticResource Gray500}"
-                                    HorizontalTextAlignment="Center" />
+                                    TextColor="#64748B"
+                                    HorizontalTextAlignment="Start" />
                             </VerticalStackLayout>
 
                             <!-- Global Status Messages -->
                             <Border
                                 IsVisible="{Binding HasError}"
-                                BackgroundColor="#FFEBEE"
-                                Stroke="#EF5350"
+                                BackgroundColor="#FEF2F2"
+                                Stroke="#FCA5A5"
                                 StrokeThickness="1"
                                 Padding="12,8">
                                 <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="8" />
+                                    <RoundRectangle CornerRadius="10" />
                                 </Border.StrokeShape>
                                 <Label
                                     Text="{Binding ErrorMessage}"
-                                    TextColor="#C62828"
+                                    TextColor="#DC2626"
                                     FontSize="13"
                                     FontFamily="OpenSansRegular"
                                     HorizontalTextAlignment="Center" />
@@ -304,129 +425,176 @@
 
                             <Border
                                 IsVisible="{Binding IsSuccess}"
-                                BackgroundColor="#E8F5E9"
-                                Stroke="#66BB6A"
+                                BackgroundColor="#F0FDF4"
+                                Stroke="#86EFAC"
                                 StrokeThickness="1"
                                 Padding="12,8">
                                 <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="8" />
+                                    <RoundRectangle CornerRadius="10" />
                                 </Border.StrokeShape>
                                 <Label
                                     Text="{Binding SuccessMessage}"
-                                    TextColor="#2E7D32"
+                                    TextColor="#16A34A"
                                     FontSize="13"
                                     FontFamily="OpenSansRegular"
                                     HorizontalTextAlignment="Center" />
                             </Border>
 
                             <!-- Email Field -->
-                            <VerticalStackLayout Spacing="4">
+                            <VerticalStackLayout Spacing="3">
                                 <Label
                                     x:Name="SignUpEmailLabel"
                                     Text="Email Address"
                                     FontSize="13"
                                     FontFamily="OpenSansSemibold"
-                                    TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource Gray100}}" />
+                                    TextColor="#334155" />
 
                                 <Border
                                     x:Name="SignUpEmailBorder"
-                                    Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
+                                    Stroke="#E2E8F0"
                                     StrokeThickness="1.5"
-                                    BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray950}}"
+                                    BackgroundColor="#F8FAFC"
+                                    HeightRequest="48"
                                     Padding="14,0">
                                     <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="12" />
+                                        <RoundRectangle CornerRadius="14" />
                                     </Border.StrokeShape>
-                                    <Entry
-                                        x:Name="SignUpEmailEntry"
-                                        Text="{Binding SignUpEmail, Mode=TwoWay}"
-                                        Placeholder="name@example.com"
-                                        PlaceholderColor="{StaticResource Gray400}"
-                                        Keyboard="Email"
-                                        HeightRequest="46"
-                                        TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}"
-                                        Focused="OnInputFocused"
-                                        Unfocused="OnInputUnfocused" />
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" VerticalOptions="Center">
+                                        <Label
+                                            Text="✉"
+                                            FontSize="16"
+                                            TextColor="#94A3B8"
+                                            VerticalOptions="Center" />
+                                        <Entry
+                                            x:Name="SignUpEmailEntry"
+                                            Grid.Column="1"
+                                            Text="{Binding SignUpEmail, Mode=TwoWay}"
+                                            Placeholder="name@example.com"
+                                            PlaceholderColor="#94A3B8"
+                                            Keyboard="Email"
+                                            TextColor="#0F172A"
+                                            VerticalOptions="Center"
+                                            Focused="OnInputFocused"
+                                            Unfocused="OnInputUnfocused" />
+                                    </Grid>
                                 </Border>
 
                                 <Label
                                     Text="{Binding SignUpEmailError}"
                                     IsVisible="{Binding SignUpEmailError, Converter={StaticResource StringHasValueConverter}}"
-                                    TextColor="#D32F2F"
+                                    TextColor="#DC2626"
                                     FontSize="12" />
                             </VerticalStackLayout>
 
                             <!-- Password Field -->
-                            <VerticalStackLayout Spacing="4">
+                            <VerticalStackLayout Spacing="3">
                                 <Label
                                     x:Name="SignUpPasswordLabel"
                                     Text="Password"
                                     FontSize="13"
                                     FontFamily="OpenSansSemibold"
-                                    TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource Gray100}}" />
+                                    TextColor="#334155" />
 
                                 <Border
                                     x:Name="SignUpPasswordBorder"
-                                    Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
+                                    Stroke="#E2E8F0"
                                     StrokeThickness="1.5"
-                                    BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray950}}"
+                                    BackgroundColor="#F8FAFC"
+                                    HeightRequest="48"
                                     Padding="14,0">
                                     <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="12" />
+                                        <RoundRectangle CornerRadius="14" />
                                     </Border.StrokeShape>
-                                    <Entry
-                                        x:Name="SignUpPasswordEntry"
-                                        Text="{Binding SignUpPassword, Mode=TwoWay}"
-                                        Placeholder="Enter your password"
-                                        PlaceholderColor="{StaticResource Gray400}"
-                                        IsPassword="True"
-                                        HeightRequest="46"
-                                        TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}"
-                                        Focused="OnInputFocused"
-                                        Unfocused="OnInputUnfocused" />
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" VerticalOptions="Center">
+                                        <Label
+                                            Text="🔒"
+                                            FontSize="15"
+                                            TextColor="#94A3B8"
+                                            VerticalOptions="Center" />
+                                        <Entry
+                                            x:Name="SignUpPasswordEntry"
+                                            Grid.Column="1"
+                                            Text="{Binding SignUpPassword, Mode=TwoWay}"
+                                            Placeholder="Enter your password"
+                                            PlaceholderColor="#94A3B8"
+                                            IsPassword="{Binding IsPasswordHidden}"
+                                            TextColor="#0F172A"
+                                            VerticalOptions="Center"
+                                            Focused="OnInputFocused"
+                                            Unfocused="OnInputUnfocused" />
+                                        <Button
+                                            Grid.Column="2"
+                                            Text="{Binding IsPasswordHidden, Converter={StaticResource EyeIconConverter}}"
+                                            Command="{Binding TogglePasswordVisibilityCommand}"
+                                            BackgroundColor="Transparent"
+                                            TextColor="#64748B"
+                                            FontSize="16"
+                                            WidthRequest="40"
+                                            HeightRequest="40"
+                                            Padding="0" />
+                                    </Grid>
                                 </Border>
 
                                 <Label
                                     Text="{Binding SignUpPasswordError}"
                                     IsVisible="{Binding SignUpPasswordError, Converter={StaticResource StringHasValueConverter}}"
-                                    TextColor="#D32F2F"
+                                    TextColor="#DC2626"
                                     FontSize="12" />
                             </VerticalStackLayout>
 
                             <!-- Confirm Password Field -->
-                            <VerticalStackLayout Spacing="4">
+                            <VerticalStackLayout Spacing="3">
                                 <Label
                                     x:Name="SignUpConfirmPasswordLabel"
                                     Text="Confirm Password"
                                     FontSize="13"
                                     FontFamily="OpenSansSemibold"
-                                    TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource Gray100}}" />
+                                    TextColor="#334155" />
 
                                 <Border
                                     x:Name="SignUpConfirmPasswordBorder"
-                                    Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
+                                    Stroke="#E2E8F0"
                                     StrokeThickness="1.5"
-                                    BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray950}}"
+                                    BackgroundColor="#F8FAFC"
+                                    HeightRequest="48"
                                     Padding="14,0">
                                     <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="12" />
+                                        <RoundRectangle CornerRadius="14" />
                                     </Border.StrokeShape>
-                                    <Entry
-                                        x:Name="SignUpConfirmPasswordEntry"
-                                        Text="{Binding SignUpConfirmPassword, Mode=TwoWay}"
-                                        Placeholder="Re-enter your password"
-                                        PlaceholderColor="{StaticResource Gray400}"
-                                        IsPassword="True"
-                                        HeightRequest="46"
-                                        TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}"
-                                        Focused="OnInputFocused"
-                                        Unfocused="OnInputUnfocused" />
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" VerticalOptions="Center">
+                                        <Label
+                                            Text="🔒"
+                                            FontSize="15"
+                                            TextColor="#94A3B8"
+                                            VerticalOptions="Center" />
+                                        <Entry
+                                            x:Name="SignUpConfirmPasswordEntry"
+                                            Grid.Column="1"
+                                            Text="{Binding SignUpConfirmPassword, Mode=TwoWay}"
+                                            Placeholder="Re-enter your password"
+                                            PlaceholderColor="#94A3B8"
+                                            IsPassword="{Binding IsConfirmPasswordHidden}"
+                                            TextColor="#0F172A"
+                                            VerticalOptions="Center"
+                                            Focused="OnInputFocused"
+                                            Unfocused="OnInputUnfocused" />
+                                        <Button
+                                            Grid.Column="2"
+                                            Text="{Binding IsConfirmPasswordHidden, Converter={StaticResource EyeIconConverter}}"
+                                            Command="{Binding ToggleConfirmPasswordVisibilityCommand}"
+                                            BackgroundColor="Transparent"
+                                            TextColor="#64748B"
+                                            FontSize="16"
+                                            WidthRequest="40"
+                                            HeightRequest="40"
+                                            Padding="0" />
+                                    </Grid>
                                 </Border>
 
                                 <Label
                                     Text="{Binding SignUpConfirmPasswordError}"
                                     IsVisible="{Binding SignUpConfirmPasswordError, Converter={StaticResource StringHasValueConverter}}"
-                                    TextColor="#D32F2F"
+                                    TextColor="#DC2626"
                                     FontSize="12" />
                             </VerticalStackLayout>
 
@@ -436,7 +604,7 @@
                                     Text="I am a:"
                                     FontSize="13"
                                     FontFamily="OpenSansSemibold"
-                                    TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource Gray100}}" />
+                                    TextColor="#334155" />
 
                                 <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                                     <!-- Student Option -->
@@ -446,25 +614,29 @@
                                         StrokeThickness="2"
                                         Stroke="{Binding IsStudentSelected, Converter={StaticResource RoleBorderBrushConverter}}"
                                         BackgroundColor="{Binding IsStudentSelected, Converter={StaticResource RoleBackgroundBrushConverter}}"
-                                        Padding="12,14">
+                                        Padding="12,12">
                                         <Border.StrokeShape>
-                                            <RoundRectangle CornerRadius="12" />
+                                            <RoundRectangle CornerRadius="14" />
                                         </Border.StrokeShape>
                                         <Border.GestureRecognizers>
                                             <TapGestureRecognizer Command="{Binding SelectRoleCommand}" CommandParameter="STUDENT" />
                                         </Border.GestureRecognizers>
                                         <VerticalStackLayout Spacing="3" HorizontalOptions="Center">
                                             <Label
+                                                Text="🎓"
+                                                FontSize="22"
+                                                HorizontalTextAlignment="Center" />
+                                            <Label
                                                 Text="Student"
-                                                FontFamily="OpenSansSemibold"
+                                                FontFamily="SegoeSemibold"
                                                 FontSize="14"
                                                 HorizontalTextAlignment="Center"
-                                                TextColor="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}" />
+                                                TextColor="#0F172A" />
                                             <Label
                                                 Text="Looking for a room"
                                                 FontFamily="OpenSansRegular"
                                                 FontSize="11"
-                                                TextColor="{StaticResource Gray500}"
+                                                TextColor="#64748B"
                                                 HorizontalTextAlignment="Center" />
                                         </VerticalStackLayout>
                                     </Border>
@@ -476,25 +648,29 @@
                                         StrokeThickness="2"
                                         Stroke="{Binding IsLandlordSelected, Converter={StaticResource RoleBorderBrushConverter}}"
                                         BackgroundColor="{Binding IsLandlordSelected, Converter={StaticResource RoleBackgroundBrushConverter}}"
-                                        Padding="12,14">
+                                        Padding="12,12">
                                         <Border.StrokeShape>
-                                            <RoundRectangle CornerRadius="12" />
+                                            <RoundRectangle CornerRadius="14" />
                                         </Border.StrokeShape>
                                         <Border.GestureRecognizers>
                                             <TapGestureRecognizer Command="{Binding SelectRoleCommand}" CommandParameter="LANDLORD" />
                                         </Border.GestureRecognizers>
                                         <VerticalStackLayout Spacing="3" HorizontalOptions="Center">
                                             <Label
+                                                Text="🏠"
+                                                FontSize="22"
+                                                HorizontalTextAlignment="Center" />
+                                            <Label
                                                 Text="Landlord"
-                                                FontFamily="OpenSansSemibold"
+                                                FontFamily="SegoeSemibold"
                                                 FontSize="14"
                                                 HorizontalTextAlignment="Center"
-                                                TextColor="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}" />
+                                                TextColor="#0F172A" />
                                             <Label
                                                 Text="Listing rooms for rent"
                                                 FontFamily="OpenSansRegular"
                                                 FontSize="11"
-                                                TextColor="{StaticResource Gray500}"
+                                                TextColor="#64748B"
                                                 HorizontalTextAlignment="Center" />
                                         </VerticalStackLayout>
                                     </Border>
@@ -503,31 +679,45 @@
                                 <Label
                                     Text="{Binding RoleError}"
                                     IsVisible="{Binding RoleError, Converter={StaticResource StringHasValueConverter}}"
-                                    TextColor="#D32F2F"
+                                    TextColor="#DC2626"
                                     FontSize="12" />
                             </VerticalStackLayout>
 
-                            <!-- Primary Button: Create Account (RoundRectangle 12) -->
+                            <!-- Primary Button: Create Account -->
                             <Button
-                                Text="Create Account"
+                                Text="Create Account  ➔"
                                 Command="{Binding SignUpCommand}"
-                                BackgroundColor="{StaticResource Primary}"
-                                TextColor="{StaticResource White}"
-                                FontFamily="OpenSansSemibold"
+                                BackgroundColor="#2563EB"
+                                TextColor="#FFFFFF"
+                                FontFamily="SegoeSemibold"
                                 FontSize="15"
-                                HeightRequest="48"
-                                CornerRadius="12"
-                                Margin="0,4,0,0" />
+                                HeightRequest="50"
+                                CornerRadius="14"
+                                Margin="0,4,0,0"
+                                Shadow="{Shadow Brush='#2563EB', Offset='0,4', Radius=12, Opacity=0.25}" />
 
-                            <!-- Toggle to Sign In -->
-                            <Button
-                                Text="Already have an account? Sign In"
-                                Clicked="OnToggleCardClicked"
-                                BackgroundColor="Transparent"
-                                TextColor="{StaticResource Primary}"
-                                FontFamily="OpenSansSemibold"
-                                FontSize="13"
-                                Margin="0,2,0,0" />
+                            <!-- Footer Toggle: Already have an account? Sign In -->
+                            <HorizontalStackLayout
+                                Spacing="5"
+                                HorizontalOptions="Center"
+                                Margin="0,4,0,0">
+                                <Label
+                                    Text="Already have an account?"
+                                    FontSize="13"
+                                    FontFamily="OpenSansRegular"
+                                    TextColor="#64748B"
+                                    VerticalOptions="Center" />
+                                <Label
+                                    Text="Sign In"
+                                    FontSize="13"
+                                    FontFamily="OpenSansSemibold"
+                                    TextColor="#2563EB"
+                                    VerticalOptions="Center">
+                                    <Label.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnToggleCardClicked" />
+                                    </Label.GestureRecognizers>
+                                </Label>
+                            </HorizontalStackLayout>
 
                         </VerticalStackLayout>
                     </Grid>
@@ -539,27 +729,28 @@
         <!-- Loading Overlay -->
         <Grid
             IsVisible="{Binding IsLoading}"
-            BackgroundColor="#80000000">
+            BackgroundColor="#660F172A">
             <Border
                 StrokeThickness="0"
-                BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource DarkSecondaryBackground}}"
+                BackgroundColor="#FFFFFF"
                 Padding="28"
                 HorizontalOptions="Center"
-                VerticalOptions="Center">
+                VerticalOptions="Center"
+                Shadow="{Shadow Brush='#000000', Offset='0,10', Radius=20, Opacity=0.15}">
                 <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="16" />
+                    <RoundRectangle CornerRadius="18" />
                 </Border.StrokeShape>
                 <VerticalStackLayout Spacing="14" HorizontalOptions="Center">
                     <ActivityIndicator
                         IsRunning="{Binding IsLoading}"
-                        Color="{StaticResource Primary}"
+                        Color="#2563EB"
                         WidthRequest="40"
                         HeightRequest="40" />
                     <Label
                         Text="Please wait..."
                         FontFamily="OpenSansSemibold"
                         FontSize="14"
-                        TextColor="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}"
+                        TextColor="#0F172A"
                         HorizontalTextAlignment="Center" />
                 </VerticalStackLayout>
             </Border>
@@ -571,41 +762,41 @@
         <Grid
             x:Name="GoogleRoleDialogOverlay"
             IsVisible="{Binding IsRoleSelectionDialogOpen}"
-            BackgroundColor="#80000000"
+            BackgroundColor="#800F172A"
             Padding="20">
 
             <Border
                 VerticalOptions="Center"
                 HorizontalOptions="Center"
-                MaximumWidthRequest="420"
+                MaximumWidthRequest="400"
                 StrokeThickness="1"
-                Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
-                BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource DarkSecondaryBackground}}"
+                Stroke="#E2E8F0"
+                BackgroundColor="#FFFFFF"
                 Padding="24,26"
-                Shadow="{Shadow Brush=Black, Offset='0,10', Radius=20, Opacity=0.2}">
+                Shadow="{Shadow Brush='#000000', Offset='0,12', Radius=24, Opacity=0.2}">
                 <Border.StrokeShape>
                     <RoundRectangle CornerRadius="24" />
                 </Border.StrokeShape>
 
-                <VerticalStackLayout Spacing="18">
+                <VerticalStackLayout Spacing="16">
                     <!-- Title & Subtitle -->
-                    <VerticalStackLayout Spacing="6">
+                    <VerticalStackLayout Spacing="4">
                         <Label
                             Text="Select Your Role"
                             FontFamily="SegoeSemibold"
                             FontSize="22"
-                            TextColor="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}"
+                            TextColor="#0F172A"
                             HorizontalTextAlignment="Center" />
                         <Label
                             Text="Choose how you want to use RoomToRentRadar to complete your registration."
                             FontFamily="OpenSansRegular"
                             FontSize="13"
-                            TextColor="{StaticResource Gray500}"
+                            TextColor="#64748B"
                             HorizontalTextAlignment="Center" />
                     </VerticalStackLayout>
 
                     <!-- Role Options (No ADMIN) -->
-                    <VerticalStackLayout Spacing="12">
+                    <VerticalStackLayout Spacing="10">
                         <!-- Student Option -->
                         <Border
                             StrokeThickness="2"
@@ -613,7 +804,7 @@
                             BackgroundColor="{Binding IsGoogleStudentSelected, Converter={StaticResource RoleBackgroundBrushConverter}}"
                             Padding="14,12">
                             <Border.StrokeShape>
-                                <RoundRectangle CornerRadius="12" />
+                                <RoundRectangle CornerRadius="14" />
                             </Border.StrokeShape>
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding SelectGoogleRoleCommand}" CommandParameter="STUDENT" />
@@ -626,14 +817,14 @@
                                 <VerticalStackLayout Spacing="2">
                                     <Label
                                         Text="Student"
-                                        FontFamily="OpenSansSemibold"
+                                        FontFamily="SegoeSemibold"
                                         FontSize="15"
-                                        TextColor="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}" />
+                                        TextColor="#0F172A" />
                                     <Label
                                         Text="Looking for a room"
                                         FontFamily="OpenSansRegular"
                                         FontSize="12"
-                                        TextColor="{StaticResource Gray500}" />
+                                        TextColor="#64748B" />
                                 </VerticalStackLayout>
                             </HorizontalStackLayout>
                         </Border>
@@ -645,7 +836,7 @@
                             BackgroundColor="{Binding IsGoogleLandlordSelected, Converter={StaticResource RoleBackgroundBrushConverter}}"
                             Padding="14,12">
                             <Border.StrokeShape>
-                                <RoundRectangle CornerRadius="12" />
+                                <RoundRectangle CornerRadius="14" />
                             </Border.StrokeShape>
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding SelectGoogleRoleCommand}" CommandParameter="LANDLORD" />
@@ -658,14 +849,14 @@
                                 <VerticalStackLayout Spacing="2">
                                     <Label
                                         Text="Landlord"
-                                        FontFamily="OpenSansSemibold"
+                                        FontFamily="SegoeSemibold"
                                         FontSize="15"
-                                        TextColor="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}" />
+                                        TextColor="#0F172A" />
                                     <Label
                                         Text="Listing rooms for rent"
                                         FontFamily="OpenSansRegular"
                                         FontSize="12"
-                                        TextColor="{StaticResource Gray500}" />
+                                        TextColor="#64748B" />
                                 </VerticalStackLayout>
                             </HorizontalStackLayout>
                         </Border>
@@ -675,27 +866,27 @@
                     <Label
                         Text="{Binding GoogleRoleError}"
                         IsVisible="{Binding GoogleRoleError, Converter={StaticResource StringHasValueConverter}}"
-                        TextColor="#D32F2F"
+                        TextColor="#DC2626"
                         FontSize="12"
                         HorizontalTextAlignment="Center" />
 
                     <!-- Buttons -->
                     <VerticalStackLayout Spacing="8">
                         <Button
-                            Text="Continue"
+                            Text="Continue  ➔"
                             Command="{Binding ConfirmGoogleRoleCommand}"
-                            BackgroundColor="{StaticResource Primary}"
-                            TextColor="{StaticResource White}"
-                            FontFamily="OpenSansSemibold"
+                            BackgroundColor="#2563EB"
+                            TextColor="#FFFFFF"
+                            FontFamily="SegoeSemibold"
                             FontSize="15"
                             HeightRequest="48"
-                            CornerRadius="12" />
+                            CornerRadius="14" />
 
                         <Button
                             Text="Cancel"
                             Command="{Binding CancelGoogleRoleCommand}"
                             BackgroundColor="Transparent"
-                            TextColor="{StaticResource Gray500}"
+                            TextColor="#64748B"
                             FontFamily="OpenSansSemibold"
                             FontSize="13" />
                     </VerticalStackLayout>

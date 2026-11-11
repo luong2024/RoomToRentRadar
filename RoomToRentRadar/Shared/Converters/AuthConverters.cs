@@ -21,8 +21,8 @@ public class RoleBorderBrushConverter : IValueConverter
     {
         var isSelected = value is true;
         return isSelected
-            ? new SolidColorBrush(Color.FromArgb("#512BD4"))
-            : new SolidColorBrush(Color.FromArgb("#ACACAC"));
+            ? new SolidColorBrush(Color.FromArgb("#2563EB")) // Modern Royal Blue
+            : new SolidColorBrush(Color.FromArgb("#E2E8F0")); // Subtle border
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -37,8 +37,23 @@ public class RoleBackgroundBrushConverter : IValueConverter
     {
         var isSelected = value is true;
         return isSelected
-            ? new SolidColorBrush(Color.FromArgb("#1A512BD4"))
-            : new SolidColorBrush(Colors.Transparent);
+            ? new SolidColorBrush(Color.FromArgb("#EFF6FF")) // Soft blue selection tint
+            : new SolidColorBrush(Color.FromArgb("#F8FAFC")); // Clean light background
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotSupportedException();
+    }
+}
+
+public class EyeIconConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var isHidden = value is true;
+        // When password is hidden, show open eye icon; when visible, show eye with strike
+        return isHidden ? "👁" : "👁‍🗨";
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
