@@ -42,17 +42,27 @@ public static class DependencyInjection
         return services;
     }
 
-    public static IServiceCollection AddPhotoInfrastructure(this IServiceCollection services, string uploadsRootPath)
+    public static IServiceCollection AddPhotoInfrastructure(
+        this IServiceCollection services,
+        string rootPath,
+        string publicBaseUrl)
     {
         ArgumentNullException.ThrowIfNull(services);
-        if (string.IsNullOrWhiteSpace(uploadsRootPath))
+        ArgumentNullException.ThrowIfNull(rootPath);
+        ArgumentNullException.ThrowIfNull(publicBaseUrl);
+
+        if (string.IsNullOrWhiteSpace(rootPath))
         {
-            throw new ArgumentException("Uploads root path is required.", nameof(uploadsRootPath));
+            throw new ArgumentException("Photo storage root path is required.", nameof(rootPath));
         }
 
-        services.AddSingleton<IPhotoStoragePort>(new LocalDiskPhotoStorageAdapter(uploadsRootPath));
-        services.AddSingleton<InMemoryRoomPhotoRepository>();
-        services.TryAddScoped<IRoomPhotoRepository>(sp => sp.GetRequiredService<InMemoryRoomPhotoRepository>());
+        if (string.IsNullOrWhiteSpace(publicBaseUrl))
+        {
+            throw new ArgumentException("Photo public base URL is required.", nameof(publicBaseUrl));
+        }
+
+        // Photo metadata is registered by AddSqliteDatastore; only the file storage adapter lives here.
+        services.AddSingleton<IPhotoStoragePort>(new LocalDiskPhotoStorageAdapter(rootPath, publicBaseUrl));
 
         return services;
     }

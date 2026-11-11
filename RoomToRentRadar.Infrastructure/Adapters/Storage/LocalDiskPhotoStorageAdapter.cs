@@ -5,49 +5,53 @@ namespace RoomToRentRadar.Infrastructure.Adapters.Storage;
 public sealed class LocalDiskPhotoStorageAdapter : IPhotoStoragePort
 {
     private readonly string _rootPath;
+    private readonly string _publicBaseUrl;
 
-    public LocalDiskPhotoStorageAdapter(string rootPath)
+    public LocalDiskPhotoStorageAdapter(string rootPath, string publicBaseUrl)
     {
         ArgumentNullException.ThrowIfNull(rootPath);
+        ArgumentNullException.ThrowIfNull(publicBaseUrl);
+
         if (string.IsNullOrWhiteSpace(rootPath))
         {
-            throw new ArgumentException("Uploads root path is required.", nameof(rootPath));
+            throw new ArgumentException("Photo storage root path is required.", nameof(rootPath));
+        }
+
+        if (string.IsNullOrWhiteSpace(publicBaseUrl))
+        {
+            throw new ArgumentException("Photo public base URL is required.", nameof(publicBaseUrl));
         }
 
         _rootPath = Path.GetFullPath(rootPath);
+        _publicBaseUrl = publicBaseUrl.TrimEnd('/');
     }
 
-    public async Task<string> SaveAsync(string roomId, string fileName, Stream content, CancellationToken ct = default)
+    public async Task SaveAsync(string path, Stream content, CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
-        ArgumentNullException.ThrowIfNull(roomId);
-        ArgumentNullException.ThrowIfNull(fileName);
+        ArgumentNullException.ThrowIfNull(path);
         ArgumentNullException.ThrowIfNull(content);
 
-        var (roomDirectory, fullPath) = ResolvePath(roomId, fileName);
-        Directory.CreateDirectory(roomDirectory);
+        var fullPath = ResolvePath(path);
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
 
-        await using (var fileStream = new FileStream(
+        // Stream straight to disk: uploads can be non-seekable and photos are too large to buffer in memory.
+        await using var fileStream = new FileStream(
             fullPath,
             FileMode.CreateNew,
             FileAccess.Write,
             FileShare.None,
             81920,
-            useAsync: true))
-        {
-            await content.CopyToAsync(fileStream, ct);
-        }
-
-        return $"/uploads/rooms/{roomId}/{fileName}";
+            useAsync: true);
+        await content.CopyToAsync(fileStream, ct);
     }
 
-    public Task DeleteAsync(string roomId, string fileName, CancellationToken ct = default)
+    public Task DeleteAsync(string path, CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
-        ArgumentNullException.ThrowIfNull(roomId);
-        ArgumentNullException.ThrowIfNull(fileName);
+        ArgumentNullException.ThrowIfNull(path);
 
-        var (_, fullPath) = ResolvePath(roomId, fileName);
+        var fullPath = ResolvePath(path);
         if (File.Exists(fullPath))
         {
             File.Delete(fullPath);
@@ -56,22 +60,39 @@ public sealed class LocalDiskPhotoStorageAdapter : IPhotoStoragePort
         return Task.CompletedTask;
     }
 
-    private (string RoomDirectory, string FullPath) ResolvePath(string roomId, string fileName)
+    public string GetPublicUrl(string path)
     {
-        var roomsRoot = Path.GetFullPath(Path.Combine(_rootPath, "rooms"));
-        var roomDirectory = Path.GetFullPath(Path.Combine(roomsRoot, roomId));
-        var fullPath = Path.GetFullPath(Path.Combine(roomDirectory, fileName));
-
-        // Reject paths that escape the uploads root, the rooms directory or the room directory
-        // (e.g. roomId "../x" or fileName "../evil.jpg").
-        if (!IsWithin(_rootPath, fullPath) ||
-            !IsWithin(roomsRoot, roomDirectory) ||
-            !IsWithin(roomDirectory, fullPath))
+        ArgumentNullException.ThrowIfNull(path);
+        if (string.IsNullOrWhiteSpace(path))
         {
-            throw new InvalidOperationException("Resolved photo path escapes the uploads root.");
+            throw new ArgumentException("Photo path is required.", nameof(path));
         }
 
-        return (roomDirectory, fullPath);
+        var normalized = path.Replace('\\', '/').TrimStart('/');
+        return $"{_publicBaseUrl}/media/{normalized}";
+    }
+
+    private string ResolvePath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            throw new ArgumentException("Photo path is required.", nameof(path));
+        }
+
+        if (Path.IsPathRooted(path))
+        {
+            throw new InvalidOperationException("Photo path must be relative.");
+        }
+
+        var fullPath = Path.GetFullPath(Path.Combine(_rootPath, path));
+
+        // Traversal guard: a relative key like "../evil.jpg" must never resolve outside the media root.
+        if (!IsWithin(_rootPath, fullPath))
+        {
+            throw new InvalidOperationException("Resolved photo path escapes the media root.");
+        }
+
+        return fullPath;
     }
 
     private static bool IsWithin(string basePath, string candidatePath)

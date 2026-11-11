@@ -6,7 +6,6 @@ using RoomToRentRadar.Datastore.Sqlite.Repositories;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Infrastructure;
-using RoomToRentRadar.Infrastructure.Adapters.Mocks;
 using RoomToRentRadar.Infrastructure.Adapters.Storage;
 using RoomToRentRadar.Ports.Outbound.ExternalServices;
 using RoomToRentRadar.Ports.Outbound.Repositories;
@@ -284,21 +283,18 @@ public class SqliteRoomPhotoRepositoryTests
     }
 
     [Test]
-    public void AddPhotoInfrastructure_RegistersStorageAndFallsBackToInMemoryRepository()
+    public void AddPhotoInfrastructure_RegistersLocalDiskStorage()
     {
         var services = new ServiceCollection();
-        services.AddPhotoInfrastructure(CreateTempUploadsPath());
+        services.AddPhotoInfrastructure(CreateTempUploadsPath(), "http://localhost:5000");
 
         using var provider = services.BuildServiceProvider();
-        using var scope = provider.CreateScope();
-
         var storage = provider.GetRequiredService<IPhotoStoragePort>();
-        var repository = scope.ServiceProvider.GetRequiredService<IRoomPhotoRepository>();
 
         Assert.Multiple(() =>
         {
             Assert.That(storage, Is.TypeOf<LocalDiskPhotoStorageAdapter>());
-            Assert.That(repository, Is.TypeOf<InMemoryRoomPhotoRepository>());
+            Assert.That(services.All(d => d.ServiceType != typeof(IRoomPhotoRepository)), Is.True);
         });
     }
 
@@ -307,7 +303,7 @@ public class SqliteRoomPhotoRepositoryTests
     {
         var services = new ServiceCollection();
         services.AddSqliteDatastore(new SqliteSettings { ConnectionString = "Data Source=:memory:" });
-        services.AddPhotoInfrastructure(CreateTempUploadsPath());
+        services.AddPhotoInfrastructure(CreateTempUploadsPath(), "http://localhost:5000");
 
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
