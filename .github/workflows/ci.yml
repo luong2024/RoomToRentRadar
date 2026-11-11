@@ -12,6 +12,7 @@ on:
     branches:
       - main
       - develop
+      - 'group-*'
   workflow_dispatch:
 
 permissions:
