@@ -41,16 +41,14 @@ public class DeleteRoomPhotoUseCaseTests
     [Test]
     public async Task ExecuteAsync_WhenPhotoExists_DeletesStoredFileAndMetadataAndReturnsTrue()
     {
-        var photo = new RoomPhoto
-        {
-            Id = PhotoId,
-            RoomId = RoomId,
-            FileName = "abc123.jpg",
-            Url = $"/uploads/rooms/{RoomId}/abc123.jpg",
-            ContentType = "image/jpeg",
-            SizeBytes = 2048,
-            UploadedByUserId = "landlord-001"
-        };
+        var photo = new RoomPhoto(
+            roomId: RoomId,
+            fileName: "abc123.jpg",
+            url: $"/uploads/rooms/{RoomId}/abc123.jpg",
+            contentType: "image/jpeg",
+            sizeBytes: 2048,
+            uploadedByUserId: "landlord-001",
+            id: PhotoId);
         _repository.GetAsync(RoomId, PhotoId, Arg.Any<CancellationToken>()).Returns(photo);
 
         var result = await _sut.ExecuteAsync(RoomId, PhotoId);

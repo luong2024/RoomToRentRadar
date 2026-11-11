@@ -79,17 +79,15 @@ public class GetRoomGalleryUseCaseTests
         var photos = new List<RoomPhoto>(count);
         for (var i = 0; i < count; i++)
         {
-            photos.Add(new RoomPhoto
-            {
-                Id = $"photo-{i + 1}",
-                RoomId = RoomId,
-                FileName = $"photo-{i + 1}.jpg",
-                Url = $"/uploads/rooms/{RoomId}/photo-{i + 1}.jpg",
-                ContentType = "image/jpeg",
-                SizeBytes = 1024,
-                UploadedByUserId = "landlord-001",
-                UploadedAtUtc = baseTime.AddMinutes(i)
-            });
+            photos.Add(new RoomPhoto(
+                roomId: RoomId,
+                fileName: $"photo-{i + 1}.jpg",
+                url: $"/uploads/rooms/{RoomId}/photo-{i + 1}.jpg",
+                contentType: "image/jpeg",
+                sizeBytes: 1024,
+                uploadedByUserId: "landlord-001",
+                id: $"photo-{i + 1}",
+                uploadedAtUtc: baseTime.AddMinutes(i)));
         }
 
         return photos;

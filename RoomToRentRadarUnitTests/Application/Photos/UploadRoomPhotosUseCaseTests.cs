@@ -243,16 +243,14 @@ public class UploadRoomPhotosUseCaseTests
         var photos = new List<RoomPhoto>(count);
         for (var i = 0; i < count; i++)
         {
-            photos.Add(new RoomPhoto
-            {
-                RoomId = roomId,
-                FileName = $"existing-{i}.jpg",
-                Url = $"/uploads/rooms/{roomId}/existing-{i}.jpg",
-                ContentType = "image/jpeg",
-                SizeBytes = 1024,
-                UploadedByUserId = UploaderUserId,
-                UploadedAtUtc = baseTime.AddMinutes(i)
-            });
+            photos.Add(new RoomPhoto(
+                roomId: roomId,
+                fileName: $"existing-{i}.jpg",
+                url: $"/uploads/rooms/{roomId}/existing-{i}.jpg",
+                contentType: "image/jpeg",
+                sizeBytes: 1024,
+                uploadedByUserId: UploaderUserId,
+                uploadedAtUtc: baseTime.AddMinutes(i)));
         }
 
         return photos;

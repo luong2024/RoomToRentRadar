@@ -59,16 +59,14 @@ public sealed class UploadRoomPhotosUseCase : IUploadRoomPhotosUseCase
             var fileName = $"{Guid.NewGuid():N}.{extension}";
             var url = await _storage.SaveAsync(request.RoomId, fileName, file.Content, ct);
 
-            var photo = new RoomPhoto
-            {
-                RoomId = request.RoomId,
-                FileName = fileName,
-                Url = url,
-                ContentType = extension == "png" ? "image/png" : "image/jpeg",
-                SizeBytes = file.Length,
-                UploadedByUserId = request.UploadedByUserId,
-                UploadedAtUtc = utcNow.AddTicks(index)
-            };
+            var photo = new RoomPhoto(
+                roomId: request.RoomId,
+                fileName: fileName,
+                url: url,
+                contentType: extension == "png" ? "image/png" : "image/jpeg",
+                sizeBytes: file.Length,
+                uploadedByUserId: request.UploadedByUserId,
+                uploadedAtUtc: utcNow.AddTicks(index));
 
             try
             {

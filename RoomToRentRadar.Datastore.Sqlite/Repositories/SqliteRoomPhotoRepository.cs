@@ -129,20 +129,18 @@ public sealed class SqliteRoomPhotoRepository : IRoomPhotoRepository
 
     private static RoomPhoto ReadRow(DbDataReader reader)
     {
-        return new RoomPhoto
-        {
-            Id = reader.GetString(reader.GetOrdinal("Id")),
-            RoomId = reader.GetString(reader.GetOrdinal("RoomId")),
-            FileName = reader.GetString(reader.GetOrdinal("FileName")),
-            Url = reader.GetString(reader.GetOrdinal("Url")),
-            ContentType = reader.GetString(reader.GetOrdinal("ContentType")),
-            SizeBytes = reader.GetInt64(reader.GetOrdinal("SizeBytes")),
-            UploadedByUserId = reader.GetString(reader.GetOrdinal("UploadedByUserId")),
-            UploadedAtUtc = DateTime.Parse(
+        return new RoomPhoto(
+            roomId: reader.GetString(reader.GetOrdinal("RoomId")),
+            fileName: reader.GetString(reader.GetOrdinal("FileName")),
+            url: reader.GetString(reader.GetOrdinal("Url")),
+            contentType: reader.GetString(reader.GetOrdinal("ContentType")),
+            sizeBytes: reader.GetInt64(reader.GetOrdinal("SizeBytes")),
+            uploadedByUserId: reader.GetString(reader.GetOrdinal("UploadedByUserId")),
+            id: reader.GetString(reader.GetOrdinal("Id")),
+            uploadedAtUtc: DateTime.Parse(
                 reader.GetString(reader.GetOrdinal("UploadedAtUtc")),
                 CultureInfo.InvariantCulture,
-                DateTimeStyles.RoundtripKind)
-        };
+                DateTimeStyles.RoundtripKind));
     }
 
     private void ReleaseConnection(SqliteConnection conn)

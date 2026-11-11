@@ -19,17 +19,15 @@ public class SqliteRoomPhotoRepositoryTests
 
     private static RoomPhoto CreatePhoto(string roomId, string id, DateTime uploadedAtUtc, string fileName = "photo.jpg")
     {
-        return new RoomPhoto
-        {
-            Id = id,
-            RoomId = roomId,
-            FileName = fileName,
-            Url = $"/uploads/rooms/{roomId}/{fileName}",
-            ContentType = "image/jpeg",
-            SizeBytes = 1234,
-            UploadedByUserId = "landlord-1",
-            UploadedAtUtc = uploadedAtUtc
-        };
+        return new RoomPhoto(
+            roomId: roomId,
+            fileName: fileName,
+            url: $"/uploads/rooms/{roomId}/{fileName}",
+            contentType: "image/jpeg",
+            sizeBytes: 1234,
+            uploadedByUserId: "landlord-1",
+            id: id,
+            uploadedAtUtc: uploadedAtUtc);
     }
 
     private static string CreateTempUploadsPath()
