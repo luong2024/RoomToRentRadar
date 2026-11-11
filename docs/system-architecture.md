@@ -43,8 +43,8 @@ Projects marked **new** do not exist yet; ⚠ marks drift to fix.
 RoomToRentRadar.slnx
 ├── 1. Core Hexagon
 │   ├── RoomToRentRadar.Domain/              net10.0 · pure C#
-│   │   ├── Aggregates/        User, Room, RoomPhoto, SavedSearch, ListingReport, Conversation, Message, ...
-│   │   ├── Entities/          RefreshTokenSession, AuditLogEntry, Favourite, Notification, DeviceRegistration, ...
+│   │   ├── Aggregates/        User, Room, SavedSearch, ListingReport   (have Version/ConcurrencyToken — erd.md §3)
+│   │   ├── Entities/          RefreshTokenSession, AuditLogEntry, RoomPhoto, Favourite, Conversation, Message, Notification, DeviceRegistration, Campus, ...
 │   │   ├── ValueObjects/      EmailAddress, Money, GeoPoint, GeoPolygon, Address, Utilities, HouseRules, SearchCriteria
 │   │   ├── Enums/             UserRole, AuthProvider, RoomType, ListingStatus, Amenity, SafetyFeature, ReportReason, ...
 │   │   ├── Events/            ListingPublished, MessageSent, ...
@@ -122,7 +122,7 @@ flowchart BT
 
 - Core never references frameworks (MAUI, ASP.NET Core, HTTP, IdentityModel, SQLite, Cosmos) — enforced by `ArchitectureTests`.
 - `RoomToRentRadar` (MAUI) **must not** reference `Application`, `Infrastructure`, `Datastore.*` (⚠ currently it does — fix per ADR-003).
-- `Client.Adapters` references `Ports` **only for `Contracts`** (DTOs); it must not use `Inbound`/`Outbound` server ports.
+- `Client.Adapters` references `Ports` **only for `Contracts`** (DTOs); it must not use `Inbound`/`Outbound` server ports or `Domain` types. Note: `Ports.csproj` references `Domain`, so these assemblies are still *available* to the client at compile time — the rule is enforced by an architecture test on namespaces used inside `Client.Adapters` and the MAUI project (`RoomToRentRadar.Ports.Inbound*`, `RoomToRentRadar.Ports.Outbound*`, `RoomToRentRadar.Domain*` forbidden).
 
 ## 5. Mobile client architecture
 
@@ -212,7 +212,7 @@ RoomsController.Search(query) → ISearchRoomsUseCase.ExecuteAsync(RoomSearchReq
 - PII: phone only to signed-in users (BR-AUTH-07); logs never contain tokens/passwords.
 
 ### 7.2 Error model
-`application/problem+json` with `errorCode` — [ADR-012](adr/adr-012-api-contract-and-error-model.md). Domain exceptions → HTTP:
+`application/problem+json` with `errorCode` — [ADR-012](adr/adr-012-api-contract-and-error-model.md). Framework-generated errors must use the same shape: configure `ApiBehaviorOptions.InvalidModelStateResponseFactory` (model-binding 400 → `VALIDATION_FAILED` + `errors`), the rate limiter's `OnRejected` (429 → `RATE_LIMITED`) and `UseStatusCodePages` for bare 401/403/404. Until the global middleware exists, the current Auth endpoints return ProblemDetails **without** `errorCode`; the client must fall back to the HTTP status. Domain exceptions → HTTP:
 
 | Exception | Status | errorCode (examples) |
 |---|---|---|

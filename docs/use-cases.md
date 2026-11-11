@@ -245,4 +245,4 @@ Each UC: **Actor · Story/AC · Preconditions · Main flow · Alternatives (A) �
 | US12 | UC-15, UC-42 | SCR-ROOM-04, SCR-ADM-03 | `reportRoom`, `listReports`, `resolveReport` |
 | US13 | UC-20…UC-24, UC-40, UC-44 | SCR-AUTH-01, SCR-AUTH-02, SCR-ACC-01, SCR-ADM-01 | `registerUser`, `loginUser`, `loginWithIctuSso`, `refreshToken`, `revokeToken`, `getCurrentUser`, `updateMyProfile`, `listPendingLandlords`, `approveLandlord`, `getAuditLogs` |
 | — (ops) | — | — | `getHealth` |
-| US14 | UC-17 | SCR-CHAT-01, SCR-CHAT-02 | `startConversation`, `listMyConversations`, `getConversationMessages`, `sendMessage`, `markConversationRead`, hub `/hubs/chat` |
+| US14 | UC-17 | SCR-CHAT-01, SCR-CHAT-02 | `startConversation`, `listMyConversations`, `getConversation`, `getConversationMessages`, `sendMessage`, `markConversationRead`, hub `/hubs/chat` |

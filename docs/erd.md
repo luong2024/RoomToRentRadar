@@ -60,23 +60,29 @@ erDiagram
 
 ## 3. Aggregates (domain ↔ tables)
 
-| Aggregate root (`RoomToRentRadar.Domain/Aggregates/`) | Owned entities / VOs | Tables | Stories |
+**Aggregates** — `RoomToRentRadar.Domain/Aggregates/`, edited concurrently by users ⇒ table has `Version`, class exposes `ConcurrencyToken` (enforced by `ArchitectureTests.DomainAggregates_MustDeclareConcurrencyTokenProperty`):
+
+| Aggregate root | Owned entities / VOs | Tables | Stories |
 |---|---|---|---|
 | `User` *(exists)* | `RefreshTokenSession`, `EmailAddress` | `Users`, `UserRefreshTokens` | US13 |
 | `Room` | `Money`, `GeoPoint`, `Address`, `Utilities`, `HouseRules` (VO per version), amenity/safety code sets | `Rooms`, `RoomAmenities`, `RoomSafetyFeatures`, `HouseRuleVersions` | US01-05, 08, 10, 11 |
-| `RoomPhoto` | — | `RoomPhotos` | US03, US08 |
-| `SavedSearch` | `SearchCriteria` VO, `GeoPolygon` VO | `SavedSearches`, `SavedSearchAlertLogs` | US05, US07 |
-| `Favourite` *(entity, no Version)* | — | `Favourites` | US06 |
+| `SavedSearch` | `SearchCriteria` VO, `GeoPolygon` VO | `SavedSearches` | US05, US07 |
 | `ListingReport` | — | `ListingReports` | US12 |
-| `Conversation` | `ConversationParticipant` | `Conversations`, `ConversationParticipants` | US14 |
-| `Message` *(separate aggregate for paging)* | — | `Messages` | US14 |
-| `DeviceRegistration` | — | `DeviceRegistrations` | US07, US14 |
-| `Notification` | — | `Notifications` | US07, US14 |
-| `TravelTimeEstimate` *(cache entity)* | — | `TravelTimeEstimates` | US09 |
-| `Campus` *(reference data)* | `GeoPoint` | `Campuses` | US01, US09 |
-| `AuditLogEntry` *(exists)* | — | `AuditLogs` | cross-cutting |
 
-> Note: `Room` is an **aggregate root** and therefore lives in `Domain/Aggregates/` and has `ConcurrencyToken` (enforced by `ArchitectureTests.DomainAggregates_MustDeclareConcurrencyTokenProperty`).
+**Entities** — `RoomToRentRadar.Domain/Entities/`, no `Version` (append-only, idempotent, owned by one writer, or system-written); still validate invariants in constructors:
+
+| Entity | Why no `Version` | Tables | Stories |
+|---|---|---|---|
+| `RoomPhoto` | uploaded once; attach uses a conditional update (§4.8) | `RoomPhotos` | US03, US08 |
+| `Favourite` | idempotent insert/delete | `Favourites` | US06 |
+| `Conversation`, `ConversationParticipant` | only system fields change (last message, read time) | `Conversations`, `ConversationParticipants` | US14 |
+| `Message` | append-only | `Messages` | US14 |
+| `SavedSearchAlertLog` | append-only, idempotent key | `SavedSearchAlertLogs` | US07 |
+| `DeviceRegistration` | idempotent upsert | `DeviceRegistrations` | US07, US14 |
+| `Notification` | system-written; only `IsRead` flips | `Notifications` | US07, US14 |
+| `TravelTimeEstimate` | cache | `TravelTimeEstimates` | US09 |
+| `Campus` | reference data | `Campuses` | US01, US09 |
+| `AuditLogEntry` *(exists)* | append-only | `AuditLogs` | cross-cutting |
 
 ## 4. Tables
 
@@ -168,7 +174,7 @@ erDiagram
 
 Indexes: `IX_Rooms_Status_Lat_Lng (Status, Latitude, Longitude)` (bounding-box prefilter), `IX_Rooms_Status_Rent (Status, MonthlyRentVnd)`, `IX_Rooms_LandlordId`, `IX_Rooms_Status_PublishedAtUtc`, `IX_Rooms_NeedsReReview` (partial `WHERE NeedsReReview = 1`).
 
-Derived (never stored): `DistanceKm` (per campus, BR-CMP-03), `SafetyScore` = `COUNT(RoomSafetyFeatures)` capped 5, `CoverPhoto` = first photo by `SortOrder`.
+Derived (never stored): `DistanceKm` (per campus, BR-CMP-03), `SafetyScore` = count of `RoomSafetyFeatures` with `IsConfirmed = 1` when `IsSafetyVerified = 1`, otherwise count of declared features shown as "Chưa xác minh" (BR-LST-08), `CoverPhoto` = first photo by `SortOrder`.
 
 ### 4.5 `RoomAmenities`
 | Column | Type | Constraints |
@@ -183,6 +189,9 @@ Amenity catalog (C# enum `Amenity`): `AirConditioner`, `WaterHeater`, `PrivateBa
 |---|---|---|
 | RoomId | TEXT | PK(1), FK→Rooms ON DELETE CASCADE |
 | FeatureCode | TEXT | PK(2) — `Cctv`·`SecureEntrance`·`FireSafety`·`OwnerOrGuardOnSite`·`WellLitAccess` (BR-LST-08) |
+| IsConfirmed | INTEGER | NN, default 0 — set to 1 by Admin at approval for each feature in `confirmedSafetyFeatures` |
+
+Rows = features **declared** by the landlord. A landlord edit that adds a feature inserts it with `IsConfirmed = 0` (and sets `Rooms.NeedsReReview = 1`).
 
 ### 4.7 `HouseRuleVersions`
 | Column | Type | Constraints | Notes |
@@ -225,6 +234,8 @@ Immutable rows. Current rules = max `VersionNumber` per room.
 | AttachedAtUtc | TEXT | | |
 
 IX `(RoomId, SortOrder)`, IX `(UploadedByUserId, AttachedAtUtc)` for cleanup of unattached > 24 h.
+
+Attach is race-safe without a `Version` column: `UPDATE RoomPhotos SET RoomId = @roomId, SortOrder = @order, AttachedAtUtc = @now WHERE Id = @id AND UploadedByUserId = @me AND (RoomId IS NULL OR RoomId = @roomId)`; fewer rows updated than requested ids → the whole create/update fails with `400 VALIDATION_FAILED` (photo not owned, expired, or attached elsewhere). Run inside the same transaction as the listing insert/update.
 
 ### 4.9 `Favourites`
 | Column | Type | Constraints |

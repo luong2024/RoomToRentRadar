@@ -619,6 +619,22 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/PagedConversations' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/conversations/{conversationId}:
+    get:
+      tags: [Chat]
+      operationId: getConversation
+      summary: One conversation header (deep link from a push notification) — participants only (BR-CHT-02)
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      responses:
+        '200':
+          description: Conversation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConversationDto' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/conversations/{conversationId}/messages:
     parameters:
       - $ref: '#/components/parameters/ConversationId'
@@ -1807,7 +1823,7 @@ components:
           oneOf:
             - $ref: '#/components/schemas/HouseRulesFields'
             - type: 'null'
-          description: Optional on create (creates version 1); on update use PUT house-rules instead
+          description: Optional on create (creates version 1). Ignored by updateListing — change rules with updateHouseRules so every change is versioned (BR-HR-02).
     PhotoUploadDto:
       type: object
       required: [id, kind, thumbUrl, mediumUrl, width, height, sizeBytes]
