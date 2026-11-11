@@ -403,7 +403,7 @@ jobs:
                 -p:NuGetAudit=true \
                 -p:NuGetAuditMode=all \
                 -p:NuGetAuditLevel=low \
-                -p:WarningsAsErrors="NU1901;NU1902;NU1903;NU1904"
+                -p:WarningsAsErrors="NU1901%3BNU1902%3BNU1903%3BNU1904"
               REPORT=$(dotnet list "$PROJECT" package --vulnerable --include-transitive --framework net10.0-android --no-restore)
               JSON_REPORT=$(dotnet list "$PROJECT" package --vulnerable --include-transitive --framework net10.0-android --format json --no-restore)
             else
@@ -411,7 +411,7 @@ jobs:
                 -p:NuGetAudit=true \
                 -p:NuGetAuditMode=all \
                 -p:NuGetAuditLevel=low \
-                -p:WarningsAsErrors="NU1901;NU1902;NU1903;NU1904"
+                -p:WarningsAsErrors="NU1901%3BNU1902%3BNU1903%3BNU1904"
               REPORT=$(dotnet list "$PROJECT" package --vulnerable --include-transitive --no-restore)
               JSON_REPORT=$(dotnet list "$PROJECT" package --vulnerable --include-transitive --format json --no-restore)
             fi
