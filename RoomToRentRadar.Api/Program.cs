@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using RoomToRentRadar.Api.Authorization;
 using RoomToRentRadar.Api.Middlewares;
@@ -13,6 +14,9 @@ using RoomToRentRadar.Infrastructure;
 using RoomToRentRadar.Infrastructure.Adapters.Security;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var uploadsRoot = Path.Combine(builder.Environment.ContentRootPath, "uploads");
+Directory.CreateDirectory(uploadsRoot);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -49,6 +53,7 @@ if (useMockSso && !builder.Environment.IsDevelopment())
 
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructure(jwtSettings, useMockSsoVerifier: useMockSso);
+builder.Services.AddPhotoInfrastructure(uploadsRoot);
 
 var signingKeyBytes = Encoding.UTF8.GetBytes(jwtSettings.SigningKey);
 builder.Services
@@ -79,6 +84,12 @@ app.UseMiddleware<AuthExceptionHandlingMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<AuditLoggingMiddleware>();
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(uploadsRoot),
+    RequestPath = "/uploads"
+});
 
 app.MapControllers();
 app.MapGet("/api/health", () => Results.Ok(new { Status = "Healthy", Service = "RoomToRentRadar.Api" }));
