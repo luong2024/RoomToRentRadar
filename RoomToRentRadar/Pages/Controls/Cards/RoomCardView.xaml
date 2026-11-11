@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
+             xmlns:cards="clr-namespace:RoomToRentRadar.Pages.Controls.Cards"
+             xmlns:rooms="clr-namespace:RoomToRentRadar.Ports.Contracts.Responses.Rooms;assembly=RoomToRentRadar.Ports"
+             x:Class="RoomToRentRadar.Pages.Controls.Cards.RoomCardView"
+             x:Name="RootRoomCard"
+             x:DataType="cards:RoomCardView">
+
+    <Border StrokeShape="RoundRectangle 12"
+            StrokeThickness="1"
+            Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+            Shadow="{StaticResource Elevation1Shadow}"
+            Margin="0,0,0,12">
+        <Border.GestureRecognizers>
+            <TapGestureRecognizer Command="{Binding DetailsCommand}"
+                                  CommandParameter="{Binding Room.Id}" />
+        </Border.GestureRecognizers>
+
+        <VerticalStackLayout Spacing="0">
+            <!-- 1. Thumbnail Header with Badges & Bookmark Action -->
+            <Grid HeightRequest="180">
+                <!-- Thumbnail Image with Fallback Placeholder -->
+                <Image Aspect="AspectFill"
+                       Source="{Binding Room.ThumbnailUrl}"
+                       HeightRequest="180"
+                       HorizontalOptions="Fill" />
+
+                <!-- Top Gradient/Scrim for text contrast -->
+                <BoxView HeightRequest="60"
+                         VerticalOptions="Start"
+                         Color="#33000000" />
+
+                <!-- Verified Badge Top Left -->
+                <common:RadaBadge Type="Verified"
+                                  IsVisible="{Binding Room.IsVerified}"
+                                  Margin="12,12,0,0"
+                                  HorizontalOptions="Start"
+                                  VerticalOptions="Start" />
+
+                <!-- Bookmark Favorite Button Top Right -->
+                <Border StrokeShape="RoundRectangle 9999"
+                        StrokeThickness="0"
+                        WidthRequest="36"
+                        HeightRequest="36"
+                        BackgroundColor="#CCFFFFFF"
+                        Margin="0,12,12,0"
+                        HorizontalOptions="End"
+                        VerticalOptions="Start">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding BookmarkCommand}"
+                                              CommandParameter="{Binding Room.Id}" />
+                    </Border.GestureRecognizers>
+                    <Label Text="{Binding BookmarkIconGlyph}"
+                           FontSize="18"
+                           TextColor="{Binding BookmarkIconColor}"
+                           HorizontalTextAlignment="Center"
+                           VerticalTextAlignment="Center" />
+                </Border>
+            </Grid>
+
+            <!-- 2. Room Content Details Area -->
+            <VerticalStackLayout Padding="16" Spacing="8">
+                <!-- P1: Price and Area Tag -->
+                <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
+                    <common:PriceTagView Grid.Column="0"
+                                         Price="{Binding Room.PricePerMonth}"
+                                         Period="/ tháng" />
+
+                    <!-- Area Pill -->
+                    <Border Grid.Column="1"
+                            StrokeShape="RoundRectangle 6"
+                            StrokeThickness="1"
+                            Padding="8,2"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
+                            Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                            VerticalOptions="Center">
+                        <Label Text="{Binding Room.AreaFormatted}"
+                               FontFamily="{StaticResource FontFamilySemibold}"
+                               FontSize="{StaticResource FontSizeCaption}"
+                               TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}"
+                               VerticalTextAlignment="Center" />
+                    </Border>
+                </Grid>
+
+                <!-- P2: Room Title (H3 Bold, Max 2 lines) -->
+                <Label Text="{Binding Room.Title}"
+                       FontFamily="{StaticResource FontFamilySemibold}"
+                       FontSize="{StaticResource FontSizeH3}"
+                       FontAttributes="Bold"
+                       LineBreakMode="TailTruncation"
+                       MaxLines="2"
+                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+
+                <!-- P3: Distance to ICTU Campus & Address -->
+                <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                    <Label Text="📍"
+                           FontSize="13"
+                           VerticalTextAlignment="Center" />
+                    <Label Text="{Binding Room.DistanceFormatted}"
+                           FontFamily="{StaticResource FontFamilySemibold}"
+                           FontSize="{StaticResource FontSizeCaption}"
+                           TextColor="{AppThemeBinding Light={StaticResource ActionAccentLight}, Dark={StaticResource ActionAccentDark}}"
+                           VerticalTextAlignment="Center" />
+                    <Label Text="•"
+                           FontSize="12"
+                           TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+                           VerticalTextAlignment="Center" />
+                    <Label Text="{Binding Room.Address}"
+                           FontFamily="{StaticResource FontFamilyRegular}"
+                           FontSize="{StaticResource FontSizeCaption}"
+                           LineBreakMode="TailTruncation"
+                           TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+                           VerticalTextAlignment="Center" />
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </Border>
+</ContentView>
+

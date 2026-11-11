@@ -32,6 +32,14 @@
         SemanticProperties.Description="Manage Meta"
         SemanticProperties.Hint="Navigate to manage meta"/>
 
+    <ShellContent
+        Title="UI Catalog"
+        Icon="{StaticResource IconRibbon}"
+        ContentTemplate="{DataTemplate pages:UiCatalogPage}"
+        Route="uicatalog"
+        SemanticProperties.Description="UI Design System Catalog"
+        SemanticProperties.Hint="Explore components, typography and color palettes"/>
+
     <Shell.FlyoutFooter>
         <Grid Padding="15">
             <sf:SfSegmentedControl x:Name="ThemeSegmentedControl" 

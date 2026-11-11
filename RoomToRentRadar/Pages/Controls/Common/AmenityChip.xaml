@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
+             x:Class="RoomToRentRadar.Pages.Controls.Common.AmenityChip"
+             x:Name="RootChipView">
+
+    <Border x:Name="ChipBorder"
+            StrokeShape="RoundRectangle 8"
+            StrokeThickness="1"
+            HeightRequest="34"
+            Padding="10,0"
+            HorizontalOptions="Start"
+            VerticalOptions="Center"
+            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
+            Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}">
+        <Border.GestureRecognizers>
+            <TapGestureRecognizer Command="{Binding Source={x:Reference RootChipView}, Path=ToggleCommand}"
+                                  CommandParameter="{Binding Source={x:Reference RootChipView}, Path=Title}" />
+        </Border.GestureRecognizers>
+
+        <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+            <!-- Optional Icon Glyph -->
+            <Label x:Name="IconLabel"
+                   Text="{Binding Source={x:Reference RootChipView}, Path=IconGlyph}"
+                   FontFamily="{x:Static Member=controls:AmenityChip.FontFamilyIcon}"
+                   FontSize="14"
+                   VerticalTextAlignment="Center"
+                   IsVisible="{Binding Source={x:Reference RootChipView}, Path=HasIcon}"
+                   TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}" />
+
+            <!-- Title Label -->
+            <Label x:Name="TitleLabel"
+                   Text="{Binding Source={x:Reference RootChipView}, Path=Title}"
+                   TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"
+                   FontFamily="{StaticResource FontFamilyRegular}"
+                   FontSize="{StaticResource FontSizeCaption}"
+                   VerticalTextAlignment="Center" />
+        </HorizontalStackLayout>
+    </Border>
+</ContentView>
+

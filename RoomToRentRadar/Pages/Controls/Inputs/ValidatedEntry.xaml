@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:inputs="clr-namespace:RoomToRentRadar.Pages.Controls.Inputs"
+             x:Class="RoomToRentRadar.Pages.Controls.Inputs.ValidatedEntry"
+             x:Name="RootEntryView">
+
+    <VerticalStackLayout Spacing="4">
+        <!-- Floating / Static Field Label -->
+        <Label x:Name="FieldLabel"
+               Text="{Binding Source={x:Reference RootEntryView}, Path=LabelText}"
+               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+               FontFamily="{StaticResource FontFamilySemibold}"
+               FontSize="{StaticResource FontSizeCaption}"
+               IsVisible="{Binding Source={x:Reference RootEntryView}, Path=HasLabel}" />
+
+        <!-- Input Box Container -->
+        <Border x:Name="EntryBorder"
+                StrokeShape="RoundRectangle 8"
+                StrokeThickness="1.5"
+                HeightRequest="{StaticResource InputHeight}"
+                Padding="12,0"
+                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+                Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}">
+
+            <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
+                <!-- Native Entry with Compiled Binding -->
+                <Entry Grid.Column="0"
+                       x:Name="InnerEntry"
+                       Text="{Binding Source={x:Reference RootEntryView}, Path=Text, Mode=TwoWay}"
+                       Placeholder="{Binding Source={x:Reference RootEntryView}, Path=Placeholder}"
+                       PlaceholderColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+                       FontFamily="{StaticResource FontFamilyRegular}"
+                       FontSize="{StaticResource FontSizeBodyMedium}"
+                       IsPassword="{Binding Source={x:Reference RootEntryView}, Path=IsPassword}"
+                       Keyboard="{Binding Source={x:Reference RootEntryView}, Path=Keyboard}"
+                       VerticalOptions="Center"
+                       Focused="InnerEntry_Focused"
+                       Unfocused="InnerEntry_Unfocused"
+                       SemanticProperties.Description="{Binding Source={x:Reference RootEntryView}, Path=LabelText}"
+                       SemanticProperties.Hint="{Binding Source={x:Reference RootEntryView}, Path=Placeholder}" />
+
+                <!-- Clear Text Button -->
+                <ImageButton Grid.Column="1"
+                             x:Name="ClearButton"
+                             Source="{StaticResource IconMeta}"
+                             WidthRequest="18"
+                             HeightRequest="18"
+                             VerticalOptions="Center"
+                             IsVisible="False"
+                             Clicked="ClearButton_Clicked" />
+            </Grid>
+        </Border>
+
+        <!-- Error Message Row (Visible when HasError is True) -->
+        <HorizontalStackLayout Spacing="6"
+                               x:Name="ErrorLayout"
+                               IsVisible="{Binding Source={x:Reference RootEntryView}, Path=HasError}">
+            <Label Text="⚠️"
+                   FontSize="12"
+                   TextColor="{AppThemeBinding Light={StaticResource StatusDangerLight}, Dark={StaticResource StatusDangerDark}}"
+                   VerticalTextAlignment="Center" />
+            <Label Text="{Binding Source={x:Reference RootEntryView}, Path=ErrorMessage}"
+                   TextColor="{AppThemeBinding Light={StaticResource StatusDangerLight}, Dark={StaticResource StatusDangerDark}}"
+                   FontFamily="{StaticResource FontFamilyRegular}"
+                   FontSize="{StaticResource FontSizeCaption}"
+                   VerticalTextAlignment="Center" />
+        </HorizontalStackLayout>
+    </VerticalStackLayout>
+</ContentView>
+

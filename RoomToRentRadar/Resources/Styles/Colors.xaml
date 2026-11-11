@@ -1,39 +1,177 @@
-﻿<?xml version="1.0" encoding="UTF-8" ?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <ResourceDictionary 
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
 
-    <!-- Note: For Android please see also Platforms\Android\Resources\values\colors.xml -->
+    <!-- ========================================================================= -->
+    <!-- TIER 1: GLOBAL / REFERENCE COLOR TOKENS (RAW PALETTE)                     -->
+    <!-- Theme: Option 1 - Navy Blue + Ocean Blue + Teal                           -->
+    <!-- ========================================================================= -->
 
-    <Color x:Key="Primary">#512BD4</Color>
-    <Color x:Key="PrimaryDark">#ac99ea</Color>
-    <Color x:Key="PrimaryDarkText">#242424</Color>
-    <Color x:Key="Secondary">#DFD8F7</Color>
-    <Color x:Key="SecondaryDarkText">#9880e5</Color>
-    <Color x:Key="Tertiary">#2B0B98</Color>
+    <!-- Brand Navy Blue Scale -->
+    <Color x:Key="Navy950">#0B131E</Color>
+    <Color x:Key="Navy900">#101C2B</Color>
+    <Color x:Key="Navy800">#162234</Color>
+    <Color x:Key="Navy700">#163A5F</Color> <!-- Primary Navy Brand Color -->
+    <Color x:Key="Navy600">#1E4C7A</Color>
+    <Color x:Key="Navy500">#3572A5</Color>
+    <Color x:Key="Navy400">#4D8DC4</Color>
 
-    <Color x:Key="DarkBackground">#17171a</Color>
-    <Color x:Key="LightOnDarkBackground">#C3C3C3</Color>
-    <Color x:Key="LightBackground">#F2F2F2</Color>
-    <Color x:Key="DarkOnLightBackground">#0D0D0D</Color>
+    <!-- Ocean Blue Scale -->
+    <Color x:Key="Ocean800">#184859</Color>
+    <Color x:Key="Ocean700">#1E5A6E</Color>
+    <Color x:Key="Ocean600">#256D85</Color> <!-- Secondary Ocean Blue -->
+    <Color x:Key="Ocean500">#2F87A3</Color>
+    <Color x:Key="Ocean400">#42A1BF</Color>
 
-    <Color x:Key="LightSecondaryBackground">#E0E0E0</Color>
-    <Color x:Key="DarkSecondaryBackground">#222228</Color>
+    <!-- Accent Teal Scale -->
+    <Color x:Key="Teal700">#2E847E</Color>
+    <Color x:Key="Teal600">#3C9E97</Color>
+    <Color x:Key="Teal500">#4CB5AE</Color> <!-- Accent Teal Color -->
+    <Color x:Key="Teal400">#5CE1D6</Color>
+    <Color x:Key="Teal300">#85EBE3</Color>
 
-    <Color x:Key="White">White</Color>
-    <Color x:Key="Black">Black</Color>
-    <Color x:Key="Magenta">#D600AA</Color>
-    <Color x:Key="MidnightBlue">#190649</Color>
-    <Color x:Key="OffBlack">#1f1f1f</Color>
+    <!-- Slate / Neutral Scale -->
+    <Color x:Key="Slate50">#F8FAFC</Color>
+    <Color x:Key="Slate100">#F4F7FA</Color> <!-- Canvas / App Background Light -->
+    <Color x:Key="Slate200">#E2E8F0</Color> <!-- Border Subtle Light -->
+    <Color x:Key="Slate300">#CBD5E1</Color>
+    <Color x:Key="Slate400">#94A3B8</Color> <!-- Text Muted Light -->
+    <Color x:Key="Slate500">#64748B</Color>
+    <Color x:Key="Slate600">#475569</Color> <!-- Text Secondary Light -->
+    <Color x:Key="Slate700">#334155</Color> <!-- Elevated Surface Dark -->
+    <Color x:Key="Slate800">#1E293B</Color> <!-- Text Primary Light -->
+    <Color x:Key="Slate900">#0F172A</Color>
+    <Color x:Key="Slate950">#070D14</Color>
 
-    <Color x:Key="Gray100">#E1E1E1</Color>
-    <Color x:Key="Gray200">#C8C8C8</Color>
-    <Color x:Key="Gray300">#ACACAC</Color>
-    <Color x:Key="Gray400">#919191</Color>
-    <Color x:Key="Gray500">#6E6E6E</Color>
-    <Color x:Key="Gray600">#404040</Color>
-    <Color x:Key="Gray900">#212121</Color>
-    <Color x:Key="Gray950">#141414</Color>
+    <!-- Status & Feedback Scale -->
+    <Color x:Key="StatusSuccessLight">#16A34A</Color>
+    <Color x:Key="StatusSuccessDark">#4CB5AE</Color>
+    <Color x:Key="StatusWarningLight">#D97706</Color>
+    <Color x:Key="StatusWarningDark">#F59E0B</Color>
+    <Color x:Key="StatusDangerLight">#DC2626</Color>
+    <Color x:Key="StatusDangerDark">#EF4444</Color>
+    <Color x:Key="StatusInfoLight">#0284C7</Color>
+    <Color x:Key="StatusInfoDark">#38BDF8</Color>
+
+    <!-- Basic Constants -->
+    <Color x:Key="White">#FFFFFF</Color>
+    <Color x:Key="Black">#000000</Color>
+    <Color x:Key="Transparent">Transparent</Color>
+
+    <!-- ========================================================================= -->
+    <!-- TIER 2: SEMANTIC TOKENS (LIGHT & DARK MODE EXPLICIT PAIRS)                -->
+    <!-- ========================================================================= -->
+
+    <!-- Surfaces & Canvas -->
+    <Color x:Key="SurfaceCanvasLight">#F4F7FA</Color>
+    <Color x:Key="SurfaceCanvasDark">#0B131E</Color>
+
+    <Color x:Key="SurfaceCardLight">#FFFFFF</Color>
+    <Color x:Key="SurfaceCardDark">#162234</Color>
+
+    <Color x:Key="SurfaceElevatedLight">#FFFFFF</Color>
+    <Color x:Key="SurfaceElevatedDark">#22334B</Color>
+
+    <Color x:Key="SurfaceSubtleLight">#E8EEF5</Color>
+    <Color x:Key="SurfaceSubtleDark">#1A283C</Color>
+
+    <!-- Typography & Content -->
+    <Color x:Key="TextPrimaryLight">#1E293B</Color>
+    <Color x:Key="TextPrimaryDark">#F4F7FA</Color>
+
+    <Color x:Key="TextSecondaryLight">#475569</Color>
+    <Color x:Key="TextSecondaryDark">#CBD5E1</Color>
+
+    <Color x:Key="TextMutedLight">#94A3B8</Color>
+    <Color x:Key="TextMutedDark">#64748B</Color>
+
+    <Color x:Key="TextInverseLight">#FFFFFF</Color>
+    <Color x:Key="TextInverseDark">#0B131E</Color>
+
+    <Color x:Key="TextBrandLight">#163A5F</Color>
+    <Color x:Key="TextBrandDark">#5CE1D6</Color>
+
+    <!-- Actions & Interactive -->
+    <Color x:Key="ActionPrimaryLight">#163A5F</Color>
+    <Color x:Key="ActionPrimaryDark">#3572A5</Color>
+
+    <Color x:Key="ActionPrimaryHoverLight">#0F2942</Color>
+    <Color x:Key="ActionPrimaryHoverDark">#4D8DC4</Color>
+
+    <Color x:Key="ActionSecondaryLight">#256D85</Color>
+    <Color x:Key="ActionSecondaryDark">#256D85</Color>
+
+    <Color x:Key="ActionAccentLight">#4CB5AE</Color>
+    <Color x:Key="ActionAccentDark">#5CE1D6</Color>
+
+    <Color x:Key="ActionDisabledLight">#E2E8F0</Color>
+    <Color x:Key="ActionDisabledDark">#1E293B</Color>
+
+    <!-- Borders & Dividers -->
+    <Color x:Key="BorderSubtleLight">#E2E8F0</Color>
+    <Color x:Key="BorderSubtleDark">#273B55</Color>
+
+    <Color x:Key="BorderFocusLight">#256D85</Color>
+    <Color x:Key="BorderFocusDark">#4CB5AE</Color>
+
+    <!-- ========================================================================= -->
+    <!-- TIER 2 SEMANTIC SOLID COLOR BRUSHES (THEME AWARE)                         -->
+    <!-- ========================================================================= -->
+
+    <SolidColorBrush x:Key="SurfaceCanvasBrush" Color="{AppThemeBinding Light={StaticResource SurfaceCanvasLight}, Dark={StaticResource SurfaceCanvasDark}}"/>
+    <SolidColorBrush x:Key="SurfaceCardBrush" Color="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"/>
+    <SolidColorBrush x:Key="SurfaceElevatedBrush" Color="{AppThemeBinding Light={StaticResource SurfaceElevatedLight}, Dark={StaticResource SurfaceElevatedDark}}"/>
+    <SolidColorBrush x:Key="SurfaceSubtleBrush" Color="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"/>
+
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"/>
+    <SolidColorBrush x:Key="TextMutedBrush" Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"/>
+    <SolidColorBrush x:Key="TextInverseBrush" Color="{AppThemeBinding Light={StaticResource TextInverseLight}, Dark={StaticResource TextInverseDark}}"/>
+    <SolidColorBrush x:Key="TextBrandBrush" Color="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}"/>
+
+    <SolidColorBrush x:Key="ActionPrimaryBrush" Color="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}"/>
+    <SolidColorBrush x:Key="ActionSecondaryBrush" Color="{AppThemeBinding Light={StaticResource ActionSecondaryLight}, Dark={StaticResource ActionSecondaryDark}}"/>
+    <SolidColorBrush x:Key="ActionAccentBrush" Color="{AppThemeBinding Light={StaticResource ActionAccentLight}, Dark={StaticResource ActionAccentDark}}"/>
+
+    <SolidColorBrush x:Key="StatusSuccessBrush" Color="{AppThemeBinding Light={StaticResource StatusSuccessLight}, Dark={StaticResource StatusSuccessDark}}"/>
+    <SolidColorBrush x:Key="StatusWarningBrush" Color="{AppThemeBinding Light={StaticResource StatusWarningLight}, Dark={StaticResource StatusWarningDark}}"/>
+    <SolidColorBrush x:Key="StatusDangerBrush" Color="{AppThemeBinding Light={StaticResource StatusDangerLight}, Dark={StaticResource StatusDangerDark}}"/>
+
+    <SolidColorBrush x:Key="BorderSubtleBrush" Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"/>
+    <SolidColorBrush x:Key="BorderFocusBrush" Color="{AppThemeBinding Light={StaticResource BorderFocusLight}, Dark={StaticResource BorderFocusDark}}"/>
+
+    <!-- ========================================================================= -->
+    <!-- BACKWARD COMPATIBILITY KEYS (PRESERVES EXISTING TEMPLATE STYLES)          -->
+    <!-- ========================================================================= -->
+
+    <Color x:Key="Primary">#163A5F</Color>
+    <Color x:Key="PrimaryDark">#3572A5</Color>
+    <Color x:Key="PrimaryDarkText">#F4F7FA</Color>
+    <Color x:Key="Secondary">#256D85</Color>
+    <Color x:Key="SecondaryDarkText">#4CB5AE</Color>
+    <Color x:Key="Tertiary">#4CB5AE</Color>
+
+    <Color x:Key="DarkBackground">#0B131E</Color>
+    <Color x:Key="LightOnDarkBackground">#F4F7FA</Color>
+    <Color x:Key="LightBackground">#F4F7FA</Color>
+    <Color x:Key="DarkOnLightBackground">#1E293B</Color>
+
+    <Color x:Key="LightSecondaryBackground">#E8EEF5</Color>
+    <Color x:Key="DarkSecondaryBackground">#162234</Color>
+
+    <Color x:Key="Magenta">#4CB5AE</Color>
+    <Color x:Key="MidnightBlue">#163A5F</Color>
+    <Color x:Key="OffBlack">#0B131E</Color>
+
+    <Color x:Key="Gray100">#F1F5F9</Color>
+    <Color x:Key="Gray200">#E2E8F0</Color>
+    <Color x:Key="Gray300">#CBD5E1</Color>
+    <Color x:Key="Gray400">#94A3B8</Color>
+    <Color x:Key="Gray500">#64748B</Color>
+    <Color x:Key="Gray600">#475569</Color>
+    <Color x:Key="Gray900">#1E293B</Color>
+    <Color x:Key="Gray950">#0B131E</Color>
 
     <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}"/>
     <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource Secondary}"/>
@@ -49,4 +187,5 @@
     <SolidColorBrush x:Key="Gray600Brush" Color="{StaticResource Gray600}"/>
     <SolidColorBrush x:Key="Gray900Brush" Color="{StaticResource Gray900}"/>
     <SolidColorBrush x:Key="Gray950Brush" Color="{StaticResource Gray950}"/>
+
 </ResourceDictionary>

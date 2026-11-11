@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:cards="clr-namespace:RoomToRentRadar.Pages.Controls.Cards"
+             xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
+             xmlns:rooms="clr-namespace:RoomToRentRadar.Ports.Contracts.Responses.Rooms;assembly=RoomToRentRadar.Ports"
+             x:Class="RoomToRentRadar.Pages.Controls.Cards.ComparisonCardView"
+             x:Name="RootComparisonView"
+             x:DataType="cards:ComparisonCardView">
+
+    <Border StrokeShape="RoundRectangle 12"
+            StrokeThickness="1"
+            WidthRequest="220"
+            Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+            Padding="14"
+            Shadow="{StaticResource Elevation1Shadow}">
+
+        <VerticalStackLayout Spacing="10">
+            <!-- Header: Title & Close/Remove Button -->
+            <Grid ColumnDefinitions="*, Auto" VerticalOptions="Start">
+                <Label Grid.Column="0"
+                       Text="{Binding Room.Title}"
+                       FontFamily="{StaticResource FontFamilySemibold}"
+                       FontSize="{StaticResource FontSizeBodyMedium}"
+                       FontAttributes="Bold"
+                       MaxLines="2"
+                       LineBreakMode="TailTruncation"
+                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+
+                <Border Grid.Column="1"
+                        StrokeShape="RoundRectangle 9999"
+                        StrokeThickness="0"
+                        WidthRequest="24"
+                        HeightRequest="24"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
+                        VerticalOptions="Start">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding RemoveCommand}"
+                                              CommandParameter="{Binding Room.Id}" />
+                    </Border.GestureRecognizers>
+                    <Label Text="✕"
+                           FontSize="11"
+                           HorizontalTextAlignment="Center"
+                           VerticalTextAlignment="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                </Border>
+            </Grid>
+
+            <!-- Price Tag -->
+            <common:PriceTagView Price="{Binding Room.PricePerMonth}" Period="/th" />
+
+            <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
+
+            <!-- Comparison Rows -->
+            <!-- 1. Diện tích -->
+            <VerticalStackLayout Spacing="2">
+                <Label Text="DIỆN TÍCH" FontSize="{StaticResource FontSizeBadge}" TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                <Label Text="{Binding Room.AreaFormatted}" FontFamily="{StaticResource FontFamilySemibold}" FontSize="{StaticResource FontSizeBodyMedium}" TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+            </VerticalStackLayout>
+
+            <!-- 2. Khoảng cách ICTU -->
+            <VerticalStackLayout Spacing="2">
+                <Label Text="KHOẢNG CÁCH ICTU" FontSize="{StaticResource FontSizeBadge}" TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                <Label Text="{Binding Room.DistanceFormatted}" FontFamily="{StaticResource FontFamilySemibold}" FontSize="{StaticResource FontSizeBodyMedium}" TextColor="{AppThemeBinding Light={StaticResource ActionAccentLight}, Dark={StaticResource ActionAccentDark}}" />
+            </VerticalStackLayout>
+
+            <!-- 3. Trạng thái xác thực -->
+            <VerticalStackLayout Spacing="4">
+                <Label Text="XÁC THỰC" FontSize="{StaticResource FontSizeBadge}" TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                <common:RadaBadge Type="Verified" IsVisible="{Binding Room.IsVerified}" />
+            </VerticalStackLayout>
+
+            <!-- 4. Địa chỉ -->
+            <VerticalStackLayout Spacing="2">
+                <Label Text="ĐỊA CHỈ" FontSize="{StaticResource FontSizeBadge}" TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                <Label Text="{Binding Room.Address}" FontFamily="{StaticResource FontFamilyRegular}" FontSize="{StaticResource FontSizeCaption}" MaxLines="2" LineBreakMode="TailTruncation" TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </Border>
+</ContentView>
+
