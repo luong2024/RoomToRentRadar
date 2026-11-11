@@ -9,7 +9,14 @@ builder.Services
 
 var app = builder.Build();
 
-app.UseExceptionHandler();
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseExceptionHandler();
+}
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
