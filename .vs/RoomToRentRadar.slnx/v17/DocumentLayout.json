@@ -1,0 +1,54 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\FPTSHOP\\source\\repos\\RoomToRentRadar\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{7467DE39-EE0B-C23A-DC34-7C43D32738B4}|RoomToRentRadarUIAppiumTests\\RoomToRentRadarUIAppiumTests.csproj|c:\\users\\fptshop\\source\\repos\\roomtorentradar\\roomtorentradaruiappiumtests\\roomtorentradaruiappiumtests.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{7467DE39-EE0B-C23A-DC34-7C43D32738B4}|RoomToRentRadarUIAppiumTests\\RoomToRentRadarUIAppiumTests.csproj|solutionrelative:roomtorentradaruiappiumtests\\roomtorentradaruiappiumtests.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C268AF69-9E2F-EA49-E3A8-29F573F16CA7}|RoomToRentRadarUnitTests\\RoomToRentRadarUnitTests.csproj|c:\\users\\fptshop\\source\\repos\\roomtorentradar\\roomtorentradarunittests\\roomtorentradarunittests.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{C268AF69-9E2F-EA49-E3A8-29F573F16CA7}|RoomToRentRadarUnitTests\\RoomToRentRadarUnitTests.csproj|solutionrelative:roomtorentradarunittests\\roomtorentradarunittests.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 1,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "RoomToRentRadarUnitTests",
+              "DocumentMoniker": "C:\\Users\\FPTSHOP\\Source\\Repos\\RoomToRentRadar\\RoomToRentRadarUnitTests\\RoomToRentRadarUnitTests.csproj",
+              "RelativeDocumentMoniker": "RoomToRentRadarUnitTests\\RoomToRentRadarUnitTests.csproj",
+              "ToolTip": "C:\\Users\\FPTSHOP\\Source\\Repos\\RoomToRentRadar\\RoomToRentRadarUnitTests\\RoomToRentRadarUnitTests.csproj",
+              "RelativeToolTip": "RoomToRentRadarUnitTests\\RoomToRentRadarUnitTests.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-11-06T03:27:25.743Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "RoomToRentRadarUIAppiumTests",
+              "DocumentMoniker": "C:\\Users\\FPTSHOP\\Source\\Repos\\RoomToRentRadar\\RoomToRentRadarUIAppiumTests\\RoomToRentRadarUIAppiumTests.csproj",
+              "RelativeDocumentMoniker": "RoomToRentRadarUIAppiumTests\\RoomToRentRadarUIAppiumTests.csproj",
+              "ToolTip": "C:\\Users\\FPTSHOP\\Source\\Repos\\RoomToRentRadar\\RoomToRentRadarUIAppiumTests\\RoomToRentRadarUIAppiumTests.csproj",
+              "RelativeToolTip": "RoomToRentRadarUIAppiumTests\\RoomToRentRadarUIAppiumTests.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-11-06T03:27:28.674Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

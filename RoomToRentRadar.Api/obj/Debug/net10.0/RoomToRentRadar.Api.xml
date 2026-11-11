@@ -1,0 +1,90 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>RoomToRentRadar.Api</name>
+    </assembly>
+    <members>
+        <member name="M:RoomToRentRadar.Api.Controllers.ListingsController.GetListings(RoomToRentRadar.Api.DTOs.ListingQueryParameters,System.Threading.CancellationToken)">
+            <summary>
+            Lấy danh sách phòng trọ có phân trang + sắp xếp (phục vụ infinite scroll trên app MAUI).
+            </summary>
+            <remarks>
+            GET /api/listings?pageNumber=1&amp;pageSize=10&amp;sortBy=price&amp;isAscending=true
+            </remarks>
+            <response code="200">Trả về một trang dữ liệu kèm metadata phân trang.</response>
+            <response code="400">Tham số phân trang không hợp lệ.</response>
+        </member>
+        <member name="T:RoomToRentRadar.Api.DTOs.ListingDto">
+            <summary>Dữ liệu rút gọn của một phòng trọ trả về cho app (card trong danh sách).</summary>
+        </member>
+        <member name="M:RoomToRentRadar.Api.DTOs.ListingDto.#ctor(System.String,System.String,System.Decimal,System.Double,System.String,System.String,System.String,System.String,System.Boolean,System.DateTime)">
+            <summary>Dữ liệu rút gọn của một phòng trọ trả về cho app (card trong danh sách).</summary>
+        </member>
+        <member name="T:RoomToRentRadar.Api.DTOs.ListingQueryParameters">
+            <summary>
+            Request DTO cho GET /api/listings (bind từ query string).
+            Ví dụ: /api/listings?pageNumber=2&amp;pageSize=10&amp;sortBy=price&amp;isAscending=true
+            </summary>
+        </member>
+        <member name="P:RoomToRentRadar.Api.DTOs.ListingQueryParameters.PageNumber">
+            <summary>Số trang, bắt đầu từ 1.</summary>
+        </member>
+        <member name="P:RoomToRentRadar.Api.DTOs.ListingQueryParameters.PageSize">
+            <summary>Số bản ghi mỗi trang (1 - 50).</summary>
+        </member>
+        <member name="P:RoomToRentRadar.Api.DTOs.ListingQueryParameters.SortBy">
+            <summary>
+            Tiêu chí sắp xếp: "price" | "area" | "createdAt" (mặc định).
+            Giá trị không hợp lệ sẽ được sắp xếp theo "createdAt".
+            </summary>
+        </member>
+        <member name="P:RoomToRentRadar.Api.DTOs.ListingQueryParameters.IsAscending">
+            <summary>true = tăng dần, false = giảm dần (mặc định).</summary>
+        </member>
+        <member name="T:RoomToRentRadar.Api.DTOs.ListingSortFields">
+            <summary>Whitelist các trường được phép sắp xếp.</summary>
+        </member>
+        <member name="T:RoomToRentRadar.Api.DTOs.PagedResponse`1">
+            <summary>
+            Response DTO dùng chung cho mọi API phân trang.
+            App MAUI dùng <see cref="P:RoomToRentRadar.Api.DTOs.PagedResponse`1.HasNextPage"/> để quyết định có gọi trang tiếp theo khi cuộn hay không.
+            </summary>
+        </member>
+        <member name="T:RoomToRentRadar.Api.Models.Listing">
+            <summary>
+            Document phòng trọ lưu trong Azure Cosmos DB (container "Listings", partition key "/city").
+            </summary>
+        </member>
+        <member name="P:RoomToRentRadar.Api.Models.Listing.Price">
+            <summary>Giá thuê theo tháng (VND).</summary>
+        </member>
+        <member name="P:RoomToRentRadar.Api.Models.Listing.Area">
+            <summary>Diện tích (m²).</summary>
+        </member>
+        <member name="P:RoomToRentRadar.Api.Models.Listing.City">
+            <summary>Partition key.</summary>
+        </member>
+        <member name="T:RoomToRentRadar.Api.Repositories.CosmosListingRepository">
+            <summary>
+            Repository đọc phòng trọ từ Azure Cosmos DB bằng Cosmos LINQ provider.
+            Phân trang + sắp xếp được dịch sang SQL và chạy trên server Cosmos,
+            mỗi request chỉ kéo về đúng PageSize document.
+            </summary>
+        </member>
+        <member name="M:RoomToRentRadar.Api.Repositories.IListingRepository.GetPagedAsync(RoomToRentRadar.Api.DTOs.ListingQueryParameters,System.Threading.CancellationToken)">
+            <summary>Lấy 1 trang phòng trọ đã sắp xếp và tổng số bản ghi (để tính metadata).</summary>
+        </member>
+        <member name="T:RoomToRentRadar.Api.Repositories.ListingQueryExtensions">
+            <summary>
+            Các extension LINQ thuần trên <see cref="T:System.Linq.IQueryable`1"/>.
+            Chúng chỉ "xây" expression tree – KHÔNG thực thi – nên provider (Cosmos LINQ)
+            sẽ dịch toàn bộ thành SQL: ORDER BY ... OFFSET ... LIMIT ...
+            </summary>
+        </member>
+        <member name="T:Program">
+            <summary>
+            Auto-generated public partial Program class for top-level statement apps.
+            </summary>
+        </member>
+    </members>
+</doc>
