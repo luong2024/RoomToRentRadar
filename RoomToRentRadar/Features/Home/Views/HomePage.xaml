@@ -112,7 +112,7 @@
                                 StrokeThickness="0"
                                 VerticalOptions="Center">
                                 <Border.GestureRecognizers>
-                                    <TapGestureRecognizer Command="{Binding ExploreRoomsCommand}" />
+                                    <TapGestureRecognizer Command="{Binding SearchFromHomeCommand}" />
                                 </Border.GestureRecognizers>
                                 <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
                                     <Label

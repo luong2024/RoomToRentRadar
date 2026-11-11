@@ -29,7 +29,7 @@ public partial class HomeViewModel : ObservableObject
     [RelayCommand]
     public async Task ExploreRoomsAsync()
     {
-        await NavigateToRouteAsync($"//{AppRoutes.RoomListings}");
+        await QuickFilterAsync(QuickSearchText);
     }
 
     [RelayCommand]

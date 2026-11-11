@@ -25,6 +25,29 @@ public class HomeViewModelTests
     }
 
     [Test]
+    public async Task ExploreRoomsCommand_WhenQuickSearchTextEntered_ForwardsEncodedKeywordToRoomsRoute()
+    {
+        // Arrange
+        var navigatedRoutes = new List<string>();
+        var vm = new HomeViewModel(route =>
+        {
+            navigatedRoutes.Add(route);
+            return Task.CompletedTask;
+        })
+        {
+            QuickSearchText = "  Điều hòa Z115  "
+        };
+
+        // Act
+        await vm.ExploreRoomsCommand.ExecuteAsync(null);
+        await vm.SearchFromHomeCommand.ExecuteAsync(null);
+
+        // Assert
+        var expectedRoute = $"//{AppRoutes.RoomListings}?search={Uri.EscapeDataString("Điều hòa Z115")}";
+        Assert.That(navigatedRoutes, Is.EqualTo(new[] { expectedRoute, expectedRoute }));
+    }
+
+    [Test]
     public void Subtitle_ByDefault_MentionsIctuWelcomeHeading()
     {
         // Arrange
