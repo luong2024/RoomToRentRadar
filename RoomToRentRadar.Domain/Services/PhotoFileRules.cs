@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace RoomToRentRadar.Domain.Services;
 
 public static class PhotoFileRules
@@ -6,9 +8,28 @@ public static class PhotoFileRules
     public const int MaxPhotosPerRoom = 10;
     public const int MinPhotosToPublish = 3;
 
-    // SKELETON ở task này — ném NotImplementedException để Task 2 có test RED.
-    public static string? DetectExtension(ReadOnlySpan<byte> header) => throw new NotImplementedException();
+    private static readonly byte[] JpgMagicBytes = { 0xFF, 0xD8, 0xFF };
+    private static readonly byte[] PngMagicBytes = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
 
-    // SKELETON ở task này — ném NotImplementedException.
-    public static bool IsValidRoomId(string? roomId) => throw new NotImplementedException();
+    private static readonly Regex RoomIdPattern = new(
+        "^[A-Za-z0-9_-]{1,64}$",
+        RegexOptions.CultureInvariant);
+
+    public static string? DetectExtension(ReadOnlySpan<byte> header)
+    {
+        if (header.StartsWith(JpgMagicBytes))
+        {
+            return "jpg";
+        }
+
+        if (header.StartsWith(PngMagicBytes))
+        {
+            return "png";
+        }
+
+        return null;
+    }
+
+    public static bool IsValidRoomId(string? roomId)
+        => !string.IsNullOrWhiteSpace(roomId) && RoomIdPattern.IsMatch(roomId);
 }

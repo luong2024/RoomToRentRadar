@@ -1,3 +1,5 @@
+using RoomToRentRadar.Domain.Exceptions;
+using RoomToRentRadar.Domain.Services;
 using RoomToRentRadar.Ports.Inbound.UseCases.Photos;
 using RoomToRentRadar.Ports.Outbound.ExternalServices;
 using RoomToRentRadar.Ports.Outbound.Repositories;
@@ -18,6 +20,22 @@ public sealed class DeleteRoomPhotoUseCase : IDeleteRoomPhotoUseCase
         _storage = storage;
     }
 
-    public Task<bool> ExecuteAsync(string roomId, string photoId, CancellationToken ct = default)
-        => throw new NotImplementedException();
+    public async Task<bool> ExecuteAsync(string roomId, string photoId, CancellationToken ct = default)
+    {
+        if (!PhotoFileRules.IsValidRoomId(roomId))
+        {
+            throw new DomainValidationException("Room id is invalid.");
+        }
+
+        var photo = await _repository.GetAsync(roomId, photoId, ct);
+        if (photo is null)
+        {
+            return false;
+        }
+
+        await _storage.DeleteAsync(roomId, photo.FileName, ct);
+        await _repository.DeleteAsync(photoId, ct);
+
+        return true;
+    }
 }
