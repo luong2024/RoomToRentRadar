@@ -27,6 +27,8 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IRoomListingsService, RoomListingsService>();
         services.AddTransient<RoomListingsViewModel>();
         services.AddTransient<RoomListingsPage>();
+        services.AddTransient<RoomDetailsViewModel>();
+        services.AddTransient<RoomDetailsPage>();
         return services;
     }
 }

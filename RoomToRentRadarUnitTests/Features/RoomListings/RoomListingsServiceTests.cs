@@ -84,6 +84,24 @@ public class RoomListingsServiceTests
     }
 
     [Test]
+    public async Task GetRoomByIdAsync_WhenApiUnreachableAndDebugFallbackEnabled_ReturnsMatchingMockRoom()
+    {
+        // Arrange
+        var fakeApiClient = new FakeApiClient(_ => throw new HttpRequestException("Backend offline"));
+        var service = new RoomListingsService(fakeApiClient, enableDebugFallback: true);
+
+        // Act
+        var room = await service.GetRoomByIdAsync("room-ictu-001");
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(room, Is.Not.Null);
+            Assert.That(room!.Id, Is.EqualTo("room-ictu-001"));
+        });
+    }
+
+    [Test]
     public async Task GetRoomListingsAsync_WhenSearchProvided_AppendsEscapedSearchQuery()
     {
         // Arrange

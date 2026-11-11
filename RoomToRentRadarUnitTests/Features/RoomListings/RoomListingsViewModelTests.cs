@@ -406,6 +406,11 @@ public class RoomListingsViewModelTests
 
             return Task.FromResult(new PagedResponse<RoomListItemModel>([], page, pageSize, 0));
         }
+
+        public Task<RoomListItemModel?> GetRoomByIdAsync(
+            string roomId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<RoomListItemModel?>(CreateRoom(roomId));
     }
 
     private sealed class FakeErrorHandler : IErrorHandler

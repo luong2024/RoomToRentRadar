@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="RoomToRentRadar.Features.RoomListings.Views.RoomDetailsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:f="clr-namespace:Fonts"
+    xmlns:vm="clr-namespace:RoomToRentRadar.Features.RoomListings.ViewModels"
+    Title="{Binding Title}"
+    x:DataType="vm:RoomDetailsViewModel"
+    BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}">
+
+    <ScrollView>
+        <VerticalStackLayout
+            Padding="{OnIdiom Phone='16,12', Tablet='24,20', Desktop='24,20'}"
+            HorizontalOptions="Fill"
+            MaximumWidthRequest="880"
+            Spacing="16">
+
+            <!-- Back Bar -->
+            <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+                <Border
+                    Padding="12,8"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                    StrokeShape="RoundRectangle 10"
+                    StrokeThickness="1">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding GoBackCommand}" />
+                    </Border.GestureRecognizers>
+                    <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                        <Label
+                            FontFamily="{x:Static f:FluentUI.FontFamily}"
+                            FontSize="18"
+                            Text="{x:Static f:FluentUI.arrow_left_20_regular}"
+                            TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                            VerticalOptions="Center" />
+                        <Label
+                            FontAttributes="Bold"
+                            FontSize="13.5"
+                            Text="Quay lại danh sách"
+                            TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                            VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                </Border>
+            </HorizontalStackLayout>
+
+            <!-- Loading Indicator -->
+            <ActivityIndicator
+                HorizontalOptions="Center"
+                IsRunning="{Binding IsLoading}"
+                IsVisible="{Binding IsLoading}"
+                Margin="0,32,0,0"
+                Color="{StaticResource PrimaryBrand}" />
+
+            <!-- Empty / Error State -->
+            <Border
+                Padding="24"
+                BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                IsVisible="{Binding IsNotFound}"
+                Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                StrokeShape="RoundRectangle 16"
+                StrokeThickness="1">
+                <VerticalStackLayout HorizontalOptions="Center" Spacing="10">
+                    <Label
+                        FontFamily="{x:Static f:FluentUI.FontFamily}"
+                        FontSize="32"
+                        HorizontalOptions="Center"
+                        Text="{x:Static f:FluentUI.building_24_regular}"
+                        TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                    <Label
+                        FontAttributes="Bold"
+                        FontSize="15"
+                        HorizontalTextAlignment="Center"
+                        Text="{Binding StatusMessage}"
+                        TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Room Details Card -->
+            <Border
+                Padding="0"
+                BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                IsVisible="{Binding HasRoom}"
+                Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                StrokeShape="RoundRectangle 18"
+                StrokeThickness="1">
+                <VerticalStackLayout Spacing="0">
+                    <!-- Hero Image -->
+                    <Grid HeightRequest="260">
+                        <Image
+                            Aspect="AspectFill"
+                            HeightRequest="260"
+                            Source="{Binding Room.ThumbnailUrl}" />
+                    </Grid>
+
+                    <!-- Details Body -->
+                    <VerticalStackLayout Padding="20" Spacing="12">
+                        <Label
+                            FontAttributes="Bold"
+                            FontSize="22"
+                            Text="{Binding Room.FormattedPrice}"
+                            TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+
+                        <Label
+                            FontAttributes="Bold"
+                            FontSize="18"
+                            LineHeight="1.25"
+                            Text="{Binding Room.Title}"
+                            TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+
+                        <HorizontalStackLayout Spacing="12">
+                            <Label
+                                FontSize="14"
+                                Text="{Binding Room.FormattedArea}"
+                                TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+                            <Label
+                                FontSize="14"
+                                Text="•"
+                                TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                            <Label
+                                FontSize="14"
+                                Text="{Binding Room.FormattedDistance}"
+                                TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+                        </HorizontalStackLayout>
+
+                        <Label
+                            FontSize="14"
+                            Text="{Binding Room.Address}"
+                            TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+
+                        <BoxView
+                            Margin="0,4"
+                            HeightRequest="1"
+                            Color="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" />
+
+                        <Label
+                            FontAttributes="Bold"
+                            FontSize="14"
+                            Text="Tiện nghi nổi bật"
+                            TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+
+                        <Label
+                            FontSize="14"
+                            Text="{Binding Room.PrimaryAmenitiesText}"
+                            TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

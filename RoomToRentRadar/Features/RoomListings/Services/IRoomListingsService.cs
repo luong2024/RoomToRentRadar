@@ -13,4 +13,8 @@ public interface IRoomListingsService
         RoomSortOption sortBy = RoomSortOption.Newest,
         string? search = null,
         CancellationToken cancellationToken = default);
+
+    Task<RoomListItemModel?> GetRoomByIdAsync(
+        string roomId,
+        CancellationToken cancellationToken = default);
 }

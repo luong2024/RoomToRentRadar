@@ -58,6 +58,29 @@ public sealed class RoomListingsService : IRoomListingsService
         }
     }
 
+    public async Task<RoomListItemModel?> GetRoomByIdAsync(
+        string roomId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
+
+        var trimmedId = roomId.Trim();
+        var endpoint = $"api/rooms/{Uri.EscapeDataString(trimmedId)}";
+
+        try
+        {
+            return await _apiClient.GetAsync<RoomListItemModel>(endpoint, cancellationToken);
+        }
+        catch (Exception ex) when (
+            _enableDebugFallback &&
+            !cancellationToken.IsCancellationRequested &&
+            (ex is HttpRequestException or InvalidOperationException or TaskCanceledException))
+        {
+            return MockRooms.FirstOrDefault(r =>
+                string.Equals(r.Id, trimmedId, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
     private static string GetSortQueryValue(RoomSortOption sortBy) =>
         sortBy switch
         {

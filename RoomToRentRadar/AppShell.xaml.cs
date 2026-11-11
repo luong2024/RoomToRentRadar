@@ -1,5 +1,7 @@
 using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
+using RoomToRentRadar.Core.Constants;
+using RoomToRentRadar.Features.RoomListings.Views;
 using Font = Microsoft.Maui.Font;
 
 namespace RoomToRentRadar
@@ -9,6 +11,7 @@ namespace RoomToRentRadar
         public AppShell()
         {
             InitializeComponent();
+            Routing.RegisterRoute(AppRoutes.RoomDetails, typeof(RoomDetailsPage));
         }
 
         public void UpdateDesktopPaneCompactState(bool isCompact)
