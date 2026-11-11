@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.PageModels"
+             xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
+             x:Class="RoomToRentRadar.Pages.RoleSelectionPage"
+             x:DataType="vm:RoleSelectionPageModel"
+             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCanvasLight}, Dark={StaticResource SurfaceCanvasDark}}">
+
+    <Grid RowDefinitions="Auto, *">
+        <!-- Header Bar -->
+        <common:PageHeaderBar Grid.Row="0"
+                              Title="Chọn Vai Trò"
+                              CanGoBack="True"
+                              BackCommand="{Binding NavigateToLoginCommand}" />
+
+        <!-- Main Scroll Area -->
+        <ScrollView Grid.Row="1" Padding="{StaticResource ScreenMargin}">
+            <VerticalStackLayout Spacing="24" MaximumWidthRequest="720" HorizontalOptions="Center">
+
+                <!-- Header Title & Subtitle -->
+                <VerticalStackLayout Spacing="8" Margin="0,12,0,0">
+                    <Label Text="Bạn tham gia với vai trò nào?"
+                           Style="{StaticResource TextH1}"
+                           HorizontalTextAlignment="Center" />
+
+                    <Label Text="Lựa chọn vai trò để hệ thống cá nhân hóa giao diện và trải nghiệm tìm kiếm phù hợp nhất với bạn."
+                           Style="{StaticResource TextBodyMedium}"
+                           HorizontalTextAlignment="Center"
+                           MaximumWidthRequest="500" />
+                </VerticalStackLayout>
+
+                <!-- Responsive 2-Card Layout (Stacked on Mobile, 2 Columns on Desktop/Tablet) -->
+                <Grid ColumnSpacing="16" RowSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="{OnIdiom Phone='*', Tablet='*', Desktop='*'}" />
+                        <ColumnDefinition Width="{OnIdiom Phone='0', Tablet='*', Desktop='*'}" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="{OnIdiom Phone='Auto', Tablet='0', Desktop='0'}" />
+                    </Grid.RowDefinitions>
+
+                    <!-- CARD 1: SINH VIÊN (STUDENT) -->
+                    <Border Grid.Row="0" Grid.Column="0"
+                            StrokeShape="RoundRectangle 16"
+                            StrokeThickness="1"
+                            Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+                            Padding="20"
+                            Shadow="{StaticResource Elevation2Shadow}">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding SelectStudentCommand}" />
+                        </Border.GestureRecognizers>
+                        <Border.Triggers>
+                            <DataTrigger TargetType="Border" Binding="{Binding IsStudentSelected}" Value="True">
+                                <Setter Property="Stroke" Value="{StaticResource ActionAccentLight}" />
+                                <Setter Property="StrokeThickness" Value="2.5" />
+                            </DataTrigger>
+                        </Border.Triggers>
+
+                        <VerticalStackLayout Spacing="14">
+                            <!-- Icon & Badge Header -->
+                            <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
+                                <Label Grid.Column="0" Text="🎓" FontSize="36" VerticalTextAlignment="Center" />
+                                <common:RadaBadge Grid.Column="1" Type="Custom" BadgeColor="#4CB5AE" Text="Miễn phí 100%" />
+                            </Grid>
+
+                            <!-- Role Title -->
+                            <Label Text="Sinh viên / Người thuê"
+                                   Style="{StaticResource TextH2}" />
+
+                            <Label Text="Dành cho sinh viên ICTU và người thuê tìm kiếm phòng trọ tiện nghi, uy tín."
+                                   Style="{StaticResource TextBodyMedium}" />
+
+                            <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
+
+                            <!-- Features List -->
+                            <VerticalStackLayout Spacing="8">
+                                <HorizontalStackLayout Spacing="8">
+                                    <Label Text="✓" TextColor="{StaticResource ActionAccentLight}" FontAttributes="Bold" />
+                                    <Label Text="Tìm phòng trọ bán kính gần ICTU" Style="{StaticResource TextCaption}" VerticalTextAlignment="Center" />
+                                </HorizontalStackLayout>
+                                <HorizontalStackLayout Spacing="8">
+                                    <Label Text="✓" TextColor="{StaticResource ActionAccentLight}" FontAttributes="Bold" />
+                                    <Label Text="Khám phá phòng trọ qua ảnh 360°" Style="{StaticResource TextCaption}" VerticalTextAlignment="Center" />
+                                </HorizontalStackLayout>
+                                <HorizontalStackLayout Spacing="8">
+                                    <Label Text="✓" TextColor="{StaticResource ActionAccentLight}" FontAttributes="Bold" />
+                                    <Label Text="So sánh 3 phòng trọ song song (US10)" Style="{StaticResource TextCaption}" VerticalTextAlignment="Center" />
+                                </HorizontalStackLayout>
+                                <HorizontalStackLayout Spacing="8">
+                                    <Label Text="✓" TextColor="{StaticResource ActionAccentLight}" FontAttributes="Bold" />
+                                    <Label Text="Đăng nhập 1-Click bằng tài khoản ICTU SSO" Style="{StaticResource TextCaption}" VerticalTextAlignment="Center" />
+                                </HorizontalStackLayout>
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- CARD 2: CHỦ TRỌ (LANDLORD) -->
+                    <Border Grid.Row="{OnIdiom Phone='1', Tablet='0', Desktop='0'}"
+                            Grid.Column="{OnIdiom Phone='0', Tablet='1', Desktop='1'}"
+                            StrokeShape="RoundRectangle 16"
+                            StrokeThickness="1"
+                            Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+                            Padding="20"
+                            Shadow="{StaticResource Elevation2Shadow}">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding SelectLandlordCommand}" />
+                        </Border.GestureRecognizers>
+                        <Border.Triggers>
+                            <DataTrigger TargetType="Border" Binding="{Binding IsLandlordSelected}" Value="True">
+                                <Setter Property="Stroke" Value="{StaticResource ActionPrimaryLight}" />
+                                <Setter Property="StrokeThickness" Value="2.5" />
+                            </DataTrigger>
+                        </Border.Triggers>
+
+                        <VerticalStackLayout Spacing="14">
+                            <!-- Icon & Badge Header -->
+                            <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
+                                <Label Grid.Column="0" Text="🏠" FontSize="36" VerticalTextAlignment="Center" />
+                                <common:RadaBadge Grid.Column="1" Type="Custom" BadgeColor="#163A5F" Text="Đăng tin nhanh" />
+                            </Grid>
+
+                            <!-- Role Title -->
+                            <Label Text="Chủ trọ / Quản lý"
+                                   Style="{StaticResource TextH2}" />
+
+                            <Label Text="Dành cho chủ trọ, người quản lý phòng muốn tiếp cận hàng nghìn sinh viên ICTU."
+                                   Style="{StaticResource TextBodyMedium}" />
+
+                            <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
+
+                            <!-- Features List -->
+                            <VerticalStackLayout Spacing="8">
+                                <HorizontalStackLayout Spacing="8">
+                                    <Label Text="✓" TextColor="{StaticResource ActionPrimaryLight}" FontAttributes="Bold" />
+                                    <Label Text="Đăng bài cho thuê phòng kèm ảnh 360°" Style="{StaticResource TextCaption}" VerticalTextAlignment="Center" />
+                                </HorizontalStackLayout>
+                                <HorizontalStackLayout Spacing="8">
+                                    <Label Text="✓" TextColor="{StaticResource ActionPrimaryLight}" FontAttributes="Bold" />
+                                    <Label Text="Quản lý tình trạng phòng trống / đã thuê" Style="{StaticResource TextCaption}" VerticalTextAlignment="Center" />
+                                </HorizontalStackLayout>
+                                <HorizontalStackLayout Spacing="8">
+                                    <Label Text="✓" TextColor="{StaticResource ActionPrimaryLight}" FontAttributes="Bold" />
+                                    <Label Text="Tiếp cận trực tiếp sinh viên ICTU có nhu cầu" Style="{StaticResource TextCaption}" VerticalTextAlignment="Center" />
+                                </HorizontalStackLayout>
+                                <HorizontalStackLayout Spacing="8">
+                                    <Label Text="✓" TextColor="{StaticResource ActionPrimaryLight}" FontAttributes="Bold" />
+                                    <Label Text="Huy hiệu 'Đã xác thực' tăng độ tin cậy" Style="{StaticResource TextCaption}" VerticalTextAlignment="Center" />
+                                </HorizontalStackLayout>
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </Border>
+                </Grid>
+
+                <!-- Actions CTA -->
+                <VerticalStackLayout Spacing="12" Margin="0,16,0,24">
+                    <common:RadaButton Text="Tiếp tục với vai trò đã chọn"
+                                       Variant="Primary"
+                                       Command="{Binding ContinueCommand}"
+                                       ButtonHeight="48"
+                                       HorizontalOptions="Fill" />
+
+                    <Button Text="Đã có tài khoản? Đăng nhập ngay"
+                            Style="{StaticResource GhostButton}"
+                            Command="{Binding NavigateToLoginCommand}"
+                            HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>
+

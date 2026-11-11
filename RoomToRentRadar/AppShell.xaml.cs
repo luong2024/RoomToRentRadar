@@ -11,6 +11,10 @@ namespace RoomToRentRadar
             InitializeComponent();
             var currentTheme = Microsoft.Maui.Controls.Application.Current!.RequestedTheme;
             ThemeSegmentedControl.SelectedIndex = currentTheme == AppTheme.Light ? 0 : 1;
+
+            // Register modal/push routes (Routes defined directly in ShellContent like 'login' must NOT be registered here to avoid duplicate route errors)
+            Routing.RegisterRoute("register", typeof(Pages.RegisterPage));
+            Routing.RegisterRoute("roleselection", typeof(Pages.RoleSelectionPage));
         }
         public static async Task DisplaySnackbarAsync(string message)
         {

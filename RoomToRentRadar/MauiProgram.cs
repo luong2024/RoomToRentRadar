@@ -23,14 +23,6 @@ namespace RoomToRentRadar
     				{
     					handler.PlatformView.SingleSelectionFollowsFocus = false;
     				});
-
-    				Microsoft.Maui.Handlers.ContentViewHandler.Mapper.AppendToMapping(nameof(Pages.Controls.CategoryChart), (handler, view) =>
-    				{
-    					if (view is Pages.Controls.CategoryChart && handler.PlatformView is Microsoft.Maui.Platform.ContentPanel contentPanel)
-    					{
-    						contentPanel.IsTabStop = true;
-    					}
-    				});
 #endif
                 })
                 .ConfigureFonts(fonts =>
@@ -49,26 +41,28 @@ namespace RoomToRentRadar
             // Register Hexagonal Architecture Layers
             builder.Services.AddApplicationServices();
             builder.Services.AddDatastore();
-            builder.Services.AddInfrastructure();
+
+            var clientJwtSettings = new RoomToRentRadar.Infrastructure.Adapters.Security.JwtSettings
+            {
+                SigningKey = "RoomToRentRadar_ClientDevSecretKey_AtLeast32BytesLong!"
+            };
+            builder.Services.AddInfrastructure(clientJwtSettings, useMockSsoVerifier: true);
 
             // Core UI Services
             builder.Services.AddSingleton<ModalErrorHandler>();
+            builder.Services.AddSingleton<RoomToRentRadar.Ports.Outbound.Security.ISecureTokenStoragePort, RoomToRentRadar.DeviceAdapters.MauiSecureTokenStorageAdapter>();
 
-            // TODO [Template Cleanup Plan]: Remove legacy template repositories and PageModels below
-            // once MainPage/AppShell is migrated to RoomToRentRadar Sprint 1 pages (US01).
-            builder.Services.AddSingleton<ProjectRepository>();
-            builder.Services.AddSingleton<TaskRepository>();
-            builder.Services.AddSingleton<CategoryRepository>();
-            builder.Services.AddSingleton<TagRepository>();
-            builder.Services.AddSingleton<SeedDataService>();
-            builder.Services.AddSingleton<MainPageModel>();
-            builder.Services.AddSingleton<ProjectListPageModel>();
-            builder.Services.AddSingleton<ManageMetaPageModel>();
+            // UI Design System Catalog
             builder.Services.AddSingleton<PageModels.UiCatalogPageModel>();
             builder.Services.AddTransient<Pages.UiCatalogPage>();
 
-            builder.Services.AddTransientWithShellRoute<ProjectDetailPage, ProjectDetailPageModel>("project");
-            builder.Services.AddTransientWithShellRoute<TaskDetailPage, TaskDetailPageModel>("task");
+            // Auth Flow Services & Pages
+            builder.Services.AddTransient<PageModels.LoginPageModel>();
+            builder.Services.AddTransient<Pages.LoginPage>();
+            builder.Services.AddTransient<PageModels.RegisterPageModel>();
+            builder.Services.AddTransient<Pages.RegisterPage>();
+            builder.Services.AddTransient<PageModels.RoleSelectionPageModel>();
+            builder.Services.AddTransient<Pages.RoleSelectionPage>();
 
             return builder.Build();
         }

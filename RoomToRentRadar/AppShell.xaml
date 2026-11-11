@@ -8,37 +8,23 @@
     Shell.FlyoutBehavior="Flyout"
     Title="RoomToRentRadar">
 
+    <!-- 1. Màn hình Khởi động: ĐĂNG NHẬP (AUTH FLOW) -->
     <ShellContent
-        Title="Dashboard"
+        Title="Đăng nhập"
         Icon="{StaticResource IconDashboard}"
-        ContentTemplate="{DataTemplate pages:MainPage}"
-        Route="main"
-        SemanticProperties.Description="Dashboard"
-        SemanticProperties.Hint="Navigate to dashboard"/>
+        ContentTemplate="{DataTemplate pages:LoginPage}"
+        Route="login"
+        SemanticProperties.Description="Đăng nhập tài khoản"
+        SemanticProperties.Hint="Đăng nhập bằng Email hoặc ICTU SSO"/>
 
-    <ShellContent
-        Title="Projects"
-        Icon="{StaticResource IconProjects}"
-        ContentTemplate="{DataTemplate pages:ProjectListPage}"
-        Route="projects"
-        SemanticProperties.Description="Projects"
-        SemanticProperties.Hint="Navigate to projects"/>
-
-    <ShellContent
-        Title="Manage Meta"
-        Icon="{StaticResource IconMeta}"
-        ContentTemplate="{DataTemplate pages:ManageMetaPage}"
-        Route="manage"
-        SemanticProperties.Description="Manage Meta"
-        SemanticProperties.Hint="Navigate to manage meta"/>
-
+    <!-- 2. Khám phá Hệ thống UI DESIGN SYSTEM & COMPONENTS MỚI -->
     <ShellContent
         Title="UI Catalog"
         Icon="{StaticResource IconRibbon}"
         ContentTemplate="{DataTemplate pages:UiCatalogPage}"
         Route="uicatalog"
         SemanticProperties.Description="UI Design System Catalog"
-        SemanticProperties.Hint="Explore components, typography and color palettes"/>
+        SemanticProperties.Hint="Khám phá tokens, bảng màu Navy Teal, buttons, inputs, cards"/>
 
     <Shell.FlyoutFooter>
         <Grid Padding="15">

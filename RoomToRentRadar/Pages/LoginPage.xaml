@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.PageModels"
+             xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
+             xmlns:inputs="clr-namespace:RoomToRentRadar.Pages.Controls.Inputs"
+             x:Class="RoomToRentRadar.Pages.LoginPage"
+             x:DataType="vm:LoginPageModel"
+             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCanvasLight}, Dark={StaticResource SurfaceCanvasDark}}">
+
+    <ScrollView Padding="{StaticResource ScreenMargin}">
+        <VerticalStackLayout Spacing="24" MaximumWidthRequest="460" HorizontalOptions="Center" VerticalOptions="Center">
+
+            <!-- 1. Hero Brand Header -->
+            <VerticalStackLayout Spacing="8" HorizontalOptions="Center" Margin="0,16,0,0">
+                <Border StrokeShape="RoundRectangle 16"
+                        WidthRequest="64"
+                        HeightRequest="64"
+                        HorizontalOptions="Center"
+                        BackgroundColor="{StaticResource ActionPrimaryLight}"
+                        Shadow="{StaticResource Elevation2Shadow}">
+                    <Label Text="📡"
+                           FontSize="32"
+                           HorizontalTextAlignment="Center"
+                           VerticalTextAlignment="Center" />
+                </Border>
+
+                <Label Text="RoomToRentRadar"
+                       Style="{StaticResource TextDisplay}"
+                       TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}"
+                       HorizontalTextAlignment="Center" />
+
+                <Label Text="Radar tìm kiếm &amp; kết nối phòng trọ sinh viên ICTU"
+                       Style="{StaticResource TextBodyMedium}"
+                       TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+                       HorizontalTextAlignment="Center" />
+            </VerticalStackLayout>
+
+            <!-- 2. Main Login Form Container -->
+            <Border StrokeShape="RoundRectangle 16"
+                    StrokeThickness="1"
+                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+                    Padding="24"
+                    Shadow="{StaticResource Elevation2Shadow}">
+
+                <VerticalStackLayout Spacing="16">
+                    <Label Text="Đăng nhập tài khoản"
+                           Style="{StaticResource TextH2}"
+                           HorizontalTextAlignment="Center" />
+
+                    <!-- General Error Alert Banner -->
+                    <Border StrokeShape="RoundRectangle 8"
+                            StrokeThickness="1"
+                            Stroke="{StaticResource StatusDangerLight}"
+                            BackgroundColor="#15DC2626"
+                            Padding="12,10"
+                            IsVisible="{Binding HasGeneralError}">
+                        <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                            <Label Text="⚠️" FontSize="14" VerticalTextAlignment="Center" />
+                            <Label Text="{Binding GeneralError}"
+                                   Style="{StaticResource TextCaption}"
+                                   TextColor="{StaticResource StatusDangerLight}"
+                                   VerticalTextAlignment="Center"
+                                   LineBreakMode="WordWrap" />
+                        </HorizontalStackLayout>
+                    </Border>
+
+                    <!-- 1-Click ICTU SSO Login Button -->
+                    <common:RadaButton Text="Đăng nhập bằng ICTU SSO"
+                                       Variant="Accent"
+                                       IsLoading="{Binding IsBusy}"
+                                       Command="{Binding LoginWithIctuSsoCommand}"
+                                       HorizontalOptions="Fill" />
+
+                    <!-- Divider -->
+                    <Grid ColumnDefinitions="*, Auto, *" ColumnSpacing="12" Margin="0,4">
+                        <BoxView Grid.Column="0" HeightRequest="1" VerticalOptions="Center" Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
+                        <Label Grid.Column="1" Text="hoặc đăng nhập bằng Email" Style="{StaticResource TextCaption}" TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" VerticalTextAlignment="Center" />
+                        <BoxView Grid.Column="2" HeightRequest="1" VerticalOptions="Center" Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
+                    </Grid>
+
+                    <!-- Email Input -->
+                    <inputs:ValidatedEntry LabelText="Địa chỉ Email *"
+                                           Placeholder="ten@ictu.edu.vn hoặc email cá nhân"
+                                           Text="{Binding Email, Mode=TwoWay}"
+                                           ErrorMessage="{Binding EmailError}"
+                                           Keyboard="Email" />
+
+                    <!-- Password Input -->
+                    <inputs:ValidatedEntry LabelText="Mật khẩu *"
+                                           Placeholder="••••••••"
+                                           IsPassword="True"
+                                           Text="{Binding Password, Mode=TwoWay}"
+                                           ErrorMessage="{Binding PasswordError}" />
+
+                    <!-- Remember Me & Forgot Password Row -->
+                    <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
+                        <HorizontalStackLayout Grid.Column="0" Spacing="8" VerticalOptions="Center">
+                            <CheckBox IsChecked="{Binding IsRememberMe, Mode=TwoWay}"
+                                      Color="{StaticResource ActionPrimaryLight}"
+                                      VerticalOptions="Center" />
+                            <Label Text="Ghi nhớ đăng nhập"
+                                   Style="{StaticResource TextCaption}"
+                                   VerticalTextAlignment="Center" />
+                        </HorizontalStackLayout>
+
+                        <Button Grid.Column="1"
+                                Text="Quên mật khẩu?"
+                                Style="{StaticResource GhostButton}"
+                                FontSize="12"
+                                HeightRequest="32"
+                                Padding="4,0"
+                                Command="{Binding ForgotPasswordCommand}"
+                                VerticalOptions="Center" />
+                    </Grid>
+
+                    <!-- Primary Submit Button -->
+                    <common:RadaButton Text="Đăng nhập"
+                                       Variant="Primary"
+                                       IsLoading="{Binding IsBusy}"
+                                       Command="{Binding LoginCommand}"
+                                       ButtonHeight="48"
+                                       HorizontalOptions="Fill"
+                                       Margin="0,8,0,0" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- 3. Register Footer Navigation -->
+            <HorizontalStackLayout HorizontalOptions="Center" Spacing="4" Margin="0,0,0,24">
+                <Label Text="Chưa có tài khoản?"
+                       Style="{StaticResource TextBodyMedium}"
+                       TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+                       VerticalTextAlignment="Center" />
+
+                <Button Text="Đăng ký ngay"
+                        Style="{StaticResource GhostButton}"
+                        Command="{Binding NavigateToRegisterCommand}"
+                        FontFamily="{StaticResource FontFamilySemibold}"
+                        FontSize="{StaticResource FontSizeBodyMedium}"
+                        Padding="4,0"
+                        HeightRequest="36"
+                        VerticalOptions="Center" />
+            </HorizontalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
+
