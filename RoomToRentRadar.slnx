@@ -1,4 +1,6 @@
 <Solution>
+  <Project Path="RoomToRentRadar.Core/RoomToRentRadar.Core.csproj" />
+  <Project Path="RoomToRentRadar.Infrastructure/RoomToRentRadar.Infrastructure.csproj" />
   <Project Path="RoomToRentRadar/RoomToRentRadar.csproj">
     <Deploy Solution="Debug|*" />
   </Project>

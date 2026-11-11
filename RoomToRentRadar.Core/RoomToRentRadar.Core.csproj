@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    RoomToRentRadar.Core — Domain layer (OWNER: @architect).
+    Pure .NET: NO dependency on MAUI, SQLite or any UI framework.
+    Contains: Models, Abstractions (interfaces / contracts), pure business Services, Constants.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>RoomToRentRadar</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="RoomToRentRadarUnitTests" />
+  </ItemGroup>
+
+</Project>

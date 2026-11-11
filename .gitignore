@@ -11,9 +11,12 @@ msbuild.log
 *.suo
 *.userprefs
 
-# Test Results
+# Test Results & Local SQLite files
 TestResults/
 [Tt]est[Rr]esult*
+*.db3
+*.db3-shm
+*.db3-wal
 
 # OS-generated files
 .DS_Store
