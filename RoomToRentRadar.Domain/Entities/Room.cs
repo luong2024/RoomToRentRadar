@@ -23,8 +23,11 @@ public sealed class Room
     public DateTime LastUpdatedAt { get; private set; } = DateTime.UtcNow;
     public bool IsVerified { get; private set; }
     public double DistanceToCampusKm { get; private set; }
+    public string ConcurrencyToken { get; private set; } = Guid.NewGuid().ToString("N");
 
     public bool IsAvailable => Status == RoomStatus.Available;
+    public bool IsPendingVerification => Status == RoomStatus.PendingVerification;
+    public bool IsPubliclyVisible => Status != RoomStatus.PendingVerification;
 
     private Room() { }
 
@@ -46,7 +49,8 @@ public sealed class Room
         RoomStatus status = RoomStatus.Available,
         DateTime? lastUpdatedAt = null,
         bool isVerified = false,
-        double distanceToCampusKm = 0.0)
+        double distanceToCampusKm = 0.0,
+        string? concurrencyToken = null)
     {
         if (string.IsNullOrWhiteSpace(id))
         {
@@ -58,9 +62,9 @@ public sealed class Room
             throw new DomainValidationException("Room title cannot be empty.");
         }
 
-        if (monthlyRent < 0)
+        if (monthlyRent <= 0)
         {
-            throw new DomainValidationException("Monthly rent cannot be negative.");
+            throw new DomainValidationException("Monthly rent must be greater than zero.");
         }
 
         if (depositAmount < 0)
@@ -68,9 +72,14 @@ public sealed class Room
             throw new DomainValidationException("Deposit amount cannot be negative.");
         }
 
-        if (areaSquareMeters < 0)
+        if (areaSquareMeters <= 0)
         {
-            throw new DomainValidationException("Area square meters cannot be negative.");
+            throw new DomainValidationException("Area square meters must be greater than zero.");
+        }
+
+        if (!Enum.IsDefined(typeof(RoomStatus), status))
+        {
+            throw new DomainValidationException($"Invalid room status: {status}.");
         }
 
         Id = id.Trim();
@@ -80,16 +89,22 @@ public sealed class Room
         DepositAmount = depositAmount;
         AreaSquareMeters = areaSquareMeters;
         RoomType = roomType?.Trim() ?? string.Empty;
-        Amenities = amenities ?? Array.Empty<string>();
+        Amenities = amenities != null ? amenities.ToArray() : Array.Empty<string>();
         FullAddress = fullAddress?.Trim() ?? string.Empty;
         LandlordName = landlordName?.Trim() ?? string.Empty;
         LandlordPhoneNumber = landlordPhoneNumber?.Trim() ?? string.Empty;
-        PhotoUrls = photoUrls ?? Array.Empty<string>();
+        PhotoUrls = photoUrls != null ? photoUrls.ToArray() : Array.Empty<string>();
         Panorama360Url = panorama360Url;
-        HouseRules = houseRules ?? Array.Empty<string>();
+        HouseRules = houseRules != null ? houseRules.ToArray() : Array.Empty<string>();
         Status = status;
         LastUpdatedAt = lastUpdatedAt ?? DateTime.UtcNow;
         IsVerified = isVerified;
         DistanceToCampusKm = distanceToCampusKm;
+        ConcurrencyToken = string.IsNullOrWhiteSpace(concurrencyToken) ? Guid.NewGuid().ToString("N") : concurrencyToken.Trim();
+    }
+
+    public void SetConcurrencyToken(string? token)
+    {
+        ConcurrencyToken = string.IsNullOrWhiteSpace(token) ? Guid.NewGuid().ToString("N") : token.Trim();
     }
 }
