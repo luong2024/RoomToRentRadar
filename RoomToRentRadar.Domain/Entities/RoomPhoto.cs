@@ -1,56 +1,82 @@
+using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.Exceptions;
+using RoomToRentRadar.Domain.Services;
 
 namespace RoomToRentRadar.Domain.Entities;
 
 public sealed class RoomPhoto
 {
-    public string Id { get; }
-    public string RoomId { get; }
-    public string FileName { get; }
-    public string Url { get; }
-    public string ContentType { get; }
-    public long SizeBytes { get; }
-    public string UploadedByUserId { get; }
-    public DateTime UploadedAtUtc { get; }
+    public string Id { get; private set; }
+    public string? RoomId { get; private set; }
+    public string UploadedByUserId { get; private set; }
+    public PhotoKind Kind { get; private set; }
+    public string ContentType { get; private set; }
+    public long SizeBytes { get; private set; }
+    public int Width { get; private set; }
+    public int Height { get; private set; }
+    public string OriginalPath { get; private set; }
+    public string MediumPath { get; private set; }
+    public string ThumbPath { get; private set; }
+    public int SortOrder { get; private set; }
+    public DateTime CreatedAtUtc { get; private set; }
+    public DateTime? AttachedAtUtc { get; private set; }
 
     public RoomPhoto(
-        string roomId,
-        string fileName,
-        string url,
+        string uploadedByUserId,
+        PhotoKind kind,
         string contentType,
         long sizeBytes,
-        string uploadedByUserId,
+        int width,
+        int height,
+        string originalPath,
+        string mediumPath,
+        string thumbPath,
+        string? roomId = null,
+        int sortOrder = 0,
         string? id = null,
-        DateTime? uploadedAtUtc = null)
+        DateTime? createdAtUtc = null,
+        DateTime? attachedAtUtc = null)
     {
-        if (string.IsNullOrWhiteSpace(roomId))
-        {
-            throw new DomainValidationException("Room id is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(fileName))
-        {
-            throw new DomainValidationException("File name is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(url))
-        {
-            throw new DomainValidationException("Photo URL is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(contentType))
-        {
-            throw new DomainValidationException("Content type is required.");
-        }
-
-        if (sizeBytes < 0)
-        {
-            throw new DomainValidationException("Photo size cannot be negative.");
-        }
-
         if (string.IsNullOrWhiteSpace(uploadedByUserId))
         {
             throw new DomainValidationException("Uploader id is required.");
+        }
+
+        if (!Enum.IsDefined(kind))
+        {
+            throw new DomainValidationException("Photo kind is not supported.");
+        }
+
+        if (contentType is not ("image/jpeg" or "image/png"))
+        {
+            throw new DomainValidationException("Content type must be image/jpeg or image/png.");
+        }
+
+        if (sizeBytes <= 0 || sizeBytes > PhotoFileRules.MaxFileBytes)
+        {
+            throw new DomainValidationException("Photo size must be between 1 byte and the maximum allowed.");
+        }
+
+        if (width <= 0 || height <= 0)
+        {
+            throw new DomainValidationException("Photo dimensions must be positive.");
+        }
+
+        if (string.IsNullOrWhiteSpace(originalPath)
+            || string.IsNullOrWhiteSpace(mediumPath)
+            || string.IsNullOrWhiteSpace(thumbPath))
+        {
+            throw new DomainValidationException("Photo storage paths are required.");
+        }
+
+        if (roomId is not null && string.IsNullOrWhiteSpace(roomId))
+        {
+            throw new DomainValidationException("Room id cannot be empty when provided.");
+        }
+
+        if (sortOrder < 0)
+        {
+            throw new DomainValidationException("Sort order cannot be negative.");
         }
 
         if (id is not null && string.IsNullOrWhiteSpace(id))
@@ -58,17 +84,56 @@ public sealed class RoomPhoto
             throw new DomainValidationException("Photo id cannot be empty when provided.");
         }
 
-        var resolvedUploadedAtUtc = uploadedAtUtc ?? DateTime.UtcNow;
-
         Id = id ?? Guid.NewGuid().ToString("N");
         RoomId = roomId;
-        FileName = fileName;
-        Url = url;
+        UploadedByUserId = uploadedByUserId;
+        Kind = kind;
         ContentType = contentType;
         SizeBytes = sizeBytes;
-        UploadedByUserId = uploadedByUserId;
-        UploadedAtUtc = resolvedUploadedAtUtc.Kind == DateTimeKind.Unspecified
-            ? DateTime.SpecifyKind(resolvedUploadedAtUtc, DateTimeKind.Utc)
-            : resolvedUploadedAtUtc.ToUniversalTime();
+        Width = width;
+        Height = height;
+        OriginalPath = originalPath;
+        MediumPath = mediumPath;
+        ThumbPath = thumbPath;
+        SortOrder = sortOrder;
+        CreatedAtUtc = NormalizeUtc(createdAtUtc ?? DateTime.UtcNow);
+        AttachedAtUtc = attachedAtUtc is null ? null : NormalizeUtc(attachedAtUtc.Value);
     }
+
+    // BR-MED-03: a photo is attached to at most one room and cannot move between rooms.
+    public void Attach(string roomId, int sortOrder, DateTime? attachedAtUtc = null)
+    {
+        if (string.IsNullOrWhiteSpace(roomId))
+        {
+            throw new DomainValidationException("Room id is required.");
+        }
+
+        if (sortOrder < 0)
+        {
+            throw new DomainValidationException("Sort order cannot be negative.");
+        }
+
+        if (RoomId is not null)
+        {
+            if (!string.Equals(RoomId, roomId, StringComparison.Ordinal))
+            {
+                throw new DomainValidationException("Photo is already attached to another room.");
+            }
+
+            SortOrder = sortOrder;
+            AttachedAtUtc ??= NormalizeUtc(attachedAtUtc ?? DateTime.UtcNow);
+            return;
+        }
+
+        RoomId = roomId;
+        SortOrder = sortOrder;
+        AttachedAtUtc = NormalizeUtc(attachedAtUtc ?? DateTime.UtcNow);
+    }
+
+    private static DateTime NormalizeUtc(DateTime value) => value.Kind switch
+    {
+        DateTimeKind.Utc => value,
+        DateTimeKind.Local => value.ToUniversalTime(),
+        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+    };
 }

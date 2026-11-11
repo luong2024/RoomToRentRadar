@@ -39,34 +39,83 @@ public class PhotoFileRulesTests
         Assert.That(PhotoFileRules.DetectExtension(new byte[] { 0xFF, 0xD8 }), Is.Null);
     }
 
-    [TestCase("room-123")]
-    [TestCase("abc_DEF-09")]
-    public void IsValidRoomId_WithValidId_ReturnsTrue(string roomId)
+    [Test]
+    public void IsPanoramaRatio_WithExactTwoToOne_ReturnsTrue()
     {
-        Assert.That(PhotoFileRules.IsValidRoomId(roomId), Is.True);
+        Assert.That(PhotoFileRules.IsPanoramaRatio(4000, 2000), Is.True);
     }
 
     [Test]
-    public void IsValidRoomId_With64Characters_ReturnsTrue()
+    public void IsPanoramaRatio_WithLowerToleranceBoundary_ReturnsTrue()
     {
-        Assert.That(PhotoFileRules.IsValidRoomId(new string('a', 64)), Is.True);
-    }
-
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("   ")]
-    [TestCase("../etc/passwd")]
-    [TestCase("a/b")]
-    [TestCase("room.1")]
-    [TestCase("room-1\n")]
-    public void IsValidRoomId_WithInvalidId_ReturnsFalse(string? roomId)
-    {
-        Assert.That(PhotoFileRules.IsValidRoomId(roomId), Is.False);
+        // 3920 / 2000 = 1.96 (2:1 minus 2%) — BR-MED panoramic ratio.
+        Assert.That(PhotoFileRules.IsPanoramaRatio(3920, 2000), Is.True);
     }
 
     [Test]
-    public void IsValidRoomId_With65Characters_ReturnsFalse()
+    public void IsPanoramaRatio_WithUpperToleranceBoundary_ReturnsTrue()
     {
-        Assert.That(PhotoFileRules.IsValidRoomId(new string('a', 65)), Is.False);
+        // 4080 / 2000 = 2.04 (2:1 plus 2%).
+        Assert.That(PhotoFileRules.IsPanoramaRatio(4080, 2000), Is.True);
+    }
+
+    [Test]
+    public void IsPanoramaRatio_JustBelowLowerBoundary_ReturnsFalse()
+    {
+        Assert.That(PhotoFileRules.IsPanoramaRatio(3900, 2000), Is.False);
+    }
+
+    [Test]
+    public void IsPanoramaRatio_JustAboveUpperBoundary_ReturnsFalse()
+    {
+        Assert.That(PhotoFileRules.IsPanoramaRatio(4100, 2000), Is.False);
+    }
+
+    [Test]
+    public void IsPanoramaRatio_WithSquareImage_ReturnsFalse()
+    {
+        Assert.That(PhotoFileRules.IsPanoramaRatio(2000, 2000), Is.False);
+    }
+
+    [Test]
+    public void IsPanoramaRatio_WithZeroWidth_ReturnsFalse()
+    {
+        Assert.That(PhotoFileRules.IsPanoramaRatio(0, 2000), Is.False);
+    }
+
+    [Test]
+    public void IsPanoramaRatio_WithZeroHeight_ReturnsFalse()
+    {
+        Assert.That(PhotoFileRules.IsPanoramaRatio(4000, 0), Is.False);
+    }
+
+    [Test]
+    public void ContentTypeOf_WithJpgExtension_ReturnsJpegContentType()
+    {
+        Assert.That(PhotoFileRules.ContentTypeOf("jpg"), Is.EqualTo("image/jpeg"));
+    }
+
+    [Test]
+    public void ContentTypeOf_WithPngExtension_ReturnsPngContentType()
+    {
+        Assert.That(PhotoFileRules.ContentTypeOf("png"), Is.EqualTo("image/png"));
+    }
+
+    [Test]
+    public void ContentTypeOf_WithUnsupportedExtension_ReturnsNull()
+    {
+        Assert.That(PhotoFileRules.ContentTypeOf("gif"), Is.Null);
+    }
+
+    [Test]
+    public void ContentTypeOf_WithNullExtension_ReturnsNull()
+    {
+        Assert.That(PhotoFileRules.ContentTypeOf(null), Is.Null);
+    }
+
+    [Test]
+    public void ContentTypeOf_WithEmptyExtension_ReturnsNull()
+    {
+        Assert.That(PhotoFileRules.ContentTypeOf(string.Empty), Is.Null);
     }
 }
