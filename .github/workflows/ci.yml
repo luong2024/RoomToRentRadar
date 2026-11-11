@@ -3,20 +3,10 @@ name: RoomToRentRadar CI
 on:
   push:
     branches:
-      - main
-      - develop
-      - 'develop*'
       - group-4
-      - group-1
-      - 'group-*'
   pull_request:
     branches:
-      - main
-      - develop
-      - 'develop*'
       - group-4
-      - group-1
-      - 'group-*'
   workflow_dispatch:
 
 permissions:
