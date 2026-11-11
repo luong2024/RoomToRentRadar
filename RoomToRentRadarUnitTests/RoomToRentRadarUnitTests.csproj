@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -14,6 +14,17 @@
     <PackageReference Include="NUnit" Version="4.3.2" />
     <PackageReference Include="NUnit.Analyzers" Version="4.7.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\RoomToRentRadar\Models\FavoriteRoom.cs" Link="Models\FavoriteRoom.cs" />
+    <Compile Include="..\RoomToRentRadar\Models\RoomListing.cs" Link="Models\RoomListing.cs" />
+    <Compile Include="..\RoomToRentRadar\Models\UserAccount.cs" Link="Models\UserAccount.cs" />
+    <Compile Include="..\RoomToRentRadar\Models\SavedSearchAlert.cs" Link="Models\SavedSearchAlert.cs" />
+    <Compile Include="..\RoomToRentRadar\Models\HouseRuleVersion.cs" Link="Models\HouseRuleVersion.cs" />
+    <Compile Include="..\RoomToRentRadar\Models\ListingReport.cs" Link="Models\ListingReport.cs" />
+    <Compile Include="..\RoomToRentRadar\Models\RoomFilterCriteria.cs" Link="Models\RoomFilterCriteria.cs" />
+    <Compile Include="..\RoomToRentRadar\Services\IRentalContracts.cs" Link="Services\IRentalContracts.cs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -5,6 +5,9 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:sf="clr-namespace:Syncfusion.Maui.Toolkit.SegmentedControl;assembly=Syncfusion.Maui.Toolkit"
     xmlns:pages="clr-namespace:RoomToRentRadar.Pages"
+    xmlns:fav="clr-namespace:RoomToRentRadar.Pages.Favorites"
+    xmlns:rooms="clr-namespace:RoomToRentRadar.Pages.Rooms"
+    xmlns:f="clr-namespace:Fonts"
     Shell.FlyoutBehavior="Flyout"
     Title="RoomToRentRadar - ICTU">
 
@@ -14,6 +17,28 @@
     <!-- ========================================================================= -->
 
     <!-- [ZONE 2: LAM MINH HIEU - T02.2 RoomListPage, T06.1 RoomMapPage, T07.2 FavoritesPage, T11.1 RoomComparePage] -->
+    <ShellContent
+        Title="Khám phá phòng trọ"
+        ContentTemplate="{DataTemplate rooms:RoomListPage}"
+        Route="room-list">
+        <ShellContent.Icon>
+            <FontImageSource
+                Glyph="{x:Static f:FluentUI.home_24_regular}"
+                FontFamily="{x:Static f:FluentUI.FontFamily}"
+                Size="{StaticResource IconSize}" />
+        </ShellContent.Icon>
+    </ShellContent>
+    <ShellContent
+        Title="Phòng yêu thích"
+        ContentTemplate="{DataTemplate fav:FavoritesPage}"
+        Route="favorites">
+        <ShellContent.Icon>
+            <FontImageSource
+                Glyph="{x:Static f:FluentUI.heart_24_regular}"
+                FontFamily="{x:Static f:FluentUI.FontFamily}"
+                Size="{StaticResource IconSize}" />
+        </ShellContent.Icon>
+    </ShellContent>
 
     <!-- [ZONE 1: LEAD DEV NGUYEN DANG QUANG - T09.1 PublishListingPage] -->
 

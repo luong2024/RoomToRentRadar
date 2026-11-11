@@ -65,6 +65,10 @@ namespace RoomToRentRadar
             // --- [ZONE 1: LEAD DEV NGUYEN DANG QUANG - T01.1, T04.1, T07.1, T09.1, T10.2, T12.2] ---
 
             // --- [ZONE 2: DEV LAM MINH HIEU - T02.2, T04.2, T06.1, T07.2, T09.2, T11.1, T13.1] ---
+            builder.Services.AddTransient<Pages.Favorites.FavoritesPage>();
+            builder.Services.AddTransient<PageModels.Favorites.FavoritesPageModel>();
+            builder.Services.AddTransient<Pages.Rooms.RoomListPage>();
+            builder.Services.AddTransient<PageModels.Rooms.RoomListPageModel>();
 
             // --- [ZONE 3: DEV PHAM THI THUY - T02.1, T03.1, T05.1, T08.1, T10.1, T11.2, T13.2] ---
 

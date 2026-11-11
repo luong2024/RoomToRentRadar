@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "nvRr7NUAXmY=",
+  "dgSpecHash": "+GOiXUFDV4E=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Admin\\source\\repos\\RoomToRentRadar\\RoomToRentRadarUnitTests\\RoomToRentRadarUnitTests.csproj",
+  "projectFilePath": "C:\\Users\\Admin\\Desktop\\btap\\RoomToRentRadar\\RoomToRentRadarUnitTests\\RoomToRentRadarUnitTests.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Admin\\.nuget\\packages\\coverlet.collector\\6.0.4\\coverlet.collector.6.0.4.nupkg.sha512",
     "C:\\Users\\Admin\\.nuget\\packages\\microsoft.applicationinsights\\2.22.0\\microsoft.applicationinsights.2.22.0.nupkg.sha512",

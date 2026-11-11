@@ -15,6 +15,8 @@ namespace RoomToRentRadar
             // --- [ROUTE ZONE 1: LEAD DEV NGUYEN DANG QUANG] ---
 
             // --- [ROUTE ZONE 2: DEV LAM MINH HIEU] ---
+            Routing.RegisterRoute(Data.Constants.Routes.Favorites, typeof(Pages.Favorites.FavoritesPage));
+            Routing.RegisterRoute(Data.Constants.Routes.RoomList, typeof(Pages.Rooms.RoomListPage));
 
             // --- [ROUTE ZONE 3: DEV PHAM THI THUY] ---
 
