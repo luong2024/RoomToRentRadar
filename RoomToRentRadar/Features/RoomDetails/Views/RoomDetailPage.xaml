@@ -2,276 +2,117 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:RoomToRentRadar.Features.RoomDetails.ViewModels"
-             xmlns:models="clr-namespace:RoomToRentRadar.Features.RoomDetails.Models"
              x:Class="RoomToRentRadar.Features.RoomDetails.Views.RoomDetailPage"
              x:DataType="vm:RoomDetailViewModel"
              Shell.NavBarIsVisible="False"
-             BackgroundColor="{AppThemeBinding Light=#FAFAFC, Dark=#121214}">
+             BackgroundColor="#FFFFFF">
 
-    <Grid RowDefinitions="Auto, *, Auto" HorizontalOptions="Fill" VerticalOptions="Fill">
+    <ContentPage.Resources>
+        <Style x:Key="RoundIconButton" TargetType="Border">
+            <Setter Property="BackgroundColor" Value="#F6F5F2" />
+            <Setter Property="StrokeThickness" Value="0" />
+            <Setter Property="WidthRequest" Value="42" />
+            <Setter Property="HeightRequest" Value="42" />
+            <Setter Property="StrokeShape" Value="RoundRectangle 21" />
+            <Setter Property="Shadow">
+                <Setter.Value><Shadow Brush="#33000000" Offset="0,2" Radius="8" Opacity="0.25" /></Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="OverviewIcon" TargetType="Label">
+            <Setter Property="FontFamily" Value="OpenSansRegular" />
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="TextColor" Value="#314A55" />
+            <Setter Property="WidthRequest" Value="25" />
+            <Setter Property="VerticalOptions" Value="Center" />
+        </Style>
+    </ContentPage.Resources>
 
-        <!-- 1. Header with subtle purple tint -->
-        <Border Grid.Row="0" StrokeThickness="0" BackgroundColor="{AppThemeBinding Light=#EDE7F6, Dark=#1E1A29}" Padding="20, 14">
-            <Grid ColumnDefinitions="40, *, 40" VerticalOptions="Center">
-                <Border Grid.Column="0" WidthRequest="38" HeightRequest="38" StrokeShape="RoundRectangle 19"
-                        BackgroundColor="{AppThemeBinding Light=White, Dark=#2D283E}" StrokeThickness="0">
-                    <Border.GestureRecognizers>
-                        <TapGestureRecognizer Command="{Binding GoBackCommand}" />
-                    </Border.GestureRecognizers>
-                    <Label Text="‹" FontSize="26" HorizontalOptions="Center" VerticalOptions="Center" Margin="0,-3,0,0"
-                           TextColor="{AppThemeBinding Light=#1F2937, Dark=White}" FontAttributes="Bold"/>
-                </Border>
+    <Grid RowDefinitions="*,Auto">
+        <ScrollView Grid.Row="0">
+            <VerticalStackLayout Spacing="0">
+                <Grid HeightRequest="370">
+                    <CarouselView ItemsSource="{Binding Room.ImageUrls}" Loop="True">
+                        <CarouselView.ItemTemplate>
+                            <DataTemplate x:DataType="x:String"><Image Source="{Binding .}" Aspect="AspectFill" /></DataTemplate>
+                        </CarouselView.ItemTemplate>
+                    </CarouselView>
 
-                <Label Grid.Column="1" Text="Property Details" 
-                       FontSize="18" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"
-                       TextColor="{AppThemeBinding Light=#1F2937, Dark=White}"/>
-            </Grid>
-        </Border>
-
-        <!-- 2. Main Scrollable Content -->
-        <ScrollView Grid.Row="1" HorizontalOptions="Fill">
-            <VerticalStackLayout Padding="20, 16" Spacing="18" HorizontalOptions="Fill">
-
-                <!-- 2.1 Hero Image with Image Count Badge -->
-                <Grid HeightRequest="280" HorizontalOptions="Fill">
-                    <Border StrokeShape="RoundRectangle 20" StrokeThickness="0" HorizontalOptions="Fill" VerticalOptions="Fill">
-                        <CarouselView ItemsSource="{Binding Room.ImageUrls}" Loop="True" HorizontalOptions="Fill" VerticalOptions="Fill">
-                            <CarouselView.ItemTemplate>
-                                <DataTemplate x:DataType="x:String">
-                                    <Image Source="{Binding .}" Aspect="AspectFill" HorizontalOptions="Fill" VerticalOptions="Fill" />
-                                </DataTemplate>
-                            </CarouselView.ItemTemplate>
-                        </CarouselView>
-                    </Border>
-
-                    <!-- '📷 1/3' Badge -->
-                    <Border HorizontalOptions="Start" VerticalOptions="End" Margin="16"
-                            Padding="12, 6" StrokeShape="RoundRectangle 12" BackgroundColor="#A0000000" StrokeThickness="0">
-                        <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
-                            <Label Text="📷" FontSize="12" TextColor="White"/>
-                            <Label Text="1/3" TextColor="White" FontSize="12" FontAttributes="Bold"/>
-                        </HorizontalStackLayout>
-                    </Border>
-                </Grid>
-
-                <!-- 2.2 Status Alert Banner (AC2, AC3) -->
-                <Border IsVisible="{Binding IsRented}" StrokeShape="RoundRectangle 14" BackgroundColor="#FFFBEB" Stroke="#FCD34D" StrokeThickness="1" Padding="14">
-                    <Label Text="⚠️ This property has been rented out. View similar properties below." TextColor="#92400E" FontSize="13" FontAttributes="Bold"/>
-                </Border>
-
-                <Border IsVisible="{Binding IsUnavailable}" StrokeShape="RoundRectangle 14" BackgroundColor="#FEF2F2" Stroke="#FCA5A5" StrokeThickness="1" Padding="14">
-                    <Label Text="🚫 This listing is no longer available!" TextColor="#991B1B" FontSize="13" FontAttributes="Bold"/>
-                </Border>
-
-                <!-- 2.3 Title, Price, Location & Rating -->
-                <VerticalStackLayout Spacing="8" HorizontalOptions="Fill">
-                    <Grid ColumnDefinitions="*, Auto" VerticalOptions="Start">
-                        <Label Grid.Column="0" Text="{Binding Room.Title}" FontSize="22" FontAttributes="Bold" 
-                               TextColor="{AppThemeBinding Light=#111827, Dark=White}" LineBreakMode="WordWrap"/>
-
-                        <HorizontalStackLayout Grid.Column="1" VerticalOptions="Start" Spacing="2">
-                            <Label Text="₦450,000" FontSize="20" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#111827, Dark=White}"/>
-                            <Label Text=" /Year" FontSize="13" TextColor="#6B7280" VerticalOptions="End" Margin="0, 0, 0, 2"/>
-                        </HorizontalStackLayout>
-                    </Grid>
-
-                    <Grid ColumnDefinitions="Auto, *, Auto" VerticalOptions="Center" ColumnSpacing="8">
-                        <Label Text="📍" FontSize="14" TextColor="#6B7280" VerticalOptions="Center"/>
-                        <Label Grid.Column="1" Text="{Binding Room.Address}" FontSize="13" TextColor="#6B7280" LineBreakMode="TailTruncation"/>
-
-                        <!-- Gold Star Rating -->
-                        <HorizontalStackLayout Grid.Column="2" Spacing="4" VerticalOptions="Center">
-                            <Label Text="★" TextColor="#F59E0B" FontSize="15" VerticalOptions="Center"/>
-                            <Label Text="4.95 / 22 reviews" FontSize="13" TextColor="#6B7280" VerticalOptions="Center"/>
-                        </HorizontalStackLayout>
-                    </Grid>
-                </VerticalStackLayout>
-
-                <!-- 2.4 FOUR QUICK STATS CARDS MATCHING DRIBBLE -->
-                <Grid ColumnDefinitions="*, *, *, *" ColumnSpacing="10" HorizontalOptions="Fill">
-                    <!-- Sitting rooms -->
-                    <Border Grid.Column="0" StrokeShape="RoundRectangle 14" BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E24}" 
-                            Stroke="{AppThemeBinding Light=#E5E7EB, Dark=#2E2E38}" StrokeThickness="1" Padding="8, 12">
-                        <VerticalStackLayout Spacing="6" HorizontalOptions="Center">
-                            <Label Text="🛋️" FontSize="18" HorizontalOptions="Center"/>
-                            <Label Text="Sitting rooms" FontSize="11" TextColor="#6B7280" HorizontalOptions="Center" LineBreakMode="NoWrap"/>
-                            <Label Text="{Binding Room.SittingRooms}" FontSize="14" FontAttributes="Bold" HorizontalOptions="Center" TextColor="{AppThemeBinding Light=#111827, Dark=White}"/>
-                        </VerticalStackLayout>
-                    </Border>
-
-                    <!-- Bedrooms -->
-                    <Border Grid.Column="1" StrokeShape="RoundRectangle 14" BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E24}" 
-                            Stroke="{AppThemeBinding Light=#E5E7EB, Dark=#2E2E38}" StrokeThickness="1" Padding="8, 12">
-                        <VerticalStackLayout Spacing="6" HorizontalOptions="Center">
-                            <Label Text="🛏️" FontSize="18" HorizontalOptions="Center"/>
-                            <Label Text="Bedrooms" FontSize="11" TextColor="#6B7280" HorizontalOptions="Center" LineBreakMode="NoWrap"/>
-                            <Label Text="{Binding Room.Bedrooms}" FontSize="14" FontAttributes="Bold" HorizontalOptions="Center" TextColor="{AppThemeBinding Light=#111827, Dark=White}"/>
-                        </VerticalStackLayout>
-                    </Border>
-
-                    <!-- Bathrooms -->
-                    <Border Grid.Column="2" StrokeShape="RoundRectangle 14" BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E24}" 
-                            Stroke="{AppThemeBinding Light=#E5E7EB, Dark=#2E2E38}" StrokeThickness="1" Padding="8, 12">
-                        <VerticalStackLayout Spacing="6" HorizontalOptions="Center">
-                            <Label Text="🚿" FontSize="18" HorizontalOptions="Center"/>
-                            <Label Text="Bathrooms" FontSize="11" TextColor="#6B7280" HorizontalOptions="Center" LineBreakMode="NoWrap"/>
-                            <Label Text="{Binding Room.Bathrooms}" FontSize="14" FontAttributes="Bold" HorizontalOptions="Center" TextColor="{AppThemeBinding Light=#111827, Dark=White}"/>
-                        </VerticalStackLayout>
-                    </Border>
-
-                    <!-- Kitchens -->
-                    <Border Grid.Column="3" StrokeShape="RoundRectangle 14" BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E24}" 
-                            Stroke="{AppThemeBinding Light=#E5E7EB, Dark=#2E2E38}" StrokeThickness="1" Padding="8, 12">
-                        <VerticalStackLayout Spacing="6" HorizontalOptions="Center">
-                            <Label Text="🍳" FontSize="18" HorizontalOptions="Center"/>
-                            <Label Text="Kitchens" FontSize="11" TextColor="#6B7280" HorizontalOptions="Center" LineBreakMode="NoWrap"/>
-                            <Label Text="{Binding Room.Kitchens}" FontSize="14" FontAttributes="Bold" HorizontalOptions="Center" TextColor="{AppThemeBinding Light=#111827, Dark=White}"/>
-                        </VerticalStackLayout>
-                    </Border>
-                </Grid>
-
-                <!-- 2.5 Description -->
-                <Border StrokeShape="RoundRectangle 16" BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E24}" 
-                        Stroke="{AppThemeBinding Light=#F3F4F6, Dark=#2E2E38}" StrokeThickness="1" Padding="18">
-                    <VerticalStackLayout Spacing="8">
-                        <Label Text="Description" FontSize="16" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#111827, Dark=White}"/>
-                        <Label Text="{Binding Room.Description}" FontSize="13" TextColor="#4B5563" LineBreakMode="WordWrap" LineHeight="1.4"/>
-                    </VerticalStackLayout>
-                </Border>
-
-                <!-- 2.6 Amenities (2 Columns) -->
-                <Border StrokeShape="RoundRectangle 16" BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E24}" 
-                        Stroke="{AppThemeBinding Light=#F3F4F6, Dark=#2E2E38}" StrokeThickness="1" Padding="18">
-                    <VerticalStackLayout Spacing="14">
-                        <Label Text="Amenities" FontSize="16" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#111827, Dark=White}"/>
-                        <CollectionView ItemsSource="{Binding Room.Amenities}">
-                            <CollectionView.ItemsLayout>
-                                <GridItemsLayout Orientation="Vertical" Span="2" VerticalItemSpacing="14" HorizontalItemSpacing="14"/>
-                            </CollectionView.ItemsLayout>
-                            <CollectionView.ItemTemplate>
-                                <DataTemplate x:DataType="models:RoomAmenityModel">
-                                    <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
-                                        <Label Text="{Binding IconGlyph}" FontSize="16" VerticalOptions="Center"/>
-                                        <Label Text="{Binding Name}" FontSize="13" TextColor="#4B5563" VerticalOptions="Center"/>
-                                    </HorizontalStackLayout>
-                                </DataTemplate>
-                            </CollectionView.ItemTemplate>
-                        </CollectionView>
-                    </VerticalStackLayout>
-                </Border>
-
-                <!-- 2.7 Agent Information with AC4 Auth Check -->
-                <Border StrokeShape="RoundRectangle 16" BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E24}" 
-                        Stroke="{AppThemeBinding Light=#F3F4F6, Dark=#2E2E38}" StrokeThickness="1" Padding="18">
-                    <VerticalStackLayout Spacing="14">
-                        <Label Text="Agent Information" FontSize="16" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#111827, Dark=White}"/>
-
-                        <Grid ColumnDefinitions="52, *, Auto" ColumnSpacing="14" VerticalOptions="Center">
-                            <!-- Circular Avatar -->
-                            <Border Grid.Column="0" WidthRequest="52" HeightRequest="52" StrokeShape="RoundRectangle 26" StrokeThickness="0">
-                                <Image Source="{Binding Room.LandlordAvatar}" Aspect="AspectFill"/>
-                            </Border>
-
-                            <!-- Name & Contacts -->
-                            <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="3">
-                                <HorizontalStackLayout Spacing="6">
-                                    <Label Text="{Binding Room.LandlordName}" FontSize="15" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#111827, Dark=White}"/>
-                                    <Label Text="★ 4.95" FontSize="12" TextColor="#F59E0B" VerticalOptions="Center"/>
-                                </HorizontalStackLayout>
-                                <Label Text="{Binding Room.LandlordEmail}" FontSize="12" TextColor="#6B7280"/>
-                                
-                                <!-- Masked/Visible Phone (AC4) -->
-                                <HorizontalStackLayout Spacing="6" Margin="0, 2, 0, 0">
-                                    <Label Text="📞" FontSize="11" TextColor="#6B7280"/>
-                                    <Label Text="{Binding DisplayPhoneNumber}" FontSize="12" FontAttributes="Bold" 
-                                           TextColor="{Binding CanViewPhoneNumber, Converter={x:Null}}"/>
-                                </HorizontalStackLayout>
-                            </VerticalStackLayout>
-
-                            <Label Grid.Column="2" Text="›" FontSize="26" TextColor="#9CA3AF" VerticalOptions="Center"/>
-                        </Grid>
-
-                        <!-- Action Buttons -->
-                        <Grid ColumnDefinitions="*, *" ColumnSpacing="10" Margin="0, 4, 0, 0">
-                            <Button Grid.Column="0" Text="Call Agent" HeightRequest="38" CornerRadius="10" FontSize="12"
-                                    IsEnabled="{Binding CanViewPhoneNumber}" Command="{Binding CallLandlordCommand}"
-                                    BackgroundColor="#10B981" TextColor="White"/>
-                            <Button Grid.Column="1" Text="Simulate Auth" HeightRequest="38" CornerRadius="10" FontSize="12"
-                                    Command="{Binding ToggleAuthSimulationCommand}" BackgroundColor="#6B7280" TextColor="White"/>
-                        </Grid>
-
-                        <!-- Report Issue Button -->
-                        <Border StrokeShape="RoundRectangle 10" Stroke="#FCA5A5" BackgroundColor="Transparent" Padding="10" StrokeThickness="1">
-                            <Label Text="Report Issue" TextColor="#DC2626" FontSize="12" FontAttributes="Bold" HorizontalOptions="Center"/>
+                    <Grid Padding="16,18" ColumnDefinitions="*,Auto,Auto" VerticalOptions="Start">
+                        <Border Style="{StaticResource RoundIconButton}" HorizontalOptions="Start">
+                            <Border.GestureRecognizers><TapGestureRecognizer Command="{Binding GoBackCommand}" /></Border.GestureRecognizers>
+                            <Label Text="←" FontSize="25" TextColor="#18333E" HorizontalOptions="Center" VerticalOptions="Center" Margin="0,-2,0,0" />
                         </Border>
-                    </VerticalStackLayout>
-                </Border>
+                        <Border Grid.Column="1" Style="{StaticResource RoundIconButton}" Margin="0,0,10,0">
+                            <Label Text="↗" FontSize="24" TextColor="#18333E" HorizontalOptions="Center" VerticalOptions="Center" Margin="0,-3,0,0" />
+                        </Border>
+                        <Border Grid.Column="2" Style="{StaticResource RoundIconButton}">
+                            <Label Text="♡" FontSize="27" TextColor="#18333E" HorizontalOptions="Center" VerticalOptions="Center" Margin="0,-5,0,0" />
+                        </Border>
+                    </Grid>
 
-                <!-- 2.8 Total Package Breakdown -->
-                <Border StrokeShape="RoundRectangle 16" BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E24}" 
-                        Stroke="{AppThemeBinding Light=#F3F4F6, Dark=#2E2E38}" StrokeThickness="1" Padding="18">
-                    <VerticalStackLayout Spacing="10">
-                        <Label Text="Total Package Breakdown" FontSize="16" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#111827, Dark=White}"/>
-                        <Label Text="• Annual Rent: ₦450,000" FontSize="13" TextColor="#4B5563"/>
-                        <Label Text="• Annual Service Charge: ₦80,000" FontSize="13" TextColor="#4B5563"/>
-                        <Label Text="• Agent Fee 5%(one time): ₦30,000" FontSize="13" TextColor="#4B5563"/>
-                        <Label Text="• Legal Fee 5%(one time): ₦30,000" FontSize="13" TextColor="#4B5563"/>
-                        <Label Text="• Caution Fee 2%(one time and refundable): ₦15,000" FontSize="13" TextColor="#4B5563"/>
-                        
-                        <BoxView HeightRequest="1" BackgroundColor="#E5E7EB" Margin="0, 8"/>
+                    <Border VerticalOptions="End" HorizontalOptions="Start" Margin="18,0,0,16" Padding="15,10" BackgroundColor="#EDF0EE" StrokeThickness="0" StrokeShape="RoundRectangle 20">
+                        <Label Text="View Gallery" FontFamily="OpenSansSemibold" FontSize="13" TextColor="#18333E" />
+                    </Border>
+                </Grid>
 
-                        <Grid ColumnDefinitions="*, Auto">
-                            <Label Text="TOTAL PACKAGE:" FontSize="14" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#111827, Dark=White}"/>
-                            <Label Grid.Column="1" Text="₦605,000" FontSize="16" FontAttributes="Bold" TextColor="#482880"/>
-                        </Grid>
-                    </VerticalStackLayout>
-                </Border>
+                <HorizontalStackLayout HorizontalOptions="Center" Spacing="12" Padding="0,14,0,10">
+                    <Ellipse WidthRequest="10" HeightRequest="10" Fill="#12323D" />
+                    <Ellipse WidthRequest="10" HeightRequest="10" Fill="#D6D8D9" />
+                    <Ellipse WidthRequest="10" HeightRequest="10" Fill="#D6D8D9" />
+                    <Ellipse WidthRequest="10" HeightRequest="10" Fill="#D6D8D9" />
+                    <Ellipse WidthRequest="10" HeightRequest="10" Fill="#D6D8D9" />
+                    <Ellipse WidthRequest="10" HeightRequest="10" Fill="#D6D8D9" />
+                </HorizontalStackLayout>
 
-                <!-- 2.9 Similar Properties (AC3) -->
-                <VerticalStackLayout IsVisible="{Binding ShowSimilarRooms}" Spacing="12" Margin="0, 4">
-                    <Label Text="Similar Properties" FontSize="16" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#111827, Dark=White}"/>
-                    <CollectionView ItemsSource="{Binding SimilarRooms}" HeightRequest="190">
-                        <CollectionView.ItemsLayout>
-                            <LinearItemsLayout Orientation="Horizontal" ItemSpacing="14"/>
-                        </CollectionView.ItemsLayout>
-                        <CollectionView.ItemTemplate>
-                            <DataTemplate x:DataType="models:SimilarRoomModel">
-                                <Border WidthRequest="240" StrokeShape="RoundRectangle 14" BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E24}" 
-                                        Stroke="{AppThemeBinding Light=#E5E7EB, Dark=#2E2E38}" StrokeThickness="1" Padding="10">
-                                    <Border.GestureRecognizers>
-                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:RoomDetailViewModel}}, Path=SelectSimilarRoomCommand}"
-                                                              CommandParameter="{Binding .}"/>
-                                    </Border.GestureRecognizers>
-                                    <VerticalStackLayout Spacing="8">
-                                        <Border HeightRequest="110" StrokeShape="RoundRectangle 10" StrokeThickness="0">
-                                            <Image Source="{Binding ThumbnailUrl}" Aspect="AspectFill"/>
-                                        </Border>
-                                        <Label Text="{Binding Title}" FontSize="13" FontAttributes="Bold" MaxLines="1" LineBreakMode="TailTruncation" TextColor="{AppThemeBinding Light=#111827, Dark=White}"/>
-                                        <Label Text="{Binding FormattedPrice}" FontSize="13" TextColor="#482880" FontAttributes="Bold"/>
-                                    </VerticalStackLayout>
-                                </Border>
-                            </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
+                <VerticalStackLayout Padding="20,0,20,28" Spacing="0">
+                    <Border BackgroundColor="#E4F1FF" StrokeThickness="0" StrokeShape="RoundRectangle 2" Padding="14,10" Margin="0,0,0,21">
+                        <HorizontalStackLayout Spacing="9"><Label Text="✿" FontSize="18" TextColor="#075470" /><Label Text="Verified Listing" FontFamily="OpenSansSemibold" FontSize="14" TextColor="#075470" VerticalOptions="Center" /></HorizontalStackLayout>
+                    </Border>
+
+                    <Label Text="{Binding Room.Title}" FontFamily="OpenSansSemibold" FontSize="22" LineHeight="1.16" TextColor="#102F3A" />
+                    <Grid Margin="0,18,0,22" ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                        <Label Text="{Binding Room.Address}" FontSize="12" TextColor="#627078" LineBreakMode="WordWrap" VerticalOptions="Center" />
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="End">
+                            <HorizontalStackLayout Spacing="5" HorizontalOptions="End"><Label Text="★" FontSize="20" TextColor="#2185ED" /><Label Text="{Binding Room.Rating, StringFormat='{0:0.0} out of 5'}" FontFamily="OpenSansSemibold" FontSize="13" TextColor="#17323D" VerticalOptions="Center" /></HorizontalStackLayout>
+                            <Label Text="{Binding Room.ReviewCount, StringFormat='{0} reviews'}" FontSize="12" TextColor="#08719B" TextDecorations="Underline" HorizontalOptions="End" />
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <BoxView HeightRequest="1" Color="#D7E0E2" />
+                    <Label Text="Main Overview" FontFamily="OpenSansSemibold" FontSize="17" TextColor="#102F3A" Margin="0,25,0,20" />
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="28" RowSpacing="20">
+                        <HorizontalStackLayout Grid.Row="0" Grid.Column="0" Spacing="8"><Label Style="{StaticResource OverviewIcon}" Text="▥" /><Label Text="{Binding Room.FormattedArea}" FontSize="13" TextColor="#29434D" VerticalOptions="Center" /></HorizontalStackLayout>
+                        <HorizontalStackLayout Grid.Row="0" Grid.Column="1" Spacing="8"><Label Style="{StaticResource OverviewIcon}" Text="♧" /><Label Text="{Binding Room.Bedrooms, StringFormat='{0} People'}" FontSize="13" TextColor="#29434D" VerticalOptions="Center" /></HorizontalStackLayout>
+                        <HorizontalStackLayout Grid.Row="1" Grid.Column="0" Spacing="8"><Label Style="{StaticResource OverviewIcon}" Text="⌁" /><Label Text="300 Mbps" FontSize="13" TextColor="#29434D" VerticalOptions="Center" /></HorizontalStackLayout>
+                        <HorizontalStackLayout Grid.Row="1" Grid.Column="1" Spacing="8"><Label Style="{StaticResource OverviewIcon}" Text="▭" /><Label Text="{Binding Room.Bedrooms, StringFormat='{0} Rooms'}" FontSize="13" TextColor="#29434D" VerticalOptions="Center" /></HorizontalStackLayout>
+                    </Grid>
+
+                    <BoxView HeightRequest="1" Color="#D7E0E2" Margin="0,27,0,0" />
+                    <Label Text="About this Listing" FontFamily="OpenSansSemibold" FontSize="17" TextColor="#102F3A" Margin="0,25,0,25" />
+                    <Label Text="Rented 8 times since 2023." FontFamily="OpenSansSemibold" FontSize="12" TextColor="#18333E" Margin="0,0,0,14" />
+                    <Label Text="{Binding Room.Description}" FontSize="13" LineHeight="1.42" TextColor="#53636A" />
+                    <Button Text="See More" HorizontalOptions="End" Margin="0,12,0,26" Padding="15,8" CornerRadius="10" FontFamily="OpenSansSemibold" FontSize="12" BackgroundColor="#E5F2FF" TextColor="#075470" />
+
+                    <BoxView HeightRequest="1" Color="#D7E0E2" />
+                    <Border HorizontalOptions="Start" Margin="0,26,0,12" Padding="13,9" BackgroundColor="#F4D7FF" Stroke="#D827F4" StrokeThickness="2" StrokeShape="RoundRectangle 18">
+                        <HorizontalStackLayout Spacing="9"><Label Text="Need help?" FontFamily="OpenSansSemibold" FontSize="13" TextColor="#283043" /><Label Text="▣" FontSize="15" TextColor="#283043" /></HorizontalStackLayout>
+                    </Border>
+                    <Label Text="1. Quiet Hours" FontFamily="OpenSansSemibold" FontSize="14" TextColor="#17323D" Margin="0,0,0,8" />
+                    <Label Text="{Binding Room.HouseRules[0]}" FontSize="13" TextColor="#53636A" />
                 </VerticalStackLayout>
-
             </VerticalStackLayout>
         </ScrollView>
 
-        <!-- 3. Fixed Bottom Action Bar: Royal Purple Pill Button -->
-        <Border Grid.Row="2" BackgroundColor="{AppThemeBinding Light=White, Dark=#18181B}" 
-                Stroke="{AppThemeBinding Light=#E5E7EB, Dark=#2E2E38}" StrokeThickness="1" Padding="20, 14">
-            <Button Text="Book Inspection - ₦5,000" 
-                    HeightRequest="52"
-                    CornerRadius="16"
-                    FontSize="16"
-                    FontAttributes="Bold"
-                    BackgroundColor="#482880"
-                    TextColor="White"
-                    HorizontalOptions="Fill"
-                    IsEnabled="{Binding CanBookOrContact}"
-                    Command="{Binding BookInspectionCommand}" />
+        <Border Grid.Row="1" BackgroundColor="#FFFFFF" Stroke="#E4E8EA" StrokeThickness="1" Padding="14,13,14,12" StrokeShape="RoundRectangle 22,22,0,0">
+            <Border.Shadow><Shadow Brush="#250C2330" Offset="0,-4" Radius="14" Opacity="0.25" /></Border.Shadow>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <VerticalStackLayout Spacing="3" VerticalOptions="Center">
+                    <HorizontalStackLayout Spacing="3"><Label Text="{Binding Room.FormattedPrice}" FontFamily="OpenSansSemibold" FontSize="19" TextColor="#102F3A" /><Label Text="/month" FontSize="12" TextColor="#53636A" VerticalOptions="End" Margin="0,0,0,3" /></HorizontalStackLayout>
+                    <Label Text="23 July—26 Sep" FontFamily="OpenSansSemibold" FontSize="12" TextColor="#08719B" TextDecorations="Underline" />
+                    <Label Text="You won’t be charged yet!" FontSize="11" TextColor="#53636A" />
+                </VerticalStackLayout>
+                <Button Grid.Column="1" Text="Request to Book" HeightRequest="48" Padding="18,0" VerticalOptions="Center" CornerRadius="11" FontFamily="OpenSansSemibold" FontSize="13" BackgroundColor="#1877F2" TextColor="White" IsEnabled="{Binding CanBookOrContact}" Command="{Binding BookInspectionCommand}" />
+            </Grid>
         </Border>
-
     </Grid>
 </ContentPage>
