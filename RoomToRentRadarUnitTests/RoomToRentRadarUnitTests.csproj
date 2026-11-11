@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -9,11 +9,22 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.0" />
     <PackageReference Include="NUnit" Version="4.3.2" />
     <PackageReference Include="NUnit.Analyzers" Version="4.7.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\RoomToRentRadar\Core\Constants\AppRoutes.cs" Link="Linked\Core\Constants\AppRoutes.cs" />
+    <Compile Include="..\RoomToRentRadar\Core\Interfaces\IErrorHandler.cs" Link="Linked\Core\Interfaces\IErrorHandler.cs" />
+    <Compile Include="..\RoomToRentRadar\Infrastructure\Api\IApiClient.cs" Link="Linked\Infrastructure\Api\IApiClient.cs" />
+    <Compile Include="..\RoomToRentRadar\Features\Home\ViewModels\HomeViewModel.cs" Link="Linked\Features\Home\ViewModels\HomeViewModel.cs" />
+    <Compile Include="..\RoomToRentRadar\Features\RoomListings\Models\*.cs" LinkBase="Linked\Features\RoomListings\Models" />
+    <Compile Include="..\RoomToRentRadar\Features\RoomListings\Services\*.cs" LinkBase="Linked\Features\RoomListings\Services" />
+    <Compile Include="..\RoomToRentRadar\Features\RoomListings\ViewModels\*.cs" LinkBase="Linked\Features\RoomListings\ViewModels" />
   </ItemGroup>
 
   <ItemGroup>
