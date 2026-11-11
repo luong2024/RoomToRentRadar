@@ -30,11 +30,12 @@
 - Create and edit files in `Pages/` (including `Pages/Controls/`), `PageModels/*PageModel.cs`, `Resources/Styles/`, `Converters/`, and `AppShell.xaml(.cs)`.
 - Leverage `CommunityToolkit.Mvvm` (`ObservableObject`, `[ObservableProperty]`, `[RelayCommand]`).
 - Register Pages and PageModels in `MauiProgram.cs` (`builder.Services.AddTransient<...>()`).
-- Execute Core Use Cases exclusively through Input Ports (`I*UseCase`) injected into PageModel constructors.
+- Load data and execute commands exclusively through client gateway interfaces (`I*Gateway` from `RoomToRentRadar.Client.Adapters`) injected into PageModel constructors (`docs/adr/adr-003`). Follow screen specs and tokens in `docs/ui-ux-spec.md`.
 
 ### Forbidden:
 - **FORBIDDEN:** Embedding direct SQL or SQLite database calls in XAML code-behind or PageModels.
-- **FORBIDDEN:** Direct `HttpClient` calls from PageModels without passing through an Input Port.
+- **FORBIDDEN:** Direct `HttpClient` calls from PageModels — HTTP lives only in `Http*Gateway` classes.
+- **FORBIDDEN:** Referencing `RoomToRentRadar.Application`, `RoomToRentRadar.Infrastructure` or `RoomToRentRadar.Datastore.*` from the MAUI project; hard-coding secrets; using emoji as icons.
 - **FORBIDDEN:** Using deprecated Xamarin.Forms APIs (such as `MessagingCenter` or `RelativeLayout`).
 - **FORBIDDEN:** Omitting `x:DataType` in `CollectionView` or `ListView` `DataTemplate` definitions.
 
