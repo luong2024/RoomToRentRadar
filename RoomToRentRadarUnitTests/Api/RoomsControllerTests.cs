@@ -86,13 +86,15 @@ public class RoomsControllerTests
     [TestCase(null)]
     [TestCase("")]
     [TestCase("   ")]
-    public async Task GetRoomById_WhenRoomIdIsWhitespace_Returns404NotFoundWithoutCallingUseCase(string? invalidId)
+    public async Task GetRoomById_WhenRoomIdIsWhitespace_Returns400BadRequestWithoutCallingUseCase(string? invalidId)
     {
         // Act
         var actionResult = await _sut.GetRoomById(invalidId!, CancellationToken.None);
 
         // Assert
-        Assert.That(actionResult.Result, Is.InstanceOf<NotFoundObjectResult>());
+        Assert.That(actionResult.Result, Is.InstanceOf<BadRequestObjectResult>());
+        var badRequestResult = (BadRequestObjectResult)actionResult.Result!;
+        Assert.That(badRequestResult.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
         await _getRoomDetailUseCase.DidNotReceiveWithAnyArgs().ExecuteAsync(default!, default);
     }
 

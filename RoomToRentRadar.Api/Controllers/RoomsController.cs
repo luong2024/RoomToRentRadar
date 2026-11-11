@@ -20,16 +20,17 @@ public sealed class RoomsController : ControllerBase
     [HttpGet("{id}")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(RoomDetailDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<RoomDetailDto>> GetRoomById(string id, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(id))
         {
-            return NotFound(new ProblemDetails
+            return BadRequest(new ProblemDetails
             {
-                Title = "Room not found",
-                Detail = "Room ID cannot be empty.",
-                Status = StatusCodes.Status404NotFound
+                Title = "Invalid room request",
+                Detail = "Room ID cannot be empty or whitespace.",
+                Status = StatusCodes.Status400BadRequest
             });
         }
 

@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using RoomToRentRadar.Api.Controllers;
 using RoomToRentRadar.Api.Security;
 using RoomToRentRadar.Application.UseCases.Rooms;
+using RoomToRentRadar.Domain.Entities;
+using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Infrastructure.Adapters.Mocks;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 
@@ -77,9 +79,9 @@ public class RoomDetailEndpointIntegrationTests
     }
 
     [Test]
-    public async Task GetRoomById_AnonymousUser_ReturnsDetailsWithMaskedPhone()
+    public async Task GetRoomById_AnonymousUser_ReturnsDetailsWithNullPhone()
     {
-        // Arrange (AC4: Guest/unauthenticated user)
+        // Arrange (AC4: Guest/unauthenticated user receives null phone number)
         SetUserAnonymous();
 
         // Act
@@ -92,6 +94,42 @@ public class RoomDetailEndpointIntegrationTests
 
         Assert.That(room.Id, Is.EqualTo("room-ictu-001"));
         Assert.That(room.LandlordPhoneNumber, Is.Null); // AC4: Anonymous user receives null phone
+    }
+
+    [TestCase("")]
+    [TestCase("   ")]
+    public async Task GetRoomById_WhitespaceId_Returns400BadRequest(string invalidId)
+    {
+        // Act
+        var response = await _controller.GetRoomById(invalidId, CancellationToken.None);
+
+        // Assert
+        Assert.That(response.Result, Is.InstanceOf<BadRequestObjectResult>());
+        var badRequest = (BadRequestObjectResult)response.Result!;
+        Assert.That(badRequest.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
+    }
+
+    [Test]
+    public async Task GetRoomById_PendingVerificationRoom_Returns404NotFound()
+    {
+        // Arrange (M4: Unverified rooms must not be disclosed)
+        var pendingRoom = new Room(
+            id: "room-pending-01",
+            title: "Phòng chờ duyệt",
+            description: "Chưa duyệt",
+            monthlyRent: 1500000m,
+            depositAmount: 500000m,
+            areaSquareMeters: 20.0,
+            roomType: "Khép kín",
+            status: RoomStatus.PendingVerification
+        );
+        _roomRepository.AddOrUpdate(pendingRoom);
+
+        // Act
+        var response = await _controller.GetRoomById("room-pending-01", CancellationToken.None);
+
+        // Assert
+        Assert.That(response.Result, Is.InstanceOf<NotFoundObjectResult>());
     }
 
     [Test]
