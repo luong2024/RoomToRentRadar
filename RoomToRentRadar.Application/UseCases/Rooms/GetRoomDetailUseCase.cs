@@ -1,19 +1,20 @@
 using RoomToRentRadar.Application.Mappers;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadar.Ports.Inbound.UseCases.Rooms;
+using RoomToRentRadar.Ports.Outbound.ExternalServices;
 using RoomToRentRadar.Ports.Outbound.Repositories;
-using RoomToRentRadar.Ports.Outbound.Security;
 
 namespace RoomToRentRadar.Application.UseCases.Rooms;
 
 public sealed class GetRoomDetailUseCase : IGetRoomDetailUseCase
 {
     public const string DefaultUnavailableMessage = "Phòng trọ này hiện không còn khả dụng. Dưới đây là gợi ý các phòng tương tự gần bạn.";
+    public const int DefaultSimilarRoomsLimit = 3;
 
     private readonly IRoomRepository _roomRepository;
-    private readonly ICurrentUserContext _currentUserContext;
+    private readonly ICurrentUserContextPort _currentUserContext;
 
-    public GetRoomDetailUseCase(IRoomRepository roomRepository, ICurrentUserContext currentUserContext)
+    public GetRoomDetailUseCase(IRoomRepository roomRepository, ICurrentUserContextPort currentUserContext)
     {
         _roomRepository = roomRepository ?? throw new ArgumentNullException(nameof(roomRepository));
         _currentUserContext = currentUserContext ?? throw new ArgumentNullException(nameof(currentUserContext));
@@ -26,8 +27,15 @@ public sealed class GetRoomDetailUseCase : IGetRoomDetailUseCase
             return null;
         }
 
-        var room = await _roomRepository.GetByIdAsync(roomId, ct);
+        var trimmedId = roomId.Trim();
+        var room = await _roomRepository.GetByIdAsync(trimmedId, ct);
         if (room == null)
+        {
+            return null;
+        }
+
+        // M4: Listings pending moderation/verification must not be exposed to the public
+        if (!room.IsPubliclyVisible)
         {
             return null;
         }
@@ -35,7 +43,7 @@ public sealed class GetRoomDetailUseCase : IGetRoomDetailUseCase
         // AC4: Only signed-in users can see the landlord's phone number
         var landlordPhone = _currentUserContext.IsAuthenticated ? room.LandlordPhoneNumber : null;
 
-        // AC3: If the listing is unavailable, provide a message and suggest similar rooms
+        // AC3: If the listing is unavailable, provide a message and suggest similar rooms nearby
         IReadOnlyList<RoomCardDto> similarRooms = Array.Empty<RoomCardDto>();
         string? unavailableMessage = null;
 
@@ -46,7 +54,8 @@ public sealed class GetRoomDetailUseCase : IGetRoomDetailUseCase
                 excludeRoomId: room.Id,
                 targetPrice: room.MonthlyRent,
                 targetArea: room.AreaSquareMeters,
-                limit: 3,
+                targetDistanceKm: room.DistanceToCampusKm,
+                limit: DefaultSimilarRoomsLimit,
                 ct: ct);
 
             if (similarEntities != null && similarEntities.Count > 0)

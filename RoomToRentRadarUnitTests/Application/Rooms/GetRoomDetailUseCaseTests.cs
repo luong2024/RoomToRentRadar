@@ -168,6 +168,7 @@ public class GetRoomDetailUseCaseTests
             excludeRoomId: "room-unavailable",
             targetPrice: 1800000m,
             targetArea: 25.5,
+            targetDistanceKm: 0.8,
             limit: 3,
             ct: Arg.Any<CancellationToken>())
             .Returns(similarRooms);
@@ -217,7 +218,13 @@ public class GetRoomDetailUseCaseTests
             )
         };
 
-        _roomRepository.GetSimilarRoomsAsync("room-rented", 1800000m, 25.5, 3, Arg.Any<CancellationToken>())
+        _roomRepository.GetSimilarRoomsAsync(
+            excludeRoomId: "room-rented",
+            targetPrice: 1800000m,
+            targetArea: 25.5,
+            targetDistanceKm: 0.8,
+            limit: 3,
+            ct: Arg.Any<CancellationToken>())
             .Returns(similarRooms);
 
         // Act
@@ -237,7 +244,13 @@ public class GetRoomDetailUseCaseTests
         // Arrange (AC3: Unavailable room but 0 similar rooms in repository)
         var unavailableRoom = CreateSampleRoom(id: "room-isolated", status: RoomStatus.Unavailable);
         _roomRepository.GetByIdAsync("room-isolated", Arg.Any<CancellationToken>()).Returns(unavailableRoom);
-        _roomRepository.GetSimilarRoomsAsync("room-isolated", 1800000m, 25.5, 3, Arg.Any<CancellationToken>())
+        _roomRepository.GetSimilarRoomsAsync(
+            excludeRoomId: "room-isolated",
+            targetPrice: 1800000m,
+            targetArea: 25.5,
+            targetDistanceKm: 0.8,
+            limit: 3,
+            ct: Arg.Any<CancellationToken>())
             .Returns(new List<Room>());
 
         // Act
@@ -290,5 +303,35 @@ public class GetRoomDetailUseCaseTests
 
         // Assert
         await _roomRepository.Received(1).GetByIdAsync("room-001", token);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WhenRoomIsPendingVerification_ReturnsNullAndDoesNotExposeDetails()
+    {
+        // Arrange (M4: Unverified rooms must not be visible to public callers)
+        var pendingRoom = CreateSampleRoom(id: "room-pending", status: RoomStatus.PendingVerification);
+        _roomRepository.GetByIdAsync("room-pending", Arg.Any<CancellationToken>()).Returns(pendingRoom);
+
+        // Act
+        var result = await _sut.ExecuteAsync("room-pending");
+
+        // Assert
+        Assert.That(result, Is.Null);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WhenRoomIdHasSurroundingWhitespace_TrimsBeforeCallingRepo()
+    {
+        // Arrange (L4: UseCase trims input before delegating)
+        var sampleRoom = CreateSampleRoom(id: "room-001");
+        _roomRepository.GetByIdAsync("room-001", Arg.Any<CancellationToken>()).Returns(sampleRoom);
+
+        // Act
+        var result = await _sut.ExecuteAsync("  room-001  ");
+
+        // Assert
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!.Id, Is.EqualTo("room-001"));
+        await _roomRepository.Received(1).GetByIdAsync("room-001", Arg.Any<CancellationToken>());
     }
 }

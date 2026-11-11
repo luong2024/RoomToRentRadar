@@ -1,7 +1,11 @@
+using RoomToRentRadar.Ports.Outbound.ExternalServices;
+
 namespace RoomToRentRadar.Ports.Outbound.Security;
 
-public interface ICurrentUserContext
+/// <summary>
+/// Alias for ICurrentUserContextPort for backwards compatibility.
+/// Preferred interface is ICurrentUserContextPort under Outbound/ExternalServices.
+/// </summary>
+public interface ICurrentUserContext : ICurrentUserContextPort
 {
-    bool IsAuthenticated { get; }
-    string? UserId { get; }
 }

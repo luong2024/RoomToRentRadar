@@ -31,6 +31,7 @@ public sealed class InMemoryRoomRepository : IRoomRepository
         string excludeRoomId,
         decimal targetPrice,
         double targetArea,
+        double targetDistanceKm = 0.0,
         int limit = 3,
         CancellationToken ct = default)
     {
@@ -39,7 +40,8 @@ public sealed class InMemoryRoomRepository : IRoomRepository
         var safeLimit = Math.Max(1, limit);
         var similar = _rooms.Values
             .Where(r => !string.Equals(r.Id, excludeRoomId, StringComparison.OrdinalIgnoreCase) && r.IsAvailable)
-            .OrderBy(r => Math.Abs(r.MonthlyRent - targetPrice))
+            .OrderBy(r => Math.Abs(r.DistanceToCampusKm - targetDistanceKm))
+            .ThenBy(r => Math.Abs(r.MonthlyRent - targetPrice))
             .ThenBy(r => Math.Abs(r.AreaSquareMeters - targetArea))
             .Take(safeLimit)
             .ToList();
@@ -47,7 +49,7 @@ public sealed class InMemoryRoomRepository : IRoomRepository
         return Task.FromResult<IReadOnlyList<Room>>(similar);
     }
 
-    public void AddOrUpdate(Room room)
+    internal void AddOrUpdate(Room room)
     {
         ArgumentNullException.ThrowIfNull(room);
         _rooms[room.Id] = room;

@@ -1,4 +1,5 @@
 using RoomToRentRadar.Domain.Entities;
+using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 
 namespace RoomToRentRadar.Application.Mappers;
@@ -37,18 +38,27 @@ public static class RoomMapper
             DepositAmount: room.DepositAmount,
             AreaSquareMeters: room.AreaSquareMeters,
             RoomType: room.RoomType,
-            Amenities: room.Amenities ?? Array.Empty<string>(),
+            Amenities: room.Amenities,
             FullAddress: room.FullAddress,
             LandlordName: room.LandlordName,
             LandlordPhoneNumber: landlordPhoneNumber,
-            PhotoUrls: room.PhotoUrls ?? Array.Empty<string>(),
+            PhotoUrls: room.PhotoUrls,
             Panorama360Url: room.Panorama360Url,
-            HouseRules: room.HouseRules ?? Array.Empty<string>(),
-            Status: room.Status.ToString(),
+            HouseRules: room.HouseRules,
+            Status: MapRoomStatus(room.Status),
             LastUpdatedAt: room.LastUpdatedAt,
             IsAvailable: room.IsAvailable,
             UnavailableMessage: unavailableMessage,
             SimilarRooms: similarRooms ?? Array.Empty<RoomCardDto>()
         );
     }
+
+    public static string MapRoomStatus(RoomStatus status) => status switch
+    {
+        RoomStatus.Available => "Available",
+        RoomStatus.Unavailable => "Unavailable",
+        RoomStatus.Rented => "Rented",
+        RoomStatus.PendingVerification => "PendingVerification",
+        _ => "Unavailable"
+    };
 }
