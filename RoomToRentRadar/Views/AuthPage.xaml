@@ -1,0 +1,707 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="RoomToRentRadar.Views.AuthPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:RoomToRentRadar.ViewModels"
+    xmlns:converters="clr-namespace:RoomToRentRadar.Shared.Converters"
+    x:DataType="vm:AuthViewModel"
+    Title="Authentication"
+    Shell.NavBarIsVisible="False"
+    BackgroundColor="{AppThemeBinding Light={StaticResource LightBackground}, Dark={StaticResource DarkBackground}}">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <converters:StringHasValueConverter x:Key="StringHasValueConverter" />
+            <converters:RoleBorderBrushConverter x:Key="RoleBorderBrushConverter" />
+            <converters:RoleBackgroundBrushConverter x:Key="RoleBackgroundBrushConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid>
+        <!-- Background decorative ambient circles -->
+        <BoxView
+            HorizontalOptions="Start"
+            VerticalOptions="Start"
+            WidthRequest="220"
+            HeightRequest="220"
+            CornerRadius="110"
+            TranslationX="-60"
+            TranslationY="-60"
+            Opacity="0.18"
+            Color="{StaticResource Primary}" />
+
+        <BoxView
+            HorizontalOptions="End"
+            VerticalOptions="End"
+            WidthRequest="260"
+            HeightRequest="260"
+            CornerRadius="130"
+            TranslationX="70"
+            TranslationY="70"
+            Opacity="0.12"
+            Color="{StaticResource Magenta}" />
+
+        <ScrollView
+            Padding="20,24"
+            VerticalOptions="Center">
+
+            <VerticalStackLayout
+                Spacing="20"
+                MaximumWidthRequest="460"
+                HorizontalOptions="Center">
+
+                <!-- Main Authentication Card (RoundRectangle 24) -->
+                <Border
+                    x:Name="MainAuthCard"
+                    StrokeThickness="1"
+                    Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource DarkSecondaryBackground}}"
+                    Padding="24,28"
+                    Shadow="{Shadow Brush=Black, Offset='0,8', Radius=16, Opacity=0.1}">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="24" />
+                    </Border.StrokeShape>
+
+                    <Grid>
+                        <!-- ============================================== -->
+                        <!-- 1. LOGIN FACE                                  -->
+                        <!-- ============================================== -->
+                        <VerticalStackLayout
+                            x:Name="LoginFace"
+                            Spacing="18"
+                            IsVisible="{Binding IsLoginView}">
+
+                            <!-- Header -->
+                            <VerticalStackLayout Spacing="6">
+                                <Label
+                                    Text="Welcome Back"
+                                    FontFamily="SegoeSemibold"
+                                    FontSize="26"
+                                    TextColor="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}"
+                                    HorizontalTextAlignment="Center" />
+                                <Label
+                                    Text="Sign in to find or manage your rental rooms"
+                                    FontFamily="OpenSansRegular"
+                                    FontSize="14"
+                                    TextColor="{StaticResource Gray500}"
+                                    HorizontalTextAlignment="Center" />
+                            </VerticalStackLayout>
+
+                            <!-- Global Status Messages -->
+                            <Border
+                                IsVisible="{Binding HasError}"
+                                BackgroundColor="#FFEBEE"
+                                Stroke="#EF5350"
+                                StrokeThickness="1"
+                                Padding="12,8">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="8" />
+                                </Border.StrokeShape>
+                                <Label
+                                    Text="{Binding ErrorMessage}"
+                                    TextColor="#C62828"
+                                    FontSize="13"
+                                    FontFamily="OpenSansRegular"
+                                    HorizontalTextAlignment="Center" />
+                            </Border>
+
+                            <Border
+                                IsVisible="{Binding IsSuccess}"
+                                BackgroundColor="#E8F5E9"
+                                Stroke="#66BB6A"
+                                StrokeThickness="1"
+                                Padding="12,8">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="8" />
+                                </Border.StrokeShape>
+                                <Label
+                                    Text="{Binding SuccessMessage}"
+                                    TextColor="#2E7D32"
+                                    FontSize="13"
+                                    FontFamily="OpenSansRegular"
+                                    HorizontalTextAlignment="Center" />
+                            </Border>
+
+                            <!-- Email Field -->
+                            <VerticalStackLayout Spacing="6">
+                                <Label
+                                    x:Name="LoginEmailLabel"
+                                    Text="Email Address"
+                                    FontSize="13"
+                                    FontFamily="OpenSansSemibold"
+                                    TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource Gray100}}" />
+
+                                <Border
+                                    x:Name="LoginEmailBorder"
+                                    Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
+                                    StrokeThickness="1.5"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray950}}"
+                                    Padding="14,0">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="12" />
+                                    </Border.StrokeShape>
+                                    <Entry
+                                        x:Name="LoginEmailEntry"
+                                        Text="{Binding LoginEmail, Mode=TwoWay}"
+                                        Placeholder="name@example.com"
+                                        PlaceholderColor="{StaticResource Gray400}"
+                                        Keyboard="Email"
+                                        HeightRequest="48"
+                                        TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}"
+                                        Focused="OnInputFocused"
+                                        Unfocused="OnInputUnfocused" />
+                                </Border>
+
+                                <Label
+                                    Text="{Binding LoginEmailError}"
+                                    IsVisible="{Binding LoginEmailError, Converter={StaticResource StringHasValueConverter}}"
+                                    TextColor="#D32F2F"
+                                    FontSize="12" />
+                            </VerticalStackLayout>
+
+                            <!-- Password Field -->
+                            <VerticalStackLayout Spacing="6">
+                                <Label
+                                    x:Name="LoginPasswordLabel"
+                                    Text="Password"
+                                    FontSize="13"
+                                    FontFamily="OpenSansSemibold"
+                                    TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource Gray100}}" />
+
+                                <Border
+                                    x:Name="LoginPasswordBorder"
+                                    Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
+                                    StrokeThickness="1.5"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray950}}"
+                                    Padding="14,0">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="12" />
+                                    </Border.StrokeShape>
+                                    <Entry
+                                        x:Name="LoginPasswordEntry"
+                                        Text="{Binding LoginPassword, Mode=TwoWay}"
+                                        Placeholder="Enter your password"
+                                        PlaceholderColor="{StaticResource Gray400}"
+                                        IsPassword="True"
+                                        HeightRequest="48"
+                                        TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}"
+                                        Focused="OnInputFocused"
+                                        Unfocused="OnInputUnfocused" />
+                                </Border>
+
+                                <Label
+                                    Text="{Binding LoginPasswordError}"
+                                    IsVisible="{Binding LoginPasswordError, Converter={StaticResource StringHasValueConverter}}"
+                                    TextColor="#D32F2F"
+                                    FontSize="12" />
+                            </VerticalStackLayout>
+
+                            <!-- Primary Button: Sign In (RoundRectangle 12) -->
+                            <Button
+                                Text="Sign In"
+                                Command="{Binding SignInCommand}"
+                                BackgroundColor="{StaticResource Primary}"
+                                TextColor="{StaticResource White}"
+                                FontFamily="OpenSansSemibold"
+                                FontSize="15"
+                                HeightRequest="48"
+                                CornerRadius="12"
+                                Margin="0,6,0,0" />
+
+                            <!-- Divider with OR -->
+                            <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="12" Margin="0,4">
+                                <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}" VerticalOptions="Center" />
+                                <Label Grid.Column="1" Text="or" FontSize="12" TextColor="{StaticResource Gray400}" VerticalOptions="Center" />
+                                <BoxView Grid.Column="2" HeightRequest="1" Color="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}" VerticalOptions="Center" />
+                            </Grid>
+
+                            <!-- Google Button (RoundRectangle 12) -->
+                            <Border
+                                Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
+                                StrokeThickness="1"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray900}}"
+                                HeightRequest="48"
+                                Padding="14,0">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="12" />
+                                </Border.StrokeShape>
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding GoogleSignInCommand}" />
+                                </Border.GestureRecognizers>
+                                <HorizontalStackLayout
+                                    Spacing="10"
+                                    HorizontalOptions="Center"
+                                    VerticalOptions="Center">
+                                    <Label
+                                        Text="G"
+                                        FontFamily="SegoeSemibold"
+                                        FontSize="18"
+                                        TextColor="#4285F4"
+                                        VerticalOptions="Center" />
+                                    <Label
+                                        Text="Continue with Google"
+                                        FontFamily="OpenSansSemibold"
+                                        FontSize="14"
+                                        TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}"
+                                        VerticalOptions="Center" />
+                                </HorizontalStackLayout>
+                            </Border>
+
+                            <!-- Toggle to Sign Up -->
+                            <Button
+                                Text="Don't have an account? Sign Up"
+                                Clicked="OnToggleCardClicked"
+                                BackgroundColor="Transparent"
+                                TextColor="{StaticResource Primary}"
+                                FontFamily="OpenSansSemibold"
+                                FontSize="13"
+                                Margin="0,4,0,0" />
+
+                        </VerticalStackLayout>
+
+                        <!-- ============================================== -->
+                        <!-- 2. SIGN UP FACE                                -->
+                        <!-- ============================================== -->
+                        <VerticalStackLayout
+                            x:Name="SignUpFace"
+                            Spacing="16"
+                            IsVisible="{Binding IsSignUpView}">
+
+                            <!-- Header -->
+                            <VerticalStackLayout Spacing="4">
+                                <Label
+                                    Text="Create Account"
+                                    FontFamily="SegoeSemibold"
+                                    FontSize="26"
+                                    TextColor="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}"
+                                    HorizontalTextAlignment="Center" />
+                                <Label
+                                    Text="Join RoomToRentRadar as a student or landlord"
+                                    FontFamily="OpenSansRegular"
+                                    FontSize="14"
+                                    TextColor="{StaticResource Gray500}"
+                                    HorizontalTextAlignment="Center" />
+                            </VerticalStackLayout>
+
+                            <!-- Global Status Messages -->
+                            <Border
+                                IsVisible="{Binding HasError}"
+                                BackgroundColor="#FFEBEE"
+                                Stroke="#EF5350"
+                                StrokeThickness="1"
+                                Padding="12,8">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="8" />
+                                </Border.StrokeShape>
+                                <Label
+                                    Text="{Binding ErrorMessage}"
+                                    TextColor="#C62828"
+                                    FontSize="13"
+                                    FontFamily="OpenSansRegular"
+                                    HorizontalTextAlignment="Center" />
+                            </Border>
+
+                            <Border
+                                IsVisible="{Binding IsSuccess}"
+                                BackgroundColor="#E8F5E9"
+                                Stroke="#66BB6A"
+                                StrokeThickness="1"
+                                Padding="12,8">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="8" />
+                                </Border.StrokeShape>
+                                <Label
+                                    Text="{Binding SuccessMessage}"
+                                    TextColor="#2E7D32"
+                                    FontSize="13"
+                                    FontFamily="OpenSansRegular"
+                                    HorizontalTextAlignment="Center" />
+                            </Border>
+
+                            <!-- Email Field -->
+                            <VerticalStackLayout Spacing="4">
+                                <Label
+                                    x:Name="SignUpEmailLabel"
+                                    Text="Email Address"
+                                    FontSize="13"
+                                    FontFamily="OpenSansSemibold"
+                                    TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource Gray100}}" />
+
+                                <Border
+                                    x:Name="SignUpEmailBorder"
+                                    Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
+                                    StrokeThickness="1.5"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray950}}"
+                                    Padding="14,0">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="12" />
+                                    </Border.StrokeShape>
+                                    <Entry
+                                        x:Name="SignUpEmailEntry"
+                                        Text="{Binding SignUpEmail, Mode=TwoWay}"
+                                        Placeholder="name@example.com"
+                                        PlaceholderColor="{StaticResource Gray400}"
+                                        Keyboard="Email"
+                                        HeightRequest="46"
+                                        TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}"
+                                        Focused="OnInputFocused"
+                                        Unfocused="OnInputUnfocused" />
+                                </Border>
+
+                                <Label
+                                    Text="{Binding SignUpEmailError}"
+                                    IsVisible="{Binding SignUpEmailError, Converter={StaticResource StringHasValueConverter}}"
+                                    TextColor="#D32F2F"
+                                    FontSize="12" />
+                            </VerticalStackLayout>
+
+                            <!-- Password Field -->
+                            <VerticalStackLayout Spacing="4">
+                                <Label
+                                    x:Name="SignUpPasswordLabel"
+                                    Text="Password"
+                                    FontSize="13"
+                                    FontFamily="OpenSansSemibold"
+                                    TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource Gray100}}" />
+
+                                <Border
+                                    x:Name="SignUpPasswordBorder"
+                                    Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
+                                    StrokeThickness="1.5"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray950}}"
+                                    Padding="14,0">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="12" />
+                                    </Border.StrokeShape>
+                                    <Entry
+                                        x:Name="SignUpPasswordEntry"
+                                        Text="{Binding SignUpPassword, Mode=TwoWay}"
+                                        Placeholder="Enter your password"
+                                        PlaceholderColor="{StaticResource Gray400}"
+                                        IsPassword="True"
+                                        HeightRequest="46"
+                                        TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}"
+                                        Focused="OnInputFocused"
+                                        Unfocused="OnInputUnfocused" />
+                                </Border>
+
+                                <Label
+                                    Text="{Binding SignUpPasswordError}"
+                                    IsVisible="{Binding SignUpPasswordError, Converter={StaticResource StringHasValueConverter}}"
+                                    TextColor="#D32F2F"
+                                    FontSize="12" />
+                            </VerticalStackLayout>
+
+                            <!-- Confirm Password Field -->
+                            <VerticalStackLayout Spacing="4">
+                                <Label
+                                    x:Name="SignUpConfirmPasswordLabel"
+                                    Text="Confirm Password"
+                                    FontSize="13"
+                                    FontFamily="OpenSansSemibold"
+                                    TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource Gray100}}" />
+
+                                <Border
+                                    x:Name="SignUpConfirmPasswordBorder"
+                                    Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
+                                    StrokeThickness="1.5"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray950}}"
+                                    Padding="14,0">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="12" />
+                                    </Border.StrokeShape>
+                                    <Entry
+                                        x:Name="SignUpConfirmPasswordEntry"
+                                        Text="{Binding SignUpConfirmPassword, Mode=TwoWay}"
+                                        Placeholder="Re-enter your password"
+                                        PlaceholderColor="{StaticResource Gray400}"
+                                        IsPassword="True"
+                                        HeightRequest="46"
+                                        TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}"
+                                        Focused="OnInputFocused"
+                                        Unfocused="OnInputUnfocused" />
+                                </Border>
+
+                                <Label
+                                    Text="{Binding SignUpConfirmPasswordError}"
+                                    IsVisible="{Binding SignUpConfirmPasswordError, Converter={StaticResource StringHasValueConverter}}"
+                                    TextColor="#D32F2F"
+                                    FontSize="12" />
+                            </VerticalStackLayout>
+
+                            <!-- Role Selection: Student or Landlord (NO ADMIN) -->
+                            <VerticalStackLayout Spacing="6">
+                                <Label
+                                    Text="I am a:"
+                                    FontSize="13"
+                                    FontFamily="OpenSansSemibold"
+                                    TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource Gray100}}" />
+
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                    <!-- Student Option -->
+                                    <Border
+                                        x:Name="StudentRoleCard"
+                                        Grid.Column="0"
+                                        StrokeThickness="2"
+                                        Stroke="{Binding IsStudentSelected, Converter={StaticResource RoleBorderBrushConverter}}"
+                                        BackgroundColor="{Binding IsStudentSelected, Converter={StaticResource RoleBackgroundBrushConverter}}"
+                                        Padding="12,14">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="12" />
+                                        </Border.StrokeShape>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding SelectRoleCommand}" CommandParameter="STUDENT" />
+                                        </Border.GestureRecognizers>
+                                        <VerticalStackLayout Spacing="3" HorizontalOptions="Center">
+                                            <Label
+                                                Text="Student"
+                                                FontFamily="OpenSansSemibold"
+                                                FontSize="14"
+                                                HorizontalTextAlignment="Center"
+                                                TextColor="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}" />
+                                            <Label
+                                                Text="Looking for a room"
+                                                FontFamily="OpenSansRegular"
+                                                FontSize="11"
+                                                TextColor="{StaticResource Gray500}"
+                                                HorizontalTextAlignment="Center" />
+                                        </VerticalStackLayout>
+                                    </Border>
+
+                                    <!-- Landlord Option -->
+                                    <Border
+                                        x:Name="LandlordRoleCard"
+                                        Grid.Column="1"
+                                        StrokeThickness="2"
+                                        Stroke="{Binding IsLandlordSelected, Converter={StaticResource RoleBorderBrushConverter}}"
+                                        BackgroundColor="{Binding IsLandlordSelected, Converter={StaticResource RoleBackgroundBrushConverter}}"
+                                        Padding="12,14">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="12" />
+                                        </Border.StrokeShape>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding SelectRoleCommand}" CommandParameter="LANDLORD" />
+                                        </Border.GestureRecognizers>
+                                        <VerticalStackLayout Spacing="3" HorizontalOptions="Center">
+                                            <Label
+                                                Text="Landlord"
+                                                FontFamily="OpenSansSemibold"
+                                                FontSize="14"
+                                                HorizontalTextAlignment="Center"
+                                                TextColor="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}" />
+                                            <Label
+                                                Text="Listing rooms for rent"
+                                                FontFamily="OpenSansRegular"
+                                                FontSize="11"
+                                                TextColor="{StaticResource Gray500}"
+                                                HorizontalTextAlignment="Center" />
+                                        </VerticalStackLayout>
+                                    </Border>
+                                </Grid>
+
+                                <Label
+                                    Text="{Binding RoleError}"
+                                    IsVisible="{Binding RoleError, Converter={StaticResource StringHasValueConverter}}"
+                                    TextColor="#D32F2F"
+                                    FontSize="12" />
+                            </VerticalStackLayout>
+
+                            <!-- Primary Button: Create Account (RoundRectangle 12) -->
+                            <Button
+                                Text="Create Account"
+                                Command="{Binding SignUpCommand}"
+                                BackgroundColor="{StaticResource Primary}"
+                                TextColor="{StaticResource White}"
+                                FontFamily="OpenSansSemibold"
+                                FontSize="15"
+                                HeightRequest="48"
+                                CornerRadius="12"
+                                Margin="0,4,0,0" />
+
+                            <!-- Toggle to Sign In -->
+                            <Button
+                                Text="Already have an account? Sign In"
+                                Clicked="OnToggleCardClicked"
+                                BackgroundColor="Transparent"
+                                TextColor="{StaticResource Primary}"
+                                FontFamily="OpenSansSemibold"
+                                FontSize="13"
+                                Margin="0,2,0,0" />
+
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- Loading Overlay -->
+        <Grid
+            IsVisible="{Binding IsLoading}"
+            BackgroundColor="#80000000">
+            <Border
+                StrokeThickness="0"
+                BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource DarkSecondaryBackground}}"
+                Padding="28"
+                HorizontalOptions="Center"
+                VerticalOptions="Center">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="16" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="14" HorizontalOptions="Center">
+                    <ActivityIndicator
+                        IsRunning="{Binding IsLoading}"
+                        Color="{StaticResource Primary}"
+                        WidthRequest="40"
+                        HeightRequest="40" />
+                    <Label
+                        Text="Please wait..."
+                        FontFamily="OpenSansSemibold"
+                        FontSize="14"
+                        TextColor="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}"
+                        HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+
+        <!-- ============================================== -->
+        <!-- 3. GOOGLE ROLE SELECTION DIALOG (OVERLAY)     -->
+        <!-- ============================================== -->
+        <Grid
+            x:Name="GoogleRoleDialogOverlay"
+            IsVisible="{Binding IsRoleSelectionDialogOpen}"
+            BackgroundColor="#80000000"
+            Padding="20">
+
+            <Border
+                VerticalOptions="Center"
+                HorizontalOptions="Center"
+                MaximumWidthRequest="420"
+                StrokeThickness="1"
+                Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
+                BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource DarkSecondaryBackground}}"
+                Padding="24,26"
+                Shadow="{Shadow Brush=Black, Offset='0,10', Radius=20, Opacity=0.2}">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="24" />
+                </Border.StrokeShape>
+
+                <VerticalStackLayout Spacing="18">
+                    <!-- Title & Subtitle -->
+                    <VerticalStackLayout Spacing="6">
+                        <Label
+                            Text="Select Your Role"
+                            FontFamily="SegoeSemibold"
+                            FontSize="22"
+                            TextColor="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}"
+                            HorizontalTextAlignment="Center" />
+                        <Label
+                            Text="Choose how you want to use RoomToRentRadar to complete your registration."
+                            FontFamily="OpenSansRegular"
+                            FontSize="13"
+                            TextColor="{StaticResource Gray500}"
+                            HorizontalTextAlignment="Center" />
+                    </VerticalStackLayout>
+
+                    <!-- Role Options (No ADMIN) -->
+                    <VerticalStackLayout Spacing="12">
+                        <!-- Student Option -->
+                        <Border
+                            StrokeThickness="2"
+                            Stroke="{Binding IsGoogleStudentSelected, Converter={StaticResource RoleBorderBrushConverter}}"
+                            BackgroundColor="{Binding IsGoogleStudentSelected, Converter={StaticResource RoleBackgroundBrushConverter}}"
+                            Padding="14,12">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="12" />
+                            </Border.StrokeShape>
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding SelectGoogleRoleCommand}" CommandParameter="STUDENT" />
+                            </Border.GestureRecognizers>
+                            <HorizontalStackLayout Spacing="12" VerticalOptions="Center">
+                                <Label
+                                    Text="🎓"
+                                    FontSize="24"
+                                    VerticalOptions="Center" />
+                                <VerticalStackLayout Spacing="2">
+                                    <Label
+                                        Text="Student"
+                                        FontFamily="OpenSansSemibold"
+                                        FontSize="15"
+                                        TextColor="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}" />
+                                    <Label
+                                        Text="Looking for a room"
+                                        FontFamily="OpenSansRegular"
+                                        FontSize="12"
+                                        TextColor="{StaticResource Gray500}" />
+                                </VerticalStackLayout>
+                            </HorizontalStackLayout>
+                        </Border>
+
+                        <!-- Landlord Option -->
+                        <Border
+                            StrokeThickness="2"
+                            Stroke="{Binding IsGoogleLandlordSelected, Converter={StaticResource RoleBorderBrushConverter}}"
+                            BackgroundColor="{Binding IsGoogleLandlordSelected, Converter={StaticResource RoleBackgroundBrushConverter}}"
+                            Padding="14,12">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="12" />
+                            </Border.StrokeShape>
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding SelectGoogleRoleCommand}" CommandParameter="LANDLORD" />
+                            </Border.GestureRecognizers>
+                            <HorizontalStackLayout Spacing="12" VerticalOptions="Center">
+                                <Label
+                                    Text="🏠"
+                                    FontSize="24"
+                                    VerticalOptions="Center" />
+                                <VerticalStackLayout Spacing="2">
+                                    <Label
+                                        Text="Landlord"
+                                        FontFamily="OpenSansSemibold"
+                                        FontSize="15"
+                                        TextColor="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}" />
+                                    <Label
+                                        Text="Listing rooms for rent"
+                                        FontFamily="OpenSansRegular"
+                                        FontSize="12"
+                                        TextColor="{StaticResource Gray500}" />
+                                </VerticalStackLayout>
+                            </HorizontalStackLayout>
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <!-- Error label if not selected -->
+                    <Label
+                        Text="{Binding GoogleRoleError}"
+                        IsVisible="{Binding GoogleRoleError, Converter={StaticResource StringHasValueConverter}}"
+                        TextColor="#D32F2F"
+                        FontSize="12"
+                        HorizontalTextAlignment="Center" />
+
+                    <!-- Buttons -->
+                    <VerticalStackLayout Spacing="8">
+                        <Button
+                            Text="Continue"
+                            Command="{Binding ConfirmGoogleRoleCommand}"
+                            BackgroundColor="{StaticResource Primary}"
+                            TextColor="{StaticResource White}"
+                            FontFamily="OpenSansSemibold"
+                            FontSize="15"
+                            HeightRequest="48"
+                            CornerRadius="12" />
+
+                        <Button
+                            Text="Cancel"
+                            Command="{Binding CancelGoogleRoleCommand}"
+                            BackgroundColor="Transparent"
+                            TextColor="{StaticResource Gray500}"
+                            FontFamily="OpenSansSemibold"
+                            FontSize="13" />
+                    </VerticalStackLayout>
+
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+    </Grid>
+</ContentPage>

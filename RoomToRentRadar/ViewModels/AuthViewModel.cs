@@ -25,7 +25,10 @@ public partial class AuthViewModel : ObservableObject
     }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsLoginView))]
     public partial bool IsSignUpView { get; set; }
+
+    public bool IsLoginView => !IsSignUpView;
 
     [ObservableProperty]
     public partial bool IsLoading { get; set; }
@@ -75,7 +78,12 @@ public partial class AuthViewModel : ObservableObject
     public partial string? SignUpConfirmPasswordError { get; set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsStudentSelected))]
+    [NotifyPropertyChangedFor(nameof(IsLandlordSelected))]
     public partial string? SelectedRole { get; set; }
+
+    public bool IsStudentSelected => SelectedRole == UserRoleConstants.Student;
+    public bool IsLandlordSelected => SelectedRole == UserRoleConstants.Landlord;
 
     [ObservableProperty]
     public partial string? RoleError { get; set; }
@@ -85,7 +93,12 @@ public partial class AuthViewModel : ObservableObject
     public partial bool IsRoleSelectionDialogOpen { get; set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsGoogleStudentSelected))]
+    [NotifyPropertyChangedFor(nameof(IsGoogleLandlordSelected))]
     public partial string? GoogleSelectedRole { get; set; }
+
+    public bool IsGoogleStudentSelected => GoogleSelectedRole == UserRoleConstants.Student;
+    public bool IsGoogleLandlordSelected => GoogleSelectedRole == UserRoleConstants.Landlord;
 
     [ObservableProperty]
     public partial string? GoogleRoleError { get; set; }
