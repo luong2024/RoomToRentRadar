@@ -18,102 +18,149 @@
             <VerticalStackLayout Spacing="16"
                                  Padding="0,0,0,24">
 
-                <!-- HERO BANNER: Modern Gradient Room Showcase with Floating Badges -->
-                <Grid HeightRequest="240">
-                    <Border StrokeThickness="0"
-                            StrokeShape="RoundRectangle 0,0,28,28"
-                            Padding="0">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="#3B1D8F" Offset="0.0" />
-                                <GradientStop Color="#512BD4" Offset="0.55" />
-                                <GradientStop Color="#7C4DFF" Offset="1.0" />
-                            </LinearGradientBrush>
-                        </Border.Background>
+                <!-- HERO BANNER: Real Room Photo Gallery + Floating Badges -->
+                <VerticalStackLayout Spacing="10">
+                    <Grid HeightRequest="250">
+                        <Border StrokeThickness="0"
+                                StrokeShape="RoundRectangle 0,0,28,28"
+                                Padding="0">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#3B1D8F" Offset="0.0" />
+                                    <GradientStop Color="#512BD4" Offset="0.55" />
+                                    <GradientStop Color="#7C4DFF" Offset="1.0" />
+                                </LinearGradientBrush>
+                            </Border.Background>
 
-                        <Grid Padding="20,18,20,24"
-                              RowDefinitions="Auto,*,Auto">
-
-                            <!-- Top Floating Pill Row -->
-                            <Grid Grid.Row="0"
-                                  ColumnDefinitions="Auto,*,Auto">
-                                <Border Grid.Column="0"
-                                        IsVisible="{Binding IsVerified}"
-                                        BackgroundColor="#10B981"
-                                        StrokeThickness="0"
-                                        StrokeShape="RoundRectangle 20"
-                                        Padding="12,6">
-                                    <Label Text="✓ Đã xác minh ICTU"
-                                           FontSize="12"
-                                           FontAttributes="Bold"
-                                           TextColor="White" />
-                                </Border>
-
-                                <Border Grid.Column="2"
-                                        BackgroundColor="#26FFFFFF"
-                                        Stroke="#4DFFFFFF"
-                                        StrokeThickness="1"
-                                        StrokeShape="RoundRectangle 20"
-                                        Padding="12,6">
-                                    <Label Text="{Binding FormattedSecurityScore}"
-                                           FontSize="12"
-                                           FontAttributes="Bold"
-                                           TextColor="#FDE68A" />
-                                </Border>
-                            </Grid>
-
-                            <!-- Center Decorative Room Illustration Icon & Subtitle -->
-                            <VerticalStackLayout Grid.Row="1"
-                                                 VerticalOptions="Center"
-                                                 HorizontalOptions="Center"
-                                                 Spacing="6">
-                                <Border BackgroundColor="#22FFFFFF"
-                                        Stroke="#44FFFFFF"
-                                        StrokeThickness="1"
-                                        StrokeShape="RoundRectangle 24"
-                                        HeightRequest="68"
-                                        WidthRequest="68"
-                                        HorizontalOptions="Center"
-                                        Padding="0">
+                            <Grid>
+                                <!-- Fallback Icon while loading -->
+                                <VerticalStackLayout VerticalOptions="Center"
+                                                     HorizontalOptions="Center"
+                                                     Spacing="4"
+                                                     Opacity="0.45">
                                     <Label Text="🏠"
-                                           FontSize="34"
-                                           HorizontalOptions="Center"
-                                           VerticalOptions="Center" />
-                                </Border>
-                                <Label Text="Không gian thực tế • Hỗ trợ xem 360°"
-                                       FontSize="13"
-                                       TextColor="#E0E7FF"
-                                       HorizontalOptions="Center" />
-                            </VerticalStackLayout>
-
-                            <!-- Bottom Overlay Info Bar inside Hero -->
-                            <Grid Grid.Row="2"
-                                  ColumnDefinitions="Auto,*,Auto">
-                                <Border Grid.Column="0"
-                                        BackgroundColor="#33000000"
-                                        StrokeThickness="0"
-                                        StrokeShape="RoundRectangle 14"
-                                        Padding="12,5">
-                                    <Label Text="{Binding AvailabilityBadgeText}"
+                                           FontSize="38"
+                                           HorizontalOptions="Center" />
+                                    <Label Text="Không gian thực tế • Hỗ trợ xem 360°"
                                            FontSize="12"
-                                           FontAttributes="Bold"
-                                           TextColor="#A7F3D0" />
-                                </Border>
+                                           TextColor="#E0E7FF"
+                                           HorizontalOptions="Center" />
+                                </VerticalStackLayout>
 
-                                <Border Grid.Column="2"
-                                        BackgroundColor="#33000000"
-                                        StrokeThickness="0"
-                                        StrokeShape="RoundRectangle 14"
-                                        Padding="12,5">
-                                    <Label Text="📷 8 ảnh • 360° VR"
-                                           FontSize="12"
-                                           FontAttributes="Bold"
-                                           TextColor="White" />
-                                </Border>
+                                <!-- Main Room Hero Photograph -->
+                                <Image Source="{Binding HeroImageUrl}"
+                                       Aspect="AspectFill"
+                                       HeightRequest="250"
+                                       HorizontalOptions="Fill"
+                                       VerticalOptions="Fill" />
+
+                                <!-- Top & Bottom Floating Overlay Badges -->
+                                <Grid Padding="20,16,20,18"
+                                      RowDefinitions="Auto,*,Auto">
+
+                                    <!-- Top Floating Pill Row -->
+                                    <Grid Grid.Row="0"
+                                          ColumnDefinitions="Auto,*,Auto">
+                                        <Border Grid.Column="0"
+                                                IsVisible="{Binding IsVerified}"
+                                                BackgroundColor="#E610B981"
+                                                StrokeThickness="0"
+                                                StrokeShape="RoundRectangle 20"
+                                                Padding="12,6">
+                                            <Label Text="✓ Đã xác minh ICTU"
+                                                   FontSize="12"
+                                                   FontAttributes="Bold"
+                                                   TextColor="White" />
+                                        </Border>
+
+                                        <Border Grid.Column="2"
+                                                BackgroundColor="#CC111827"
+                                                Stroke="#4DFFFFFF"
+                                                StrokeThickness="1"
+                                                StrokeShape="RoundRectangle 20"
+                                                Padding="12,6">
+                                            <Label Text="{Binding FormattedSecurityScore}"
+                                                   FontSize="12"
+                                                   FontAttributes="Bold"
+                                                   TextColor="#FDE68A" />
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Bottom Overlay Info Bar inside Hero -->
+                                    <Grid Grid.Row="2"
+                                          ColumnDefinitions="Auto,*,Auto">
+                                        <Border Grid.Column="0"
+                                                BackgroundColor="#CC111827"
+                                                StrokeThickness="0"
+                                                StrokeShape="RoundRectangle 14"
+                                                Padding="12,5">
+                                            <Label Text="{Binding AvailabilityBadgeText}"
+                                                   FontSize="12"
+                                                   FontAttributes="Bold"
+                                                   TextColor="#A7F3D0" />
+                                        </Border>
+
+                                        <Border Grid.Column="2"
+                                                BackgroundColor="#CC111827"
+                                                StrokeThickness="0"
+                                                StrokeShape="RoundRectangle 14"
+                                                Padding="12,5">
+                                            <Label Text="📷 8 ảnh • 360° VR"
+                                                   FontSize="12"
+                                                   FontAttributes="Bold"
+                                                   TextColor="White" />
+                                        </Border>
+                                    </Grid>
+                                </Grid>
                             </Grid>
-                        </Grid>
-                    </Border>
-                </Grid>
+                        </Border>
+                    </Grid>
+
+                    <!-- Room Angle Thumbnails Selector Strip -->
+                    <CollectionView ItemsSource="{Binding RoomPhotos}"
+                                    HeightRequest="64"
+                                    Margin="16,0,16,0"
+                                    SelectionMode="None">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Horizontal"
+                                               ItemSpacing="10" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="pageModels:RoomPhotoItem">
+                                <Border WidthRequest="96"
+                                        HeightRequest="62"
+                                        BackgroundColor="#312E81"
+                                        Stroke="{Binding BorderStrokeColorHex}"
+                                        StrokeThickness="2.5"
+                                        StrokeShape="RoundRectangle 12"
+                                        Padding="0">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type pageModels:RoomDetailViewModel}}, Path=SelectPhotoCommand, x:DataType=pageModels:RoomDetailViewModel}"
+                                            CommandParameter="{Binding .}" />
+                                    </Border.GestureRecognizers>
+                                    <Grid>
+                                        <Image Source="{Binding ImageUrl}"
+                                               Aspect="AspectFill"
+                                               WidthRequest="96"
+                                               HeightRequest="62" />
+                                        <Border VerticalOptions="End"
+                                                BackgroundColor="#B3111827"
+                                                StrokeThickness="0"
+                                                Padding="4,2">
+                                            <Label Text="{Binding Caption}"
+                                                   FontSize="9"
+                                                   TextColor="White"
+                                                   HorizontalTextAlignment="Center"
+                                                   LineBreakMode="TailTruncation"
+                                                   MaxLines="1" />
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
 
                 <!-- MAIN CONTENT CONTAINER -->
                 <VerticalStackLayout Padding="16,0,16,0"
@@ -156,7 +203,7 @@
 
                             <CollectionView AutomationId="SimilarRoomsList"
                                             ItemsSource="{Binding SimilarRooms}"
-                                            HeightRequest="168"
+                                            HeightRequest="248"
                                             SelectionMode="None">
                                 <CollectionView.ItemsLayout>
                                     <LinearItemsLayout Orientation="Horizontal"
@@ -169,60 +216,88 @@
                                                 Stroke="{AppThemeBinding Light=#E5E7EB, Dark=#32323E}"
                                                 StrokeThickness="1"
                                                 StrokeShape="RoundRectangle 16"
-                                                Padding="14">
+                                                Padding="0">
                                             <Border.GestureRecognizers>
                                                 <TapGestureRecognizer
                                                     Command="{Binding Source={RelativeSource AncestorType={x:Type pageModels:RoomDetailViewModel}}, Path=SelectSimilarRoomCommand, x:DataType=pageModels:RoomDetailViewModel}"
                                                     CommandParameter="{Binding .}" />
                                             </Border.GestureRecognizers>
 
-                                            <Grid RowDefinitions="Auto,Auto,Auto,*,Auto"
-                                                  RowSpacing="5">
-                                                <HorizontalStackLayout Grid.Row="0"
-                                                                       Spacing="6">
-                                                    <Border BackgroundColor="#DCFCE7"
+                                            <Grid RowDefinitions="108,*">
+                                                <!-- Similar Room Photo Banner -->
+                                                <Grid Grid.Row="0"
+                                                      HeightRequest="108"
+                                                      BackgroundColor="{Binding AccentColorHex}">
+                                                    <Image Source="{Binding ImageUrl}"
+                                                           Aspect="AspectFill"
+                                                           HeightRequest="108"
+                                                           HorizontalOptions="Fill"
+                                                           VerticalOptions="Fill" />
+                                                    <HorizontalStackLayout VerticalOptions="Start"
+                                                                           Padding="10,8"
+                                                                           Spacing="6">
+                                                        <Border BackgroundColor="#E6DCFCE7"
+                                                                StrokeThickness="0"
+                                                                StrokeShape="RoundRectangle 8"
+                                                                Padding="8,2">
+                                                            <Label Text="✓ Còn trống"
+                                                                   FontSize="10"
+                                                                   FontAttributes="Bold"
+                                                                   TextColor="#15803D" />
+                                                        </Border>
+                                                        <Border BackgroundColor="#E6EDE9FE"
+                                                                StrokeThickness="0"
+                                                                StrokeShape="RoundRectangle 8"
+                                                                Padding="8,2">
+                                                            <Label Text="{Binding RoomType}"
+                                                                   FontSize="10"
+                                                                   FontAttributes="Bold"
+                                                                   TextColor="#5B21B6" />
+                                                        </Border>
+                                                    </HorizontalStackLayout>
+                                                    <Border HorizontalOptions="End"
+                                                            VerticalOptions="End"
+                                                            Margin="8,6"
+                                                            BackgroundColor="#CC111827"
                                                             StrokeThickness="0"
                                                             StrokeShape="RoundRectangle 8"
                                                             Padding="8,2">
-                                                        <Label Text="✓ Còn trống"
-                                                               FontSize="11"
+                                                        <Label Text="{Binding PhotoBadgeText}"
+                                                               FontSize="10"
                                                                FontAttributes="Bold"
-                                                               TextColor="#15803D" />
+                                                               TextColor="White" />
                                                     </Border>
-                                                    <Border BackgroundColor="#EDE9FE"
-                                                            StrokeThickness="0"
-                                                            StrokeShape="RoundRectangle 8"
-                                                            Padding="8,2">
-                                                        <Label Text="{Binding RoomType}"
-                                                               FontSize="11"
-                                                               FontAttributes="Bold"
-                                                               TextColor="#5B21B6" />
-                                                    </Border>
-                                                </HorizontalStackLayout>
+                                                </Grid>
 
-                                                <Label Grid.Row="1"
-                                                       Text="{Binding Title}"
-                                                       FontAttributes="Bold"
-                                                       FontSize="14"
-                                                       LineBreakMode="TailTruncation"
-                                                       MaxLines="1" />
+                                                <!-- Similar Room Details -->
+                                                <Grid Grid.Row="1"
+                                                      Padding="12,10,12,12"
+                                                      RowDefinitions="Auto,Auto,Auto,Auto"
+                                                      RowSpacing="4">
+                                                    <Label Grid.Row="0"
+                                                           Text="{Binding Title}"
+                                                           FontAttributes="Bold"
+                                                           FontSize="14"
+                                                           LineBreakMode="TailTruncation"
+                                                           MaxLines="1" />
 
-                                                <Label Grid.Row="2"
-                                                       Text="{Binding FormattedRent}"
-                                                       FontAttributes="Bold"
-                                                       FontSize="16"
-                                                       TextColor="{StaticResource Primary}" />
+                                                    <Label Grid.Row="1"
+                                                           Text="{Binding FormattedRent}"
+                                                           FontAttributes="Bold"
+                                                           FontSize="16"
+                                                           TextColor="{StaticResource Primary}" />
 
-                                                <Label Grid.Row="3"
-                                                       Text="{Binding FormattedSpecs}"
-                                                       FontSize="12"
-                                                       TextColor="{StaticResource Gray500}" />
+                                                    <Label Grid.Row="2"
+                                                           Text="{Binding FormattedSpecs}"
+                                                           FontSize="12"
+                                                           TextColor="{StaticResource Gray500}" />
 
-                                                <Label Grid.Row="4"
-                                                       Text="Chạm để xem phòng này →"
-                                                       FontSize="12"
-                                                       FontAttributes="Bold"
-                                                       TextColor="{StaticResource Primary}" />
+                                                    <Label Grid.Row="3"
+                                                           Text="Chạm để xem phòng này →"
+                                                           FontSize="12"
+                                                           FontAttributes="Bold"
+                                                           TextColor="{StaticResource Primary}" />
+                                                </Grid>
                                             </Grid>
                                         </Border>
                                     </DataTemplate>

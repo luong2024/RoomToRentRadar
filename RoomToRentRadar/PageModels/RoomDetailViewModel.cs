@@ -12,6 +12,28 @@ public class AmenityChipItem
     public string DisplayText => $"{Icon}  {Name}";
 }
 
+public class RoomPhotoItem : ObservableObject
+{
+    private bool _isSelected;
+
+    public string ImageUrl { get; set; } = string.Empty;
+    public string Caption { get; set; } = string.Empty;
+
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set
+        {
+            if (SetProperty(ref _isSelected, value))
+            {
+                OnPropertyChanged(nameof(BorderStrokeColorHex));
+            }
+        }
+    }
+
+    public string BorderStrokeColorHex => IsSelected ? "#FFFFFF" : "#44FFFFFF";
+}
+
 public class SimilarRoomItemDto : ObservableObject
 {
     public string Id { get; set; } = string.Empty;
@@ -23,6 +45,8 @@ public class SimilarRoomItemDto : ObservableObject
     public int DistanceMeters { get; set; }
     public bool IsVerified { get; set; } = true;
     public string AccentColorHex { get; set; } = "#512BD4";
+    public string ImageUrl { get; set; } = string.Empty;
+    public string PhotoBadgeText { get; set; } = "📷 6 ảnh • 360°";
 
     public string FormattedRent => string.Format(CultureInfo.GetCultureInfo("vi-VN"), "{0:N0} đ/tháng", Rent);
     public string FormattedSpecs => $"{Area:0.#} m² • {RoomType} • Cách ICTU {DistanceMeters}m";
@@ -59,7 +83,14 @@ public class RoomDetailViewModel : ObservableObject, IQueryAttributable
     private string _rawLandlordPhone = string.Empty;
     private DateTimeOffset _updatedAt = DateTimeOffset.UtcNow;
     private string _unavailableMessage = "Phòng này hiện đã có sinh viên đặt cọc thuê. Hệ thống gợi ý 3 phòng tương tự đang còn trống ngay gần cổng ICTU:";
+    private string _heroImageUrl = "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=900&q=80";
     private HouseRulesDetailModel _houseRules = new();
+
+    public string HeroImageUrl
+    {
+        get => _heroImageUrl;
+        set => SetProperty(ref _heroImageUrl, value);
+    }
 
     public bool IsAvailable
     {
@@ -266,6 +297,8 @@ public class RoomDetailViewModel : ObservableObject, IQueryAttributable
 
     public ObservableCollection<AmenityChipItem> AmenityChips { get; } = [];
 
+    public ObservableCollection<RoomPhotoItem> RoomPhotos { get; } = [];
+
     public ObservableCollection<SimilarRoomItemDto> SimilarRooms { get; } = [];
 
     public string FormattedRent => string.Format(ViCulture, "{0:N0} đ", Rent);
@@ -298,11 +331,14 @@ public class RoomDetailViewModel : ObservableObject, IQueryAttributable
 
     public IRelayCommand<SimilarRoomItemDto> SelectSimilarRoomCommand { get; }
 
+    public IRelayCommand<RoomPhotoItem> SelectPhotoCommand { get; }
+
     public RoomDetailViewModel()
     {
         ContactOrSignInCommand = new AsyncRelayCommand(ContactOrSignInAsync);
         ToggleAvailabilityPreviewCommand = new RelayCommand(ToggleAvailabilityPreview);
         SelectSimilarRoomCommand = new RelayCommand<SimilarRoomItemDto>(SelectSimilarRoom);
+        SelectPhotoCommand = new RelayCommand<RoomPhotoItem>(SelectPhoto);
 
         LoadSampleRoomDetail("room-2026-001", isAvailable: true, isAuthenticated: false);
     }
@@ -383,6 +419,33 @@ public class RoomDetailViewModel : ObservableObject, IQueryAttributable
             AmenityChips.Add(new AmenityChipItem { Icon = "📹", Name = "Camera an ninh" });
             AmenityChips.Add(new AmenityChipItem { Icon = "🛵", Name = "Chỗ để xe tầng 1" });
 
+            HeroImageUrl = "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=900&q=80";
+            RoomPhotos.Clear();
+            RoomPhotos.Add(new RoomPhotoItem
+            {
+                ImageUrl = "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=900&q=80",
+                Caption = "Không gian chính & Ban công",
+                IsSelected = true
+            });
+            RoomPhotos.Add(new RoomPhotoItem
+            {
+                ImageUrl = "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=900&q=80",
+                Caption = "Góc bàn học & Cửa sổ lớn",
+                IsSelected = false
+            });
+            RoomPhotos.Add(new RoomPhotoItem
+            {
+                ImageUrl = "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=900&q=80",
+                Caption = "Khu vực kệ bếp & Tủ gỗ",
+                IsSelected = false
+            });
+            RoomPhotos.Add(new RoomPhotoItem
+            {
+                ImageUrl = "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=900&q=80",
+                Caption = "Toàn cảnh 360° VR",
+                IsSelected = false
+            });
+
             SimilarRooms.Clear();
             if (!IsAvailable)
             {
@@ -396,7 +459,9 @@ public class RoomDetailViewModel : ObservableObject, IQueryAttributable
                     Address = "Ngõ 42 Đường Z115, Tân Thịnh, TP. Thái Nguyên",
                     DistanceMeters = 350,
                     IsVerified = true,
-                    AccentColorHex = "#4F46E5"
+                    AccentColorHex = "#4F46E5",
+                    ImageUrl = "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=700&q=80",
+                    PhotoBadgeText = "📷 8 ảnh • 360°"
                 });
                 SimilarRooms.Add(new SimilarRoomItemDto
                 {
@@ -408,7 +473,9 @@ public class RoomDetailViewModel : ObservableObject, IQueryAttributable
                     Address = "Đường Quang Trung, Tân Thịnh, TP. Thái Nguyên",
                     DistanceMeters = 550,
                     IsVerified = true,
-                    AccentColorHex = "#0D9488"
+                    AccentColorHex = "#0D9488",
+                    ImageUrl = "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=700&q=80",
+                    PhotoBadgeText = "📷 5 ảnh"
                 });
                 SimilarRooms.Add(new SimilarRoomItemDto
                 {
@@ -420,13 +487,27 @@ public class RoomDetailViewModel : ObservableObject, IQueryAttributable
                     Address = "Tổ 7 Phường Tân Thịnh, TP. Thái Nguyên",
                     DistanceMeters = 620,
                     IsVerified = true,
-                    AccentColorHex = "#7C3AED"
+                    AccentColorHex = "#7C3AED",
+                    ImageUrl = "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=700&q=80",
+                    PhotoBadgeText = "📷 6 ảnh • 360°"
                 });
             }
         }
         finally
         {
             IsBusy = false;
+        }
+    }
+
+    private void SelectPhoto(RoomPhotoItem? photo)
+    {
+        if (photo is null)
+            return;
+
+        HeroImageUrl = photo.ImageUrl;
+        foreach (var item in RoomPhotos)
+        {
+            item.IsSelected = ReferenceEquals(item, photo);
         }
     }
 
@@ -473,6 +554,10 @@ public class RoomDetailViewModel : ObservableObject, IQueryAttributable
         Address = selectedRoom.Address;
         DistanceMeters = selectedRoom.DistanceMeters;
         IsVerified = selectedRoom.IsVerified;
+        if (!string.IsNullOrWhiteSpace(selectedRoom.ImageUrl))
+        {
+            HeroImageUrl = selectedRoom.ImageUrl;
+        }
         UpdatedAt = DateTimeOffset.Now;
         IsAvailable = true;
         SimilarRooms.Clear();
