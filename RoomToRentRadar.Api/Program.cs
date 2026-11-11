@@ -34,6 +34,13 @@ if (string.Equals(databaseProvider, "CosmosDb", StringComparison.OrdinalIgnoreCa
 {
     var cosmosSettings = builder.Configuration.GetSection(CosmosDbSettings.SectionName).Get<CosmosDbSettings>() ?? new CosmosDbSettings();
     builder.Services.AddCosmosDatastore(cosmosSettings);
+
+    if (string.IsNullOrEmpty(builder.Configuration["AllowInMemoryRoomFallback"]))
+    {
+        throw new InvalidOperationException(
+            "Search API (US04) is not yet implemented for the CosmosDb provider. Use DatabaseProvider=Sqlite, " +
+            "or set AllowInMemoryRoomFallback=true to run the in-memory seed fallback explicitly.");
+    }
 }
 else
 {
@@ -84,3 +91,6 @@ app.MapControllers();
 app.MapGet("/api/health", () => Results.Ok(new { Status = "Healthy", Service = "RoomToRentRadar.Api" }));
 
 app.Run();
+
+// Cho phép test project (WebApplicationFactory<Program>) tham chiếu entry point của API.
+public partial class Program { }
