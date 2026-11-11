@@ -19,7 +19,7 @@ flowchart LR
   Admin([Admin]) -->|uses| App
   App -->|HTTPS REST + SignalR| API[RoomToRentRadar API<br/>ASP.NET Core 10]
   App -->|tiles/SDK| Maps[Google Maps SDK / Apple MapKit]
-  App -->|OIDC login| SSO[ICTU SSO<br/>Google/Microsoft OIDC]
+  App -->|OIDC login| SSO[ICTU SSO<br/>Google OIDC, domain ictu.edu.vn]
   API -->|push| FCM[Firebase Cloud Messaging]
   FCM -->|notifications| App
   API -->|directions| ORS[OpenRouteService]

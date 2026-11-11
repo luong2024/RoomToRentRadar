@@ -100,7 +100,7 @@ To-be: register as Landlord (phone required) → Admin approves the landlord →
 | BR-AUTH-01 | Email is trimmed and lower-cased; it must be unique. Duplicate → `409 Conflict`. |
 | BR-AUTH-02 | Public registration allows only `Student` and `Landlord`. Self-registering as `Admin` → `403`. Admin accounts are seeded by configuration. |
 | BR-AUTH-03 | `Landlord` registration requires a Vietnamese phone `^(0|\+84)[0-9]{9}$`. New landlords are `IsVerified = false`; they can sign in and edit their profile but cannot upload photos or create listings until approved; publishing requires `VerifiedLandlordPolicy` (Admin, or Landlord with `is_verified = true`). |
-| BR-AUTH-04 | ICTU SSO accepts only `@ictu.edu.vn` identities; it provisions/links a `Student` with `IsVerified = true`; student code is derived from the e-mail local part when not supplied. |
+| BR-AUTH-04 | ICTU SSO = **Google OIDC**. The server accepts an id_token only if the signature/audience/issuer are valid, `email_verified = true`, the e-mail ends with `@ictu.edu.vn` **and** the `hd` (hosted domain) claim equals `ictu.edu.vn`. It provisions/links a `Student` with `IsVerified = true`; the student code is the e-mail local part upper-cased (e.g. `DTC235210045@ictu.edu.vn` → `DTC235210045`) when not supplied. |
 | BR-AUTH-05 | Password 8–128 chars with ≥ 1 upper, ≥ 1 lower, ≥ 1 digit; PBKDF2-HMAC-SHA256, 100,000 iterations, 16-byte salt. 5 consecutive failures lock the account for 15 min. Error messages never reveal whether the e-mail exists. |
 | BR-AUTH-06 | Access token JWT (30 min) with claims `sub`, `email`, `role`, `is_verified`, `jti`. Refresh token (7 days) stored as SHA-256 hash, rotated on every refresh; reuse of a revoked token revokes all sessions of that user. |
 | BR-AUTH-07 | Protected actions require sign-in: viewing landlord phone/Zalo, favourites, saved searches, reports, chat, publishing. Anonymous responses carry `landlordPhoneNumber = null`. |
@@ -232,6 +232,8 @@ To-be: register as Landlord (phone required) → Admin approves the landlord →
 | # | Question | Owner | Default if unanswered |
 |---|---|---|---|
 | OQ-1 | Story points for US14 (chat) — not in the plan sheet. | Scrum Team | Estimate at next backlog refinement. |
-| OQ-2 | Which campuses besides ICTU, and their coordinates? | Team | Seed ICTU only; other TNU members added via seed file. |
-| OQ-3 | ICTU SSO provider (Google Workspace or Microsoft Entra)? | University IT | Mock in Development. |
-| OQ-4 | Who acts as Admin during the pilot? | PO | A team member account seeded via config. |
+| OQ-2 | Which campuses besides ICTU, and their coordinates? | Team | Seed ICTU only; other campuses are added to the seed file when the team supplies name + coordinates (copy from Google Maps → right-click the campus gate → first line). |
+
+Resolved decisions (2026-11-11):
+- **SSO provider:** Google (OIDC), domain `ictu.edu.vn`; student e-mail format `DTC<digits>@ictu.edu.vn` (see BR-AUTH-04).
+- **Admin during the pilot:** one team member signs in with a seeded Admin account (`Admin:SeedAccounts` configuration) and performs all approvals/moderation.

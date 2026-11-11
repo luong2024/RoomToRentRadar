@@ -24,7 +24,8 @@ Students and landlords need secure accounts; ICTU students should be able to use
 ## Consequences
 - Positive: no third-party cost; offline-friendly long sessions.
 - Negative: `is_verified` claim can be stale up to 30 min — acceptable; server re-checks landlord status in `CreateListing` use case.
-- Follow-up: OQ-3 (real SSO provider).
+- ICTU SSO provider is **Google** (decided 2026-11-11). The real verifier checks Google's signing keys (JWKS), `aud` = our OAuth client ID, `email_verified`, `hd = ictu.edu.vn`. The client opens Google's authorization endpoint with `hd=ictu.edu.vn` as a UI hint only — the server-side `hd` check is the real enforcement.
+- Follow-up: the team creates a Google Cloud OAuth client (Android + Web) and keeps the client ID in configuration (not committed).
 
 ## Compliance
 Existing tests in `RoomToRentRadarUnitTests/Application/Auth` and `Infrastructure/*`; architecture test for mocks disabled in root config.
