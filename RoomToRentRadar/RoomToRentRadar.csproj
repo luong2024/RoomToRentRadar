@@ -79,9 +79,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\RoomToRentRadar.Ports\RoomToRentRadar.Ports.csproj" />
-		<ProjectReference Include="..\RoomToRentRadar.Application\RoomToRentRadar.Application.csproj" />
-		<ProjectReference Include="..\RoomToRentRadar.Infrastructure\RoomToRentRadar.Infrastructure.csproj" />
-		<ProjectReference Include="..\RoomToRentRadar.Datastore.Sqlite\RoomToRentRadar.Datastore.Sqlite.csproj" />
+		<ProjectReference Include="..\RoomToRentRadar.Client.Adapters\RoomToRentRadar.Client.Adapters.csproj" />
 	</ItemGroup>
 	
 </Project>

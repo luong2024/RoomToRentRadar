@@ -1,10 +1,10 @@
 using RoomToRentRadar.Ports.Contracts.Responses.Auth;
 
-namespace RoomToRentRadar.Ports.Outbound.Security;
+namespace RoomToRentRadar.Client.Adapters.Abstractions;
 
-public interface ISecureTokenStoragePort
+public interface ISessionStore
 {
-    Task SaveSessionAsync(AuthTokensDto tokens, CancellationToken ct = default);
+    Task<bool> SaveSessionAsync(AuthTokensDto tokens, CancellationToken ct = default);
     Task<string?> GetAccessTokenAsync(CancellationToken ct = default);
     Task<string?> GetRefreshTokenAsync(CancellationToken ct = default);
     Task<UserProfileDto?> GetCachedUserProfileAsync(CancellationToken ct = default);

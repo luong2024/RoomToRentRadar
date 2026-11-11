@@ -1,12 +1,12 @@
 using System.Windows.Input;
-using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
+using RoomToRentRadar.Pages.Controls.Cards.Models;
 
 namespace RoomToRentRadar.Pages.Controls.Cards;
 
 public partial class RoomCardView : ContentView
 {
     public static readonly BindableProperty RoomProperty =
-        BindableProperty.Create(nameof(Room), typeof(RoomCardDto), typeof(RoomCardView), null,
+        BindableProperty.Create(nameof(Room), typeof(RoomCardDisplayModel), typeof(RoomCardView), null,
             propertyChanged: (b, o, n) => ((RoomCardView)b).UpdateBookmarkState());
 
     public static readonly BindableProperty BookmarkCommandProperty =
@@ -21,9 +21,9 @@ public partial class RoomCardView : ContentView
     public static readonly BindableProperty BookmarkIconColorProperty =
         BindableProperty.Create(nameof(BookmarkIconColor), typeof(Color), typeof(RoomCardView), Color.FromArgb("#1E293B"));
 
-    public RoomCardDto? Room
+    public RoomCardDisplayModel? Room
     {
-        get => (RoomCardDto?)GetValue(RoomProperty);
+        get => (RoomCardDisplayModel?)GetValue(RoomProperty);
         set => SetValue(RoomProperty, value);
     }
 

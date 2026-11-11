@@ -15,6 +15,14 @@ namespace RoomToRentRadar
             // Register modal/push routes (Routes defined directly in ShellContent like 'login' must NOT be registered here to avoid duplicate route errors)
             Routing.RegisterRoute("register", typeof(Pages.RegisterPage));
             Routing.RegisterRoute("roleselection", typeof(Pages.RoleSelectionPage));
+
+#if !DEBUG
+            // Hide UI Design System Catalog in production Release builds (M5)
+            if (UiCatalogContent != null && Items.Contains(UiCatalogContent))
+            {
+                Items.Remove(UiCatalogContent);
+            }
+#endif
         }
         public static async Task DisplaySnackbarAsync(string message)
         {

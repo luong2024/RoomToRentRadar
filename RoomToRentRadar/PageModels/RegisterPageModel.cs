@@ -1,9 +1,8 @@
 using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using RoomToRentRadar.Client.Adapters.Abstractions;
 using RoomToRentRadar.Ports.Contracts.Requests.Auth;
-using RoomToRentRadar.Ports.Inbound.UseCases.Auth;
-using RoomToRentRadar.Ports.Outbound.Security;
 
 namespace RoomToRentRadar.PageModels;
 
@@ -11,10 +10,11 @@ namespace RoomToRentRadar.PageModels;
 public partial class RegisterPageModel : ObservableObject
 {
     private static readonly Regex EmailRegex = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-    private static readonly Regex PhoneRegex = new(@"^(03|05|07|08|09)\d{8}$", RegexOptions.Compiled);
+    // BR-AUTH-03: Vietnamese phone ^(0|\+84)[0-9]{9}$
+    private static readonly Regex PhoneRegex = new(@"^(0|\+84)[0-9]{9}$", RegexOptions.Compiled);
 
-    private readonly IRegisterUserUseCase _registerUserUseCase;
-    private readonly ISecureTokenStoragePort _tokenStorage;
+    private readonly IAuthGateway _authGateway;
+    private readonly ISessionStore _sessionStore;
 
     [ObservableProperty]
     public partial string Role { get; set; } = "Student";
@@ -77,11 +77,11 @@ public partial class RegisterPageModel : ObservableObject
     public partial bool IsBusy { get; set; } = false;
 
     public RegisterPageModel(
-        IRegisterUserUseCase registerUserUseCase,
-        ISecureTokenStoragePort tokenStorage)
+        IAuthGateway authGateway,
+        ISessionStore sessionStore)
     {
-        _registerUserUseCase = registerUserUseCase;
-        _tokenStorage = tokenStorage;
+        _authGateway = authGateway ?? throw new ArgumentNullException(nameof(authGateway));
+        _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
         UpdateRoleState();
     }
 
@@ -139,9 +139,10 @@ public partial class RegisterPageModel : ObservableObject
 
         if (IsStudent)
         {
-            if (string.IsNullOrWhiteSpace(StudentCode))
+            // BR-AUTH-04: Student code is optional, derived from email if omitted
+            if (!string.IsNullOrWhiteSpace(StudentCode) && StudentCode.Trim().Length < 5)
             {
-                StudentCodeError = "Vui lòng nhập mã sinh viên ICTU (ví dụ: DTC19...).";
+                StudentCodeError = "Mã sinh viên không hợp lệ (ví dụ: DTC19...).";
                 isValid = false;
             }
         }
@@ -154,7 +155,7 @@ public partial class RegisterPageModel : ObservableObject
             }
             else if (!PhoneRegex.IsMatch(PhoneNumber.Trim()))
             {
-                PhoneNumberError = "Số điện thoại phải gồm 10 chữ số hợp lệ tại Việt Nam.";
+                PhoneNumberError = "Số điện thoại phải gồm 10 chữ số hợp lệ tại Việt Nam (ví dụ: 0912345678 hoặc +84912345678).";
                 isValid = false;
             }
         }
@@ -188,34 +189,46 @@ public partial class RegisterPageModel : ObservableObject
         try
         {
             IsBusy = true;
+            var normalizedStudentCode = IsStudent && !string.IsNullOrWhiteSpace(StudentCode) ? StudentCode.Trim().ToUpperInvariant() : null;
+            var normalizedPhone = !IsStudent && !string.IsNullOrWhiteSpace(PhoneNumber) ? PhoneNumber.Trim() : null;
+
             var request = new RegisterUserRequest(
                 Email: Email.Trim(),
                 Password: Password,
                 FullName: FullName.Trim(),
                 Role: IsStudent ? "Student" : "Landlord",
-                PhoneNumber: string.IsNullOrWhiteSpace(PhoneNumber) ? null : PhoneNumber.Trim(),
-                StudentCode: IsStudent && !string.IsNullOrWhiteSpace(StudentCode) ? StudentCode.Trim() : null
+                PhoneNumber: normalizedPhone,
+                StudentCode: normalizedStudentCode
             );
 
-            var response = await _registerUserUseCase.ExecuteAsync(request);
+            var response = await _authGateway.RegisterAsync(request);
 
             if (response != null && !string.IsNullOrEmpty(response.AccessToken))
             {
-                await _tokenStorage.SaveSessionAsync(response);
+                var saved = await _sessionStore.SaveSessionAsync(response);
+                if (!saved)
+                {
+                    GeneralError = "Đăng ký thành công nhưng không thể lưu phiên đăng nhập an toàn.";
+                    HasGeneralError = true;
+                    return;
+                }
+
                 await Shell.Current.GoToAsync("//uicatalog");
             }
             else
             {
-                GeneralError = "Đăng ký thành công! Vui lòng đăng nhập.";
+                GeneralError = "Đăng ký không thành công. Vui lòng kiểm tra lại thông tin.";
                 HasGeneralError = true;
-                await Shell.Current.GoToAsync("//login");
             }
         }
-        catch (Exception ex)
+        catch (ApiException apiEx)
         {
-            GeneralError = ex.Message.Contains("exist") || ex.Message.Contains("Email")
-                ? "Email này đã được sử dụng trong hệ thống. Vui lòng đăng nhập."
-                : "Không thể hoàn thành đăng ký. Vui lòng thử lại sau.";
+            GeneralError = MapRegisterErrorCodeToMessage(apiEx.ErrorCode, apiEx.Message);
+            HasGeneralError = true;
+        }
+        catch (Exception)
+        {
+            GeneralError = "Không thể hoàn thành đăng ký. Vui lòng thử lại sau.";
             HasGeneralError = true;
         }
         finally
@@ -228,5 +241,17 @@ public partial class RegisterPageModel : ObservableObject
     private async Task NavigateToLoginAsync()
     {
         await Shell.Current.GoToAsync("//login");
+    }
+
+    private static string MapRegisterErrorCodeToMessage(string? errorCode, string defaultMessage)
+    {
+        return errorCode switch
+        {
+            "USER_EMAIL_EXISTS" or "AUTH_EMAIL_EXISTS" => "Email này đã được sử dụng trong hệ thống. Vui lòng đăng nhập.",
+            "INVALID_STUDENT_CODE" => "Mã sinh viên không hợp lệ.",
+            "INVALID_PHONE_NUMBER" => "Số điện thoại không hợp lệ.",
+            "INVALID_ROLE" => "Vai trò người dùng không hợp lệ.",
+            _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : "Đăng ký thất bại. Vui lòng kiểm tra lại thông tin."
+        };
     }
 }

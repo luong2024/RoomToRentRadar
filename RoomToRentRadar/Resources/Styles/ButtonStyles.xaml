@@ -90,7 +90,7 @@
 
     <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource ActionAccentLight}, Dark={StaticResource ActionAccentDark}}" />
-        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Slate950}}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource Slate950}}" />
         <Setter Property="VisualStateManager.VisualStateGroups">
             <VisualStateGroupList>
                 <VisualStateGroup x:Name="CommonStates">

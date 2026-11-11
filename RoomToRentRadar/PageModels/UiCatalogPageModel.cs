@@ -1,13 +1,13 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
+using RoomToRentRadar.Pages.Controls.Cards.Models;
 
 namespace RoomToRentRadar.PageModels;
 
 public partial class UiCatalogPageModel : ObservableObject
 {
     [ObservableProperty]
-    public partial RoomCardDto SampleRoom { get; set; }
+    public partial RoomCardDisplayModel SampleRoom { get; set; }
 
     [ObservableProperty]
     public partial bool IsButtonLoading { get; set; }
@@ -26,14 +26,14 @@ public partial class UiCatalogPageModel : ObservableObject
 
     public UiCatalogPageModel()
     {
-        SampleRoom = new RoomCardDto
+        SampleRoom = new RoomCardDisplayModel
         {
             Id = "room-demo-01",
             Title = "Phòng trọ cao cấp Full đồ gần Cổng trường ICTU",
             PricePerMonth = 2200000m,
             AreaSquareMeters = 25.5,
             Address = "Số 18, Đường Z115, Quyết Thắng, TP. Thái Nguyên",
-            DistanceToIctuMeters = 350,
+            DistanceMeters = 350,
             ThumbnailUrl = "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=600&q=80",
             IsVerified = true,
             IsAvailable = true,

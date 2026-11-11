@@ -1,19 +1,19 @@
 using System.Windows.Input;
-using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
+using RoomToRentRadar.Pages.Controls.Cards.Models;
 
 namespace RoomToRentRadar.Pages.Controls.Cards;
 
 public partial class ComparisonCardView : ContentView
 {
     public static readonly BindableProperty RoomProperty =
-        BindableProperty.Create(nameof(Room), typeof(RoomCardDto), typeof(ComparisonCardView), null);
+        BindableProperty.Create(nameof(Room), typeof(RoomCardDisplayModel), typeof(ComparisonCardView), null);
 
     public static readonly BindableProperty RemoveCommandProperty =
         BindableProperty.Create(nameof(RemoveCommand), typeof(ICommand), typeof(ComparisonCardView), null);
 
-    public RoomCardDto? Room
+    public RoomCardDisplayModel? Room
     {
-        get => (RoomCardDto?)GetValue(RoomProperty);
+        get => (RoomCardDisplayModel?)GetValue(RoomProperty);
         set => SetValue(RoomProperty, value);
     }
 

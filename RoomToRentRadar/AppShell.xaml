@@ -8,7 +8,8 @@
     Shell.FlyoutBehavior="Flyout"
     Title="RoomToRentRadar">
 
-    <!-- 1. Màn hình Khởi động: ĐĂNG NHẬP (AUTH FLOW) -->
+    <!-- 1. Màn hình Khởi động hiện tại: ĐĂNG NHẬP (AUTH FLOW) -->
+    <!-- TODO: T01.2 (Onboarding & Explore Feed): Chuyển màn hình duyệt phòng (ExplorePage) làm điểm bắt đầu cho Guest mode theo docs/ui-ux-spec.md §1 & UC-01 -->
     <ShellContent
         Title="Đăng nhập"
         Icon="{StaticResource IconDashboard}"
@@ -17,8 +18,9 @@
         SemanticProperties.Description="Đăng nhập tài khoản"
         SemanticProperties.Hint="Đăng nhập bằng Email hoặc ICTU SSO"/>
 
-    <!-- 2. Khám phá Hệ thống UI DESIGN SYSTEM & COMPONENTS MỚI -->
+    <!-- 2. Khám phá Hệ thống UI DESIGN SYSTEM & COMPONENTS (Chỉ hiển thị cho Dev/Debug) -->
     <ShellContent
+        x:Name="UiCatalogContent"
         Title="UI Catalog"
         Icon="{StaticResource IconRibbon}"
         ContentTemplate="{DataTemplate pages:UiCatalogPage}"

@@ -1,11 +1,12 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Storage;
+using RoomToRentRadar.Client.Adapters.Abstractions;
 using RoomToRentRadar.Ports.Contracts.Responses.Auth;
-using RoomToRentRadar.Ports.Outbound.Security;
 
 namespace RoomToRentRadar.DeviceAdapters;
 
-public sealed class MauiSecureTokenStorageAdapter : ISecureTokenStoragePort
+public sealed class MauiSecureSessionStore : ISessionStore
 {
     private const string KeyAccessToken = "auth_access_token";
     private const string KeyRefreshToken = "auth_refresh_token";
@@ -13,8 +14,17 @@ public sealed class MauiSecureTokenStorageAdapter : ISecureTokenStoragePort
     private const string KeyRefreshExpires = "auth_refresh_expires";
     private const string KeyUserProfile = "auth_user_profile";
 
-    public async Task SaveSessionAsync(AuthTokensDto tokens, CancellationToken ct = default)
+    private readonly ILogger<MauiSecureSessionStore>? _logger;
+
+    public MauiSecureSessionStore(ILogger<MauiSecureSessionStore>? logger = null)
     {
+        _logger = logger;
+    }
+
+    public async Task<bool> SaveSessionAsync(AuthTokensDto tokens, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(tokens);
+
         try
         {
             await SecureStorage.Default.SetAsync(KeyAccessToken, tokens.AccessToken);
@@ -27,10 +37,13 @@ public sealed class MauiSecureTokenStorageAdapter : ISecureTokenStoragePort
                 var profileJson = JsonSerializer.Serialize(tokens.User);
                 await SecureStorage.Default.SetAsync(KeyUserProfile, profileJson);
             }
+
+            return true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Graceful fallback for environments where SecureStorage hardware key is restricted
+            _logger?.LogError(ex, "Failed to persist authentication session to SecureStorage.");
+            return false;
         }
     }
 
@@ -40,8 +53,9 @@ public sealed class MauiSecureTokenStorageAdapter : ISecureTokenStoragePort
         {
             return await SecureStorage.Default.GetAsync(KeyAccessToken);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger?.LogWarning(ex, "Failed to read access token from SecureStorage.");
             return null;
         }
     }
@@ -52,8 +66,9 @@ public sealed class MauiSecureTokenStorageAdapter : ISecureTokenStoragePort
         {
             return await SecureStorage.Default.GetAsync(KeyRefreshToken);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger?.LogWarning(ex, "Failed to read refresh token from SecureStorage.");
             return null;
         }
     }
@@ -68,8 +83,9 @@ public sealed class MauiSecureTokenStorageAdapter : ISecureTokenStoragePort
 
             return JsonSerializer.Deserialize<UserProfileDto>(json);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger?.LogWarning(ex, "Failed to read cached user profile from SecureStorage.");
             return null;
         }
     }
@@ -83,7 +99,8 @@ public sealed class MauiSecureTokenStorageAdapter : ISecureTokenStoragePort
                 return false;
 
             var expiresStr = await SecureStorage.Default.GetAsync(KeyAccessExpires);
-            if (!string.IsNullOrWhiteSpace(expiresStr) && DateTime.TryParse(expiresStr, null, System.Globalization.DateTimeStyles.RoundtripKind, out var expiresUtc))
+            if (!string.IsNullOrWhiteSpace(expiresStr) &&
+                DateTime.TryParse(expiresStr, null, System.Globalization.DateTimeStyles.RoundtripKind, out var expiresUtc))
             {
                 if (expiresUtc > DateTime.UtcNow)
                     return true;
@@ -91,15 +108,17 @@ public sealed class MauiSecureTokenStorageAdapter : ISecureTokenStoragePort
 
             // Check if Refresh Token is still alive for automatic refresh
             var refreshExpiresStr = await SecureStorage.Default.GetAsync(KeyRefreshExpires);
-            if (!string.IsNullOrWhiteSpace(refreshExpiresStr) && DateTime.TryParse(refreshExpiresStr, null, System.Globalization.DateTimeStyles.RoundtripKind, out var refreshExpiresUtc))
+            if (!string.IsNullOrWhiteSpace(refreshExpiresStr) &&
+                DateTime.TryParse(refreshExpiresStr, null, System.Globalization.DateTimeStyles.RoundtripKind, out var refreshExpiresUtc))
             {
                 return refreshExpiresUtc > DateTime.UtcNow;
             }
 
             return false;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger?.LogWarning(ex, "Failed to validate tokens in SecureStorage.");
             return false;
         }
     }
@@ -114,9 +133,9 @@ public sealed class MauiSecureTokenStorageAdapter : ISecureTokenStoragePort
             SecureStorage.Default.Remove(KeyRefreshExpires);
             SecureStorage.Default.Remove(KeyUserProfile);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Ignore removal errors
+            _logger?.LogWarning(ex, "Failed to clear session from SecureStorage.");
         }
 
         return Task.CompletedTask;

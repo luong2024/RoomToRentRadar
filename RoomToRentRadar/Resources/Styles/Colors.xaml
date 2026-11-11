@@ -47,8 +47,10 @@
     <!-- Status & Feedback Scale -->
     <Color x:Key="StatusSuccessLight">#16A34A</Color>
     <Color x:Key="StatusSuccessDark">#4CB5AE</Color>
+    <Color x:Key="StatusSuccessTextLight">#15803D</Color> <!-- High contrast AA for small text -->
     <Color x:Key="StatusWarningLight">#D97706</Color>
     <Color x:Key="StatusWarningDark">#F59E0B</Color>
+    <Color x:Key="StatusWarningTextLight">#B45309</Color> <!-- High contrast AA for small text -->
     <Color x:Key="StatusDangerLight">#DC2626</Color>
     <Color x:Key="StatusDangerDark">#EF4444</Color>
     <Color x:Key="StatusInfoLight">#0284C7</Color>
@@ -135,7 +137,9 @@
     <SolidColorBrush x:Key="ActionAccentBrush" Color="{AppThemeBinding Light={StaticResource ActionAccentLight}, Dark={StaticResource ActionAccentDark}}"/>
 
     <SolidColorBrush x:Key="StatusSuccessBrush" Color="{AppThemeBinding Light={StaticResource StatusSuccessLight}, Dark={StaticResource StatusSuccessDark}}"/>
+    <SolidColorBrush x:Key="StatusSuccessTextBrush" Color="{AppThemeBinding Light={StaticResource StatusSuccessTextLight}, Dark={StaticResource StatusSuccessDark}}"/>
     <SolidColorBrush x:Key="StatusWarningBrush" Color="{AppThemeBinding Light={StaticResource StatusWarningLight}, Dark={StaticResource StatusWarningDark}}"/>
+    <SolidColorBrush x:Key="StatusWarningTextBrush" Color="{AppThemeBinding Light={StaticResource StatusWarningTextLight}, Dark={StaticResource StatusWarningDark}}"/>
     <SolidColorBrush x:Key="StatusDangerBrush" Color="{AppThemeBinding Light={StaticResource StatusDangerLight}, Dark={StaticResource StatusDangerDark}}"/>
 
     <SolidColorBrush x:Key="BorderSubtleBrush" Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"/>

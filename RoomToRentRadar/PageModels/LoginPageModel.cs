@@ -1,9 +1,8 @@
 using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using RoomToRentRadar.Client.Adapters.Abstractions;
 using RoomToRentRadar.Ports.Contracts.Requests.Auth;
-using RoomToRentRadar.Ports.Inbound.UseCases.Auth;
-using RoomToRentRadar.Ports.Outbound.Security;
 
 namespace RoomToRentRadar.PageModels;
 
@@ -11,9 +10,8 @@ public partial class LoginPageModel : ObservableObject
 {
     private static readonly Regex EmailRegex = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-    private readonly ILoginUserUseCase _loginUserUseCase;
-    private readonly ILoginWithIctuSsoUseCase _loginWithIctuSsoUseCase;
-    private readonly ISecureTokenStoragePort _tokenStorage;
+    private readonly IAuthGateway _authGateway;
+    private readonly ISessionStore _sessionStore;
 
     [ObservableProperty]
     public partial string Email { get; set; } = string.Empty;
@@ -40,13 +38,11 @@ public partial class LoginPageModel : ObservableObject
     public partial bool IsBusy { get; set; } = false;
 
     public LoginPageModel(
-        ILoginUserUseCase loginUserUseCase,
-        ILoginWithIctuSsoUseCase loginWithIctuSsoUseCase,
-        ISecureTokenStoragePort tokenStorage)
+        IAuthGateway authGateway,
+        ISessionStore sessionStore)
     {
-        _loginUserUseCase = loginUserUseCase;
-        _loginWithIctuSsoUseCase = loginWithIctuSsoUseCase;
-        _tokenStorage = tokenStorage;
+        _authGateway = authGateway ?? throw new ArgumentNullException(nameof(authGateway));
+        _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
     }
 
     [RelayCommand]
@@ -85,11 +81,18 @@ public partial class LoginPageModel : ObservableObject
         {
             IsBusy = true;
             var request = new LoginRequest(Email.Trim(), Password);
-            var response = await _loginUserUseCase.ExecuteAsync(request);
+            var response = await _authGateway.LoginAsync(request);
 
             if (response != null && !string.IsNullOrEmpty(response.AccessToken))
             {
-                await _tokenStorage.SaveSessionAsync(response);
+                var saved = await _sessionStore.SaveSessionAsync(response);
+                if (!saved)
+                {
+                    GeneralError = "Không thể lưu phiên đăng nhập an toàn vào thiết bị.";
+                    HasGeneralError = true;
+                    return;
+                }
+
                 await Shell.Current.GoToAsync("//uicatalog");
             }
             else
@@ -98,11 +101,14 @@ public partial class LoginPageModel : ObservableObject
                 HasGeneralError = true;
             }
         }
-        catch (Exception ex)
+        catch (ApiException apiEx)
         {
-            GeneralError = ex.Message.Contains("credential") || ex.Message.Contains("password")
-                ? "Email hoặc mật khẩu không chính xác."
-                : "Không thể kết nối đến máy chủ. Vui lòng thử lại sau.";
+            GeneralError = MapAuthErrorCodeToMessage(apiEx.ErrorCode, apiEx.Message);
+            HasGeneralError = true;
+        }
+        catch (Exception)
+        {
+            GeneralError = "Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng hoặc thử lại sau.";
             HasGeneralError = true;
         }
         finally
@@ -116,32 +122,47 @@ public partial class LoginPageModel : ObservableObject
     {
         if (IsBusy) return;
 
+#if !DEBUG
+        if (Shell.Current != null)
+        {
+            await Shell.Current.DisplayAlertAsync(
+                "ICTU SSO",
+                "Tính năng Đăng nhập một chạm ICTU SSO (Google OIDC) đang được cấu hình bảo mật theo Task T13.04. Vui lòng đăng nhập bằng Email trong thời gian này.",
+                "Đã hiểu");
+        }
+        return;
+#else
         try
         {
             IsBusy = true;
             HasGeneralError = false;
             GeneralError = string.Empty;
 
-            // In production this integrates with ICTU CAS/OAuth2 web flow.
-            // Using student test SSO token for development simulation:
+            // In development simulation:
             var ssoRequest = new IctuSsoLoginRequest("mock-ictu-sso-id-token", DeviceInfo.Current.Model);
-            var response = await _loginWithIctuSsoUseCase.ExecuteAsync(ssoRequest);
+            var response = await _authGateway.LoginWithIctuSsoAsync(ssoRequest);
 
             if (response != null && !string.IsNullOrEmpty(response.AccessToken))
             {
-                await _tokenStorage.SaveSessionAsync(response);
+                await _sessionStore.SaveSessionAsync(response);
                 await Shell.Current.GoToAsync("//uicatalog");
             }
         }
+        catch (ApiException apiEx)
+        {
+            GeneralError = MapAuthErrorCodeToMessage(apiEx.ErrorCode, "Xác thực qua ICTU SSO không thành công.");
+            HasGeneralError = true;
+        }
         catch (Exception)
         {
-            GeneralError = "Xác thực qua ICTU SSO tạm thời gián đoạn. Vui lòng thử lại hoặc dùng Email.";
+            GeneralError = "Không thể kết nối đến máy chủ xác thực ICTU SSO. Vui lòng thử lại sau.";
             HasGeneralError = true;
         }
         finally
         {
             IsBusy = false;
         }
+#endif
     }
 
     [RelayCommand]
@@ -160,5 +181,17 @@ public partial class LoginPageModel : ObservableObject
                 "Tính năng khôi phục mật khẩu qua Email đang được bảo trì. Vui lòng liên hệ ban quản trị ICTU Radar.",
                 "Đã hiểu");
         }
+    }
+
+    private static string MapAuthErrorCodeToMessage(string? errorCode, string defaultMessage)
+    {
+        return errorCode switch
+        {
+            "INVALID_CREDENTIALS" or "AUTH_INVALID_CREDENTIALS" => "Email hoặc mật khẩu không chính xác.",
+            "ACCOUNT_LOCKED" or "AUTH_ACCOUNT_LOCKED" => "Tài khoản tạm thời bị khóa do nhập sai nhiều lần. Vui lòng thử lại sau 15 phút.",
+            "USER_NOT_FOUND" or "AUTH_USER_NOT_FOUND" => "Tài khoản không tồn tại trên hệ thống.",
+            "USER_DISABLED" => "Tài khoản đã bị tạm dừng hoạt động. Vui lòng liên hệ hỗ trợ.",
+            _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin."
+        };
     }
 }

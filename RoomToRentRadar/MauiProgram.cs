@@ -1,8 +1,8 @@
 using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
-using RoomToRentRadar.Application;
-using RoomToRentRadar.Datastore;
-using RoomToRentRadar.Infrastructure;
+using RoomToRentRadar.Client.Adapters;
+using RoomToRentRadar.Client.Adapters.Abstractions;
+using RoomToRentRadar.DeviceAdapters;
 using Syncfusion.Maui.Toolkit.Hosting;
 
 namespace RoomToRentRadar
@@ -38,19 +38,16 @@ namespace RoomToRentRadar
     		builder.Services.AddLogging(configure => configure.AddDebug());
 #endif
 
-            // Register Hexagonal Architecture Layers
-            builder.Services.AddApplicationServices();
-            builder.Services.AddDatastore();
+            // Register Client Gateways (ADR-003)
+            var baseApiUrl = DeviceInfo.Platform == DevicePlatform.Android
+                ? new Uri("http://10.0.2.2:5000")
+                : new Uri("http://localhost:5000");
 
-            var clientJwtSettings = new RoomToRentRadar.Infrastructure.Adapters.Security.JwtSettings
-            {
-                SigningKey = "RoomToRentRadar_ClientDevSecretKey_AtLeast32BytesLong!"
-            };
-            builder.Services.AddInfrastructure(clientJwtSettings, useMockSsoVerifier: true);
+            builder.Services.AddClientAuthGateway(baseApiUrl);
 
-            // Core UI Services
+            // Core UI & Device Services
             builder.Services.AddSingleton<ModalErrorHandler>();
-            builder.Services.AddSingleton<RoomToRentRadar.Ports.Outbound.Security.ISecureTokenStoragePort, RoomToRentRadar.DeviceAdapters.MauiSecureTokenStorageAdapter>();
+            builder.Services.AddSingleton<ISessionStore, MauiSecureSessionStore>();
 
             // UI Design System Catalog
             builder.Services.AddSingleton<PageModels.UiCatalogPageModel>();
