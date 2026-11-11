@@ -27,27 +27,26 @@ public class GetRoomDetailUseCaseTests
         RoomStatus status = RoomStatus.Available,
         string landlordPhone = "0987654321")
     {
-        return new Room
-        {
-            Id = id,
-            Title = "Phòng trọ khép kín gần trường ICTU",
-            Description = "Phòng đầy đủ tiện nghi, giờ giấc tự do, an ninh tốt.",
-            MonthlyRent = 1800000m,
-            DepositAmount = 1800000m,
-            AreaSquareMeters = 25.5,
-            RoomType = "Khép kín",
-            Amenities = new List<string> { "Điều hòa", "Nóng lạnh", "Wifi", "Gác lửng" },
-            FullAddress = "Số 123 Đường Z115, Xã Quyết Thắng, TP Thái Nguyên",
-            LandlordName = "Nguyễn Văn Chủ Trọ",
-            LandlordPhoneNumber = landlordPhone,
-            PhotoUrls = new List<string> { "https://cdn.example.com/photo1.jpg", "https://cdn.example.com/photo2.jpg" },
-            Panorama360Url = "https://cdn.example.com/panorama.jpg",
-            HouseRules = new List<string> { "Không nuôi thú cưng", "Giữ yên lặng sau 23h" },
-            Status = status,
-            LastUpdatedAt = new DateTime(2026, 11, 10, 12, 0, 0, DateTimeKind.Utc),
-            IsVerified = true,
-            DistanceToCampusKm = 0.8
-        };
+        return new Room(
+            id: id,
+            title: "Phòng trọ khép kín gần trường ICTU",
+            description: "Phòng đầy đủ tiện nghi, giờ giấc tự do, an ninh tốt.",
+            monthlyRent: 1800000m,
+            depositAmount: 1800000m,
+            areaSquareMeters: 25.5,
+            roomType: "Khép kín",
+            amenities: new List<string> { "Điều hòa", "Nóng lạnh", "Wifi", "Gác lửng" },
+            fullAddress: "Số 123 Đường Z115, Xã Quyết Thắng, TP Thái Nguyên",
+            landlordName: "Nguyễn Văn Chủ Trọ",
+            landlordPhoneNumber: landlordPhone,
+            photoUrls: new List<string> { "https://cdn.example.com/photo1.jpg", "https://cdn.example.com/photo2.jpg" },
+            panorama360Url: "https://cdn.example.com/panorama.jpg",
+            houseRules: new List<string> { "Không nuôi thú cưng", "Giữ yên lặng sau 23h" },
+            status: status,
+            lastUpdatedAt: new DateTime(2026, 11, 10, 12, 0, 0, DateTimeKind.Utc),
+            isVerified: true,
+            distanceToCampusKm: 0.8
+        );
     }
 
     [Test]
@@ -133,28 +132,36 @@ public class GetRoomDetailUseCaseTests
 
         var similarRooms = new List<Room>
         {
-            new()
-            {
-                Id = "room-sim-01",
-                Title = "Phòng trọ tương tự 01",
-                MonthlyRent = 1750000m,
-                AreaSquareMeters = 24.0,
-                DistanceToCampusKm = 0.9,
-                IsVerified = true,
-                PhotoUrls = new List<string> { "https://cdn.example.com/sim1.jpg" },
-                FullAddress = "Đường Z115"
-            },
-            new()
-            {
-                Id = "room-sim-02",
-                Title = "Phòng trọ tương tự 02",
-                MonthlyRent = 1900000m,
-                AreaSquareMeters = 26.0,
-                DistanceToCampusKm = 1.1,
-                IsVerified = false,
-                PhotoUrls = new List<string> { "https://cdn.example.com/sim2.jpg" },
-                FullAddress = "Tổ 2, Tân Thịnh"
-            }
+            new(
+                id: "room-sim-01",
+                title: "Phòng trọ tương tự 01",
+                description: "Mô tả phòng tương tự 01",
+                monthlyRent: 1750000m,
+                depositAmount: 1750000m,
+                areaSquareMeters: 24.0,
+                roomType: "Khép kín",
+                fullAddress: "Đường Z115",
+                landlordName: "Chủ trọ 1",
+                landlordPhoneNumber: "0911111111",
+                photoUrls: new List<string> { "https://cdn.example.com/sim1.jpg" },
+                isVerified: true,
+                distanceToCampusKm: 0.9
+            ),
+            new(
+                id: "room-sim-02",
+                title: "Phòng trọ tương tự 02",
+                description: "Mô tả phòng tương tự 02",
+                monthlyRent: 1900000m,
+                depositAmount: 1900000m,
+                areaSquareMeters: 26.0,
+                roomType: "Khép kín",
+                fullAddress: "Tổ 2, Tân Thịnh",
+                landlordName: "Chủ trọ 2",
+                landlordPhoneNumber: "0922222222",
+                photoUrls: new List<string> { "https://cdn.example.com/sim2.jpg" },
+                isVerified: false,
+                distanceToCampusKm: 1.1
+            )
         };
 
         _roomRepository.GetSimilarRoomsAsync(
@@ -193,17 +200,21 @@ public class GetRoomDetailUseCaseTests
 
         var similarRooms = new List<Room>
         {
-            new()
-            {
-                Id = "room-sim-01",
-                Title = "Phòng trọ tương tự 01",
-                MonthlyRent = 1800000m,
-                AreaSquareMeters = 25.0,
-                DistanceToCampusKm = 0.5,
-                IsVerified = true,
-                PhotoUrls = new List<string> { "https://cdn.example.com/sim.jpg" },
-                FullAddress = "Đường Z115"
-            }
+            new(
+                id: "room-sim-01",
+                title: "Phòng trọ tương tự 01",
+                description: "Mô tả",
+                monthlyRent: 1800000m,
+                depositAmount: 1800000m,
+                areaSquareMeters: 25.0,
+                roomType: "Khép kín",
+                fullAddress: "Đường Z115",
+                landlordName: "Chủ trọ 1",
+                landlordPhoneNumber: "0911111111",
+                photoUrls: new List<string> { "https://cdn.example.com/sim.jpg" },
+                isVerified: true,
+                distanceToCampusKm: 0.5
+            )
         };
 
         _roomRepository.GetSimilarRoomsAsync("room-rented", 1800000m, 25.5, 3, Arg.Any<CancellationToken>())
