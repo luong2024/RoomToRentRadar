@@ -124,16 +124,23 @@ public sealed class SqliteDbContext : IDisposable
 
                     CREATE TABLE IF NOT EXISTS RoomPhotos (
                         Id TEXT PRIMARY KEY NOT NULL,
-                        RoomId TEXT NOT NULL,
-                        FileName TEXT NOT NULL,
-                        Url TEXT NOT NULL,
+                        RoomId TEXT NULL,
+                        UploadedByUserId TEXT NOT NULL,
+                        Kind TEXT NOT NULL,
                         ContentType TEXT NOT NULL,
                         SizeBytes INTEGER NOT NULL,
-                        UploadedByUserId TEXT NOT NULL,
-                        UploadedAtUtc TEXT NOT NULL
+                        Width INTEGER NOT NULL,
+                        Height INTEGER NOT NULL,
+                        OriginalPath TEXT NOT NULL,
+                        MediumPath TEXT NOT NULL,
+                        ThumbPath TEXT NOT NULL,
+                        SortOrder INTEGER NOT NULL DEFAULT 0,
+                        CreatedAtUtc TEXT NOT NULL,
+                        AttachedAtUtc TEXT NULL
                     );
 
-                    CREATE INDEX IF NOT EXISTS IX_RoomPhotos_RoomId ON RoomPhotos(RoomId);
+                    CREATE INDEX IF NOT EXISTS IX_RoomPhotos_RoomId_SortOrder ON RoomPhotos(RoomId, SortOrder);
+                    CREATE INDEX IF NOT EXISTS IX_RoomPhotos_UploadedBy_AttachedAt ON RoomPhotos(UploadedByUserId, AttachedAtUtc);
                     """;
                 cmd.ExecuteNonQuery();
                 _schemaInitialized = true;
