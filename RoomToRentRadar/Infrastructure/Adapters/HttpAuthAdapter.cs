@@ -50,6 +50,10 @@ public class HttpAuthAdapter : IAuthenticationPort
             var errorMessage = await ExtractErrorMessageAsync(response, cancellationToken);
             return AuthResult.Failed(errorMessage);
         }
+        catch (HttpRequestException)
+        {
+            return AuthResult.Failed("Unable to connect to authentication server. Please ensure the backend API is running.");
+        }
         catch (Exception ex)
         {
             return AuthResult.Failed(ex.Message);
@@ -87,6 +91,10 @@ public class HttpAuthAdapter : IAuthenticationPort
 
             var errorMessage = await ExtractErrorMessageAsync(response, cancellationToken);
             return AuthResult.Failed(errorMessage);
+        }
+        catch (HttpRequestException)
+        {
+            return AuthResult.Failed("Unable to connect to authentication server. Please ensure the backend API is running.");
         }
         catch (Exception ex)
         {
@@ -131,6 +139,10 @@ public class HttpAuthAdapter : IAuthenticationPort
             }
 
             return AuthResult.Failed(errorDetail);
+        }
+        catch (HttpRequestException)
+        {
+            return AuthResult.Failed("Unable to connect to authentication server. Please ensure the backend API is running.");
         }
         catch (Exception ex)
         {

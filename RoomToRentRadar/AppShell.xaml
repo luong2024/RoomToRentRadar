@@ -5,16 +5,29 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:sf="clr-namespace:Syncfusion.Maui.Toolkit.SegmentedControl;assembly=Syncfusion.Maui.Toolkit"
     xmlns:homeViews="clr-namespace:RoomToRentRadar.Features.Home.Views"
+    xmlns:authViews="clr-namespace:RoomToRentRadar.Views"
     Shell.FlyoutBehavior="Flyout"
     Title="RoomToRentRadar">
 
-    <ShellContent
-        Title="Home"
-        Icon="{StaticResource IconDashboard}"
-        ContentTemplate="{DataTemplate homeViews:HomePage}"
-        Route="home"
-        SemanticProperties.Description="Home"
-        SemanticProperties.Hint="Navigate to home" />
+    <!-- 1. Home is the default landing page (login is NOT mandatory on launch) -->
+    <FlyoutItem Title="Home" Icon="{StaticResource IconDashboard}">
+        <ShellContent
+            Title="Home"
+            ContentTemplate="{DataTemplate homeViews:HomePage}"
+            Route="home"
+            SemanticProperties.Description="Home"
+            SemanticProperties.Hint="Navigate to home" />
+    </FlyoutItem>
+
+    <!-- 2. Sign In / Register available via Flyout and navigation buttons -->
+    <FlyoutItem Title="Sign In / Register" Icon="{StaticResource IconProjects}">
+        <ShellContent
+            Title="Authentication"
+            ContentTemplate="{DataTemplate authViews:AuthPage}"
+            Route="auth/login"
+            SemanticProperties.Description="Sign In and Sign Up"
+            SemanticProperties.Hint="Navigate to authentication" />
+    </FlyoutItem>
 
     <Shell.FlyoutFooter>
         <Grid Padding="15">

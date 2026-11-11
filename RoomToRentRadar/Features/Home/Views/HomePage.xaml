@@ -23,5 +23,15 @@
             Style="{StaticResource Body1}"
             HorizontalTextAlignment="Center" />
 
+        <Button
+            Text="Go to Sign In / Sign Up"
+            Command="{Binding NavigateToAuthCommand}"
+            BackgroundColor="{StaticResource Primary}"
+            TextColor="{StaticResource White}"
+            CornerRadius="12"
+            FontFamily="OpenSansSemibold"
+            HeightRequest="48"
+            Margin="0,16,0,0" />
+
     </VerticalStackLayout>
 </ContentPage>

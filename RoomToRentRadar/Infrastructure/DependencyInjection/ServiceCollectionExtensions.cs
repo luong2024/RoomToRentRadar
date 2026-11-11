@@ -14,7 +14,18 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddMobileInfrastructure(this IServiceCollection services)
     {
         services.AddSingleton<IErrorHandler, ModalErrorHandler>();
-        services.AddSingleton<HttpClient>();
+        services.AddSingleton(sp =>
+        {
+            var baseUrl = DeviceInfo.Platform == DevicePlatform.Android
+                ? "http://10.0.2.2:5000/"
+                : "http://localhost:5000/";
+
+            return new HttpClient
+            {
+                BaseAddress = new Uri(baseUrl),
+                Timeout = TimeSpan.FromSeconds(15)
+            };
+        });
         services.AddSingleton<IApiClient, ApiClient>();
         services.AddSingleton<IGoogleAuthAdapter, GoogleAuthAdapter>();
         services.AddSingleton<IAuthenticationPort, HttpAuthAdapter>();
