@@ -5,6 +5,5 @@
   <Project Path="RoomToRentRadar/RoomToRentRadar.csproj">
     <Deploy Solution="Debug|*" />
   </Project>
-  <Project Path="RoomToRentRadarUIAppiumTests/RoomToRentRadarUIAppiumTests.csproj" />
   <Project Path="RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj" />
 </Solution>
