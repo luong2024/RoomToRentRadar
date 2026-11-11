@@ -21,6 +21,7 @@
     <Compile Include="..\RoomToRentRadar\Core\Constants\AppRoutes.cs" Link="Linked\Core\Constants\AppRoutes.cs" />
     <Compile Include="..\RoomToRentRadar\Core\Interfaces\IErrorHandler.cs" Link="Linked\Core\Interfaces\IErrorHandler.cs" />
     <Compile Include="..\RoomToRentRadar\Infrastructure\Api\IApiClient.cs" Link="Linked\Infrastructure\Api\IApiClient.cs" />
+    <Compile Include="..\RoomToRentRadar\Infrastructure\Api\ApiSettings.cs" Link="Linked\Infrastructure\Api\ApiSettings.cs" />
     <Compile Include="..\RoomToRentRadar\Features\Home\ViewModels\HomeViewModel.cs" Link="Linked\Features\Home\ViewModels\HomeViewModel.cs" />
     <Compile Include="..\RoomToRentRadar\Features\RoomListings\Models\*.cs" LinkBase="Linked\Features\RoomListings\Models" />
     <Compile Include="..\RoomToRentRadar\Features\RoomListings\Services\*.cs" LinkBase="Linked\Features\RoomListings\Services" />

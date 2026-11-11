@@ -14,7 +14,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddMobileInfrastructure(this IServiceCollection services)
     {
         services.AddSingleton<IErrorHandler, ModalErrorHandler>();
-        services.AddSingleton<HttpClient>();
+        services.AddSingleton(_ => ApiSettings.CreateHttpClient(ApiSettings.BaseUrl));
         services.AddSingleton<IApiClient, ApiClient>();
         return services;
     }
