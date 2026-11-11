@@ -9,7 +9,6 @@ using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using RoomToRentRadar.Adapters.Inbound.WebApi.Contracts;
 using RoomToRentRadar.Adapters.Outbound.Authentication;
-using RoomToRentRadar.Adapters.Outbound.Persistence;
 using RoomToRentRadar.Application.Ports.Outbound;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.ValueObjects;
@@ -334,7 +333,8 @@ public class AuthAndRbacIntegrationTests
     private async Task ProvisionAdminInDatabaseAsync(string email, string password)
     {
         using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
         var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
 
         var admin = User.ProvisionAdminUser(
@@ -342,17 +342,19 @@ public class AuthAndRbacIntegrationTests
             passwordHasher.HashPassword(password),
             DateTimeOffset.UtcNow);
 
-        await db.Users.AddAsync(admin);
-        await db.SaveChangesAsync();
+        await userRepository.AddAsync(admin);
+        await unitOfWork.SaveChangesAsync();
     }
 
     private async Task DeactivateUserInDatabaseAsync(Guid userId)
     {
         using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var user = await db.Users.FindAsync(userId);
+        var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var user = await userRepository.GetByIdAsync(userId);
         user!.Deactivate(DateTimeOffset.UtcNow);
-        await db.SaveChangesAsync();
+        userRepository.Update(user);
+        await unitOfWork.SaveChangesAsync();
     }
 
     private static string CreateCustomJwt(

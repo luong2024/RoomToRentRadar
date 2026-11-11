@@ -1,11 +1,11 @@
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
-using RoomToRentRadar.Adapters.Outbound.Persistence;
-using RoomToRentRadar.Adapters.Outbound.Persistence.Repositories;
+using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb;
+using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Context;
+using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Repositories;
 using RoomToRentRadar.Application.Exceptions;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.ValueObjects;
+using User = RoomToRentRadar.Domain.Entities.User;
 
 namespace RoomToRentRadar.Adapters.Tests.Persistence;
 
@@ -13,43 +13,38 @@ public class AuthPersistenceTests
 {
     private static readonly DateTimeOffset FixedNow = new(2026, 11, 10, 12, 0, 0, TimeSpan.Zero);
 
-    private SqliteConnection _connection = null!;
-    private AppDbContext _dbContext = null!;
-    private EfUserRepository _userRepository = null!;
-    private EfRefreshTokenRepository _refreshTokenRepository = null!;
-    private EfUnitOfWork _unitOfWork = null!;
+    private CosmosDbContext _dbContext = null!;
+    private CosmosUserRepository _userRepository = null!;
+    private CosmosRefreshTokenRepository _refreshTokenRepository = null!;
+    private CosmosUnitOfWork _unitOfWork = null!;
 
     [SetUp]
     public async Task SetUp()
     {
-        _connection = new SqliteConnection("Data Source=:memory:");
-        await _connection.OpenAsync();
+        _dbContext = CosmosDbContext.CreateInMemory();
+        await _dbContext.EnsureDatabaseAndContainersAsync();
 
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite(_connection)
-            .Options;
-
-        _dbContext = new AppDbContext(options);
-        await _dbContext.Database.MigrateAsync();
-
-        _userRepository = new EfUserRepository(_dbContext);
-        _refreshTokenRepository = new EfRefreshTokenRepository(_dbContext);
-        _unitOfWork = new EfUnitOfWork(_dbContext);
+        _unitOfWork = new CosmosUnitOfWork(_dbContext);
+        _userRepository = new CosmosUserRepository(_dbContext, _unitOfWork);
+        _refreshTokenRepository = new CosmosRefreshTokenRepository(_dbContext, _unitOfWork);
     }
 
     [TearDown]
-    public async Task TearDown()
+    public void TearDown()
     {
-        await _dbContext.DisposeAsync();
-        await _connection.DisposeAsync();
+        _dbContext.Dispose();
     }
 
     [Test]
-    public async Task MigrateAsync_ShouldApplyInitialAuthSchemaCleanly()
+    public async Task EnsureDatabaseAndContainersAsync_ShouldInitializeCosmosContainersCleanly()
     {
-        var appliedMigrations = await _dbContext.Database.GetAppliedMigrationsAsync();
+        await _dbContext.EnsureDatabaseAndContainersAsync();
 
-        Assert.That(appliedMigrations, Has.One.Contains("InitialAuthSchema"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(_dbContext.Users, Is.Not.Null);
+            Assert.That(_dbContext.RefreshTokens, Is.Not.Null);
+        });
     }
 
     [Test]
@@ -60,8 +55,6 @@ public class AuthPersistenceTests
 
         await _userRepository.AddAsync(user);
         await _unitOfWork.SaveChangesAsync();
-
-        _dbContext.ChangeTracker.Clear();
 
         var loaded = await _userRepository.GetByEmailAsync(EmailAddress.Create("student@example.com"));
 
@@ -102,8 +95,6 @@ public class AuthPersistenceTests
         await _userRepository.AddAsync(user);
         await _unitOfWork.SaveChangesAsync();
 
-        _dbContext.ChangeTracker.Clear();
-
         var loaded = await _userRepository.GetByExternalLoginAsync(UserExternalLogin.GoogleProvider, "google-sub-999");
 
         Assert.Multiple(() =>
@@ -126,7 +117,7 @@ public class AuthPersistenceTests
 
         await _userRepository.AddAsync(user2);
 
-        Assert.ThrowsAsync<DbUpdateException>(async () =>
+        Assert.CatchAsync(async () =>
             await _unitOfWork.SaveChangesAsync());
     }
 
@@ -151,7 +142,7 @@ public class AuthPersistenceTests
         var duplicateHashToken = RefreshToken.Create(user.Id, "hash-1", family, FixedNow, FixedNow.AddDays(7));
         await _refreshTokenRepository.AddAsync(duplicateHashToken);
 
-        Assert.ThrowsAsync<DbUpdateException>(async () =>
+        Assert.CatchAsync(async () =>
             await _unitOfWork.SaveChangesAsync());
     }
 
@@ -179,8 +170,6 @@ public class AuthPersistenceTests
                 throw new InvalidOperationException("Simulated failure before new token is saved.");
             });
         });
-
-        _dbContext.ChangeTracker.Clear();
 
         var reloadedOldToken = await _refreshTokenRepository.GetByTokenHashAsync("old-hash");
         var reloadedNewToken = await _refreshTokenRepository.GetByTokenHashAsync("new-hash");
