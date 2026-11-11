@@ -310,9 +310,12 @@ jobs:
           fi
 
           APK_FILE=$(find "$OUTPUT_DIR" -maxdepth 2 -name "*-Signed.apk" | head -n 1)
+          if [ -z "$APK_FILE" ]; then
+            APK_FILE=$(find "$OUTPUT_DIR" -maxdepth 2 -name "*.apk" | head -n 1)
+          fi
 
           if [ -z "$APK_FILE" ] || [ ! -s "$APK_FILE" ]; then
-            echo "::error::No non-empty signed Release APK (*-Signed.apk) found in '$OUTPUT_DIR'."
+            echo "::error::No non-empty Release APK file found in '$OUTPUT_DIR'."
             ls -la "$OUTPUT_DIR"
             exit 1
           fi

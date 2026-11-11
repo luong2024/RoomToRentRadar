@@ -35,11 +35,20 @@ jobs:
       CosmosDb__DatabaseName: RoomToRentRadarTestDb
 
     steps:
-      - name: Validate release branch and version tag
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Validate release branch, version tag, and tag-commit integrity
         env:
           BRANCH: ${{ github.ref_name }}
           TAG: ${{ inputs.release_tag }}
+          COMMIT_SHA: ${{ github.sha }}
         run: |
+          set -euo pipefail
+
           if [[ "$BRANCH" != "main" && "$BRANCH" != "group-4" && "$BRANCH" != "group-1" ]]; then
             echo "::error::Releases may only be triggered from main, group-4, or group-1 (current branch: '$BRANCH')."
             exit 1
@@ -50,8 +59,13 @@ jobs:
             exit 1
           fi
 
-      - name: Checkout source code
-        uses: actions/checkout@v4
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            TAG_COMMIT=$(git rev-list -n 1 "refs/tags/$TAG")
+            if [ "$TAG_COMMIT" != "$COMMIT_SHA" ]; then
+              echo "::error::Tag '$TAG' already exists at commit $TAG_COMMIT, which does not match source commit $COMMIT_SHA."
+              exit 1
+            fi
+          fi
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
@@ -95,13 +109,25 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
 
-      - name: Determine release version
+      - name: Determine release version and verify tag-commit integrity
         id: version
         env:
           TAG: ${{ inputs.release_tag }}
+          COMMIT_SHA: ${{ github.sha }}
         run: |
+          set -euo pipefail
+
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            TAG_COMMIT=$(git rev-list -n 1 "refs/tags/$TAG")
+            if [ "$TAG_COMMIT" != "$COMMIT_SHA" ]; then
+              echo "::error::Tag '$TAG' points to $TAG_COMMIT instead of verified commit $COMMIT_SHA."
+              exit 1
+            fi
+          fi
+
           VERSION="${TAG#v}"
           echo "release_tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "app_version=$VERSION" >> "$GITHUB_OUTPUT"
@@ -212,14 +238,30 @@ jobs:
         id: stage
         env:
           APP_VERSION: ${{ steps.version.outputs.app_version }}
+          HAS_SIGNING: ${{ steps.signing.outputs.has_signing }}
         run: |
           set -euo pipefail
           OUTPUT_DIR="RoomToRentRadar/bin/Release/net10.0-android"
-          APK_SRC=$(find "$OUTPUT_DIR" -name "*-Signed.apk" | head -n 1)
 
-          if [ -z "$APK_SRC" ] || [ ! -s "$APK_SRC" ]; then
-            echo "::error::Signed Release APK (*-Signed.apk) not found in $OUTPUT_DIR."
-            exit 1
+          if [ "$HAS_SIGNING" = "true" ]; then
+            APK_SRC=$(find "$OUTPUT_DIR" -name "*-Signed.apk" | head -n 1)
+            if [ -z "$APK_SRC" ] || [ ! -s "$APK_SRC" ]; then
+              echo "::error::Signed Release APK (*-Signed.apk) not found in $OUTPUT_DIR."
+              exit 1
+            fi
+            if ! keytool -printcert -jarfile "$APK_SRC" >/dev/null 2>&1; then
+              echo "::error::Release APK '$APK_SRC' failed cryptographic signature verification."
+              exit 1
+            fi
+          else
+            APK_SRC=$(find "$OUTPUT_DIR" -name "*-Signed.apk" | head -n 1)
+            if [ -z "$APK_SRC" ]; then
+              APK_SRC=$(find "$OUTPUT_DIR" -name "*.apk" | head -n 1)
+            fi
+            if [ -z "$APK_SRC" ] || [ ! -s "$APK_SRC" ]; then
+              echo "::error::Release APK not found in $OUTPUT_DIR."
+              exit 1
+            fi
           fi
 
           if ! unzip -t "$APK_SRC" >/dev/null 2>&1; then
@@ -253,5 +295,6 @@ jobs:
           RUN_NUM: ${{ github.run_number }}
         run: |
           gh release create "$TAG_NAME" "$APK_FILE" \
+            --target "$COMMIT_SHA" \
             --title "RoomToRentRadar $TAG_NAME" \
             --notes "Manual release $TAG_NAME built from commit $COMMIT_SHA (Run #$RUN_NUM)."
