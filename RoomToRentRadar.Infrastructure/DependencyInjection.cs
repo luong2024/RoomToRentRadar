@@ -37,6 +37,8 @@ public static class DependencyInjection
         services.TryAddScoped<IUserRepository>(sp => sp.GetRequiredService<InMemoryUserRepository>());
         services.AddSingleton<InMemoryAuditLogRepository>();
         services.TryAddScoped<IAuditLogRepository>(sp => sp.GetRequiredService<InMemoryAuditLogRepository>());
+        services.AddSingleton<InMemoryRoomRepository>();
+        services.TryAddScoped<IRoomRepository>(sp => sp.GetRequiredService<InMemoryRoomRepository>());
 
         return services;
     }
