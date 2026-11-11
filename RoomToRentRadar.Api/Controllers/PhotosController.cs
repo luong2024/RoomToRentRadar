@@ -2,8 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using RoomToRentRadar.Api.Authorization;
+using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.Exceptions;
-using RoomToRentRadar.Domain.Services;
 using RoomToRentRadar.Ports.Contracts.Requests.Photos;
 using RoomToRentRadar.Ports.Contracts.Responses.Photos;
 using RoomToRentRadar.Ports.Inbound.UseCases.Photos;
@@ -11,98 +11,60 @@ using RoomToRentRadar.Ports.Inbound.UseCases.Photos;
 namespace RoomToRentRadar.Api.Controllers;
 
 [ApiController]
-[Route("api/rooms/{roomId}/photos")]
+[Route("api/landlord/photos")]
 public sealed class PhotosController : ControllerBase
 {
-    private readonly IUploadRoomPhotosUseCase _uploadRoomPhotosUseCase;
-    private readonly IGetRoomGalleryUseCase _getRoomGalleryUseCase;
-    private readonly IDeleteRoomPhotoUseCase _deleteRoomPhotoUseCase;
+    private readonly IUploadPhotoUseCase _uploadPhotoUseCase;
+    private readonly IDeletePhotoUseCase _deletePhotoUseCase;
 
     public PhotosController(
-        IUploadRoomPhotosUseCase uploadRoomPhotosUseCase,
-        IGetRoomGalleryUseCase getRoomGalleryUseCase,
-        IDeleteRoomPhotoUseCase deleteRoomPhotoUseCase)
+        IUploadPhotoUseCase uploadPhotoUseCase,
+        IDeletePhotoUseCase deletePhotoUseCase)
     {
-        ArgumentNullException.ThrowIfNull(uploadRoomPhotosUseCase);
-        ArgumentNullException.ThrowIfNull(getRoomGalleryUseCase);
-        ArgumentNullException.ThrowIfNull(deleteRoomPhotoUseCase);
+        ArgumentNullException.ThrowIfNull(uploadPhotoUseCase);
+        ArgumentNullException.ThrowIfNull(deletePhotoUseCase);
 
-        _uploadRoomPhotosUseCase = uploadRoomPhotosUseCase;
-        _getRoomGalleryUseCase = getRoomGalleryUseCase;
-        _deleteRoomPhotoUseCase = deleteRoomPhotoUseCase;
+        _uploadPhotoUseCase = uploadPhotoUseCase;
+        _deletePhotoUseCase = deletePhotoUseCase;
     }
 
     [HttpPost]
     [Authorize(Policy = AuthorizationPolicies.VerifiedLandlordPolicy)]
-    [RequestSizeLimit(110 * 1024 * 1024)]
-    [RequestFormLimits(MultipartBodyLengthLimit = 110 * 1024 * 1024)]
-    [ProducesResponseType(typeof(IReadOnlyList<RoomPhotoDto>), StatusCodes.Status201Created)]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(11 * 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = 11 * 1024 * 1024)]
+    [ProducesResponseType(typeof(PhotoUploadDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
-    public async Task<ActionResult<IReadOnlyList<RoomPhotoDto>>> Upload(
-        [FromRoute] string roomId,
-        [FromForm] List<IFormFile> files,
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status413PayloadTooLarge)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status415UnsupportedMediaType)]
+    public async Task<ActionResult<PhotoUploadDto>> Upload(
+        [FromForm] IFormFile? file,
+        [FromForm] PhotoKind? kind,
         CancellationToken ct)
     {
+        // RoomId/UploadedByUserId are never accepted from the client (whitelist).
+        if (file is null)
+        {
+            throw new DomainValidationException("Photo file is required.");
+        }
+
+        if (kind is null)
+        {
+            throw new DomainValidationException("Photo kind is required.");
+        }
+
         var userId = User.GetRequiredUserId();
 
-        if (files is null || files.Count == 0)
-        {
-            throw new DomainValidationException("At least one photo file is required.");
-        }
+        // Stream straight from the request; never buffer the upload into memory.
+        await using var stream = file.OpenReadStream();
 
-        if (files.Count > PhotoFileRules.MaxPhotosPerRoom)
-        {
-            throw new DomainValidationException($"A room can have at most {PhotoFileRules.MaxPhotosPerRoom} photos.");
-        }
+        var dto = await _uploadPhotoUseCase.ExecuteAsync(
+            new UploadPhotoRequest(userId, kind.Value, file.FileName, stream, file.Length),
+            ct);
 
-        var streams = new List<MemoryStream>(files.Count);
-
-        try
-        {
-            var inputs = new List<PhotoFileInput>(files.Count);
-            foreach (var file in files)
-            {
-                if (file.Length > PhotoFileRules.MaxFileBytes)
-                {
-                    throw new DomainValidationException("Each photo must be 10 MB or smaller.");
-                }
-
-                var buffer = new MemoryStream((int)file.Length);
-                streams.Add(buffer);
-
-                await file.CopyToAsync(buffer, ct);
-                buffer.Position = 0;
-
-                inputs.Add(new PhotoFileInput(file.FileName, buffer, file.Length));
-            }
-
-            var dtos = await _uploadRoomPhotosUseCase.ExecuteAsync(
-                new UploadRoomPhotosRequest(roomId, userId, inputs),
-                ct);
-
-            return StatusCode(StatusCodes.Status201Created, dtos);
-        }
-        finally
-        {
-            foreach (var stream in streams)
-            {
-                stream.Dispose();
-            }
-        }
-    }
-
-    [HttpGet]
-    [AllowAnonymous]
-    [ProducesResponseType(typeof(RoomGalleryDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<RoomGalleryDto>> GetGallery(
-        [FromRoute] string roomId,
-        CancellationToken ct)
-    {
-        var gallery = await _getRoomGalleryUseCase.ExecuteAsync(roomId, ct);
-        return Ok(gallery);
+        return Created(dto.MediumUrl, dto);
     }
 
     [HttpDelete("{photoId}")]
@@ -111,12 +73,17 @@ public sealed class PhotosController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Delete(
-        [FromRoute] string roomId,
-        [FromRoute] string photoId,
-        CancellationToken ct)
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Delete([FromRoute] string photoId, CancellationToken ct)
     {
-        var deleted = await _deleteRoomPhotoUseCase.ExecuteAsync(roomId, photoId, ct);
-        return deleted ? NoContent() : NotFound();
+        var userId = User.GetRequiredUserId();
+        var result = await _deletePhotoUseCase.ExecuteAsync(photoId, userId, ct);
+
+        return result switch
+        {
+            DeletePhotoResult.Deleted => NoContent(),
+            DeletePhotoResult.Attached => Conflict(),
+            _ => NotFound()
+        };
     }
 }

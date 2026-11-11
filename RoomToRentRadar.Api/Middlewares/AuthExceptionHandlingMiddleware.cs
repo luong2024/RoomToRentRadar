@@ -84,6 +84,16 @@ public sealed class AuthExceptionHandlingMiddleware
                 title = "Conflict";
                 return true;
 
+            case FileTooLargeException:
+                statusCode = StatusCodes.Status413PayloadTooLarge;
+                title = "Payload Too Large";
+                return true;
+
+            case UnsupportedMediaTypeException:
+                statusCode = StatusCodes.Status415UnsupportedMediaType;
+                title = "Unsupported Media Type";
+                return true;
+
             default:
                 statusCode = StatusCodes.Status500InternalServerError;
                 title = "Unexpected Error";

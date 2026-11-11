@@ -1,13 +1,12 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using RoomToRentRadar.Api.Authorization;
 using RoomToRentRadar.Api.Middlewares;
 using RoomToRentRadar.Application;
-using RoomToRentRadar.Datastore.CosmosDb;
-using RoomToRentRadar.Datastore.CosmosDb.Configurations;
 using RoomToRentRadar.Datastore.Sqlite;
 using RoomToRentRadar.Datastore.Sqlite.Configurations;
 using RoomToRentRadar.Infrastructure;
@@ -15,10 +14,31 @@ using RoomToRentRadar.Infrastructure.Adapters.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var uploadsRoot = Path.Combine(builder.Environment.ContentRootPath, "uploads");
-Directory.CreateDirectory(uploadsRoot);
+var mediaRootSetting = builder.Configuration["Media:RootPath"];
+if (string.IsNullOrWhiteSpace(mediaRootSetting))
+{
+    mediaRootSetting = "uploads";
+}
 
-builder.Services.AddControllers();
+var mediaRoot = Path.Combine(builder.Environment.ContentRootPath, mediaRootSetting);
+Directory.CreateDirectory(mediaRoot);
+
+var mediaPublicBaseUrl = builder.Configuration["Media:PublicBaseUrl"];
+if (string.IsNullOrWhiteSpace(mediaPublicBaseUrl))
+{
+    // Fail fast: public URLs must be explicit outside Development.
+    if (!builder.Environment.IsDevelopment())
+    {
+        throw new InvalidOperationException("CRITICAL: Media:PublicBaseUrl must be configured outside the Development environment.");
+    }
+
+    mediaPublicBaseUrl = "http://localhost:5000";
+}
+
+// Enums are serialized as strings (AGENTS.md §6, openapi.yaml PhotoKind: type string).
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer();
 
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new JwtSettings();
@@ -33,18 +53,8 @@ if (string.IsNullOrWhiteSpace(jwtSettings.SigningKey))
     jwtSettings.SigningKey = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
 }
 
-var databaseProvider = builder.Configuration["DatabaseProvider"] ?? "Sqlite";
-if (string.Equals(databaseProvider, "CosmosDb", StringComparison.OrdinalIgnoreCase))
-{
-    var cosmosSettings = builder.Configuration.GetSection(CosmosDbSettings.SectionName).Get<CosmosDbSettings>() ?? new CosmosDbSettings();
-    builder.Services.AddCosmosDatastore(cosmosSettings);
-    Console.WriteLine("WARNING: CosmosDb provider has no photo repository; photo metadata uses in-memory storage and will be lost on restart.");
-}
-else
-{
-    var sqliteSettings = builder.Configuration.GetSection(SqliteSettings.SectionName).Get<SqliteSettings>() ?? new SqliteSettings();
-    builder.Services.AddSqliteDatastore(sqliteSettings);
-}
+var sqliteSettings = builder.Configuration.GetSection(SqliteSettings.SectionName).Get<SqliteSettings>() ?? new SqliteSettings();
+builder.Services.AddSqliteDatastore(sqliteSettings);
 
 var useMockSso = builder.Configuration.GetValue("IctuSso:UseMockVerifier", defaultValue: false);
 if (useMockSso && !builder.Environment.IsDevelopment())
@@ -54,7 +64,7 @@ if (useMockSso && !builder.Environment.IsDevelopment())
 
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructure(jwtSettings, useMockSsoVerifier: useMockSso);
-builder.Services.AddPhotoInfrastructure(uploadsRoot);
+builder.Services.AddPhotoInfrastructure(mediaRoot, mediaPublicBaseUrl);
 
 var signingKeyBytes = Encoding.UTF8.GetBytes(jwtSettings.SigningKey);
 builder.Services
@@ -88,11 +98,21 @@ app.UseMiddleware<AuditLoggingMiddleware>();
 
 app.UseStaticFiles(new StaticFileOptions
 {
-    FileProvider = new PhysicalFileProvider(uploadsRoot),
-    RequestPath = "/uploads"
+    FileProvider = new PhysicalFileProvider(mediaRoot),
+    RequestPath = "/media",
+    OnPrepareResponse = ctx =>
+    {
+        // Photos are immutable (server-generated names); cache them for a year.
+        ctx.Context.Response.Headers.Append("Cache-Control", "public, max-age=31536000, immutable");
+        ctx.Context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+    }
 });
 
 app.MapControllers();
 app.MapGet("/api/health", () => Results.Ok(new { Status = "Healthy", Service = "RoomToRentRadar.Api" }));
 
 app.Run();
+
+public partial class Program
+{
+}
