@@ -2,7 +2,6 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using RoomToRentRadar.Adapters.Inbound.WebApi.Authentication;
 using RoomToRentRadar.Adapters.Inbound.WebApi.Authorization;
@@ -10,8 +9,10 @@ using RoomToRentRadar.Adapters.Inbound.WebApi.Controllers;
 using RoomToRentRadar.Adapters.Inbound.WebApi.Middleware;
 using RoomToRentRadar.Adapters.Inbound.WebApi.RateLimiting;
 using RoomToRentRadar.Adapters.Outbound.Authentication;
-using RoomToRentRadar.Adapters.Outbound.Persistence;
-using RoomToRentRadar.Adapters.Outbound.Persistence.Repositories;
+using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb;
+using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Configurations;
+using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Context;
+using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Repositories;
 using RoomToRentRadar.Application.Ports.Inbound;
 using RoomToRentRadar.Application.Ports.Outbound;
 using RoomToRentRadar.Application.UseCases.Authentication;
@@ -47,17 +48,15 @@ public static class ServiceCollectionExtensions
             .AddOptions<GoogleAuthOptions>()
             .Bind(configuration.GetSection(GoogleAuthOptions.SectionName));
 
-        var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? "Data Source=roomtorentradar.db";
+        services
+            .AddOptions<CosmosDbOptions>()
+            .Bind(configuration.GetSection(CosmosDbOptions.SectionName));
 
-        services.AddDbContext<AppDbContext>(options =>
-            options.UseSqlite(
-                connectionString,
-                sqlite => sqlite.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
-
-        services.AddScoped<IUserRepository, EfUserRepository>();
-        services.AddScoped<IRefreshTokenRepository, EfRefreshTokenRepository>();
-        services.AddScoped<IUnitOfWork, EfUnitOfWork>();
+        services.AddSingleton<ICosmosDbContext, CosmosDbContext>();
+        services.AddScoped<CosmosUnitOfWork>();
+        services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<CosmosUnitOfWork>());
+        services.AddScoped<IUserRepository, CosmosUserRepository>();
+        services.AddScoped<IRefreshTokenRepository, CosmosRefreshTokenRepository>();
         services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
         services.AddSingleton<IGoogleIdentityVerifier, GoogleIdentityVerifier>();
         services.AddSingleton<ITokenService, JwtTokenService>();
