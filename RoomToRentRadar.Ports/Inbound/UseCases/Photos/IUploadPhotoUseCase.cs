@@ -3,7 +3,7 @@ using RoomToRentRadar.Ports.Contracts.Responses.Photos;
 
 namespace RoomToRentRadar.Ports.Inbound.UseCases.Photos;
 
-public interface IUploadRoomPhotosUseCase
+public interface IUploadPhotoUseCase
 {
-    Task<IReadOnlyList<RoomPhotoDto>> ExecuteAsync(UploadRoomPhotosRequest request, CancellationToken ct = default);
+    Task<PhotoUploadDto> ExecuteAsync(UploadPhotoRequest request, CancellationToken ct = default);
 }

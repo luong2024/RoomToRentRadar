@@ -2,6 +2,7 @@ namespace RoomToRentRadar.Ports.Outbound.ExternalServices;
 
 public interface IPhotoStoragePort
 {
-    Task<string> SaveAsync(string roomId, string fileName, Stream content, CancellationToken ct = default); // trả URL tương đối
-    Task DeleteAsync(string roomId, string fileName, CancellationToken ct = default);
+    Task SaveAsync(string path, Stream content, CancellationToken ct = default);
+    Task DeleteAsync(string path, CancellationToken ct = default);
+    string GetPublicUrl(string path);
 }
