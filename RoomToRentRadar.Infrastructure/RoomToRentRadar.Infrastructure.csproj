@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    RoomToRentRadar.Infrastructure — Data & External Services layer.
+    Pure .NET 10 library (NO MAUI dependency) so it can be unit-tested directly with in-memory SQLite.
+    Contains: SQLite schema, seed data, RentalDatabaseService, Repositories, and In-Memory Fakes.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>RoomToRentRadar</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RoomToRentRadar.Core\RoomToRentRadar.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="8.0.8" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="RoomToRentRadarUnitTests" />
+  </ItemGroup>
+
+</Project>

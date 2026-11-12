@@ -1,0 +1,16 @@
+# ============================================================================
+# CODEOWNERS — RoomToRentRadar (Group 5 - ICTU)
+# Scrum Master / Gatekeeper: @Duc-Nguyen-Github
+# Technical Lead / Architect: @quangtldc0301
+# ============================================================================
+
+# Default owners for everything in the repository
+*                                           @Duc-Nguyen-Github @quangtldc0301
+
+# Locked Core Architecture & Contracts (requires Scrum Master or Lead approval)
+/RoomToRentRadar.Core/                      @Duc-Nguyen-Github @quangtldc0301
+/RoomToRentRadar.Infrastructure/Persistence/ @Duc-Nguyen-Github @quangtldc0301
+/RoomToRentRadar/MauiProgram.cs             @Duc-Nguyen-Github @quangtldc0301
+/AGENTS.md                                  @Duc-Nguyen-Github @quangtldc0301
+/.github/                                   @Duc-Nguyen-Github @quangtldc0301
+/.githooks/                                 @Duc-Nguyen-Github @quangtldc0301
