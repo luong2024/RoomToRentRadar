@@ -1,9 +1,48 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Net.Http.Json;
+using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 namespace RoomToRentRadar.PageModels;
+
+public sealed class ApiSearchActiveFiltersDto
+{
+    public string CampusId { get; set; } = "ictu-main";
+    public decimal? MinRent { get; set; }
+    public decimal? MaxRent { get; set; }
+    public double? MinArea { get; set; }
+    public double? MaxArea { get; set; }
+    public string? RoomType { get; set; }
+    public double? MaxDistanceMeters { get; set; }
+    public string SortBy { get; set; } = "distance";
+}
+
+public sealed class ApiSearchListingCardDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string CampusId { get; set; } = "ictu-main";
+    public string Title { get; set; } = string.Empty;
+    public decimal Rent { get; set; }
+    public double Area { get; set; }
+    public double DistanceMeters { get; set; }
+    public string RoomType { get; set; } = "Studio";
+    public string Address { get; set; } = string.Empty;
+    public string ThumbnailUrl { get; set; } = string.Empty;
+    public string Status { get; set; } = "Available";
+    public bool IsVerified { get; set; }
+}
+
+public sealed class ApiSearchResponseDto
+{
+    public int TotalCount { get; set; }
+    public ApiSearchActiveFiltersDto ActiveFilters { get; set; } = new();
+    public List<ApiSearchListingCardDto> Items { get; set; } = [];
+    public int PageIndex { get; set; } = 1;
+    public int PageSize { get; set; } = 20;
+    public bool HasNextPage { get; set; }
+}
 
 public class ActiveFilterChipModel : ObservableObject
 {
@@ -60,6 +99,11 @@ public class FilteredRoomCardModel : ObservableObject
 public class SearchFilterViewModel : ObservableObject
 {
     private static readonly CultureInfo ViCulture = CultureInfo.GetCultureInfo("vi-VN");
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly HttpClient SharedHttpClient = new()
+    {
+        Timeout = TimeSpan.FromSeconds(2.0)
+    };
 
     private const decimal DefaultMinRent = 500_000m;
     private const decimal DefaultMaxRent = 5_000_000m;
@@ -69,6 +113,7 @@ public class SearchFilterViewModel : ObservableObject
     private const string AllRoomTypesValue = "Tất cả";
 
     private readonly List<FilteredRoomCardModel> _allCatalogRooms = [];
+    private CancellationTokenSource? _apiSearchCts;
 
     private string _minRentText = string.Empty;
     private string _maxRentText = string.Empty;
@@ -77,6 +122,11 @@ public class SearchFilterViewModel : ObservableObject
     private double _maxDistanceMeters = DefaultMaxDistanceMeters;
     private string _selectedRoomType = AllRoomTypesValue;
     private bool _onlyVerified = true;
+
+    private static string BaseApiUrl =>
+        DeviceInfo.Current.Platform == DevicePlatform.Android
+            ? "http://10.0.2.2:5000"
+            : "http://localhost:5000";
 
     public string MinRentText
     {
@@ -550,8 +600,7 @@ public class SearchFilterViewModel : ObservableObject
             r.Area <= MaxArea &&
             r.DistanceMeters <= MaxDistanceMeters &&
             (!OnlyVerified || r.IsVerified) &&
-            (string.Equals(SelectedRoomType, AllRoomTypesValue, StringComparison.OrdinalIgnoreCase) ||
-             string.Equals(r.RoomType, SelectedRoomType, StringComparison.OrdinalIgnoreCase)))
+            MatchesRoomType(r.RoomType, SelectedRoomType))
             .OrderBy(r => r.DistanceMeters)
             .ToList();
 
@@ -565,6 +614,111 @@ public class SearchFilterViewModel : ObservableObject
         OnPropertyChanged(nameof(ResultCountText));
         OnPropertyChanged(nameof(HasActiveFilters));
         OnPropertyChanged(nameof(HasNoResults));
+
+        _apiSearchCts?.Cancel();
+        _apiSearchCts = new CancellationTokenSource();
+        _ = FetchSearchResultsFromApiAsync(minRent, maxRent, _apiSearchCts.Token);
+    }
+
+    /// <summary>
+    /// Calls Backend API T04.1 (GET /api/v1/listings/search) and updates FilteredRooms when the local API is online.
+    /// Automatically preserves local filtered results when Backend API is offline.
+    /// </summary>
+    public async Task FetchSearchResultsFromApiAsync(
+        decimal minRent,
+        decimal maxRent,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var queryParams = new List<string>
+            {
+                "campusId=ictu-main",
+                $"minRent={minRent.ToString(CultureInfo.InvariantCulture)}",
+                $"maxRent={maxRent.ToString(CultureInfo.InvariantCulture)}",
+                $"minArea={MinArea.ToString(CultureInfo.InvariantCulture)}",
+                $"maxArea={MaxArea.ToString(CultureInfo.InvariantCulture)}",
+                $"maxDistanceMeters={MaxDistanceMeters.ToString(CultureInfo.InvariantCulture)}",
+                "sortBy=distance",
+                "pageIndex=1",
+                "pageSize=20"
+            };
+
+            if (!string.Equals(SelectedRoomType, AllRoomTypesValue, StringComparison.OrdinalIgnoreCase))
+            {
+                var apiRoomType = string.Equals(SelectedRoomType, "Phòng khép kín", StringComparison.OrdinalIgnoreCase)
+                    ? "Khép kín"
+                    : SelectedRoomType;
+                queryParams.Add($"roomType={Uri.EscapeDataString(apiRoomType)}");
+            }
+
+            var url = $"{BaseApiUrl}/api/v1/listings/search?{string.Join("&", queryParams)}";
+            var response = await SharedHttpClient.GetFromJsonAsync<ApiSearchResponseDto>(url, JsonOptions, cancellationToken);
+            if (response is null || cancellationToken.IsCancellationRequested)
+                return;
+
+            var colors = new[] { "#4F46E5", "#7C3AED", "#0D9488", "#2563EB", "#4338CA" };
+            FilteredRooms.Clear();
+            for (var i = 0; i < response.Items.Count; i++)
+            {
+                var item = response.Items[i];
+                FilteredRooms.Add(new FilteredRoomCardModel
+                {
+                    Id = item.Id,
+                    Title = item.Title,
+                    Rent = item.Rent,
+                    Area = item.Area,
+                    RoomType = item.RoomType,
+                    DistanceMeters = (int)Math.Round(item.DistanceMeters),
+                    Address = item.Address,
+                    IsVerified = item.IsVerified,
+                    SecurityScore = 4.8,
+                    ImageUrl = ResolveRoomPhotoUrl(item.Id, item.ThumbnailUrl),
+                    PhotoBadgeText = "📷 6 ảnh • 🌐 360°",
+                    FallbackColorHex = colors[i % colors.Length]
+                });
+            }
+
+            OnPropertyChanged(nameof(TotalResultCount));
+            OnPropertyChanged(nameof(ResultCountText));
+            OnPropertyChanged(nameof(HasActiveFilters));
+            OnPropertyChanged(nameof(HasNoResults));
+        }
+        catch (Exception)
+        {
+            // Keep local filtered catalog when Backend API (http://localhost:5000) is not running
+        }
+    }
+
+    private static bool MatchesRoomType(string roomType, string selectedFilter)
+    {
+        if (string.Equals(selectedFilter, AllRoomTypesValue, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (string.Equals(selectedFilter, "Phòng khép kín", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(roomType, "Khép kín", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return string.Equals(roomType, selectedFilter, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string ResolveRoomPhotoUrl(string roomId, string? rawUrl)
+    {
+        if (!string.IsNullOrWhiteSpace(rawUrl) && !rawUrl.Contains("cdn.example", StringComparison.OrdinalIgnoreCase))
+        {
+            return rawUrl;
+        }
+
+        return roomId.ToLowerInvariant() switch
+        {
+            "room-2026-002" or "room-ictu-002" => "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=700&q=80",
+            "room-2026-003" or "room-ictu-003" => "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=700&q=80",
+            "room-2026-004" or "room-ictu-004" => "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=700&q=80",
+            "room-2026-005" or "room-ictu-005" => "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=700&q=80",
+            _ => "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=700&q=80"
+        };
     }
 
     private static string CleanDigits(string input)
