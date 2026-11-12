@@ -107,6 +107,51 @@ public sealed class InMemoryListingRepository : IListingRepository
         return Task.FromResult(((IReadOnlyList<ListingDocument>)page, list.Count));
     }
 
+    public Task<(IReadOnlyList<ListingDocument> Items, int TotalCount)> GetPagedAsync(
+        ListingQueryRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        IQueryable<ListingDocument> query = _canonical
+            .AsQueryable()
+            .Where(l =>
+                (string.IsNullOrWhiteSpace(request.CampusId)
+                 || string.Equals(l.CampusId, request.CampusId, StringComparison.OrdinalIgnoreCase))
+                && string.Equals(l.Status, "Available", StringComparison.OrdinalIgnoreCase)
+                && l.IsVerified);
+
+        var totalCount = query.Count();
+
+        var sortKey = request.SortBy?.Trim().ToLowerInvariant();
+        var isAsc = sortKey switch
+        {
+            "price_desc" or "rent_desc" or "area_desc" => false,
+            "price_asc" or "rent_asc" or "area_asc" => true,
+            _ => request.IsAscending
+        };
+
+        IOrderedQueryable<ListingDocument> ordered = (sortKey, isAsc) switch
+        {
+            ("price" or "rent" or "price_asc" or "rent_asc", true) => query.OrderBy(l => l.Rent).ThenBy(l => l.DistanceMeters),
+            ("price" or "rent" or "price_desc" or "rent_desc", false) => query.OrderByDescending(l => l.Rent).ThenBy(l => l.DistanceMeters),
+            ("area" or "area_asc", true) => query.OrderBy(l => l.Area).ThenBy(l => l.DistanceMeters),
+            ("area" or "area_desc", false) => query.OrderByDescending(l => l.Area).ThenBy(l => l.DistanceMeters),
+            ("updatedat", true) => query.OrderBy(l => l.UpdatedAt),
+            ("updatedat", false) => query.OrderByDescending(l => l.UpdatedAt),
+            (_, false) => query.OrderByDescending(l => l.DistanceMeters).ThenBy(l => l.Rent),
+            _ => query.OrderBy(l => l.DistanceMeters).ThenBy(l => l.Rent)
+        };
+
+        var pageNumber = request.EffectivePage;
+        var pageSize = Math.Clamp(request.PageSize, 1, ListingQueryRequest.MaxPageSize);
+
+        var items = ordered
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        return Task.FromResult(((IReadOnlyList<ListingDocument>)items, totalCount));
+    }
+
     private static string NormalizeToCanonicalId(string id)
     {
         if (id.StartsWith("room-ictu-", StringComparison.OrdinalIgnoreCase)
