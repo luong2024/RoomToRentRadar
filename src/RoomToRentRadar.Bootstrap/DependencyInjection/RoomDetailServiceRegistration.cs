@@ -18,9 +18,16 @@ public static class RoomDetailServiceRegistration
         IWebHostEnvironment environment)
     {
         var endpoint = configuration["CosmosDb:AccountEndpoint"];
-        var authKey = configuration["CosmosDb:AuthKey"];
-        var databaseName = configuration["CosmosDb:DatabaseName"];
-        var containerName = configuration["CosmosDb:ContainerName"];
+        var authKey = configuration["CosmosDb:AuthKey"] ?? configuration["CosmosDb:AuthKeyOrResourceToken"];
+        var databaseName = configuration["CosmosDb:DatabaseName"] ?? "RoomToRentRadarDb";
+        var containerName = configuration["CosmosDb:ContainerName"] ?? "Rooms";
+
+        if (string.Equals(endpoint, "in-memory", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddScoped<IRoomRepository, CosmosRoomRepository>();
+            services.AddScoped<IGetRoomDetailsUseCase, GetRoomDetailsUseCase>();
+            return services;
+        }
 
         if (string.IsNullOrWhiteSpace(endpoint) ||
             string.IsNullOrWhiteSpace(authKey) ||

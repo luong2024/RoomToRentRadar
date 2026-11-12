@@ -1,31 +1,29 @@
+using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Context;
 using RoomToRentRadar.Bootstrap.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// TODO: Cấu hình Authentication đầy đủ (JwtBearer, cookies, v.v.) khi hoàn thiện hệ thống Auth chung
-builder.Services.AddAuthentication();
-builder.Services.AddAuthorization();
-
 builder.Services
+    .AddApplicationUseCases()
+    .AddOutboundAdapters(builder.Configuration, builder.Environment)
     .AddRoomDetailServices(builder.Configuration, builder.Environment)
-    .AddInboundAdapters();
+    .AddInboundAdapters(builder.Configuration);
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseDeveloperExceptionPage();
-}
-else
-{
-    app.UseExceptionHandler();
-}
-
+app.UseExceptionHandler();
 app.UseHttpsRedirection();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-app.Run();
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var cosmosDbContext = scope.ServiceProvider.GetRequiredService<ICosmosDbContext>();
+    await cosmosDbContext.EnsureDatabaseAndContainersAsync();
+}
+
+await app.RunAsync();
 
 public partial class Program;
