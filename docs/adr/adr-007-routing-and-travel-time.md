@@ -24,7 +24,7 @@ US09 needs distance and travel time by motorbike, bus and walking, using the pro
 ## Consequences
 - Positive: free; ~1 external call per (room, campus, mode) ever.
 - Negative: bus time is an estimate (clearly labelled in UI).
-- Follow-up: verify ORS quota on sign-up; document key in `appsettings.Development.json` placeholder only.
+- Follow-up: verify ORS quota on sign-up (free account, no card); document key in `appsettings.Development.json` placeholder only.
 
 ## Compliance
 Adapter contract tests (success, timeout → fallback, quota error → fallback); no API key in committed files.

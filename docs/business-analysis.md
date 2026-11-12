@@ -1,10 +1,15 @@
 # Business Analysis — RoomToRentRadar
 
+<!--
+CONTEXT NOTE (2026-11-12): BR IDs are permanent — never renumber or reuse. New areas get a new prefix; BR-I18N was inserted
+as §7.2a so existing section numbers and links stay valid. §10 is the shared list of external services for the whole team.
+-->
+
 | Field | Value |
 |---|---|
 | Status | Draft v1.0 — 2026-11-11 |
 | Owner | Group 2 |
-| Scope | MVP (US01–US14) as defined in [prd.md](prd.md) |
+| Scope | MVP (US01–US15) as defined in [prd.md](prd.md) |
 
 > **For AI agents:** §7 *Business Rules Catalog* is the authoritative list of domain rules. Every rule has a stable ID (`BR-<AREA>-NN`). Code comments, tests and specs must reference these IDs (e.g. `// BR-LST-04`). Never invent a rule that is not here — add it to this file first (via PR) and reference it.
 
@@ -62,7 +67,7 @@ RoomToRentRadar introduces a **two-sided marketplace with a trust layer**:
 | 1 | Join several Facebook/Zalo groups | Open app → feed of verified rooms sorted by distance to campus (US01) |
 | 2 | Scroll, read unstructured posts | Filter by price/area/type/distance, or draw an area (US04, US05) |
 | 3 | Comment "ib" / call blindly | Read full details, utilities, house rules, 360° photos, travel time (US02, US03, US09, US11) |
-| 4 | Screenshot posts to compare | ♥ save and compare up to 3 rooms; share image to parents (US06, US10) |
+| 4 | Screenshot posts to compare | Save (heart) and compare up to 3 rooms; share image to parents (US06, US10) |
 | 5 | Miss new posts | Saved search alerts within 15 min (US07) |
 | 6 | Give phone number publicly | Call / Zalo / in-app chat after signing in (US02 AC4, US14) |
 | 7 | Get scammed, no recourse | Report → moderation queue (US12) |
@@ -74,10 +79,10 @@ To-be: register as Landlord (phone required) → Admin approves the landlord →
 
 ## 6. Domain glossary (EN ↔ VI)
 
-| Term (English UI) | Vietnamese Reference | Definition |
+| Term (English UI) | Vietnamese UI term (use in `AppResources.vi.resx`) | Definition |
 |---|---|---|
 | Listing / Room | Tin đăng / Phòng | A rentable unit advertised by a landlord. In code: `Room` aggregate. |
-| Room type | Loại phòng | `BoardingRoom` (Phòng trọ), `MiniApartment` (Chung cư mini), `WholeHouse` (Nhà nguyên căn), `Dormitory` (Ký túc xá / KTX tư nhân). |
+| Room type | Loại phòng | `BoardingRoom` — UI "Boarding room" (phòng trọ), `MiniApartment` — "Mini apartment" (chung cư mini), `WholeHouse` — "Whole house" (nhà nguyên căn), `Dormitory` — "Dormitory" (ký túc xá / KTX tư nhân). |
 | Monthly rent | Giá thuê / tháng | Integer VND. |
 | Deposit | Tiền cọc | Integer VND. |
 | Area | Diện tích | m², decimal(1). |
@@ -112,18 +117,26 @@ To-be: register as Landlord (phone required) → Admin approves the landlord →
 | BR-CMP-02 | A signed-in user's selected campus is stored in the profile (`Users.SelectedCampusId`) and syncs across devices; a guest's selection is stored on the device only. |
 | BR-CMP-03 | Every distance, distance filter, distance sort and travel time is relative to the *selected* campus at request time; it is never stored on the listing. |
 
+### 7.2a Language (`BR-I18N`) — US15
+| ID | Rule |
+|---|---|
+| BR-I18N-01 | Supported UI languages: **English (`en`, en-US)** and **Vietnamese (`vi`, vi-VN)**. First launch: Vietnamese when the device UI language is Vietnamese, otherwise English. English is the fallback for any missing string. |
+| BR-I18N-02 | The language can be changed at any time in *Account → Language* by guests and signed-in users; it applies immediately to every screen without restarting the app. It is stored on the device; for signed-in users it is also saved to `Users.PreferredLanguage`. On sign-in, a device that has never had an explicit choice adopts the profile language; otherwise the device choice is uploaded. |
+| BR-I18N-03 | Translated: all app text, validation and `errorCode` messages, enum/reference labels (room types, amenities, safety features, listing/report statuses), and number/date/price formats (§6 of ui-ux-spec). **Not** translated: user-written content (titles, descriptions, house rules, report notes, chat) and proper nouns (campus names, addresses, people). |
+| BR-I18N-04 | Server-generated text (push notifications and inbox `Notifications.Title/Body`) is rendered in the recipient's `PreferredLanguage` when it is created; existing inbox items are not re-translated after a language change. API `ProblemDetails.title/detail` stay English (for developers) — the client shows only its own text for `errorCode`. |
+
 ### 7.3 Listings (`BR-LST`)
 | ID | Rule |
 |---|---|
 | BR-LST-01 | Required on create: title (10–100 chars), address line (≤ 200), ward, district (default "TP. Thái Nguyên"), pin location (lat/lng inside Thái Nguyên province bounding box), monthly rent (100,000–50,000,000 ₫), deposit (0–3× rent), area (5–200 m²), room type, ≥ 3 standard photos. (US08 AC1) |
 | BR-LST-02 | Optional: description (≤ 2,000), max occupants (1–10), furnishing (`Unfurnished`, `Basic`, `Full`), available-from date, amenities (catalog codes), safety features (catalog codes), house rules. |
-| BR-LST-03 | Utilities: electricity price ₫/kWh (0–10,000), water price with unit (`PerCubicMeter`, `PerPerson`, `Included`), internet fee ₫/month (0 = included), parking fee ₫/month, other fees note (≤ 200). Displayed as a monthly cost breakdown with an **estimated monthly total** = rent + 100 kWh × electricity price + water (4 m³ × price, or 1 × per-person price, or 0 if included) + internet + parking; labelled "ước tính". |
+| BR-LST-03 | Utilities: electricity price ₫/kWh (0–10,000), water price with unit (`PerCubicMeter`, `PerPerson`, `Included`), internet fee ₫/month (0 = included), parking fee ₫/month, other fees note (≤ 200). Displayed as a monthly cost breakdown with an **estimated monthly total** = rent + 100 kWh × electricity price + water (4 m³ × price, or 1 × per-person price, or 0 if included) + internet + parking; labelled "est." (estimate). |
 | BR-LST-04 | **State machine** (direct status assignment is forbidden):<br>`PendingReview → Available` (Admin approve) · `PendingReview → Rejected` (Admin reject, reason required) · `Rejected → PendingReview` (landlord edits & resubmits) · `Available ⇄ Rented` (landlord) · `Available/Rented → Unpublished` (landlord) · `Unpublished → Available` (landlord republish — every Unpublished listing was verified before) · `Available/Rented/Unpublished → Suspended` (Admin, from report) · `Suspended → PendingReview` (landlord edits & resubmits). Diagram: [ADR-011](adr/adr-011-listing-moderation-state-machine.md). |
 | BR-LST-04a | Public visibility of the detail page: `Available`, `Rented`, `Unpublished` are viewable by anyone (the last two with an "unavailable" banner, US02 AC3). `PendingReview`, `Rejected`, `Suspended` return 404 to everyone except the owner and Admin (a suspended listing may be a scam — never expose its contact). Favourites keep showing such rooms as "Ngừng hiển thị" without opening them. |
 | BR-LST-05 | Edits to an `Available`/`Rented` listing apply immediately. *Material* edits (address, pin, room type, adding photos) set `NeedsReReview = true` → appears in Admin queue; listing stays visible. Edits to `PendingReview`/`Rejected` listings keep/return status `PendingReview`. |
 | BR-LST-06 | A listing is **Verified** when `VerifiedAtUtc` is set (first Admin approval). Public feed/search shows only `Status = Available` (which implies verified) **and** landlord `IsVerified = true`. (US01 AC4) |
 | BR-LST-07 | Only the owning landlord can edit/unpublish/mark rented (anti-IDOR, GUARDRAILS 1.5.6); Admin can approve/reject/suspend. Every mutation uses optimistic concurrency (`Version`, HTTP `If-Match`). |
-| BR-LST-08 | **Safety Score** = number of verified safety criteria met, 0–5: (1) CCTV, (2) secure entrance (gate/smart or fingerprint lock), (3) fire safety (extinguisher **and** emergency exit), (4) owner or guard on site, (5) well-lit access path. Landlord declares; at approval the Admin confirms a subset (`confirmedSafetyFeatures` → `RoomSafetyFeatures.IsConfirmed`) and the room gets `IsSafetyVerified = true`. Verified score = confirmed features; before verification the declared count is shown as "Chưa xác minh". |
+| BR-LST-08 | **Safety Score** = number of verified safety criteria met, 0–5: (1) CCTV, (2) secure entrance (gate/smart or fingerprint lock), (3) fire safety (extinguisher **and** emergency exit), (4) owner or guard on site, (5) well-lit access path. Landlord declares; at approval the Admin confirms a subset (`confirmedSafetyFeatures` → `RoomSafetyFeatures.IsConfirmed`) and the room gets `IsSafetyVerified = true`. Verified score = confirmed features; before verification the declared count is shown as "Not verified". |
 | BR-LST-09 | `LastUpdatedAtUtc` changes on any landlord-visible content edit; shown on detail (US02 AC2). |
 | BR-LST-10 | **Similar rooms** for an unavailable listing: `Available`, rent within ±20%, within 2 km of the original pin, same room type preferred, ordered by distance to the original, max 5. If fewer than 2 found, relax room type. (US02 AC3) |
 | BR-LST-11 | A landlord may have at most 50 non-archived listings (abuse guard). |
@@ -155,7 +168,7 @@ To-be: register as Landlord (phone required) → Admin approves the landlord →
 | BR-FAV-01 | Favourites are server-side per user (sync across devices, US06 AC2). Max 200. |
 | BR-FAV-02 | Add/remove are idempotent (`PUT`/`DELETE`). |
 | BR-FAV-03 | Removing shows an Undo snackbar for 5 s; the API call is sent after the snackbar closes (or immediately if the user leaves the screen) — undo within 5 s means no API call (US06 AC4). |
-| BR-FAV-04 | Favourites list shows current rent and availability, including unavailable rooms (greyed, "Đã cho thuê"/"Ngừng đăng") (US06 AC3). |
+| BR-FAV-04 | Favourites list shows current rent and availability, including unavailable rooms (greyed, "Rented"/"Unpublished") (US06 AC3). |
 
 ### 7.7 Alerts & notifications (`BR-ALR`)
 | ID | Rule |
@@ -171,9 +184,9 @@ To-be: register as Landlord (phone required) → Admin approves the landlord →
 | ID | Rule |
 |---|---|
 | BR-TRV-01 | Modes: `Motorbike`, `Bus`, `Walking` (US09 AC1); campus = profile campus (US09 AC2). |
-| BR-TRV-02 | Motorbike = routing "driving" profile; Walking = "foot" profile; Bus = estimate `driving duration × 1.6 + 10 min` labelled "ước tính". |
+| BR-TRV-02 | Motorbike = routing "driving" profile; Walking = "foot" profile; Bus = estimate `driving duration × 1.6 + 10 min` labelled "est." (estimate). |
 | BR-TRV-03 | Results cached per (room, campus, mode) for 30 days; invalidated when the pin moves. |
-| BR-TRV-04 | If routing fails/times out (3 s), return straight-line distance with `isFallback = true`; UI shows "Khoảng cách đường chim bay" (US09 AC3). |
+| BR-TRV-04 | If routing fails/times out (3 s), return straight-line distance with `isFallback = true`; UI shows "Straight-line distance" (US09 AC3). |
 
 ### 7.9 Compare (`BR-CPR`)
 | ID | Rule |
@@ -208,7 +221,7 @@ To-be: register as Landlord (phone required) → Admin approves the landlord →
 | BR-CHT-03 | Message: text 1–2,000 chars, trimmed; no attachments in MVP. |
 | BR-CHT-04 | Sending is idempotent by `(SenderId, ClientMessageId)` (retry-safe). |
 | BR-CHT-05 | Rate limit 30 messages/min per user. |
-| BR-CHT-06 | Offline recipient gets a push "Tin nhắn mới từ …"; read state per participant (`LastReadAtUtc`) drives unread counts. |
+| BR-CHT-06 | Offline recipient gets a push "New message from …"; read state per participant (`LastReadAtUtc`) drives unread counts. |
 | BR-CHT-07 | Conversations remain readable after the listing becomes unavailable; new messages remain allowed for 30 days after. |
 
 ### 7.13 Audit (`BR-AUD`) — *implemented on develop2*
@@ -226,15 +239,33 @@ To-be: register as Landlord (phone required) → Admin approves the landlord →
 | Cloud cost | SQLite single datastore ([ADR-002](adr/adr-002-sqlite-single-datastore.md)); free tiers only. |
 | Map/geolocation API limits | Native map SDK (free for mobile), no paid geocoding (pin-drop), routing cache ([ADR-006](adr/adr-006-maps-and-spatial-search.md), [ADR-007](adr/adr-007-routing-and-travel-time.md)). |
 | Fake listings & privacy | Two-level verification, Safety Score verification, reports, EXIF stripping, phone gating, minimal data. |
+| Older, non-technical landlords (persona P3) do not read English | Vietnamese UI with in-app switch (US15, BR-I18N-01..04); short labels, icons with text, landlord wizard with examples; Admin can help landlords publish during the pilot. |
+| ICTU Google Workspace may block unknown third-party OAuth apps | Test early with one real `DTC…@ictu.edu.vn` account; only if it shows *Access blocked*, ask ICTU IT to trust the team's client ID; email/password sign-in stays the fallback (ADR-005). |
+| Free-tier services change or need a card (Google Maps billing account) | Pre-approved fallback Mapsui + OpenFreeMap (ADR-006); every external service sits behind a port with a Development mock (§10). |
 
 ## 9. Open questions
 
 | # | Question | Owner | Default if unanswered |
 |---|---|---|---|
-| OQ-1 | Story points for US14 (chat) — not in the plan sheet. | Scrum Team | Estimate at next backlog refinement. |
+| OQ-1 | Story points for US14 (chat) and US15 (language switch) — not in the plan sheet. | Scrum Team | Estimate at next backlog refinement. |
 | OQ-2 | Verify the 7 non-ICTU campus coordinates (seed in [erd.md §4.1](erd.md#41-campuses-reference-seeded)) before the pilot. | Team | Seed as listed; fix the seed file if a pin is off. |
 
 Resolved decisions (2026-11-11):
 - **Campuses:** ICTU plus the other Thái Nguyên University member schools in the city (8 campuses). Coordinates were looked up once from OpenStreetMap (free, no API key) — a one-time seed list, not a runtime dependency.
 - **SSO provider:** Google (OIDC), domain `ictu.edu.vn`; student e-mail format `DTC<digits>@ictu.edu.vn` (see BR-AUTH-04).
 - **Admin during the pilot:** one team member signs in with a seeded Admin account (`Admin:SeedAccounts` configuration) and performs all approvals/moderation.
+
+## 10. External services (course scope)
+
+Decided 2026-11-12. This is a course project: the app is demonstrated by the team on a laptop, emulator and team phones. There is **no public server, no domain, no store release and no APK distribution** (ADR-013). Everything below is free. Each service sits behind an outbound port with a mock that works only in Development, so nobody is blocked while keys are missing.
+
+| Service | Used for (story) | Account / setup | Cost | Key stored in | Fallback |
+|---|---|---|---|---|---|
+| **Google Cloud: OAuth client** | ICTU sign-in with Google (US13, BR-AUTH-04) | One team Cloud project; consent screen *External*, scopes `openid email profile`; one Android client per developer debug-keystore SHA-1; custom URI scheme enabled ([ADR-005](adr/adr-005-authentication-and-session.md)) | Free, no card | user-secrets / env | e-mail + password sign-in; `MockIctuSsoVerifierAdapter` (Development) |
+| **Google Maps SDK for Android** | Map, pins, polygon, pin-drop (US05, US08) | Same Cloud project; enable *Maps SDK for Android*; key restricted to package + SHA-1s; 1 USD budget alert ([ADR-006](adr/adr-006-maps-and-spatial-search.md)) | 0 USD per load, no monthly cap — **billing card required** | MSBuild property / env, not committed | Mapsui + OpenFreeMap (no key) |
+| **OpenRouteService** | Travel time by motorbike/walk/bus (US09) | Free sign-up at openrouteservice.org ([ADR-007](adr/adr-007-routing-and-travel-time.md)) | Free daily quota, no card | user-secrets / env | straight-line distance (`isFallback`), `MockTravelTimeAdapter` |
+| **Firebase Cloud Messaging** | Push for saved-search alerts and chat (US07, US14) | One Firebase project (Spark plan); `google-services.json` and the server service-account JSON stay out of git ([ADR-010](adr/adr-010-push-notifications-and-alerts.md)) | Free, no card | local file / env | in-app Notifications inbox; `MockPushNotificationAdapter` |
+| **Microsoft Dev Tunnels** | HTTPS URL so physical team phones reach the API on the demo laptop | Sign in to Visual Studio or the `devtunnel` CLI with a Microsoft/GitHub account | Free | — | emulator only (`10.0.2.2`) |
+| **GitHub + GitHub Actions** | Repo, PRs, CI | existing | Free | — | — |
+
+Not used (removed from scope): public VM/hosting, Vercel/Render, domain/DuckDNS, Firebase App Distribution, Google Play, Apple Developer account, paid geocoding (pin-drop instead, ADR-006).
