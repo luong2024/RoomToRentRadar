@@ -212,7 +212,7 @@ Rules: `BR-CHT-01..07`, [ADR-009](adr/adr-009-in-app-chat.md). Text only in MVP.
 | NFR-05 | Security | OWASP ASVS L1 basics: PBKDF2 passwords, JWT 30 min + rotating refresh 7 days, HTTPS outside Development, rate limiting on auth/report/chat endpoints, no secrets in source. GUARDRAILS 1.5.x apply. |
 | NFR-06 | Privacy | Store the minimum personal data: no national ID, no student GPS history; landlord phone exposed only to signed-in users; chat visible only to its two participants and Admin on report. |
 | NFR-07 | Availability | Read features degrade gracefully offline: last list page, viewed details, favourites and conversations are served from the on-device cache with an "offline" banner. |
-| NFR-08 | Usability | Vietnamese UI (vi-VN), touch targets ≥ 48 dp, WCAG 2.2 AA contrast, every list has loading/empty/error states. |
+| NFR-08 | Usability | English UI (en-ENG), touch targets ≥ 48 dp, WCAG 2.2 AA contrast, every list has loading/empty/error states. |
 | NFR-09 | Platform | Android 7.0+ (API 24) is the primary demo target; iOS 15+ best-effort; Windows/MacCatalyst not supported in MVP. |
 | NFR-10 | Maintainability | Hexagonal architecture rules in `.agents/GUARDRAILS.md`; ≥ 80% line coverage on Domain/Application; CI green on every PR to `develop2`. |
 | NFR-11 | Cost | Only free tiers/free OSS (see [ADR index](adr/index.md)); budget sheet caps paid cloud at 11 M VND. |

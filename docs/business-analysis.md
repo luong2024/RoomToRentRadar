@@ -74,7 +74,7 @@ To-be: register as Landlord (phone required) → Admin approves the landlord →
 
 ## 6. Domain glossary (EN ↔ VI)
 
-| Term | Vietnamese (UI) | Definition |
+| Term (English UI) | Vietnamese Reference | Definition |
 |---|---|---|
 | Listing / Room | Tin đăng / Phòng | A rentable unit advertised by a landlord. In code: `Room` aggregate. |
 | Room type | Loại phòng | `BoardingRoom` (Phòng trọ), `MiniApartment` (Chung cư mini), `WholeHouse` (Nhà nguyên căn), `Dormitory` (Ký túc xá / KTX tư nhân). |
