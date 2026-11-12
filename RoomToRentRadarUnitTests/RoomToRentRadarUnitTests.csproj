@@ -1,32 +1,41 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-		<TargetFramework>net10.0</TargetFramework>
-		<LangVersion>latest</LangVersion>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
-		<IsPackable>false</IsPackable>
-	</PropertyGroup>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
 
-	<ItemGroup>
-		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-		<PackageReference Include="coverlet.collector" Version="6.0.4" />
-		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.0" />
-		<PackageReference Include="NUnit" Version="4.3.2" />
-		<PackageReference Include="NUnit.Analyzers" Version="4.7.0" />
-		<PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
-	</ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.0" />
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="FluentAssertions" Version="8.8.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <PackageReference Include="NUnit" Version="4.3.2" />
+    <PackageReference Include="NUnit.Analyzers" Version="4.7.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
 
-	<ItemGroup>
-		<Using Include="NUnit.Framework" />
-	</ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\RoomToRentRadar.Api\RoomToRentRadar.Api.csproj" />
+    <ProjectReference Include="..\RoomToRentRadar.Shared\RoomToRentRadar.Shared.csproj" />
+  </ItemGroup>
 
-	<ItemGroup>
-		<Compile Include="..\RoomToRentRadar\Models\Contracts\SpatialSearchContracts.cs" Link="Linked\Models\Contracts\SpatialSearchContracts.cs" />
-		<Compile Include="..\RoomToRentRadar\Utilities\GeoPolygonHelper.cs" Link="Linked\Utilities\GeoPolygonHelper.cs" />
-		<Compile Include="..\RoomToRentRadar\Services\ISpatialSearchService.cs" Link="Linked\Services\ISpatialSearchService.cs" />
-		<Compile Include="..\RoomToRentRadar\Services\MockSpatialSearchService.cs" Link="Linked\Services\MockSpatialSearchService.cs" />
-		<Compile Include="..\RoomToRentRadar\PageModels\MapSearchViewModel.cs" Link="Linked\PageModels\MapSearchViewModel.cs" />
-	</ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\RoomToRentRadar\Models\Contracts\ListingContracts.cs" Link="Linked\ListingContracts.cs" />
+    <Compile Include="..\RoomToRentRadar\Models\RoomListingItemModel.cs" Link="Linked\RoomListingItemModel.cs" />
+    <Compile Include="..\RoomToRentRadar\Services\IListingsService.cs" Link="Linked\IListingsService.cs" />
+    <Compile Include="..\RoomToRentRadar\Services\MockListingsService.cs" Link="Linked\MockListingsService.cs" />
+    <Compile Include="..\RoomToRentRadar\PageModels\RoomListViewModel.cs" Link="Linked\RoomListViewModel.cs" />
+    <Compile Include="..\RoomToRentRadar\Models\Contracts\SpatialSearchContracts.cs" Link="Linked\Models\Contracts\SpatialSearchContracts.cs" />
+    <Compile Include="..\RoomToRentRadar\Utilities\GeoPolygonHelper.cs" Link="Linked\Utilities\GeoPolygonHelper.cs" />
+    <Compile Include="..\RoomToRentRadar\Services\ISpatialSearchService.cs" Link="Linked\Services\ISpatialSearchService.cs" />
+    <Compile Include="..\RoomToRentRadar\Services\MockSpatialSearchService.cs" Link="Linked\Services\MockSpatialSearchService.cs" />
+    <Compile Include="..\RoomToRentRadar\PageModels\MapSearchViewModel.cs" Link="Linked\PageModels\MapSearchViewModel.cs" />
+  </ItemGroup>
 
 </Project>

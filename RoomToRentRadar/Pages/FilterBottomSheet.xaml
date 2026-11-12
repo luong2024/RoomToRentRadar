@@ -1,0 +1,512 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pageModels="clr-namespace:RoomToRentRadar.PageModels"
+             x:Class="RoomToRentRadar.Pages.FilterBottomSheet"
+             x:DataType="pageModels:SearchFilterViewModel"
+             Title="Bộ lọc tìm kiếm phòng"
+             BackgroundColor="{AppThemeBinding Light=#F4F5F9, Dark=#121216}">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- PINNED TOP HEADER: Active Filters & Result Count (US04 AC3 & AC4) -->
+        <Border Grid.Row="0"
+                StrokeThickness="0"
+                StrokeShape="RoundRectangle 0,0,26,26"
+                Padding="18,16,18,18">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#3B1D8F" Offset="0.0" />
+                    <GradientStop Color="#512BD4" Offset="0.6" />
+                    <GradientStop Color="#7C4DFF" Offset="1.0" />
+                </LinearGradientBrush>
+            </Border.Background>
+
+            <VerticalStackLayout Spacing="12">
+                <Grid ColumnDefinitions="*,Auto"
+                      ColumnSpacing="10">
+                    <VerticalStackLayout Grid.Column="0"
+                                         Spacing="2">
+                        <Label Text="Bộ lọc thông minh quanh ICTU"
+                               FontSize="12"
+                               TextColor="#DDD6FE" />
+                        <Label AutomationId="ResultCountLabel"
+                               Text="{Binding ResultCountText}"
+                               FontSize="20"
+                               FontAttributes="Bold"
+                               TextColor="White" />
+                    </VerticalStackLayout>
+
+                    <Button Grid.Column="1"
+                            AutomationId="ClearFiltersButton"
+                            Text="Xóa bộ lọc"
+                            Command="{Binding ClearFiltersCommand}"
+                            BackgroundColor="#28FFFFFF"
+                            BorderColor="#55FFFFFF"
+                            BorderWidth="1"
+                            TextColor="White"
+                            FontAttributes="Bold"
+                            FontSize="12"
+                            CornerRadius="12"
+                            Padding="12,8"
+                            VerticalOptions="Center" />
+                </Grid>
+
+                <!-- Active Filter Chips Bar (US04 AC3) -->
+                <CollectionView ItemsSource="{Binding ActiveFilterChips}"
+                                IsVisible="{Binding HasActiveFilters}"
+                                HeightRequest="36"
+                                SelectionMode="None">
+                    <CollectionView.ItemsLayout>
+                        <LinearItemsLayout Orientation="Horizontal"
+                                           ItemSpacing="8" />
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="pageModels:ActiveFilterChipModel">
+                            <Border BackgroundColor="White"
+                                    StrokeThickness="0"
+                                    StrokeShape="RoundRectangle 14"
+                                    Padding="12,6">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type pageModels:SearchFilterViewModel}}, Path=RemoveFilterChipCommand, x:DataType=pageModels:SearchFilterViewModel}"
+                                        CommandParameter="{Binding .}" />
+                                </Border.GestureRecognizers>
+                                <Label Text="{Binding DisplayText}"
+                                       FontSize="12"
+                                       FontAttributes="Bold"
+                                       TextColor="#512BD4"
+                                       VerticalOptions="Center" />
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </VerticalStackLayout>
+        </Border>
+
+        <!-- SCROLLABLE FILTER CONTROLS & LIVE MATCHING ROOMS -->
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="16,16,16,24"
+                                 Spacing="16">
+
+                <!-- 1. PRICE RANGE FILTER CARD (US04 AC1) -->
+                <Border BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark=#1C1C22}"
+                        Stroke="{AppThemeBinding Light=#ECEEF5, Dark=#2D2D38}"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 22"
+                        Padding="18">
+                    <VerticalStackLayout Spacing="12">
+                        <HorizontalStackLayout Spacing="8">
+                            <Label Text="💰" FontSize="18" />
+                            <Label Text="Khoảng giá thuê (VNĐ/tháng)"
+                                   FontSize="16"
+                                   FontAttributes="Bold" />
+                        </HorizontalStackLayout>
+
+                        <Grid ColumnDefinitions="*,Auto,*"
+                              ColumnSpacing="10">
+                            <Border Grid.Column="0"
+                                    BackgroundColor="{AppThemeBinding Light=#F9FAFB, Dark=#252530}"
+                                    Stroke="{AppThemeBinding Light=#E5E7EB, Dark=#383846}"
+                                    StrokeThickness="1"
+                                    StrokeShape="RoundRectangle 14"
+                                    Padding="12,4">
+                                <Entry AutomationId="MinRentEntry"
+                                       Placeholder="Giá thấp nhất (VD: 1000000)"
+                                       Keyboard="Numeric"
+                                       FontSize="13"
+                                       Text="{Binding MinRentText}" />
+                            </Border>
+
+                            <Label Grid.Column="1"
+                                   Text="—"
+                                   FontAttributes="Bold"
+                                   VerticalOptions="Center"
+                                   TextColor="{StaticResource Gray400}" />
+
+                            <Border Grid.Column="2"
+                                    BackgroundColor="{AppThemeBinding Light=#F9FAFB, Dark=#252530}"
+                                    Stroke="{AppThemeBinding Light=#E5E7EB, Dark=#383846}"
+                                    StrokeThickness="1"
+                                    StrokeShape="RoundRectangle 14"
+                                    Padding="12,4">
+                                <Entry AutomationId="MaxRentEntry"
+                                       Placeholder="Giá cao nhất (VD: 2500000)"
+                                       Keyboard="Numeric"
+                                       FontSize="13"
+                                       Text="{Binding MaxRentText}" />
+                            </Border>
+                        </Grid>
+
+                        <!-- Quick Price Presets -->
+                        <Grid ColumnDefinitions="*,*,*"
+                              ColumnSpacing="8">
+                            <Button Grid.Column="0"
+                                    Text="≤ 1.5 triệu"
+                                    Command="{Binding ApplyPricePresetCommand}"
+                                    CommandParameter="under15"
+                                    BackgroundColor="#F5F3FF"
+                                    TextColor="#512BD4"
+                                    FontSize="12"
+                                    FontAttributes="Bold"
+                                    CornerRadius="10"
+                                    Padding="8,6" />
+                            <Button Grid.Column="1"
+                                    Text="1.5 – 2 triệu"
+                                    Command="{Binding ApplyPricePresetCommand}"
+                                    CommandParameter="15to20"
+                                    BackgroundColor="#F5F3FF"
+                                    TextColor="#512BD4"
+                                    FontSize="12"
+                                    FontAttributes="Bold"
+                                    CornerRadius="10"
+                                    Padding="8,6" />
+                            <Button Grid.Column="2"
+                                    Text="2 – 3 triệu"
+                                    Command="{Binding ApplyPricePresetCommand}"
+                                    CommandParameter="20to30"
+                                    BackgroundColor="#F5F3FF"
+                                    TextColor="#512BD4"
+                                    FontSize="12"
+                                    FontAttributes="Bold"
+                                    CornerRadius="10"
+                                    Padding="8,6" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- 2. ROOM TYPE PICKER CHIPS (US04 AC1) -->
+                <Border BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark=#1C1C22}"
+                        Stroke="{AppThemeBinding Light=#ECEEF5, Dark=#2D2D38}"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 22"
+                        Padding="18">
+                    <VerticalStackLayout Spacing="12">
+                        <HorizontalStackLayout Spacing="8">
+                            <Label Text="🏠" FontSize="18" />
+                            <Label Text="Loại hình phòng trọ"
+                                   FontSize="16"
+                                   FontAttributes="Bold" />
+                        </HorizontalStackLayout>
+
+                        <CollectionView ItemsSource="{Binding RoomTypeOptions}"
+                                        HeightRequest="42"
+                                        SelectionMode="None">
+                            <CollectionView.ItemsLayout>
+                                <LinearItemsLayout Orientation="Horizontal"
+                                                   ItemSpacing="8" />
+                            </CollectionView.ItemsLayout>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="pageModels:RoomTypeOptionModel">
+                                    <Border BackgroundColor="{Binding ChipBackgroundHex}"
+                                            StrokeThickness="0"
+                                            StrokeShape="RoundRectangle 14"
+                                            Padding="14,8">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type pageModels:SearchFilterViewModel}}, Path=SelectRoomTypeCommand, x:DataType=pageModels:SearchFilterViewModel}"
+                                                CommandParameter="{Binding .}" />
+                                        </Border.GestureRecognizers>
+                                        <Label Text="{Binding DisplayName}"
+                                               FontSize="13"
+                                               FontAttributes="Bold"
+                                               TextColor="{Binding ChipTextColorHex}"
+                                               VerticalOptions="Center" />
+                                    </Border>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- 3. AREA & DISTANCE TO ICTU SLIDERS (US04 AC1) -->
+                <Border BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark=#1C1C22}"
+                        Stroke="{AppThemeBinding Light=#ECEEF5, Dark=#2D2D38}"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 22"
+                        Padding="18">
+                    <VerticalStackLayout Spacing="14">
+
+                        <!-- Distance Slider -->
+                        <VerticalStackLayout Spacing="6">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <HorizontalStackLayout Grid.Column="0" Spacing="8">
+                                    <Label Text="🛵" FontSize="18" />
+                                    <Label Text="Khoảng cách tối đa tới ICTU"
+                                           FontSize="16"
+                                           FontAttributes="Bold" />
+                                </HorizontalStackLayout>
+                                <Border Grid.Column="1"
+                                        BackgroundColor="#DCFCE7"
+                                        StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 10"
+                                        Padding="10,4">
+                                    <Label Text="{Binding FormattedMaxDistance}"
+                                           FontSize="12"
+                                           FontAttributes="Bold"
+                                           TextColor="#15803D" />
+                                </Border>
+                            </Grid>
+
+                            <Slider AutomationId="MaxDistanceSlider"
+                                    Minimum="100"
+                                    Maximum="3000"
+                                    Value="{Binding MaxDistanceMeters}"
+                                    MinimumTrackColor="{StaticResource Primary}"
+                                    ThumbColor="{StaticResource Primary}" />
+
+                            <Grid ColumnDefinitions="*,*">
+                                <Label Grid.Column="0" Text="100 m (Sát cổng trường)" FontSize="11" TextColor="{StaticResource Gray400}" />
+                                <Label Grid.Column="1" Text="3.0 km" FontSize="11" HorizontalOptions="End" TextColor="{StaticResource Gray400}" />
+                            </Grid>
+                        </VerticalStackLayout>
+
+                        <BoxView HeightRequest="1" Color="{AppThemeBinding Light=#ECEEF5, Dark=#2D2D38}" />
+
+                        <!-- Area Range Presets & Sliders -->
+                        <VerticalStackLayout Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <HorizontalStackLayout Grid.Column="0" Spacing="8">
+                                    <Label Text="📐" FontSize="18" />
+                                    <Label Text="Diện tích phòng"
+                                           FontSize="16"
+                                           FontAttributes="Bold" />
+                                </HorizontalStackLayout>
+                                <Border Grid.Column="1"
+                                        BackgroundColor="#DBEAFE"
+                                        StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 10"
+                                        Padding="10,4">
+                                    <Label Text="{Binding FormattedAreaRange}"
+                                           FontSize="12"
+                                           FontAttributes="Bold"
+                                           TextColor="#1D4ED8" />
+                                </Border>
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*,*,*"
+                                  ColumnSpacing="8">
+                                <Button Grid.Column="0"
+                                        Text="15 – 20 m²"
+                                        Command="{Binding ApplyAreaPresetCommand}"
+                                        CommandParameter="compact"
+                                        BackgroundColor="#EFF6FF"
+                                        TextColor="#1D4ED8"
+                                        FontSize="12"
+                                        FontAttributes="Bold"
+                                        CornerRadius="10"
+                                        Padding="8,6" />
+                                <Button Grid.Column="1"
+                                        Text="20 – 28 m²"
+                                        Command="{Binding ApplyAreaPresetCommand}"
+                                        CommandParameter="standard"
+                                        BackgroundColor="#EFF6FF"
+                                        TextColor="#1D4ED8"
+                                        FontSize="12"
+                                        FontAttributes="Bold"
+                                        CornerRadius="10"
+                                        Padding="8,6" />
+                                <Button Grid.Column="2"
+                                        Text="≥ 25 m² rộng"
+                                        Command="{Binding ApplyAreaPresetCommand}"
+                                        CommandParameter="spacious"
+                                        BackgroundColor="#EFF6FF"
+                                        TextColor="#1D4ED8"
+                                        FontSize="12"
+                                        FontAttributes="Bold"
+                                        CornerRadius="10"
+                                        Padding="8,6" />
+                            </Grid>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- 4. LIVE FILTERED ROOM RESULTS PREVIEW (US04 AC2 & AC3) -->
+                <VerticalStackLayout Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Grid.Column="0"
+                               Text="Danh sách phòng khớp bộ lọc"
+                               FontSize="16"
+                               FontAttributes="Bold" />
+                        <Label Grid.Column="1"
+                               Text="Cập nhật tức thì (&lt; 2s)"
+                               FontSize="12"
+                               TextColor="#10B981"
+                               FontAttributes="Bold" />
+                    </Grid>
+
+                    <!-- Empty State when no rooms match -->
+                    <Border IsVisible="{Binding HasNoResults}"
+                            BackgroundColor="{AppThemeBinding Light=#FFFBEB, Dark=#2C2210}"
+                            Stroke="#F59E0B"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 18"
+                            Padding="18">
+                        <VerticalStackLayout Spacing="8"
+                                             HorizontalOptions="Center">
+                            <Label Text="🔍 Không tìm thấy phòng nào khớp tiêu chí"
+                                   FontSize="15"
+                                   FontAttributes="Bold"
+                                   HorizontalOptions="Center"
+                                   TextColor="#92400E" />
+                            <Label Text="Hãy thử nới rộng khoảng giá hoặc tăng khoảng cách tới ICTU, hoặc nhấn 'Xóa bộ lọc'."
+                                   FontSize="13"
+                                   HorizontalTextAlignment="Center"
+                                   TextColor="#B45309" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- Filtered Room Cards -->
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding FilteredRooms}"
+                                         Spacing="14">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="pageModels:FilteredRoomCardModel">
+                                <Border BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark=#1C1C22}"
+                                        Stroke="{AppThemeBinding Light=#ECEEF5, Dark=#2D2D38}"
+                                        StrokeThickness="1"
+                                        StrokeShape="RoundRectangle 20"
+                                        Padding="0">
+                                    <VerticalStackLayout Spacing="0">
+
+                                        <!-- Room Photo Banner with Floating Badges -->
+                                        <Grid HeightRequest="165"
+                                              BackgroundColor="{Binding FallbackColorHex}">
+
+                                            <!-- Fallback Visual (Visible while loading or offline) -->
+                                            <VerticalStackLayout VerticalOptions="Center"
+                                                                 HorizontalOptions="Center"
+                                                                 Spacing="4"
+                                                                 Opacity="0.45">
+                                                <Label Text="🏠"
+                                                       FontSize="38"
+                                                       HorizontalOptions="Center" />
+                                                <Label Text="Ảnh thực tế phòng trọ ICTU"
+                                                       FontSize="11"
+                                                       TextColor="White"
+                                                       HorizontalOptions="Center" />
+                                            </VerticalStackLayout>
+
+                                            <!-- Actual Room Photograph -->
+                                            <Image Source="{Binding ImageUrl}"
+                                                   Aspect="AspectFill"
+                                                   HeightRequest="165"
+                                                   HorizontalOptions="Fill"
+                                                   VerticalOptions="Fill" />
+
+                                            <!-- Top Overlay: Verified + RoomType + Security Rating -->
+                                            <Grid ColumnDefinitions="Auto,*,Auto"
+                                                  VerticalOptions="Start"
+                                                  Padding="12,10"
+                                                  ColumnSpacing="6">
+                                                <Border Grid.Column="0"
+                                                        BackgroundColor="#E6DCFCE7"
+                                                        StrokeThickness="0"
+                                                        StrokeShape="RoundRectangle 8"
+                                                        Padding="8,4">
+                                                    <Label Text="✓ Đã xác minh"
+                                                           FontSize="11"
+                                                           FontAttributes="Bold"
+                                                           TextColor="#15803D" />
+                                                </Border>
+                                                <Border Grid.Column="1"
+                                                        HorizontalOptions="Start"
+                                                        BackgroundColor="#E6EDE9FE"
+                                                        StrokeThickness="0"
+                                                        StrokeShape="RoundRectangle 8"
+                                                        Padding="8,4">
+                                                    <Label Text="{Binding RoomType}"
+                                                           FontSize="11"
+                                                           FontAttributes="Bold"
+                                                           TextColor="#5B21B6" />
+                                                </Border>
+                                                <Border Grid.Column="2"
+                                                        BackgroundColor="#CC111827"
+                                                        StrokeThickness="0"
+                                                        StrokeShape="RoundRectangle 8"
+                                                        Padding="8,4">
+                                                    <Label Text="{Binding FormattedSecurity}"
+                                                           FontSize="11"
+                                                           FontAttributes="Bold"
+                                                           TextColor="#FBBF24" />
+                                                </Border>
+                                            </Grid>
+
+                                            <!-- Bottom Overlay: Photo Count & 360 Badge -->
+                                            <Border HorizontalOptions="End"
+                                                    VerticalOptions="End"
+                                                    Margin="12,10"
+                                                    BackgroundColor="#CC111827"
+                                                    StrokeThickness="0"
+                                                    StrokeShape="RoundRectangle 10"
+                                                    Padding="10,4">
+                                                <Label Text="{Binding PhotoBadgeText}"
+                                                       FontSize="11"
+                                                       FontAttributes="Bold"
+                                                       TextColor="White" />
+                                            </Border>
+                                        </Grid>
+
+                                        <!-- Room Info Section -->
+                                        <VerticalStackLayout Padding="14,12,14,14"
+                                                             Spacing="6">
+                                            <Label Text="{Binding Title}"
+                                                   FontSize="15"
+                                                   FontAttributes="Bold" />
+
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <Label Grid.Column="0"
+                                                       Text="{Binding FormattedSpecs}"
+                                                       FontSize="12"
+                                                       VerticalOptions="Center"
+                                                       TextColor="{StaticResource Gray500}" />
+                                                <Label Grid.Column="1"
+                                                       Text="{Binding FormattedRent}"
+                                                       FontSize="16"
+                                                       FontAttributes="Bold"
+                                                       TextColor="{StaticResource Primary}" />
+                                            </Grid>
+
+                                            <Label Text="{Binding Address, StringFormat='📍 {0}'}"
+                                                   FontSize="12"
+                                                   TextColor="{StaticResource Gray400}" />
+                                        </VerticalStackLayout>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- STICKY BOTTOM APPLY BAR -->
+        <Border Grid.Row="2"
+                Stroke="{AppThemeBinding Light=#E5E7EB, Dark=#2D2D38}"
+                StrokeThickness="1"
+                StrokeShape="RoundRectangle 24,24,0,0"
+                BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark=#1C1C22}"
+                Padding="16,12">
+            <Grid ColumnDefinitions="Auto,*"
+                  ColumnSpacing="12">
+                <Button Grid.Column="0"
+                        Text="Đặt lại"
+                        Command="{Binding ClearFiltersCommand}"
+                        BackgroundColor="#F3F4F6"
+                        TextColor="#374151"
+                        FontAttributes="Bold"
+                        CornerRadius="14"
+                        Padding="18,12" />
+
+                <Button Grid.Column="1"
+                        Text="{Binding ResultCountText, StringFormat='Áp dụng ({0})'}"
+                        Command="{Binding ApplyFiltersCommand}"
+                        BackgroundColor="{StaticResource Primary}"
+                        TextColor="White"
+                        FontAttributes="Bold"
+                        CornerRadius="14"
+                        Padding="18,12" />
+            </Grid>
+        </Border>
+    </Grid>
+</ContentPage>

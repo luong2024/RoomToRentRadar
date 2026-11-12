@@ -7,6 +7,7 @@ using RoomToRentRadar.Models.Contracts;
 using RoomToRentRadar.PageModels;
 using RoomToRentRadar.Services;
 using RoomToRentRadar.Utilities;
+using NUnit.Framework;
 
 namespace RoomToRentRadarUnitTests;
 

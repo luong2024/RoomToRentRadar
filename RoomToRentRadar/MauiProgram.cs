@@ -1,7 +1,9 @@
-﻿using CommunityToolkit.Maui;
+using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
-using Syncfusion.Maui.Toolkit.Hosting;
 using Refit;
+using Syncfusion.Maui.Toolkit.Hosting;
+
+
 
 namespace RoomToRentRadar
 {
@@ -56,6 +58,22 @@ namespace RoomToRentRadar
             builder.Services.AddSingleton<MainPageModel>();
             builder.Services.AddSingleton<ProjectListPageModel>();
             builder.Services.AddSingleton<ManageMetaPageModel>();
+
+            // US01 / T01.2: Refit API + Mock fallback + RoomListViewModel
+            builder.Services
+                .AddRefitClient<IListingsApiService>()
+                .ConfigureHttpClient(client =>
+                {
+                    var baseUrl = DeviceInfo.Platform == DevicePlatform.Android
+                        ? "http://10.0.2.2:5000"
+                        : "http://localhost:5000";
+                    client.BaseAddress = new Uri(baseUrl);
+                    client.Timeout = TimeSpan.FromSeconds(5);
+                });
+            builder.Services.AddSingleton<MockListingsService>();
+            builder.Services.AddSingleton<IListingsService, ListingsService>();
+            builder.Services.AddSingleton<RoomListViewModel>();
+            builder.Services.AddSingleton<RoomListPage>();
 
             builder.Services.AddTransientWithShellRoute<ProjectDetailPage, ProjectDetailPageModel>("project");
             builder.Services.AddTransientWithShellRoute<TaskDetailPage, TaskDetailPageModel>("task");
