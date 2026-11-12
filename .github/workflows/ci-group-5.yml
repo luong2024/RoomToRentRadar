@@ -1,0 +1,157 @@
+name: Group 5 — CI Quality & Architecture Gatekeeper
+
+on:
+  pull_request:
+    branches:
+      - group-5
+      - main
+  push:
+    branches:
+      - group-5
+      - "feature/group-5/**"
+
+# Cancel older CI runs on the same PR/branch immediately when a new commit is pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  # ============================================================================
+  # JOB 1: GOVERNANCE, BRANCH PROTECTION, BOUNDARY & STATIC ANTI-PATTERN GATE
+  # Fast (< 30s): Fails immediately if a developer or AI Agent breaks team rules.
+  # ============================================================================
+  governance-and-boundary-gate:
+    name: "1. Governance, Scope & Anti-Pattern Gate"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository with full git history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: "Rule 1: Block any PR targeting `main` branch"
+        if: github.event_name == 'pull_request' && github.base_ref == 'main'
+        run: |
+          echo "::error::CẤM TUYỆT ĐỐI mở Pull Request vào nhánh 'main'! Hãy đổi base branch sang 'group-5'."
+          exit 1
+
+      - name: "Rule 2: Verify no tracked bin/ or obj/ artifacts in commit"
+        run: |
+          tracked_build_files="$(git ls-files | grep -E '(^|/)(bin|obj)/' || true)"
+          if [ -n "$tracked_build_files" ]; then
+            echo "::error::Phát hiện file biên dịch trong thư mục bin/ hoặc obj/ bị commit vào Git:"
+            echo "$tracked_build_files"
+            exit 1
+          fi
+
+      - name: "Rule 3: Verify Locked Architecture Zone on Feature PRs"
+        if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'feature/group-5/T') && !startsWith(github.head_ref, 'feature/group-5/T00-')
+        run: |
+          git fetch origin ${{ github.base_ref }} --depth=50
+          locked_changes="$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '^(RoomToRentRadar\.Core/Models/|RoomToRentRadar\.Core/Abstractions/|RoomToRentRadar\.Infrastructure/Persistence/|RoomToRentRadar/MauiProgram\.cs$)' || true)"
+          if [ -n "$locked_changes" ]; then
+            if ! echo "${{ join(github.event.pull_request.labels.*.name, ',') }}" | grep -qi "architect-approved"; then
+              echo "::error::PR từ nhánh '${{ github.head_ref }}' đã sửa vùng khóa của @architect (Core Models/Abstractions, Persistence, hoặc MauiProgram.cs) khi chưa có nhãn 'architect-approved':"
+              echo "$locked_changes"
+              exit 1
+            fi
+          fi
+
+      - name: "Rule 4: Static Scan for UI Thread Deadlocks (.Result / .Wait()) & Service Locator"
+        run: |
+          # Check for synchronous blocking calls in Features or Repositories
+          deadlock_hits="$(grep -rnE '\.(Result|Wait\s*\()' RoomToRentRadar/Features RoomToRentRadar.Infrastructure/Repositories 2>/dev/null || true)"
+          if [ -n "$deadlock_hits" ]; then
+            echo "::error::Phát hiện lệnh chặn luồng đồng bộ (.Result hoặc .Wait()) có nguy cơ gây treo (deadlock) ứng dụng MAUI. Hãy dùng async/await:"
+            echo "$deadlock_hits"
+            exit 1
+          fi
+
+          # Check for Service Locator anti-pattern in PageModels
+          locator_hits="$(grep -rnE 'IServiceProvider|\.GetService<' RoomToRentRadar/Features 2>/dev/null || true)"
+          if [ -n "$locator_hits" ]; then
+            echo "::error::Phát hiện Service Locator (IServiceProvider.GetService) trong Features/. Hãy inject trực tiếp Interface qua Constructor (DIP):"
+            echo "$locator_hits"
+            exit 1
+          fi
+
+  # ============================================================================
+  # JOB 2: CORE + INFRASTRUCTURE BUILD & API/CONTRACT INTEGRATION TESTS
+  # Includes hang detection (--blame-hang-timeout 30s) so infinite loops / deadlocks fail fast.
+  # ============================================================================
+  contract-and-api-tests:
+    name: "2. Core/Infra Build + SQLite & API Contract Tests"
+    runs-on: ubuntu-latest
+    needs: governance-and-boundary-gate
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10 SDK with NuGet caching
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+          cache: true
+          cache-dependency-path: "**/*.csproj"
+
+      - name: Build Core & Infrastructure (Warnings as Errors)
+        run: |
+          dotnet build RoomToRentRadar.Core/RoomToRentRadar.Core.csproj -c Release --warnaserror
+          dotnet build RoomToRentRadar.Infrastructure/RoomToRentRadar.Infrastructure.csproj -c Release --warnaserror
+          dotnet build RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj -c Release
+
+      - name: Run Unit, SQLite & API Contract Tests (30s Hang Timeout per test)
+        run: |
+          dotnet test RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj \
+            -c Release \
+            --no-build \
+            --verbosity normal \
+            --blame-hang-timeout 30s \
+            --blame-hang-dump-type mini \
+            --logger "trx;LogFileName=test-results.trx" \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults
+
+      - name: Upload Test Results & Coverage Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-and-contract-test-results
+          path: ./TestResults
+          retention-days: 14
+
+  # ============================================================================
+  # JOB 3: FULL .NET MAUI MULTI-TARGET COMPILATION (ANDROID + WINDOWS + XAML SOURCEGEN)
+  # Catches XAML syntax/binding errors, missing DI registrations in FeatureModules, and platform breaks.
+  # ============================================================================
+  maui-app-build:
+    name: "3. Full MAUI Build (Android + Windows + XAML SourceGen)"
+    runs-on: windows-latest
+    needs: governance-and-boundary-gate
+    timeout-minutes: 25
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+          cache: true
+          cache-dependency-path: "**/*.csproj"
+
+      - name: Install .NET MAUI Workloads (Android & Windows)
+        run: dotnet workload install maui-android maui-windows
+
+      - name: Build MAUI Windows Target (Verifies XAML SourceGen & WinUI 3)
+        run: dotnet build RoomToRentRadar/RoomToRentRadar.csproj -c Release -f net10.0-windows10.0.19041.0 --nologo
+
+      - name: Build MAUI Android Target (Verifies Android Packaging & Handlers)
+        run: dotnet build RoomToRentRadar/RoomToRentRadar.csproj -c Release -f net10.0-android --nologo
