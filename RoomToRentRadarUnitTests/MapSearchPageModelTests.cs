@@ -4,6 +4,7 @@ using RoomToRentRadar.Features.Map.ViewModels;
 using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Models;
 using RoomToRentRadar.Services;
+using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.Shared.Listings;
 using RoomToRentRadar.Shared.Pagination;
 
@@ -343,7 +344,34 @@ public class MapSearchPageModelTests
 
         public AreaSearchRequest? LastRequest => Requests.Count == 0 ? null : Requests[^1];
 
-        public Task<PagedResult<ListingSummaryDto>> GetListingsAsync(int limit, CancellationToken cancellationToken = default)
+        public Task<ListingSearchResultDto> GetListingsAsync(
+            int limit,
+            string? cursor = null,
+            ActiveListingFiltersDto? filters = null,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<ListingDetailFetchResult> GetListingDetailAsync(Guid id, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<IReadOnlyList<ListingSummaryDto>> GetSimilarListingsAsync(
+            Guid id,
+            int limit = 4,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<ListingContactFetchResult> GetListingContactAsync(
+            Guid id,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<LoginResponse?> DemoLoginAsync(CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task LogoutAsync(CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task<SearchResultDto<ListingSummaryDto>> SearchByAreaAsync(
@@ -365,7 +393,34 @@ public class MapSearchPageModelTests
 
         public List<CancellationToken> CancellationTokens { get; } = [];
 
-        public Task<PagedResult<ListingSummaryDto>> GetListingsAsync(int limit, CancellationToken cancellationToken = default)
+        public Task<ListingSearchResultDto> GetListingsAsync(
+            int limit,
+            string? cursor = null,
+            ActiveListingFiltersDto? filters = null,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<ListingDetailFetchResult> GetListingDetailAsync(Guid id, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<IReadOnlyList<ListingSummaryDto>> GetSimilarListingsAsync(
+            Guid id,
+            int limit = 4,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<ListingContactFetchResult> GetListingContactAsync(
+            Guid id,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<LoginResponse?> DemoLoginAsync(CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task LogoutAsync(CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task<SearchResultDto<ListingSummaryDto>> SearchByAreaAsync(

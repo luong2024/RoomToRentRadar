@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RoomToRentRadar.Api.Features.Listings;
 using RoomToRentRadar.Shared.Listings;
@@ -39,18 +40,73 @@ public sealed class ListingsController(
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(ListingDetailDto), StatusCodes.Status200OK, "application/json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status410Gone, "application/problem+json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError, "application/problem+json")]
     public async Task<ActionResult<ListingDetailDto>> GetListing(
         Guid id,
         CancellationToken cancellationToken)
     {
-        var listing = await listingsQueryService.GetDetailAsync(id, cancellationToken);
-        if (listing is null)
+        var result = await listingsQueryService.GetDetailAsync(id, cancellationToken);
+
+        switch (result.Outcome)
+        {
+            case ListingDetailOutcome.Found:
+                return Ok(result.Detail);
+            case ListingDetailOutcome.Unavailable:
+                return ToProblem(ListingProblemFactory.Unavailable());
+            default:
+                return ToProblem(ListingProblemFactory.NotFound());
+        }
+    }
+
+    [Authorize]
+    [HttpGet("{id:guid}/contact")]
+    [ProducesResponseType(typeof(ListingContactDto), StatusCodes.Status200OK, "application/json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status410Gone, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError, "application/problem+json")]
+    public async Task<ActionResult<ListingContactDto>> GetListingContact(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var result = await listingsQueryService.GetContactAsync(id, cancellationToken);
+
+        switch (result.Outcome)
+        {
+            case ListingDetailOutcome.Found:
+                return Ok(result.Contact);
+            case ListingDetailOutcome.Unavailable:
+                return ToProblem(ListingProblemFactory.Unavailable());
+            default:
+                return ToProblem(ListingProblemFactory.NotFound());
+        }
+    }
+
+    [HttpGet("{id:guid}/similar")]
+    [ProducesResponseType(typeof(IReadOnlyList<ListingSummaryDto>), StatusCodes.Status200OK, "application/json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError, "application/problem+json")]
+    public async Task<ActionResult<IReadOnlyList<ListingSummaryDto>>> GetSimilarListings(
+        Guid id,
+        [FromQuery] int limit = 4,
+        CancellationToken cancellationToken = default)
+    {
+        if (limit is < 1 or > 10)
+        {
+            return ToProblem(ListingProblemFactory.InvalidQuery(
+                ListingProblemFactory.InvalidLimit,
+                "limit must be between 1 and 10."));
+        }
+
+        var similar = await listingsQueryService.GetSimilarAsync(id, limit, cancellationToken);
+        if (similar is null)
         {
             return ToProblem(ListingProblemFactory.NotFound());
         }
 
-        return Ok(listing);
+        return Ok(similar);
     }
 
     [HttpPost("search/area")]

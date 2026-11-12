@@ -30,6 +30,7 @@ public sealed class ListingConfiguration : IEntityTypeConfiguration<Listing>
         builder.Property(x => x.Title).HasColumnName("title").HasMaxLength(200).IsRequired();
         builder.Property(x => x.Description).HasColumnName("description").HasMaxLength(4000).IsRequired();
         builder.Property(x => x.Price).HasColumnName("price");
+        builder.Property(x => x.Deposit).HasColumnName("deposit");
         builder.Property(x => x.AreaM2).HasColumnName("area_m2");
         builder.Property(x => x.Bedrooms).HasColumnName("bedrooms");
         builder.Property(x => x.RoomType)
@@ -48,6 +49,8 @@ public sealed class ListingConfiguration : IEntityTypeConfiguration<Listing>
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
         builder.Property(x => x.OwnerId).HasColumnName("owner_id");
+        builder.Property(x => x.LandlordName).HasColumnName("landlord_name").HasMaxLength(120).IsRequired();
+        builder.Property(x => x.LandlordPhone).HasColumnName("landlord_phone").HasMaxLength(20).IsRequired();
 
         // Each index matches one whitelisted sort: equality on status, then the
         // sort key in the requested direction, then id as the unique tie-breaker.

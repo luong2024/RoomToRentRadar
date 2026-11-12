@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -5,6 +6,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.OpenApi;
 using RoomToRentRadar.Api.Data;
 using RoomToRentRadar.Api.Data.Seed;
+using RoomToRentRadar.Api.Features.Auth;
 using RoomToRentRadar.Api.Features.Listings;
 using RoomToRentRadar.Api.Features.Photos;
 using RoomToRentRadar.Shared.Serialization;
@@ -71,6 +73,13 @@ builder.Services.AddCors(options =>
 });
 builder.Services.AddScoped<ListingsQueryService>();
 builder.Services.AddScoped<ListingCandidatePageBuilder>();
+builder.Services.AddScoped<AuthService>();
+builder.Services
+    .AddAuthentication(BearerTokenAuthenticationHandler.SchemeName)
+    .AddScheme<AuthenticationSchemeOptions, BearerTokenAuthenticationHandler>(
+        BearerTokenAuthenticationHandler.SchemeName,
+        _ => { });
+builder.Services.AddAuthorization();
 builder.Services.AddSingleton(serviceProvider => PhotoStorageOptions.Resolve(
     serviceProvider.GetRequiredService<IConfiguration>()[PhotoStorageOptions.ConfigKey],
     serviceProvider.GetRequiredService<IHostEnvironment>().ContentRootPath));
@@ -98,6 +107,8 @@ if (app.Environment.IsDevelopment())
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await dbContext.Database.MigrateAsync();
     await DatabaseSeeder.SeedSampleAsync(dbContext);
+    await DatabaseSeeder.BackfillSampleDetailsAsync(dbContext);
+    await DemoUserSeeder.SeedAsync(dbContext, app.Configuration, app.Logger);
 }
 
 app.UseExceptionHandler();
@@ -120,6 +131,9 @@ app.UseStaticFiles(new StaticFileOptions
         app.Services.GetRequiredService<PhotoStorageOptions>().RootPath),
     RequestPath = PhotoStorage.RequestPath
 });
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 
