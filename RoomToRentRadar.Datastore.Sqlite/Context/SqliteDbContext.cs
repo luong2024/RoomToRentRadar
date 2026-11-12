@@ -121,31 +121,8 @@ public sealed class SqliteDbContext : IDisposable
                     CREATE INDEX IF NOT EXISTS IX_AuditLogs_TimestampUtc ON AuditLogs(TimestampUtc DESC);
                     CREATE INDEX IF NOT EXISTS IX_AuditLogs_UserId ON AuditLogs(UserId);
                     CREATE INDEX IF NOT EXISTS IX_AuditLogs_Action ON AuditLogs(Action);
-
-                    CREATE TABLE IF NOT EXISTS Rooms (
-                        Id TEXT PRIMARY KEY NOT NULL,
-                        Title TEXT NOT NULL,
-                        Description TEXT NOT NULL,
-                        Price NUMERIC NOT NULL,
-                        Area REAL NOT NULL,
-                        Address TEXT NOT NULL,
-                        Latitude REAL NOT NULL,
-                        Longitude REAL NOT NULL,
-                        LandlordId TEXT NOT NULL,
-                        IsAvailable INTEGER NOT NULL,
-                        IsVerified INTEGER NOT NULL,
-                        CreatedAtUtc TEXT NOT NULL,
-                        Status TEXT NOT NULL DEFAULT 'Available',
-                        LandlordName TEXT NULL,
-                        LandlordPhoneNumber TEXT NULL
-                    );
-
-                    CREATE INDEX IF NOT EXISTS IX_Rooms_Price ON Rooms(Price);
-                    CREATE INDEX IF NOT EXISTS IX_Rooms_Area ON Rooms(Area);
                     """;
                 cmd.ExecuteNonQuery();
-
-                SeedRoomsIfEmpty(conn);
                 _schemaInitialized = true;
             }
             finally
@@ -156,70 +133,6 @@ public sealed class SqliteDbContext : IDisposable
                 }
             }
         }
-    }
-
-    /// <summary>
-    /// Chèn dữ liệu mẫu 8 phòng khi bảng Rooms còn rỗng (chỉ một lần).
-    /// Chạy trong transaction, trong cùng lock khởi tạo schema.
-    /// </summary>
-    private static void SeedRoomsIfEmpty(SqliteConnection conn)
-    {
-        using (var countCmd = conn.CreateCommand())
-        {
-            countCmd.CommandText = "SELECT COUNT(1) FROM Rooms;";
-            var existing = Convert.ToInt64(countCmd.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture);
-            if (existing > 0)
-            {
-                return;
-            }
-        }
-
-        using var tx = conn.BeginTransaction();
-        using (var insertCmd = conn.CreateCommand())
-        {
-            insertCmd.Transaction = tx;
-            insertCmd.CommandText = """
-                INSERT OR IGNORE INTO Rooms (
-                    Id, Title, Description, Price, Area, Address, Latitude, Longitude,
-                    LandlordId, IsAvailable, IsVerified, CreatedAtUtc, Status
-                ) VALUES (
-                    @id, @title, @description, @price, @area, @address, @latitude, @longitude,
-                    @landlordId, @isAvailable, @isVerified, @createdAtUtc, @status
-                );
-                """;
-
-            var parameters = new[]
-            {
-                "@id", "@title", "@description", "@price", "@area", "@address", "@latitude", "@longitude",
-                "@landlordId", "@isAvailable", "@isVerified", "@createdAtUtc", "@status"
-            }.Select(name =>
-            {
-                var parameter = insertCmd.CreateParameter();
-                parameter.ParameterName = name;
-                insertCmd.Parameters.Add(parameter);
-                return parameter;
-            }).ToArray();
-
-            foreach (var room in RoomSeedData.CreateRooms())
-            {
-                parameters[0].Value = room.Id;
-                parameters[1].Value = room.Title;
-                parameters[2].Value = room.Description;
-                parameters[3].Value = room.Price;
-                parameters[4].Value = room.Area;
-                parameters[5].Value = room.Address;
-                parameters[6].Value = room.Latitude;
-                parameters[7].Value = room.Longitude;
-                parameters[8].Value = room.LandlordId;
-                parameters[9].Value = room.IsAvailable ? 1 : 0;
-                parameters[10].Value = room.IsVerified ? 1 : 0;
-                parameters[11].Value = room.CreatedAtUtc.ToString("O", System.Globalization.CultureInfo.InvariantCulture);
-                parameters[12].Value = room.Status.ToString();
-                insertCmd.ExecuteNonQuery();
-            }
-        }
-
-        tx.Commit();
     }
 
     public void Dispose()

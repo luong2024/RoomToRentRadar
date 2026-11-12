@@ -56,26 +56,25 @@ public class ArchitectureTests
     }
 
     [Test]
-    public void DomainAggregatesAndMutableEntities_MustDeclareConcurrencyTokenProperty()
+    public void DomainAggregates_MustDeclareConcurrencyTokenProperty()
     {
-        var targetTypes = DomainAssembly.GetTypes()
-            .Where(t => IsCandidateClass(t) && t.Namespace != null &&
-                        (t.Namespace.Contains("Aggregates") || t.Name == "Room"))
+        var aggregateTypes = DomainAssembly.GetTypes()
+            .Where(t => IsCandidateClass(t) && t.Namespace != null && t.Namespace.Contains("Aggregates"))
             .ToList();
 
-        Assert.That(targetTypes, Is.Not.Empty, "Expected at least one Domain Aggregate or Mutable Entity to be verified.");
+        Assert.That(aggregateTypes, Is.Not.Empty, "Expected at least one Domain Aggregate to be verified.");
 
-        foreach (var type in targetTypes)
+        foreach (var type in aggregateTypes)
         {
             var concurrencyProp = type.GetProperty("ConcurrencyToken", BindingFlags.Public | BindingFlags.Instance);
             Assert.That(
                 concurrencyProp,
                 Is.Not.Null,
-                $"Aggregate/Entity '{type.Name}' must declare a 'ConcurrencyToken' property to support Optimistic Concurrency Control (Guardrail 1.5.2).");
+                $"Aggregate '{type.Name}' must declare a 'ConcurrencyToken' property to support Optimistic Concurrency Control (Guardrail 1.5.2).");
             Assert.That(
                 concurrencyProp!.PropertyType,
                 Is.EqualTo(typeof(string)),
-                $"Aggregate/Entity '{type.Name}' ConcurrencyToken must be of type string.");
+                $"Aggregate '{type.Name}' ConcurrencyToken must be of type string.");
         }
     }
 
