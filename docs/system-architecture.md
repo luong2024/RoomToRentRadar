@@ -34,7 +34,7 @@ flowchart LR
 | API | ASP.NET Core 10 controllers, JWT bearer, SignalR hub, BackgroundServices | Business use cases, auth/RBAC, moderation, search, alerts, chat, media serving. |
 | Database | SQLite file (`roomtorentradar.db`, WAL) | All server data ([erd.md](erd.md)). |
 | Media store | Local disk folder behind `IPhotoStoragePort` | Photo originals and renditions ([ADR-008](adr/adr-008-media-storage-and-360-viewer.md)). |
-| Reverse proxy | Caddy (Docker Compose, one Linux VM) | HTTPS certificates, WebSocket proxy, forwards to the API container ([ADR-013](adr/adr-013-hosting-and-environments.md)). |
+| Demo hosting | Team laptop + Microsoft Dev Tunnels (HTTPS for physical phones) | No public server in course scope; Docker/Caddy/VM is a documented upgrade path only ([ADR-013](adr/adr-013-hosting-and-environments.md)). |
 
 ## 3. Solution structure (target)
 

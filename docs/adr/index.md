@@ -20,4 +20,4 @@ File naming: `adr-<NNN>-<kebab-case-title>.md` (the number is a permanent ID, no
 | [ADR-010](adr-010-push-notifications-and-alerts.md) | Firebase Cloud Messaging + in-process alert matcher | Accepted | 2026-11-11 |
 | [ADR-011](adr-011-listing-moderation-state-machine.md) | Listing lifecycle state machine and two-level verification | Accepted | 2026-11-11 |
 | [ADR-012](adr-012-api-contract-and-error-model.md) | Design-first OpenAPI, ProblemDetails + errorCode, offset paging, ETag concurrency | Accepted | 2026-11-11 |
-| [ADR-013](adr-013-hosting-and-environments.md) | Environments, free hosting (Docker Compose + Caddy on one VM, DuckDNS) and APK distribution — course scope | Accepted (revised) | 2026-11-12 |
+| [ADR-013](adr-013-hosting-and-environments.md) | Environments and demo setup — course scope (laptop + Dev Tunnels, no public hosting) | Accepted (revised) | 2026-11-12 |

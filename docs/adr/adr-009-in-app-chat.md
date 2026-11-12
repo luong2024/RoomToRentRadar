@@ -24,7 +24,7 @@ Besides phone and Zalo, students must be able to chat with landlords inside the 
 
 ## Consequences
 - Positive: no extra service or cost; consistent security; reliable sending.
-- Negative: SignalR in-process ⇒ single API instance (accepted in ADR-013: one container behind Caddy, which proxies WebSockets).
+- Negative: SignalR in-process ⇒ single API instance (accepted in ADR-013: one API process on the demo laptop; Dev Tunnels forwards WebSockets).
 - Security: the JWT travels in the `access_token` query string for WebSockets, so request logging and the audit middleware MUST NOT log query strings for `/hubs/*`.
 - Follow-up: NuGet `Microsoft.AspNetCore.SignalR.Client` for the client adapters (approval per GUARDRAILS).
 

@@ -25,7 +25,7 @@ US07 requires push alerts within 15 minutes, max 3 per saved search per day, pau
 ## Consequences
 - Positive: free; ≤ seconds latency typical; idempotent.
 - Negative: Firebase project setup (google-services.json not committed; injected in CI/local).
-- Course scope (2026-11-12): FCM is free with no card (Firebase Spark plan). The same Firebase project also hosts App Distribution for the APK (ADR-013). Push is a "nice to have" for the demo: if the client plugin is not compatible with .NET 10 in time, alerts still land in the in-app Notifications inbox (above) and push is listed as a known limitation.
+- Course scope (2026-11-12): FCM is free with no card (Firebase Spark plan) and is the only Firebase product used — it is needed because US07 AC requires a push alert, not for app distribution. Push is a "nice to have" for the demo: if the client plugin is not compatible with .NET 10 in time, alerts still land in the in-app Notifications inbox (above) and push is listed as a known limitation.
 
 ## Compliance
 Unit tests for matcher (filters, polygon, distance, cap, idempotency); mock adapter default `false` in `appsettings.json` (architecture test).

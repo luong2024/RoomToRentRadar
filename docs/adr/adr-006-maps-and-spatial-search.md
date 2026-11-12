@@ -22,7 +22,7 @@ US05 needs pins, preview cards and polygon drawing; US08 needs the landlord to p
 
 ## Decision
 - Client map: **.NET MAUI Maps**. Android key from build-time secret (not committed); iOS uses MapKit.
-- **Cost (course scope, revised 2026-11-12):** Maps SDK for Android map loads *without a map ID* are billed at 0 USD ("Mobile Native Dynamic Maps"), but Google still requires a **billing account (card) on the Cloud project**. Rules: do not use a map ID or Street View; restrict the key to the app's package name + the team keystore SHA-1 (ADR-013); set a 1 USD budget alert.
+- **Cost (course scope, revised 2026-11-12):** Maps SDK for Android map loads *without a map ID* use the "Mobile Native Dynamic Maps" SKU at **0 USD with no monthly cap** — far above the team's "≥ 5,000 free loads/month" bar, so Google Maps stays the choice (best-looking, familiar map). Google still requires a **billing account (card) on the Cloud project**. Rules: do not use a map ID, Street View or any web/Places API; restrict the key to the app's package name + the developers' debug-keystore SHA-1s (ADR-013); set a 1 USD budget alert.
 - **Pre-approved fallback** (no new ADR needed) if no team member can attach a card: **Mapsui + OpenFreeMap tiles** (free, no account, no key). To keep the switch cheap, every page uses one wrapper control `Pages/Controls/RoomMap` (pins, polygon, map tap); only that control knows which map library is underneath.
 - **Drawing UX:** "tap to add vertices" (3–20) with live polygon, undo last point, *Done* / *Clear* buttons — reliable on all devices, unlike freehand drawing that conflicts with map panning.
 - **Pin-drop for landlords** instead of paid geocoding: map opens at campus, landlord drags the pin to the house; address text typed manually.

@@ -228,7 +228,7 @@ To-be: register as Landlord (phone required) → Admin approves the landlord →
 | Fake listings & privacy | Two-level verification, Safety Score verification, reports, EXIF stripping, phone gating, minimal data. |
 | English-only UI vs. older, non-technical landlords (persona P3) | Short labels, icons with text, landlord wizard with examples; all strings in `.resx` so a Vietnamese resource file can be added later without code changes; Admin can help landlords publish during the pilot. |
 | ICTU Google Workspace may block unknown third-party OAuth apps | Test early with one real `DTC…@ictu.edu.vn` account; only if it shows *Access blocked*, ask ICTU IT to trust the team's client ID; email/password sign-in stays the fallback (ADR-005). |
-| Free-tier services change or need a card (Google Maps billing account, student cloud credit, Android sideloading rules) | Pre-approved fallbacks: Mapsui + OpenFreeMap (ADR-006), laptop + tunnel for the demo, team phones/emulator (ADR-013). |
+| Free-tier services change or need a card (Google Maps billing account) | Pre-approved fallback Mapsui + OpenFreeMap (ADR-006); every external service sits behind a port with a Development mock (§10). |
 
 ## 9. Open questions
 
@@ -241,3 +241,18 @@ Resolved decisions (2026-11-11):
 - **Campuses:** ICTU plus the other Thái Nguyên University member schools in the city (8 campuses). Coordinates were looked up once from OpenStreetMap (free, no API key) — a one-time seed list, not a runtime dependency.
 - **SSO provider:** Google (OIDC), domain `ictu.edu.vn`; student e-mail format `DTC<digits>@ictu.edu.vn` (see BR-AUTH-04).
 - **Admin during the pilot:** one team member signs in with a seeded Admin account (`Admin:SeedAccounts` configuration) and performs all approvals/moderation.
+
+## 10. External services (course scope)
+
+Decided 2026-11-12. This is a course project: the app is demonstrated by the team on a laptop, emulator and team phones. There is **no public server, no domain, no store release and no APK distribution** (ADR-013). Everything below is free. Each service sits behind an outbound port with a mock that works only in Development, so nobody is blocked while keys are missing.
+
+| Service | Used for (story) | Account / setup | Cost | Key stored in | Fallback |
+|---|---|---|---|---|---|
+| **Google Cloud: OAuth client** | ICTU sign-in with Google (US13, BR-AUTH-04) | One team Cloud project; consent screen *External*, scopes `openid email profile`; one Android client per developer debug-keystore SHA-1; custom URI scheme enabled ([ADR-005](adr/adr-005-authentication-and-session.md)) | Free, no card | user-secrets / env | e-mail + password sign-in; `MockIctuSsoVerifierAdapter` (Development) |
+| **Google Maps SDK for Android** | Map, pins, polygon, pin-drop (US05, US08) | Same Cloud project; enable *Maps SDK for Android*; key restricted to package + SHA-1s; 1 USD budget alert ([ADR-006](adr/adr-006-maps-and-spatial-search.md)) | 0 USD per load, no monthly cap — **billing card required** | MSBuild property / env, not committed | Mapsui + OpenFreeMap (no key) |
+| **OpenRouteService** | Travel time by motorbike/walk/bus (US09) | Free sign-up at openrouteservice.org ([ADR-007](adr/adr-007-routing-and-travel-time.md)) | Free daily quota, no card | user-secrets / env | straight-line distance (`isFallback`), `MockTravelTimeAdapter` |
+| **Firebase Cloud Messaging** | Push for saved-search alerts and chat (US07, US14) | One Firebase project (Spark plan); `google-services.json` and the server service-account JSON stay out of git ([ADR-010](adr/adr-010-push-notifications-and-alerts.md)) | Free, no card | local file / env | in-app Notifications inbox; `MockPushNotificationAdapter` |
+| **Microsoft Dev Tunnels** | HTTPS URL so physical team phones reach the API on the demo laptop | Sign in to Visual Studio or the `devtunnel` CLI with a Microsoft/GitHub account | Free | — | emulator only (`10.0.2.2`) |
+| **GitHub + GitHub Actions** | Repo, PRs, CI | existing | Free | — | — |
+
+Not used (removed from scope): public VM/hosting, Vercel/Render, domain/DuckDNS, Firebase App Distribution, Google Play, Apple Developer account, paid geocoding (pin-drop instead, ADR-006).
