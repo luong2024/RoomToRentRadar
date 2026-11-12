@@ -1,3 +1,4 @@
+using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Context;
 using RoomToRentRadar.Bootstrap.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +17,12 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-app.Run();
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var cosmosDbContext = scope.ServiceProvider.GetRequiredService<ICosmosDbContext>();
+    await cosmosDbContext.EnsureDatabaseAndContainersAsync();
+}
+
+await app.RunAsync();
 
 public partial class Program;
