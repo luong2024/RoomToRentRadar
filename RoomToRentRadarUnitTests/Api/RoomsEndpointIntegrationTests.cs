@@ -150,6 +150,41 @@ public class RoomsEndpointIntegrationTests
     }
 
     [Test]
+    public async Task GetRooms_InvalidRoomType_Returns400ProblemDetails()
+    {
+        var response = await _client.GetAsync("/api/rooms?roomTypes=BOGUS");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.That(
+            response.Content.Headers.ContentType?.MediaType,
+            Is.EqualTo("application/problem+json"),
+            "ADR-012: lỗi trả problem+json");
+
+        // Follow-up: model-state 400 chưa có `errorCode` (cần InvalidModelStateResponseFactory),
+        // nên test này CỐ Ý không assert `errorCode`. Bật lại khi follow-up hoàn tất.
+    }
+
+    [Test]
+    public async Task GetRooms_EmptyRoomTypeFilter_IsIgnored()
+    {
+        // `?roomTypes=` bind thành null (= không lọc theo loại phòng), không phải list rỗng (list rỗng = 0 phòng).
+        var response = await _client.GetAsync("/api/rooms?roomTypes=");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var root = body.RootElement;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(root.GetProperty("totalCount").GetInt32(), Is.EqualTo(5), "roomTypes rỗng = không lọc → toàn bộ seed demo");
+            Assert.That(root.GetProperty("items").GetArrayLength(), Is.EqualTo(5));
+        });
+    }
+
+    [Test]
     public async Task GetRooms_DemoSeedDisabled_ReturnsEmptyPage()
     {
         using var productionLike = CreateFactory(seedDemoRooms: false);
