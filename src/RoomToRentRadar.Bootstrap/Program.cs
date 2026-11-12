@@ -6,7 +6,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services
     .AddApplicationUseCases()
     .AddOutboundAdapters(builder.Configuration)
-    .AddInboundAdapters(builder.Configuration);
+    .AddInboundAdapters(builder.Configuration)
+    .AddProfileFeature(); 
 
 var app = builder.Build();
 
