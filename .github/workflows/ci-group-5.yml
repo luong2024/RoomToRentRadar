@@ -54,10 +54,10 @@ jobs:
         if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'feature/group-5/T') && !startsWith(github.head_ref, 'feature/group-5/T00-')
         run: |
           git fetch origin ${{ github.base_ref }} --depth=50
-          locked_changes="$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '^(RoomToRentRadar\.Core/Models/|RoomToRentRadar\.Core/Abstractions/|RoomToRentRadar\.Infrastructure/Persistence/|RoomToRentRadar/MauiProgram\.cs$)' || true)"
+          locked_changes="$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '^(RoomToRentRadar\.Core/Models/|RoomToRentRadar\.Core/Abstractions/|RoomToRentRadar\.Infrastructure/Persistence/|RoomToRentRadar/MauiProgram\.cs$|RoomToRentRadar\.Api/Program\.cs$)' || true)"
           if [ -n "$locked_changes" ]; then
             if ! echo "${{ join(github.event.pull_request.labels.*.name, ',') }}" | grep -qi "architect-approved"; then
-              echo "::error::PR từ nhánh '${{ github.head_ref }}' đã sửa vùng khóa của @architect (Core Models/Abstractions, Persistence, hoặc MauiProgram.cs) khi chưa có nhãn 'architect-approved':"
+              echo "::error::PR từ nhánh '${{ github.head_ref }}' đã sửa vùng khóa của @architect (Core, Persistence, MauiProgram.cs, hoặc Api/Program.cs) khi chưa có nhãn 'architect-approved':"
               echo "$locked_changes"
               exit 1
             fi
@@ -101,10 +101,11 @@ jobs:
           cache: true
           cache-dependency-path: "**/*.csproj"
 
-      - name: Build Core & Infrastructure (Warnings as Errors)
+      - name: Build Core, Infrastructure & ASP.NET Core Web API (Warnings as Errors)
         run: |
           dotnet build RoomToRentRadar.Core/RoomToRentRadar.Core.csproj -c Release --warnaserror
           dotnet build RoomToRentRadar.Infrastructure/RoomToRentRadar.Infrastructure.csproj -c Release --warnaserror
+          dotnet build RoomToRentRadar.Api/RoomToRentRadar.Api.csproj -c Release --warnaserror
           dotnet build RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj -c Release
 
       - name: Run Unit, SQLite & API Contract Tests (30s Hang Timeout per test)
@@ -155,3 +156,4 @@ jobs:
 
       - name: Build MAUI Android Target (Verifies Android Packaging & Handlers)
         run: dotnet build RoomToRentRadar/RoomToRentRadar.csproj -c Release -f net10.0-android --nologo
+ 

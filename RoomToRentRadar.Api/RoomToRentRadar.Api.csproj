@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!--
+    RoomToRentRadar.Api — ASP.NET Core Web API host backed by SQLite (RoomToRentRadar.Infrastructure).
+    Program.cs is LOCKED by @architect.
+    Each backend task adds its HTTP routes inside its own isolated file under Endpoints/*.cs
+    so developers never collide on Program.cs.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>RoomToRentRadar.Api</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RoomToRentRadar.Core\RoomToRentRadar.Core.csproj" />
+    <ProjectReference Include="..\RoomToRentRadar.Infrastructure\RoomToRentRadar.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="RoomToRentRadarUnitTests" />
+  </ItemGroup>
+
+</Project>
