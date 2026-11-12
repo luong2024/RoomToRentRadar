@@ -143,8 +143,9 @@ public class DeletePhotoUseCaseTests
     [TestCase(PhotoId, "   ")]
     public async Task ExecuteAsync_WithBlankId_ThrowsAndQueriesNothing(string photoId, string userId)
     {
-        Assert.ThrowsAsync<DomainValidationException>(
-            async () => await _sut.ExecuteAsync(photoId, userId));
+        await Assert.ThatAsync(
+            async () => await _sut.ExecuteAsync(photoId, userId),
+            Throws.TypeOf<DomainValidationException>());
 
         await _repository.DidNotReceiveWithAnyArgs().GetOwnedAsync(
             Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());

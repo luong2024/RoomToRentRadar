@@ -68,12 +68,14 @@ public class LocalDiskPhotoStorageAdapterTests
         var escapedPath = Path.Combine(Path.GetDirectoryName(_rootPath)!, escapedName);
 
         using var dotDotContent = new MemoryStream(new byte[] { 1 });
-        Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await adapter.SaveAsync($"../{escapedName}", dotDotContent));
+        await Assert.ThatAsync(
+            async () => await adapter.SaveAsync($"../{escapedName}", dotDotContent),
+            Throws.TypeOf<InvalidOperationException>());
 
         using var nestedContent = new MemoryStream(new byte[] { 2 });
-        Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await adapter.SaveAsync($"rooms/../../{escapedName}", nestedContent));
+        await Assert.ThatAsync(
+            async () => await adapter.SaveAsync($"rooms/../../{escapedName}", nestedContent),
+            Throws.TypeOf<InvalidOperationException>());
 
         Assert.Multiple(() =>
         {
@@ -91,8 +93,9 @@ public class LocalDiskPhotoStorageAdapterTests
         var rootedPath = Path.Combine(Path.GetTempPath(), $"rtrr-rooted-{Guid.NewGuid():N}.jpg");
 
         using var content = new MemoryStream(new byte[] { 1 });
-        Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await adapter.SaveAsync(rootedPath, content));
+        await Assert.ThatAsync(
+            async () => await adapter.SaveAsync(rootedPath, content),
+            Throws.TypeOf<InvalidOperationException>());
 
         Assert.That(File.Exists(rootedPath), Is.False);
     }
@@ -110,8 +113,9 @@ public class LocalDiskPhotoStorageAdapterTests
         }
 
         using var secondContent = new MemoryStream(new byte[] { 1, 2, 3 });
-        Assert.ThrowsAsync<IOException>(
-            async () => await adapter.SaveAsync(path, secondContent));
+        await Assert.ThatAsync(
+            async () => await adapter.SaveAsync(path, secondContent),
+            Throws.TypeOf<IOException>());
 
         var storedBytes = await File.ReadAllBytesAsync(
             Path.Combine(_rootPath, "rooms", "2026", "11", "p1", "original.jpg"));

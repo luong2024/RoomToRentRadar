@@ -119,8 +119,9 @@ public class UploadPhotoUseCaseTests
     {
         var request = CreateRequest(CreateJpegHeader(width: 800, height: 600), kind: PhotoKind.Panorama);
 
-        Assert.ThrowsAsync<DomainValidationException>(
-            async () => await _sut.ExecuteAsync(request));
+        await Assert.ThatAsync(
+            async () => await _sut.ExecuteAsync(request),
+            Throws.TypeOf<DomainValidationException>());
 
         await AssertNothingSavedAsync();
     }
@@ -130,8 +131,9 @@ public class UploadPhotoUseCaseTests
     {
         var request = CreateRequest(CreateJpegHeader(width: 800, height: 600), length: 0);
 
-        Assert.ThrowsAsync<DomainValidationException>(
-            async () => await _sut.ExecuteAsync(request));
+        await Assert.ThatAsync(
+            async () => await _sut.ExecuteAsync(request),
+            Throws.TypeOf<DomainValidationException>());
 
         await AssertNothingSavedAsync();
     }
@@ -143,8 +145,9 @@ public class UploadPhotoUseCaseTests
             CreateJpegHeader(width: 800, height: 600),
             length: PhotoFileRules.MaxFileBytes + 1);
 
-        Assert.ThrowsAsync<FileTooLargeException>(
-            async () => await _sut.ExecuteAsync(request));
+        await Assert.ThatAsync(
+            async () => await _sut.ExecuteAsync(request),
+            Throws.TypeOf<FileTooLargeException>());
 
         await AssertNothingSavedAsync();
     }
@@ -155,8 +158,9 @@ public class UploadPhotoUseCaseTests
         var forged = new byte[16];
         var request = CreateRequest(forged, fileName: "forged.jpg");
 
-        Assert.ThrowsAsync<UnsupportedMediaTypeException>(
-            async () => await _sut.ExecuteAsync(request));
+        await Assert.ThatAsync(
+            async () => await _sut.ExecuteAsync(request),
+            Throws.TypeOf<UnsupportedMediaTypeException>());
 
         await AssertNothingSavedAsync();
     }
@@ -167,8 +171,9 @@ public class UploadPhotoUseCaseTests
         var brokenHeader = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 };
         var request = CreateRequest(brokenHeader);
 
-        Assert.ThrowsAsync<UnsupportedMediaTypeException>(
-            async () => await _sut.ExecuteAsync(request));
+        await Assert.ThatAsync(
+            async () => await _sut.ExecuteAsync(request),
+            Throws.TypeOf<UnsupportedMediaTypeException>());
 
         await AssertNothingSavedAsync();
     }
@@ -178,8 +183,9 @@ public class UploadPhotoUseCaseTests
     {
         var request = CreateRequest(CreateJpegHeader(width: 800, height: 600), kind: (PhotoKind)99);
 
-        Assert.ThrowsAsync<DomainValidationException>(
-            async () => await _sut.ExecuteAsync(request));
+        await Assert.ThatAsync(
+            async () => await _sut.ExecuteAsync(request),
+            Throws.TypeOf<DomainValidationException>());
 
         await AssertNothingSavedAsync();
     }
@@ -190,8 +196,9 @@ public class UploadPhotoUseCaseTests
     {
         var request = CreateRequest(CreateJpegHeader(width: 800, height: 600), userId: userId);
 
-        Assert.ThrowsAsync<DomainValidationException>(
-            async () => await _sut.ExecuteAsync(request));
+        await Assert.ThatAsync(
+            async () => await _sut.ExecuteAsync(request),
+            Throws.TypeOf<DomainValidationException>());
 
         await AssertNothingSavedAsync();
     }
@@ -205,12 +212,25 @@ public class UploadPhotoUseCaseTests
         _repository.AddAsync(Arg.Any<RoomPhoto>(), Arg.Any<CancellationToken>())
             .ThrowsAsync(new InvalidOperationException("database failure"));
 
-        var exception = Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await _sut.ExecuteAsync(CreateRequest(content)));
+        InvalidOperationException? exception = null;
+        await Assert.ThatAsync(
+            async () =>
+            {
+                try
+                {
+                    await _sut.ExecuteAsync(CreateRequest(content));
+                }
+                catch (InvalidOperationException ex)
+                {
+                    exception = ex;
+                    throw;
+                }
+            },
+            Throws.TypeOf<InvalidOperationException>());
 
         Assert.Multiple(() =>
         {
-            Assert.That(exception.Message, Is.EqualTo("database failure"));
+            Assert.That(exception!.Message, Is.EqualTo("database failure"));
             Assert.That(savedPath, Is.Not.Null);
         });
         await _storage.Received(1).DeleteAsync(savedPath!, CancellationToken.None);
@@ -223,8 +243,21 @@ public class UploadPhotoUseCaseTests
         _storage.SaveAsync(Arg.Any<string>(), Arg.Any<Stream>(), Arg.Any<CancellationToken>())
             .ThrowsAsync(storageFailure);
 
-        var exception = Assert.ThrowsAsync<IOException>(
-            async () => await _sut.ExecuteAsync(CreateRequest(CreateJpegHeader(width: 800, height: 600))));
+        IOException? exception = null;
+        await Assert.ThatAsync(
+            async () =>
+            {
+                try
+                {
+                    await _sut.ExecuteAsync(CreateRequest(CreateJpegHeader(width: 800, height: 600)));
+                }
+                catch (IOException ex)
+                {
+                    exception = ex;
+                    throw;
+                }
+            },
+            Throws.TypeOf<IOException>());
 
         Assert.That(exception, Is.SameAs(storageFailure));
         await _repository.DidNotReceiveWithAnyArgs().AddAsync(
