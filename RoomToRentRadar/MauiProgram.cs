@@ -63,6 +63,8 @@ namespace RoomToRentRadar
             builder.Services.AddSingleton<ComparisonBasketService>();
 
             // --- [ZONE 1: LEAD DEV NGUYEN DANG QUANG - T01.1, T04.1, T07.1, T09.1, T10.2, T12.2] ---
+            builder.Services.AddSingleton<UserRepository>();             // T01.1
+            builder.Services.AddSingleton<IAuthService, AuthService>();  // T01.1 (singleton: holds the session)
 
             // --- [ZONE 2: DEV LAM MINH HIEU - T02.2, T04.2, T06.1, T07.2, T09.2, T11.1, T13.1] ---
 
