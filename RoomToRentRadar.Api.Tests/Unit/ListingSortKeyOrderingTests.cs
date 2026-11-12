@@ -14,18 +14,19 @@ public sealed class ListingSortKeyOrderingTests
 
     private static readonly ListingSortKey[] Keys =
     [
-        new(Id(0), Day3, 5_000_000, 30),
-        new(Id(1), Day1, 7_000_000, 60),
-        new(Id(2), Day3, 5_000_000, 60),
-        new(Id(3), Day2, 7_000_000, 30),
-        new(Id(4), Day3, 9_000_000, 45),
-        new(Id(5), Day2, 5_000_000, 30)
+        new(Id(0), Day3, 5_000_000, 30, 4.0),
+        new(Id(1), Day1, 7_000_000, 60, 1.0),
+        new(Id(2), Day3, 5_000_000, 60, 3.0),
+        new(Id(3), Day2, 7_000_000, 30, 2.0),
+        new(Id(4), Day3, 9_000_000, 45, 5.0),
+        new(Id(5), Day2, 5_000_000, 30, 1.0)
     ];
 
     [TestCase(ListingSort.Newest, new[] { 0, 2, 4, 3, 5, 1 })]
     [TestCase(ListingSort.PriceAsc, new[] { 0, 2, 5, 1, 3, 4 })]
     [TestCase(ListingSort.PriceDesc, new[] { 4, 1, 3, 0, 2, 5 })]
     [TestCase(ListingSort.AreaDesc, new[] { 1, 2, 4, 0, 3, 5 })]
+    [TestCase(ListingSort.DistanceAsc, new[] { 1, 5, 3, 2, 0, 4 })]
     public void Sort_MatchesExpectedOrdering(ListingSort sort, int[] expectedIndexes)
     {
         var ordered = ListingSortKeyOrdering.Sort(Keys, sort);
@@ -55,6 +56,9 @@ public sealed class ListingSortKeyOrderingTests
     [TestCase(ListingSort.AreaDesc, 1)]
     [TestCase(ListingSort.AreaDesc, 2)]
     [TestCase(ListingSort.AreaDesc, 6)]
+    [TestCase(ListingSort.DistanceAsc, 1)]
+    [TestCase(ListingSort.DistanceAsc, 2)]
+    [TestCase(ListingSort.DistanceAsc, 6)]
     public void CursorPageWalk_ReturnsEveryRowExactlyOnce(ListingSort sort, int pageSize)
     {
         var expected = ListingSortKeyOrdering.Sort(Keys, sort).Select(key => key.Id).ToList();
@@ -73,6 +77,7 @@ public sealed class ListingSortKeyOrderingTests
     [TestCase(ListingSort.PriceAsc)]
     [TestCase(ListingSort.PriceDesc)]
     [TestCase(ListingSort.AreaDesc)]
+    [TestCase(ListingSort.DistanceAsc)]
     public void IsAfterCursor_MatchesPositionInOrderedSequence(ListingSort sort)
     {
         var ordered = ListingSortKeyOrdering.Sort(Keys, sort);
@@ -109,6 +114,25 @@ public sealed class ListingSortKeyOrderingTests
             Assert.That(cursor.FilterFingerprint, Is.EqualTo(Fingerprint));
             Assert.That(cursor.Price, Is.EqualTo(key.Price));
             Assert.That(cursor.CreatedAt, Is.Null);
+            Assert.That(cursor.AreaM2, Is.Null);
+        });
+    }
+
+    [Test]
+    public void DistanceCursor_RoundTripsDistance()
+    {
+        var key = Keys[3];
+
+        var encoded = ListingSortKeyOrdering.EncodeCursor(ListingSort.DistanceAsc, key, Fingerprint);
+        Assert.That(ListingCursorCodec.TryDecode(encoded, out var cursor), Is.True);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(cursor.Sort, Is.EqualTo(ListingSort.DistanceAsc));
+            Assert.That(cursor.Id, Is.EqualTo(key.Id));
+            Assert.That(cursor.DistanceKm, Is.EqualTo(2.0));
+            Assert.That(cursor.CreatedAt, Is.Null);
+            Assert.That(cursor.Price, Is.Null);
             Assert.That(cursor.AreaM2, Is.Null);
         });
     }

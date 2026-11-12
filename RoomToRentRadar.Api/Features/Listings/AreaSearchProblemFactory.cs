@@ -22,4 +22,20 @@ public static class AreaSearchProblemFactory
         problem.Extensions["field"] = error.Field;
         return problem;
     }
+
+    public static ProblemDetails InvalidOrigin(string detail)
+    {
+        var problem = new ProblemDetails
+        {
+            Type = "https://tools.ietf.org/html/rfc9110#section-15.5.21",
+            Status = StatusCodes.Status422UnprocessableEntity,
+            Title = "Invalid distance origin",
+            Detail = detail
+        };
+        problem.Extensions["code"] = InvalidOriginCode;
+        problem.Extensions["field"] = "origin";
+        return problem;
+    }
+
+    public const string InvalidOriginCode = "invalid_origin";
 }

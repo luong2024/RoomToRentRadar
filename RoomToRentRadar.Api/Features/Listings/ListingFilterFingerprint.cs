@@ -12,9 +12,34 @@ namespace RoomToRentRadar.Api.Features.Listings;
 /// </summary>
 public static class ListingFilterFingerprint
 {
-    public static string Compute(ListingFilters filters)
+    public static string Compute(ListingFilters filters) => Hash(BuildCanonical(filters));
+
+    /// <summary>
+    /// Area searches also bind the drawn ring and the distance origin: paging with a
+    /// different polygon or reference point would otherwise skip or repeat rows.
+    /// </summary>
+    public static string ComputeForArea(
+        ListingFilters filters,
+        SearchArea area,
+        double originLat,
+        double originLng)
     {
-        var canonical = string.Join(
+        var ring = string.Join(
+            ';',
+            area.Polygon.ExteriorRing.Coordinates.Select(
+                coordinate => $"{Format(coordinate.X)},{Format(coordinate.Y)}"));
+
+        return Hash(string.Join(
+            '|',
+            BuildCanonical(filters),
+            "area",
+            Format(originLat),
+            Format(originLng),
+            ring));
+    }
+
+    private static string BuildCanonical(ListingFilters filters)
+        => string.Join(
             '|',
             filters.MinPrice?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
             filters.MaxPrice?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
@@ -26,8 +51,8 @@ public static class ListingFilterFingerprint
             Format(filters.Campus?.Lng),
             Format(filters.Campus?.MaxDistanceKm));
 
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
-    }
+    private static string Hash(string canonical)
+        => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
 
     private static string Format(double? value)
         => value?.ToString("R", CultureInfo.InvariantCulture) ?? string.Empty;

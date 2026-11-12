@@ -1,21 +1,19 @@
+using Microsoft.Extensions.DependencyInjection;
 using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Features.Home.Views;
 using RoomToRentRadar.Features.Login.Views;
+using RoomToRentRadar.Features.Map.Views;
 using RoomToRentRadar.Features.RoomDetail.Views;
 
 namespace RoomToRentRadar;
 
 public partial class AppShell : Shell
 {
-    public AppShell(HomePage homePage)
+    public AppShell(IServiceProvider services)
     {
         InitializeComponent();
-        Items.Add(new ShellContent
-        {
-            Title = "Khám phá phòng",
-            Route = AppRoutes.Home,
-            Content = homePage
-        });
+        ExploreTab.ContentTemplate = new DataTemplate(() => services.GetRequiredService<HomePage>());
+        MapTab.ContentTemplate = new DataTemplate(() => services.GetRequiredService<MapSearchPage>());
         Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(RoomDetailPage));
         Routing.RegisterRoute(AppRoutes.Login, typeof(LoginPage));
     }

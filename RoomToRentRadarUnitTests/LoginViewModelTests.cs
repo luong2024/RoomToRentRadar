@@ -181,6 +181,11 @@ public class LoginViewModelTests
 
         public Task LogoutAsync(CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The login screen does not sign out.");
+
+        public Task<SearchResultDto<ListingSummaryDto>> SearchByAreaAsync(
+            AreaSearchRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The login screen does not search by area.");
     }
 
     private sealed class FakeTokenStore : ITokenStore

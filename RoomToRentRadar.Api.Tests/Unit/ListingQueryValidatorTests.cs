@@ -72,8 +72,25 @@ public sealed class ListingQueryValidatorTests
     [TestCase("popular", "invalid_sort")]
     [TestCase("PriceAsc", "invalid_sort")]
     [TestCase("", "invalid_sort")]
+    [TestCase("distance_asc", "invalid_sort")]
     public void InvalidSort_IsRejected(string sort, string expectedCode)
         => AssertRejected(new ListingQueryParameters { Sort = sort }, expectedCode);
+
+    [Test]
+    public void DistanceSort_IsAcceptedWhenTheEndpointSupportsIt()
+    {
+        var parameters = new ListingQueryParameters { Sort = ListingSortWire.DistanceAsc };
+
+        var isValid = ListingQueryValidator.TryCreate(
+            parameters, out var query, out var problem, allowDistanceSort: true);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(isValid, Is.True);
+            Assert.That(problem, Is.Null);
+            Assert.That(query.Sort, Is.EqualTo(ListingSort.DistanceAsc));
+        });
+    }
 
     [Test]
     public void NegativeMinPrice_IsRejected()

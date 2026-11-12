@@ -8,4 +8,5 @@ public sealed record ListingCursor(
     string FilterFingerprint,
     DateTime? CreatedAt,
     long? Price,
-    double? AreaM2);
+    double? AreaM2,
+    double? DistanceKm = null);

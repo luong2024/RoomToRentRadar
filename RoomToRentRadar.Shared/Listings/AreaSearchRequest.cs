@@ -16,8 +16,11 @@ public sealed class AreaSearchRequest
     [Description("Optional price and bedroom filters, identical to the list endpoint query parameters.")]
     public AreaSearchFilters? Filters { get; init; }
 
-    [Description("Sort order: newest (default), price_asc, price_desc or area_desc.")]
+    [Description("Sort order: newest (default), price_asc, price_desc, area_desc or distance_asc.")]
     public string? Sort { get; init; }
+
+    [Description("Reference point for distance_asc, in WGS84 degrees. Defaults to the polygon centroid.")]
+    public AreaSearchOrigin? Origin { get; init; }
 
     [Description("Maximum number of listings to return. Defaults to 20; valid range is 1-100.")]
     public int? Limit { get; init; }
@@ -39,6 +42,16 @@ public sealed class AreaPolygon
     [Required]
     [Description("Polygon rings. Exactly one closed exterior ring of [lng, lat] positions.")]
     public double[][][]? Coordinates { get; init; }
+}
+
+/// <summary>Reference point used to order an area search by distance.</summary>
+public sealed class AreaSearchOrigin
+{
+    [Description("Latitude in degrees, within [-90, 90].")]
+    public double? Lat { get; init; }
+
+    [Description("Longitude in degrees, within [-180, 180].")]
+    public double? Lng { get; init; }
 }
 
 public sealed class AreaSearchFilters

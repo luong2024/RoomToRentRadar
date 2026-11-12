@@ -14,7 +14,10 @@ public enum ListingSort
     PriceDesc,
 
     [JsonStringEnumMemberName("area_desc")]
-    AreaDesc
+    AreaDesc,
+
+    [JsonStringEnumMemberName("distance_asc")]
+    DistanceAsc
 }
 
 public static class ListingSortWire
@@ -23,6 +26,7 @@ public static class ListingSortWire
     public const string PriceAsc = "price_asc";
     public const string PriceDesc = "price_desc";
     public const string AreaDesc = "area_desc";
+    public const string DistanceAsc = "distance_asc";
 
     public static bool TryParse(string? value, out ListingSort sort)
     {
@@ -40,6 +44,9 @@ public static class ListingSortWire
             case AreaDesc:
                 sort = ListingSort.AreaDesc;
                 return true;
+            case DistanceAsc:
+                sort = ListingSort.DistanceAsc;
+                return true;
             default:
                 sort = default;
                 return false;
@@ -52,6 +59,7 @@ public static class ListingSortWire
         ListingSort.PriceAsc => PriceAsc,
         ListingSort.PriceDesc => PriceDesc,
         ListingSort.AreaDesc => AreaDesc,
+        ListingSort.DistanceAsc => DistanceAsc,
         _ => throw new ArgumentOutOfRangeException(nameof(sort), sort, null)
     };
 }

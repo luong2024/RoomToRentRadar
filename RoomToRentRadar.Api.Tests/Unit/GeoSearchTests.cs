@@ -29,6 +29,18 @@ public sealed class GeoSearchTests
     }
 
     [Test]
+    public void Centroid_IsTheDistanceReferencePoint()
+    {
+        Assert.That(GeoSearch.TryCreateSearchArea(Rectangle(), out var area, out _), Is.True);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(area.CentroidLng, Is.EqualTo(106.70).Within(1e-9));
+            Assert.That(area.CentroidLat, Is.EqualTo(10.77).Within(1e-9));
+        });
+    }
+
+    [Test]
     public void LowercasePolygonType_IsAccepted()
     {
         Assert.That(GeoSearch.TryCreateSearchArea(Rectangle("polygon"), out _, out _), Is.True);

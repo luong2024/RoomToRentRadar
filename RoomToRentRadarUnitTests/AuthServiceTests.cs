@@ -124,6 +124,11 @@ public class AuthServiceTests
 
         public Task LogoutAsync(CancellationToken cancellationToken = default)
             => throw new NotSupportedException("Automatic sign-in does not sign out.");
+
+        public Task<SearchResultDto<ListingSummaryDto>> SearchByAreaAsync(
+            AreaSearchRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("Automatic sign-in does not search by area.");
     }
 
     private sealed class FakeTokenStore : ITokenStore

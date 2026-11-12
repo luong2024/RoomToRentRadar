@@ -44,6 +44,7 @@
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
 		<PackageReference Include="CommunityToolkit.Maui" Version="12.3.0" />
 		<PackageReference Include="Syncfusion.Maui.Toolkit" Version="1.0.10" />
+		<PackageReference Include="Mapsui.Maui" Version="5.1.0" />
 	</ItemGroup>
 
 	<ItemGroup>

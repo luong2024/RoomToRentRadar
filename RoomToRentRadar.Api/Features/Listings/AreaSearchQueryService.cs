@@ -16,15 +16,26 @@ public sealed class AreaSearchQueryService(
     public async Task<SearchResultDto<ListingSummaryDto>> SearchAsync(
         ListingQuery query,
         SearchArea area,
+        double originLat,
+        double originLng,
         ListingCursor? cursor,
         CancellationToken cancellationToken)
     {
         var candidates = await SelectCandidates(query, area).ToListAsync(cancellationToken);
 
-        var matches = candidates.Where(candidate => area.Intersects(candidate.Lng, candidate.Lat)).ToList();
+        var matches = candidates
+            .Where(candidate => area.Intersects(candidate.Lng, candidate.Lat))
+            .Select(candidate => candidate with
+            {
+                DistanceKm = GeoDistance.HaversineKm(originLat, originLng, candidate.Lat, candidate.Lng)
+            })
+            .ToList();
+
+        var filterFingerprint = ListingFilterFingerprint.ComputeForArea(
+            query.Filters, area, originLat, originLng);
 
         var page = await candidatePageBuilder.BuildAsync(
-            matches, query, cursor, cancellationToken);
+            matches, query, cursor, filterFingerprint, cancellationToken);
 
         return new SearchResultDto<ListingSummaryDto>(
             page.Items,

@@ -353,6 +353,141 @@ public sealed class AreaSearchEndpointTests
     }
 
     [Test]
+    public async Task CursorFromDifferentArea_IsRejected()
+    {
+        var firstPage = await SearchAsync(
+            Body(SpatialListingsSeed.RectangleRing(), limit: 2, sort: ListingSortWire.PriceAsc));
+        Assert.That(firstPage.Pagination.NextCursor, Is.Not.Null);
+
+        var shiftedRing = Ring(
+            (SpatialListingsSeed.MinLng + 0.01, SpatialListingsSeed.MinLat),
+            (SpatialListingsSeed.MaxLng + 0.01, SpatialListingsSeed.MinLat),
+            (SpatialListingsSeed.MaxLng + 0.01, SpatialListingsSeed.MaxLat),
+            (SpatialListingsSeed.MinLng + 0.01, SpatialListingsSeed.MaxLat),
+            (SpatialListingsSeed.MinLng + 0.01, SpatialListingsSeed.MinLat));
+
+        await AssertProblemAsync(
+            Body(shiftedRing, limit: 2, sort: ListingSortWire.PriceAsc, cursor: firstPage.Pagination.NextCursor),
+            HttpStatusCode.BadRequest,
+            ListingProblemFactory.CursorFilterMismatch);
+    }
+
+    [Test]
+    public async Task CursorFromDifferentOrigin_IsRejected()
+    {
+        var firstPage = await SearchAsync(
+            Body(SpatialListingsSeed.RectangleRing(), limit: 2, sort: ListingSortWire.DistanceAsc));
+        Assert.That(firstPage.Pagination.NextCursor, Is.Not.Null);
+
+        await AssertProblemAsync(
+            Body(
+                SpatialListingsSeed.RectangleRing(),
+                limit: 2,
+                sort: ListingSortWire.DistanceAsc,
+                cursor: firstPage.Pagination.NextCursor,
+                originLat: SpatialListingsSeed.MinLat,
+                originLng: SpatialListingsSeed.MinLng),
+            HttpStatusCode.BadRequest,
+            ListingProblemFactory.CursorFilterMismatch);
+    }
+
+    [Test]
+    public async Task DistanceAsc_OrdersByDistanceFromThePolygonCentroid()
+    {
+        var result = await SearchAsync(
+            Body(SpatialListingsSeed.RectangleRing(), limit: 100, sort: ListingSortWire.DistanceAsc));
+        var centroid = Centroid(SpatialListingsSeed.RectangleRing());
+
+        AssertDistanceOrder(result.Data, centroid.Lat, centroid.Lng);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Data, Has.Count.EqualTo(SpatialListingsSeed.RectangleMatchCount));
+            Assert.That(result.Data[0].Id, Is.EqualTo(SpatialListingsSeed.CenterId));
+            Assert.That(result.Pagination.HasMore, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task DistanceAsc_WithExplicitOrigin_UsesTheProvidedOrigin()
+    {
+        var result = await SearchAsync(
+            Body(
+                SpatialListingsSeed.RectangleRing(),
+                limit: 100,
+                sort: ListingSortWire.DistanceAsc,
+                originLat: SpatialListingsSeed.MinLat,
+                originLng: SpatialListingsSeed.MinLng));
+
+        AssertDistanceOrder(result.Data, SpatialListingsSeed.MinLat, SpatialListingsSeed.MinLng);
+        Assert.That(result.Data[0].Id, Is.EqualTo(SpatialListingsSeed.EdgeWestId));
+    }
+
+    [Test]
+    public async Task DistanceAsc_CursorWalk_ReturnsEveryMatchExactlyOnce()
+    {
+        var collected = new List<ListingSummaryDto>();
+        string? cursor = null;
+
+        for (var page = 0; page < 20; page++)
+        {
+            var result = await SearchAsync(
+                Body(
+                    SpatialListingsSeed.RectangleRing(),
+                    limit: 3,
+                    sort: ListingSortWire.DistanceAsc,
+                    cursor: cursor));
+            collected.AddRange(result.Data);
+            cursor = result.Pagination.NextCursor;
+
+            if (cursor is null)
+            {
+                break;
+            }
+        }
+
+        var centroid = Centroid(SpatialListingsSeed.RectangleRing());
+        Assert.Multiple(() =>
+        {
+            Assert.That(collected, Has.Count.EqualTo(SpatialListingsSeed.RectangleMatchCount));
+            Assert.That(collected.Select(item => item.Id).Distinct().Count(), Is.EqualTo(collected.Count));
+        });
+        AssertDistanceOrder(collected, centroid.Lat, centroid.Lng);
+    }
+
+    [TestCase(100d, 106.70, TestName = "OriginLatitudeAboveRange_IsRejected")]
+    [TestCase(10.77, 200d, TestName = "OriginLongitudeAboveRange_IsRejected")]
+    public async Task InvalidOrigin_ReturnsUnprocessableOrigin(double lat, double lng)
+    {
+        var body = Body(
+            SpatialListingsSeed.RectangleRing(),
+            sort: ListingSortWire.DistanceAsc,
+            originLat: lat,
+            originLng: lng);
+
+        var problem = await AssertProblemAsync(
+            body,
+            HttpStatusCode.UnprocessableEntity,
+            AreaSearchProblemFactory.InvalidOriginCode,
+            "origin");
+
+        Assert.That(problem.GetProperty("title").GetString(), Is.EqualTo("Invalid distance origin"));
+    }
+
+    [Test]
+    public async Task IncompleteOrigin_ReturnsUnprocessableOrigin()
+    {
+        var body = Body(SpatialListingsSeed.RectangleRing(), sort: ListingSortWire.DistanceAsc);
+        body["origin"] = new JsonObject { ["lat"] = 10.77 };
+
+        await AssertProblemAsync(
+            body,
+            HttpStatusCode.UnprocessableEntity,
+            AreaSearchProblemFactory.InvalidOriginCode,
+            "origin");
+    }
+
+    [Test]
     public async Task WrongGeometryType_ReturnsUnprocessableArea()
     {
         var body = Body(SpatialListingsSeed.RectangleRing());
@@ -531,7 +666,9 @@ public sealed class AreaSearchEndpointTests
         double[][] ring,
         int? limit = null,
         string? sort = null,
-        string? cursor = null)
+        string? cursor = null,
+        double? originLat = null,
+        double? originLng = null)
     {
         var body = new JsonObject
         {
@@ -555,6 +692,15 @@ public sealed class AreaSearchEndpointTests
         if (cursor is not null)
         {
             body["cursor"] = cursor;
+        }
+
+        if (originLat is { } latValue && originLng is { } lngValue)
+        {
+            body["origin"] = new JsonObject
+            {
+                ["lat"] = latValue,
+                ["lng"] = lngValue
+            };
         }
 
         return body;
@@ -584,6 +730,40 @@ public sealed class AreaSearchEndpointTests
 
         ring[vertexCount] = [ring[0][0], ring[0][1]];
         return ring;
+    }
+
+    private static (double Lat, double Lng) Centroid(double[][] ring)
+    {
+        var polygon = new AreaPolygon { Type = "Polygon", Coordinates = [ring] };
+        Assert.That(GeoSearch.TryCreateSearchArea(polygon, out var area, out _), Is.True);
+        return (area.CentroidLat, area.CentroidLng);
+    }
+
+    private static void AssertDistanceOrder(
+        IReadOnlyList<ListingSummaryDto> items,
+        double originLat,
+        double originLng)
+    {
+        for (var index = 1; index < items.Count; index++)
+        {
+            var previous = GeoDistance.HaversineKm(
+                originLat, originLng, items[index - 1].Lat, items[index - 1].Lng);
+            var current = GeoDistance.HaversineKm(
+                originLat, originLng, items[index].Lat, items[index].Lng);
+
+            Assert.That(
+                previous,
+                Is.LessThanOrEqualTo(current),
+                $"Items are not sorted by distance at index {index}.");
+
+            if (previous == current)
+            {
+                Assert.That(
+                    items[index - 1].Id.CompareTo(items[index].Id),
+                    Is.LessThan(0),
+                    $"Equal distances must be ordered by id at index {index}.");
+            }
+        }
     }
 
     private static void AssertSorted(IReadOnlyList<ListingSummaryDto> items, ListingSort sort)

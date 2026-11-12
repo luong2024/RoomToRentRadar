@@ -29,4 +29,8 @@ public interface IApiClient
     Task<LoginResponse?> DemoLoginAsync(CancellationToken cancellationToken = default);
 
     Task LogoutAsync(CancellationToken cancellationToken = default);
+
+    Task<SearchResultDto<ListingSummaryDto>> SearchByAreaAsync(
+        AreaSearchRequest request,
+        CancellationToken cancellationToken = default);
 }

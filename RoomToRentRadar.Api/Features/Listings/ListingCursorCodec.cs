@@ -20,7 +20,8 @@ public static class ListingCursorCodec
         string filterFingerprint,
         DateTime? createdAt = null,
         long? price = null,
-        double? areaM2 = null)
+        double? areaM2 = null,
+        double? distanceKm = null)
     {
         if (string.IsNullOrWhiteSpace(filterFingerprint))
         {
@@ -33,6 +34,7 @@ public static class ListingCursorCodec
             ListingSort.Newest => createdAt?.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
             ListingSort.PriceAsc or ListingSort.PriceDesc => price?.ToString(CultureInfo.InvariantCulture),
             ListingSort.AreaDesc => areaM2?.ToString("R", CultureInfo.InvariantCulture),
+            ListingSort.DistanceAsc => distanceKm?.ToString("R", CultureInfo.InvariantCulture),
             _ => null
         };
 
@@ -82,6 +84,7 @@ public static class ListingCursorCodec
         DateTime? createdAt = null;
         long? price = null;
         double? areaM2 = null;
+        double? distanceKm = null;
 
         switch (sort)
         {
@@ -120,6 +123,17 @@ public static class ListingCursorCodec
                 areaM2 = parsedArea;
                 break;
 
+            case ListingSort.DistanceAsc:
+                if (!double.TryParse(payload.Key, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedDistance)
+                    || double.IsNaN(parsedDistance)
+                    || double.IsInfinity(parsedDistance))
+                {
+                    return false;
+                }
+
+                distanceKm = parsedDistance;
+                break;
+
             default:
                 return false;
         }
@@ -130,7 +144,8 @@ public static class ListingCursorCodec
             payload.Fingerprint,
             createdAt,
             price,
-            areaM2);
+            areaM2,
+            distanceKm);
         return true;
     }
 }
