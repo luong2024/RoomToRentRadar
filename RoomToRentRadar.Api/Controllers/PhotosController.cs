@@ -42,7 +42,7 @@ public sealed class PhotosController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status415UnsupportedMediaType)]
     public async Task<ActionResult<PhotoUploadDto>> Upload(
         [FromForm] IFormFile? file,
-        [FromForm] PhotoKind? kind,
+        [FromForm] string? kind,
         CancellationToken ct)
     {
         // RoomId/UploadedByUserId are never accepted from the client (whitelist).
@@ -51,9 +51,17 @@ public sealed class PhotosController : ControllerBase
             throw new DomainValidationException("Photo file is required.");
         }
 
-        if (kind is null)
+        // Bind kind as a string and whitelist it here (GUARDRAILS §1.5.1). Letting [ApiController]
+        // enum-bind it short-circuits with a ValidationProblemDetails that carries no errorCode and
+        // never reaches the middleware. The multipart wire format is unchanged (enum name string).
+        if (string.IsNullOrWhiteSpace(kind))
         {
             throw new DomainValidationException("Photo kind is required.");
+        }
+
+        if (!Enum.TryParse<PhotoKind>(kind.Trim(), ignoreCase: true, out var photoKind) || !Enum.IsDefined(photoKind))
+        {
+            throw new DomainValidationException("Photo kind is invalid.");
         }
 
         var userId = User.GetRequiredUserId();
@@ -62,7 +70,7 @@ public sealed class PhotosController : ControllerBase
         await using var stream = file.OpenReadStream();
 
         var dto = await _uploadPhotoUseCase.ExecuteAsync(
-            new UploadPhotoRequest(userId, kind.Value, file.FileName, stream, file.Length),
+            new UploadPhotoRequest(userId, photoKind, file.FileName, stream, file.Length),
             ct);
 
         return Created(dto.MediumUrl, dto);
@@ -84,8 +92,37 @@ public sealed class PhotosController : ControllerBase
         return result switch
         {
             DeletePhotoResult.Deleted => NoContent(),
-            DeletePhotoResult.Attached => Conflict(),
-            _ => NotFound()
+            DeletePhotoResult.Attached => PhotoProblem(
+                StatusCodes.Status409Conflict,
+                "Conflict",
+                "PHOTO_ATTACHED",
+                "Photo is attached to a room and cannot be deleted."),
+            // Anti-IDOR: a missing photo and another user's photo stay indistinguishable.
+            _ => PhotoProblem(
+                StatusCodes.Status404NotFound,
+                "Not Found",
+                "PHOTO_NOT_FOUND",
+                "Photo was not found.")
+        };
+    }
+
+    // Two branches do not justify a new class/service (KISS): a small local ProblemDetails builder
+    // mirroring the middleware shape, with the errorCode extension member and problem+json content type.
+    private ObjectResult PhotoProblem(int statusCode, string title, string errorCode, string detail)
+    {
+        var problem = new ProblemDetails
+        {
+            Status = statusCode,
+            Title = title,
+            Detail = detail,
+            Instance = HttpContext.Request.Path
+        };
+        problem.Extensions["errorCode"] = errorCode;
+
+        return new ObjectResult(problem)
+        {
+            StatusCode = statusCode,
+            ContentTypes = { "application/problem+json" }
         };
     }
 }

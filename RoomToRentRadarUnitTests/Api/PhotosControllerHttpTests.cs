@@ -163,6 +163,7 @@ public class PhotosControllerHttpTests
         using var response = await UploadAsync(new byte[16], "garbage.jpg", "Standard", token);
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.UnsupportedMediaType));
+        await AssertProblemBodyAsync(response, HttpStatusCode.UnsupportedMediaType, "UNSUPPORTED_MEDIA_TYPE");
     }
 
     [Test]
@@ -175,6 +176,7 @@ public class PhotosControllerHttpTests
         using var response = await UploadAsync(oversized, "huge.jpg", "Standard", token);
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.RequestEntityTooLarge));
+        await AssertProblemBodyAsync(response, HttpStatusCode.RequestEntityTooLarge, "FILE_TOO_LARGE");
     }
 
     [Test]
@@ -189,6 +191,28 @@ public class PhotosControllerHttpTests
         using var response = await _client.SendAsync(request);
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        await AssertProblemBodyAsync(response, HttpStatusCode.BadRequest, "VALIDATION_FAILED");
+    }
+
+    [Test]
+    public async Task Upload_MissingKind_Returns400()
+    {
+        var token = CreateToken("landlord-1", "Landlord", isVerified: true);
+        using var content = new MultipartFormDataContent();
+        var file = new ByteArrayContent(MinimalJpeg);
+        file.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        content.Add(file, "file", "room.jpg");
+        using var request = new HttpRequestMessage(HttpMethod.Post, PhotosUrl) { Content = content };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        using var response = await _client.SendAsync(request);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        await AssertProblemBodyAsync(response, HttpStatusCode.BadRequest, "VALIDATION_FAILED");
+
+        var body = await response.Content.ReadAsStringAsync();
+        using var json = JsonDocument.Parse(body);
+        Assert.That(json.RootElement.GetProperty("detail").GetString(), Is.EqualTo("Photo kind is required."), body);
     }
 
     [Test]
@@ -199,6 +223,7 @@ public class PhotosControllerHttpTests
         using var response = await UploadAsync(MinimalJpeg, "room.jpg", "NotAKind", token);
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        await AssertProblemBodyAsync(response, HttpStatusCode.BadRequest, "VALIDATION_FAILED");
     }
 
     [Test]
@@ -209,6 +234,62 @@ public class PhotosControllerHttpTests
         using var response = await UploadAsync(MinimalJpeg, "room.jpg", "Panorama", token);
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        await AssertProblemBodyAsync(response, HttpStatusCode.BadRequest, "VALIDATION_FAILED");
+    }
+
+    [Test]
+    public async Task Upload_LowercaseStandardKind_Returns201()
+    {
+        var token = CreateToken("landlord-1", "Landlord", isVerified: true);
+
+        // The former [FromForm] PhotoKind? binder was case-insensitive, so "standard" returned 201.
+        // A case-sensitive parse must not narrow that previously-accepted input to a 400.
+        var (json, location) = await UploadCreatedAsync(token, MinimalJpeg, "room.jpg", "standard");
+        using (json)
+        {
+            Assert.Multiple(() =>
+            {
+                Assert.That(json.RootElement.GetProperty("kind").GetString(), Is.EqualTo("Standard"));
+                Assert.That(json.RootElement.GetProperty("id").GetString(), Is.Not.Null.And.Matches("^[0-9a-f]{32}$"));
+                Assert.That(location, Is.Not.Null.And.Contains("/media/"));
+            });
+        }
+    }
+
+    [Test]
+    public async Task Upload_LowercasePanoramaKind_Returns400WithRatioDetail()
+    {
+        var token = CreateToken("landlord-1", "Landlord", isVerified: true);
+
+        using var response = await UploadAsync(MinimalJpeg, "room.jpg", "panorama", token);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        await AssertProblemBodyAsync(response, HttpStatusCode.BadRequest, "VALIDATION_FAILED");
+
+        // The ratio message proves "panorama" parsed as Panorama and reached UploadPhotoUseCase,
+        // rather than being rejected here as an invalid kind.
+        var body = await response.Content.ReadAsStringAsync();
+        using var json = JsonDocument.Parse(body);
+        Assert.That(
+            json.RootElement.GetProperty("detail").GetString(),
+            Does.Contain("Panorama photos must use a 2:1 aspect ratio"),
+            body);
+    }
+
+    [Test]
+    public async Task Upload_UndefinedNumericKind_Returns400()
+    {
+        var token = CreateToken("landlord-1", "Landlord", isVerified: true);
+
+        // Enum.TryParse also accepts numeric strings, so Enum.IsDefined must still reject 99.
+        using var response = await UploadAsync(MinimalJpeg, "room.jpg", "99", token);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        await AssertProblemBodyAsync(response, HttpStatusCode.BadRequest, "VALIDATION_FAILED");
+
+        var body = await response.Content.ReadAsStringAsync();
+        using var json = JsonDocument.Parse(body);
+        Assert.That(json.RootElement.GetProperty("detail").GetString(), Is.EqualTo("Photo kind is invalid."), body);
     }
 
     [Test]
@@ -221,6 +302,20 @@ public class PhotosControllerHttpTests
         using var response = await DeleteAsync(photoId, otherToken);
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        await AssertProblemBodyAsync(response, HttpStatusCode.NotFound, "PHOTO_NOT_FOUND");
+    }
+
+    [Test]
+    public async Task Delete_MissingPhoto_Returns404()
+    {
+        var token = CreateToken("landlord-a", "Landlord", isVerified: true);
+
+        // A real 32-hex id that was never uploaded: the not-found branch must be indistinguishable
+        // from the cross-owner case (anti-IDOR) — same 404, same errorCode.
+        using var response = await DeleteAsync("0123456789abcdef0123456789abcdef", token);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        await AssertProblemBodyAsync(response, HttpStatusCode.NotFound, "PHOTO_NOT_FOUND");
     }
 
     [Test]
@@ -239,6 +334,7 @@ public class PhotosControllerHttpTests
         using var response = await DeleteAsync(photoId, token);
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+        await AssertProblemBodyAsync(response, HttpStatusCode.Conflict, "PHOTO_ATTACHED");
     }
 
     [Test]
@@ -351,6 +447,44 @@ public class PhotosControllerHttpTests
         }
 
         return await _client.SendAsync(request);
+    }
+
+    // Asserts the application/problem+json body contract (ADR-012; openapi ProblemDetails
+    // required: [title, status, errorCode]). Each test asserts the HTTP status separately.
+    private static async Task AssertProblemBodyAsync(
+        HttpResponseMessage response,
+        HttpStatusCode expectedStatus,
+        string expectedErrorCode)
+    {
+        var body = await response.Content.ReadAsStringAsync();
+        using var json = JsonDocument.Parse(body);
+        var root = json.RootElement;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                response.Content.Headers.ContentType?.MediaType,
+                Is.EqualTo("application/problem+json"),
+                body);
+
+            // Assert the exact camelCase member name exists — do not assume it.
+            Assert.That(root.TryGetProperty("errorCode", out var errorCode), Is.True, $"No camelCase 'errorCode'. Body: {body}");
+            Assert.That(root.TryGetProperty("title", out var title), Is.True, body);
+            Assert.That(root.TryGetProperty("status", out var status), Is.True, body);
+
+            Assert.That(
+                errorCode.ValueKind == JsonValueKind.String ? errorCode.GetString() : null,
+                Is.EqualTo(expectedErrorCode),
+                body);
+            Assert.That(
+                title.ValueKind == JsonValueKind.String ? title.GetString() : null,
+                Is.Not.Null.And.Not.Empty,
+                body);
+            Assert.That(
+                status.ValueKind == JsonValueKind.Number ? status.GetInt32() : -1,
+                Is.EqualTo((int)expectedStatus),
+                body);
+        });
     }
 
     private sealed class PhotoApiFactory : WebApplicationFactory<Program>
