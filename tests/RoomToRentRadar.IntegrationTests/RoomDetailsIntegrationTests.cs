@@ -203,8 +203,19 @@ public class RoomDetailsIntegrationTests
             Status = RoomStatus.Available,
             IsVerified = true
         };
+        var similarRoomOutOfArea = new Room
+        {
+            Id = "room-similar-out-of-area",
+            Title = "Phòng giá hợp lệ nhưng diện tích ngoài khoảng (quá lớn)",
+            Price = 2000000m,
+            Area = 40,
+            Address = "Số 16 Ga Thái Nguyên",
+            Status = RoomStatus.Available,
+            IsVerified = true
+        };
         _factory.RoomRepository.Upsert(similarRoom1);
         _factory.RoomRepository.Upsert(similarRoom2);
+        _factory.RoomRepository.Upsert(similarRoomOutOfArea);
 
         // Act
         var response = await _client.GetAsync($"/api/rooms/{unavailableRoom.Id}");
@@ -223,6 +234,7 @@ public class RoomDetailsIntegrationTests
             Assert.That(dto.SimilarRooms.Count, Is.GreaterThanOrEqualTo(2));
             Assert.That(dto.SimilarRooms.Any(r => r.Id == "room-similar-01"), Is.True);
             Assert.That(dto.SimilarRooms.Any(r => r.Id == "room-similar-02"), Is.True);
+            Assert.That(dto.SimilarRooms.Any(r => r.Id == "room-similar-out-of-area"), Is.False, "Phòng có diện tích nằm ngoài khoảng cho phép không được xuất hiện trong SimilarRooms");
         });
     }
 

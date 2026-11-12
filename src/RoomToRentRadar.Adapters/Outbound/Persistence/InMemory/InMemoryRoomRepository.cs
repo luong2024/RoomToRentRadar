@@ -41,11 +41,14 @@ public class InMemoryRoomRepository : IRoomRepository
     {
         var minPrice = price * 0.7m;
         var maxPrice = price * 1.3m;
+        var minArea = area * 0.7;
+        var maxArea = area * 1.3;
 
         var similar = _rooms.Values
             .Where(r => !string.Equals(r.Id, roomId, StringComparison.OrdinalIgnoreCase) &&
                         r.Status == RoomStatus.Available &&
-                        r.Price >= minPrice && r.Price <= maxPrice)
+                        r.Price >= minPrice && r.Price <= maxPrice &&
+                        r.Area >= minArea && r.Area <= maxArea)
             .Take(5)
             .ToList();
 
