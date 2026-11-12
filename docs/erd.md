@@ -237,6 +237,8 @@ IX `(RoomId, SortOrder)`, IX `(UploadedByUserId, AttachedAtUtc)` for cleanup of 
 
 Attach is race-safe without a `Version` column: `UPDATE RoomPhotos SET RoomId = @roomId, SortOrder = @order, AttachedAtUtc = @now WHERE Id = @id AND UploadedByUserId = @me AND ((RoomId IS NULL AND CreatedAtUtc >= @cutoff) OR RoomId = @roomId)` (`@cutoff` = utcnow - 24 h, BR-MED-03; only unattached photos expire, a photo already in this room reattaches at any age); fewer rows updated than requested ids → the whole create/update fails with `400 VALIDATION_FAILED` (photo not owned, expired, or attached elsewhere). Run inside the same transaction as the listing insert/update.
 
+Schema enforcement: `CHECK` constraints on `Kind`, `ContentType`, `SizeBytes`, `Width`, `Height` and `SortOrder` are enforced by the SQLite DDL. The `RoomId`/`UploadedByUserId` FKs stay application-enforced (owner-scoped queries) until the `Rooms` table and user fixtures exist in the same database; add the DB FKs and enable `PRAGMA foreign_keys` in that task.
+
 ### 4.9 `Favourites`
 | Column | Type | Constraints |
 |---|---|---|
