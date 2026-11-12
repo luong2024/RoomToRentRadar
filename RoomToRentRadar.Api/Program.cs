@@ -4,6 +4,7 @@ using RoomToRentRadar.Api.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton<IListingRepository, InMemoryListingRepository>();
+builder.Services.AddScoped<IListingService, ListingService>();
 builder.Services.AddScoped<IListingDetailService, ListingDetailService>();
 builder.Services.AddScoped<IListingSearchService, ListingSearchService>();
 

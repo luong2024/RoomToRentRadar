@@ -9,9 +9,22 @@ namespace RoomToRentRadar.Api.Controllers;
 [Route("api/v1/[controller]")]
 [Produces("application/json")]
 public sealed class ListingsController(
+    IListingService listingService,
     IListingDetailService listingDetailService,
     IListingSearchService listingSearchService) : ControllerBase
 {
+    /// <summary>GET /api/v1/listings?pageNumber=1&amp;pageSize=10&amp;sortBy=distance|rent|area&amp;isAscending=true (US01 T01.1)</summary>
+    [HttpGet]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(PagedResult<ListingCardDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PagedResult<ListingCardDto>>> GetListings(
+        [FromQuery] ListingQueryRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await listingService.GetListingsAsync(request, cancellationToken);
+        return Ok(result);
+    }
+
     [HttpGet("search")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(SearchResponseDto), StatusCodes.Status200OK)]
