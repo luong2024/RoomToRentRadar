@@ -1,0 +1,133 @@
+### Manual test requests for US01 / T01.1 (Auth API)
+### Run the API first:  dotnet run   (from RoomToRentRadar.Api)
+### Then click "Send Request" above each request (VS Code "REST Client" extension or Visual Studio).
+
+@host = http://localhost:5124
+
+###############################################################################
+# AC2 - Login with a seeded demo account -> 200 + token (sub = User ID, role = Student)
+###############################################################################
+
+# @name login
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "student@ictu.edu.vn",
+  "password": "123456"
+}
+
+###############################################################################
+# AC3 - Call a protected endpoint with "Authorization: Bearer <token>" -> 200
+# (uses the token returned by the "login" request above, send that one first)
+###############################################################################
+
+GET {{host}}/api/auth/me
+Authorization: Bearer {{login.response.body.$.token}}
+
+### AC3 - No token -> 401 "Bạn cần đăng nhập..."
+GET {{host}}/api/auth/me
+
+### AC3 - Fake/tampered token -> 401
+GET {{host}}/api/auth/me
+Authorization: Bearer abc.def.ghi
+
+###############################################################################
+# Register
+###############################################################################
+
+### Register a new Student -> 201 + token
+### {{$timestamp}} makes the email unique so this can be sent many times.
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Nguyễn Văn Test",
+  "email": "sv{{$timestamp}}@ictu.edu.vn",
+  "password": "abc123",
+  "phone": "0988000111",
+  "role": "student"
+}
+
+### Register a new Landlord -> 201 + token (role = Landlord)
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Chủ Trọ Test",
+  "email": "chutro{{$timestamp}}@gmail.com",
+  "password": "abc123",
+  "role": "Landlord"
+}
+
+###############################################################################
+# AC1 + AC4 - Validation errors -> 400 with friendly Vietnamese messages
+###############################################################################
+
+### Invalid email format -> 400 "Email không đúng định dạng."
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Sai Email",
+  "email": "khong-phai-email",
+  "password": "abc123",
+  "role": "Student"
+}
+
+### Password shorter than 6 characters -> 400 "Mật khẩu phải có ít nhất 6 ký tự."
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Mat Khau Ngan",
+  "email": "ngan@ictu.edu.vn",
+  "password": "123",
+  "role": "Student"
+}
+
+### Self-register as Admin is not allowed -> 400 "Vai trò không hợp lệ..."
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Hacker",
+  "email": "hacker@ictu.edu.vn",
+  "password": "abc123",
+  "role": "Admin"
+}
+
+### Email already registered -> 409 "Email này đã được đăng ký..."
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Trung Email",
+  "email": "student@ictu.edu.vn",
+  "password": "abc123",
+  "role": "Student"
+}
+
+###############################################################################
+# AC4 - Invalid credentials -> 401 with one generic message
+###############################################################################
+
+### Wrong password -> 401 "Email hoặc mật khẩu không đúng."
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "student@ictu.edu.vn",
+  "password": "sai-mat-khau"
+}
+
+### Unknown email -> same 401 message (does not reveal whether the email exists)
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "khongtontai@ictu.edu.vn",
+  "password": "abc123"
+}
+
+### Note: 5 wrong passwords in a row lock the account for 5 minutes (configured in Program.cs).
