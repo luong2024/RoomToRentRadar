@@ -63,7 +63,7 @@ RoomToRentRadar.slnx
 │   │   ├── Contracts/Responses/<Feature>/   *Dto records (output projection)
 │   │   ├── Contracts/Common/                PagedResult<T>, CursorPage<T>, ProblemCodes
 │   │   ├── Inbound/UseCases/<Feature>/      I*UseCase (1 method ExecuteAsync)
-│   │   └── Outbound/{Repositories,ExternalServices,Caching}/   I*Repository, I*Port
+│   │   └── Outbound/{Repositories,ExternalServices,Caching,Transactions}/   I*Repository, I*Port, IUnitOfWork
 │   └── RoomToRentRadar.Application/         net10.0 · use cases
 │       ├── UseCases/<Feature>/  *UseCase (Auth, Audit, Campuses, Rooms, Listings, Media, Favourites,
 │       │                        SavedSearches, Alerts, TravelTime, Compare, HouseRules, Reports, Moderation, Chat, Notifications)
@@ -192,6 +192,7 @@ RoomsController.Search(query) → ISearchRoomsUseCase.ExecuteAsync(RoomSearchReq
 | `IRoomRepository` (write: Get/Add/Update by id+owner) | `SqliteRoomRepository` | aggregate persistence incl. amenities/safety/house rules |
 | `IRoomSearchReadModel` (read: candidates, pins, similar, compare) | `SqliteRoomSearchReadModel` | read/write segregation (ISP) |
 | `IRoomPhotoRepository`, `IPhotoStoragePort`, `IImageProcessorPort` | Sqlite / LocalDisk / Skia | ADR-008 |
+| `IUnitOfWork` | `SqliteUnitOfWork` | ambient transaction for multi-repository use cases (ERD §4.8) |
 | `IFavouriteRepository`, `ISavedSearchRepository`, `IAlertLogRepository` | Sqlite | |
 | `IListingReportRepository` | Sqlite | |
 | `ITravelTimeCacheRepository`, `ITravelTimePort` | Sqlite / ORS, Mock | ADR-007 |

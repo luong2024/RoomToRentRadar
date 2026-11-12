@@ -121,6 +121,29 @@ public sealed class SqliteDbContext : IDisposable
                     CREATE INDEX IF NOT EXISTS IX_AuditLogs_TimestampUtc ON AuditLogs(TimestampUtc DESC);
                     CREATE INDEX IF NOT EXISTS IX_AuditLogs_UserId ON AuditLogs(UserId);
                     CREATE INDEX IF NOT EXISTS IX_AuditLogs_Action ON AuditLogs(Action);
+
+                    -- CHECKs mirror ERD §4.8. FK to Rooms/Users stays application-enforced until the
+                    -- Rooms table and user fixtures exist; enabling PRAGMA foreign_keys before then
+                    -- would reject valid uploads and attach tests.
+                    CREATE TABLE IF NOT EXISTS RoomPhotos (
+                        Id TEXT PRIMARY KEY NOT NULL,
+                        RoomId TEXT NULL,
+                        UploadedByUserId TEXT NOT NULL,
+                        Kind TEXT NOT NULL CHECK (Kind IN ('Standard', 'Panorama')),
+                        ContentType TEXT NOT NULL CHECK (ContentType IN ('image/jpeg', 'image/png')),
+                        SizeBytes INTEGER NOT NULL CHECK (SizeBytes > 0 AND SizeBytes <= 10485760),
+                        Width INTEGER NOT NULL CHECK (Width > 0),
+                        Height INTEGER NOT NULL CHECK (Height > 0),
+                        OriginalPath TEXT NOT NULL,
+                        MediumPath TEXT NOT NULL,
+                        ThumbPath TEXT NOT NULL,
+                        SortOrder INTEGER NOT NULL DEFAULT 0 CHECK (SortOrder >= 0),
+                        CreatedAtUtc TEXT NOT NULL,
+                        AttachedAtUtc TEXT NULL
+                    );
+
+                    CREATE INDEX IF NOT EXISTS IX_RoomPhotos_RoomId_SortOrder ON RoomPhotos(RoomId, SortOrder);
+                    CREATE INDEX IF NOT EXISTS IX_RoomPhotos_UploadedBy_AttachedAt ON RoomPhotos(UploadedByUserId, AttachedAtUtc);
                     """;
                 cmd.ExecuteNonQuery();
                 _schemaInitialized = true;

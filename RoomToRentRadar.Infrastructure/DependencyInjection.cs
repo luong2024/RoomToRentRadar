@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using RoomToRentRadar.Infrastructure.Adapters.Mocks;
 using RoomToRentRadar.Infrastructure.Adapters.Security;
+using RoomToRentRadar.Infrastructure.Adapters.Storage;
 using RoomToRentRadar.Ports.Outbound.ExternalServices;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 
@@ -37,6 +38,31 @@ public static class DependencyInjection
         services.TryAddScoped<IUserRepository>(sp => sp.GetRequiredService<InMemoryUserRepository>());
         services.AddSingleton<InMemoryAuditLogRepository>();
         services.TryAddScoped<IAuditLogRepository>(sp => sp.GetRequiredService<InMemoryAuditLogRepository>());
+
+        return services;
+    }
+
+    public static IServiceCollection AddPhotoInfrastructure(
+        this IServiceCollection services,
+        string rootPath,
+        string publicBaseUrl)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(rootPath);
+        ArgumentNullException.ThrowIfNull(publicBaseUrl);
+
+        if (string.IsNullOrWhiteSpace(rootPath))
+        {
+            throw new ArgumentException("Photo storage root path is required.", nameof(rootPath));
+        }
+
+        if (string.IsNullOrWhiteSpace(publicBaseUrl))
+        {
+            throw new ArgumentException("Photo public base URL is required.", nameof(publicBaseUrl));
+        }
+
+        // Photo metadata is registered by AddSqliteDatastore; only the file storage adapter lives here.
+        services.AddSingleton<IPhotoStoragePort>(new LocalDiskPhotoStorageAdapter(rootPath, publicBaseUrl));
 
         return services;
     }

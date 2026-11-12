@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using RoomToRentRadar.Api.Errors;
 using RoomToRentRadar.Domain.Exceptions;
 
 namespace RoomToRentRadar.Api.Middlewares;
@@ -32,18 +33,12 @@ public sealed class AuthExceptionHandlingMiddleware
             context.Response.StatusCode = statusCode;
             context.Response.ContentType = "application/problem+json";
 
-            var problem = new ProblemDetails
-            {
-                Status = statusCode,
-                Title = title,
-                Detail = ex.Message,
-                Instance = context.Request.Path
-            };
-
-            if (!string.IsNullOrWhiteSpace(errorCode))
-            {
-                problem.Extensions["errorCode"] = errorCode;
-            }
+            var problem = ApiProblemFactory.Create(
+                statusCode,
+                title,
+                errorCode ?? "UNEXPECTED_ERROR",
+                ex.Message,
+                context.Request.Path);
 
             await JsonSerializer.SerializeAsync(
                 context.Response.Body,
@@ -62,55 +57,67 @@ public sealed class AuthExceptionHandlingMiddleware
             case DomainValidationException:
                 statusCode = StatusCodes.Status400BadRequest;
                 title = "Validation Error";
-                errorCode = "VALIDATION_ERROR";
+                errorCode = "VALIDATION_FAILED";
                 return true;
 
             case InvalidCredentialsException:
                 statusCode = StatusCodes.Status401Unauthorized;
                 title = "Authentication Failed";
-                errorCode = "AUTH_INVALID_CREDENTIALS";
+                errorCode = "INVALID_CREDENTIALS";
                 return true;
 
             case InvalidTokenException:
                 statusCode = StatusCodes.Status401Unauthorized;
                 title = "Authentication Failed";
-                errorCode = "AUTH_INVALID_TOKEN";
+                errorCode = "INVALID_TOKEN";
                 return true;
 
             case AccountLockedException:
                 statusCode = StatusCodes.Status403Forbidden;
                 title = "Account Locked";
-                errorCode = "AUTH_ACCOUNT_LOCKED";
+                errorCode = "ACCOUNT_LOCKED";
                 return true;
 
             case ForbiddenRoleException:
                 statusCode = StatusCodes.Status403Forbidden;
                 title = "Access Forbidden";
-                errorCode = "AUTH_FORBIDDEN_ROLE";
+                errorCode = "FORBIDDEN_ROLE";
                 return true;
 
             case LandlordNotApprovedException:
                 statusCode = StatusCodes.Status403Forbidden;
                 title = "Access Forbidden";
-                errorCode = "AUTH_LANDLORD_NOT_APPROVED";
+                errorCode = "LANDLORD_NOT_APPROVED";
                 return true;
 
             case UserNotFoundException:
                 statusCode = StatusCodes.Status404NotFound;
                 title = "User Not Found";
-                errorCode = "AUTH_USER_NOT_FOUND";
+                errorCode = "USER_NOT_FOUND";
                 return true;
 
             case DuplicateEmailException:
                 statusCode = StatusCodes.Status409Conflict;
                 title = "Conflict";
-                errorCode = "AUTH_EMAIL_EXISTS";
+                errorCode = "EMAIL_TAKEN";
                 return true;
 
             case ConcurrencyConflictException:
                 statusCode = StatusCodes.Status409Conflict;
                 title = "Conflict";
                 errorCode = "CONCURRENCY_CONFLICT";
+                return true;
+
+            case FileTooLargeException:
+                statusCode = StatusCodes.Status413PayloadTooLarge;
+                title = "Payload Too Large";
+                errorCode = "FILE_TOO_LARGE";
+                return true;
+
+            case UnsupportedMediaTypeException:
+                statusCode = StatusCodes.Status415UnsupportedMediaType;
+                title = "Unsupported Media Type";
+                errorCode = "UNSUPPORTED_MEDIA_TYPE";
                 return true;
 
             default:
