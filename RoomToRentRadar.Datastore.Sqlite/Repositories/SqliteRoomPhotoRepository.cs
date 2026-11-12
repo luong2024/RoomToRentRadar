@@ -2,6 +2,7 @@ using System.Data.Common;
 using System.Globalization;
 using Microsoft.Data.Sqlite;
 using RoomToRentRadar.Datastore.Sqlite.Context;
+using RoomToRentRadar.Datastore.Sqlite.Transactions;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Ports.Outbound.Repositories;
@@ -16,22 +17,28 @@ public sealed class SqliteRoomPhotoRepository : IRoomPhotoRepository
         FROM RoomPhotos
         """;
 
-    private readonly SqliteDbContext _dbContext;
+    private const int UnattachedPhotoLifetimeHours = 24; // BR-MED-03
 
-    public SqliteRoomPhotoRepository(SqliteDbContext dbContext)
+    private readonly SqliteDbContext _dbContext;
+    private readonly SqliteUnitOfWork _unitOfWork;
+
+    public SqliteRoomPhotoRepository(SqliteDbContext dbContext, SqliteUnitOfWork unitOfWork)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
+        ArgumentNullException.ThrowIfNull(unitOfWork);
         _dbContext = dbContext;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task AddAsync(RoomPhoto photo, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(photo);
 
-        var conn = _dbContext.CreateOpenConnection();
+        var conn = _unitOfWork.CurrentConnection ?? _dbContext.CreateOpenConnection();
         try
         {
             await using var cmd = conn.CreateCommand();
+            cmd.Transaction = _unitOfWork.CurrentTransaction;
             cmd.CommandText = """
                 INSERT INTO RoomPhotos (
                     Id, RoomId, UploadedByUserId, Kind, ContentType, SizeBytes, Width, Height,
@@ -72,10 +79,11 @@ public sealed class SqliteRoomPhotoRepository : IRoomPhotoRepository
         ArgumentNullException.ThrowIfNull(photoId);
         ArgumentNullException.ThrowIfNull(userId);
 
-        var conn = _dbContext.CreateOpenConnection();
+        var conn = _unitOfWork.CurrentConnection ?? _dbContext.CreateOpenConnection();
         try
         {
             await using var cmd = conn.CreateCommand();
+            cmd.Transaction = _unitOfWork.CurrentTransaction;
             // Anti-IDOR: the uploader is part of the key, so a photo of another user is invisible.
             cmd.CommandText = $"""
                 {SelectColumns}
@@ -99,10 +107,11 @@ public sealed class SqliteRoomPhotoRepository : IRoomPhotoRepository
         ArgumentNullException.ThrowIfNull(photoId);
         ArgumentNullException.ThrowIfNull(userId);
 
-        var conn = _dbContext.CreateOpenConnection();
+        var conn = _unitOfWork.CurrentConnection ?? _dbContext.CreateOpenConnection();
         try
         {
             await using var cmd = conn.CreateCommand();
+            cmd.Transaction = _unitOfWork.CurrentTransaction;
             // Anti-IDOR + BR-MED-03: only the owner may delete, and only while not attached.
             cmd.CommandText = """
                 DELETE FROM RoomPhotos
@@ -123,10 +132,11 @@ public sealed class SqliteRoomPhotoRepository : IRoomPhotoRepository
     {
         ArgumentNullException.ThrowIfNull(roomId);
 
-        var conn = _dbContext.CreateOpenConnection();
+        var conn = _unitOfWork.CurrentConnection ?? _dbContext.CreateOpenConnection();
         try
         {
             await using var cmd = conn.CreateCommand();
+            cmd.Transaction = _unitOfWork.CurrentTransaction;
             cmd.CommandText = $"""
                 {SelectColumns}
                 WHERE RoomId = @roomId
@@ -164,35 +174,37 @@ public sealed class SqliteRoomPhotoRepository : IRoomPhotoRepository
             return 0;
         }
 
-        var conn = _dbContext.CreateOpenConnection();
+        var conn = _unitOfWork.CurrentConnection ?? _dbContext.CreateOpenConnection();
         try
         {
-            // One transaction so a partial attach never leaves half of the gallery linked.
-            using var transaction = conn.BeginTransaction();
             var attachedAtUtc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
+            // Both sides use the fixed-width round-trip UTC format, so text order equals time order (BR-MED-03).
+            var cutoff = DateTime.UtcNow.AddHours(-UnattachedPhotoLifetimeHours)
+                .ToString("O", CultureInfo.InvariantCulture);
             var updated = 0;
 
             for (var index = 0; index < orderedIds.Count; index++)
             {
                 await using var cmd = conn.CreateCommand();
-                cmd.Transaction = transaction;
+                cmd.Transaction = _unitOfWork.CurrentTransaction;
                 // Anti-IDOR + race-safe attach (ERD 4.8): only an owned photo that is free or
                 // already in this room is updated; anything else leaves the row untouched.
                 cmd.CommandText = """
                     UPDATE RoomPhotos
                     SET RoomId = @roomId, SortOrder = @sortOrder, AttachedAtUtc = @attachedAtUtc
-                    WHERE Id = @id AND UploadedByUserId = @userId AND (RoomId IS NULL OR RoomId = @roomId);
+                    WHERE Id = @id AND UploadedByUserId = @userId
+                      AND ((RoomId IS NULL AND CreatedAtUtc >= @cutoff) OR RoomId = @roomId);
                     """;
                 cmd.Parameters.AddWithValue("@roomId", roomId);
                 cmd.Parameters.AddWithValue("@sortOrder", index);
                 cmd.Parameters.AddWithValue("@attachedAtUtc", attachedAtUtc);
+                cmd.Parameters.AddWithValue("@cutoff", cutoff);
                 cmd.Parameters.AddWithValue("@id", orderedIds[index]);
                 cmd.Parameters.AddWithValue("@userId", userId);
 
                 updated += await cmd.ExecuteNonQueryAsync(ct);
             }
 
-            transaction.Commit();
             return updated;
         }
         finally
@@ -233,7 +245,7 @@ public sealed class SqliteRoomPhotoRepository : IRoomPhotoRepository
 
     private void ReleaseConnection(SqliteConnection conn)
     {
-        if (!_dbContext.OwnsSharedConnection)
+        if (!_dbContext.OwnsSharedConnection && !ReferenceEquals(conn, _unitOfWork.CurrentConnection))
         {
             conn.Dispose();
         }

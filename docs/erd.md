@@ -235,7 +235,7 @@ Immutable rows. Current rules = max `VersionNumber` per room.
 
 IX `(RoomId, SortOrder)`, IX `(UploadedByUserId, AttachedAtUtc)` for cleanup of unattached > 24 h.
 
-Attach is race-safe without a `Version` column: `UPDATE RoomPhotos SET RoomId = @roomId, SortOrder = @order, AttachedAtUtc = @now WHERE Id = @id AND UploadedByUserId = @me AND (RoomId IS NULL OR RoomId = @roomId)`; fewer rows updated than requested ids → the whole create/update fails with `400 VALIDATION_FAILED` (photo not owned, expired, or attached elsewhere). Run inside the same transaction as the listing insert/update.
+Attach is race-safe without a `Version` column: `UPDATE RoomPhotos SET RoomId = @roomId, SortOrder = @order, AttachedAtUtc = @now WHERE Id = @id AND UploadedByUserId = @me AND ((RoomId IS NULL AND CreatedAtUtc >= @cutoff) OR RoomId = @roomId)` (`@cutoff` = utcnow - 24 h, BR-MED-03; only unattached photos expire, a photo already in this room reattaches at any age); fewer rows updated than requested ids → the whole create/update fails with `400 VALIDATION_FAILED` (photo not owned, expired, or attached elsewhere). Run inside the same transaction as the listing insert/update.
 
 ### 4.9 `Favourites`
 | Column | Type | Constraints |

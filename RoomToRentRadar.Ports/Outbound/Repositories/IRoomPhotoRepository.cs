@@ -15,6 +15,9 @@ public interface IRoomPhotoRepository
     // ORDER BY SortOrder (0 = cover).
     Task<IReadOnlyList<RoomPhoto>> ListByRoomAsync(string roomId, CancellationToken ct = default);
 
-    // Attaches orderedIds in one transaction; returns the number of updated rows so callers can detect partial matches.
+    // Runs in the caller's transaction when one is active. Unattached photos older than 24 h never
+    // attach (BR-MED-03). Returns the number of updated rows; the caller must fail and roll back the
+    // whole operation when it is less than orderedIds.Count.
+    // Without an active caller transaction updates are not atomic; all-or-nothing needs IUnitOfWork.ExecuteAsync.
     Task<int> AttachAsync(string userId, string roomId, IReadOnlyList<string> orderedIds, CancellationToken ct = default);
 }

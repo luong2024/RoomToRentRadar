@@ -3,12 +3,15 @@ using RoomToRentRadar.Datastore.Sqlite;
 using RoomToRentRadar.Datastore.Sqlite.Configurations;
 using RoomToRentRadar.Datastore.Sqlite.Context;
 using RoomToRentRadar.Datastore.Sqlite.Repositories;
+using RoomToRentRadar.Datastore.Sqlite.Transactions;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
+using RoomToRentRadar.Domain.Exceptions;
 using RoomToRentRadar.Infrastructure;
 using RoomToRentRadar.Infrastructure.Adapters.Storage;
 using RoomToRentRadar.Ports.Outbound.ExternalServices;
 using RoomToRentRadar.Ports.Outbound.Repositories;
+using RoomToRentRadar.Ports.Outbound.Transactions;
 
 namespace RoomToRentRadarUnitTests.Infrastructure;
 
@@ -35,7 +38,7 @@ public class SqliteRoomPhotoRepositoryTests
             roomId: roomId,
             sortOrder: sortOrder,
             id: id,
-            createdAtUtc: createdAtUtc ?? new DateTime(2026, 11, 10, 10, 0, 0, DateTimeKind.Utc));
+            createdAtUtc: createdAtUtc ?? DateTime.UtcNow);
 
     private static string CreateTempUploadsPath()
     {
@@ -46,7 +49,7 @@ public class SqliteRoomPhotoRepositoryTests
     public async Task AddAsync_ThenGetOwnedAsync_ReturnsFullPhotoForOwner()
     {
         using var dbContext = new SqliteDbContext(new SqliteSettings { ConnectionString = "Data Source=:memory:" });
-        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext);
+        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext, new SqliteUnitOfWork(dbContext));
         var createdAtUtc = new DateTime(2026, 11, 10, 10, 0, 0, DateTimeKind.Utc);
 
         await repository.AddAsync(CreatePhoto("photo-1", createdAtUtc: createdAtUtc));
@@ -77,7 +80,7 @@ public class SqliteRoomPhotoRepositoryTests
     public async Task GetOwnedAsync_WithOtherUser_ReturnsNull()
     {
         using var dbContext = new SqliteDbContext(new SqliteSettings { ConnectionString = "Data Source=:memory:" });
-        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext);
+        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext, new SqliteUnitOfWork(dbContext));
 
         await repository.AddAsync(CreatePhoto("photo-1"));
 
@@ -90,7 +93,7 @@ public class SqliteRoomPhotoRepositoryTests
     public async Task GetOwnedAsync_WithMissingPhoto_ReturnsNull()
     {
         using var dbContext = new SqliteDbContext(new SqliteSettings { ConnectionString = "Data Source=:memory:" });
-        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext);
+        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext, new SqliteUnitOfWork(dbContext));
 
         await repository.AddAsync(CreatePhoto("photo-1"));
 
@@ -103,7 +106,7 @@ public class SqliteRoomPhotoRepositoryTests
     public async Task DeleteUnattachedAsync_WhenOwnerAndUnattached_DeletesAndReturnsTrue()
     {
         using var dbContext = new SqliteDbContext(new SqliteSettings { ConnectionString = "Data Source=:memory:" });
-        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext);
+        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext, new SqliteUnitOfWork(dbContext));
         await repository.AddAsync(CreatePhoto("photo-1"));
 
         var deleted = await repository.DeleteUnattachedAsync("photo-1", "landlord-1");
@@ -116,7 +119,7 @@ public class SqliteRoomPhotoRepositoryTests
     public async Task DeleteUnattachedAsync_WhenPhotoAttached_ReturnsFalseAndKeepsPhoto()
     {
         using var dbContext = new SqliteDbContext(new SqliteSettings { ConnectionString = "Data Source=:memory:" });
-        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext);
+        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext, new SqliteUnitOfWork(dbContext));
         await repository.AddAsync(CreatePhoto("photo-1"));
         await repository.AttachAsync("landlord-1", "room-1", new[] { "photo-1" });
 
@@ -135,7 +138,7 @@ public class SqliteRoomPhotoRepositoryTests
     public async Task DeleteUnattachedAsync_WithOtherUser_ReturnsFalseAndKeepsPhoto()
     {
         using var dbContext = new SqliteDbContext(new SqliteSettings { ConnectionString = "Data Source=:memory:" });
-        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext);
+        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext, new SqliteUnitOfWork(dbContext));
         await repository.AddAsync(CreatePhoto("photo-1"));
 
         var deleted = await repository.DeleteUnattachedAsync("photo-1", "landlord-2");
@@ -152,7 +155,7 @@ public class SqliteRoomPhotoRepositoryTests
     public async Task AttachAsync_WithOwnedUnattachedPhotos_ReturnsCountAndSetsRoomAndOrder()
     {
         using var dbContext = new SqliteDbContext(new SqliteSettings { ConnectionString = "Data Source=:memory:" });
-        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext);
+        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext, new SqliteUnitOfWork(dbContext));
         await repository.AddAsync(CreatePhoto("p0"));
         await repository.AddAsync(CreatePhoto("p1"));
         await repository.AddAsync(CreatePhoto("p2"));
@@ -174,7 +177,7 @@ public class SqliteRoomPhotoRepositoryTests
     public async Task AttachAsync_WithMixedOwnership_ReturnsOnlyUpdatedRows()
     {
         using var dbContext = new SqliteDbContext(new SqliteSettings { ConnectionString = "Data Source=:memory:" });
-        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext);
+        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext, new SqliteUnitOfWork(dbContext));
         await repository.AddAsync(CreatePhoto("mine"));
         await repository.AddAsync(CreatePhoto("theirs", uploadedByUserId: "landlord-2"));
         await repository.AddAsync(CreatePhoto("elsewhere", roomId: "room-x", sortOrder: 3));
@@ -208,28 +211,21 @@ public class SqliteRoomPhotoRepositoryTests
     public async Task AttachAsync_ReattachToSameRoom_UpdatesSortOrder()
     {
         using var dbContext = new SqliteDbContext(new SqliteSettings { ConnectionString = "Data Source=:memory:" });
-        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext);
+        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext, new SqliteUnitOfWork(dbContext));
         await repository.AddAsync(CreatePhoto("photo-1"));
+        await repository.AddAsync(CreatePhoto("photo-2"));
 
-        var first = await repository.AttachAsync("landlord-1", "room-1", new[] { "photo-1" });
-        var firstAttached = (await repository.ListByRoomAsync("room-1")).Single();
-
-        // Only photo-1 matches; the leading ids simulate expired uploads so it lands at index 5.
-        var second = await repository.AttachAsync(
-            "landlord-1",
-            "room-1",
-            new[] { "gone-0", "gone-1", "gone-2", "gone-3", "gone-4", "photo-1" });
-        var reattached = (await repository.ListByRoomAsync("room-1")).Single();
+        var first = await repository.AttachAsync("landlord-1", "room-1", new[] { "photo-1", "photo-2" });
+        var second = await repository.AttachAsync("landlord-1", "room-1", new[] { "photo-2", "photo-1" });
+        var photos = await repository.ListByRoomAsync("room-1");
 
         Assert.Multiple(() =>
         {
-            Assert.That(first, Is.EqualTo(1));
-            Assert.That(firstAttached.SortOrder, Is.EqualTo(0));
-            Assert.That(firstAttached.AttachedAtUtc, Is.Not.Null);
-            Assert.That(second, Is.EqualTo(1));
-            Assert.That(reattached.Id, Is.EqualTo("photo-1"));
-            Assert.That(reattached.SortOrder, Is.EqualTo(5));
-            Assert.That(reattached.AttachedAtUtc, Is.Not.Null);
+            Assert.That(first, Is.EqualTo(2));
+            Assert.That(second, Is.EqualTo(2));
+            Assert.That(photos.Select(p => p.Id), Is.EqualTo(new[] { "photo-2", "photo-1" }));
+            Assert.That(photos.Select(p => p.SortOrder), Is.EqualTo(new[] { 0, 1 }));
+            Assert.That(photos.Select(p => p.AttachedAtUtc), Is.All.Not.Null);
         });
     }
 
@@ -237,7 +233,7 @@ public class SqliteRoomPhotoRepositoryTests
     public async Task AttachAsync_WithEmptyIds_ReturnsZero()
     {
         using var dbContext = new SqliteDbContext(new SqliteSettings { ConnectionString = "Data Source=:memory:" });
-        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext);
+        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext, new SqliteUnitOfWork(dbContext));
         await repository.AddAsync(CreatePhoto("photo-1"));
 
         var updated = await repository.AttachAsync("landlord-1", "room-1", Array.Empty<string>());
@@ -251,10 +247,137 @@ public class SqliteRoomPhotoRepositoryTests
     }
 
     [Test]
+    public async Task AttachAsync_WithExpiredUnattachedPhoto_DoesNotAttach()
+    {
+        using var dbContext = new SqliteDbContext(new SqliteSettings { ConnectionString = "Data Source=:memory:" });
+        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext, new SqliteUnitOfWork(dbContext));
+        await repository.AddAsync(CreatePhoto("old", createdAtUtc: DateTime.UtcNow.AddHours(-25)));
+
+        var updated = await repository.AttachAsync("landlord-1", "room-1", new[] { "old" });
+        var stored = await repository.GetOwnedAsync("old", "landlord-1");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(updated, Is.EqualTo(0));
+            Assert.That(stored!.RoomId, Is.Null);
+            Assert.That(stored.AttachedAtUtc, Is.Null);
+        });
+    }
+
+    [Test]
+    public async Task AttachAsync_WithPhotoJustInsideLifetime_Attaches()
+    {
+        using var dbContext = new SqliteDbContext(new SqliteSettings { ConnectionString = "Data Source=:memory:" });
+        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext, new SqliteUnitOfWork(dbContext));
+        await repository.AddAsync(CreatePhoto("fresh", createdAtUtc: DateTime.UtcNow.AddHours(-23)));
+
+        var updated = await repository.AttachAsync("landlord-1", "room-1", new[] { "fresh" });
+
+        Assert.That(updated, Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task AttachAsync_WithOldPhotoAlreadyInSameRoom_Reattaches()
+    {
+        using var dbContext = new SqliteDbContext(new SqliteSettings { ConnectionString = "Data Source=:memory:" });
+        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext, new SqliteUnitOfWork(dbContext));
+        await repository.AddAsync(CreatePhoto(
+            "old", roomId: "room-1", sortOrder: 5, createdAtUtc: DateTime.UtcNow.AddHours(-25)));
+
+        var updated = await repository.AttachAsync("landlord-1", "room-1", new[] { "old" });
+        var stored = await repository.GetOwnedAsync("old", "landlord-1");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(updated, Is.EqualTo(1));
+            Assert.That(stored!.RoomId, Is.EqualTo("room-1"));
+            Assert.That(stored.SortOrder, Is.EqualTo(0));
+        });
+    }
+
+    [Test]
+    public async Task AttachAsync_InsideUnitOfWork_CommitsWhenWorkSucceeds()
+    {
+        using var dbContext = new SqliteDbContext(new SqliteSettings { ConnectionString = "Data Source=:memory:" });
+        var unitOfWork = new SqliteUnitOfWork(dbContext);
+        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext, unitOfWork);
+        await repository.AddAsync(CreatePhoto("photo-1"));
+        await repository.AddAsync(CreatePhoto("photo-2"));
+
+        var updated = await unitOfWork.ExecuteAsync(async ct =>
+            await repository.AttachAsync("landlord-1", "room-1", new[] { "photo-1", "photo-2" }, ct));
+
+        var photos = await repository.ListByRoomAsync("room-1");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(updated, Is.EqualTo(2));
+            Assert.That(photos.Select(p => p.Id), Is.EqualTo(new[] { "photo-1", "photo-2" }));
+            Assert.That(photos.Select(p => p.SortOrder), Is.EqualTo(new[] { 0, 1 }));
+            Assert.That(photos.Select(p => p.AttachedAtUtc), Is.All.Not.Null);
+        });
+    }
+
+    [Test]
+    public async Task AttachAsync_WithExpiredIdInCallerTransaction_RollsBackWholeAttach()
+    {
+        using var dbContext = new SqliteDbContext(new SqliteSettings { ConnectionString = "Data Source=:memory:" });
+        var unitOfWork = new SqliteUnitOfWork(dbContext);
+        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext, unitOfWork);
+        await repository.AddAsync(CreatePhoto("fresh"));
+        await repository.AddAsync(CreatePhoto("expired", createdAtUtc: DateTime.UtcNow.AddHours(-25)));
+
+        var updated = 0;
+        await Assert.ThatAsync(
+            async () => await unitOfWork.ExecuteAsync<int>(async ct =>
+            {
+                updated = await repository.AttachAsync("landlord-1", "room-1", new[] { "fresh", "expired" }, ct);
+                throw new InvalidOperationException("400 VALIDATION_FAILED");
+            }),
+            Throws.TypeOf<InvalidOperationException>());
+
+        var fresh = await repository.GetOwnedAsync("fresh", "landlord-1");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(updated, Is.EqualTo(1));
+            Assert.That(fresh!.RoomId, Is.Null);
+            Assert.That(fresh.AttachedAtUtc, Is.Null);
+        });
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WhenWorkThrowsAndTokenCancelled_RethrowsOriginalException()
+    {
+        using var dbContext = new SqliteDbContext(new SqliteSettings { ConnectionString = "Data Source=:memory:" });
+        var unitOfWork = new SqliteUnitOfWork(dbContext);
+        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext, unitOfWork);
+        await repository.AddAsync(CreatePhoto("photo-1"));
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.ThatAsync(
+            async () => await unitOfWork.ExecuteAsync<int>(async _ =>
+            {
+                await repository.AttachAsync("landlord-1", "room-1", new[] { "photo-1" }, CancellationToken.None);
+                throw new DomainValidationException("400 VALIDATION_FAILED");
+            }, cts.Token),
+            Throws.TypeOf<DomainValidationException>());
+
+        var stored = await repository.GetOwnedAsync("photo-1", "landlord-1");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(stored!.RoomId, Is.Null);
+            Assert.That(stored.AttachedAtUtc, Is.Null);
+        });
+    }
+
+    [Test]
     public async Task ListByRoomAsync_ReturnsOnlyRoomPhotosOrderedBySortOrder()
     {
         using var dbContext = new SqliteDbContext(new SqliteSettings { ConnectionString = "Data Source=:memory:" });
-        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext);
+        IRoomPhotoRepository repository = new SqliteRoomPhotoRepository(dbContext, new SqliteUnitOfWork(dbContext));
         await repository.AddAsync(CreatePhoto("photo-2", roomId: "room-1", sortOrder: 2));
         await repository.AddAsync(CreatePhoto("photo-0", roomId: "room-1", sortOrder: 0));
         await repository.AddAsync(CreatePhoto("photo-1", roomId: "room-1", sortOrder: 1));
@@ -280,6 +403,27 @@ public class SqliteRoomPhotoRepositoryTests
         var descriptor = services.Single(d => d.ServiceType == typeof(IRoomPhotoRepository));
 
         Assert.That(descriptor.ImplementationType, Is.EqualTo(typeof(SqliteRoomPhotoRepository)));
+    }
+
+    [Test]
+    public void AddSqliteDatastore_RegistersUnitOfWork()
+    {
+        var services = new ServiceCollection();
+        services.AddSqliteDatastore(new SqliteSettings { ConnectionString = "Data Source=:memory:" });
+
+        var descriptor = services.Single(d => d.ServiceType == typeof(IUnitOfWork));
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var concrete = scope.ServiceProvider.GetRequiredService<SqliteUnitOfWork>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(descriptor.Lifetime, Is.EqualTo(ServiceLifetime.Scoped));
+            Assert.That(unitOfWork, Is.TypeOf<SqliteUnitOfWork>());
+            Assert.That(concrete, Is.SameAs(unitOfWork));
+        });
     }
 
     [Test]
