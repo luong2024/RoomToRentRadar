@@ -90,8 +90,9 @@ public class SearchRoomsUseCaseTests
 
     [TestCase("area_asc")]
     [TestCase("price")]
-    [TestCase("DISTANCE")]
+    [TestCase("DISTANCE")] // ruling 21: matching is case-sensitive after Trim
     [TestCase("")]
+    [TestCase("   ")]
     public void ExecuteAsync_UnknownSort_ThrowsDomainValidationExceptionWithInvalidSortOption(string sort)
     {
         var request = new RoomSearchRequest(Sort: sort);
@@ -382,11 +383,18 @@ public class SearchRoomsUseCaseTests
     }
 
     [Test]
-    public async Task ExecuteAsync_SortIsCaseInsensitiveAndTrimmed()
+    public async Task ExecuteAsync_SortIsTrimmed()
     {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(Sort: "  PRICE_DESC  "));
+        // "  newest  " is distinct from the plain sort tests, and the newest item is also the farthest /
+        // most expensive one, so a default "distance" sort would produce a different first item.
+        var result = await _sut.ExecuteAsync(new RoomSearchRequest(Sort: "  newest  "));
 
-        Assert.That(result.Items.Select(item => item.MonthlyRentVnd), Is.Ordered.Descending);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Items[0].Id, Is.EqualTo("cand-tnut-house"));
+            Assert.That(
+                result.Items.Select(item => item.PublishedAtUtc ?? DateTime.MinValue), Is.Ordered.Descending);
+        });
     }
 
     // ----------------------------------------------------------------- paging (US04 AC3)
@@ -443,6 +451,16 @@ public class SearchRoomsUseCaseTests
             Assert.That(result.PageSize, Is.EqualTo(RoomSearchRequest.MaxPageSize));
             Assert.That(result.PageNumber, Is.EqualTo(1));
         });
+    }
+
+    [Test]
+    public async Task ExecuteAsync_PageSizeBelowOne_IsClampedToOne()
+    {
+        // Ruling 21: an explicit PageSize < 1 clamps to 1 (the default 20 only applies when it is omitted).
+        var result = await _sut.ExecuteAsync(new RoomSearchRequest(PageSize: 0));
+
+        Assert.That(result.PageSize, Is.EqualTo(1));
+        Assert.That(result.Items, Has.Count.EqualTo(1));
     }
 
     [Test]
