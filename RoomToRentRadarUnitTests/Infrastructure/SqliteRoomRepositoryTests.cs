@@ -288,6 +288,132 @@ public class SqliteRoomRepositoryTests
         });
     }
 
+    [Test]
+    public async Task AddAsync_ThenApproveThenUpdateAsync_PreservesEveryFieldAndStampsNewStatus()
+    {
+        using var dbContext = new SqliteDbContext(InMemorySettings);
+        IRoomRepository repository = new SqliteRoomRepository(dbContext);
+        var original = FullyPopulatedRoom("room-full-roundtrip");
+
+        await repository.AddAsync(original);
+        var stored = (await repository.GetByIdAsync(original.Id))!;
+        AssertSavedFields(stored, original);
+
+        var verifiedAtUtc = new DateTime(2026, 11, 20, 10, 15, 0, DateTimeKind.Utc);
+        stored.Approve(verifiedAtUtc);
+        await repository.UpdateAsync(stored);
+
+        var reloaded = (await repository.GetByIdAsync(original.Id))!;
+        Assert.That(reloaded.Version, Is.EqualTo(original.Version + 1));
+        Assert.That(reloaded.ConcurrencyToken, Is.EqualTo(reloaded.Version.ToString()));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(reloaded.Status, Is.EqualTo(ListingStatus.Available));
+            Assert.That(reloaded.VerifiedAtUtc, Is.EqualTo(verifiedAtUtc));
+            Assert.That(reloaded.PublishedAtUtc, Is.EqualTo(verifiedAtUtc),
+                "the original PublishedAtUtc is preserved because only Available rows carry one (BR-LST-04/06)");
+            Assert.That(reloaded.StatusReason, Is.Null, "Approve() clears the review reason");
+        });
+
+        // Every immutable descriptior field must still match the row that was inserted.
+        AssertSavedFields(reloaded, original);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(reloaded.CreatedAtUtc, Is.EqualTo(original.CreatedAtUtc), "CreatedAtUtc is immutable");
+            Assert.That(reloaded.LastUpdatedAtUtc, Is.GreaterThan(original.LastUpdatedAtUtc));
+        });
+    }
+
+    private static void AssertSavedFields(Room actual, Room expected)
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(actual.Id, Is.EqualTo(expected.Id));
+            Assert.That(actual.LandlordId, Is.EqualTo(expected.LandlordId));
+            Assert.That(actual.Title, Is.EqualTo(expected.Title));
+            Assert.That(actual.Description, Is.EqualTo(expected.Description));
+            Assert.That(actual.RoomType, Is.EqualTo(expected.RoomType));
+            Assert.That(actual.MonthlyRentVnd, Is.EqualTo(expected.MonthlyRentVnd));
+            Assert.That(actual.DepositVnd, Is.EqualTo(expected.DepositVnd));
+            Assert.That(actual.AreaM2, Is.EqualTo(expected.AreaM2));
+            Assert.That(actual.MaxOccupants, Is.EqualTo(expected.MaxOccupants));
+            Assert.That(actual.Furnishing, Is.EqualTo(expected.Furnishing));
+            Assert.That(actual.AvailableFrom, Is.EqualTo(expected.AvailableFrom));
+            Assert.That(actual.AddressLine, Is.EqualTo(expected.AddressLine));
+            Assert.That(actual.Ward, Is.EqualTo(expected.Ward));
+            Assert.That(actual.District, Is.EqualTo(expected.District));
+            Assert.That(actual.Latitude, Is.EqualTo(expected.Latitude));
+            Assert.That(actual.Longitude, Is.EqualTo(expected.Longitude));
+            Assert.That(actual.ElectricityPriceVndPerKwh, Is.EqualTo(expected.ElectricityPriceVndPerKwh));
+            Assert.That(actual.WaterPriceVnd, Is.EqualTo(expected.WaterPriceVnd));
+            Assert.That(actual.WaterPriceUnit, Is.EqualTo(expected.WaterPriceUnit));
+            Assert.That(actual.InternetFeeVnd, Is.EqualTo(expected.InternetFeeVnd));
+            Assert.That(actual.ParkingFeeVnd, Is.EqualTo(expected.ParkingFeeVnd));
+            Assert.That(actual.OtherFeesNote, Is.EqualTo(expected.OtherFeesNote));
+            Assert.That(actual.NeedsReReview, Is.EqualTo(expected.NeedsReReview));
+            Assert.That(actual.IsSafetyVerified, Is.EqualTo(expected.IsSafetyVerified));
+            Assert.That(actual.VerifiedByUserId, Is.EqualTo(expected.VerifiedByUserId));
+            Assert.That(actual.CreatedAtUtc, Is.EqualTo(expected.CreatedAtUtc));
+        });
+    }
+
+    private static Room FullyPopulatedRoom(string id) => Room.Reconstitute(
+        id: id,
+        landlordId: "landlord-full",
+        title: "Phòng đầy đủ trường SQLite",
+        roomType: RoomType.WholeHouse,
+        monthlyRentVnd: 4_200_000L,
+        depositVnd: 8_400_000L,
+        areaM2: 42.5,
+        addressLine: "Số 18, ngõ 4",
+        ward: "Quang Trung",
+        district: "TP. Thái Nguyên",
+        latitude: 21.5823,
+        longitude: 105.8141,
+        status: ListingStatus.PendingReview,
+        createdAtUtc: new DateTime(2026, 10, 1, 7, 0, 0, DateTimeKind.Utc),
+        lastUpdatedAtUtc: new DateTime(2026, 10, 5, 8, 30, 0, DateTimeKind.Utc),
+        version: 3,
+        description: "Nhà nguyên căn có sân, đủ nội thất, gần ĐH Kinh tế.",
+        maxOccupants: 5,
+        furnishing: "Full",
+        availableFrom: new DateOnly(2026, 12, 1),
+        electricityPriceVndPerKwh: 3_800L,
+        waterPriceVnd: 70_000L,
+        waterPriceUnit: "PerPerson",
+        internetFeeVnd: 120_000L,
+        parkingFeeVnd: 60_000L,
+        otherFeesNote: "Phí rác 25.000 đ/tháng",
+        statusReason: "Cần bổ sung ảnh thực tế (BR-LST-04).",
+        needsReReview: true,
+        isSafetyVerified: true,
+        verifiedAtUtc: null,
+        verifiedByUserId: "admin-full",
+        publishedAtUtc: null);
+
+    [Test]
+    public async Task AddAsync_DuplicatePrimaryKey_ThrowsDomainValidationExceptionWithDuplicateCode()
+    {
+        using var dbContext = new SqliteDbContext(InMemorySettings);
+        IRoomRepository repository = new SqliteRoomRepository(dbContext);
+        await repository.AddAsync(NewRoom("room-dup"));
+
+        var ex = Assert.ThrowsAsync<DomainValidationException>(async () => await repository.AddAsync(NewRoom("room-dup")));
+
+        Assert.That(ex!.ErrorCode, Is.EqualTo("DUPLICATE_ROOM"));
+    }
+
+    [Test]
+    public async Task CampusRepository_GetByIdAsync_UnknownId_ReturnsNull()
+    {
+        using var dbContext = new SqliteDbContext(InMemorySettings);
+        ICampusRepository repository = new SqliteCampusRepository(dbContext);
+
+        Assert.That(await repository.GetByIdAsync("KHONG-TON-TAI"), Is.Null);
+    }
+
     private static Room NewRoom(string id) => Room.Reconstitute(
         id: id,
         landlordId: "landlord-1",

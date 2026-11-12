@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using RoomToRentRadar.Datastore.Sqlite.Context;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Ports.Outbound.Repositories;
@@ -5,16 +6,16 @@ using RoomToRentRadar.Ports.Outbound.Repositories;
 namespace RoomToRentRadar.Datastore.Sqlite.Repositories;
 
 /// <summary>
-/// Phase 0 stub. Task 3 (Giai đoạn 3) implements this against the <c>Campuses</c> table and the
-/// <c>CampusSeedData</c> fixture (BR-CMP-01..03); the constructor shape is final so the tests
-/// written in Task 1 compile and stay valid.
+/// Read-only access to the seeded <c>Campuses</c> reference table (ERD §4.1, BR-CMP-01..03).
+/// Rows come from <see cref="Seed.CampusSeedData"/> and are never written at runtime.
 /// </summary>
 public sealed class SqliteCampusRepository : ICampusRepository
 {
-    // Kept for Task 3 to reuse; suppressed so the Phase 0 stub does not warn.
-#pragma warning disable CS0169
+    private const string SelectColumns = """
+        Id, Name, ShortName, Latitude, Longitude, IsDefault, SortOrder
+        """;
+
     private readonly SqliteDbContext _dbContext;
-#pragma warning restore CS0169
 
     public SqliteCampusRepository(SqliteDbContext dbContext)
     {
@@ -22,12 +23,80 @@ public sealed class SqliteCampusRepository : ICampusRepository
         _dbContext = dbContext;
     }
 
-    public Task<Campus?> GetByIdAsync(string id, CancellationToken ct = default) =>
-        throw new NotImplementedException("SqliteCampusRepository.GetByIdAsync is implemented in Task 3 (Giai đoạn 3).");
+    public async Task<Campus?> GetByIdAsync(string id, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
 
-    public Task<Campus?> GetDefaultCampusAsync(CancellationToken ct = default) =>
-        throw new NotImplementedException("SqliteCampusRepository.GetDefaultCampusAsync is implemented in Task 3 (Giai đoạn 3).");
+        var conn = _dbContext.CreateOpenConnection();
+        try
+        {
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = $"SELECT {SelectColumns} FROM Campuses WHERE Id = @id LIMIT 1;";
+            cmd.Parameters.AddWithValue("@id", id);
 
-    public Task<IReadOnlyList<Campus>> GetAllAsync(CancellationToken ct = default) =>
-        throw new NotImplementedException("SqliteCampusRepository.GetAllAsync is implemented in Task 3 (Giai đoạn 3).");
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
+            return await reader.ReadAsync(ct) ? MapCampus(reader) : null;
+        }
+        finally
+        {
+            ReleaseConnection(conn);
+        }
+    }
+
+    public async Task<Campus?> GetDefaultCampusAsync(CancellationToken ct = default)
+    {
+        var conn = _dbContext.CreateOpenConnection();
+        try
+        {
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = $"SELECT {SelectColumns} FROM Campuses WHERE IsDefault = 1 ORDER BY SortOrder, Id LIMIT 1;";
+
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
+            return await reader.ReadAsync(ct) ? MapCampus(reader) : null;
+        }
+        finally
+        {
+            ReleaseConnection(conn);
+        }
+    }
+
+    public async Task<IReadOnlyList<Campus>> GetAllAsync(CancellationToken ct = default)
+    {
+        var conn = _dbContext.CreateOpenConnection();
+        try
+        {
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = $"SELECT {SelectColumns} FROM Campuses ORDER BY SortOrder, Id;";
+
+            var campuses = new List<Campus>(8);
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+            {
+                campuses.Add(MapCampus(reader));
+            }
+
+            return campuses;
+        }
+        finally
+        {
+            ReleaseConnection(conn);
+        }
+    }
+
+    private static Campus MapCampus(SqliteDataReader reader) => new(
+        id: reader.GetString(0),
+        name: reader.GetString(1),
+        shortName: reader.GetString(2),
+        latitude: reader.GetDouble(3),
+        longitude: reader.GetDouble(4),
+        isDefault: reader.GetInt64(5) != 0,
+        sortOrder: reader.GetInt32(6));
+
+    private void ReleaseConnection(SqliteConnection conn)
+    {
+        if (!_dbContext.OwnsSharedConnection)
+        {
+            conn.Dispose();
+        }
+    }
 }
