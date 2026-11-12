@@ -42,27 +42,33 @@
                        SemanticProperties.Description="{Binding Source={x:Reference RootEntryView}, Path=LabelText}"
                        SemanticProperties.Hint="{Binding Source={x:Reference RootEntryView}, Path=Placeholder}" />
 
-                <!-- Clear Text Button -->
+                <!-- Password Show/Hide Toggle Button (Visible only when IsPassword is True) -->
                 <ImageButton Grid.Column="1"
-                             x:Name="ClearButton"
-                             Source="{StaticResource IconMeta}"
-                             WidthRequest="18"
-                             HeightRequest="18"
+                             x:Name="PasswordToggleButton"
+                             WidthRequest="40"
+                             HeightRequest="40"
+                             Padding="10"
                              VerticalOptions="Center"
-                             IsVisible="False"
-                             Clicked="ClearButton_Clicked" />
+                             HorizontalOptions="Center"
+                             BackgroundColor="Transparent"
+                             IsVisible="{Binding Source={x:Reference RootEntryView}, Path=IsPassword}"
+                             SemanticProperties.Description="Show or hide password"
+                             Clicked="PasswordToggleButton_Clicked">
+                    <ImageButton.Source>
+                        <FontImageSource x:Name="PasswordToggleIcon"
+                                         Glyph="{x:Static fonts:FluentUI.eye_20_regular}"
+                                         FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                         Size="20"
+                                         Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                    </ImageButton.Source>
+                </ImageButton>
             </Grid>
         </Border>
 
-        <!-- Error Message Row (Visible when HasError is True) -->
+        <!-- Error Message Row (Visible when HasError is True, without warning icon) -->
         <HorizontalStackLayout Spacing="6"
                                x:Name="ErrorLayout"
                                IsVisible="{Binding Source={x:Reference RootEntryView}, Path=HasError}">
-            <Label Text="{x:Static fonts:FluentUI.warning_20_regular}"
-                   FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                   FontSize="14"
-                   TextColor="{AppThemeBinding Light={StaticResource StatusDangerLight}, Dark={StaticResource StatusDangerDark}}"
-                   VerticalTextAlignment="Center" />
             <Label Text="{Binding Source={x:Reference RootEntryView}, Path=ErrorMessage}"
                    TextColor="{AppThemeBinding Light={StaticResource StatusDangerLight}, Dark={StaticResource StatusDangerDark}}"
                    FontFamily="{StaticResource FontFamilyRegular}"

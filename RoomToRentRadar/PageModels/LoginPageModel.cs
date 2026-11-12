@@ -203,6 +203,71 @@ public partial class LoginPageModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task LoginWithGoogleAsync()
+    {
+        if (IsBusy) return;
+
+        try
+        {
+            IsBusy = true;
+            HasGeneralError = false;
+            GeneralError = string.Empty;
+
+            var request = new GoogleLoginRequest(
+                IdToken: "mock-google-id-token",
+                Role: "Student",
+                DeviceInfo: DeviceInfo.Current.Model);
+
+            var response = await _authGateway.LoginWithGoogleAsync(request);
+
+            if (response != null && !string.IsNullOrEmpty(response.AccessToken))
+            {
+                var saved = await _sessionStore.SaveSessionAsync(response);
+                if (!saved)
+                {
+                    GeneralError = "Unable to securely store your session on this device.";
+                    HasGeneralError = true;
+                    return;
+                }
+
+                try
+                {
+                    await Shell.Current.GoToAsync("//main");
+                }
+                catch (Exception)
+                {
+                    GeneralError = "Google sign in succeeded, but navigation to home screen failed.";
+                    HasGeneralError = true;
+                }
+            }
+            else
+            {
+                GeneralError = "Authentication with Google failed. Please try again.";
+                HasGeneralError = true;
+            }
+        }
+        catch (ApiException apiEx)
+        {
+            GeneralError = MapAuthErrorCodeToMessage(apiEx.ErrorCode, apiEx.StatusCode, apiEx.Message);
+            HasGeneralError = true;
+        }
+        catch (HttpRequestException)
+        {
+            GeneralError = "Unable to connect to the authentication server. Please check your network.";
+            HasGeneralError = true;
+        }
+        catch (Exception)
+        {
+            GeneralError = "An unexpected error occurred during Google login.";
+            HasGeneralError = true;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
     private async Task NavigateToRegisterAsync()
     {
         await Shell.Current.GoToAsync("roleselection");

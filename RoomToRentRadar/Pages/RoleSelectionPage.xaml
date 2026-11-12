@@ -172,7 +172,14 @@
 
                 <!-- Actions CTA -->
                 <VerticalStackLayout Spacing="12" Margin="0,16,0,24">
-                    <common:RadaButton Text="Continue with selected role"
+                    <common:RadaButton Text="{Binding ContinueWithGoogleText}"
+                                       Variant="Secondary"
+                                       IsLoading="{Binding IsBusy}"
+                                       Command="{Binding ContinueWithGoogleCommand}"
+                                       ButtonHeight="48"
+                                       HorizontalOptions="Fill" />
+
+                    <common:RadaButton Text="Register with Email &amp; Password"
                                        Variant="Primary"
                                        Command="{Binding ContinueCommand}"
                                        ButtonHeight="48"

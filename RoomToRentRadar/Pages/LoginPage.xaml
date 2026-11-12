@@ -89,8 +89,15 @@
                                        IsVisible="{Binding IsSsoVisible}"
                                        HorizontalOptions="Fill" />
 
-                    <!-- Divider (Hidden in Release builds) -->
-                    <Grid ColumnDefinitions="*, Auto, *" ColumnSpacing="12" Margin="0,4" IsVisible="{Binding IsSsoVisible}">
+                    <!-- Sign in with Google Button -->
+                    <common:RadaButton Text="Sign in with Google"
+                                       Variant="Secondary"
+                                       IsLoading="{Binding IsBusy}"
+                                       Command="{Binding LoginWithGoogleCommand}"
+                                       HorizontalOptions="Fill" />
+
+                    <!-- Divider -->
+                    <Grid ColumnDefinitions="*, Auto, *" ColumnSpacing="12" Margin="0,4">
                         <BoxView Grid.Column="0" HeightRequest="1" VerticalOptions="Center" Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
                         <Label Grid.Column="1" Text="or sign in with Email" Style="{StaticResource TextCaption}" TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" VerticalTextAlignment="Center" />
                         <BoxView Grid.Column="2" HeightRequest="1" VerticalOptions="Center" Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
