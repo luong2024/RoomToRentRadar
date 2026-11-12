@@ -49,9 +49,14 @@
              Default="5">
         <OnIdiom.Desktop>15</OnIdiom.Desktop>
     </OnIdiom>
-
     <FontImageSource x:Key="IconRooms"
                      Glyph="{x:Static f:FluentUI.home_24_regular}"
+                     FontFamily="{x:Static f:FluentUI.FontFamily}"
+                     Color="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}"
+                     Size="{StaticResource IconSize}" />
+
+    <FontImageSource x:Key="IconMap"
+                     Glyph="{x:Static f:FluentUI.map_24_regular}"
                      FontFamily="{x:Static f:FluentUI.FontFamily}"
                      Color="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}"
                      Size="{StaticResource IconSize}" />

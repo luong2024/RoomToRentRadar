@@ -15,6 +15,14 @@
         Route="rooms"
         SemanticProperties.Description="Danh sách phòng trọ"
         SemanticProperties.Hint="Xem danh sách phòng trọ quanh ICTU"/>
+
+    <ShellContent
+        Title="Bản đồ"
+        Icon="{StaticResource IconMap}"
+        ContentTemplate="{DataTemplate pages:MapSearchPage}"
+        Route="map"
+        SemanticProperties.Description="Tìm phòng trên bản đồ"
+        SemanticProperties.Hint="Khoanh vùng tìm phòng quanh ICTU"/>
     <ShellContent
         Title="Dashboard"
         Icon="{StaticResource IconDashboard}"
