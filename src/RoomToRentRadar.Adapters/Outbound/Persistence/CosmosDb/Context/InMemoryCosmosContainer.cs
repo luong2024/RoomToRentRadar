@@ -9,7 +9,7 @@ namespace RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Context;
 
 public sealed class InMemoryCosmosContainer<T> : ICosmosContainer<T> where T : class
 {
-    private readonly ConcurrentDictionary<string, string> _storage = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, (string Json, string ETag)> _storage = new(StringComparer.Ordinal);
     private readonly object _syncRoot = new();
 
     public Task<T> CreateItemAsync(T item, string partitionKey, CancellationToken cancellationToken = default)
@@ -26,8 +26,11 @@ public sealed class InMemoryCosmosContainer<T> : ICosmosContainer<T> where T : c
 
             ValidateUniqueConstraints(item);
 
+            var etag = Guid.NewGuid().ToString("N");
+            SetItemETag(item, etag);
+
             var json = JsonConvert.SerializeObject(item);
-            _storage[id] = json;
+            _storage[id] = (json, etag);
             return Task.FromResult(Clone(item));
         }
     }
@@ -41,8 +44,53 @@ public sealed class InMemoryCosmosContainer<T> : ICosmosContainer<T> where T : c
             var id = GetItemId(item);
             ValidateUniqueConstraints(item, id);
 
+            var etag = Guid.NewGuid().ToString("N");
+            SetItemETag(item, etag);
+
             var json = JsonConvert.SerializeObject(item);
-            _storage[id] = json;
+            _storage[id] = (json, etag);
+            return Task.FromResult(Clone(item));
+        }
+    }
+
+    public Task<T> ReplaceItemAsync(
+        T item,
+        string id,
+        string partitionKey,
+        string? ifMatchEtag = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+
+        lock (_syncRoot)
+        {
+            if (!_storage.TryGetValue(id, out var existing))
+            {
+                throw new CosmosException(
+                    $"Document with id '{id}' was not found.",
+                    HttpStatusCode.NotFound,
+                    0,
+                    Guid.NewGuid().ToString("N"),
+                    1.0);
+            }
+
+            if (ifMatchEtag is not null && !string.Equals(existing.ETag, ifMatchEtag, StringComparison.Ordinal))
+            {
+                throw new CosmosException(
+                    $"Precondition failed: ETag '{ifMatchEtag}' does not match current document ETag '{existing.ETag}'.",
+                    HttpStatusCode.PreconditionFailed,
+                    0,
+                    Guid.NewGuid().ToString("N"),
+                    1.0);
+            }
+
+            ValidateUniqueConstraints(item, id);
+
+            var newEtag = Guid.NewGuid().ToString("N");
+            SetItemETag(item, newEtag);
+
+            var json = JsonConvert.SerializeObject(item);
+            _storage[id] = (json, newEtag);
             return Task.FromResult(Clone(item));
         }
     }
@@ -51,10 +99,11 @@ public sealed class InMemoryCosmosContainer<T> : ICosmosContainer<T> where T : c
     {
         lock (_syncRoot)
         {
-            if (_storage.TryGetValue(id, out var json))
+            if (_storage.TryGetValue(id, out var entry))
             {
-                var doc = JsonConvert.DeserializeObject<T>(json);
-                return Task.FromResult(doc);
+                var doc = JsonConvert.DeserializeObject<T>(entry.Json)!;
+                SetItemETag(doc, entry.ETag);
+                return Task.FromResult<T?>(doc);
             }
 
             return Task.FromResult<T?>(null);
@@ -77,10 +126,14 @@ public sealed class InMemoryCosmosContainer<T> : ICosmosContainer<T> where T : c
         lock (_syncRoot)
         {
             var items = _storage.Values
-                .Select(v => JsonConvert.DeserializeObject<T>(v)!)
+                .Select(entry =>
+                {
+                    var doc = JsonConvert.DeserializeObject<T>(entry.Json)!;
+                    SetItemETag(doc, entry.ETag);
+                    return doc;
+                })
                 .ToList();
 
-            // Extract parameter values if present
             var queryText = queryDefinition.QueryText;
 
             if (typeof(T) == typeof(UserDocument))
@@ -88,7 +141,6 @@ public sealed class InMemoryCosmosContainer<T> : ICosmosContainer<T> where T : c
                 var userItems = items.Cast<UserDocument>();
                 if (queryText.Contains("normalizedEmail", StringComparison.OrdinalIgnoreCase))
                 {
-                    // Find email parameter
                     var emailParam = GetQueryParameter(queryDefinition, "@email");
                     if (emailParam is not null)
                     {
@@ -140,7 +192,12 @@ public sealed class InMemoryCosmosContainer<T> : ICosmosContainer<T> where T : c
         lock (_syncRoot)
         {
             var items = _storage.Values
-                .Select(v => JsonConvert.DeserializeObject<T>(v)!)
+                .Select(entry =>
+                {
+                    var doc = JsonConvert.DeserializeObject<T>(entry.Json)!;
+                    SetItemETag(doc, entry.ETag);
+                    return doc;
+                })
                 .Where(predicate)
                 .ToList();
 
@@ -159,19 +216,13 @@ public sealed class InMemoryCosmosContainer<T> : ICosmosContainer<T> where T : c
     private void ValidateUniqueConstraints(T item, string? currentId = null)
     {
         var allDocs = _storage.Values
-            .Select(v => JsonConvert.DeserializeObject<T>(v)!)
+            .Select(entry => JsonConvert.DeserializeObject<T>(entry.Json)!)
             .Where(d => currentId is null || GetItemId(d) != currentId)
             .ToList();
 
         if (item is UserDocument userDoc)
         {
             var userDocs = allDocs.Cast<UserDocument>();
-
-            // Unique NormalizedEmail
-            if (userDocs.Any(u => string.Equals(u.NormalizedEmail, userDoc.NormalizedEmail, StringComparison.OrdinalIgnoreCase)))
-            {
-                throw CreateConflictException($"Unique index violation: User with email '{userDoc.Email}' already exists.");
-            }
 
             // Unique ExternalLogins (Provider, ProviderSubject)
             foreach (var el in userDoc.ExternalLogins)
@@ -199,6 +250,15 @@ public sealed class InMemoryCosmosContainer<T> : ICosmosContainer<T> where T : c
         var idProp = typeof(T).GetProperty("Id", BindingFlags.Public | BindingFlags.Instance);
         var val = idProp?.GetValue(item)?.ToString();
         return val ?? Guid.NewGuid().ToString();
+    }
+
+    private static void SetItemETag(T item, string etag)
+    {
+        var etagProp = typeof(T).GetProperty("ETag", BindingFlags.Public | BindingFlags.Instance);
+        if (etagProp?.CanWrite == true)
+        {
+            etagProp.SetValue(item, etag);
+        }
     }
 
     private static object? GetQueryParameter(QueryDefinition query, string name)

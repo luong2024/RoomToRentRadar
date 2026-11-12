@@ -14,5 +14,7 @@ public sealed class CosmosDbOptions
 
     public string RefreshTokensContainerName { get; set; } = "RefreshTokens";
 
+    public string EmailIndexContainerName { get; set; } = "EmailIndex";
+
     public string ConnectionMode { get; set; } = "Direct";
 }

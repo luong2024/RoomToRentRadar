@@ -30,4 +30,7 @@ public sealed class RefreshTokenDocument
 
     [JsonProperty("revocationReason")]
     public string? RevocationReason { get; set; }
+
+    [JsonProperty("_etag")]
+    public string? ETag { get; set; }
 }

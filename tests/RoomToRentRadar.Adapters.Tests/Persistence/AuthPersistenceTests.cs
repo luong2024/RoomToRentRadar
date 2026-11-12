@@ -44,6 +44,7 @@ public class AuthPersistenceTests
         {
             Assert.That(_dbContext.Users, Is.Not.Null);
             Assert.That(_dbContext.RefreshTokens, Is.Not.Null);
+            Assert.That(_dbContext.EmailIndex, Is.Not.Null);
         });
     }
 
@@ -180,5 +181,166 @@ public class AuthPersistenceTests
             Assert.That(reloadedOldToken!.IsRevoked, Is.False);
             Assert.That(reloadedNewToken, Is.Null);
         });
+    }
+
+    [Test]
+    public async Task UnitOfWork_WhenDuplicateEmailRegisteredConcurrently_ShouldEnsureOnlyOneSucceeds()
+    {
+        var email = EmailAddress.Create("concurrent-student@example.com");
+
+        var uow1 = new CosmosUnitOfWork(_dbContext);
+        var repo1 = new CosmosUserRepository(_dbContext, uow1);
+
+        var uow2 = new CosmosUnitOfWork(_dbContext);
+        var repo2 = new CosmosUserRepository(_dbContext, uow2);
+
+        var user1 = User.RegisterLocalUser(email, "hash1", UserRole.Student, FixedNow);
+        var user2 = User.RegisterLocalUser(email, "hash2", UserRole.Landlord, FixedNow);
+
+        await repo1.AddAsync(user1);
+        await repo2.AddAsync(user2);
+
+        var task1 = Task.Run(async () =>
+        {
+            try
+            {
+                await uow1.SaveChangesAsync();
+                return (Success: true, Error: (Exception?)null);
+            }
+            catch (Exception ex)
+            {
+                return (Success: false, Error: ex);
+            }
+        });
+
+        var task2 = Task.Run(async () =>
+        {
+            try
+            {
+                await uow2.SaveChangesAsync();
+                return (Success: true, Error: (Exception?)null);
+            }
+            catch (Exception ex)
+            {
+                return (Success: false, Error: ex);
+            }
+        });
+
+        var results = await Task.WhenAll(task1, task2);
+
+        var successCount = results.Count(r => r.Success);
+        var conflictCount = results.Count(r => !r.Success && r.Error is DuplicateEmailException);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(successCount, Is.EqualTo(1), "Exactly one registration must succeed.");
+            Assert.That(conflictCount, Is.EqualTo(1), "The concurrent duplicate registration must fail with DuplicateEmailException.");
+        });
+
+        var loadedEmailIndex = await _dbContext.EmailIndex.ReadItemAsync("concurrent-student@example.com", "concurrent-student@example.com");
+        Assert.That(loadedEmailIndex, Is.Not.Null);
+    }
+
+    [Test]
+    public async Task RefreshToken_WhenRotatedConcurrentlyWithSameToken_ShouldEnforceETagConcurrencyAndAllowOnlyOne()
+    {
+        var user = User.RegisterLocalUser(EmailAddress.Create("concurrent-token@example.com"), "hash", UserRole.Student, FixedNow);
+        await _userRepository.AddAsync(user);
+
+        var family = Guid.NewGuid();
+        var initialToken = RefreshToken.Create(user.Id, "shared-token-hash", family, FixedNow, FixedNow.AddDays(7));
+        await _refreshTokenRepository.AddAsync(initialToken);
+        await _unitOfWork.SaveChangesAsync();
+
+        // Simulate 2 concurrent requests resolving scoped instances
+        var uow1 = new CosmosUnitOfWork(_dbContext);
+        var repo1 = new CosmosRefreshTokenRepository(_dbContext, uow1);
+
+        var uow2 = new CosmosUnitOfWork(_dbContext);
+        var repo2 = new CosmosRefreshTokenRepository(_dbContext, uow2);
+
+        // Both read the same active token hash concurrently
+        var tokenForRequest1 = await repo1.GetByTokenHashAsync("shared-token-hash");
+        var tokenForRequest2 = await repo2.GetByTokenHashAsync("shared-token-hash");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(tokenForRequest1, Is.Not.Null);
+            Assert.That(tokenForRequest2, Is.Not.Null);
+        });
+
+        var replacement1 = RefreshToken.Create(user.Id, "hash-replacement-1", family, FixedNow.AddMinutes(1), FixedNow.AddDays(7));
+        var replacement2 = RefreshToken.Create(user.Id, "hash-replacement-2", family, FixedNow.AddMinutes(1), FixedNow.AddDays(7));
+
+        tokenForRequest1!.ReplaceWith(replacement1.Id, FixedNow.AddMinutes(1));
+        repo1.Update(tokenForRequest1);
+        await repo1.AddAsync(replacement1);
+
+        tokenForRequest2!.ReplaceWith(replacement2.Id, FixedNow.AddMinutes(1));
+        repo2.Update(tokenForRequest2);
+        await repo2.AddAsync(replacement2);
+
+        var task1 = Task.Run(async () =>
+        {
+            try
+            {
+                await uow1.SaveChangesAsync();
+                return (Success: true, Error: (Exception?)null);
+            }
+            catch (Exception ex)
+            {
+                return (Success: false, Error: ex);
+            }
+        });
+
+        var task2 = Task.Run(async () =>
+        {
+            try
+            {
+                await uow2.SaveChangesAsync();
+                return (Success: true, Error: (Exception?)null);
+            }
+            catch (Exception ex)
+            {
+                return (Success: false, Error: ex);
+            }
+        });
+
+        var results = await Task.WhenAll(task1, task2);
+
+        var successCount = results.Count(r => r.Success);
+        var concurrencyFailureCount = results.Count(r => !r.Success && r.Error is InvalidRefreshTokenException);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(successCount, Is.EqualTo(1), "Exactly one concurrent rotation request must succeed.");
+            Assert.That(concurrencyFailureCount, Is.EqualTo(1), "The concurrent conflicting request must fail with InvalidRefreshTokenException due to ETag mismatch.");
+        });
+    }
+
+    [Test]
+    public void CosmosDbContext_WhenAccountEndpointMissingInProduction_ShouldFailFast()
+    {
+        var options = new RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Configurations.CosmosDbOptions
+        {
+            AccountEndpoint = "",
+            AuthKeyOrResourceToken = "some-key"
+        };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => _ = new CosmosDbContext(options));
+        Assert.That(ex.Message, Does.Contain("CosmosDb:AccountEndpoint"));
+    }
+
+    [Test]
+    public void CosmosDbContext_WhenAuthKeyMissingInProduction_ShouldFailFast()
+    {
+        var options = new RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Configurations.CosmosDbOptions
+        {
+            AccountEndpoint = "https://my-cosmos-account.documents.azure.com:443/",
+            AuthKeyOrResourceToken = ""
+        };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => _ = new CosmosDbContext(options));
+        Assert.That(ex.Message, Does.Contain("CosmosDb:AuthKeyOrResourceToken"));
     }
 }

@@ -31,6 +31,27 @@ public sealed class CosmosContainer<T> : ICosmosContainer<T> where T : class
         return response.Resource;
     }
 
+    public async Task<T> ReplaceItemAsync(
+        T item,
+        string id,
+        string partitionKey,
+        string? ifMatchEtag = null,
+        CancellationToken cancellationToken = default)
+    {
+        var requestOptions = ifMatchEtag is not null
+            ? new ItemRequestOptions { IfMatchEtag = ifMatchEtag }
+            : null;
+
+        var response = await _container.ReplaceItemAsync(
+            item,
+            id,
+            new PartitionKey(partitionKey),
+            requestOptions,
+            cancellationToken);
+
+        return response.Resource;
+    }
+
     public async Task<T?> ReadItemAsync(string id, string partitionKey, CancellationToken cancellationToken = default)
     {
         try

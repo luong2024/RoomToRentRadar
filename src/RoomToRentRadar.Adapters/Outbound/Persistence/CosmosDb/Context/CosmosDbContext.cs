@@ -13,6 +13,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
 
     private readonly ICosmosContainer<UserDocument> _usersContainer;
     private readonly ICosmosContainer<RefreshTokenDocument> _refreshTokensContainer;
+    private readonly ICosmosContainer<EmailIndexDocument> _emailIndexContainer;
 
     public const string PartitionKeyPath = "/id";
     public const string UniqueEmailPath = "/normalizedEmail";
@@ -28,17 +29,31 @@ public sealed class CosmosDbContext : ICosmosDbContext
         ArgumentNullException.ThrowIfNull(options);
         _options = options;
 
-        _isInMemory = string.IsNullOrWhiteSpace(options.AccountEndpoint) ||
-                      string.Equals(options.AccountEndpoint, "in-memory", StringComparison.OrdinalIgnoreCase) ||
-                      string.IsNullOrWhiteSpace(options.AuthKeyOrResourceToken);
+        // In-memory mode is ONLY allowed when AccountEndpoint is explicitly set to "in-memory".
+        // Any other missing configuration is a misconfiguration and must fail fast.
+        _isInMemory = string.Equals(options.AccountEndpoint, "in-memory", StringComparison.OrdinalIgnoreCase);
 
         if (_isInMemory)
         {
             _usersContainer = new InMemoryCosmosContainer<UserDocument>();
             _refreshTokensContainer = new InMemoryCosmosContainer<RefreshTokenDocument>();
+            _emailIndexContainer = new InMemoryCosmosContainer<EmailIndexDocument>();
         }
         else
         {
+            if (string.IsNullOrWhiteSpace(options.AccountEndpoint))
+            {
+                throw new InvalidOperationException(
+                    "Azure Cosmos DB is not configured. 'CosmosDb:AccountEndpoint' is required. " +
+                    "Set the endpoint in configuration or use CosmosDbContext.CreateInMemory() for local testing.");
+            }
+
+            if (string.IsNullOrWhiteSpace(options.AuthKeyOrResourceToken))
+            {
+                throw new InvalidOperationException(
+                    "Azure Cosmos DB is not configured. 'CosmosDb:AuthKeyOrResourceToken' is required. " +
+                    "Set the key in configuration or use CosmosDbContext.CreateInMemory() for local testing.");
+            }
             var clientOptions = new CosmosClientOptions
             {
                 SerializerOptions = new CosmosSerializationOptions
@@ -55,15 +70,19 @@ public sealed class CosmosDbContext : ICosmosDbContext
             _cosmosClient = new CosmosClient(options.AccountEndpoint, options.AuthKeyOrResourceToken, clientOptions);
             var usersCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.UsersContainerName);
             var refreshTokensCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.RefreshTokensContainerName);
+            var emailIndexCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.EmailIndexContainerName);
 
             _usersContainer = new CosmosContainer<UserDocument>(usersCosmosContainer);
             _refreshTokensContainer = new CosmosContainer<RefreshTokenDocument>(refreshTokensCosmosContainer);
+            _emailIndexContainer = new CosmosContainer<EmailIndexDocument>(emailIndexCosmosContainer);
         }
     }
 
     public ICosmosContainer<UserDocument> Users => _usersContainer;
 
     public ICosmosContainer<RefreshTokenDocument> RefreshTokens => _refreshTokensContainer;
+
+    public ICosmosContainer<EmailIndexDocument> EmailIndex => _emailIndexContainer;
 
     public static CosmosDbContext CreateInMemory()
     {
@@ -115,6 +134,12 @@ public sealed class CosmosDbContext : ICosmosDbContext
 
         await database.CreateContainerIfNotExistsAsync(
             refreshTokensContainerProperties,
+            cancellationToken: cancellationToken);
+
+        var emailIndexContainerProperties = new ContainerProperties(_options.EmailIndexContainerName, PartitionKeyPath);
+
+        await database.CreateContainerIfNotExistsAsync(
+            emailIndexContainerProperties,
             cancellationToken: cancellationToken);
     }
 

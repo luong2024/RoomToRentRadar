@@ -35,7 +35,13 @@ public sealed class CosmosRefreshTokenRepository : IRefreshTokenRepository
                 t => string.Equals(t.TokenHash, tokenHash, StringComparison.Ordinal),
                 cancellationToken);
             var first = match.FirstOrDefault();
-            return first is null ? null : MapToDomain(first);
+            if (first is null)
+            {
+                return null;
+            }
+
+            _unitOfWork.TrackRefreshTokenLoaded(first.Id, first.ETag);
+            return MapToDomain(first);
         }
 
         var query = new QueryDefinition("SELECT * FROM c WHERE c.tokenHash = @tokenHash")
@@ -43,7 +49,13 @@ public sealed class CosmosRefreshTokenRepository : IRefreshTokenRepository
 
         var results = await _dbContext.RefreshTokens.QueryAsync(query, cancellationToken);
         var doc = results.FirstOrDefault();
-        return doc is null ? null : MapToDomain(doc);
+        if (doc is null)
+        {
+            return null;
+        }
+
+        _unitOfWork.TrackRefreshTokenLoaded(doc.Id, doc.ETag);
+        return MapToDomain(doc);
     }
 
     public async Task<IReadOnlyList<RefreshToken>> GetByFamilyAsync(
@@ -66,6 +78,11 @@ public sealed class CosmosRefreshTokenRepository : IRefreshTokenRepository
                 .WithParameter("@tokenFamily", familyString);
 
             docs = await _dbContext.RefreshTokens.QueryAsync(query, cancellationToken);
+        }
+
+        foreach (var doc in docs)
+        {
+            _unitOfWork.TrackRefreshTokenLoaded(doc.Id, doc.ETag);
         }
 
         var dbTokens = docs.Select(MapToDomain).ToList();

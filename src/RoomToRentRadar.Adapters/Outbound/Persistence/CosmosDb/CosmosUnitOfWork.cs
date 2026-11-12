@@ -19,6 +19,7 @@ public sealed class CosmosUnitOfWork : IUnitOfWork
     private readonly Dictionary<Guid, User> _dirtyUsers = [];
     private readonly Dictionary<Guid, RefreshToken> _addedRefreshTokens = [];
     private readonly Dictionary<Guid, RefreshToken> _dirtyRefreshTokens = [];
+    private readonly Dictionary<Guid, string?> _refreshTokenEtags = [];
 
     private readonly List<Func<Task>> _rollbackActions = [];
     private bool _inTransaction;
@@ -56,6 +57,14 @@ public sealed class CosmosUnitOfWork : IUnitOfWork
         if (!_addedRefreshTokens.ContainsKey(token.Id))
         {
             _dirtyRefreshTokens[token.Id] = token;
+        }
+    }
+
+    public void TrackRefreshTokenLoaded(string id, string? etag)
+    {
+        if (Guid.TryParse(id, out var guid))
+        {
+            _refreshTokenEtags[guid] = etag;
         }
     }
 
@@ -102,9 +111,31 @@ public sealed class CosmosUnitOfWork : IUnitOfWork
 
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        // 1. Persist added users
+        // 1. Persist added users with global unique email guarantee via EmailIndex
         foreach (var user in _addedUsers.Values.ToList())
         {
+            var normalizedEmail = user.Email.Value.ToLowerInvariant();
+            var emailIndexDoc = new EmailIndexDocument
+            {
+                Id = normalizedEmail,
+                UserId = user.Id.ToString(),
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+
+            // Atomically ensure email uniqueness across all partitions in Cosmos DB
+            try
+            {
+                await _dbContext.EmailIndex.CreateItemAsync(emailIndexDoc, emailIndexDoc.Id, cancellationToken);
+                if (_inTransaction)
+                {
+                    _rollbackActions.Add(() => _dbContext.EmailIndex.DeleteItemAsync(emailIndexDoc.Id, emailIndexDoc.Id, CancellationToken.None));
+                }
+            }
+            catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.Conflict)
+            {
+                throw new DuplicateEmailException(ex);
+            }
+
             var doc = MapUserToDocument(user);
             try
             {
@@ -117,7 +148,13 @@ public sealed class CosmosUnitOfWork : IUnitOfWork
             }
             catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.Conflict)
             {
+                await _dbContext.EmailIndex.DeleteItemAsync(emailIndexDoc.Id, emailIndexDoc.Id, CancellationToken.None);
                 throw new DuplicateEmailException(ex);
+            }
+            catch
+            {
+                await _dbContext.EmailIndex.DeleteItemAsync(emailIndexDoc.Id, emailIndexDoc.Id, CancellationToken.None);
+                throw;
             }
         }
         _addedUsers.Clear();
@@ -145,7 +182,9 @@ public sealed class CosmosUnitOfWork : IUnitOfWork
             var doc = MapRefreshTokenToDocument(token);
             try
             {
-                await _dbContext.RefreshTokens.CreateItemAsync(doc, doc.Id, cancellationToken);
+                var created = await _dbContext.RefreshTokens.CreateItemAsync(doc, doc.Id, cancellationToken);
+                _refreshTokenEtags[token.Id] = created.ETag;
+
                 if (_inTransaction)
                 {
                     var idToDelete = doc.Id;
@@ -159,10 +198,12 @@ public sealed class CosmosUnitOfWork : IUnitOfWork
         }
         _addedRefreshTokens.Clear();
 
-        // 4. Persist modified refresh tokens
+        // 4. Persist modified refresh tokens with Optimistic Concurrency Control (ETag)
         foreach (var token in _dirtyRefreshTokens.Values.ToList())
         {
             var doc = MapRefreshTokenToDocument(token);
+            _refreshTokenEtags.TryGetValue(token.Id, out var expectedEtag);
+
             if (_inTransaction)
             {
                 var previous = await _dbContext.RefreshTokens.ReadItemAsync(doc.Id, doc.Id, cancellationToken);
@@ -172,7 +213,22 @@ public sealed class CosmosUnitOfWork : IUnitOfWork
                 }
             }
 
-            await _dbContext.RefreshTokens.UpsertItemAsync(doc, doc.Id, cancellationToken);
+            try
+            {
+                var replaced = await _dbContext.RefreshTokens.ReplaceItemAsync(
+                    doc,
+                    doc.Id,
+                    doc.Id,
+                    expectedEtag,
+                    cancellationToken);
+
+                _refreshTokenEtags[token.Id] = replaced.ETag;
+            }
+            catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.PreconditionFailed)
+            {
+                throw new InvalidRefreshTokenException(
+                    "Refresh token has been concurrently modified or already rotated. Session invalidation enforced.");
+            }
         }
         _dirtyRefreshTokens.Clear();
     }
@@ -245,6 +301,7 @@ public sealed class CosmosUnitOfWork : IUnitOfWork
         _dirtyUsers.Clear();
         _addedRefreshTokens.Clear();
         _dirtyRefreshTokens.Clear();
+        _refreshTokenEtags.Clear();
 
         for (var i = _rollbackActions.Count - 1; i >= fromIndex; i--)
         {

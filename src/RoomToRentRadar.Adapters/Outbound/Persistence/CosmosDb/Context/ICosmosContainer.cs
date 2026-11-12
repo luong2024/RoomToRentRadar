@@ -8,6 +8,13 @@ public interface ICosmosContainer<T> where T : class
 
     Task<T> UpsertItemAsync(T item, string partitionKey, CancellationToken cancellationToken = default);
 
+    Task<T> ReplaceItemAsync(
+        T item,
+        string id,
+        string partitionKey,
+        string? ifMatchEtag = null,
+        CancellationToken cancellationToken = default);
+
     Task<T?> ReadItemAsync(string id, string partitionKey, CancellationToken cancellationToken = default);
 
     Task DeleteItemAsync(string id, string partitionKey, CancellationToken cancellationToken = default);

@@ -8,5 +8,7 @@ public interface ICosmosDbContext : IDisposable
 
     ICosmosContainer<RefreshTokenDocument> RefreshTokens { get; }
 
+    ICosmosContainer<EmailIndexDocument> EmailIndex { get; }
+
     Task EnsureDatabaseAndContainersAsync(CancellationToken cancellationToken = default);
 }
