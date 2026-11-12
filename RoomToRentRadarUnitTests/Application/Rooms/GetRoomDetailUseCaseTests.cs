@@ -47,7 +47,9 @@ public class GetRoomDetailUseCaseTests
             lastUpdatedAt: new DateTime(2026, 11, 10, 12, 0, 0, DateTimeKind.Utc),
             isVerified: true,
             distanceToCampusKm: 0.8,
-            roomTypeEnum: RoomType.BoardingRoom
+            roomTypeEnum: RoomType.BoardingRoom,
+            latitude: 21.5875,
+            longitude: 105.8080
         );
     }
 
@@ -67,17 +69,16 @@ public class GetRoomDetailUseCaseTests
         Assert.That(result!.Id, Is.EqualTo("room-001"));
         Assert.That(result.Title, Is.EqualTo("Phòng trọ khép kín gần trường ICTU"));
         Assert.That(result.Description, Is.EqualTo("Phòng đầy đủ tiện nghi, giờ giấc tự do, an ninh tốt."));
-        Assert.That(result.MonthlyRent, Is.EqualTo(1800000m));
-        Assert.That(result.DepositAmount, Is.EqualTo(1800000m));
-        Assert.That(result.AreaSquareMeters, Is.EqualTo(25.5));
+        Assert.That(result.MonthlyRentVnd, Is.EqualTo(1800000m));
+        Assert.That(result.DepositVnd, Is.EqualTo(1800000m));
+        Assert.That(result.AreaM2, Is.EqualTo(25.5));
         Assert.That(result.RoomType, Is.EqualTo(RoomType.BoardingRoom));
         Assert.That(result.Amenities, Does.Contain(Amenity.AirConditioner));
         Assert.That(result.Amenities, Does.Contain(Amenity.WaterHeater));
-        Assert.That(result.FullAddress, Does.Contain("Số 123 Đường Z115"));
-        Assert.That(result.LandlordName, Is.EqualTo("Nguyễn Văn Chủ Trọ"));
+        Assert.That(result.Address.AddressLine, Does.Contain("Số 123 Đường Z115"));
+        Assert.That(result.Landlord.DisplayName, Is.EqualTo("Nguyễn Văn Chủ Trọ"));
         Assert.That(result.Photos, Has.Count.EqualTo(3)); // 2 standard + 1 panorama
         Assert.That(result.Status, Is.EqualTo(ListingStatus.Available));
-        Assert.That(result.IsAvailable, Is.True);
     }
 
     [Test]
@@ -93,8 +94,7 @@ public class GetRoomDetailUseCaseTests
 
         // Assert
         Assert.That(result, Is.Not.Null);
-        Assert.That(result!.LandlordPhoneNumber, Is.EqualTo("0987654321"));
-        Assert.That(result.Landlord.PhoneNumber, Is.EqualTo("0987654321"));
+        Assert.That(result!.Landlord.PhoneNumber, Is.EqualTo("0987654321"));
         Assert.That(result.Landlord.ZaloUrl, Is.EqualTo("https://zalo.me/0987654321"));
     }
 
@@ -111,8 +111,7 @@ public class GetRoomDetailUseCaseTests
 
         // Assert
         Assert.That(result, Is.Not.Null);
-        Assert.That(result!.LandlordPhoneNumber, Is.Null);
-        Assert.That(result.Landlord.PhoneNumber, Is.Null);
+        Assert.That(result!.Landlord.PhoneNumber, Is.Null);
         Assert.That(result.Landlord.ZaloUrl, Is.Null);
     }
 
@@ -129,8 +128,7 @@ public class GetRoomDetailUseCaseTests
 
         // Assert
         Assert.That(result, Is.Not.Null);
-        Assert.That(result!.IsAvailable, Is.False);
-        Assert.That(result.Status, Is.EqualTo(ListingStatus.Rented));
+        Assert.That(result!.Status, Is.EqualTo(ListingStatus.Rented));
     }
 
     [Test]
@@ -146,8 +144,7 @@ public class GetRoomDetailUseCaseTests
 
         // Assert
         Assert.That(result, Is.Not.Null);
-        Assert.That(result!.IsAvailable, Is.False);
-        Assert.That(result.Status, Is.EqualTo(ListingStatus.Unpublished));
+        Assert.That(result!.Status, Is.EqualTo(ListingStatus.Unpublished));
     }
 
     [Test]
@@ -219,5 +216,41 @@ public class GetRoomDetailUseCaseTests
         // Assert
         Assert.That(result, Is.Not.Null);
         await _roomRepository.Received(1).GetByIdAsync("room-001", Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithUnknownCampusId_FallsBackToICTU()
+    {
+        // Arrange (M1 fix: unknown campusId falls back to ICTU coordinates)
+        var sampleRoom = CreateSampleRoom();
+        _roomRepository.GetByIdAsync("room-001", Arg.Any<CancellationToken>()).Returns(sampleRoom);
+
+        // Act
+        var resultWithUnknown = await _sut.ExecuteAsync("room-001", campusId: "UNKNOWN_CAMPUS_XYZ");
+        var resultWithIctu = await _sut.ExecuteAsync("room-001", campusId: "ICTU");
+
+        // Assert
+        Assert.That(resultWithUnknown, Is.Not.Null);
+        Assert.That(resultWithIctu, Is.Not.Null);
+        Assert.That(resultWithUnknown!.DistanceKm, Is.EqualTo(resultWithIctu!.DistanceKm),
+            "Unknown campus must fall back to ICTU default coordinates.");
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithKnownCampusId_UsesCorrectCoordinates()
+    {
+        // Arrange (M1 fix: valid campusId uses that campus's coordinates)
+        var sampleRoom = CreateSampleRoom();
+        _roomRepository.GetByIdAsync("room-001", Arg.Any<CancellationToken>()).Returns(sampleRoom);
+
+        // Act
+        var resultIctu = await _sut.ExecuteAsync("room-001", campusId: "ICTU");
+        var resultTnus = await _sut.ExecuteAsync("room-001", campusId: "TNUS");
+
+        // Assert
+        Assert.That(resultIctu, Is.Not.Null);
+        Assert.That(resultTnus, Is.Not.Null);
+        Assert.That(resultIctu!.DistanceKm, Is.Not.EqualTo(resultTnus!.DistanceKm),
+            "Distance calculated for TNUS must differ from ICTU coordinates.");
     }
 }
