@@ -1,6 +1,6 @@
-using RoomToRentRadar.ViewModels;
+using RoomToRentRadar.Features.Authentication.ViewModels;
 
-namespace RoomToRentRadar.Views;
+namespace RoomToRentRadar.Features.Authentication.Views;
 
 public partial class AuthPage : ContentPage
 {

@@ -1,7 +1,7 @@
 using System.Text;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Core.Models.Authentication;
-using RoomToRentRadar.ViewModels;
+using RoomToRentRadar.Features.Authentication.ViewModels;
 
 namespace RoomToRentRadarUnitTests;
 

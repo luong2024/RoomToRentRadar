@@ -1,11 +1,11 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Core.Models.Authentication;
 
-namespace RoomToRentRadar.ViewModels;
+namespace RoomToRentRadar.Features.Authentication.ViewModels;
 
 public partial class AuthViewModel : ObservableObject
 {
@@ -51,9 +51,6 @@ public partial class AuthViewModel : ObservableObject
 
     [ObservableProperty]
     public partial string LoginPassword { get; set; } = string.Empty;
-
-    [ObservableProperty]
-    public partial bool RememberMe { get; set; }
 
     [ObservableProperty]
     public partial bool IsPasswordHidden { get; set; } = true;
@@ -181,7 +178,7 @@ public partial class AuthViewModel : ObservableObject
     {
         if (IsLoading) return;
 
-        ClearErrors();
+        ClearStatus();
 
         if (!ValidateLoginForm())
         {
@@ -197,8 +194,7 @@ public partial class AuthViewModel : ObservableObject
             var result = await _authenticationPort.LoginWithEmailAsync(request, cancellationToken);
             if (result.IsSuccess)
             {
-                IsSuccess = true;
-                SuccessMessage = "Signed in successfully!";
+                SetSuccess("Signed in successfully!");
             }
             else
             {
@@ -220,7 +216,7 @@ public partial class AuthViewModel : ObservableObject
     {
         if (IsLoading) return;
 
-        ClearErrors();
+        ClearStatus();
 
         if (!ValidateSignUpForm())
         {
@@ -236,8 +232,7 @@ public partial class AuthViewModel : ObservableObject
             var result = await _authenticationPort.RegisterAsync(request, cancellationToken);
             if (result.IsSuccess)
             {
-                IsSuccess = true;
-                SuccessMessage = "Account created successfully! You can now sign in.";
+                SetSuccess("Account created successfully! You can now sign in.");
                 if (FlipToLoginHandler != null)
                 {
                     await FlipToLoginHandler.Invoke();
@@ -263,7 +258,7 @@ public partial class AuthViewModel : ObservableObject
     {
         if (IsLoading) return;
 
-        ClearErrors();
+        ClearStatus();
 
         try
         {
@@ -281,8 +276,7 @@ public partial class AuthViewModel : ObservableObject
 
             if (result.IsSuccess)
             {
-                IsSuccess = true;
-                SuccessMessage = "Google sign-in successful!";
+                SetSuccess("Google sign-in successful!");
             }
             else if (result.RequiresRoleSelection || !string.IsNullOrWhiteSpace(result.PendingGoogleIdToken))
             {
@@ -336,8 +330,7 @@ public partial class AuthViewModel : ObservableObject
             {
                 IsRoleSelectionDialogOpen = false;
                 PendingGoogleIdToken = null;
-                IsSuccess = true;
-                SuccessMessage = "Account created and signed in with Google!";
+                SetSuccess("Account created and signed in with Google!");
             }
             else
             {
@@ -456,6 +449,13 @@ public partial class AuthViewModel : ObservableObject
         return isValid;
     }
 
+    public void ClearStatus()
+    {
+        ClearErrors();
+        IsSuccess = false;
+        SuccessMessage = null;
+    }
+
     public void ClearErrors()
     {
         HasError = false;
@@ -471,7 +471,17 @@ public partial class AuthViewModel : ObservableObject
 
     private void SetError(string message)
     {
+        IsSuccess = false;
+        SuccessMessage = null;
         HasError = true;
         ErrorMessage = message;
+    }
+
+    private void SetSuccess(string message)
+    {
+        HasError = false;
+        ErrorMessage = null;
+        IsSuccess = true;
+        SuccessMessage = message;
     }
 }

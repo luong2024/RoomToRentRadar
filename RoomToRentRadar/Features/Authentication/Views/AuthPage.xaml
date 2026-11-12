@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage
-    x:Class="RoomToRentRadar.Views.AuthPage"
+    x:Class="RoomToRentRadar.Features.Authentication.Views.AuthPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:vm="clr-namespace:RoomToRentRadar.ViewModels"
+    xmlns:vm="clr-namespace:RoomToRentRadar.Features.Authentication.ViewModels"
     xmlns:converters="clr-namespace:RoomToRentRadar.Shared.Converters"
     x:DataType="vm:AuthViewModel"
     Title="Authentication"
@@ -321,27 +321,14 @@
                                     FontSize="12" />
                             </VerticalStackLayout>
 
-                            <!-- Options Row: Remember Me & Forgot Password -->
-                            <Grid ColumnDefinitions="Auto,*,Auto" VerticalOptions="Center" Margin="0,0,0,2">
-                                <CheckBox
-                                    IsChecked="{Binding RememberMe}"
-                                    Color="#2563EB"
-                                    VerticalOptions="Center" />
-                                <Label
-                                    Grid.Column="1"
-                                    Text="Remember me"
-                                    FontSize="13"
-                                    FontFamily="OpenSansRegular"
-                                    TextColor="#475569"
-                                    VerticalOptions="Center" />
-                                <Label
-                                    Grid.Column="2"
-                                    Text="Forgot password?"
-                                    FontSize="13"
-                                    FontFamily="OpenSansSemibold"
-                                    TextColor="#2563EB"
-                                    VerticalOptions="Center" />
-                            </Grid>
+                            <!-- Forgot Password -->
+                            <Label
+                                Text="Forgot password?"
+                                FontSize="13"
+                                FontFamily="OpenSansSemibold"
+                                TextColor="#2563EB"
+                                HorizontalOptions="End"
+                                Margin="0,0,0,2" />
 
                             <!-- Primary Button: Sign In (Blue-to-Cyan Gradient) -->
                             <Button

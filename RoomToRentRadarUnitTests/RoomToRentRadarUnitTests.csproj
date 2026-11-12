@@ -21,7 +21,8 @@
     <Compile Include="..\RoomToRentRadar\Core\Models\Authentication\AuthContracts.cs" Link="Linked\AuthContracts.cs" />
     <Compile Include="..\RoomToRentRadar\Core\Interfaces\IAuthenticationPort.cs" Link="Linked\IAuthenticationPort.cs" />
     <Compile Include="..\RoomToRentRadar\Core\Interfaces\IGoogleAuthAdapter.cs" Link="Linked\IGoogleAuthAdapter.cs" />
-    <Compile Include="..\RoomToRentRadar\ViewModels\AuthViewModel.cs" Link="Linked\AuthViewModel.cs" />
+    <Compile Include="..\RoomToRentRadar\Features\Authentication\ViewModels\AuthViewModel.cs" Link="Linked\AuthViewModel.cs" />
+    <Compile Include="..\RoomToRentRadar\Infrastructure\Adapters\HttpAuthAdapter.cs" Link="Linked\HttpAuthAdapter.cs" />
   </ItemGroup>
 
   <ItemGroup>

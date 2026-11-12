@@ -1,11 +1,11 @@
 using RoomToRentRadar.Core.Interfaces;
+using RoomToRentRadar.Features.Authentication.ViewModels;
+using RoomToRentRadar.Features.Authentication.Views;
 using RoomToRentRadar.Features.Home.ViewModels;
 using RoomToRentRadar.Features.Home.Views;
 using RoomToRentRadar.Infrastructure.Adapters;
 using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Shared.Services;
-using RoomToRentRadar.ViewModels;
-using RoomToRentRadar.Views;
 
 namespace RoomToRentRadar.Infrastructure.DependencyInjection;
 
@@ -14,19 +14,10 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddMobileInfrastructure(this IServiceCollection services)
     {
         services.AddSingleton<IErrorHandler, ModalErrorHandler>();
-        services.AddSingleton(sp =>
+        services.AddSingleton(sp => new HttpClient
         {
-            var baseUrl = DeviceInfo.Platform == DevicePlatform.Android
-                ? (DeviceInfo.DeviceType == DeviceType.Virtual
-                    ? "http://10.0.2.2:5000/"
-                    : "http://127.0.0.1:5000/")
-                : "http://localhost:5000/";
-
-            return new HttpClient
-            {
-                BaseAddress = new Uri(baseUrl),
-                Timeout = TimeSpan.FromSeconds(15)
-            };
+            BaseAddress = ApiConfiguration.GetBaseAddress(),
+            Timeout = TimeSpan.FromSeconds(15)
         });
         services.AddSingleton<IApiClient, ApiClient>();
         services.AddSingleton<IGoogleAuthAdapter, GoogleAuthAdapter>();

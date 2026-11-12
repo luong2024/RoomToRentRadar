@@ -5,7 +5,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:sf="clr-namespace:Syncfusion.Maui.Toolkit.SegmentedControl;assembly=Syncfusion.Maui.Toolkit"
     xmlns:homeViews="clr-namespace:RoomToRentRadar.Features.Home.Views"
-    xmlns:authViews="clr-namespace:RoomToRentRadar.Views"
+    xmlns:authViews="clr-namespace:RoomToRentRadar.Features.Authentication.Views"
     Shell.FlyoutBehavior="Flyout"
     Title="RoomToRentRadar">
 
