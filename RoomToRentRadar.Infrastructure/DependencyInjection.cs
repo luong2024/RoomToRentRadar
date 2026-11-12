@@ -4,6 +4,7 @@ using RoomToRentRadar.Infrastructure.Adapters.Mocks;
 using RoomToRentRadar.Infrastructure.Adapters.Security;
 using RoomToRentRadar.Ports.Outbound.ExternalServices;
 using RoomToRentRadar.Ports.Outbound.Repositories;
+using RoomToRentRadar.Ports.Outbound.Security;
 
 namespace RoomToRentRadar.Infrastructure;
 
@@ -33,6 +34,7 @@ public static class DependencyInjection
             services.AddSingleton<IIctuSsoVerifierPort, IctuSsoVerifierAdapter>();
         }
 
+        // Mocks for local development (users/audit). SQLite is used for rooms per ADR-002.
         services.AddSingleton<InMemoryUserRepository>();
         services.TryAddScoped<IUserRepository>(sp => sp.GetRequiredService<InMemoryUserRepository>());
         services.AddSingleton<InMemoryAuditLogRepository>();
