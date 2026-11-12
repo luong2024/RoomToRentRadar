@@ -42,6 +42,7 @@ public static class DependencyInjection
         // TODO [US02/T02.2 - Cosmos/Sqlite Migration]: Replace InMemoryRoomRepository with production adapter when datastore slice is implemented
         services.AddSingleton<InMemoryRoomRepository>();
         services.TryAddScoped<IRoomRepository>(sp => sp.GetRequiredService<InMemoryRoomRepository>());
+        services.TryAddScoped<IRoomSearchReadModel>(sp => sp.GetRequiredService<InMemoryRoomRepository>());
         services.TryAddScoped<ICurrentUserContextPort, InMemoryCurrentUserContext>();
         services.TryAddScoped<ICurrentUserContext>(sp => (InMemoryCurrentUserContext)sp.GetRequiredService<ICurrentUserContextPort>());
 

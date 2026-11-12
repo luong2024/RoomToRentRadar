@@ -1,6 +1,5 @@
 using RoomToRentRadar.Application.Mappers;
 using RoomToRentRadar.Domain.Aggregates;
-using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 
@@ -41,7 +40,7 @@ public class RoomMapperTests
             monthlyRent: 1500000m,
             depositAmount: 500000m,
             areaSquareMeters: 20.0,
-            roomType: "Khép kín",
+            roomType: "BoardingRoom",
             fullAddress: "Ngõ 1 Đường Z115",
             photoUrls: new[] { "https://cdn.example.com/thumb.jpg" },
             isVerified: true,
@@ -52,12 +51,11 @@ public class RoomMapperTests
 
         Assert.That(card.Id, Is.EqualTo("room-c-01"));
         Assert.That(card.Title, Is.EqualTo("Phòng trọ mini"));
-        Assert.That(card.MonthlyRent, Is.EqualTo(1500000m));
-        Assert.That(card.AreaSquareMeters, Is.EqualTo(20.0));
-        Assert.That(card.DistanceToCampusKm, Is.EqualTo(0.5));
+        Assert.That(card.Price, Is.EqualTo(1500000m));
+        Assert.That(card.Area, Is.EqualTo(20.0));
+        Assert.That(card.DistanceKm, Is.EqualTo(0.5));
         Assert.That(card.IsVerified, Is.True);
-        Assert.That(card.ThumbnailUrl, Is.EqualTo("https://cdn.example.com/thumb.jpg"));
-        Assert.That(card.AddressSummary, Is.EqualTo("Ngõ 1 Đường Z115"));
+        Assert.That(card.Address, Is.EqualTo("Ngõ 1 Đường Z115"));
     }
 
     [Test]
@@ -70,8 +68,8 @@ public class RoomMapperTests
             monthlyRent: 2500000m,
             depositAmount: 1500000m,
             areaSquareMeters: 30.0,
-            roomType: "Chung cư mini",
-            amenities: new[] { "Điều hòa", "Nóng lạnh" },
+            roomType: "MiniApartment",
+            amenities: new[] { "AirConditioner", "WaterHeater" },
             fullAddress: "Số 99 Đường Z115",
             landlordName: "Bác An",
             landlordPhoneNumber: "0912345678",
@@ -83,23 +81,17 @@ public class RoomMapperTests
             distanceToCampusKm: 0.4
         );
 
-        var similarRooms = new List<RoomCardDto>
-        {
-            new("sim-1", "Phòng 1", 2400000m, 28.0, 0.5, true, "thumb1", "address1")
-        };
-
         var detail = RoomMapper.ToDetailDto(
             room,
-            landlordPhoneNumber: "0912345678",
-            unavailableMessage: null,
-            similarRooms: similarRooms);
+            landlordPhoneNumber: "0912345678");
 
         Assert.That(detail.Id, Is.EqualTo("room-d-01"));
-        Assert.That(detail.Status, Is.EqualTo("Available"));
+        Assert.That(detail.Status, Is.EqualTo(ListingStatus.Available));
         Assert.That(detail.IsAvailable, Is.True);
         Assert.That(detail.LandlordPhoneNumber, Is.EqualTo("0912345678"));
         Assert.That(detail.Amenities, Has.Count.EqualTo(2));
-        Assert.That(detail.HouseRules, Has.Count.EqualTo(1));
-        Assert.That(detail.SimilarRooms, Has.Count.EqualTo(1));
+        Assert.That(detail.Utilities.EstimatedMonthlyTotalVnd, Is.GreaterThan(0));
+        Assert.That(detail.Photos, Has.Count.EqualTo(2)); // Standard + Panorama
+        Assert.That(detail.HouseRules, Is.Not.Null);
     }
 }

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using NSubstitute;
 using RoomToRentRadar.Api.Controllers;
 using RoomToRentRadar.Api.Security;
 using RoomToRentRadar.Application.UseCases.Rooms;
@@ -17,7 +18,8 @@ public class RoomDetailEndpointIntegrationTests
     private InMemoryRoomRepository _roomRepository = null!;
     private IHttpContextAccessor _httpContextAccessor = null!;
     private HttpContextUserContextAdapter _userContext = null!;
-    private GetRoomDetailUseCase _useCase = null!;
+    private GetRoomDetailUseCase _detailUseCase = null!;
+    private GetSimilarRoomsUseCase _similarUseCase = null!;
     private RoomsController _controller = null!;
 
     [SetUp]
@@ -26,8 +28,9 @@ public class RoomDetailEndpointIntegrationTests
         _roomRepository = new InMemoryRoomRepository();
         _httpContextAccessor = Substitute.For<IHttpContextAccessor>();
         _userContext = new HttpContextUserContextAdapter(_httpContextAccessor);
-        _useCase = new GetRoomDetailUseCase(_roomRepository, _userContext);
-        _controller = new RoomsController(_useCase);
+        _detailUseCase = new GetRoomDetailUseCase(_roomRepository, _userContext);
+        _similarUseCase = new GetSimilarRoomsUseCase(_roomRepository, _roomRepository);
+        _controller = new RoomsController(_detailUseCase, _similarUseCase);
     }
 
     private void SetUserAuthenticated(string userId = "student-123")
@@ -64,18 +67,18 @@ public class RoomDetailEndpointIntegrationTests
         var response = await _controller.GetRoomById("room-ictu-001", CancellationToken.None);
 
         // Assert
-        Assert.That(response.Result, Is.InstanceOf<OkObjectResult>());
-        var okResult = (OkObjectResult)response.Result!;
+        Assert.That(response, Is.InstanceOf<OkObjectResult>());
+        var okResult = (OkObjectResult)response;
         var room = (RoomDetailDto)okResult.Value!;
 
         Assert.That(room.Id, Is.EqualTo("room-ictu-001"));
         Assert.That(room.Title, Does.Contain("cổng chính ICTU"));
         Assert.That(room.MonthlyRent, Is.EqualTo(1800000m));
-        Assert.That(room.Status, Is.EqualTo("Available"));
+        Assert.That(room.Status, Is.EqualTo(ListingStatus.Available));
         Assert.That(room.IsAvailable, Is.True);
         Assert.That(room.LandlordPhoneNumber, Is.EqualTo("0988123456")); // AC4: Authenticated user sees phone
-        Assert.That(room.UnavailableMessage, Is.Null);
-        Assert.That(room.SimilarRooms, Is.Empty);
+        Assert.That(room.Landlord.PhoneNumber, Is.EqualTo("0988123456"));
+        Assert.That(room.Landlord.ZaloUrl, Does.Contain("0988123456"));
     }
 
     [Test]
@@ -88,12 +91,14 @@ public class RoomDetailEndpointIntegrationTests
         var response = await _controller.GetRoomById("room-ictu-001", CancellationToken.None);
 
         // Assert
-        Assert.That(response.Result, Is.InstanceOf<OkObjectResult>());
-        var okResult = (OkObjectResult)response.Result!;
+        Assert.That(response, Is.InstanceOf<OkObjectResult>());
+        var okResult = (OkObjectResult)response;
         var room = (RoomDetailDto)okResult.Value!;
 
         Assert.That(room.Id, Is.EqualTo("room-ictu-001"));
         Assert.That(room.LandlordPhoneNumber, Is.Null); // AC4: Anonymous user receives null phone
+        Assert.That(room.Landlord.PhoneNumber, Is.Null);
+        Assert.That(room.Landlord.ZaloUrl, Is.Null);
     }
 
     [TestCase("")]
@@ -104,15 +109,16 @@ public class RoomDetailEndpointIntegrationTests
         var response = await _controller.GetRoomById(invalidId, CancellationToken.None);
 
         // Assert
-        Assert.That(response.Result, Is.InstanceOf<BadRequestObjectResult>());
-        var badRequest = (BadRequestObjectResult)response.Result!;
-        Assert.That(badRequest.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
+        Assert.That(response, Is.InstanceOf<BadRequestObjectResult>());
+        var badRequest = (BadRequestObjectResult)response;
+        var problem = (ProblemDetails)badRequest.Value!;
+        Assert.That(problem.Extensions["errorCode"]?.ToString(), Is.EqualTo("VALIDATION_FAILED"));
     }
 
     [Test]
     public async Task GetRoomById_PendingVerificationRoom_Returns404NotFound()
     {
-        // Arrange (M4: Unverified rooms must not be disclosed)
+        // Arrange (BR-LST-04a: Unverified rooms must not be disclosed)
         var pendingRoom = new Room(
             id: "room-pending-01",
             title: "Phòng chờ duyệt",
@@ -120,7 +126,7 @@ public class RoomDetailEndpointIntegrationTests
             monthlyRent: 1500000m,
             depositAmount: 500000m,
             areaSquareMeters: 20.0,
-            roomType: "Khép kín",
+            roomType: "BoardingRoom",
             status: ListingStatus.PendingReview
         );
         _roomRepository.AddOrUpdate(pendingRoom);
@@ -129,61 +135,52 @@ public class RoomDetailEndpointIntegrationTests
         var response = await _controller.GetRoomById("room-pending-01", CancellationToken.None);
 
         // Assert
-        Assert.That(response.Result, Is.InstanceOf<NotFoundObjectResult>());
+        Assert.That(response, Is.InstanceOf<NotFoundObjectResult>());
+        var notFound = (NotFoundObjectResult)response;
+        var problem = (ProblemDetails)notFound.Value!;
+        Assert.That(problem.Extensions["errorCode"]?.ToString(), Is.EqualTo("ROOM_NOT_FOUND"));
     }
 
     [Test]
-    public async Task GetRoomById_UnavailableRoom_ReturnsMessageAndSuggestedSimilarRooms()
+    public async Task GetRoomById_UnavailableRoom_ReturnsUnpublishedDetails()
     {
-        // Arrange (AC3: Unavailable room suggests similar available rooms)
+        // Arrange (BR-LST-04a: Unpublished room is viewable by public)
         SetUserAuthenticated("student-002");
 
         // Act
         var response = await _controller.GetRoomById("room-ictu-003", CancellationToken.None);
 
         // Assert
-        Assert.That(response.Result, Is.InstanceOf<OkObjectResult>());
-        var okResult = (OkObjectResult)response.Result!;
+        Assert.That(response, Is.InstanceOf<OkObjectResult>());
+        var okResult = (OkObjectResult)response;
         var room = (RoomDetailDto)okResult.Value!;
 
         Assert.That(room.Id, Is.EqualTo("room-ictu-003"));
-        Assert.That(room.Status, Is.EqualTo("Unavailable"));
+        Assert.That(room.Status, Is.EqualTo(ListingStatus.Unpublished));
         Assert.That(room.IsAvailable, Is.False);
-        Assert.That(room.UnavailableMessage, Is.Not.Null.And.Not.Empty);
-        Assert.That(room.SimilarRooms, Has.Count.GreaterThan(0));
-
-        // Similar rooms must all be available
-        foreach (var similar in room.SimilarRooms)
-        {
-            Assert.That(similar.Id, Is.Not.EqualTo("room-ictu-003"));
-            Assert.That(similar.Title, Is.Not.Empty);
-            Assert.That(similar.MonthlyRent, Is.GreaterThan(0));
-        }
     }
 
     [Test]
-    public async Task GetRoomById_RentedRoom_ReturnsMessageAndSuggestedSimilarRooms()
+    public async Task GetRoomById_RentedRoom_ReturnsRentedDetails()
     {
-        // Arrange (AC3: Rented room suggests similar available rooms)
+        // Arrange (BR-LST-04a: Rented room is viewable by public)
         SetUserAnonymous();
 
         // Act
         var response = await _controller.GetRoomById("room-ictu-004", CancellationToken.None);
 
         // Assert
-        Assert.That(response.Result, Is.InstanceOf<OkObjectResult>());
-        var okResult = (OkObjectResult)response.Result!;
+        Assert.That(response, Is.InstanceOf<OkObjectResult>());
+        var okResult = (OkObjectResult)response;
         var room = (RoomDetailDto)okResult.Value!;
 
         Assert.That(room.Id, Is.EqualTo("room-ictu-004"));
-        Assert.That(room.Status, Is.EqualTo("Rented"));
+        Assert.That(room.Status, Is.EqualTo(ListingStatus.Rented));
         Assert.That(room.IsAvailable, Is.False);
-        Assert.That(room.UnavailableMessage, Is.Not.Null.And.Not.Empty);
-        Assert.That(room.SimilarRooms, Has.Count.GreaterThan(0));
     }
 
     [Test]
-    public async Task GetRoomById_NonExistentRoom_Returns404NotFound()
+    public async Task GetRoomById_NonExistentRoom_Returns404NotFoundWithErrorCode()
     {
         // Arrange
         SetUserAnonymous();
@@ -192,8 +189,65 @@ public class RoomDetailEndpointIntegrationTests
         var response = await _controller.GetRoomById("room-not-found-xyz", CancellationToken.None);
 
         // Assert
-        Assert.That(response.Result, Is.InstanceOf<NotFoundObjectResult>());
-        var notFound = (NotFoundObjectResult)response.Result!;
+        Assert.That(response, Is.InstanceOf<NotFoundObjectResult>());
+        var notFound = (NotFoundObjectResult)response;
         Assert.That(notFound.StatusCode, Is.EqualTo(StatusCodes.Status404NotFound));
+        var problem = (ProblemDetails)notFound.Value!;
+        Assert.That(problem.Extensions["errorCode"]?.ToString(), Is.EqualTo("ROOM_NOT_FOUND"));
+    }
+
+    [Test]
+    public async Task GetSimilarRooms_ReturnsSimilarAvailableRoomsPer_BR_LST_10()
+    {
+        // Arrange
+        SetUserAnonymous();
+
+        // Act
+        var response = await _controller.GetSimilarRooms("room-ictu-003", CancellationToken.None);
+
+        // Assert
+        Assert.That(response, Is.InstanceOf<OkObjectResult>());
+        var okResult = (OkObjectResult)response;
+        var similar = (IReadOnlyList<RoomCardDto>)okResult.Value!;
+
+        Assert.That(similar, Is.Not.Null);
+        Assert.That(similar, Has.Count.LessThanOrEqualTo(5));
+
+        foreach (var card in similar)
+        {
+            Assert.That(card.Id, Is.Not.EqualTo("room-ictu-003"), "Must exclude target room itself");
+            Assert.That(card.IsAvailable, Is.True, "Must only return Available rooms");
+        }
+    }
+
+    [Test]
+    public async Task GetSimilarRooms_TargetRoomNotFound_Returns404NotFound()
+    {
+        var response = await _controller.GetSimilarRooms("room-non-existing", CancellationToken.None);
+
+        Assert.That(response, Is.InstanceOf<NotFoundObjectResult>());
+        var notFound = (NotFoundObjectResult)response;
+        var problem = (ProblemDetails)notFound.Value!;
+        Assert.That(problem.Extensions["errorCode"]?.ToString(), Is.EqualTo("ROOM_NOT_FOUND"));
+    }
+
+    [Test]
+    public async Task GetRoomById_WithMatchingIfNoneMatch_Returns304NotModified()
+    {
+        // Arrange
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Headers["If-None-Match"] = "\"room-ictu-001\"";
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = httpContext
+        };
+
+        // Act
+        var response = await _controller.GetRoomById("room-ictu-001", CancellationToken.None);
+
+        // Assert
+        Assert.That(response, Is.InstanceOf<StatusCodeResult>());
+        var statusCodeResult = (StatusCodeResult)response;
+        Assert.That(statusCodeResult.StatusCode, Is.EqualTo(StatusCodes.Status304NotModified));
     }
 }
