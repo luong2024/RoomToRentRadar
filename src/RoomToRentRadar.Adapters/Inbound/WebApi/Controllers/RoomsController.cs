@@ -31,7 +31,10 @@ public class RoomsController : ControllerBase
     {
         try
         {
-            var roomDetails = await _getRoomDetailsUseCase.ExecuteAsync(id, cancellationToken);
+            // TODO: Thay thế mock isUserVerified bằng xác thực thực tế (ví dụ: User.Identity?.IsAuthenticated == true hoặc claim xác thực) khi hoàn tất cấu hình Auth
+            var isUserVerified = User.Identity?.IsAuthenticated ?? false;
+
+            var roomDetails = await _getRoomDetailsUseCase.ExecuteAsync(id, isUserVerified, cancellationToken);
             return Ok(roomDetails);
         }
         catch (NotFoundException ex)

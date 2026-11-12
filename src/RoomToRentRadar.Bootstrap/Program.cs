@@ -3,8 +3,7 @@ using RoomToRentRadar.Bootstrap.DependencyInjection;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services
-    .AddApplicationUseCases()
-    .AddOutboundAdapters(builder.Configuration)
+    .AddRoomDetailServices(builder.Configuration, builder.Environment)
     .AddInboundAdapters();
 
 var app = builder.Build();

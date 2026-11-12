@@ -18,4 +18,10 @@ public class Room
     public string Address { get; set; } = string.Empty;
     public bool IsVerified { get; set; }
     public RoomStatus Status { get; set; } = RoomStatus.Available;
+    public decimal Deposit { get; set; }
+    public string RoomType { get; set; } = string.Empty;
+    public List<string> Amenities { get; set; } = [];
+    public List<string> HouseRules { get; set; } = [];
+    public string LandlordPhone { get; set; } = string.Empty;
+    public DateTime LastUpdatedDate { get; set; } = DateTime.UtcNow;
 }

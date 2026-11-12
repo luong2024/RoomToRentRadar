@@ -1,4 +1,8 @@
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using RoomToRentRadar.Adapters.Inbound.WebApi.Controllers;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Repositories;
 using RoomToRentRadar.Application.Ports.Inbound;
@@ -18,7 +22,7 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddOutboundAdapters(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddOutboundAdapters(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment? environment = null)
     {
         var endpoint = configuration["CosmosDb:AccountEndpoint"];
         var authKey = configuration["CosmosDb:AuthKey"];
@@ -27,14 +31,29 @@ public static class ServiceCollectionExtensions
 
         if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(authKey))
         {
-            var cosmosClient = new CosmosClient(endpoint, authKey, new CosmosClientOptions
+            CosmosClientOptions clientOptions;
+            if (environment != null && environment.IsDevelopment())
             {
-                HttpClientFactory = () => new HttpClient(new HttpClientHandler
+                // bypass TLS
+                clientOptions = new CosmosClientOptions
                 {
-                    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-                }),
-                ConnectionMode = ConnectionMode.Gateway
-            });
+                    HttpClientFactory = () => new HttpClient(new HttpClientHandler
+                    {
+                        ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                    }),
+                    ConnectionMode = ConnectionMode.Gateway
+                };
+            }
+            else
+            {
+                // normal validation
+                clientOptions = new CosmosClientOptions
+                {
+                    ConnectionMode = ConnectionMode.Gateway
+                };
+            }
+
+            var cosmosClient = new CosmosClient(endpoint, authKey, clientOptions);
             var container = cosmosClient.GetContainer(databaseName, containerName);
 
             services.AddSingleton(cosmosClient);

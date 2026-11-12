@@ -2,6 +2,7 @@ using RoomToRentRadar.Application.DTOs;
 using RoomToRentRadar.Application.Exceptions;
 using RoomToRentRadar.Application.Ports.Inbound;
 using RoomToRentRadar.Application.Ports.Outbound;
+using RoomToRentRadar.Domain.Entities;
 
 namespace RoomToRentRadar.Application.UseCases;
 
@@ -14,7 +15,7 @@ public class GetRoomDetailsUseCase : IGetRoomDetailsUseCase
         _roomRepository = roomRepository ?? throw new ArgumentNullException(nameof(roomRepository));
     }
 
-    public async Task<RoomDetailsDto> ExecuteAsync(string roomId, CancellationToken cancellationToken = default)
+    public async Task<RoomDetailsDto> ExecuteAsync(string roomId, bool isUserVerified, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(roomId))
         {
@@ -27,18 +28,36 @@ public class GetRoomDetailsUseCase : IGetRoomDetailsUseCase
             throw new NotFoundException($"Không tìm thấy phòng với ID '{roomId}'.");
         }
 
-        return new RoomDetailsDto
+        var isAvailable = room.Status == RoomStatus.Available;
+
+        var dto = new RoomDetailsDto
         {
             Id = room.Id,
             Title = room.Title,
             Description = room.Description,
             Price = room.Price,
             FormattedPrice = $"{room.Price:N0} VNĐ",
+            Deposit = room.Deposit,
+            FormattedDeposit = $"{room.Deposit:N0} VNĐ",
             Area = room.Area,
             FormattedArea = $"{room.Area} m²",
-            Address = room.Address,
+            Address = isAvailable ? room.Address : string.Empty,
+            RoomType = room.RoomType,
+            Amenities = room.Amenities ?? [],
+            HouseRules = room.HouseRules ?? [],
+            LandlordPhone = isAvailable ? room.LandlordPhone : string.Empty,
+            LastUpdatedDate = room.LastUpdatedDate,
             IsVerified = room.IsVerified,
-            Status = room.Status.ToString()
+            Status = room.Status.ToString(),
+            IsAvailable = isAvailable,
+            UnavailableMessage = isAvailable ? null : "Phòng này hiện không khả dụng."
         };
+
+        if (isAvailable && !isUserVerified)
+        {
+            dto.LandlordPhone = "*** (Yêu cầu xác thực để xem)";
+        }
+
+        return dto;
     }
 }
