@@ -34,6 +34,25 @@ namespace RoomToRentRadar.Services
         Task<PhotoOperationResult> ReorderPhotosAsync(int roomId, IReadOnlyList<string> orderedKeys);
     }
 
+    /// <summary>
+    /// Platform image codec used by PhotoGalleryService. Infrastructure is pure .NET (no MAUI), so decoding,
+    /// JPEG re-encoding and thumbnail resizing are implemented in the MAUI app (MauiPhotoImageProcessor)
+    /// and injected here. Unit tests can supply a fake.
+    /// </summary>
+    public interface IPhotoImageProcessor
+    {
+        /// <summary>
+        /// Decodes <paramref name="imageBytes"/> (already checked as JPEG/PNG/WebP by signature),
+        /// re-encodes it as JPEG (which drops EXIF/GPS metadata) and builds a thumbnail no wider than
+        /// <paramref name="thumbnailMaxWidth"/>. Returns null if the bytes cannot be decoded as an image.
+        /// </summary>
+        Task<ProcessedPhoto?> ProcessAsync(
+            byte[] imageBytes, int thumbnailMaxWidth, float jpegQuality, CancellationToken cancellationToken = default);
+    }
+
+    /// <summary>Output of <see cref="IPhotoImageProcessor"/>: pixel size plus the two JPEG files to store.</summary>
+    public sealed record ProcessedPhoto(int Width, int Height, byte[] OriginalJpeg, byte[] ThumbnailJpeg);
+
     /// <summary>Limits agreed for US04 (AC1 requires at least 8 photos per listing).</summary>
     public static class PhotoGalleryLimits
     {
