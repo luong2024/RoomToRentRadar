@@ -36,19 +36,35 @@ public class HttpAuthAdapter : IAuthenticationPort
             var response = await _httpClient.PostAsJsonAsync("api/v1/auth/register", payload, cancellationToken);
             if (response.IsSuccessStatusCode)
             {
-                var userResponse = await response.Content.ReadFromJsonAsync<BackendUserDto>(JsonOptions, cancellationToken);
+                var userResponse = await response.Content.ReadFromJsonAsync<BackendRegisterResponseDto>(JsonOptions, cancellationToken);
+                if (userResponse is null ||
+                    userResponse.UserId == Guid.Empty ||
+                    string.IsNullOrWhiteSpace(userResponse.Email) ||
+                    string.IsNullOrWhiteSpace(userResponse.Role))
+                {
+                    return AuthResult.Failed("Invalid registration response from authentication service.");
+                }
+
                 var user = new AuthUser(
-                    userResponse?.Id ?? Guid.NewGuid(),
-                    userResponse?.Email ?? request.Email,
-                    userResponse?.Role ?? request.Role,
-                    userResponse?.Provider ?? "LOCAL",
-                    userResponse?.IsActive ?? true);
+                    userResponse.UserId,
+                    userResponse.Email,
+                    userResponse.Role,
+                    "LOCAL",
+                    true);
 
                 return AuthResult.Success(string.Empty, string.Empty, user);
             }
 
-            var errorMessage = await ExtractErrorMessageAsync(response, cancellationToken);
+            var (errorMessage, _) = await ParseErrorResponseAsync(response, cancellationToken);
             return AuthResult.Failed(errorMessage);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (OperationCanceledException)
+        {
+            return AuthResult.Failed("Connection timed out. Please check that the backend server is running and reachable.");
         }
         catch (HttpRequestException)
         {
@@ -73,24 +89,20 @@ public class HttpAuthAdapter : IAuthenticationPort
             var response = await _httpClient.PostAsJsonAsync("api/v1/auth/login", payload, cancellationToken);
             if (response.IsSuccessStatusCode)
             {
-                var authDto = await response.Content.ReadFromJsonAsync<BackendAuthResponseDto>(JsonOptions, cancellationToken);
-                if (authDto == null)
-                {
-                    return AuthResult.Failed("Empty response from authentication service.");
-                }
-
-                var user = new AuthUser(
-                    authDto.User?.Id ?? Guid.NewGuid(),
-                    authDto.User?.Email ?? request.Email,
-                    authDto.User?.Role ?? string.Empty,
-                    authDto.User?.Provider ?? "LOCAL",
-                    authDto.User?.IsActive ?? true);
-
-                return AuthResult.Success(authDto.AccessToken, authDto.RefreshToken, user);
+                var authDto = await response.Content.ReadFromJsonAsync<BackendAuthSessionDto>(JsonOptions, cancellationToken);
+                return BuildSessionAuthResult(authDto, "LOCAL");
             }
 
-            var errorMessage = await ExtractErrorMessageAsync(response, cancellationToken);
+            var (errorMessage, _) = await ParseErrorResponseAsync(response, cancellationToken);
             return AuthResult.Failed(errorMessage);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (OperationCanceledException)
+        {
+            return AuthResult.Failed("Connection timed out. Please check that the backend server is running and reachable.");
         }
         catch (HttpRequestException)
         {
@@ -109,36 +121,31 @@ public class HttpAuthAdapter : IAuthenticationPort
             var payload = new
             {
                 idToken = request.IdToken,
-                role = request.Role ?? "STUDENT"
+                role = request.Role
             };
 
             var response = await _httpClient.PostAsJsonAsync("api/v1/auth/google", payload, cancellationToken);
             if (response.IsSuccessStatusCode)
             {
-                var authDto = await response.Content.ReadFromJsonAsync<BackendAuthResponseDto>(JsonOptions, cancellationToken);
-                if (authDto == null)
-                {
-                    return AuthResult.Failed("Empty response from authentication service.");
-                }
-
-                var user = new AuthUser(
-                    authDto.User?.Id ?? Guid.NewGuid(),
-                    authDto.User?.Email ?? string.Empty,
-                    authDto.User?.Role ?? (request.Role ?? "STUDENT"),
-                    authDto.User?.Provider ?? "GOOGLE",
-                    authDto.User?.IsActive ?? true);
-
-                return AuthResult.Success(authDto.AccessToken, authDto.RefreshToken, user);
+                var authDto = await response.Content.ReadFromJsonAsync<BackendAuthSessionDto>(JsonOptions, cancellationToken);
+                return BuildSessionAuthResult(authDto, "GOOGLE");
             }
 
-            var errorDetail = await ExtractErrorMessageAsync(response, cancellationToken);
-            if (response.StatusCode == HttpStatusCode.BadRequest &&
-                errorDetail.Contains("Role must be either STUDENT or LANDLORD", StringComparison.OrdinalIgnoreCase))
+            var (errorDetail, hasRoleValidationError) = await ParseErrorResponseAsync(response, cancellationToken);
+            if (response.StatusCode == HttpStatusCode.BadRequest && hasRoleValidationError)
             {
                 return AuthResult.NeedRoleSelection(request.IdToken);
             }
 
             return AuthResult.Failed(errorDetail);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (OperationCanceledException)
+        {
+            return AuthResult.Failed("Connection timed out. Please check that the backend server is running and reachable.");
         }
         catch (HttpRequestException)
         {
@@ -150,53 +157,89 @@ public class HttpAuthAdapter : IAuthenticationPort
         }
     }
 
-    private static async Task<string> ExtractErrorMessageAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    private static AuthResult BuildSessionAuthResult(BackendAuthSessionDto? authDto, string provider)
     {
+        if (authDto is null ||
+            authDto.UserId == Guid.Empty ||
+            string.IsNullOrWhiteSpace(authDto.Email) ||
+            string.IsNullOrWhiteSpace(authDto.Role) ||
+            string.IsNullOrWhiteSpace(authDto.AccessToken))
+        {
+            return AuthResult.Failed("Invalid authentication response from authentication service.");
+        }
+
+        var user = new AuthUser(
+            authDto.UserId,
+            authDto.Email,
+            authDto.Role,
+            provider,
+            true);
+
+        return AuthResult.Success(authDto.AccessToken, authDto.RefreshToken, user);
+    }
+
+    private static async Task<(string Message, bool HasRoleValidationError)> ParseErrorResponseAsync(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
+    {
+        var fallbackMessage = $"Authentication request failed with status code {(int)response.StatusCode}.";
+
         try
         {
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
             if (string.IsNullOrWhiteSpace(content))
             {
-                return $"Authentication request failed with status code {(int)response.StatusCode}.";
+                return (fallbackMessage, false);
             }
 
             using var doc = JsonDocument.Parse(content);
-            if (doc.RootElement.TryGetProperty("detail", out var detailProp) && !string.IsNullOrWhiteSpace(detailProp.GetString()))
+            var root = doc.RootElement;
+
+            var hasRoleError = root.TryGetProperty("errors", out var errorsProp) &&
+                               errorsProp.ValueKind == JsonValueKind.Object &&
+                               errorsProp.EnumerateObject().Any(p =>
+                                   string.Equals(p.Name, "role", StringComparison.OrdinalIgnoreCase));
+
+            if (root.TryGetProperty("detail", out var detailProp) && !string.IsNullOrWhiteSpace(detailProp.GetString()))
             {
-                return detailProp.GetString()!;
-            }
-            if (doc.RootElement.TryGetProperty("title", out var titleProp) && !string.IsNullOrWhiteSpace(titleProp.GetString()))
-            {
-                return titleProp.GetString()!;
-            }
-            if (doc.RootElement.TryGetProperty("message", out var messageProp) && !string.IsNullOrWhiteSpace(messageProp.GetString()))
-            {
-                return messageProp.GetString()!;
+                return (detailProp.GetString()!, hasRoleError);
             }
 
-            return content;
+            if (root.TryGetProperty("title", out var titleProp) && !string.IsNullOrWhiteSpace(titleProp.GetString()))
+            {
+                return (titleProp.GetString()!, hasRoleError);
+            }
+
+            if (root.TryGetProperty("message", out var messageProp) && !string.IsNullOrWhiteSpace(messageProp.GetString()))
+            {
+                return (messageProp.GetString()!, hasRoleError);
+            }
+
+            return (content, hasRoleError);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch
         {
-            return $"Authentication request failed with status code {(int)response.StatusCode}.";
+            return (fallbackMessage, false);
         }
     }
 
-    private sealed class BackendAuthResponseDto
+    private sealed class BackendAuthSessionDto
     {
-        public string AccessToken { get; set; } = string.Empty;
-        public string RefreshToken { get; set; } = string.Empty;
-        public string TokenType { get; set; } = "Bearer";
-        public int ExpiresIn { get; set; }
-        public BackendUserDto? User { get; set; }
-    }
-
-    private sealed class BackendUserDto
-    {
-        public Guid Id { get; set; }
+        public Guid UserId { get; set; }
         public string Email { get; set; } = string.Empty;
         public string Role { get; set; } = string.Empty;
-        public string Provider { get; set; } = string.Empty;
-        public bool IsActive { get; set; }
+        public string AccessToken { get; set; } = string.Empty;
+        public string RefreshToken { get; set; } = string.Empty;
+    }
+
+    private sealed class BackendRegisterResponseDto
+    {
+        public Guid UserId { get; set; }
+        public string Email { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
     }
 }
