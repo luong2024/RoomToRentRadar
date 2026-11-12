@@ -24,6 +24,7 @@ public class CosmosRoomRepositoryTests
         var clientOptions = new CosmosClientOptions
         {
             ConnectionMode = ConnectionMode.Gateway,
+            RequestTimeout = TimeSpan.FromSeconds(5),
             HttpClientFactory = () =>
             {
                 var handler = new HttpClientHandler
@@ -40,13 +41,24 @@ public class CosmosRoomRepositoryTests
 
         _client = new CosmosClient(Endpoint, AuthKey, clientOptions);
 
-        var dbResponse = await _client.CreateDatabaseIfNotExistsAsync(DatabaseName);
-        _database = dbResponse.Database;
+        try
+        {
+            var dbResponse = await _client.CreateDatabaseIfNotExistsAsync(DatabaseName);
+            _database = dbResponse.Database;
 
-        var containerResponse = await _database.CreateContainerIfNotExistsAsync(ContainerName, "/id");
-        _container = containerResponse.Container;
+            var containerResponse = await _database.CreateContainerIfNotExistsAsync(ContainerName, "/id");
+            _container = containerResponse.Container;
 
-        _repository = new CosmosRoomRepository(_container);
+            _repository = new CosmosRoomRepository(_container);
+        }
+        catch (Exception ex) when (ex is HttpRequestException ||
+                                  ex is System.Net.Sockets.SocketException ||
+                                  ex.InnerException is HttpRequestException ||
+                                  ex.InnerException is System.Net.Sockets.SocketException ||
+                                  ex.Message.Contains("Connection refused", StringComparison.OrdinalIgnoreCase))
+        {
+            Assert.Ignore($"Cosmos DB Emulator is not reachable at {Endpoint}. Skipping live integration tests on environments without running emulator. Details: {ex.Message}");
+        }
     }
 
     [OneTimeTearDown]
