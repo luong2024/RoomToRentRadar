@@ -29,6 +29,7 @@ public static class RoomMapper
     public static RoomDetailDto ToDetailDto(
         Room room,
         string? landlordPhoneNumber,
+        double? distanceKm = null,
         string? unavailableMessage = null,
         IReadOnlyList<RoomCardDto>? similarRooms = null)
     {
@@ -125,7 +126,7 @@ public static class RoomMapper
             AreaM2: room.AreaM2,
             Address: address,
             Location: location,
-            DistanceKm: room.DistanceToCampusKm,
+            DistanceKm: distanceKm ?? room.DistanceToCampusKm,
             Utilities: utilities,
             Amenities: amenities,
             Safety: safety,

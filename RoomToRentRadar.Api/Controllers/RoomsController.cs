@@ -48,7 +48,7 @@ public sealed class RoomsController : ControllerBase
             return BadRequest(invalidProblem);
         }
 
-        var result = await _getRoomDetailUseCase.ExecuteAsync(id, ct);
+        var result = await _getRoomDetailUseCase.ExecuteAsync(id, ct, campusId);
         if (result == null)
         {
             var notFoundProblem = new ProblemDetails

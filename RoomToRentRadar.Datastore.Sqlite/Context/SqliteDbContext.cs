@@ -134,7 +134,10 @@ public sealed class SqliteDbContext : IDisposable
                         LandlordId TEXT NOT NULL,
                         IsAvailable INTEGER NOT NULL,
                         IsVerified INTEGER NOT NULL,
-                        CreatedAtUtc TEXT NOT NULL
+                        CreatedAtUtc TEXT NOT NULL,
+                        Status TEXT NOT NULL DEFAULT 'Available',
+                        LandlordName TEXT NULL,
+                        LandlordPhoneNumber TEXT NULL
                     );
 
                     CREATE INDEX IF NOT EXISTS IX_Rooms_Price ON Rooms(Price);
@@ -178,17 +181,17 @@ public sealed class SqliteDbContext : IDisposable
             insertCmd.CommandText = """
                 INSERT OR IGNORE INTO Rooms (
                     Id, Title, Description, Price, Area, Address, Latitude, Longitude,
-                    LandlordId, IsAvailable, IsVerified, CreatedAtUtc
+                    LandlordId, IsAvailable, IsVerified, CreatedAtUtc, Status
                 ) VALUES (
                     @id, @title, @description, @price, @area, @address, @latitude, @longitude,
-                    @landlordId, @isAvailable, @isVerified, @createdAtUtc
+                    @landlordId, @isAvailable, @isVerified, @createdAtUtc, @status
                 );
                 """;
 
             var parameters = new[]
             {
                 "@id", "@title", "@description", "@price", "@area", "@address", "@latitude", "@longitude",
-                "@landlordId", "@isAvailable", "@isVerified", "@createdAtUtc"
+                "@landlordId", "@isAvailable", "@isVerified", "@createdAtUtc", "@status"
             }.Select(name =>
             {
                 var parameter = insertCmd.CreateParameter();
@@ -211,6 +214,7 @@ public sealed class SqliteDbContext : IDisposable
                 parameters[9].Value = room.IsAvailable ? 1 : 0;
                 parameters[10].Value = room.IsVerified ? 1 : 0;
                 parameters[11].Value = room.CreatedAtUtc.ToString("O", System.Globalization.CultureInfo.InvariantCulture);
+                parameters[12].Value = room.Status.ToString();
                 insertCmd.ExecuteNonQuery();
             }
         }

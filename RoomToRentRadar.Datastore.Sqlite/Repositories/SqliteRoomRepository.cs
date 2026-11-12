@@ -27,7 +27,7 @@ public sealed class SqliteRoomRepository : IRoomRepository, IRoomSearchReadModel
             await using var cmd = conn.CreateCommand();
             cmd.CommandText = """
                 SELECT Id, Title, Description, Price, Area, Address, Latitude, Longitude,
-                       LandlordId, IsAvailable, IsVerified, CreatedAtUtc
+                       LandlordId, IsAvailable, IsVerified, CreatedAtUtc, Status, LandlordName, LandlordPhoneNumber
                 FROM Rooms
                 ORDER BY CreatedAtUtc ASC, Id ASC;
                 """;
@@ -55,7 +55,7 @@ public sealed class SqliteRoomRepository : IRoomRepository, IRoomSearchReadModel
             await using var cmd = conn.CreateCommand();
             cmd.CommandText = """
                 SELECT Id, Title, Description, Price, Area, Address, Latitude, Longitude,
-                       LandlordId, IsAvailable, IsVerified, CreatedAtUtc
+                       LandlordId, IsAvailable, IsVerified, CreatedAtUtc, Status, LandlordName, LandlordPhoneNumber
                 FROM Rooms
                 WHERE Id = @id
                 LIMIT 1;
@@ -81,10 +81,10 @@ public sealed class SqliteRoomRepository : IRoomRepository, IRoomSearchReadModel
             cmd.CommandText = """
                 INSERT INTO Rooms (
                     Id, Title, Description, Price, Area, Address, Latitude, Longitude,
-                    LandlordId, IsAvailable, IsVerified, CreatedAtUtc
+                    LandlordId, IsAvailable, IsVerified, CreatedAtUtc, Status, LandlordName, LandlordPhoneNumber
                 ) VALUES (
                     @id, @title, @description, @price, @area, @address, @latitude, @longitude,
-                    @landlordId, @isAvailable, @isVerified, @createdAtUtc
+                    @landlordId, @isAvailable, @isVerified, @createdAtUtc, @status, @landlordName, @landlordPhoneNumber
                 );
                 """;
             cmd.Parameters.AddWithValue("@id", room.Id);
@@ -99,6 +99,9 @@ public sealed class SqliteRoomRepository : IRoomRepository, IRoomSearchReadModel
             cmd.Parameters.AddWithValue("@isAvailable", room.IsAvailable ? 1 : 0);
             cmd.Parameters.AddWithValue("@isVerified", room.IsVerified ? 1 : 0);
             cmd.Parameters.AddWithValue("@createdAtUtc", room.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture));
+            cmd.Parameters.AddWithValue("@status", room.Status.ToString());
+            cmd.Parameters.AddWithValue("@landlordName", (object?)room.LandlordName ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@landlordPhoneNumber", (object?)room.LandlordPhoneNumber ?? DBNull.Value);
 
             await cmd.ExecuteNonQueryAsync(ct);
         }
@@ -149,19 +152,51 @@ public sealed class SqliteRoomRepository : IRoomRepository, IRoomSearchReadModel
             .ToList();
     }
 
-    private static Room ReadRoom(SqliteDataReader reader) => Room.Reconstitute(
-        id: reader.GetString(0),
-        title: reader.GetString(1),
-        description: reader.GetString(2),
-        price: Convert.ToDecimal(reader.GetValue(3), CultureInfo.InvariantCulture),
-        area: Convert.ToDouble(reader.GetValue(4), CultureInfo.InvariantCulture),
-        address: reader.GetString(5),
-        latitude: Convert.ToDouble(reader.GetValue(6), CultureInfo.InvariantCulture),
-        longitude: Convert.ToDouble(reader.GetValue(7), CultureInfo.InvariantCulture),
-        landlordId: reader.GetString(8),
-        isAvailable: Convert.ToInt64(reader.GetValue(9), CultureInfo.InvariantCulture) != 0,
-        isVerified: Convert.ToInt64(reader.GetValue(10), CultureInfo.InvariantCulture) != 0,
-        createdAtUtc: ParseUtc(reader.GetString(11)));
+    private static Room ReadRoom(SqliteDataReader reader)
+    {
+        var id = reader.GetString(0);
+        var title = reader.GetString(1);
+        var description = reader.GetString(2);
+        var price = Convert.ToDecimal(reader.GetValue(3), CultureInfo.InvariantCulture);
+        var area = Convert.ToDouble(reader.GetValue(4), CultureInfo.InvariantCulture);
+        var address = reader.GetString(5);
+        var latitude = Convert.ToDouble(reader.GetValue(6), CultureInfo.InvariantCulture);
+        var longitude = Convert.ToDouble(reader.GetValue(7), CultureInfo.InvariantCulture);
+        var landlordId = reader.GetString(8);
+        var isAvailable = Convert.ToInt64(reader.GetValue(9), CultureInfo.InvariantCulture) != 0;
+        var isVerified = Convert.ToInt64(reader.GetValue(10), CultureInfo.InvariantCulture) != 0;
+        var createdAtUtc = ParseUtc(reader.GetString(11));
+        var statusStr = reader.FieldCount > 12 && !reader.IsDBNull(12) ? reader.GetString(12) : null;
+        var landlordName = reader.FieldCount > 13 && !reader.IsDBNull(13) ? reader.GetString(13) : null;
+        var landlordPhone = reader.FieldCount > 14 && !reader.IsDBNull(14) ? reader.GetString(14) : null;
+
+        var status = Enum.TryParse<ListingStatus>(statusStr, true, out var parsedStatus)
+            ? parsedStatus
+            : (isAvailable ? ListingStatus.Available : ListingStatus.Rented);
+
+        return new Room(
+            id: id,
+            title: title,
+            description: description,
+            monthlyRent: price,
+            depositAmount: 0m,
+            areaSquareMeters: area,
+            roomType: "BoardingRoom",
+            amenities: null,
+            fullAddress: address,
+            landlordName: landlordName,
+            landlordPhoneNumber: landlordPhone,
+            photoUrls: null,
+            panorama360Url: null,
+            houseRules: null,
+            status: status,
+            lastUpdatedAt: createdAtUtc,
+            isVerified: isVerified,
+            latitude: latitude,
+            longitude: longitude,
+            landlordId: landlordId
+        );
+    }
 
     private static DateTime ParseUtc(string iso8601) =>
         DateTime.Parse(iso8601, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
