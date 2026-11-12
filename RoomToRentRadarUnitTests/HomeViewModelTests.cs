@@ -67,8 +67,8 @@ public class HomeViewModelTests
         var first = CreateListing("First room");
         var second = CreateListing("Second room");
         var apiClient = new FakeApiClient(
-            CreatePage("cursor-2", first),
-            CreatePage(null, second));
+            CreatePage(2, false, "cursor-2", first),
+            CreatePage(2, false, null, second));
         var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
