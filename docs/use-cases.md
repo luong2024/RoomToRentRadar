@@ -1,5 +1,11 @@
 # Use Cases — RoomToRentRadar
 
+<!--
+CONTEXT NOTE (2026-11-12): every E* flow needs a test (AGENTS.md §6). §4 traceability matrix is machine-checked against
+openapi.yaml operationIds, BR-* and SCR-* ids — keep it complete when adding a story (US15 → UC-25, SCR-ACC-03).
+SCR-ONB-01 was retired on 2026-11-12 (no onboarding step; campus = ICTU by default, changed via SCR-ACC-02).
+-->
+
 | Field | Value |
 |---|---|
 | Status | Draft v1.0 — 2026-11-11 |

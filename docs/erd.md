@@ -1,5 +1,11 @@
 # Entity-Relationship Design (ERD) — RoomToRentRadar
 
+<!--
+CONTEXT NOTE (2026-11-12): tables that exist in code today = Users, UserRefreshTokens, AuditLogs (RoomToRentRadar.Datastore.Sqlite/Tables).
+All other tables and every column marked **new** are the target design, still to be migrated. Users gets 3 new columns:
+SelectedCampusId, PreferredLanguage, Version. Changing a table here is a contract change: ask the team first (AGENTS.md §8).
+-->
+
 | Field | Value |
 |---|---|
 | Status | Draft v1.0 — 2026-11-11 |

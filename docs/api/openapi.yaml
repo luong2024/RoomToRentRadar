@@ -1,3 +1,6 @@
+# CONTEXT NOTE (2026-11-12): implemented today = auth endpoints (AuthController) + getAuditLogs only.
+# Every other operation, and every field whose description says "PLANNED", is the target contract that code must follow.
+# Changing a shared DTO/operation needs team approval and must be done here in the same PR as the code (AGENTS.md §5, §8).
 openapi: 3.1.0
 info:
   title: RoomToRentRadar API

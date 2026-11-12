@@ -1,5 +1,10 @@
 # System Architecture — RoomToRentRadar
 
+<!--
+CONTEXT NOTE (2026-11-12): §3 describes the TARGET solution; §10 lists what exists today. Client.Adapters already exists
+(PR #22: Abstractions, Http, Session, Mocks); Caching/ and Realtime/ are still to be added. Localization design: §7.6.
+-->
+
 | Field | Value |
 |---|---|
 | Status | Draft v1.0 — 2026-11-11 |

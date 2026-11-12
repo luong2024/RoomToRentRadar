@@ -1,5 +1,22 @@
 # AGENTS.md — RoomToRentRadar (Group 2)
 
+<!--
+CONTEXT NOTE — read this first in a new session (last updated 2026-11-12).
+- Source of truth = docs/ in this repo. The PO plan "06. Project Plan - Group 2.xlsx" lives untracked at the repo root on the
+  team's machines and is NEVER committed; sheet "Sprint 1" lists US01–US13 with task IDs Txx.y and owners.
+- Scope = US01–US13 (PO) + team additions US14 (chat, 2026-11-11) and US15 (EN/VI language switch, 2026-11-12).
+  Tasks proposed by the team but not yet in the plan are marked "*": T07.3, T08.5, T08.6, T12.3, T13.4, T14.2, T15.1, T15.2.
+  They (and a "base tasks" split to reduce merge conflicts) wait for confirmation at the next report meeting.
+- Target UI = Claude Design canvas https://claude.ai/artifact/BaGFGEWwf3G4W9ewRd5B1i (link-shared; ask thinhlai06 if it does not open).
+  Frame title = "TASK (owner) · screen · US · SCR-id"; Play mode links the screens.
+- Code vs docs (develop2 @ ea65801): only US13 is implemented (User aggregate, AuthController, AuditLogsController,
+  Users/UserRefreshTokens/AuditLogs tables) + auth UI pages from PR #22 + Client.Adapters. PR #6 (T02.1 room detail API) was merged
+  and then reverted (ea65801) until its review findings are fixed. Everything marked "new"/"PLANNED" in erd.md/openapi.yaml is NOT in code yet.
+- Course scope (2026-11-12): no public server, no domain, no APK/store distribution; demo = laptop + emulator + team phones via
+  Dev Tunnels. External services and who sets them up: docs/business-analysis.md §10.
+- Commits: user's git identity only — never Co-Authored-By or "Generated with" lines (also in PR bodies).
+-->
+
 > Entry point for every AI agent and contributor. Rules marked **MUST** are mandatory.
 > If a rule, a doc and the code disagree — or something is unclear — **stop and ask the user. Never guess.**
 

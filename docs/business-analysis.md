@@ -1,10 +1,15 @@
 # Business Analysis — RoomToRentRadar
 
+<!--
+CONTEXT NOTE (2026-11-12): BR IDs are permanent — never renumber or reuse. New areas get a new prefix; BR-I18N was inserted
+as §7.2a so existing section numbers and links stay valid. §10 is the shared list of external services for the whole team.
+-->
+
 | Field | Value |
 |---|---|
 | Status | Draft v1.0 — 2026-11-11 |
 | Owner | Group 2 |
-| Scope | MVP (US01–US14) as defined in [prd.md](prd.md) |
+| Scope | MVP (US01–US15) as defined in [prd.md](prd.md) |
 
 > **For AI agents:** §7 *Business Rules Catalog* is the authoritative list of domain rules. Every rule has a stable ID (`BR-<AREA>-NN`). Code comments, tests and specs must reference these IDs (e.g. `// BR-LST-04`). Never invent a rule that is not here — add it to this file first (via PR) and reference it.
 
@@ -242,7 +247,7 @@ To-be: register as Landlord (phone required) → Admin approves the landlord →
 
 | # | Question | Owner | Default if unanswered |
 |---|---|---|---|
-| OQ-1 | Story points for US14 (chat) — not in the plan sheet. | Scrum Team | Estimate at next backlog refinement. |
+| OQ-1 | Story points for US14 (chat) and US15 (language switch) — not in the plan sheet. | Scrum Team | Estimate at next backlog refinement. |
 | OQ-2 | Verify the 7 non-ICTU campus coordinates (seed in [erd.md §4.1](erd.md#41-campuses-reference-seeded)) before the pilot. | Team | Seed as listed; fix the seed file if a pin is off. |
 
 Resolved decisions (2026-11-11):

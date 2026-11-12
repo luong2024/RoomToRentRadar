@@ -1,5 +1,11 @@
 # UI/UX Specification — RoomToRentRadar
 
+<!--
+CONTEXT NOTE (2026-11-12): the visual target for every SCR-* is the Claude Design canvas linked in AGENTS.md (frames named
+"TASK (owner) · screen · US · SCR-id"). The canvas draws screens in English; US15 requires every screen in EN and VI (row 7 shows the rules).
+Icons in the canvas are stroke placeholders — the app uses Fluent System Icons, never emoji. Colours come only from §3 tokens.
+-->
+
 | Field | Value |
 |---|---|
 | Status | Draft v1.0 — 2026-11-11 |

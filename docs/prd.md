@@ -1,5 +1,14 @@
 # Product Requirements Document (PRD) — RoomToRentRadar
 
+<!--
+CONTEXT NOTE (2026-11-12) — scope change log, newest last:
+- 2026-11-11: US14 in-app chat added by the team (PO stories stay US01–US13). Admin console = supporting capability, not a story.
+- 2026-11-12: US15 English/Vietnamese switch added; "Vietnamese UI" removed from §5.2 out-of-scope.
+- 2026-11-12: course scope — Android only, no store/APK distribution, no public hosting (NFR-09, ADR-013).
+- Story points for US14/US15 are not in the plan sheet yet (business-analysis.md OQ-1).
+- AC text of US01–US13 is copied from the plan sheet; never reword it — clarifications go below each story.
+-->
+
 | Field | Value |
 |---|---|
 | Product | RoomToRentRadar — Student Room Rental Radar |
