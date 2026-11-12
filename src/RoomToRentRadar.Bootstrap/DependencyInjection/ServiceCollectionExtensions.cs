@@ -1,4 +1,7 @@
 using RoomToRentRadar.Adapters.Inbound.WebApi.Controllers;
+using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb;
+using RoomToRentRadar.Application.Ports.Inbound;
+using RoomToRentRadar.Application.UseCases.RoomListings;
 
 namespace RoomToRentRadar.Bootstrap.DependencyInjection;
 
@@ -9,13 +12,14 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddApplicationUseCases(this IServiceCollection services)
     {
-        // Register Application use cases (Inbound Ports -> UseCase implementations) here.
+        services.AddScoped<IGetRoomListingsUseCase, GetRoomListingsUseCase>();
         return services;
     }
 
     public static IServiceCollection AddOutboundAdapters(this IServiceCollection services, IConfiguration configuration)
     {
-        // Register Outbound Adapters (Cosmos DB repositories, external services) here.
+        services.AddCachingAdapters();
+        services.AddCosmosDbPersistence(configuration);
         return services;
     }
 
