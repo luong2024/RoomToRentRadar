@@ -1,14 +1,14 @@
 using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.Shared.Listings;
-using RoomToRentRadar.Shared.Pagination;
 
 namespace RoomToRentRadar.Infrastructure.Api;
 
 public interface IApiClient
 {
-    Task<PagedResult<ListingSummaryDto>> GetListingsAsync(
+    Task<ListingSearchResultDto> GetListingsAsync(
         int limit,
         string? cursor = null,
+        ActiveListingFiltersDto? filters = null,
         CancellationToken cancellationToken = default);
 
     Task<ListingDetailFetchResult> GetListingDetailAsync(Guid id, CancellationToken cancellationToken = default);

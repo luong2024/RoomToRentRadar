@@ -569,9 +569,10 @@ public class RoomDetailViewModelTests
 
         public Exception? SimilarException { get; set; }
 
-        public Task<PagedResult<ListingSummaryDto>> GetListingsAsync(
+        public Task<ListingSearchResultDto> GetListingsAsync(
             int limit,
             string? cursor = null,
+            ActiveListingFiltersDto? filters = null,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The room detail screen does not load listing summaries.");
 
