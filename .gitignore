@@ -77,8 +77,4 @@ appsettings.*.local.json
 .DS_Store
 Thumbs.db
 
-implementation_plan.md
-*.zip
-.qoder/
-.superpowers/
 RoomToRentRadar.Api/uploads/
