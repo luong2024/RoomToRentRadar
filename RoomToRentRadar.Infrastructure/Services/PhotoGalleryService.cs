@@ -1,17 +1,16 @@
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Maui.Graphics.Platform;
+using RoomToRentRadar.Abstractions.Auth;
 using RoomToRentRadar.Data;
-using IImage = Microsoft.Maui.Graphics.IImage;
-using ImageFormat = Microsoft.Maui.Graphics.ImageFormat;
 
 namespace RoomToRentRadar.Services
 {
     /// <summary>
-    /// Implementation of IPhotoGalleryService for US04 / T04.1.
-    /// - Files are stored under {AppDataDirectory}/room-photos/{roomId}/{GUID}.jpg (+ {GUID}_thumb.jpg).
+    /// Implementation of IPhotoGalleryService for US04 / T04.1 (pure .NET, no MAUI dependency).
+    /// - Files are stored under {storageRoot}/room-photos/{roomId}/{GUID}.jpg (+ {GUID}_thumb.jpg).
+    ///   The MAUI app passes FileSystem.AppDataDirectory as storageRoot; tests pass a temp folder.
+    /// - Decoding / JPEG re-encoding / thumbnails are delegated to <see cref="IPhotoImageProcessor"/>.
     /// - The database only stores keys: PhotosJson (JSON array) and Panorama360Url, via RentalDatabaseService.
     /// - Seed values ("dotnet_bot.png", https URLs) are returned as-is; they have no separate thumbnail.
     /// </summary>
@@ -22,7 +21,8 @@ namespace RoomToRentRadar.Services
         private const string StoredExtension = ".jpg";
 
         private readonly RentalDatabaseService _database;
-        private readonly IServiceProvider _serviceProvider;
+        private readonly IAuthService _authService;
+        private readonly IPhotoImageProcessor _imageProcessor;
         private readonly ILogger<PhotoGalleryService> _logger;
         private readonly string _storageRoot;
 
@@ -30,18 +30,17 @@ namespace RoomToRentRadar.Services
         private readonly SemaphoreSlim _writeLock = new(1, 1);
 
         public PhotoGalleryService(
-            RentalDatabaseService database, IServiceProvider serviceProvider, ILogger<PhotoGalleryService> logger)
-            : this(database, serviceProvider, logger, FileSystem.AppDataDirectory)
-        {
-        }
-
-        /// <summary>Overload with an explicit storage root (useful for tests).</summary>
-        public PhotoGalleryService(
-            RentalDatabaseService database, IServiceProvider serviceProvider, ILogger<PhotoGalleryService> logger,
+            RentalDatabaseService database,
+            IAuthService authService,
+            IPhotoImageProcessor imageProcessor,
+            ILogger<PhotoGalleryService> logger,
             string storageRoot)
         {
+            ArgumentException.ThrowIfNullOrWhiteSpace(storageRoot);
+
             _database = database;
-            _serviceProvider = serviceProvider;
+            _authService = authService;
+            _imageProcessor = imageProcessor;
             _logger = logger;
             _storageRoot = Path.GetFullPath(storageRoot);
         }
@@ -95,8 +94,7 @@ namespace RoomToRentRadar.Services
             }
 
             // 2. Check the real content (magic bytes), not the file extension.
-            var format = DetectImageFormat(bytes);
-            if (format is null)
+            if (!IsSupportedImageSignature(bytes))
             {
                 _logger.LogInformation("Rejected upload {FileName}: not JPEG/PNG/WebP content.", Path.GetFileName(fileName));
                 return PhotoOperationResult.Failure(PhotoErrorCode.UnsupportedType, "Chỉ hỗ trợ ảnh JPG, PNG hoặc WebP.");
@@ -118,86 +116,73 @@ namespace RoomToRentRadar.Services
                         $"Mỗi phòng chỉ được tối đa {PhotoGalleryLimits.MaxPhotosPerRoom} ảnh.");
                 }
 
-                // 4. Decode for real; a renamed or corrupted file fails here.
-                IImage? image;
+                // 4. Decode + re-encode (strips EXIF/GPS) + thumbnail on the platform codec.
+                //    A renamed or corrupted file fails here.
+                ProcessedPhoto? processed;
                 try
                 {
-                    using var input = new MemoryStream(bytes, writable: false);
-                    image = PlatformImage.FromStream(input, format.Value);
+                    processed = await _imageProcessor.ProcessAsync(
+                        bytes, PhotoGalleryLimits.ThumbnailMaxWidth, PhotoGalleryLimits.OriginalJpegQuality, cancellationToken);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     _logger.LogWarning(ex, "Could not decode uploaded image for room {RoomId}.", roomId);
-                    image = null;
+                    processed = null;
                 }
 
-                if (image is null || image.Width < 1 || image.Height < 1)
+                if (processed is null || processed.Width < 1 || processed.Height < 1)
                 {
                     return PhotoOperationResult.Failure(PhotoErrorCode.UnsupportedType, "File ảnh bị hỏng hoặc không đọc được.");
                 }
 
-                using (image)
+                if (isPanorama && !IsPanoramaShape(processed.Width, processed.Height))
                 {
-                    if (isPanorama && !IsPanoramaShape(image.Width, image.Height))
-                    {
-                        return PhotoOperationResult.Failure(PhotoErrorCode.InvalidInput,
-                            "Ảnh 360° phải có tỉ lệ 2:1 (ví dụ 4096×2048).");
-                    }
-
-                    // 5. Save original (re-encoded: strips EXIF/GPS) + thumbnail, with a GUID name.
-                    var key = $"{PhotoFolder}/{roomId}/{Guid.NewGuid():N}{StoredExtension}";
-                    var originalPath = ResolveLocalPath(key)!;
-                    var thumbnailPath = GetThumbnailPath(originalPath);
-
-                    try
-                    {
-                        Directory.CreateDirectory(Path.GetDirectoryName(originalPath)!);
-                        await SaveJpegAsync(image, originalPath, cancellationToken);
-
-                        if (image.Width > PhotoGalleryLimits.ThumbnailMaxWidth)
-                        {
-                            float scale = (float)PhotoGalleryLimits.ThumbnailMaxWidth / image.Width;
-                            using var thumbnail = image.Downsize(
-                                PhotoGalleryLimits.ThumbnailMaxWidth, image.Height * scale, disposeOriginal: false);
-                            await SaveJpegAsync(thumbnail, thumbnailPath, cancellationToken);
-                        }
-                        else
-                        {
-                            File.Copy(originalPath, thumbnailPath, overwrite: true);
-                        }
-
-                        // 6. Persist the key.
-                        string? replacedPanorama = null;
-                        if (isPanorama)
-                        {
-                            replacedPanorama = room!.PanoramaKey;
-                            await SaveRoomMediaAsync(roomId, room.PhotoKeys, key);
-                        }
-                        else
-                        {
-                            var keys = new List<string>(room!.PhotoKeys) { key };
-                            await SaveRoomMediaAsync(roomId, keys, room.PanoramaKey);
-                        }
-
-                        // Old 360° file is deleted only after the database points to the new one.
-                        DeleteLocalFiles(replacedPanorama);
-                    }
-                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or SqliteException)
-                    {
-                        _logger.LogError(ex, "Failed to store photo for room {RoomId}.", roomId);
-                        DeleteLocalFiles(key); // roll back files that were written
-                        return PhotoOperationResult.Failure(PhotoErrorCode.StorageFailed,
-                            "Không lưu được ảnh. Vui lòng thử lại.");
-                    }
-
-                    var sortOrder = isPanorama ? -1 : room.PhotoKeys.Count;
-                    _logger.LogInformation("Stored {Kind} photo {Key} for room {RoomId}.",
-                        isPanorama ? "360°" : "2D", key, roomId);
-
-                    return PhotoOperationResult.Success(
-                        isPanorama ? "Đã cập nhật ảnh 360°." : "Đã tải ảnh lên.",
-                        ToRoomPhoto(key, isPanorama, sortOrder));
+                    return PhotoOperationResult.Failure(PhotoErrorCode.InvalidInput,
+                        "Ảnh 360° phải có tỉ lệ 2:1 (ví dụ 4096×2048).");
                 }
+
+                // 5. Save original + thumbnail with a GUID name (never the user's file name).
+                var key = $"{PhotoFolder}/{roomId}/{Guid.NewGuid():N}{StoredExtension}";
+                var originalPath = ResolveLocalPath(key)!;
+                var thumbnailPath = GetThumbnailPath(originalPath);
+
+                try
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(originalPath)!);
+                    await File.WriteAllBytesAsync(originalPath, processed.OriginalJpeg, cancellationToken);
+                    await File.WriteAllBytesAsync(thumbnailPath, processed.ThumbnailJpeg, cancellationToken);
+
+                    // 6. Persist the key.
+                    string? replacedPanorama = null;
+                    if (isPanorama)
+                    {
+                        replacedPanorama = room!.PanoramaKey;
+                        await SaveRoomMediaAsync(roomId, room.PhotoKeys, key);
+                    }
+                    else
+                    {
+                        var keys = new List<string>(room!.PhotoKeys) { key };
+                        await SaveRoomMediaAsync(roomId, keys, room.PanoramaKey);
+                    }
+
+                    // Old 360° file is deleted only after the database points to the new one.
+                    DeleteLocalFiles(replacedPanorama);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or SqliteException)
+                {
+                    _logger.LogError(ex, "Failed to store photo for room {RoomId}.", roomId);
+                    DeleteLocalFiles(key); // roll back files that were written
+                    return PhotoOperationResult.Failure(PhotoErrorCode.StorageFailed,
+                        "Không lưu được ảnh. Vui lòng thử lại.");
+                }
+
+                var sortOrder = isPanorama ? -1 : room.PhotoKeys.Count;
+                _logger.LogInformation("Stored {Kind} photo {Key} for room {RoomId}.",
+                    isPanorama ? "360°" : "2D", key, roomId);
+
+                return PhotoOperationResult.Success(
+                    isPanorama ? "Đã cập nhật ảnh 360°." : "Đã tải ảnh lên.",
+                    ToRoomPhoto(key, isPanorama, sortOrder));
             }
             finally
             {
@@ -311,11 +296,11 @@ namespace RoomToRentRadar.Services
 
         /// <summary>
         /// Checks in HTTP order: 401 (not signed in) → 404 (room) → 403 (not owner/admin).
-        /// IAuthService is resolved lazily: if T01.1 is not registered yet, writes are refused (safe default).
+        /// IAuthService is constructor-injected (DIP); with the InMemoryAuthService fallback it still works.
         /// </summary>
         private async Task<(RoomMedia? Room, PhotoOperationResult? Error)> AuthorizeAsync(int roomId)
         {
-            var user = _serviceProvider.GetService<IAuthService>()?.CurrentUser;
+            var user = _authService.CurrentUser;
             if (user is null)
             {
                 return (null, PhotoOperationResult.Failure(PhotoErrorCode.NotSignedIn,
@@ -486,13 +471,6 @@ namespace RoomToRentRadar.Services
             }
         }
 
-        private static async Task SaveJpegAsync(IImage image, string path, CancellationToken cancellationToken)
-        {
-            await using var output = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
-            await image.SaveAsync(output, ImageFormat.Jpeg, PhotoGalleryLimits.OriginalJpegQuality);
-            await output.FlushAsync(cancellationToken);
-        }
-
         private static bool IsPanoramaShape(float width, float height) =>
             Math.Abs(width / height - PhotoGalleryLimits.PanoramaAspectRatio)
             <= PhotoGalleryLimits.PanoramaAspectRatio * PhotoGalleryLimits.PanoramaAspectTolerance;
@@ -521,28 +499,25 @@ namespace RoomToRentRadar.Services
             return (buffer.ToArray(), false);
         }
 
-        /// <summary>Identifies JPEG / PNG / WebP from the file signature. Returns null otherwise.</summary>
-        internal static ImageFormat? DetectImageFormat(ReadOnlySpan<byte> data)
+        /// <summary>True if the file signature (magic bytes) is JPEG, PNG or WebP; the extension is never trusted.</summary>
+        internal static bool IsSupportedImageSignature(ReadOnlySpan<byte> data)
         {
+            // JPEG: FF D8 FF
             if (data.Length >= 3 && data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF)
             {
-                return ImageFormat.Jpeg;
+                return true;
             }
 
+            // PNG: 89 50 4E 47 0D 0A 1A 0A
             if (data.Length >= 8 && data[..8].SequenceEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }))
             {
-                return ImageFormat.Png;
+                return true;
             }
 
-            // "RIFF" <size> "WEBP". Maui.Graphics has no WebP enum value; the platform decoder detects it from bytes.
-            if (data.Length >= 12
-                && data[..4].SequenceEqual("RIFF"u8)
-                && data.Slice(8, 4).SequenceEqual("WEBP"u8))
-            {
-                return ImageFormat.Png;
-            }
-
-            return null;
+            // WebP: "RIFF" <4-byte size> "WEBP"
+            return data.Length >= 12
+                   && data[..4].SequenceEqual("RIFF"u8)
+                   && data.Slice(8, 4).SequenceEqual("WEBP"u8);
         }
     }
 }
