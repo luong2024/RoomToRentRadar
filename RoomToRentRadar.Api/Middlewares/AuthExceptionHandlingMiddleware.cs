@@ -40,9 +40,10 @@ public sealed class AuthExceptionHandlingMiddleware
                 Instance = context.Request.Path
             };
 
-            // ADR-012 §3: stable machine code the MAUI client maps to Vietnamese.
-            // Extensions is [JsonExtensionData], so this flattens to a camelCase "errorCode" member.
-            problem.Extensions["errorCode"] = errorCode;
+            if (!string.IsNullOrWhiteSpace(errorCode))
+            {
+                problem.Extensions["errorCode"] = errorCode;
+            }
 
             await JsonSerializer.SerializeAsync(
                 context.Response.Body,
@@ -51,7 +52,10 @@ public sealed class AuthExceptionHandlingMiddleware
         }
     }
 
-    public static bool TryMapException(Exception exception, out int statusCode, out string title, out string errorCode)
+    public static bool TryMapException(Exception exception, out int statusCode, out string title) =>
+        TryMapException(exception, out statusCode, out title, out _);
+
+    public static bool TryMapException(Exception exception, out int statusCode, out string title, out string? errorCode)
     {
         switch (exception)
         {
@@ -124,7 +128,7 @@ public sealed class AuthExceptionHandlingMiddleware
             default:
                 statusCode = StatusCodes.Status500InternalServerError;
                 title = "Unexpected Error";
-                errorCode = string.Empty;
+                errorCode = null;
                 return false;
         }
     }

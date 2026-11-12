@@ -73,9 +73,9 @@ Put new code only where this map (and `docs/system-architecture.md` §3) says. N
 | Driven ports | `I*Repository` → `Sqlite*Repository`; `I*Port` → `*Adapter`; mocks `Mock*`/`InMemory*` (tests/Development only) |
 | DTOs | immutable `record`: `*Request` (input), `*Dto` (output); JSON camelCase, enums as strings, money = integer VND |
 | Client | `I<Feature>Gateway` → `Http<Feature>Gateway`; `*Page` + `*PageModel` (CommunityToolkit.Mvvm) |
-| Errors | `application/problem+json` + stable `errorCode`; client maps `errorCode` → Vietnamese text (`docs/ui-ux-spec.md` §6) |
+| Errors | `application/problem+json` + stable `errorCode`; client maps `errorCode` → English text (`docs/ui-ux-spec.md` §6) |
 | Tests | `Method_Scenario_Expected`; async tests are `public async Task` with `await Assert.ThrowsAsync<T>(...)`; every `E*` flow in `docs/use-cases.md` has a test |
-| UI | tokens only (no hard-coded colours/sizes); allowed colour pairs in `docs/ui-ux-spec.md` §3.1.1; `x:DataType` on every page and `DataTemplate`; Loading/Empty/Error/Offline states; touch targets ≥ 48 dp; Vietnamese strings |
+| UI | tokens only (no hard-coded colours/sizes); allowed colour pairs in `docs/ui-ux-spec.md` §3.1.1; `x:DataType` on every page and `DataTemplate`; Loading/Empty/Error/Offline states; touch targets ≥ 48 dp; English strings (en-ENG) |
 | Icons | **MUST NOT use emoji as icons.** Use Fluent System Icons glyphs (`Resources/Fonts/FluentUI.cs`) or SVG in `Resources/Images` |
 
 ## 7. Git workflow, commits & PRs
