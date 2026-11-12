@@ -59,6 +59,20 @@ launchSettings.json.user
 *.db-shm
 *.db-wal
 
+# Local databases, secrets and signing material (never commit — checked by CI)
+*.db
+*.db3
+*.sqlite
+*.sqlite3
+google-services.json
+GoogleService-Info.plist
+*.keystore
+*.jks
+*.pfx
+*.p12
+.env
+appsettings.*.local.json
+
 # OS generated files
 .DS_Store
 Thumbs.db
