@@ -32,6 +32,30 @@ public sealed class ExternalIdentityConflictException : AuthApplicationException
         : base("An account with this email address already exists under another sign-in method and cannot be automatically linked.")
     {
     }
+
+    public ExternalIdentityConflictException(string message)
+        : base(message)
+    {
+    }
+
+    public ExternalIdentityConflictException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
+}
+
+public sealed class ConcurrencyConflictException : AuthApplicationException
+{
+    public ConcurrencyConflictException(
+        string message = "The resource was modified concurrently by another operation. Please retry.")
+        : base(message)
+    {
+    }
+
+    public ConcurrencyConflictException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
 }
 
 public sealed class AuthenticationFailedException : AuthApplicationException

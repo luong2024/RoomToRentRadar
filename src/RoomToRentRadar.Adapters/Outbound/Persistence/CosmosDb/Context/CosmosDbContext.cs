@@ -14,9 +14,9 @@ public sealed class CosmosDbContext : ICosmosDbContext
     private readonly ICosmosContainer<UserDocument> _usersContainer;
     private readonly ICosmosContainer<RefreshTokenDocument> _refreshTokensContainer;
     private readonly ICosmosContainer<EmailIndexDocument> _emailIndexContainer;
+    private readonly ICosmosContainer<ExternalLoginIndexDocument> _externalLoginIndexContainer;
 
     public const string PartitionKeyPath = "/id";
-    public const string UniqueEmailPath = "/normalizedEmail";
     public const string UniqueTokenHashPath = "/tokenHash";
 
     public CosmosDbContext(IOptions<CosmosDbOptions> options)
@@ -38,6 +38,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
             _usersContainer = new InMemoryCosmosContainer<UserDocument>();
             _refreshTokensContainer = new InMemoryCosmosContainer<RefreshTokenDocument>();
             _emailIndexContainer = new InMemoryCosmosContainer<EmailIndexDocument>();
+            _externalLoginIndexContainer = new InMemoryCosmosContainer<ExternalLoginIndexDocument>();
         }
         else
         {
@@ -71,10 +72,12 @@ public sealed class CosmosDbContext : ICosmosDbContext
             var usersCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.UsersContainerName);
             var refreshTokensCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.RefreshTokensContainerName);
             var emailIndexCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.EmailIndexContainerName);
+            var externalLoginIndexCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.ExternalLoginIndexContainerName);
 
             _usersContainer = new CosmosContainer<UserDocument>(usersCosmosContainer);
             _refreshTokensContainer = new CosmosContainer<RefreshTokenDocument>(refreshTokensCosmosContainer);
             _emailIndexContainer = new CosmosContainer<EmailIndexDocument>(emailIndexCosmosContainer);
+            _externalLoginIndexContainer = new CosmosContainer<ExternalLoginIndexDocument>(externalLoginIndexCosmosContainer);
         }
     }
 
@@ -83,6 +86,8 @@ public sealed class CosmosDbContext : ICosmosDbContext
     public ICosmosContainer<RefreshTokenDocument> RefreshTokens => _refreshTokensContainer;
 
     public ICosmosContainer<EmailIndexDocument> EmailIndex => _emailIndexContainer;
+
+    public ICosmosContainer<ExternalLoginIndexDocument> ExternalLoginIndex => _externalLoginIndexContainer;
 
     public static CosmosDbContext CreateInMemory()
     {
@@ -106,16 +111,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
 
         var database = databaseResponse.Database;
 
-        var usersContainerProperties = new ContainerProperties(_options.UsersContainerName, PartitionKeyPath)
-        {
-            UniqueKeyPolicy = new UniqueKeyPolicy
-            {
-                UniqueKeys =
-                {
-                    new UniqueKey { Paths = { UniqueEmailPath } }
-                }
-            }
-        };
+        var usersContainerProperties = new ContainerProperties(_options.UsersContainerName, PartitionKeyPath);
 
         await database.CreateContainerIfNotExistsAsync(
             usersContainerProperties,
@@ -140,6 +136,12 @@ public sealed class CosmosDbContext : ICosmosDbContext
 
         await database.CreateContainerIfNotExistsAsync(
             emailIndexContainerProperties,
+            cancellationToken: cancellationToken);
+
+        var externalLoginIndexContainerProperties = new ContainerProperties(_options.ExternalLoginIndexContainerName, PartitionKeyPath);
+
+        await database.CreateContainerIfNotExistsAsync(
+            externalLoginIndexContainerProperties,
             cancellationToken: cancellationToken);
     }
 

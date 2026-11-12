@@ -36,4 +36,7 @@ public sealed class UserDocument
 
     [JsonProperty("externalLogins")]
     public List<UserExternalLoginDocument> ExternalLogins { get; set; } = [];
+
+    [JsonProperty("_etag")]
+    public string? ETag { get; set; }
 }

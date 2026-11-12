@@ -32,7 +32,13 @@ public sealed class CosmosUserRepository : IUserRepository
 
         var idString = id.ToString();
         var doc = await _dbContext.Users.ReadItemAsync(idString, idString, cancellationToken);
-        return doc is null ? null : MapToDomain(doc);
+        if (doc is null)
+        {
+            return null;
+        }
+
+        _unitOfWork.TrackUserLoaded(doc.Id, doc.ETag);
+        return MapToDomain(doc);
     }
 
     public async Task<User?> GetByEmailAsync(EmailAddress email, CancellationToken cancellationToken = default)
@@ -52,7 +58,13 @@ public sealed class CosmosUserRepository : IUserRepository
                 u => string.Equals(u.NormalizedEmail, normalized, StringComparison.OrdinalIgnoreCase),
                 cancellationToken);
             var first = match.FirstOrDefault();
-            return first is null ? null : MapToDomain(first);
+            if (first is null)
+            {
+                return null;
+            }
+
+            _unitOfWork.TrackUserLoaded(first.Id, first.ETag);
+            return MapToDomain(first);
         }
 
         var query = new QueryDefinition("SELECT * FROM c WHERE c.normalizedEmail = @email")
@@ -60,7 +72,13 @@ public sealed class CosmosUserRepository : IUserRepository
 
         var results = await _dbContext.Users.QueryAsync(query, cancellationToken);
         var doc = results.FirstOrDefault();
-        return doc is null ? null : MapToDomain(doc);
+        if (doc is null)
+        {
+            return null;
+        }
+
+        _unitOfWork.TrackUserLoaded(doc.Id, doc.ETag);
+        return MapToDomain(doc);
     }
 
     public async Task<User?> GetByExternalLoginAsync(
@@ -71,6 +89,20 @@ public sealed class CosmosUserRepository : IUserRepository
         var normalizedProvider = provider.Trim().ToUpperInvariant();
         var normalizedSubject = providerSubject.Trim();
 
+        var tracked = _unitOfWork.GetTrackedUserByExternalLogin(normalizedProvider, normalizedSubject);
+        if (tracked is not null)
+        {
+            return tracked;
+        }
+
+        // Prefer O(1) point read via ExternalLoginIndex container
+        var indexId = ExternalLoginIndexDocument.BuildId(normalizedProvider, normalizedSubject);
+        var indexDoc = await _dbContext.ExternalLoginIndex.ReadItemAsync(indexId, indexId, cancellationToken);
+        if (indexDoc is not null && Guid.TryParse(indexDoc.UserId, out var indexedUserId))
+        {
+            return await GetByIdAsync(indexedUserId, cancellationToken);
+        }
+
         if (_dbContext.Users is InMemoryCosmosContainer<UserDocument> inMemory)
         {
             var match = await inMemory.QueryAsync(
@@ -80,7 +112,13 @@ public sealed class CosmosUserRepository : IUserRepository
                 cancellationToken);
 
             var first = match.FirstOrDefault();
-            return first is null ? null : MapToDomain(first);
+            if (first is null)
+            {
+                return null;
+            }
+
+            _unitOfWork.TrackUserLoaded(first.Id, first.ETag);
+            return MapToDomain(first);
         }
 
         var query = new QueryDefinition(
@@ -90,7 +128,13 @@ public sealed class CosmosUserRepository : IUserRepository
 
         var results = await _dbContext.Users.QueryAsync(query, cancellationToken);
         var doc = results.FirstOrDefault();
-        return doc is null ? null : MapToDomain(doc);
+        if (doc is null)
+        {
+            return null;
+        }
+
+        _unitOfWork.TrackUserLoaded(doc.Id, doc.ETag);
+        return MapToDomain(doc);
     }
 
     public async Task<bool> ExistsByEmailAsync(EmailAddress email, CancellationToken cancellationToken = default)

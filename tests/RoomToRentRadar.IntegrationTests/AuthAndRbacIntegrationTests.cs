@@ -323,6 +323,39 @@ public class AuthAndRbacIntegrationTests
         });
     }
 
+    [Test]
+    public async Task GoogleAuth_WhenConcurrentFirstTimeRegistrationsShareSameSubject_ShouldEnsureOnlyOneUserIsCreated()
+    {
+        _factory.GoogleVerifier.RegisterValidToken(
+            "concurrent-token-1",
+            "shared-concurrent-sub",
+            "concurrent.user1@gmail.com");
+
+        _factory.GoogleVerifier.RegisterValidToken(
+            "concurrent-token-2",
+            "shared-concurrent-sub",
+            "concurrent.user2@gmail.com");
+
+        var request1 = _client.PostAsJsonAsync("/api/v1/auth/google", new LoginWithGoogleRequest(
+            "concurrent-token-1",
+            "STUDENT"));
+
+        var request2 = _client.PostAsJsonAsync("/api/v1/auth/google", new LoginWithGoogleRequest(
+            "concurrent-token-2",
+            "STUDENT"));
+
+        var responses = await Task.WhenAll(request1, request2);
+
+        var okCount = responses.Count(r => r.StatusCode == HttpStatusCode.OK);
+        var conflictCount = responses.Count(r => r.StatusCode == HttpStatusCode.Conflict);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(okCount, Is.EqualTo(1), "Exactly one registration should succeed.");
+            Assert.That(conflictCount, Is.EqualTo(1), "Concurrent registration with same Google subject should return 409 Conflict.");
+        });
+    }
+
     private async Task<HttpResponseMessage> SendWithBearerAsync(string url, string token)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, url);

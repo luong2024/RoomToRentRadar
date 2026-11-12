@@ -99,6 +99,12 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                 conflictEx.Message,
                 null),
 
+            ConcurrencyConflictException concurrencyEx => (
+                StatusCodes.Status409Conflict,
+                "Concurrency Conflict",
+                concurrencyEx.Message,
+                null),
+
             AuthenticationFailedException authEx => (
                 StatusCodes.Status401Unauthorized,
                 "Authentication Failed",

@@ -215,30 +215,14 @@ public sealed class InMemoryCosmosContainer<T> : ICosmosContainer<T> where T : c
 
     private void ValidateUniqueConstraints(T item, string? currentId = null)
     {
-        var allDocs = _storage.Values
-            .Select(entry => JsonConvert.DeserializeObject<T>(entry.Json)!)
-            .Where(d => currentId is null || GetItemId(d) != currentId)
-            .ToList();
-
-        if (item is UserDocument userDoc)
+        if (item is RefreshTokenDocument tokenDoc)
         {
-            var userDocs = allDocs.Cast<UserDocument>();
+            var allDocs = _storage.Values
+                .Select(entry => JsonConvert.DeserializeObject<T>(entry.Json)!)
+                .Where(d => currentId is null || GetItemId(d) != currentId)
+                .Cast<RefreshTokenDocument>();
 
-            // Unique ExternalLogins (Provider, ProviderSubject)
-            foreach (var el in userDoc.ExternalLogins)
-            {
-                if (userDocs.Any(u => u.ExternalLogins.Any(x =>
-                    string.Equals(x.Provider, el.Provider, StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(x.ProviderSubject, el.ProviderSubject, StringComparison.Ordinal))))
-                {
-                    throw CreateConflictException($"Unique index violation: External login for provider '{el.Provider}' already linked to another user.");
-                }
-            }
-        }
-        else if (item is RefreshTokenDocument tokenDoc)
-        {
-            var tokenDocs = allDocs.Cast<RefreshTokenDocument>();
-            if (tokenDocs.Any(t => string.Equals(t.TokenHash, tokenDoc.TokenHash, StringComparison.Ordinal)))
+            if (allDocs.Any(t => string.Equals(t.TokenHash, tokenDoc.TokenHash, StringComparison.Ordinal)))
             {
                 throw CreateConflictException($"Unique index violation: RefreshToken with hash '{tokenDoc.TokenHash}' already exists.");
             }

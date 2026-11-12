@@ -45,6 +45,7 @@ public class AuthPersistenceTests
             Assert.That(_dbContext.Users, Is.Not.Null);
             Assert.That(_dbContext.RefreshTokens, Is.Not.Null);
             Assert.That(_dbContext.EmailIndex, Is.Not.Null);
+            Assert.That(_dbContext.ExternalLoginIndex, Is.Not.Null);
         });
     }
 
@@ -342,5 +343,119 @@ public class AuthPersistenceTests
 
         var ex = Assert.Throws<InvalidOperationException>(() => _ = new CosmosDbContext(options));
         Assert.That(ex.Message, Does.Contain("CosmosDb:AuthKeyOrResourceToken"));
+    }
+
+    [Test]
+    public async Task User_WhenUpdatedConcurrently_ShouldEnforceETagAndPreventLostUpdate()
+    {
+        var email = EmailAddress.Create("concurrent-user-etag@example.com");
+        var initialUser = User.RegisterLocalUser(email, "hash", UserRole.Student, FixedNow);
+        await _userRepository.AddAsync(initialUser);
+        await _unitOfWork.SaveChangesAsync();
+
+        // Simulate 2 concurrent requests loading the same user snapshot (same initial ETag)
+        var uowAdmin = new CosmosUnitOfWork(_dbContext);
+        var repoAdmin = new CosmosUserRepository(_dbContext, uowAdmin);
+
+        var uowLogin = new CosmosUnitOfWork(_dbContext);
+        var repoLogin = new CosmosUserRepository(_dbContext, uowLogin);
+
+        var userForAdmin = await repoAdmin.GetByIdAsync(initialUser.Id);
+        var userForLogin = await repoLogin.GetByIdAsync(initialUser.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(userForAdmin, Is.Not.Null);
+            Assert.That(userForLogin, Is.Not.Null);
+            Assert.That(userForAdmin!.IsActive, Is.True);
+        });
+
+        // 1. Admin deactivates the user and rotates security stamp first
+        var adminStampBefore = userForAdmin!.SecurityStamp;
+        userForAdmin.Deactivate(FixedNow.AddMinutes(5));
+        repoAdmin.Update(userForAdmin);
+        await uowAdmin.SaveChangesAsync();
+
+        // 2. Concurrent login request holding stale snapshot tries to update LastLoginAt
+        userForLogin!.RecordSuccessfulLogin(FixedNow.AddMinutes(6));
+        repoLogin.Update(userForLogin);
+
+        Assert.ThrowsAsync<ConcurrencyConflictException>(async () =>
+            await uowLogin.SaveChangesAsync());
+
+        // 3. Verify that Admin's deactivation and security stamp rotation were NOT overwritten
+        var uowVerify = new CosmosUnitOfWork(_dbContext);
+        var repoVerify = new CosmosUserRepository(_dbContext, uowVerify);
+        var persisted = await repoVerify.GetByIdAsync(initialUser.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(persisted, Is.Not.Null);
+            Assert.That(persisted!.IsActive, Is.False);
+            Assert.That(persisted.SecurityStamp, Is.Not.EqualTo(adminStampBefore));
+            Assert.That(persisted.LastLoginAt, Is.Null);
+        });
+    }
+
+    [Test]
+    public async Task ExternalLogin_WhenSameIdentityRegisteredConcurrentlyAcrossUsers_ShouldEnsureOnlyOneSucceedsAndCleanupOrphanedEmailIndex()
+    {
+        var uow1 = new CosmosUnitOfWork(_dbContext);
+        var repo1 = new CosmosUserRepository(_dbContext, uow1);
+
+        var uow2 = new CosmosUnitOfWork(_dbContext);
+        var repo2 = new CosmosUserRepository(_dbContext, uow2);
+
+        var user1 = User.RegisterGoogleUser(EmailAddress.Create("ext-concurrent-1@gmail.com"), "shared-google-sub-777", UserRole.Student, FixedNow);
+        var user2 = User.RegisterGoogleUser(EmailAddress.Create("ext-concurrent-2@gmail.com"), "shared-google-sub-777", UserRole.Landlord, FixedNow);
+
+        await repo1.AddAsync(user1);
+        await repo2.AddAsync(user2);
+
+        var task1 = Task.Run(async () =>
+        {
+            try
+            {
+                await uow1.SaveChangesAsync();
+                return (Success: true, FailedEmail: (string?)null, Error: (Exception?)null);
+            }
+            catch (Exception ex)
+            {
+                return (Success: false, FailedEmail: "ext-concurrent-1@gmail.com", Error: ex);
+            }
+        });
+
+        var task2 = Task.Run(async () =>
+        {
+            try
+            {
+                await uow2.SaveChangesAsync();
+                return (Success: true, FailedEmail: (string?)null, Error: (Exception?)null);
+            }
+            catch (Exception ex)
+            {
+                return (Success: false, FailedEmail: "ext-concurrent-2@gmail.com", Error: ex);
+            }
+        });
+
+        var results = await Task.WhenAll(task1, task2);
+
+        var successCount = results.Count(r => r.Success);
+        var conflictResult = results.SingleOrDefault(r => !r.Success);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(successCount, Is.EqualTo(1), "Exactly one registration with the external identity must succeed.");
+            Assert.That(conflictResult.Error, Is.InstanceOf<ExternalIdentityConflictException>());
+        });
+
+        // Verify the orphaned EmailIndex entry for the failed registration was cleaned up
+        var failedEmail = conflictResult.FailedEmail!;
+        var uowRetryLocal = new CosmosUnitOfWork(_dbContext);
+        var repoRetryLocal = new CosmosUserRepository(_dbContext, uowRetryLocal);
+        var localRetryUser = User.RegisterLocalUser(EmailAddress.Create(failedEmail), "local-hash", UserRole.Student, FixedNow);
+
+        await repoRetryLocal.AddAsync(localRetryUser);
+        Assert.DoesNotThrowAsync(async () => await uowRetryLocal.SaveChangesAsync());
     }
 }

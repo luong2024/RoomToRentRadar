@@ -10,5 +10,7 @@ public interface ICosmosDbContext : IDisposable
 
     ICosmosContainer<EmailIndexDocument> EmailIndex { get; }
 
+    ICosmosContainer<ExternalLoginIndexDocument> ExternalLoginIndex { get; }
+
     Task EnsureDatabaseAndContainersAsync(CancellationToken cancellationToken = default);
 }
