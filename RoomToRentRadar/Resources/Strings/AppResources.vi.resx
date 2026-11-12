@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="ShowOrHidePassword" xml:space="preserve">
+    <value>Ẩn hoặc hiện mật khẩu</value>
+  </data>
+  <data name="SignInWithGoogle" xml:space="preserve">
+    <value>Đăng nhập bằng Google</value>
+  </data>
+  <data name="RegisterWithEmailPassword" xml:space="preserve">
+    <value>Đăng ký bằng Email &amp; Mật khẩu</value>
+  </data>
+  <data name="PromptLandlordPhoneTitle" xml:space="preserve">
+    <value>Số điện thoại chủ trọ</value>
+  </data>
+  <data name="PromptLandlordPhoneMessage" xml:space="preserve">
+    <value>Vui lòng nhập số điện thoại liên hệ (bắt buộc để xác minh chủ trọ):</value>
+  </data>
+  <data name="Confirm" xml:space="preserve">
+    <value>Xác nhận</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Hủy</value>
+  </data>
+  <data name="PhoneNumberRequiredTitle" xml:space="preserve">
+    <value>Yêu cầu số điện thoại</value>
+  </data>
+  <data name="PhoneNumberRequiredMessage" xml:space="preserve">
+    <value>Cần có số điện thoại hợp lệ để đăng ký vai trò Chủ trọ.</value>
+  </data>
+  <data name="Ok" xml:space="preserve">
+    <value>Đồng ý</value>
+  </data>
+  <data name="GoogleSignInErrorTitle" xml:space="preserve">
+    <value>Lỗi đăng nhập Google</value>
+  </data>
+  <data name="SignInFailedTitle" xml:space="preserve">
+    <value>Đăng nhập thất bại</value>
+  </data>
+  <data name="SessionStorageError" xml:space="preserve">
+    <value>Không thể lưu phiên đăng nhập an toàn trên thiết bị này.</value>
+  </data>
+  <data name="GoogleNavError" xml:space="preserve">
+    <value>Đăng nhập Google thành công, nhưng không thể chuyển đến màn hình chính.</value>
+  </data>
+  <data name="GoogleAuthFailed" xml:space="preserve">
+    <value>Xác thực với Google thất bại. Vui lòng thử lại.</value>
+  </data>
+</root>
+

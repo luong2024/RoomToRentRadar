@@ -62,15 +62,19 @@ public class MockGoogleAuthVerifierAdapterTests
     [TestCase("")]
     [TestCase("   ")]
     [TestCase(null)]
-    public void VerifyIdTokenAsync_WithEmptyToken_ThrowsInvalidTokenException(string? token)
+    public async Task VerifyIdTokenAsync_WithEmptyToken_ThrowsInvalidTokenException(string? token)
     {
-        Assert.ThrowsAsync<InvalidTokenException>(() => _sut.VerifyIdTokenAsync(token!));
+        var ex = Assert.ThrowsAsync<InvalidTokenException>(async () => await _sut.VerifyIdTokenAsync(token!));
+        await Task.CompletedTask;
+        Assert.That(ex, Is.Not.Null);
     }
 
     [Test]
-    public void VerifyIdTokenAsync_WithMalformedMockFormat_ThrowsInvalidTokenException()
+    public async Task VerifyIdTokenAsync_WithMalformedMockFormat_ThrowsInvalidTokenException()
     {
-        Assert.ThrowsAsync<InvalidTokenException>(() => _sut.VerifyIdTokenAsync("mock-google:onlyonepart"));
+        var ex = Assert.ThrowsAsync<InvalidTokenException>(async () => await _sut.VerifyIdTokenAsync("mock-google:onlyonepart"));
+        await Task.CompletedTask;
+        Assert.That(ex, Is.Not.Null);
     }
 
     [Test]
@@ -118,4 +122,89 @@ public class MockGoogleAuthVerifierAdapterTests
             Assert.That(payload.SubjectId, Is.EqualTo("google-12345"));
         });
     }
+
+    [Test]
+    public async Task VerifyIdTokenAsync_WithUnverifiedEmailClaim_ThrowsInvalidTokenException()
+    {
+        var testKeyBytes = Encoding.UTF8.GetBytes("a-very-secret-test-key-of-at-least-32-bytes!");
+        var securityKey = new SymmetricSecurityKey(testKeyBytes);
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var descriptor = new SecurityTokenDescriptor
+        {
+            Issuer = "https://accounts.google.com",
+            Audience = "radar-app",
+            Subject = new ClaimsIdentity(
+            [
+                new Claim("sub", "google-12345"),
+                new Claim("email", "student@ictu.edu.vn"),
+                new Claim("email_verified", "false")
+            ]),
+            Expires = DateTime.UtcNow.AddHours(1),
+            SigningCredentials = credentials
+        };
+
+        var jwt = tokenHandler.CreateEncodedJwt(descriptor);
+
+        var validationParams = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = "https://accounts.google.com",
+            ValidateAudience = false,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = securityKey,
+            ClockSkew = TimeSpan.Zero
+        };
+
+        var verifier = new GoogleAuthVerifierAdapter(validationParams);
+        var ex = Assert.ThrowsAsync<InvalidTokenException>(async () =>
+            await verifier.VerifyIdTokenAsync(jwt));
+        await Task.CompletedTask;
+        Assert.That(ex, Is.Not.Null);
+    }
+
+    [Test]
+    public async Task VerifyIdTokenAsync_WithTamperedSignature_ThrowsInvalidTokenException()
+    {
+        var testKeyBytes = Encoding.UTF8.GetBytes("a-very-secret-test-key-of-at-least-32-bytes!");
+        var securityKey = new SymmetricSecurityKey(testKeyBytes);
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var descriptor = new SecurityTokenDescriptor
+        {
+            Issuer = "https://accounts.google.com",
+            Audience = "radar-app",
+            Subject = new ClaimsIdentity(
+            [
+                new Claim("sub", "google-12345"),
+                new Claim("email", "student@ictu.edu.vn")
+            ]),
+            Expires = DateTime.UtcNow.AddHours(1),
+            SigningCredentials = credentials
+        };
+
+        var jwt = tokenHandler.CreateEncodedJwt(descriptor);
+        var tamperedJwt = jwt + "tampered";
+
+        var validationParams = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = "https://accounts.google.com",
+            ValidateAudience = false,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = securityKey,
+            ClockSkew = TimeSpan.Zero
+        };
+
+        var verifier = new GoogleAuthVerifierAdapter(validationParams);
+        var ex = Assert.ThrowsAsync<InvalidTokenException>(async () =>
+            await verifier.VerifyIdTokenAsync(tamperedJwt));
+        await Task.CompletedTask;
+        Assert.That(ex, Is.Not.Null);
+    }
 }
+

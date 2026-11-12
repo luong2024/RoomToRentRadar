@@ -7,3 +7,4 @@ public interface ILoginWithGoogleUseCase
 {
     Task<AuthTokensDto> ExecuteAsync(GoogleLoginRequest request, CancellationToken ct = default);
 }
+

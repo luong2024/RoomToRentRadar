@@ -6,3 +6,4 @@ public interface IGoogleAuthVerifierPort
 {
     Task<GoogleUserPayload> VerifyIdTokenAsync(string idToken, CancellationToken ct = default);
 }
+

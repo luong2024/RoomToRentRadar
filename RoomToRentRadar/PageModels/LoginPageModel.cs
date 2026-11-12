@@ -3,7 +3,9 @@ using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Client.Adapters.Abstractions;
+using RoomToRentRadar.DeviceAdapters;
 using RoomToRentRadar.Ports.Contracts.Requests.Auth;
+using RoomToRentRadar.Resources.Strings;
 
 namespace RoomToRentRadar.PageModels;
 
@@ -13,6 +15,7 @@ public partial class LoginPageModel : ObservableObject
 
     private readonly IAuthGateway _authGateway;
     private readonly ISessionStore _sessionStore;
+    private readonly IGoogleAuthClientService _googleAuthService;
 
     [ObservableProperty]
     public partial string Email { get; set; } = string.Empty;
@@ -46,10 +49,12 @@ public partial class LoginPageModel : ObservableObject
 
     public LoginPageModel(
         IAuthGateway authGateway,
-        ISessionStore sessionStore)
+        ISessionStore sessionStore,
+        IGoogleAuthClientService? googleAuthService = null)
     {
         _authGateway = authGateway ?? throw new ArgumentNullException(nameof(authGateway));
         _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
+        _googleAuthService = googleAuthService ?? new GoogleAuthClientService();
     }
 
     [RelayCommand]
@@ -213,8 +218,14 @@ public partial class LoginPageModel : ObservableObject
             HasGeneralError = false;
             GeneralError = string.Empty;
 
+            var idToken = await _googleAuthService.AuthenticateAndGetIdTokenAsync("Student");
+            if (string.IsNullOrWhiteSpace(idToken))
+            {
+                return;
+            }
+
             var request = new GoogleLoginRequest(
-                IdToken: "mock-google-id-token",
+                IdToken: idToken,
                 Role: "Student",
                 DeviceInfo: DeviceInfo.Current.Model);
 
@@ -225,7 +236,7 @@ public partial class LoginPageModel : ObservableObject
                 var saved = await _sessionStore.SaveSessionAsync(response);
                 if (!saved)
                 {
-                    GeneralError = "Unable to securely store your session on this device.";
+                    GeneralError = AppResources.SessionStorageError;
                     HasGeneralError = true;
                     return;
                 }
@@ -236,13 +247,13 @@ public partial class LoginPageModel : ObservableObject
                 }
                 catch (Exception)
                 {
-                    GeneralError = "Google sign in succeeded, but navigation to home screen failed.";
+                    GeneralError = AppResources.GoogleNavError;
                     HasGeneralError = true;
                 }
             }
             else
             {
-                GeneralError = "Authentication with Google failed. Please try again.";
+                GeneralError = AppResources.GoogleAuthFailed;
                 HasGeneralError = true;
             }
         }

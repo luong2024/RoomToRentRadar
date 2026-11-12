@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:inputs="clr-namespace:RoomToRentRadar.Pages.Controls.Inputs"
              xmlns:fonts="clr-namespace:Fonts"
+             xmlns:loc="clr-namespace:RoomToRentRadar.Resources.Strings"
              x:Class="RoomToRentRadar.Pages.Controls.Inputs.ValidatedEntry"
              x:Name="RootEntryView">
 
@@ -45,14 +46,14 @@
                 <!-- Password Show/Hide Toggle Button (Visible only when IsPassword is True) -->
                 <ImageButton Grid.Column="1"
                              x:Name="PasswordToggleButton"
-                             WidthRequest="40"
-                             HeightRequest="40"
-                             Padding="10"
+                             WidthRequest="48"
+                             HeightRequest="48"
+                             Padding="12"
                              VerticalOptions="Center"
                              HorizontalOptions="Center"
                              BackgroundColor="Transparent"
                              IsVisible="{Binding Source={x:Reference RootEntryView}, Path=IsPassword}"
-                             SemanticProperties.Description="Show or hide password"
+                             SemanticProperties.Description="{Binding [ShowOrHidePassword], Source={x:Static loc:LocalizedStrings.Instance}}"
                              Clicked="PasswordToggleButton_Clicked">
                     <ImageButton.Source>
                         <FontImageSource x:Name="PasswordToggleIcon"

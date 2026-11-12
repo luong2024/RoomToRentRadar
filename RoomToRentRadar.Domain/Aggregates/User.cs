@@ -351,6 +351,16 @@ public sealed class User
 
     public void LinkGoogle(string googleSubjectId, string? phoneNumber, DateTime utcNow)
     {
+        if (Role != UserRole.Student && Role != UserRole.Landlord)
+        {
+            throw new ForbiddenRoleException("Only Student and Landlord accounts can be linked to Google authentication.");
+        }
+
+        if (Role == UserRole.Student && !Email.IsIctuStudentEmail())
+        {
+            throw new DomainValidationException($"Only '{EmailAddress.IctuDomain}' student accounts can be linked to Google.");
+        }
+
         if (string.IsNullOrWhiteSpace(googleSubjectId))
         {
             throw new DomainValidationException("Google subject identifier is required.");

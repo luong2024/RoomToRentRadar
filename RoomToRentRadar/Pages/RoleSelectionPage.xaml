@@ -4,6 +4,7 @@
              xmlns:vm="clr-namespace:RoomToRentRadar.PageModels"
              xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
              xmlns:fonts="clr-namespace:Fonts"
+             xmlns:loc="clr-namespace:RoomToRentRadar.Resources.Strings"
              x:Class="RoomToRentRadar.Pages.RoleSelectionPage"
              x:DataType="vm:RoleSelectionPageModel"
              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCanvasLight}, Dark={StaticResource SurfaceCanvasDark}}">
@@ -179,7 +180,7 @@
                                        ButtonHeight="48"
                                        HorizontalOptions="Fill" />
 
-                    <common:RadaButton Text="Register with Email &amp; Password"
+                    <common:RadaButton Text="{Binding [RegisterWithEmailPassword], Source={x:Static loc:LocalizedStrings.Instance}}"
                                        Variant="Primary"
                                        Command="{Binding ContinueCommand}"
                                        ButtonHeight="48"

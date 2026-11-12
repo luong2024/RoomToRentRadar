@@ -56,6 +56,7 @@ namespace RoomToRentRadar
             // Core UI & Device Services
             builder.Services.AddSingleton<ModalErrorHandler>();
             builder.Services.AddSingleton<ISessionStore, MauiSecureSessionStore>();
+            builder.Services.AddSingleton<IGoogleAuthClientService, GoogleAuthClientService>();
 
             // Main Landing Page
             builder.Services.AddTransient<PageModels.MainLandingPageModel>();

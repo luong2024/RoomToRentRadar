@@ -55,6 +55,31 @@ public sealed class LoginWithGoogleUseCase : ILoginWithGoogleUseCase
 
         if (existingUser != null)
         {
+            if (existingUser.Role == UserRole.Admin)
+            {
+                _auditLogger.LogLoginFailed(email.Value, "AdminGoogleSignInForbidden");
+                throw new ForbiddenRoleException("Admin accounts cannot sign in or link via Google authentication.");
+            }
+
+            if (existingUser.Role != role)
+            {
+                _auditLogger.LogLoginFailed(email.Value, "RoleMismatch");
+                throw new DomainValidationException($"Account exists with role '{existingUser.Role}', which does not match requested role '{role}'.");
+            }
+
+            if (existingUser.Role == UserRole.Student && !email.IsIctuStudentEmail())
+            {
+                _auditLogger.LogLoginFailed(email.Value, "NonIctuGoogleDomain");
+                throw new DomainValidationException($"Student Google login requires an '{EmailAddress.IctuDomain}' email address.");
+            }
+
+            if (existingUser.Role == UserRole.Landlord &&
+                string.IsNullOrWhiteSpace(existingUser.PhoneNumber) &&
+                string.IsNullOrWhiteSpace(request.PhoneNumber))
+            {
+                throw new DomainValidationException("Phone number is required for Landlord registration.");
+            }
+
             existingUser.EnsureNotLockedOut(utcNow);
             existingUser.LinkGoogle(payload.SubjectId, request.PhoneNumber, utcNow);
             existingUser.RecordLoginSuccess(utcNow);
@@ -117,3 +142,4 @@ public sealed class LoginWithGoogleUseCase : ILoginWithGoogleUseCase
             User: UserMapper.ToProfileDto(user));
     }
 }
+

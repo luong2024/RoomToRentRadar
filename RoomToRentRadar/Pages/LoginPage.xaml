@@ -5,6 +5,7 @@
              xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
              xmlns:inputs="clr-namespace:RoomToRentRadar.Pages.Controls.Inputs"
              xmlns:fonts="clr-namespace:Fonts"
+             xmlns:loc="clr-namespace:RoomToRentRadar.Resources.Strings"
              x:Class="RoomToRentRadar.Pages.LoginPage"
              x:DataType="vm:LoginPageModel"
              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCanvasLight}, Dark={StaticResource SurfaceCanvasDark}}">
@@ -90,7 +91,7 @@
                                        HorizontalOptions="Fill" />
 
                     <!-- Sign in with Google Button -->
-                    <common:RadaButton Text="Sign in with Google"
+                    <common:RadaButton Text="{Binding [SignInWithGoogle], Source={x:Static loc:LocalizedStrings.Instance}}"
                                        Variant="Secondary"
                                        IsLoading="{Binding IsBusy}"
                                        Command="{Binding LoginWithGoogleCommand}"

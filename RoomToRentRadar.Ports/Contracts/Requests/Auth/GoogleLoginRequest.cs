@@ -6,3 +6,4 @@ public record GoogleLoginRequest(
     string? PhoneNumber = null,
     string? DeviceInfo = null
 );
+

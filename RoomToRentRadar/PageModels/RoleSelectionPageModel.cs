@@ -2,7 +2,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Client.Adapters.Abstractions;
 using RoomToRentRadar.Client.Adapters.Http;
+using RoomToRentRadar.DeviceAdapters;
 using RoomToRentRadar.Ports.Contracts.Requests.Auth;
+using RoomToRentRadar.Resources.Strings;
 
 namespace RoomToRentRadar.PageModels;
 
@@ -10,6 +12,7 @@ public partial class RoleSelectionPageModel : ObservableObject
 {
     private readonly IAuthGateway _authGateway;
     private readonly ISessionStore _sessionStore;
+    private readonly IGoogleAuthClientService _googleAuthService;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ContinueWithGoogleText))]
@@ -28,10 +31,14 @@ public partial class RoleSelectionPageModel : ObservableObject
         ? "Continue with Google (Student)"
         : "Continue with Google (Landlord)";
 
-    public RoleSelectionPageModel(IAuthGateway authGateway, ISessionStore sessionStore)
+    public RoleSelectionPageModel(
+        IAuthGateway authGateway,
+        ISessionStore sessionStore,
+        IGoogleAuthClientService? googleAuthService = null)
     {
         _authGateway = authGateway ?? throw new ArgumentNullException(nameof(authGateway));
         _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
+        _googleAuthService = googleAuthService ?? new GoogleAuthClientService();
     }
 
     [RelayCommand]
@@ -65,10 +72,10 @@ public partial class RoleSelectionPageModel : ObservableObject
                 if (Shell.Current != null)
                 {
                     var phoneInput = await Shell.Current.DisplayPromptAsync(
-                        "Landlord Phone Number",
-                        "Please enter your Vietnamese contact phone number (required for landlord verification):",
-                        accept: "Confirm",
-                        cancel: "Cancel",
+                        AppResources.PromptLandlordPhoneTitle,
+                        AppResources.PromptLandlordPhoneMessage,
+                        accept: AppResources.Confirm,
+                        cancel: AppResources.Cancel,
                         placeholder: "0912345678",
                         maxLength: 12,
                         keyboard: Keyboard.Telephone);
@@ -78,9 +85,9 @@ public partial class RoleSelectionPageModel : ObservableObject
                         if (phoneInput != null)
                         {
                             await Shell.Current.DisplayAlertAsync(
-                                "Phone Number Required",
-                                "A valid phone number is required to register as a Landlord.",
-                                "OK");
+                                AppResources.PhoneNumberRequiredTitle,
+                                AppResources.PhoneNumberRequiredMessage,
+                                AppResources.Ok);
                         }
                         return;
                     }
@@ -89,9 +96,11 @@ public partial class RoleSelectionPageModel : ObservableObject
                 }
             }
 
-            var token = SelectedRole == "Student"
-                ? "mock-google-student-token"
-                : "mock-google-landlord-token";
+            var token = await _googleAuthService.AuthenticateAndGetIdTokenAsync(SelectedRole);
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return;
+            }
 
             var request = new GoogleLoginRequest(
                 IdToken: token,
@@ -114,14 +123,14 @@ public partial class RoleSelectionPageModel : ObservableObject
         {
             if (Shell.Current != null)
             {
-                await Shell.Current.DisplayAlertAsync("Google Sign-In Error", apiEx.Message, "OK");
+                await Shell.Current.DisplayAlertAsync(AppResources.GoogleSignInErrorTitle, apiEx.Message, AppResources.Ok);
             }
         }
         catch (Exception ex)
         {
             if (Shell.Current != null)
             {
-                await Shell.Current.DisplayAlertAsync("Sign In Failed", ex.Message, "OK");
+                await Shell.Current.DisplayAlertAsync(AppResources.SignInFailedTitle, ex.Message, AppResources.Ok);
             }
         }
         finally

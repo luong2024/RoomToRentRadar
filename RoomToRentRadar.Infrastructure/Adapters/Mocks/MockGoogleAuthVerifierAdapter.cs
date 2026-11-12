@@ -61,3 +61,4 @@ public sealed class MockGoogleAuthVerifierAdapter : IGoogleAuthVerifierPort
         return _googleVerifier.VerifyIdTokenAsync(trimmed, ct);
     }
 }
+
