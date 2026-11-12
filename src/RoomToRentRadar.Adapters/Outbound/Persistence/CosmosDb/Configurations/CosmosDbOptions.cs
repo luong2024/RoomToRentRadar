@@ -6,6 +6,8 @@ public sealed class CosmosDbOptions
 
     public string AccountEndpoint { get; set; } = string.Empty;
 
+    public string? AuthKey { get; set; }
+
     public string? AuthKeyOrResourceToken { get; set; }
 
     public string DatabaseName { get; set; } = "RoomToRentRadarDb";

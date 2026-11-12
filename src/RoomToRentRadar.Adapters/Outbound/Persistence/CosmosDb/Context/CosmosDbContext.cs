@@ -49,7 +49,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
                     "Set the endpoint in configuration or use CosmosDbContext.CreateInMemory() for local testing.");
             }
 
-            if (string.IsNullOrWhiteSpace(options.AuthKeyOrResourceToken))
+            if (string.IsNullOrWhiteSpace(options.AuthKeyOrResourceToken) && string.IsNullOrWhiteSpace(options.AuthKey))
             {
                 throw new InvalidOperationException(
                     "Azure Cosmos DB is not configured. 'CosmosDb:AuthKeyOrResourceToken' is required. " +
@@ -68,7 +68,11 @@ public sealed class CosmosDbContext : ICosmosDbContext
                 clientOptions.ConnectionMode = ConnectionMode.Gateway;
             }
 
-            _cosmosClient = new CosmosClient(options.AccountEndpoint, options.AuthKeyOrResourceToken, clientOptions);
+            var authKey = !string.IsNullOrWhiteSpace(options.AuthKey)
+                ? options.AuthKey
+                : options.AuthKeyOrResourceToken;
+
+            _cosmosClient = new CosmosClient(options.AccountEndpoint, authKey, clientOptions);
             var usersCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.UsersContainerName);
             var refreshTokensCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.RefreshTokensContainerName);
             var emailIndexCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.EmailIndexContainerName);
@@ -110,6 +114,8 @@ public sealed class CosmosDbContext : ICosmosDbContext
             cancellationToken: cancellationToken);
 
         var database = databaseResponse.Database;
+
+        await database.CreateContainerIfNotExistsAsync("Rooms", "/id");
 
         var usersContainerProperties = new ContainerProperties(_options.UsersContainerName, PartitionKeyPath);
 
