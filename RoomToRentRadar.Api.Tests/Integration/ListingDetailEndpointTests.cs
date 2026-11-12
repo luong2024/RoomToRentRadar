@@ -54,7 +54,7 @@ public sealed class ListingDetailEndpointTests
             Assert.That(detail.Description, Is.EqualTo("Test listing 0 description"));
             Assert.That(detail.Price, Is.EqualTo(5_000_000L));
             Assert.That(detail.Deposit, Is.EqualTo(5_000_000L));
-            Assert.That(detail.RoomType, Is.EqualTo(RoomType.Apartment));
+            Assert.That(detail.RoomType, Is.EqualTo(RoomType.SingleRoom));
             Assert.That(detail.Status, Is.EqualTo(ListingStatus.Published));
             Assert.That(detail.CreatedAt, Is.EqualTo(DateTime.SpecifyKind(new DateTime(2026, 1, 1), DateTimeKind.Utc)));
             Assert.That(detail.UpdatedAt, Is.EqualTo(DateTime.SpecifyKind(new DateTime(2026, 1, 1, 0, 5, 0), DateTimeKind.Utc)));
@@ -77,7 +77,7 @@ public sealed class ListingDetailEndpointTests
         {
             Assert.That(detail.TryGetProperty("landlordPhone", out _), Is.False);
             Assert.That(detail.GetProperty("landlordName").GetString(), Is.EqualTo("Landlord 0"));
-            Assert.That(detail.GetProperty("roomType").GetString(), Is.EqualTo("apartment"));
+            Assert.That(detail.GetProperty("roomType").GetString(), Is.EqualTo("single_room"));
             Assert.That(detail.GetProperty("status").GetString(), Is.EqualTo("published"));
         });
     }
