@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:rooms="clr-namespace:RoomToRentRadar.Features.Rooms"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:fonts="clr-namespace:Fonts"
+             x:Class="RoomToRentRadar.Features.Rooms.PhotoGallery360Page"
+             x:DataType="rooms:PhotoGallery360PageModel"
+             BackgroundColor="#121214"
+             NavigationPage.HasNavigationBar="False"
+             Title="Thư viện ảnh &amp; 360°">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <toolkit:InvertedBoolConverter x:Key="InvertedBoolConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto, Auto, *">
+
+        <!-- TOP BAR: BACK BUTTON, TITLE & PRICE -->
+        <Grid Grid.Row="0"
+              ColumnDefinitions="Auto, *, Auto"
+              Padding="16, 12"
+              BackgroundColor="#1C1C1E"
+              VerticalOptions="Center">
+
+            <!-- Back Button -->
+            <Border Grid.Column="0"
+                    StrokeShape="RoundRectangle 10"
+                    Stroke="Transparent"
+                    BackgroundColor="#2C2C2E"
+                    HeightRequest="36"
+                    WidthRequest="36"
+                    Padding="0">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding GoBackCommand}" />
+                </Border.GestureRecognizers>
+                <Label Text="{x:Static fonts:FluentUI.chevron_left_24_regular}"
+                       FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                       FontSize="20"
+                       TextColor="{StaticResource White}"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center" />
+            </Border>
+
+            <!-- Room Title & Rent -->
+            <VerticalStackLayout Grid.Column="1" Margin="12, 0" Spacing="2" VerticalOptions="Center">
+                <Label Text="{Binding RoomTitle}"
+                       FontSize="15"
+                       FontAttributes="Bold"
+                       TextColor="{StaticResource White}"
+                       LineBreakMode="TailTruncation"
+                       MaxLines="1" />
+                <Label Text="{Binding MonthlyRentFormatted}"
+                       FontSize="13"
+                       FontAttributes="Bold"
+                       TextColor="#FFD54F" />
+            </VerticalStackLayout>
+
+            <!-- Counter Badge (Photos tab only) -->
+            <Border Grid.Column="2"
+                    IsVisible="{Binding IsPhotosTabSelected}"
+                    StrokeShape="RoundRectangle 10"
+                    Stroke="Transparent"
+                    BackgroundColor="#2C2C2E"
+                    Padding="10, 4"
+                    VerticalOptions="Center">
+                <Label Text="{Binding CurrentPhotoCounter}"
+                       FontSize="12"
+                       FontAttributes="Bold"
+                       TextColor="{StaticResource White}" />
+            </Border>
+        </Grid>
+
+        <!-- TAB SWITCHER: BỘ SƯU TẬP ẢNH VS XEM 360° (US04 AC1 & AC2) -->
+        <Border Grid.Row="1"
+                Margin="16, 10"
+                StrokeShape="RoundRectangle 20"
+                Stroke="Transparent"
+                BackgroundColor="#1C1C1E"
+                Padding="4"
+                HorizontalOptions="Center">
+
+            <HorizontalStackLayout Spacing="6">
+                <!-- Tab: Photos (AC1) -->
+                <Button Text="🖼 Bộ sưu tập ảnh"
+                        Command="{Binding SelectTabCommand}"
+                        CommandParameter="Photos"
+                        BackgroundColor="{Binding IsPhotosTabSelected, Converter={toolkit:BoolToObjectConverter TrueObject={StaticResource Primary}, FalseObject=Transparent}}"
+                        TextColor="{StaticResource White}"
+                        FontSize="13"
+                        FontAttributes="Bold"
+                        CornerRadius="16"
+                        HeightRequest="36"
+                        Padding="16, 0" />
+
+                <!-- Tab: 360° Panorama Viewer (AC2) -->
+                <Button Text="🔄 Xem phòng 360°"
+                        Command="{Binding SelectTabCommand}"
+                        CommandParameter="360"
+                        BackgroundColor="{Binding Is360TabSelected, Converter={toolkit:BoolToObjectConverter TrueObject={StaticResource Primary}, FalseObject=Transparent}}"
+                        TextColor="{StaticResource White}"
+                        FontSize="13"
+                        FontAttributes="Bold"
+                        CornerRadius="16"
+                        HeightRequest="36"
+                        Padding="16, 0" />
+            </HorizontalStackLayout>
+        </Border>
+
+        <!-- VIEW MODE 1: PHOTO GALLERY CAROUSEL (US04 AC1, AC3, AC4) -->
+        <Grid Grid.Row="2" IsVisible="{Binding IsPhotosTabSelected}">
+
+            <!-- PLACEHOLDER WHEN LISTING HAS NO PHOTO (US04 AC4) -->
+            <VerticalStackLayout IsVisible="{Binding IsEmptyPhotos}"
+                                 HorizontalOptions="Center"
+                                 VerticalOptions="Center"
+                                 Spacing="16"
+                                 Padding="30">
+                <Border StrokeShape="RoundRectangle 40"
+                        Stroke="Transparent"
+                        BackgroundColor="#2C2C2E"
+                        HeightRequest="80"
+                        WidthRequest="80"
+                        HorizontalOptions="Center">
+                    <Label Text="{x:Static fonts:FluentUI.image_24_regular}"
+                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                           FontSize="38"
+                           TextColor="{StaticResource Gray400}"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center" />
+                </Border>
+                <Label Text="Chưa có hình ảnh thực tế"
+                       FontSize="16"
+                       FontAttributes="Bold"
+                       TextColor="{StaticResource White}"
+                       HorizontalTextAlignment="Center" />
+                <Label Text="Chủ trọ hiện chưa tải lên ảnh cho phòng này. Vui lòng liên hệ trực tiếp chủ trọ để xem phòng."
+                       FontSize="13"
+                       TextColor="{StaticResource Gray400}"
+                       HorizontalTextAlignment="Center"
+                       LineHeight="1.3" />
+            </VerticalStackLayout>
+
+            <!-- PHOTO CAROUSEL & THUMBNAIL STRIP (US04 AC1: 8+ photos, AC3: Progressive & Cached) -->
+            <Grid IsVisible="{Binding HasPhotos}" RowDefinitions="*, Auto">
+
+                <!-- MAIN CAROUSEL VIEW -->
+                <Grid Grid.Row="0">
+                    <CarouselView x:Name="PhotoCarousel"
+                                  ItemsSource="{Binding Photos}"
+                                  Position="{Binding CurrentPhotoIndex, Mode=TwoWay}"
+                                  Loop="True"
+                                  HorizontalScrollBarVisibility="Never">
+                        <CarouselView.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <Grid Padding="12">
+                                    <!-- Cached Image with progressive loading (US04 AC3) -->
+                                    <Image Source="{Binding .}"
+                                           Aspect="AspectFit"
+                                           HorizontalOptions="Fill"
+                                           VerticalOptions="Fill">
+                                        <Image.Shadow>
+                                            <Shadow Brush="#80000000" Radius="15" Offset="0,4" />
+                                        </Image.Shadow>
+                                    </Image>
+                                </Grid>
+                            </DataTemplate>
+                        </CarouselView.ItemTemplate>
+                    </CarouselView>
+
+                    <!-- Previous Button Arrow -->
+                    <Border HorizontalOptions="Start"
+                            VerticalOptions="Center"
+                            Margin="16, 0"
+                            StrokeShape="RoundRectangle 20"
+                            Stroke="Transparent"
+                            BackgroundColor="#80000000"
+                            HeightRequest="40"
+                            WidthRequest="40">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding PreviousPhotoCommand}" />
+                        </Border.GestureRecognizers>
+                        <Label Text="{x:Static fonts:FluentUI.chevron_left_24_regular}"
+                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                               FontSize="20"
+                               TextColor="{StaticResource White}"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center" />
+                    </Border>
+
+                    <!-- Next Button Arrow -->
+                    <Border HorizontalOptions="End"
+                            VerticalOptions="Center"
+                            Margin="16, 0"
+                            StrokeShape="RoundRectangle 20"
+                            Stroke="Transparent"
+                            BackgroundColor="#80000000"
+                            HeightRequest="40"
+                            WidthRequest="40">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding NextPhotoCommand}" />
+                        </Border.GestureRecognizers>
+                        <Label Text="{x:Static fonts:FluentUI.chevron_right_24_regular}"
+                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                               FontSize="20"
+                               TextColor="{StaticResource White}"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center" />
+                    </Border>
+                </Grid>
+
+                <!-- BOTTOM THUMBNAIL STRIP (US04 AC1) -->
+                <Border Grid.Row="1"
+                        BackgroundColor="#1A1A1E"
+                        Padding="12, 10"
+                        HeightRequest="85">
+                    <CollectionView ItemsSource="{Binding Photos}"
+                                    SelectionMode="None">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <Border StrokeShape="RoundRectangle 8"
+                                        Stroke="{StaticResource Primary}"
+                                        StrokeThickness="1"
+                                        BackgroundColor="#2C2C2E"
+                                        HeightRequest="65"
+                                        WidthRequest="65"
+                                        Padding="0">
+                                    <Image Source="{Binding .}"
+                                           Aspect="AspectFill"
+                                           HeightRequest="65"
+                                           WidthRequest="65">
+                                        <Image.Clip>
+                                            <RoundRectangleGeometry CornerRadius="8" Rect="0,0,65,65" />
+                                        </Image.Clip>
+                                    </Image>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </Border>
+
+            </Grid>
+
+        </Grid>
+
+        <!-- VIEW MODE 2: INTERACTIVE 360° VIEWER (US04 AC2) -->
+        <Grid Grid.Row="2" IsVisible="{Binding Is360TabSelected}">
+            <!-- 360 PANNELLUM WEBVIEW -->
+            <WebView x:Name="PanoramaWebView"
+                     HorizontalOptions="Fill"
+                     VerticalOptions="Fill" />
+        </Grid>
+
+    </Grid>
+
+</ContentPage>
+
