@@ -17,6 +17,7 @@ public partial class HomeViewModel : ObservableObject
     private readonly IApiClient _apiClient;
     private readonly IErrorHandler _errorHandler;
     private readonly INavigationService _navigationService;
+    private CancellationTokenSource? _searchCancellation;
     private readonly HashSet<Guid> _listingIds = new();
     private string? _nextCursor;
     private int _generation;
@@ -137,11 +138,18 @@ public partial class HomeViewModel : ObservableObject
 
     public bool CanLoadMore => HasMore
         && _nextCursor is not null
+        && !IsBusy
         && !IsLoadingMore
         && !HasError
         && Listings.Count > 0;
 
     partial void OnIsLoadingMoreChanged(bool value) => OnPropertyChanged(nameof(CanLoadMore));
+
+    partial void OnIsBusyChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanLoadMore));
+    }
+
 
     partial void OnHasMoreChanged(bool value) => OnPropertyChanged(nameof(CanLoadMore));
 
@@ -190,6 +198,9 @@ public partial class HomeViewModel : ObservableObject
             return;
 
         var generation = _generation;
+        using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken, _searchCancellation?.Token ?? CancellationToken.None);
+        var requestToken = linkedCancellation.Token;
         IsLoadingMore = true;
         try
         {
@@ -197,7 +208,7 @@ public partial class HomeViewModel : ObservableObject
                 PageSize,
                 _nextCursor,
                 _appliedFilters,
-                cancellationToken);
+                requestToken);
             if (generation != _generation)
                 return;
 
@@ -208,7 +219,7 @@ public partial class HomeViewModel : ObservableObject
             IsTotalCountCapped = page.TotalCountCapped;
             UpdateResultsText();
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (requestToken.IsCancellationRequested)
         {
         }
         catch (Exception ex)
@@ -221,7 +232,8 @@ public partial class HomeViewModel : ObservableObject
         }
         finally
         {
-            IsLoadingMore = false;
+            if (generation == _generation)
+                IsLoadingMore = false;
         }
     }
 
@@ -253,7 +265,9 @@ public partial class HomeViewModel : ObservableObject
         FilterError = string.Empty;
 
         if (IsFilterPanelOpen)
+        {
             SyncDraftWithAppliedFilters();
+        }
     }
 
     [RelayCommand(AllowConcurrentExecutions = false)]
@@ -294,7 +308,19 @@ public partial class HomeViewModel : ObservableObject
     private async Task LoadFirstPageAsync(CancellationToken cancellationToken)
     {
         var generation = ++_generation;
+        _searchCancellation?.Cancel();
+        _searchCancellation?.Dispose();
+        var requestCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _searchCancellation = requestCancellation;
+        var requestToken = requestCancellation.Token;
         IsBusy = true;
+        IsLoadingMore = false;
+        _nextCursor = null;
+        HasMore = false;
+        TotalCount = 0;
+        IsTotalCountCapped = false;
+        Reset(Array.Empty<ListingSummaryDto>());
+        ResultsText = "Đang cập nhật số phòng…";
         ErrorMessage = string.Empty;
         EmptyMessage = "Đang tải phòng trọ…";
         try
@@ -303,7 +329,7 @@ public partial class HomeViewModel : ObservableObject
                 PageSize,
                 cursor: null,
                 _appliedFilters,
-                cancellationToken);
+                requestToken);
             if (generation != _generation)
                 return;
 
@@ -317,8 +343,13 @@ public partial class HomeViewModel : ObservableObject
                 ? "Không tìm thấy phòng phù hợp. Hãy thử nới lỏng bộ lọc."
                 : "Hiện chưa có phòng nào được đăng.";
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (requestToken.IsCancellationRequested)
         {
+            if (generation == _generation)
+            {
+                ResultsText = "Đã dừng tải phòng.";
+                EmptyMessage = "Đã dừng tải phòng. Hãy tải lại để tiếp tục.";
+            }
         }
         catch (Exception ex)
         {
@@ -523,7 +554,9 @@ public partial class HomeViewModel : ObservableObject
         }
 
         var wholeVnd = millions * 1_000_000d;
-        if (!double.IsFinite(wholeVnd) || wholeVnd > long.MaxValue)
+        // long.MaxValue rounds to 2^63 as a double; reject that exclusive bound
+        // before converting so a large valid-looking input cannot wrap negative.
+        if (!double.IsFinite(wholeVnd) || wholeVnd >= 9223372036854775808d)
         {
             error = "Giá thuê quá lớn.";
             return false;
@@ -603,5 +636,6 @@ public partial class HomeViewModel : ObservableObject
             if (_listingIds.Add(listing.Id))
                 Listings.Add(HomeListingItem.FromDto(listing));
         }
+        OnPropertyChanged(nameof(CanLoadMore));
     }
 }

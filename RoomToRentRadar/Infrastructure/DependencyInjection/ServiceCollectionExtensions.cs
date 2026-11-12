@@ -34,7 +34,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<AuthService>();
         services.AddSingleton<IErrorHandler, ModalErrorHandler>();
         services.AddSingleton<IPreferences>(Preferences.Default);
-        services.AddSingleton<ISavedAreaSearchStore, PreferencesSavedAreaSearchStore>();
+        services.AddSingleton<ISavedAreaSearchStore>(provider => new FileSavedAreaSearchStore(
+            FileSystem.AppDataDirectory, provider.GetRequiredService<IPreferences>()));
         services.AddSingleton<INavigationService, ShellNavigationService>();
         return services;
     }

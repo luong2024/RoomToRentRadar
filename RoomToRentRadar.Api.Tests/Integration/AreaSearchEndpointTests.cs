@@ -90,6 +90,40 @@ public sealed class AreaSearchEndpointTests
         });
     }
 
+    [TestCase(ListingSortWire.PriceAsc)]
+    [TestCase(ListingSortWire.DistanceAsc)]
+    public async Task FiveVertexDrawnArea_QueriesSeededDatabase_IncludingBoundaryButExcludingOutside(string sort)
+    {
+        // A five-tap polygon cuts off the north-west corner of the seeded rectangle.
+        // SetUp inserted these rooms into the real SQLite database used by the API.
+        var ring = Ring((106.68, 10.75), (106.72, 10.75), (106.72, 10.79),
+            (106.70, 10.79), (106.68, 10.775), (106.68, 10.75));
+
+        var result = await SearchAsync(Body(ring, limit: 100, sort: sort));
+        var ids = result.Data.Select(item => item.Id).ToArray();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ids, Does.Contain(SpatialListingsSeed.CenterId), "Known room inside the drawn area is searchable.");
+            Assert.That(ids, Does.Contain(SpatialListingsSeed.CenterBId));
+            Assert.That(ids, Does.Contain(SpatialListingsSeed.EdgeWestId), "Rooms on a drawn edge remain searchable.");
+            Assert.That(ids, Does.Contain(SpatialListingsSeed.VertexSouthEastId), "Rooms on a drawn vertex remain searchable.");
+            Assert.That(ids, Does.Not.Contain(SpatialListingsSeed.VertexNorthWestId), "The cut-off corner must be outside this polygon.");
+            Assert.That(ids, Does.Not.Contain(SpatialListingsSeed.OutsideNorthId));
+            Assert.That(ids, Does.Not.Contain(SpatialListingsSeed.OutsideWestId));
+            Assert.That(ids, Does.Not.Contain(SpatialListingsSeed.DraftInsideId));
+            Assert.That(result.TotalCount, Is.EqualTo(9));
+        });
+
+        if (sort == ListingSortWire.PriceAsc)
+            AssertSorted(result.Data, ListingSort.PriceAsc);
+        else
+        {
+            var origin = Centroid(ring);
+            AssertDistanceOrder(result.Data, origin.Lat, origin.Lng);
+        }
+    }
+
     [Test]
     public async Task ConcavePolygon_ExcludesListingsInTheNotch()
     {

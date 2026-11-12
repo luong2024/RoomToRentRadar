@@ -1,3 +1,5 @@
+using NetTopologySuite.Geometries;
+
 namespace RoomToRentRadar.Models;
 
 /// <summary>
@@ -15,6 +17,19 @@ public sealed class PolygonDraft
     public bool IsClosed { get; private set; }
 
     public bool CanClose => !IsClosed && _vertices.Count >= MinimumVertices;
+
+    internal bool HasValidGeometry
+    {
+        get
+        {
+            if (_vertices.Count < MinimumVertices || _vertices.Distinct().Count() != _vertices.Count)
+                return false;
+            var coordinates = _vertices.Select(vertex => new Coordinate(vertex.Lng, vertex.Lat))
+                .Append(new Coordinate(_vertices[0].Lng, _vertices[0].Lat)).ToArray();
+            var polygon = new GeometryFactory().CreatePolygon(coordinates);
+            return polygon.IsValid && polygon.Area > 0;
+        }
+    }
 
     /// <summary>Vertices plus the repeated first vertex when closed.</summary>
     public IReadOnlyList<GeoPoint> Ring => IsClosed && _vertices.Count > 0
