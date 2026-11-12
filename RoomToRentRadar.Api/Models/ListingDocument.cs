@@ -52,11 +52,21 @@ public sealed class GeoJsonPoint
 
 public sealed class PhotoDocument
 {
+    public string Id { get; set; } = string.Empty;
+
     public string Url { get; set; } = string.Empty;
+
+    public string ThumbnailUrl { get; set; } = string.Empty;
 
     public bool Is360 { get; set; }
 
     public int Order { get; set; }
+
+    public int Width { get; set; }
+
+    public int Height { get; set; }
+
+    public long SizeBytes { get; set; }
 }
 
 public sealed class HouseRulesDocument
