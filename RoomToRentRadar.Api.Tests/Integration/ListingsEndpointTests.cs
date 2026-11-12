@@ -186,6 +186,39 @@ public sealed class ListingsEndpointTests
         Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo("cursor_sort_mismatch"));
     }
 
+    [Test]
+    public async Task CursorFilterMismatch_IsRejected()
+    {
+        var firstPage = await GetPageAsync("/api/v1/listings?limit=2&min_price=6000000");
+        Assert.That(firstPage.Pagination.NextCursor, Is.Not.Null);
+
+        var problem = await GetProblemAsync(
+            "/api/v1/listings?limit=2&min_price=7000000&cursor="
+            + Uri.EscapeDataString(firstPage.Pagination.NextCursor!));
+
+        Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo("cursor_filter_mismatch"));
+    }
+
+    [Test]
+    public async Task Cursor_IsAcceptedWhenFiltersAreUnchanged()
+    {
+        var firstPage = await GetPageAsync("/api/v1/listings?limit=2&min_price=6000000");
+        Assert.That(firstPage.Pagination.NextCursor, Is.Not.Null);
+
+        var secondPage = await GetPageAsync(
+            "/api/v1/listings?limit=2&min_price=6000000&cursor="
+            + Uri.EscapeDataString(firstPage.Pagination.NextCursor!));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(secondPage.Data, Has.Count.EqualTo(2));
+            Assert.That(
+                secondPage.Data.Select(item => item.Id)
+                    .Intersect(firstPage.Data.Select(item => item.Id)),
+                Is.Empty);
+        });
+    }
+
     [TestCase("limit=0", "invalid_limit")]
     [TestCase("limit=101", "invalid_limit")]
     [TestCase("limit=abc", "invalid_parameter_format")]

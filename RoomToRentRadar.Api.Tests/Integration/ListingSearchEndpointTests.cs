@@ -278,7 +278,7 @@ public sealed class ListingSearchEndpointTests
         Assert.Multiple(() =>
         {
             Assert.That(result.Data, Has.Count.EqualTo(50));
-            Assert.That(result.TotalCount, Is.EqualTo(ListingSearchResultDto.TotalCountLimit));
+            Assert.That(result.TotalCount, Is.EqualTo(SearchLimits.TotalCountLimit));
             Assert.That(result.TotalCountCapped, Is.True);
             Assert.That(again.TotalCount, Is.EqualTo(result.TotalCount));
             Assert.That(again.TotalCountCapped, Is.True);

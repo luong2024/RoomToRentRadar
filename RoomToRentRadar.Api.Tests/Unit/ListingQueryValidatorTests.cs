@@ -18,13 +18,13 @@ public sealed class ListingQueryValidatorTests
             Assert.That(query.Limit, Is.EqualTo(ListingQueryValidator.DefaultLimit));
             Assert.That(query.Sort, Is.EqualTo(ListingSort.Newest));
             Assert.That(query.Cursor, Is.Null);
-            Assert.That(query.MinPrice, Is.Null);
-            Assert.That(query.MaxPrice, Is.Null);
-            Assert.That(query.Bedrooms, Is.Null);
-            Assert.That(query.MinAreaM2, Is.Null);
-            Assert.That(query.MaxAreaM2, Is.Null);
-            Assert.That(query.RoomType, Is.Null);
-            Assert.That(query.Campus, Is.Null);
+            Assert.That(query.Filters.MinPrice, Is.Null);
+            Assert.That(query.Filters.MaxPrice, Is.Null);
+            Assert.That(query.Filters.Bedrooms, Is.Null);
+            Assert.That(query.Filters.MinAreaM2, Is.Null);
+            Assert.That(query.Filters.MaxAreaM2, Is.Null);
+            Assert.That(query.Filters.RoomType, Is.Null);
+            Assert.That(query.Filters.Campus, Is.Null);
         });
     }
 
@@ -53,13 +53,13 @@ public sealed class ListingQueryValidatorTests
             Assert.That(query.Limit, Is.EqualTo(50));
             Assert.That(query.Sort, Is.EqualTo(ListingSort.AreaDesc));
             Assert.That(query.Cursor, Is.EqualTo("abc"));
-            Assert.That(query.MinPrice, Is.EqualTo(1_000_000));
-            Assert.That(query.MaxPrice, Is.EqualTo(5_000_000));
-            Assert.That(query.Bedrooms, Is.EqualTo(2));
-            Assert.That(query.MinAreaM2, Is.EqualTo(25.5));
-            Assert.That(query.MaxAreaM2, Is.EqualTo(80d));
-            Assert.That(query.RoomType, Is.EqualTo(RoomType.Studio));
-            Assert.That(query.Campus, Is.EqualTo(new CampusFilter(10.7626, 106.6602, 3.5)));
+            Assert.That(query.Filters.MinPrice, Is.EqualTo(1_000_000));
+            Assert.That(query.Filters.MaxPrice, Is.EqualTo(5_000_000));
+            Assert.That(query.Filters.Bedrooms, Is.EqualTo(2));
+            Assert.That(query.Filters.MinAreaM2, Is.EqualTo(25.5));
+            Assert.That(query.Filters.MaxAreaM2, Is.EqualTo(80d));
+            Assert.That(query.Filters.RoomType, Is.EqualTo(RoomType.Studio));
+            Assert.That(query.Filters.Campus, Is.EqualTo(new CampusFilter(10.7626, 106.6602, 3.5)));
         });
     }
 
@@ -124,8 +124,8 @@ public sealed class ListingQueryValidatorTests
         Assert.That(ListingQueryValidator.TryCreate(parameters, out var query, out _), Is.True);
         Assert.Multiple(() =>
         {
-            Assert.That(query.MinAreaM2, Is.EqualTo(30d));
-            Assert.That(query.MaxAreaM2, Is.EqualTo(30d));
+            Assert.That(query.Filters.MinAreaM2, Is.EqualTo(30d));
+            Assert.That(query.Filters.MaxAreaM2, Is.EqualTo(30d));
         });
     }
 
@@ -139,7 +139,7 @@ public sealed class ListingQueryValidatorTests
         var parameters = new ListingQueryParameters { RoomType = wireValue };
 
         Assert.That(ListingQueryValidator.TryCreate(parameters, out var query, out _), Is.True);
-        Assert.That(query.RoomType, Is.EqualTo(expected));
+        Assert.That(query.Filters.RoomType, Is.EqualTo(expected));
     }
 
     [TestCase("castle")]
@@ -200,7 +200,7 @@ public sealed class ListingQueryValidatorTests
         };
 
         Assert.That(ListingQueryValidator.TryCreate(parameters, out var query, out _), Is.True);
-        Assert.That(query.Campus!.MaxDistanceKm, Is.EqualTo(ListingQueryValidator.MaxDistanceKm));
+        Assert.That(query.Filters.Campus!.MaxDistanceKm, Is.EqualTo(ListingQueryValidator.MaxDistanceKm));
     }
 
     [TestCase(90d, 180d)]
@@ -210,7 +210,7 @@ public sealed class ListingQueryValidatorTests
         var parameters = new ListingQueryParameters { CampusLat = lat, CampusLng = lng, MaxDistanceKm = 1 };
 
         Assert.That(ListingQueryValidator.TryCreate(parameters, out var query, out _), Is.True);
-        Assert.That(query.Campus, Is.EqualTo(new CampusFilter(lat, lng, 1d)));
+        Assert.That(query.Filters.Campus, Is.EqualTo(new CampusFilter(lat, lng, 1d)));
     }
 
     [Test]

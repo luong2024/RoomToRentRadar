@@ -10,7 +10,7 @@ public sealed class ListingQueryParameters
     public int? Limit { get; init; }
 
     [FromQuery(Name = "cursor")]
-    [Description("Opaque cursor from pagination.next_cursor. Must match the requested sort; restart pagination when filters change.")]
+    [Description("Opaque cursor from pagination.next_cursor. Must match the requested sort and filters; restart pagination when either changes.")]
     public string? Cursor { get; init; }
 
     [FromQuery(Name = "sort")]

@@ -10,6 +10,8 @@ public sealed class ListingSortKeyOrderingTests
     private static readonly DateTime Day2 = Day1.AddDays(1);
     private static readonly DateTime Day3 = Day1.AddDays(2);
 
+    private const string Fingerprint = "ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789";
+
     private static readonly ListingSortKey[] Keys =
     [
         new(Id(0), Day3, 5_000_000, 30),
@@ -78,7 +80,7 @@ public sealed class ListingSortKeyOrderingTests
         for (var cursorIndex = 0; cursorIndex < ordered.Count; cursorIndex++)
         {
             var last = ordered[cursorIndex];
-            var cursor = Decode(ListingSortKeyOrdering.EncodeCursor(sort, last));
+            var cursor = Decode(ListingSortKeyOrdering.EncodeCursor(sort, last, Fingerprint));
 
             var afterCursor = ordered
                 .Where(key => ListingSortKeyOrdering.IsAfterCursor(key, cursor))
@@ -97,13 +99,14 @@ public sealed class ListingSortKeyOrderingTests
     {
         var key = Keys[3];
 
-        var encoded = ListingSortKeyOrdering.EncodeCursor(ListingSort.PriceDesc, key);
+        var encoded = ListingSortKeyOrdering.EncodeCursor(ListingSort.PriceDesc, key, Fingerprint);
         Assert.That(ListingCursorCodec.TryDecode(encoded, out var cursor), Is.True);
 
         Assert.Multiple(() =>
         {
             Assert.That(cursor.Sort, Is.EqualTo(ListingSort.PriceDesc));
             Assert.That(cursor.Id, Is.EqualTo(key.Id));
+            Assert.That(cursor.FilterFingerprint, Is.EqualTo(Fingerprint));
             Assert.That(cursor.Price, Is.EqualTo(key.Price));
             Assert.That(cursor.CreatedAt, Is.Null);
             Assert.That(cursor.AreaM2, Is.Null);
@@ -115,7 +118,7 @@ public sealed class ListingSortKeyOrderingTests
     {
         var key = Keys[0];
 
-        var encoded = ListingSortKeyOrdering.EncodeCursor(ListingSort.Newest, key);
+        var encoded = ListingSortKeyOrdering.EncodeCursor(ListingSort.Newest, key, Fingerprint);
         Assert.That(ListingCursorCodec.TryDecode(encoded, out var cursor), Is.True);
 
         Assert.Multiple(() =>
@@ -159,7 +162,7 @@ public sealed class ListingSortKeyOrderingTests
                 break;
             }
 
-            cursor = Decode(ListingSortKeyOrdering.EncodeCursor(sort, window[^1]));
+            cursor = Decode(ListingSortKeyOrdering.EncodeCursor(sort, window[^1], Fingerprint));
         }
 
         return collected;

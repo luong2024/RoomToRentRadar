@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using RoomToRentRadar.Api.Domain;
+using RoomToRentRadar.Shared.Listings;
 
 namespace RoomToRentRadar.Api.Data.Configurations;
 
@@ -18,7 +19,9 @@ public sealed class ListingConfiguration : IEntityTypeConfiguration<Listing>
                 "status IN ('draft', 'published', 'hidden', 'removed')");
             table.HasCheckConstraint(
                 "ck_listings_room_type",
-                "room_type IN ('single_room', 'shared_room', 'studio', 'apartment', 'house')");
+                "room_type IN ("
+                + string.Join(", ", RoomTypeWire.All.Select(value => $"'{value}'"))
+                + ")");
         });
 
         builder.HasKey(x => x.Id);

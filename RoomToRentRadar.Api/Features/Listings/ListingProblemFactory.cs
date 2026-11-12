@@ -8,6 +8,7 @@ public static class ListingProblemFactory
     public const string InvalidSort = "invalid_sort";
     public const string InvalidCursor = "invalid_cursor";
     public const string CursorSortMismatch = "cursor_sort_mismatch";
+    public const string CursorFilterMismatch = "cursor_filter_mismatch";
     public const string InvalidPriceRange = "invalid_price_range";
     public const string InvalidAreaRange = "invalid_area_range";
     public const string InvalidRoomType = "invalid_room_type";

@@ -11,17 +11,20 @@ public sealed class ListingCursorCodecTests
 {
     private static readonly Guid ListingId = Guid.Parse("a6d4a502-8172-f03b-991b-121d1b1ecfba");
     private static readonly DateTime CreatedAt = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc).AddTicks(1234567);
+    private const string Fingerprint = "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF";
 
     [Test]
     public void NewestCursor_RoundTrips()
     {
-        var encoded = ListingCursorCodec.Encode(ListingSort.Newest, ListingId, createdAt: CreatedAt);
+        var encoded = ListingCursorCodec.Encode(
+            ListingSort.Newest, ListingId, Fingerprint, createdAt: CreatedAt);
 
         Assert.That(ListingCursorCodec.TryDecode(encoded, out var cursor), Is.True);
         Assert.Multiple(() =>
         {
             Assert.That(cursor.Sort, Is.EqualTo(ListingSort.Newest));
             Assert.That(cursor.Id, Is.EqualTo(ListingId));
+            Assert.That(cursor.FilterFingerprint, Is.EqualTo(Fingerprint));
             Assert.That(cursor.CreatedAt, Is.EqualTo(CreatedAt));
             Assert.That(cursor.CreatedAt!.Value.Kind, Is.EqualTo(DateTimeKind.Utc));
             Assert.That(cursor.Price, Is.Null);
@@ -32,7 +35,8 @@ public sealed class ListingCursorCodecTests
     [Test]
     public void PriceCursor_RoundTrips()
     {
-        var encoded = ListingCursorCodec.Encode(ListingSort.PriceDesc, ListingId, price: 12_345_678);
+        var encoded = ListingCursorCodec.Encode(
+            ListingSort.PriceDesc, ListingId, Fingerprint, price: 12_345_678);
 
         Assert.That(ListingCursorCodec.TryDecode(encoded, out var cursor), Is.True);
         Assert.Multiple(() =>
@@ -47,7 +51,8 @@ public sealed class ListingCursorCodecTests
     [Test]
     public void AreaCursor_RoundTrips()
     {
-        var encoded = ListingCursorCodec.Encode(ListingSort.AreaDesc, ListingId, areaM2: 42.5);
+        var encoded = ListingCursorCodec.Encode(
+            ListingSort.AreaDesc, ListingId, Fingerprint, areaM2: 42.5);
 
         Assert.That(ListingCursorCodec.TryDecode(encoded, out var cursor), Is.True);
         Assert.Multiple(() =>
@@ -71,7 +76,43 @@ public sealed class ListingCursorCodecTests
     [Test]
     public void UnsupportedVersion_IsRejected()
     {
-        var encoded = EncodePayload(new { version = 2, sort = "newest", key = CreatedAt.ToString("O"), id = ListingId });
+        var encoded = EncodePayload(new
+        {
+            version = 3,
+            sort = "newest",
+            key = CreatedAt.ToString("O"),
+            id = ListingId,
+            fingerprint = Fingerprint
+        });
+
+        Assert.That(ListingCursorCodec.TryDecode(encoded, out _), Is.False);
+    }
+
+    [Test]
+    public void VersionWithoutFingerprint_IsRejected()
+    {
+        var encoded = EncodePayload(new
+        {
+            version = 1,
+            sort = "newest",
+            key = CreatedAt.ToString("O"),
+            id = ListingId
+        });
+
+        Assert.That(ListingCursorCodec.TryDecode(encoded, out _), Is.False);
+    }
+
+    [Test]
+    public void BlankFingerprint_IsRejected()
+    {
+        var encoded = EncodePayload(new
+        {
+            version = ListingCursorCodec.CurrentVersion,
+            sort = "newest",
+            key = CreatedAt.ToString("O"),
+            id = ListingId,
+            fingerprint = "   "
+        });
 
         Assert.That(ListingCursorCodec.TryDecode(encoded, out _), Is.False);
     }
@@ -79,7 +120,14 @@ public sealed class ListingCursorCodecTests
     [Test]
     public void UnknownSort_IsRejected()
     {
-        var encoded = EncodePayload(new { version = 1, sort = "popular", key = "1", id = ListingId });
+        var encoded = EncodePayload(new
+        {
+            version = ListingCursorCodec.CurrentVersion,
+            sort = "popular",
+            key = "1",
+            id = ListingId,
+            fingerprint = Fingerprint
+        });
 
         Assert.That(ListingCursorCodec.TryDecode(encoded, out _), Is.False);
     }
@@ -87,7 +135,14 @@ public sealed class ListingCursorCodecTests
     [Test]
     public void InvalidNewestKey_IsRejected()
     {
-        var encoded = EncodePayload(new { version = 1, sort = "newest", key = "not-a-date", id = ListingId });
+        var encoded = EncodePayload(new
+        {
+            version = ListingCursorCodec.CurrentVersion,
+            sort = "newest",
+            key = "not-a-date",
+            id = ListingId,
+            fingerprint = Fingerprint
+        });
 
         Assert.That(ListingCursorCodec.TryDecode(encoded, out _), Is.False);
     }
@@ -95,7 +150,14 @@ public sealed class ListingCursorCodecTests
     [Test]
     public void InvalidPriceKey_IsRejected()
     {
-        var encoded = EncodePayload(new { version = 1, sort = "price_asc", key = "not-a-price", id = ListingId });
+        var encoded = EncodePayload(new
+        {
+            version = ListingCursorCodec.CurrentVersion,
+            sort = "price_asc",
+            key = "not-a-price",
+            id = ListingId,
+            fingerprint = Fingerprint
+        });
 
         Assert.That(ListingCursorCodec.TryDecode(encoded, out _), Is.False);
     }
@@ -105,10 +167,11 @@ public sealed class ListingCursorCodecTests
     {
         var encoded = EncodePayload(new
         {
-            version = 1,
+            version = ListingCursorCodec.CurrentVersion,
             sort = "newest",
             key = CreatedAt.ToString("O"),
-            id = Guid.Empty
+            id = Guid.Empty,
+            fingerprint = Fingerprint
         });
 
         Assert.That(ListingCursorCodec.TryDecode(encoded, out _), Is.False);

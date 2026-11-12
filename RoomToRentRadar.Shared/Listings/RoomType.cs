@@ -32,6 +32,10 @@ public static class RoomTypeWire
     public const string Apartment = "apartment";
     public const string House = "house";
 
+    /// <summary>Every supported wire value, in enum order.</summary>
+    public static readonly IReadOnlyList<string> All =
+        [SingleRoom, SharedRoom, Studio, Apartment, House];
+
     public static bool TryParse(string? value, out RoomType roomType)
     {
         switch (value)
@@ -66,4 +70,9 @@ public static class RoomTypeWire
         RoomType.House => House,
         _ => throw new ArgumentOutOfRangeException(nameof(roomType), roomType, null)
     };
+
+    public static RoomType FromWireValue(string value)
+        => TryParse(value, out var roomType)
+            ? roomType
+            : throw new InvalidOperationException($"Unknown room type '{value}'.");
 }

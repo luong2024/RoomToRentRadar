@@ -10,20 +10,41 @@ namespace RoomToRentRadar.Api.Features.Listings;
 /// Listing search. Without a campus filter the database applies every filter, counts
 /// the matches and returns the page: two SELECT statements. With a campus filter one
 /// bounding-box candidate query is issued, the exact haversine distance is applied in
-/// memory and the cover photos of the selected page come from a second query.
+/// memory and <see cref="ListingCandidatePageBuilder"/> builds the page with its
+/// cover photos.
 /// </summary>
-public sealed class ListingsQueryService(AppDbContext dbContext)
+public sealed class ListingsQueryService(
+    AppDbContext dbContext,
+    ListingCandidatePageBuilder candidatePageBuilder)
 {
     public async Task<ListingSearchResultDto> GetPageAsync(
         ListingQuery query,
         ListingCursor? cursor,
         CancellationToken cancellationToken)
     {
-        var activeFilters = BuildActiveFilters(query);
+        var activeFilters = BuildActiveFilters(query.Filters);
 
-        return query.Campus is { } campus
-            ? await GetRadiusPageAsync(query, campus, cursor, activeFilters, cancellationToken)
-            : await GetSqlPageAsync(query, cursor, activeFilters, cancellationToken);
+        if (query.Filters.Campus is not { } campus)
+        {
+            var page = await GetSqlPageAsync(query, cursor, cancellationToken);
+            return new ListingSearchResultDto(
+                page.Items,
+                page.Pagination,
+                page.TotalCount,
+                page.TotalCountCapped,
+                activeFilters);
+        }
+
+        var candidates = await GetRadiusCandidatesAsync(query, campus, cancellationToken);
+        var radiusPage = await candidatePageBuilder.BuildAsync(
+            candidates, query, cursor, cancellationToken);
+
+        return new ListingSearchResultDto(
+            radiusPage.Items,
+            radiusPage.Pagination,
+            radiusPage.TotalCount,
+            radiusPage.TotalCountCapped,
+            activeFilters);
     }
 
     public async Task<ListingDetailDto?> GetDetailAsync(Guid id, CancellationToken cancellationToken)
@@ -54,20 +75,22 @@ public sealed class ListingsQueryService(AppDbContext dbContext)
                     .ToList()))
             .FirstOrDefaultAsync(cancellationToken);
 
-    private async Task<ListingSearchResultDto> GetSqlPageAsync(
+    private async Task<ListingCandidatePage> GetSqlPageAsync(
         ListingQuery query,
         ListingCursor? cursor,
-        ActiveListingFiltersDto? activeFilters,
         CancellationToken cancellationToken)
     {
-        var listings = ApplyFilters(
-            dbContext.Listings
-                .AsNoTracking()
-                .Where(x => x.Status == ListingStatus.Published),
-            query);
+        var listings = dbContext.Listings
+            .AsNoTracking()
+            .Where(x => x.Status == ListingStatus.Published)
+            .ApplyFilters(query.Filters);
 
         // Counted before the cursor so every page of a walk reports the same total.
-        var (totalCount, totalCountCapped) = await CountMatchesAsync(listings, cancellationToken);
+        var counted = await listings
+            .Take(SearchLimits.TotalCountLimit + 1)
+            .CountAsync(cancellationToken);
+        var totalCount = Math.Min(counted, SearchLimits.TotalCountLimit);
+        var totalCountCapped = counted > SearchLimits.TotalCountLimit;
 
         var pageQuery = cursor is null ? listings : ListingSortStrategy.ApplyCursor(listings, cursor);
         pageQuery = ListingSortStrategy.ApplyOrdering(pageQuery, query.Sort);
@@ -105,42 +128,35 @@ public sealed class ListingsQueryService(AppDbContext dbContext)
             nextCursor = ListingCursorCodec.Encode(
                 query.Sort,
                 last.Id,
+                ListingFilterFingerprint.Compute(query.Filters),
                 last.CreatedAt,
                 last.Price,
                 last.AreaM2);
         }
 
-        return new ListingSearchResultDto(
+        return new ListingCandidatePage(
             items,
             new PaginationInfo(query.Limit, nextCursor, hasMore),
             totalCount,
-            totalCountCapped,
-            activeFilters);
+            totalCountCapped);
     }
 
-    private async Task<ListingSearchResultDto> GetRadiusPageAsync(
+    private async Task<IReadOnlyList<ListingCandidate>> GetRadiusCandidatesAsync(
         ListingQuery query,
         CampusFilter campus,
-        ListingCursor? cursor,
-        ActiveListingFiltersDto? activeFilters,
         CancellationToken cancellationToken)
     {
         var box = GeoDistance.BoundingBox(campus.Lat, campus.Lng, campus.MaxDistanceKm);
 
-        var listings = ApplyFilters(
-            dbContext.Listings
-                .AsNoTracking()
-                .Where(x => x.Status == ListingStatus.Published
-                    && x.Lat >= box.MinLat
-                    && x.Lat <= box.MaxLat
-                    && x.Lng >= box.MinLng
-                    && x.Lng <= box.MaxLng),
-            query);
-
-        // Display columns are projected as well so the page can be built without a
-        // third query; photos stay out of this query.
-        var candidates = await listings
-            .Select(x => new CandidateRow(
+        var candidates = await dbContext.Listings
+            .AsNoTracking()
+            .Where(x => x.Status == ListingStatus.Published
+                && x.Lat >= box.MinLat
+                && x.Lat <= box.MaxLat
+                && x.Lng >= box.MinLng
+                && x.Lng <= box.MaxLng)
+            .ApplyFilters(query.Filters)
+            .Select(x => new ListingCandidate(
                 x.Id,
                 x.Title,
                 x.Price,
@@ -152,194 +168,25 @@ public sealed class ListingsQueryService(AppDbContext dbContext)
                 x.CreatedAt))
             .ToListAsync(cancellationToken);
 
-        var matches = new List<ListingSortKey>(candidates.Count);
-        var rows = new Dictionary<Guid, CandidateRow>(candidates.Count);
-        foreach (var candidate in candidates)
-        {
-            // The bounding box is a superset of the circle, so the exact distance
-            // decides membership. The boundary is inclusive.
-            if (GeoDistance.HaversineKm(campus.Lat, campus.Lng, candidate.Lat, candidate.Lng)
-                > campus.MaxDistanceKm)
-            {
-                continue;
-            }
-
-            matches.Add(new ListingSortKey(candidate.Id, candidate.CreatedAt, candidate.Price, candidate.AreaM2));
-            rows[candidate.Id] = candidate;
-        }
-
-        // Counted before the cursor so every page reports the same total.
-        var totalCount = Math.Min(matches.Count, ListingSearchResultDto.TotalCountLimit);
-        var totalCountCapped = matches.Count > ListingSearchResultDto.TotalCountLimit;
-
-        var remaining = cursor is null
-            ? matches
-            : matches.Where(key => ListingSortKeyOrdering.IsAfterCursor(key, cursor)).ToList();
-
-        var ordered = ListingSortKeyOrdering.Sort(remaining, query.Sort);
-
-        var pageKeys = ordered.Take(query.Limit + 1).ToList();
-        var hasMore = pageKeys.Count > query.Limit;
-        if (hasMore)
-        {
-            pageKeys.RemoveAt(pageKeys.Count - 1);
-        }
-
-        var coverPhotos = await LoadCoverPhotosAsync(pageKeys, cancellationToken);
-
-        var items = new List<ListingSummaryDto>(pageKeys.Count);
-        foreach (var key in pageKeys)
-        {
-            var row = rows[key.Id];
-            items.Add(new ListingSummaryDto(
-                key.Id,
-                row.Title,
-                key.Price,
-                key.AreaM2,
-                row.Bedrooms,
-                row.Address,
-                row.Lat,
-                row.Lng,
-                key.CreatedAt,
-                coverPhotos.GetValueOrDefault(key.Id)));
-        }
-
-        string? nextCursor = null;
-        if (hasMore)
-        {
-            nextCursor = ListingSortKeyOrdering.EncodeCursor(query.Sort, pageKeys[^1]);
-        }
-
-        return new ListingSearchResultDto(
-            items,
-            new PaginationInfo(query.Limit, nextCursor, hasMore),
-            totalCount,
-            totalCountCapped,
-            activeFilters);
+        // The bounding box is a superset of the circle, so the exact distance
+        // decides membership. The boundary is inclusive.
+        return candidates
+            .Where(candidate => GeoDistance.HaversineKm(
+                campus.Lat, campus.Lng, candidate.Lat, candidate.Lng) <= campus.MaxDistanceKm)
+            .ToList();
     }
 
-    private static IQueryable<Listing> ApplyFilters(IQueryable<Listing> listings, ListingQuery query)
-    {
-        if (query.MinPrice is { } minPrice)
-        {
-            listings = listings.Where(x => x.Price >= minPrice);
-        }
-
-        if (query.MaxPrice is { } maxPrice)
-        {
-            listings = listings.Where(x => x.Price <= maxPrice);
-        }
-
-        if (query.MinAreaM2 is { } minAreaM2)
-        {
-            listings = listings.Where(x => x.AreaM2 >= minAreaM2);
-        }
-
-        if (query.MaxAreaM2 is { } maxAreaM2)
-        {
-            listings = listings.Where(x => x.AreaM2 <= maxAreaM2);
-        }
-
-        if (query.Bedrooms is { } bedrooms)
-        {
-            listings = listings.Where(x => x.Bedrooms == bedrooms);
-        }
-
-        if (query.RoomType is { } roomType)
-        {
-            listings = listings.Where(x => x.RoomType == roomType);
-        }
-
-        return listings;
-    }
-
-    /// <summary>
-    /// Counts the matches, capped at <see cref="ListingSearchResultDto.TotalCountLimit"/>
-    /// so a huge result set never scans more than the limit plus one row. The provider
-    /// fallback keeps the endpoint working if LIMIT cannot be applied to an aggregate.
-    /// </summary>
-    private static async Task<(int TotalCount, bool TotalCountCapped)> CountMatchesAsync(
-        IQueryable<Listing> listings,
-        CancellationToken cancellationToken)
-    {
-        const int limit = ListingSearchResultDto.TotalCountLimit;
-
-        int counted;
-        try
-        {
-            counted = await listings.Take(limit + 1).CountAsync(cancellationToken);
-        }
-        catch (InvalidOperationException)
-        {
-            counted = await listings.CountAsync(cancellationToken);
-        }
-
-        return counted > limit ? (limit, true) : (counted, false);
-    }
-
-    private async Task<IReadOnlyDictionary<Guid, string>> LoadCoverPhotosAsync(
-        IReadOnlyList<ListingSortKey> pageKeys,
-        CancellationToken cancellationToken)
-    {
-        if (pageKeys.Count == 0)
-        {
-            return new Dictionary<Guid, string>();
-        }
-
-        var listingIds = pageKeys.Select(key => key.Id).ToList();
-
-        var photos = await dbContext.ListingPhotos
-            .AsNoTracking()
-            .Where(photo => listingIds.Contains(photo.ListingId))
-            .OrderByDescending(photo => photo.IsCover)
-            .ThenBy(photo => photo.SortOrder)
-            .ThenBy(photo => photo.Id)
-            .Select(photo => new { photo.ListingId, Url = photo.ThumbUrl ?? photo.Url })
-            .ToListAsync(cancellationToken);
-
-        var coverPhotos = new Dictionary<Guid, string>(photos.Count);
-        foreach (var photo in photos)
-        {
-            // Photos are ordered, so the first row per listing is its cover.
-            coverPhotos.TryAdd(photo.ListingId, photo.Url);
-        }
-
-        return coverPhotos;
-    }
-
-    private static ActiveListingFiltersDto? BuildActiveFilters(ListingQuery query)
-    {
-        if (query.MinPrice is null
-            && query.MaxPrice is null
-            && query.MinAreaM2 is null
-            && query.MaxAreaM2 is null
-            && query.Bedrooms is null
-            && query.RoomType is null
-            && query.Campus is null)
-        {
-            return null;
-        }
-
-        return new ActiveListingFiltersDto(
-            query.MinPrice,
-            query.MaxPrice,
-            query.MinAreaM2,
-            query.MaxAreaM2,
-            query.Bedrooms,
-            query.RoomType,
-            query.Campus?.Lat,
-            query.Campus?.Lng,
-            query.Campus?.MaxDistanceKm);
-    }
-
-    private sealed record CandidateRow(
-        Guid Id,
-        string Title,
-        long Price,
-        double AreaM2,
-        int Bedrooms,
-        string Address,
-        double Lat,
-        double Lng,
-        DateTime CreatedAt);
+    private static ActiveListingFiltersDto? BuildActiveFilters(ListingFilters filters)
+        => filters.IsEmpty
+            ? null
+            : new ActiveListingFiltersDto(
+                filters.MinPrice,
+                filters.MaxPrice,
+                filters.MinAreaM2,
+                filters.MaxAreaM2,
+                filters.Bedrooms,
+                filters.RoomType,
+                filters.Campus?.Lat,
+                filters.Campus?.Lng,
+                filters.Campus?.MaxDistanceKm);
 }

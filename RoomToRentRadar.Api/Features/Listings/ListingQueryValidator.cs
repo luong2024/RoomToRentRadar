@@ -100,17 +100,20 @@ public static class ListingQueryValidator
             return false;
         }
 
+        var filters = new ListingFilters(
+            parameters.MinPrice,
+            parameters.MaxPrice,
+            parameters.MinAreaM2,
+            parameters.MaxAreaM2,
+            parameters.Bedrooms,
+            roomType,
+            campus);
+
         query = new ListingQuery(
             limit,
             string.IsNullOrWhiteSpace(parameters.Cursor) ? null : parameters.Cursor,
             sort,
-            parameters.MinPrice,
-            parameters.MaxPrice,
-            parameters.Bedrooms,
-            parameters.MinAreaM2,
-            parameters.MaxAreaM2,
-            roomType,
-            campus);
+            filters);
         return true;
     }
 

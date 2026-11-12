@@ -227,7 +227,7 @@ public sealed class AreaSearchEndpointTests
         Assert.Multiple(() =>
         {
             Assert.That(result.Data, Has.Count.EqualTo(50));
-            Assert.That(result.TotalCount, Is.EqualTo(AreaSearchResultDto.TotalCountLimit));
+            Assert.That(result.TotalCount, Is.EqualTo(SearchLimits.TotalCountLimit));
             Assert.That(result.TotalCountCapped, Is.True);
             Assert.That(again.TotalCount, Is.EqualTo(result.TotalCount));
             Assert.That(again.TotalCountCapped, Is.True);
@@ -486,13 +486,13 @@ public sealed class AreaSearchEndpointTests
         });
     }
 
-    private async Task<AreaSearchResultDto> SearchAsync(JsonObject body)
+    private async Task<SearchResultDto<ListingSummaryDto>> SearchAsync(JsonObject body)
     {
         var response = await _client.PostAsync(Endpoint, JsonContent(body));
         var payload = await response.Content.ReadAsStringAsync();
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), payload);
 
-        var result = JsonSerializer.Deserialize<AreaSearchResultDto>(payload, ApiJson.Options);
+        var result = JsonSerializer.Deserialize<SearchResultDto<ListingSummaryDto>>(payload, ApiJson.Options);
         Assert.That(result, Is.Not.Null, payload);
         return result!;
     }

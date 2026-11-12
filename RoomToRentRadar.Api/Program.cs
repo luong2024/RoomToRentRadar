@@ -70,6 +70,7 @@ builder.Services.AddCors(options =>
         .AllowAnyMethod());
 });
 builder.Services.AddScoped<ListingsQueryService>();
+builder.Services.AddScoped<ListingCandidatePageBuilder>();
 builder.Services.AddSingleton(serviceProvider => PhotoStorageOptions.Resolve(
     serviceProvider.GetRequiredService<IConfiguration>()[PhotoStorageOptions.ConfigKey],
     serviceProvider.GetRequiredService<IHostEnvironment>().ContentRootPath));

@@ -35,30 +35,10 @@ public sealed class RoomTypeConverter : ValueConverter<RoomType, string>
 {
     public RoomTypeConverter()
         : base(
-            value => ToWireValue(value),
-            value => FromWireValue(value))
+            value => RoomTypeWire.ToWireValue(value),
+            value => RoomTypeWire.FromWireValue(value))
     {
     }
-
-    public static string ToWireValue(RoomType roomType) => roomType switch
-    {
-        RoomType.SingleRoom => "single_room",
-        RoomType.SharedRoom => "shared_room",
-        RoomType.Studio => "studio",
-        RoomType.Apartment => "apartment",
-        RoomType.House => "house",
-        _ => throw new ArgumentOutOfRangeException(nameof(roomType), roomType, null)
-    };
-
-    public static RoomType FromWireValue(string value) => value switch
-    {
-        "single_room" => RoomType.SingleRoom,
-        "shared_room" => RoomType.SharedRoom,
-        "studio" => RoomType.Studio,
-        "apartment" => RoomType.Apartment,
-        "house" => RoomType.House,
-        _ => throw new InvalidOperationException($"Unknown room type '{value}'.")
-    };
 }
 
 public sealed class ListingPhotoKindConverter : ValueConverter<ListingPhotoKind, string>
