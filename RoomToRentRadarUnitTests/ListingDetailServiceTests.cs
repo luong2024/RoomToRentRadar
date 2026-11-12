@@ -76,7 +76,7 @@ public class ListingDetailServiceTests
         detail.Should().BeNull();
     }
 
-    [Theory]
+    [Xunit.Theory]
     [InlineData("0987654321", "098*** (Sign in to view)")]
     [InlineData("0912-345-678", "091*** (Sign in to view)")]
     [InlineData("", "*** (Sign in to view)")]

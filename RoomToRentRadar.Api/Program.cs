@@ -1,3 +1,4 @@
+using RoomToRentRadar.Api;
 using RoomToRentRadar.Api.Repositories;
 using RoomToRentRadar.Api.Services;
 
@@ -6,6 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<IListingRepository, InMemoryListingRepository>();
 builder.Services.AddScoped<IListingDetailService, ListingDetailService>();
 builder.Services.AddScoped<IListingSearchService, ListingSearchService>();
+builder.Services.AddPhotoPipeline(builder.Configuration);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -19,6 +21,8 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var app = builder.Build();
+
+app.UsePhotoStaticFiles();
 
 if (app.Environment.IsDevelopment())
 {
