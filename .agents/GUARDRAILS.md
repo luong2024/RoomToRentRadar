@@ -34,6 +34,7 @@ Every Agent and Subagent operating within this project MUST strictly comply with
 
 ### 1.4. Modern .NET MAUI Standards (from davidortinau/maui-skills)
 - **Zero Obsolete APIs:** Deprecated Xamarin.Forms APIs (e.g., `MessagingCenter`, `RelativeLayout`) are strictly banned in .NET 10.
+- **Zero Emoji as Icons:** Unicode emojis/pictographs (e.g., `📍`, `🔍`, `📊`, `🏠`, `⚠️`, `⚙`, `✓`, `✕`) are STRICTLY FORBIDDEN as icons. All iconography MUST use **Fluent System Icons** glyphs (`Fonts.FluentUI`, `FontFamily="FluentUI"`) or SVG assets from `Resources/Images/` (`docs/ui-ux-spec.md` §3.4, `AGENTS.md` §6, `.agents/rules/ui-iconography.md`).
 - **Compiled Bindings:** Every `DataTemplate` in a `CollectionView` / `ListView` MUST specify `x:DataType`.
 - **Android Emulator Networking:** API calls from the Android Emulator to localhost services MUST use IP `10.0.2.2`, never `localhost`.
 
@@ -117,6 +118,7 @@ Before completing any turn, the agent must verify:
 - [ ] The Core layer (`RoomToRentRadar.Domain/`, `RoomToRentRadar.Ports/`, `RoomToRentRadar.Application/`) has zero explicit or implicit references to UI (`Microsoft.Maui.*`), HTTP/Web (`System.Net.Http.*`, `Microsoft.AspNetCore.*`), Identity/JWT (`Microsoft.IdentityModel.*`), or Database libraries?
 - [ ] Any newly created Use Case (`I*UseCase` -> `*UseCase`), Repository (`I*Repository` -> `*Repository`), or Adapter (`I*Port` -> `*Adapter`) is properly registered in `RoomToRentRadar.Application/DependencyInjection.cs`, `RoomToRentRadar.Datastore.Sqlite/DependencyInjection.cs`, `RoomToRentRadar.Infrastructure/DependencyInjection.cs`, `RoomToRentRadar.Client.Adapters/DependencyInjection.cs`, `MauiProgram.cs`, or `RoomToRentRadar.Api/Program.cs`?
 - [ ] All new `CollectionView` / `ListView` elements and root `ContentPage` files declare `x:DataType`?
+- [ ] No emoji used as icons in UI (0 emoji policy)? All icons reference `FluentSystemIcons` (`Fonts.FluentUI` / `FluentUI.FontFamily`) or SVG?
 - [ ] No server-managed fields (`Status`, `IsVerified`, `Role`, `CreatedAt`) exposed in public Request DTOs (Zero Trust & Whitelisting respected)?
 - [ ] Mutations on evolving state implement optimistic concurrency (ETag / version check) and throw `ConcurrencyConflictException` on collision?
 - [ ] Domain entities and value objects enforce invariants in constructors, rejecting invalid states with `DomainValidationException`?
