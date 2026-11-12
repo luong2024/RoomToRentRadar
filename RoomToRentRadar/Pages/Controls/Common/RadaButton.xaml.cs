@@ -118,44 +118,40 @@ public partial class RadaButton : ContentView
 
     private void ApplyVariantStyle()
     {
-        if (Microsoft.Maui.Controls.Application.Current?.Resources == null) return;
-
-        var resources = Microsoft.Maui.Controls.Application.Current.Resources;
-
         switch (Variant)
         {
             case RadaButtonVariant.Primary:
-                ButtonBorder.BackgroundColor = resources.TryGetValue("ActionPrimaryLight", out var pBg) ? (Color)pBg : Color.FromArgb("#163A5F");
+                ButtonBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, "ActionPrimaryLight");
                 ButtonBorder.Stroke = Colors.Transparent;
                 TextColor = Colors.White;
                 break;
 
             case RadaButtonVariant.Secondary:
-                ButtonBorder.BackgroundColor = resources.TryGetValue("ActionSecondaryLight", out var sBg) ? (Color)sBg : Color.FromArgb("#256D85");
+                ButtonBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, "ActionSecondaryLight");
                 ButtonBorder.Stroke = Colors.Transparent;
                 TextColor = Colors.White;
                 break;
 
             case RadaButtonVariant.Accent:
-                ButtonBorder.BackgroundColor = resources.TryGetValue("ActionAccentLight", out var aBg) ? (Color)aBg : Color.FromArgb("#4CB5AE");
+                ButtonBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, "ActionAccentLight");
                 ButtonBorder.Stroke = Colors.Transparent;
-                TextColor = resources.TryGetValue("ActionPrimaryLight", out var aText) ? (Color)aText : Color.FromArgb("#163A5F");
+                SetDynamicResource(TextColorProperty, "ActionPrimaryLight");
                 break;
 
             case RadaButtonVariant.Outline:
                 ButtonBorder.BackgroundColor = Colors.Transparent;
-                ButtonBorder.Stroke = resources.TryGetValue("BorderSubtleLight", out var oStroke) ? (Color)oStroke : Color.FromArgb("#E2E8F0");
-                TextColor = resources.TryGetValue("TextPrimaryLight", out var oText) ? (Color)oText : Color.FromArgb("#1E293B");
+                ButtonBorder.SetDynamicResource(Border.StrokeProperty, "BorderSubtleLight");
+                SetDynamicResource(TextColorProperty, "TextPrimaryLight");
                 break;
 
             case RadaButtonVariant.Ghost:
                 ButtonBorder.BackgroundColor = Colors.Transparent;
                 ButtonBorder.Stroke = Colors.Transparent;
-                TextColor = resources.TryGetValue("TextBrandLight", out var gText) ? (Color)gText : Color.FromArgb("#163A5F");
+                SetDynamicResource(TextColorProperty, "TextBrandLight");
                 break;
 
             case RadaButtonVariant.Destructive:
-                ButtonBorder.BackgroundColor = resources.TryGetValue("StatusDangerLight", out var dBg) ? (Color)dBg : Color.FromArgb("#DC2626");
+                ButtonBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, "StatusDangerLight");
                 ButtonBorder.Stroke = Colors.Transparent;
                 TextColor = Colors.White;
                 break;

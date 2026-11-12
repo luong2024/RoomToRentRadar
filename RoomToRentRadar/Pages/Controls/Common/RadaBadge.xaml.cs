@@ -20,10 +20,10 @@ public partial class RadaBadge : ContentView
             propertyChanged: (b, o, n) => ((RadaBadge)b).ApplyBadgeType());
 
     public static readonly BindableProperty BadgeColorProperty =
-        BindableProperty.Create(nameof(BadgeColor), typeof(Color), typeof(RadaBadge), Color.FromArgb("#4CB5AE"));
+        BindableProperty.Create(nameof(BadgeColor), typeof(Color), typeof(RadaBadge), Colors.Transparent);
 
     public static readonly BindableProperty BadgeTextColorProperty =
-        BindableProperty.Create(nameof(BadgeTextColor), typeof(Color), typeof(RadaBadge), Color.FromArgb("#163A5F"));
+        BindableProperty.Create(nameof(BadgeTextColor), typeof(Color), typeof(RadaBadge), Colors.Transparent);
 
     public string Text
     {
@@ -62,34 +62,32 @@ public partial class RadaBadge : ContentView
 
     private void ApplyBadgeType()
     {
-        var resources = Microsoft.Maui.Controls.Application.Current?.Resources;
-
         switch (Type)
         {
             case RadaBadgeType.Verified:
-                BadgeColor = resources != null && resources.TryGetValue("ActionAccentLight", out var aBg) ? (Color)aBg : Color.FromArgb("#4CB5AE");
-                BadgeTextColor = resources != null && resources.TryGetValue("ActionPrimaryLight", out var aTxt) ? (Color)aTxt : Color.FromArgb("#163A5F");
+                SetDynamicResource(BadgeColorProperty, "ActionAccentLight");
+                SetDynamicResource(BadgeTextColorProperty, "ActionPrimaryLight");
                 if (string.IsNullOrEmpty(Text) || Text == "Verified" || Text == "Available" || Text == "Almost Full" || Text == "Full")
                     Text = "Verified";
                 break;
 
             case RadaBadgeType.Available:
-                BadgeColor = resources != null && resources.TryGetValue("SurfaceSubtleLight", out var avBg) ? (Color)avBg : Color.FromArgb("#DCFCE7");
-                BadgeTextColor = resources != null && resources.TryGetValue("StatusSuccessTextLight", out var avTxt) ? (Color)avTxt : Color.FromArgb("#15803D");
+                SetDynamicResource(BadgeColorProperty, "SurfaceSubtleLight");
+                SetDynamicResource(BadgeTextColorProperty, "StatusSuccessTextLight");
                 if (string.IsNullOrEmpty(Text) || Text.Contains("Verified") || Text.Contains("xác thực") || Text.Contains("Full") || Text.Contains("hết"))
                     Text = "Available";
                 break;
 
             case RadaBadgeType.AlmostFull:
-                BadgeColor = resources != null && resources.TryGetValue("SurfaceSubtleLight", out var afBg) ? (Color)afBg : Color.FromArgb("#FEF3C7");
-                BadgeTextColor = resources != null && resources.TryGetValue("StatusWarningTextLight", out var afTxt) ? (Color)afTxt : Color.FromArgb("#B45309");
+                SetDynamicResource(BadgeColorProperty, "SurfaceSubtleLight");
+                SetDynamicResource(BadgeTextColorProperty, "StatusWarningTextLight");
                 if (string.IsNullOrEmpty(Text) || Text.Contains("Verified") || Text.Contains("Available") || Text.Contains("Full"))
                     Text = "Almost Full";
                 break;
 
             case RadaBadgeType.Full:
-                BadgeColor = resources != null && resources.TryGetValue("SurfaceSubtleLight", out var fBg) ? (Color)fBg : Color.FromArgb("#FEE2E2");
-                BadgeTextColor = resources != null && resources.TryGetValue("StatusDangerLight", out var fTxt) ? (Color)fTxt : Color.FromArgb("#B91C1C");
+                SetDynamicResource(BadgeColorProperty, "SurfaceSubtleLight");
+                SetDynamicResource(BadgeTextColorProperty, "StatusDangerLight");
                 if (string.IsNullOrEmpty(Text) || Text.Contains("Verified") || Text.Contains("Available") || Text.Contains("Almost"))
                     Text = "Full";
                 break;

@@ -71,7 +71,7 @@
                                                          Size="32" />
                                     </Image.Source>
                                 </Image>
-                                <common:RadaBadge Grid.Column="1" Type="Custom" BadgeColor="#4CB5AE" BadgeTextColor="#163A5F" Text="100% Free" />
+                                <common:RadaBadge Grid.Column="1" Type="Custom" BadgeColor="{StaticResource ActionAccentLight}" BadgeTextColor="{StaticResource ActionPrimaryLight}" Text="100% Free" />
                             </Grid>
 
                             <!-- Role Title -->
@@ -135,7 +135,7 @@
                                                          Size="32" />
                                     </Image.Source>
                                 </Image>
-                                <common:RadaBadge Grid.Column="1" Type="Custom" BadgeColor="#163A5F" BadgeTextColor="White" Text="Fast Posting" />
+                                <common:RadaBadge Grid.Column="1" Type="Custom" BadgeColor="{StaticResource ActionPrimaryLight}" BadgeTextColor="{StaticResource White}" Text="Fast Posting" />
                             </Grid>
 
                             <!-- Role Title -->
