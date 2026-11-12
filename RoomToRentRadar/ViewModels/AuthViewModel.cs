@@ -117,6 +117,8 @@ public partial class AuthViewModel : ObservableObject
 
     public Func<Task>? NavigateToHomeHandler { get; set; }
 
+    public Func<Task>? FlipToLoginHandler { get; set; }
+
     [RelayCommand]
     public void ToggleForm()
     {
@@ -236,6 +238,10 @@ public partial class AuthViewModel : ObservableObject
             {
                 IsSuccess = true;
                 SuccessMessage = "Account created successfully! You can now sign in.";
+                if (FlipToLoginHandler != null)
+                {
+                    await FlipToLoginHandler.Invoke();
+                }
             }
             else
             {

@@ -4,8 +4,13 @@ namespace RoomToRentRadar.Views;
 
 public partial class AuthPage : ContentPage
 {
+    private const string CardFlipAnimationName = "AuthCardFlip";
+    private const string FocusAnimationName = "InputFocusGlow";
+
     private bool _isFlipping;
     private readonly Color _primaryFocusColor = Color.FromArgb("#2563EB"); // Modern Royal Blue
+    private readonly Color _glowHighlightColor = Color.FromArgb("#60A5FA");
+    private readonly Color _glowSoftColor = Color.FromArgb("#BFDBFE");
     private readonly Color _defaultBorderColor = Color.FromArgb("#E2E8F0");
     private readonly Color _defaultLabelColor = Color.FromArgb("#334155");
     private readonly Color _focusedBackground = Color.FromArgb("#FFFFFF");
@@ -21,10 +26,35 @@ public partial class AuthPage : ContentPage
                 await Shell.Current.GoToAsync("//home");
             }
         };
+        viewModel.FlipToLoginHandler = async () =>
+        {
+            await Task.Delay(700);
+            if (viewModel.IsSignUpView)
+            {
+                await FlipCardAsync(viewModel);
+            }
+        };
         BindingContext = viewModel;
     }
 
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        MainAuthCard.AbortAnimation(CardFlipAnimationName);
+        StopAllFocusAnimations();
+    }
+
     private async void OnToggleCardClicked(object? sender, EventArgs e)
+    {
+        if (BindingContext is not AuthViewModel vm)
+        {
+            return;
+        }
+
+        await FlipCardAsync(vm);
+    }
+
+    private async Task FlipCardAsync(AuthViewModel vm)
     {
         if (_isFlipping)
         {
@@ -32,37 +62,47 @@ public partial class AuthPage : ContentPage
         }
 
         _isFlipping = true;
+        MainAuthCard.AbortAnimation(CardFlipAnimationName);
+        StopAllFocusAnimations();
+
+        var startAngle = vm.IsSignUpView ? 180.0 : 0.0;
+        var endAngle = vm.IsSignUpView ? 0.0 : 180.0;
 
         try
         {
-            // Phase 1: 3D perspective rotation + scale depth + soft fade
-            await Task.WhenAll(
-                MainAuthCard.RotateYToAsync(90, 220, Easing.CubicIn),
-                MainAuthCard.ScaleToAsync(0.92, 220, Easing.CubicIn),
-                MainAuthCard.FadeToAsync(0.85, 220, Easing.CubicIn)
-            );
+            var tcs = new TaskCompletionSource<bool>();
+            var swapped = false;
 
-            // Phase 2: Swap active face in ViewModel
-            if (BindingContext is AuthViewModel vm)
+            var flipAnimation = new Animation(v =>
             {
-                vm.ToggleForm();
-            }
+                MainAuthCard.RotationY = v;
+                if (!swapped && ((endAngle > startAngle && v >= 90.0) || (endAngle < startAngle && v <= 90.0)))
+                {
+                    swapped = true;
+                    vm.ToggleForm();
+                }
+            }, startAngle, endAngle, Easing.CubicInOut);
 
-            // Phase 3: Set transform to opposite angle
-            MainAuthCard.RotationY = -90;
+            flipAnimation.Commit(
+                MainAuthCard,
+                CardFlipAnimationName,
+                rate: 16,
+                length: 500,
+                finished: (_, canceled) =>
+                {
+                    if (!swapped)
+                    {
+                        vm.ToggleForm();
+                    }
+                    MainAuthCard.RotationY = endAngle;
+                    tcs.TrySetResult(!canceled);
+                });
 
-            // Phase 4: Rotate back to front + restore full scale & opacity
-            await Task.WhenAll(
-                MainAuthCard.RotateYToAsync(0, 250, Easing.CubicOut),
-                MainAuthCard.ScaleToAsync(1.0, 250, Easing.CubicOut),
-                MainAuthCard.FadeToAsync(1.0, 250, Easing.CubicOut)
-            );
+            await tcs.Task;
         }
         catch
         {
-            MainAuthCard.RotationY = 0;
-            MainAuthCard.Scale = 1.0;
-            MainAuthCard.Opacity = 1.0;
+            MainAuthCard.RotationY = vm.IsSignUpView ? 180.0 : 0.0;
         }
         finally
         {
@@ -70,46 +110,85 @@ public partial class AuthPage : ContentPage
         }
     }
 
-    private async void OnInputFocused(object? sender, FocusEventArgs e)
+    private void OnInputFocused(object? sender, FocusEventArgs e)
     {
         if (sender is not Entry entry) return;
 
         var (border, label) = GetBorderAndLabelForEntry(entry);
         if (border == null) return;
 
-        // Highlight label
+        border.AbortAnimation(FocusAnimationName);
+
         if (label != null)
         {
             label.TextColor = _primaryFocusColor;
         }
 
-        // Apply focused border styling & subtle spring scale
-        border.Stroke = new SolidColorBrush(_primaryFocusColor);
-        border.StrokeThickness = 2.0;
+        var strokeBrush = new LinearGradientBrush
+        {
+            StartPoint = new Point(0, 0.5),
+            EndPoint = new Point(1, 0.5),
+            GradientStops = new GradientStopCollection
+            {
+                new GradientStop(_glowSoftColor, 0.0f),
+                new GradientStop(_primaryFocusColor, 0.35f),
+                new GradientStop(_glowHighlightColor, 0.5f),
+                new GradientStop(_primaryFocusColor, 0.65f),
+                new GradientStop(_glowSoftColor, 1.0f)
+            }
+        };
+
+        border.Stroke = strokeBrush;
         border.BackgroundColor = _focusedBackground;
 
-        await border.ScaleToAsync(1.012, 140, Easing.CubicOut);
+        var glowAnimation = new Animation(v =>
+        {
+            var angle = v * 2.0 * Math.PI;
+            var dx = 0.5 * Math.Cos(angle);
+            var dy = 0.5 * Math.Sin(angle);
+            strokeBrush.StartPoint = new Point(0.5 + dx, 0.5 + dy);
+            strokeBrush.EndPoint = new Point(0.5 - dx, 0.5 - dy);
+        }, 0.0, 1.0);
+
+        glowAnimation.Commit(
+            border,
+            FocusAnimationName,
+            rate: 16,
+            length: 1800,
+            easing: Easing.Linear,
+            repeat: () => true);
     }
 
-    private async void OnInputUnfocused(object? sender, FocusEventArgs e)
+    private void OnInputUnfocused(object? sender, FocusEventArgs e)
     {
         if (sender is not Entry entry) return;
 
         var (border, label) = GetBorderAndLabelForEntry(entry);
         if (border == null) return;
 
-        // Restore default label color
+        ResetBorderFocusState(border, label);
+    }
+
+    private void ResetBorderFocusState(Border border, Label? label)
+    {
+        border.AbortAnimation(FocusAnimationName);
+
         if (label != null)
         {
             label.TextColor = _defaultLabelColor;
         }
 
-        // Restore default border styling
         border.Stroke = new SolidColorBrush(_defaultBorderColor);
-        border.StrokeThickness = 1.5;
         border.BackgroundColor = _defaultBackground;
+    }
 
-        await border.ScaleToAsync(1.0, 140, Easing.CubicIn);
+    private void StopAllFocusAnimations()
+    {
+        ResetBorderFocusState(LoginEmailBorder, LoginEmailLabel);
+        ResetBorderFocusState(LoginPasswordBorder, LoginPasswordLabel);
+        ResetBorderFocusState(SignUpEmailBorder, SignUpEmailLabel);
+        ResetBorderFocusState(SignUpPasswordBorder, SignUpPasswordLabel);
+        ResetBorderFocusState(SignUpConfirmPasswordBorder, SignUpConfirmPasswordLabel);
     }
 
     private (Border? border, Label? label) GetBorderAndLabelForEntry(Entry entry)
