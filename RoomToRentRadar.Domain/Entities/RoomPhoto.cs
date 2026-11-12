@@ -100,36 +100,6 @@ public sealed class RoomPhoto
         AttachedAtUtc = attachedAtUtc is null ? null : NormalizeUtc(attachedAtUtc.Value);
     }
 
-    // BR-MED-03: a photo is attached to at most one room and cannot move between rooms.
-    public void Attach(string roomId, int sortOrder, DateTime? attachedAtUtc = null)
-    {
-        if (string.IsNullOrWhiteSpace(roomId))
-        {
-            throw new DomainValidationException("Room id is required.");
-        }
-
-        if (sortOrder < 0)
-        {
-            throw new DomainValidationException("Sort order cannot be negative.");
-        }
-
-        if (RoomId is not null)
-        {
-            if (!string.Equals(RoomId, roomId, StringComparison.Ordinal))
-            {
-                throw new DomainValidationException("Photo is already attached to another room.");
-            }
-
-            SortOrder = sortOrder;
-            AttachedAtUtc ??= NormalizeUtc(attachedAtUtc ?? DateTime.UtcNow);
-            return;
-        }
-
-        RoomId = roomId;
-        SortOrder = sortOrder;
-        AttachedAtUtc = NormalizeUtc(attachedAtUtc ?? DateTime.UtcNow);
-    }
-
     private static DateTime NormalizeUtc(DateTime value) => value.Kind switch
     {
         DateTimeKind.Utc => value,
