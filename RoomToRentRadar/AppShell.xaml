@@ -5,6 +5,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:sf="clr-namespace:Syncfusion.Maui.Toolkit.SegmentedControl;assembly=Syncfusion.Maui.Toolkit"
     xmlns:home="clr-namespace:RoomToRentRadar.Features.Home"
+    xmlns:rooms="clr-namespace:RoomToRentRadar.Features.Rooms"
+    xmlns:fav="clr-namespace:RoomToRentRadar.Features.Favorites"
     Shell.FlyoutBehavior="Flyout"
     Title="RoomToRentRadar - ICTU">
 
@@ -15,6 +17,21 @@
     <!-- ========================================================================= -->
 
     <!-- [ZONE 2: LAM MINH HIEU - T02.2 RoomListPage, T06.1 RoomMapPage, T07.2 FavoritesPage, T11.1 RoomComparePage] -->
+    <ShellContent
+        Title="Danh sách phòng"
+        Icon="{StaticResource IconProjects}"
+        ContentTemplate="{DataTemplate rooms:RoomListPage}"
+        Route="room-list"
+        SemanticProperties.Description="Danh sách phòng trọ đã xác thực"
+        SemanticProperties.Hint="Khám phá phòng trọ quanh ICTU"/>
+
+    <ShellContent
+        Title="Phòng yêu thích"
+        Icon="{StaticResource IconRibbon}"
+        ContentTemplate="{DataTemplate fav:FavoritesPage}"
+        Route="favorites"
+        SemanticProperties.Description="Danh sách phòng yêu thích đã lưu"
+        SemanticProperties.Hint="Xem lại và so sánh phòng đã lưu"/>
 
     <!-- [ZONE 1: LEAD DEV NGUYEN DANG QUANG - T09.1 PublishListingPage] -->
 

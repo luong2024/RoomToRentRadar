@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:RoomToRentRadar.Models;assembly=RoomToRentRadar.Core"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Pages.Controls"
+             xmlns:rooms="clr-namespace:RoomToRentRadar.Features.Rooms"
+             xmlns:fonts="clr-namespace:Fonts"
+             x:Class="RoomToRentRadar.Pages.Controls.RoomCardView"
+             x:DataType="models:RoomListing">
+
+    <Border StrokeShape="RoundRectangle 16"
+            Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
+            StrokeThickness="1"
+            BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource DarkSecondaryBackground}}"
+            Padding="14"
+            Shadow="{OnPlatform Android='0,2,6,#20000000', WinUI='0,2,10,#1A000000', Default=null}">
+
+        <Border.GestureRecognizers>
+            <TapGestureRecognizer 
+                Command="{Binding Source={RelativeSource AncestorType={x:Type rooms:RoomListPageModel}}, Path=NavigateToDetailCommand}"
+                CommandParameter="{Binding .}" />
+        </Border.GestureRecognizers>
+
+        <VerticalStackLayout Spacing="10">
+
+            <!-- ROOM THUMBNAIL & BADGES OVERLAY (US02 AC2) -->
+            <Grid HeightRequest="160">
+                <!-- Image -->
+                <Image Source="{Binding ThumbnailUrl}"
+                       Aspect="AspectFill"
+                       HeightRequest="160">
+                    <Image.Clip>
+                        <RoundRectangleGeometry CornerRadius="12" Rect="0,0,1000,160" />
+                    </Image.Clip>
+                </Image>
+
+                <!-- Top-Left: ICTU Verification Badge (US02 AC2 & AC4) -->
+                <Border HorizontalOptions="Start"
+                        VerticalOptions="Start"
+                        Margin="10"
+                        StrokeShape="RoundRectangle 8"
+                        Stroke="Transparent"
+                        BackgroundColor="#E60D47A1"
+                        Padding="8, 4">
+                    <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+                        <Label Text="{x:Static fonts:FluentUI.checkmark_16_regular}"
+                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                               FontSize="12"
+                               TextColor="{StaticResource White}"
+                               VerticalOptions="Center" />
+                        <Label Text="ICTU ĐÃ DUYỆT"
+                               FontSize="11"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource White}"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                </Border>
+
+                <!-- Top-Right: Embedded Heart Button (US07 Integration) -->
+                <controls:FavoriteHeartButton
+                    HorizontalOptions="End"
+                    VerticalOptions="Start"
+                    Margin="10"
+                    IsFavorite="{Binding IsFavorite}"
+                    ButtonSize="36"
+                    IconSize="20"
+                    Command="{Binding Source={RelativeSource AncestorType={x:Type rooms:RoomListPageModel}}, Path=ToggleFavoriteCommand}"
+                    CommandParameter="{Binding .}" />
+
+                <!-- Bottom-Left: Distance to ICTU campus (US02 AC1 & AC2) -->
+                <Border HorizontalOptions="Start"
+                        VerticalOptions="End"
+                        Margin="10"
+                        StrokeShape="RoundRectangle 8"
+                        Stroke="Transparent"
+                        BackgroundColor="#CC000000"
+                        Padding="8, 4">
+                    <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+                        <Label Text="{x:Static fonts:FluentUI.location_16_regular}"
+                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                               FontSize="12"
+                               TextColor="#FFD54F"
+                               VerticalOptions="Center" />
+                        <Label Text="{Binding DistanceToCampusKm, StringFormat='{0:F1} km tới ICTU'}"
+                               FontSize="11"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource White}"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                </Border>
+
+                <!-- Bottom-Right: Commute Time (Motorbike) -->
+                <Border HorizontalOptions="End"
+                        VerticalOptions="End"
+                        Margin="10"
+                        StrokeShape="RoundRectangle 8"
+                        Stroke="Transparent"
+                        BackgroundColor="#CC000000"
+                        Padding="8, 4">
+                    <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+                        <Label Text="{x:Static fonts:FluentUI.vehicle_motorcycle_16_regular}"
+                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                               FontSize="12"
+                               TextColor="{StaticResource White}"
+                               VerticalOptions="Center" />
+                        <Label Text="{Binding MotorbikeMinutes, StringFormat='{0} phút'}"
+                               FontSize="11"
+                               TextColor="{StaticResource White}"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                </Border>
+            </Grid>
+
+            <!-- TITLE (US02 AC2) -->
+            <VerticalStackLayout Spacing="4">
+                <Label Text="{Binding Title}"
+                       FontSize="16"
+                       FontAttributes="Bold"
+                       LineBreakMode="TailTruncation"
+                       MaxLines="2" />
+
+                <!-- Address -->
+                <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+                    <Label Text="{x:Static fonts:FluentUI.building_16_regular}"
+                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                           FontSize="13"
+                           TextColor="{StaticResource Gray400}"
+                           VerticalOptions="Center" />
+                    <Label Text="{Binding Address}"
+                           FontSize="13"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}"
+                           LineBreakMode="TailTruncation"
+                           VerticalOptions="Center" />
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+
+            <!-- AREA, ROOM TYPE & SECURITY SCORE (US02 AC2) -->
+            <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                <Label Text="{Binding Area, StringFormat='📐 {0:F0} m²'}"
+                       FontSize="13"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                <Label Text="•"
+                       TextColor="{StaticResource Gray400}" />
+                <Label Text="{Binding RoomType}"
+                       FontSize="13"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                <Label Text="•"
+                       TextColor="{StaticResource Gray400}" />
+                <Label Text="{Binding SecurityScore, StringFormat='★ {0:F1}'}"
+                       FontSize="13"
+                       FontAttributes="Bold"
+                       TextColor="#F57F17" />
+            </HorizontalStackLayout>
+
+            <!-- DIVIDER -->
+            <BoxView HeightRequest="1"
+                     Color="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
+                     Margin="0, 2" />
+
+            <!-- MONTHLY RENT & DEPOSIT (US02 AC2) -->
+            <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
+                <VerticalStackLayout Grid.Column="0" Spacing="2">
+                    <Label Text="{Binding MonthlyRent, StringFormat='{0:N0} đ/tháng'}"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource Primary}" />
+                    <Label Text="{Binding Deposit, StringFormat='Cọc: {0:N0} đ'}"
+                           FontSize="12"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
+                </VerticalStackLayout>
+
+                <Button Grid.Column="1"
+                        Text="Xem chi tiết"
+                        Command="{Binding Source={RelativeSource AncestorType={x:Type rooms:RoomListPageModel}}, Path=NavigateToDetailCommand}"
+                        CommandParameter="{Binding .}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource MidnightBlue}}"
+                        TextColor="{StaticResource Primary}"
+                        FontSize="12"
+                        FontAttributes="Bold"
+                        CornerRadius="8"
+                        HeightRequest="36"
+                        Padding="14, 0"
+                        VerticalOptions="Center" />
+            </Grid>
+
+        </VerticalStackLayout>
+    </Border>
+
+</ContentView>
+

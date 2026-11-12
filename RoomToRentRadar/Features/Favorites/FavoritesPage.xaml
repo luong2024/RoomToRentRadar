@@ -1,0 +1,375 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:RoomToRentRadar.Models;assembly=RoomToRentRadar.Core"
+             xmlns:pageModels="clr-namespace:RoomToRentRadar.Features.Favorites"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Pages.Controls"
+             xmlns:favorites="clr-namespace:RoomToRentRadar.Features.Favorites"
+             xmlns:pullToRefresh="clr-namespace:Syncfusion.Maui.Toolkit.PullToRefresh;assembly=Syncfusion.Maui.Toolkit"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:fonts="clr-namespace:Fonts"
+             x:Class="RoomToRentRadar.Features.Favorites.FavoritesPage"
+             x:DataType="pageModels:FavoritesPageModel"
+             Title="Phòng trọ yêu thích">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <toolkit:InvertedBoolConverter x:Key="InvertedBoolConverter" />
+            <favorites:ListingStatusToColorConverter x:Key="StatusToColorConverter" />
+            <favorites:ListingStatusToBadgeBackgroundConverter x:Key="StatusToBadgeBgConverter" />
+            <favorites:ListingStatusToTextConverter x:Key="StatusToTextConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto, *">
+
+        <!-- HEADER & SEARCH SECTION -->
+        <VerticalStackLayout Grid.Row="0"
+                             Padding="{StaticResource LayoutPadding}"
+                             Spacing="10"
+                             BackgroundColor="{AppThemeBinding Light={StaticResource LightBackground}, Dark={StaticResource DarkBackground}}">
+            
+            <!-- Title & User Account Sync Info (US07 AC2) -->
+            <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
+                <VerticalStackLayout Grid.Column="0" Spacing="2">
+                    <Label Text="Phòng trọ yêu thích"
+                           Style="{StaticResource Title2}"
+                           FontAttributes="Bold" />
+                    <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                        <Label Text="{x:Static fonts:FluentUI.person_heart_20_regular}"
+                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                               FontSize="14"
+                               TextColor="{StaticResource Primary}"
+                               VerticalOptions="Center" />
+                        <Label Text="{Binding CurrentUserDisplayName, StringFormat='Tài khoản: {0}'}"
+                               FontSize="12"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+
+                <!-- Count Badge -->
+                <Border Grid.Column="1"
+                        StrokeShape="RoundRectangle 12"
+                        Stroke="Transparent"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource MidnightBlue}}"
+                        Padding="10, 4"
+                        VerticalOptions="Center">
+                    <Label Text="{Binding FavoritesCount, StringFormat='{0} phòng'}"
+                           FontSize="12"
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource Primary}" />
+                </Border>
+            </Grid>
+
+            <!-- Search in Favorites Entry -->
+            <Border StrokeShape="RoundRectangle 12"
+                    Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
+                    StrokeThickness="1"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource DarkSecondaryBackground}}"
+                    Padding="12, 0"
+                    HeightRequest="44">
+                <Grid ColumnDefinitions="Auto, *">
+                    <Label Grid.Column="0"
+                           Text="{x:Static fonts:FluentUI.search_24_regular}"
+                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                           FontSize="18"
+                           TextColor="{StaticResource Gray400}"
+                           VerticalOptions="Center"
+                           Margin="0, 0, 8, 0" />
+                    <Entry Grid.Column="1"
+                           Text="{Binding SearchText}"
+                           Placeholder="Tìm kiếm trong danh sách yêu thích..."
+                           FontSize="14"
+                           VerticalOptions="Center"
+                           ClearButtonVisibility="WhileEditing" />
+                </Grid>
+            </Border>
+        </VerticalStackLayout>
+
+        <!-- MAIN CONTENT WITH PULL-TO-REFRESH -->
+        <Grid Grid.Row="1">
+            <pullToRefresh:SfPullToRefresh
+                IsRefreshing="{Binding IsRefreshing}"
+                RefreshCommand="{Binding RefreshFavoritesCommand}">
+                <pullToRefresh:SfPullToRefresh.PullableContent>
+                    <Grid>
+                        <!-- EMPTY STATE -->
+                        <VerticalStackLayout IsVisible="{Binding IsEmpty}"
+                                             HorizontalOptions="Center"
+                                             VerticalOptions="Center"
+                                             Spacing="16"
+                                             Padding="30">
+                            <Border StrokeShape="RoundRectangle 40"
+                                    Stroke="Transparent"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource MidnightBlue}}"
+                                    HeightRequest="80"
+                                    WidthRequest="80"
+                                    HorizontalOptions="Center">
+                                <Label Text="{x:Static fonts:FluentUI.heart_broken_24_regular}"
+                                       FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                       FontSize="36"
+                                       TextColor="{StaticResource Primary}"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center" />
+                            </Border>
+
+                            <Label Text="Chưa có phòng yêu thích nào"
+                                   Style="{StaticResource Title3}"
+                                   FontAttributes="Bold"
+                                   HorizontalTextAlignment="Center" />
+
+                            <Label Text="Hãy khám phá các phòng trọ quanh khuôn viên ICTU và nhấn vào biểu tượng trái tim để lưu lại so sánh nhé!"
+                                   FontSize="14"
+                                   TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}"
+                                   HorizontalTextAlignment="Center"
+                                   LineHeight="1.3" />
+
+                            <Button Text="Khám phá phòng quanh ICTU"
+                                    Command="{Binding ExploreRoomsCommand}"
+                                    BackgroundColor="{StaticResource Primary}"
+                                    TextColor="{StaticResource White}"
+                                    CornerRadius="20"
+                                    HeightRequest="44"
+                                    Padding="20, 0"
+                                    HorizontalOptions="Center"
+                                    FontAttributes="Bold"
+                                    Margin="0, 10, 0, 0" />
+                        </VerticalStackLayout>
+
+                        <!-- FAVORITE ROOMS LIST -->
+                        <CollectionView ItemsSource="{Binding FavoriteRooms}"
+                                        IsVisible="{Binding IsEmpty, Converter={StaticResource InvertedBoolConverter}}"
+                                        SelectionMode="None"
+                                        Margin="16, 8, 16, 90">
+                            <CollectionView.ItemsLayout>
+                                <LinearItemsLayout Orientation="Vertical" ItemSpacing="14" />
+                            </CollectionView.ItemsLayout>
+
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="models:RoomListing">
+                                    <Border StrokeShape="RoundRectangle 16"
+                                            Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
+                                            StrokeThickness="1"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource DarkSecondaryBackground}}"
+                                            Padding="14"
+                                            Shadow="{OnPlatform Android='0,2,6,#20000000', WinUI='0,2,10,#1A000000', Default=null}">
+
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer 
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type pageModels:FavoritesPageModel}}, Path=OpenRoomDetailCommand}"
+                                                CommandParameter="{Binding .}" />
+                                        </Border.GestureRecognizers>
+
+                                        <VerticalStackLayout Spacing="10">
+
+                                            <!-- ROOM IMAGE & TOP BADGES -->
+                                            <Grid HeightRequest="150">
+                                                <!-- Image Thumbnail -->
+                                                <Image Source="{Binding ThumbnailUrl}"
+                                                       Aspect="AspectFill"
+                                                       HeightRequest="150">
+                                                    <Image.Clip>
+                                                        <RoundRectangleGeometry CornerRadius="12" Rect="0,0,1000,150" />
+                                                    </Image.Clip>
+                                                </Image>
+
+                                                <!-- Top-Left: ICTU Verified Badge -->
+                                                <Border HorizontalOptions="Start"
+                                                        VerticalOptions="Start"
+                                                        Margin="10"
+                                                        StrokeShape="RoundRectangle 8"
+                                                        Stroke="Transparent"
+                                                        BackgroundColor="#D00D47A1"
+                                                        Padding="8, 4">
+                                                    <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+                                                        <Label Text="{x:Static fonts:FluentUI.checkmark_16_regular}"
+                                                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                               FontSize="12"
+                                                               TextColor="{StaticResource White}"
+                                                               VerticalOptions="Center" />
+                                                        <Label Text="ICTU Đã duyệt"
+                                                               FontSize="11"
+                                                               FontAttributes="Bold"
+                                                               TextColor="{StaticResource White}"
+                                                               VerticalOptions="Center" />
+                                                    </HorizontalStackLayout>
+                                                </Border>
+
+                                                <!-- Top-Right: Heart Button (Instant Toggle / Remove US07 AC1) -->
+                                                <controls:FavoriteHeartButton
+                                                    HorizontalOptions="End"
+                                                    VerticalOptions="Start"
+                                                    Margin="10"
+                                                    IsFavorite="{Binding IsFavorite}"
+                                                    ButtonSize="36"
+                                                    IconSize="20"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type pageModels:FavoritesPageModel}}, Path=RemoveFavoriteCommand}"
+                                                    CommandParameter="{Binding .}" />
+
+                                                <!-- Bottom-Left: Live Availability Badge (US07 AC3) -->
+                                                <Border HorizontalOptions="Start"
+                                                        VerticalOptions="End"
+                                                        Margin="10"
+                                                        StrokeShape="RoundRectangle 8"
+                                                        Stroke="Transparent"
+                                                        BackgroundColor="{Binding Status, Converter={StaticResource StatusToBadgeBgConverter}}"
+                                                        Padding="8, 4">
+                                                    <Label Text="{Binding Status, Converter={StaticResource StatusToTextConverter}}"
+                                                           FontSize="11"
+                                                           FontAttributes="Bold"
+                                                           TextColor="{Binding Status, Converter={StaticResource StatusToColorConverter}}" />
+                                                </Border>
+                                            </Grid>
+
+                                            <!-- TITLE & WARD -->
+                                            <VerticalStackLayout Spacing="4">
+                                                <Label Text="{Binding Title}"
+                                                       FontSize="16"
+                                                       FontAttributes="Bold"
+                                                       LineBreakMode="TailTruncation"
+                                                       MaxLines="2" />
+
+                                                <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+                                                    <Label Text="{x:Static fonts:FluentUI.location_16_regular}"
+                                                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                           FontSize="13"
+                                                           TextColor="{StaticResource Gray400}"
+                                                           VerticalOptions="Center" />
+                                                    <Label Text="{Binding Address}"
+                                                           FontSize="13"
+                                                           TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}"
+                                                           LineBreakMode="TailTruncation"
+                                                           VerticalOptions="Center" />
+                                                </HorizontalStackLayout>
+                                            </VerticalStackLayout>
+
+                                            <!-- AREA & ROOM TYPE -->
+                                            <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                                                <Label Text="{Binding Area, StringFormat='📐 {0:F0} m²'}"
+                                                       FontSize="13"
+                                                       TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                                                <Label Text="•"
+                                                       TextColor="{StaticResource Gray400}" />
+                                                <Label Text="{Binding RoomType}"
+                                                       FontSize="13"
+                                                       TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                                                <Label Text="•"
+                                                       TextColor="{StaticResource Gray400}" />
+                                                <Label Text="{Binding SecurityScore, StringFormat='★ {0:F1}'}"
+                                                       FontSize="13"
+                                                       FontAttributes="Bold"
+                                                       TextColor="#F57F17" />
+                                            </HorizontalStackLayout>
+
+                                            <!-- DIVIDER -->
+                                            <BoxView HeightRequest="1"
+                                                     Color="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
+                                                     Margin="0, 2" />
+
+                                            <!-- PRICE (US07 AC3), DEPOSIT & DISTANCE -->
+                                            <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
+                                                <!-- Monthly Rent & Deposit -->
+                                                <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                                    <Label Text="{Binding MonthlyRent, StringFormat='{0:N0} đ/tháng'}"
+                                                           FontSize="17"
+                                                           FontAttributes="Bold"
+                                                           TextColor="{StaticResource Primary}" />
+                                                    <Label Text="{Binding Deposit, StringFormat='Cọc: {0:N0} đ'}"
+                                                           FontSize="12"
+                                                           TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
+                                                </VerticalStackLayout>
+
+                                                <!-- Commute Distance to ICTU -->
+                                                <Border Grid.Column="1"
+                                                        StrokeShape="RoundRectangle 8"
+                                                        Stroke="Transparent"
+                                                        BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkBackground}}"
+                                                        Padding="8, 6"
+                                                        VerticalOptions="Center">
+                                                    <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+                                                        <Label Text="{x:Static fonts:FluentUI.vehicle_motorcycle_16_regular}"
+                                                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                               FontSize="13"
+                                                               TextColor="{StaticResource Primary}"
+                                                               VerticalOptions="Center" />
+                                                        <Label Text="{Binding DistanceToCampusKm, StringFormat='{0:F1} km ICTU'}"
+                                                               FontSize="12"
+                                                               FontAttributes="Bold"
+                                                               TextColor="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}"
+                                                               VerticalOptions="Center" />
+                                                    </HorizontalStackLayout>
+                                                </Border>
+                                            </Grid>
+
+                                        </VerticalStackLayout>
+                                    </Border>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </Grid>
+                </pullToRefresh:SfPullToRefresh.PullableContent>
+            </pullToRefresh:SfPullToRefresh>
+
+            <!-- FLOATING 5-SECOND UNDO BANNER (US07 AC4) -->
+            <Border IsVisible="{Binding ShowUndoBanner}"
+                    VerticalOptions="End"
+                    HorizontalOptions="Fill"
+                    Margin="16, 0, 16, 20"
+                    StrokeShape="RoundRectangle 14"
+                    Stroke="Transparent"
+                    BackgroundColor="#26262B"
+                    Padding="14, 12"
+                    Shadow="{OnPlatform Android='0,4,12,#80000000', WinUI='0,4,16,#80000000', Default=null}">
+
+                <Grid ColumnDefinitions="Auto, *, Auto, Auto" ColumnSpacing="10" VerticalOptions="Center">
+                    <!-- Icon -->
+                    <Label Grid.Column="0"
+                           Text="{x:Static fonts:FluentUI.delete_24_regular}"
+                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                           FontSize="20"
+                           TextColor="#FF8A80"
+                           VerticalOptions="Center" />
+
+                    <!-- Message + Countdown -->
+                    <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                        <Label Text="{Binding UndoMessage}"
+                               FontSize="13"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource White}"
+                               LineBreakMode="TailTruncation" />
+                        <Label Text="{Binding UndoRemainingSeconds, StringFormat='Tự động xóa sau {0} giây...'}"
+                               FontSize="11"
+                               TextColor="#B0BEC5" />
+                    </VerticalStackLayout>
+
+                    <!-- UNDO BUTTON -->
+                    <Button Grid.Column="2"
+                            Text="HOÀN TÁC"
+                            Command="{Binding UndoRemoveFavoriteCommand}"
+                            BackgroundColor="#FFD54F"
+                            TextColor="#1A1A1A"
+                            FontAttributes="Bold"
+                            FontSize="12"
+                            CornerRadius="8"
+                            HeightRequest="36"
+                            Padding="12, 0"
+                            VerticalOptions="Center" />
+
+                    <!-- DISMISS BUTTON -->
+                    <ImageButton Grid.Column="3"
+                                 Source="{StaticResource IconDelete}"
+                                 Command="{Binding DismissUndoBannerCommand}"
+                                 HeightRequest="32"
+                                 WidthRequest="32"
+                                 VerticalOptions="Center"
+                                 Opacity="0.7" />
+                </Grid>
+            </Border>
+
+        </Grid>
+
+    </Grid>
+
+</ContentPage>
+

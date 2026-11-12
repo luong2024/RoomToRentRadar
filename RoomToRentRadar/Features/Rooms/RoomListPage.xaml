@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:RoomToRentRadar.Models;assembly=RoomToRentRadar.Core"
+             xmlns:rooms="clr-namespace:RoomToRentRadar.Features.Rooms"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Pages.Controls"
+             xmlns:pullToRefresh="clr-namespace:Syncfusion.Maui.Toolkit.PullToRefresh;assembly=Syncfusion.Maui.Toolkit"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:fonts="clr-namespace:Fonts"
+             x:Class="RoomToRentRadar.Features.Rooms.RoomListPage"
+             x:DataType="rooms:RoomListPageModel"
+             Title="Phòng trọ gần ICTU">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <toolkit:InvertedBoolConverter x:Key="InvertedBoolConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto, *">
+
+        <!-- HEADER, SEARCH & SORT BAR -->
+        <VerticalStackLayout Grid.Row="0"
+                             Padding="{StaticResource LayoutPadding}"
+                             Spacing="12"
+                             BackgroundColor="{AppThemeBinding Light={StaticResource LightBackground}, Dark={StaticResource DarkBackground}}">
+
+            <!-- Title & Campus Subtitle (US02 AC1) -->
+            <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
+                <VerticalStackLayout Grid.Column="0" Spacing="2">
+                    <Label Text="Phòng trọ gần ICTU"
+                           Style="{StaticResource Title2}"
+                           FontAttributes="Bold" />
+                    <Label Text="Sắp xếp theo khoảng cách gần trường nhất"
+                           FontSize="12"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
+                </VerticalStackLayout>
+
+                <!-- Map Button Shortcut (US06 Integration) -->
+                <Border Grid.Column="1"
+                        StrokeShape="RoundRectangle 12"
+                        Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource DarkSecondaryBackground}}"
+                        HeightRequest="40"
+                        WidthRequest="40"
+                        Padding="0"
+                        VerticalOptions="Center">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding NavigateToMapCommand}" />
+                    </Border.GestureRecognizers>
+                    <Label Text="{x:Static fonts:FluentUI.map_24_regular}"
+                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                           FontSize="20"
+                           TextColor="{StaticResource Primary}"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center" />
+                </Border>
+            </Grid>
+
+            <!-- Search Bar + Filter Button (US05 Integration) -->
+            <Grid ColumnDefinitions="*, Auto" ColumnSpacing="10">
+                <Border Grid.Column="0"
+                        StrokeShape="RoundRectangle 12"
+                        Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
+                        StrokeThickness="1"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource DarkSecondaryBackground}}"
+                        Padding="12, 0"
+                        HeightRequest="44">
+                    <Grid ColumnDefinitions="Auto, *">
+                        <Label Grid.Column="0"
+                               Text="{x:Static fonts:FluentUI.search_24_regular}"
+                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                               FontSize="18"
+                               TextColor="{StaticResource Gray400}"
+                               VerticalOptions="Center"
+                               Margin="0, 0, 8, 0" />
+                        <Entry Grid.Column="1"
+                               Text="{Binding SearchKeyword}"
+                               Placeholder="Tìm phòng trọ, đường Z115, phường..."
+                               FontSize="14"
+                               VerticalOptions="Center"
+                               ClearButtonVisibility="WhileEditing" />
+                    </Grid>
+                </Border>
+
+                <!-- Filter Modal Button -->
+                <Border Grid.Column="1"
+                        StrokeShape="RoundRectangle 12"
+                        Stroke="Transparent"
+                        BackgroundColor="{StaticResource Primary}"
+                        HeightRequest="44"
+                        WidthRequest="44"
+                        Padding="0"
+                        VerticalOptions="Center">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding NavigateToFilterCommand}" />
+                    </Border.GestureRecognizers>
+                    <Label Text="{x:Static fonts:FluentUI.filter_24_regular}"
+                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                           FontSize="20"
+                           TextColor="{StaticResource White}"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center" />
+                </Border>
+            </Grid>
+
+            <!-- Sorting Chips (US02 AC1: DistanceAsc default) -->
+            <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                <HorizontalStackLayout Spacing="8">
+                    <!-- DistanceAsc (Default) -->
+                    <Button Text="📍 Gần ICTU nhất"
+                            Command="{Binding ChangeSortByCommand}"
+                            CommandParameter="DistanceAsc"
+                            BackgroundColor="{StaticResource Primary}"
+                            TextColor="{StaticResource White}"
+                            FontSize="12"
+                            FontAttributes="Bold"
+                            CornerRadius="16"
+                            HeightRequest="32"
+                            Padding="12, 0" />
+
+                    <!-- RentAsc -->
+                    <Button Text="💰 Giá thấp nhất"
+                            Command="{Binding ChangeSortByCommand}"
+                            CommandParameter="RentAsc"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSecondaryBackground}}"
+                            TextColor="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}"
+                            FontSize="12"
+                            CornerRadius="16"
+                            HeightRequest="32"
+                            Padding="12, 0" />
+
+                    <!-- RentDesc -->
+                    <Button Text="💎 Giá cao nhất"
+                            Command="{Binding ChangeSortByCommand}"
+                            CommandParameter="RentDesc"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSecondaryBackground}}"
+                            TextColor="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}"
+                            FontSize="12"
+                            CornerRadius="16"
+                            HeightRequest="32"
+                            Padding="12, 0" />
+
+                    <!-- AreaDesc -->
+                    <Button Text="📐 Diện tích rộng"
+                            Command="{Binding ChangeSortByCommand}"
+                            CommandParameter="AreaDesc"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSecondaryBackground}}"
+                            TextColor="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}"
+                            FontSize="12"
+                            CornerRadius="16"
+                            HeightRequest="32"
+                            Padding="12, 0" />
+                </HorizontalStackLayout>
+            </ScrollView>
+
+        </VerticalStackLayout>
+
+        <!-- MAIN LIST WITH PULL-TO-REFRESH & INFINITE SCROLL (US02 AC3) -->
+        <Grid Grid.Row="1">
+            <pullToRefresh:SfPullToRefresh
+                IsRefreshing="{Binding IsRefreshing}"
+                RefreshCommand="{Binding RefreshRoomsCommand}">
+                <pullToRefresh:SfPullToRefresh.PullableContent>
+                    <Grid>
+                        <!-- EMPTY STATE -->
+                        <VerticalStackLayout IsVisible="{Binding IsEmpty}"
+                                             HorizontalOptions="Center"
+                                             VerticalOptions="Center"
+                                             Spacing="14"
+                                             Padding="30">
+                            <Label Text="{x:Static fonts:FluentUI.search_24_regular}"
+                                   FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                   FontSize="40"
+                                   TextColor="{StaticResource Gray400}"
+                                   HorizontalOptions="Center" />
+                            <Label Text="Không tìm thấy phòng trọ phù hợp"
+                                   Style="{StaticResource Title3}"
+                                   FontAttributes="Bold"
+                                   HorizontalTextAlignment="Center" />
+                            <Label Text="Vui lòng thử đổi từ khóa tìm kiếm hoặc sắp xếp lại danh sách."
+                                   FontSize="14"
+                                   TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}"
+                                   HorizontalTextAlignment="Center" />
+                            <Button Text="Tải lại danh sách"
+                                    Command="{Binding LoadRoomsCommand}"
+                                    BackgroundColor="{StaticResource Primary}"
+                                    TextColor="{StaticResource White}"
+                                    CornerRadius="20"
+                                    HeightRequest="40"
+                                    Padding="20, 0"
+                                    HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+
+                        <!-- LIST OF ROOM CARDS (US02 AC2 & AC3 Infinite Scroll) -->
+                        <CollectionView ItemsSource="{Binding Rooms}"
+                                        IsVisible="{Binding IsEmpty, Converter={StaticResource InvertedBoolConverter}}"
+                                        SelectionMode="None"
+                                        RemainingItemsThreshold="3"
+                                        RemainingItemsThresholdReachedCommand="{Binding LoadMoreRoomsCommand}"
+                                        Margin="16, 8, 16, 16">
+
+                            <CollectionView.ItemsLayout>
+                                <LinearItemsLayout Orientation="Vertical" ItemSpacing="12" />
+                            </CollectionView.ItemsLayout>
+
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="models:RoomListing">
+                                    <controls:RoomCardView />
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+
+                            <!-- INFINITE SCROLL FOOTER -->
+                            <CollectionView.Footer>
+                                <VerticalStackLayout Padding="16" Spacing="8" HorizontalOptions="Center">
+                                    <ActivityIndicator IsRunning="{Binding IsLoadingMore}"
+                                                       IsVisible="{Binding IsLoadingMore}"
+                                                       Color="{StaticResource Primary}" />
+                                    <Label Text="Đang tải thêm phòng quanh ICTU..."
+                                           IsVisible="{Binding IsLoadingMore}"
+                                           FontSize="12"
+                                           TextColor="{StaticResource Gray500}"
+                                           HorizontalOptions="Center" />
+                                    <Label Text="✓ Đã hiển thị tất cả phòng trọ khả dụng"
+                                           IsVisible="{Binding HasMoreItems, Converter={StaticResource InvertedBoolConverter}}"
+                                           FontSize="12"
+                                           TextColor="{StaticResource Gray400}"
+                                           HorizontalOptions="Center"
+                                           Margin="0, 10, 0, 20" />
+                                </VerticalStackLayout>
+                            </CollectionView.Footer>
+
+                        </CollectionView>
+                    </Grid>
+                </pullToRefresh:SfPullToRefresh.PullableContent>
+            </pullToRefresh:SfPullToRefresh>
+        </Grid>
+
+    </Grid>
+
+</ContentPage>
+

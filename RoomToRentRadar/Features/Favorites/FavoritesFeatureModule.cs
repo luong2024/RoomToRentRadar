@@ -8,7 +8,8 @@ namespace RoomToRentRadar.Features.Favorites
         public static IServiceCollection AddFavoritesFeature(this IServiceCollection services)
         {
             // T07.1 (Quang): services.AddSingleton<IFavoriteRepository, FavoriteRepository>();
-            // T07.2 (Hieu):  services.AddTransientWithShellRoute<FavoritesPage, FavoritesPageModel>(Constants.Routes.Favorites);
+            // T07.2 (Hieu):
+            services.AddTransientWithShellRoute<FavoritesPage, FavoritesPageModel>(Constants.Routes.Favorites);
             return services;
         }
     }

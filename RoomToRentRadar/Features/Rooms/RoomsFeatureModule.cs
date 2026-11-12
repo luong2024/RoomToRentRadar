@@ -9,7 +9,8 @@ namespace RoomToRentRadar.Features.Rooms
         public static IServiceCollection AddRoomsFeature(this IServiceCollection services)
         {
             // T02.1/T03.1/T05.1/T09.2: services.AddSingleton<IRoomListingRepository, RoomListingRepository>();
-            // T02.2 (Hieu):  services.AddTransientWithShellRoute<RoomListPage, RoomListPageModel>(Constants.Routes.RoomList);
+            // T02.2 (Hieu):
+            services.AddTransientWithShellRoute<RoomListPage, RoomListPageModel>(Constants.Routes.RoomList);
             // T03.2 (Nam):   services.AddTransientWithShellRoute<RoomDetailPage, RoomDetailPageModel>(Constants.Routes.RoomDetail);
             // T04.2 (Hieu):  services.AddTransientWithShellRoute<PhotoGallery360Page, PhotoGallery360PageModel>(Constants.Routes.RoomGallery360);
             // T05.2 (Nam):   services.AddTransientWithShellRoute<RoomFilterModalPage, RoomFilterPageModel>(Constants.Routes.RoomFilter);
