@@ -147,7 +147,7 @@ public sealed class RoomListingsService : IRoomListingsService
             Address = "Ngõ 12 Đường Z115, Xã Quyết Thắng, TP. Thái Nguyên",
             DistanceToCampusKm = 0.3,
             ThumbnailUrl = "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&q=80",
-            IsVerified = true,
+            IsVerified = false,
             CreatedAt = new DateTimeOffset(2026, 11, 10, 8, 0, 0, TimeSpan.FromHours(7)),
             Amenities = ["Điều hòa", "Nóng lạnh", "Giờ giấc tự do", "Khóa vân tay"]
         },
@@ -160,7 +160,7 @@ public sealed class RoomListingsService : IRoomListingsService
             Address = "Đường Z115, Xóm Gốc Mít, Quyết Thắng, TP. Thái Nguyên",
             DistanceToCampusKm = 0.6,
             ThumbnailUrl = "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&q=80",
-            IsVerified = true,
+            IsVerified = false,
             CreatedAt = new DateTimeOffset(2026, 11, 9, 14, 30, 0, TimeSpan.FromHours(7)),
             Amenities = ["Full nội thất", "Ban công", "Máy giặt chung"]
         },
@@ -173,7 +173,7 @@ public sealed class RoomListingsService : IRoomListingsService
             Address = "Xóm Tân Đức, Xã Quyết Thắng, TP. Thái Nguyên",
             DistanceToCampusKm = 0.8,
             ThumbnailUrl = "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?w=600&q=80",
-            IsVerified = true,
+            IsVerified = false,
             CreatedAt = new DateTimeOffset(2026, 11, 9, 9, 15, 0, TimeSpan.FromHours(7)),
             Amenities = ["Gác xép", "Nóng lạnh", "Chỗ để xe rộng"]
         },
@@ -186,7 +186,7 @@ public sealed class RoomListingsService : IRoomListingsService
             Address = "Phường Tân Thịnh, TP. Thái Nguyên",
             DistanceToCampusKm = 1.2,
             ThumbnailUrl = "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=600&q=80",
-            IsVerified = true,
+            IsVerified = false,
             CreatedAt = new DateTimeOffset(2026, 11, 8, 18, 0, 0, TimeSpan.FromHours(7)),
             Amenities = ["Điều hòa", "Tủ lạnh", "Bếp tách riêng"]
         },
@@ -199,7 +199,7 @@ public sealed class RoomListingsService : IRoomListingsService
             Address = "Ngõ 45 Đường Z115, Quyết Thắng, TP. Thái Nguyên",
             DistanceToCampusKm = 0.4,
             ThumbnailUrl = "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=600&q=80",
-            IsVerified = true,
+            IsVerified = false,
             CreatedAt = new DateTimeOffset(2026, 11, 8, 10, 0, 0, TimeSpan.FromHours(7)),
             Amenities = ["Camera 24/7", "Nóng lạnh", "Wifi tốc độ cao"]
         },
@@ -225,7 +225,7 @@ public sealed class RoomListingsService : IRoomListingsService
             Address = "Đường Z115, Xã Quyết Thắng, TP. Thái Nguyên",
             DistanceToCampusKm = 0.5,
             ThumbnailUrl = "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=600&q=80",
-            IsVerified = true,
+            IsVerified = false,
             CreatedAt = new DateTimeOffset(2026, 11, 7, 8, 20, 0, TimeSpan.FromHours(7)),
             Amenities = ["Điện nước giá dân", "Nóng lạnh", "Cửa sổ lớn"]
         },
@@ -238,7 +238,7 @@ public sealed class RoomListingsService : IRoomListingsService
             Address = "Xóm Hồng Thái, Quyết Thắng, TP. Thái Nguyên",
             DistanceToCampusKm = 0.3,
             ThumbnailUrl = "https://images.unsplash.com/photo-1540518614846-7ede433c4573?w=600&q=80",
-            IsVerified = true,
+            IsVerified = false,
             CreatedAt = new DateTimeOffset(2026, 11, 6, 15, 0, 0, TimeSpan.FromHours(7)),
             Amenities = ["Giường tủ", "Nóng lạnh", "Không chung chủ"]
         },
@@ -251,7 +251,7 @@ public sealed class RoomListingsService : IRoomListingsService
             Address = "Tổ 8, Phường Tân Thịnh, TP. Thái Nguyên",
             DistanceToCampusKm = 1.4,
             ThumbnailUrl = "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&q=80",
-            IsVerified = true,
+            IsVerified = false,
             CreatedAt = new DateTimeOffset(2026, 11, 5, 11, 30, 0, TimeSpan.FromHours(7)),
             Amenities = ["Thang máy", "Điều hòa", "Tủ lạnh", "Khóa từ"]
         },
@@ -264,7 +264,7 @@ public sealed class RoomListingsService : IRoomListingsService
             Address = "Ngõ 88 Đường Z115, Quyết Thắng, TP. Thái Nguyên",
             DistanceToCampusKm = 0.7,
             ThumbnailUrl = "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?w=600&q=80",
-            IsVerified = true,
+            IsVerified = false,
             CreatedAt = new DateTimeOffset(2026, 11, 4, 19, 10, 0, TimeSpan.FromHours(7)),
             Amenities = ["Khu yên tĩnh", "Bàn làm việc", "Nóng lạnh"]
         },
@@ -290,7 +290,7 @@ public sealed class RoomListingsService : IRoomListingsService
             Address = "Chợ sinh viên Z115, Quyết Thắng, TP. Thái Nguyên",
             DistanceToCampusKm = 0.5,
             ThumbnailUrl = "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=600&q=80",
-            IsVerified = true,
+            IsVerified = false,
             CreatedAt = new DateTimeOffset(2026, 11, 2, 9, 0, 0, TimeSpan.FromHours(7)),
             Amenities = ["Điều hòa", "Nóng lạnh", "Gần chợ & bến buýt"]
         },
@@ -303,7 +303,7 @@ public sealed class RoomListingsService : IRoomListingsService
             Address = "Xóm Gốc Mít, Xã Quyết Thắng, TP. Thái Nguyên",
             DistanceToCampusKm = 0.9,
             ThumbnailUrl = "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&q=80",
-            IsVerified = true,
+            IsVerified = false,
             CreatedAt = new DateTimeOffset(2026, 11, 1, 10, 0, 0, TimeSpan.FromHours(7)),
             Amenities = ["Miễn phí gửi xe", "Wifi", "Vệ sinh khép kín"]
         },
@@ -316,7 +316,7 @@ public sealed class RoomListingsService : IRoomListingsService
             Address = "Phường Tân Thịnh, TP. Thái Nguyên",
             DistanceToCampusKm = 1.6,
             ThumbnailUrl = "https://images.unsplash.com/photo-1560185127-6ed189bf02f4?w=600&q=80",
-            IsVerified = true,
+            IsVerified = false,
             CreatedAt = new DateTimeOffset(2026, 10, 31, 17, 0, 0, TimeSpan.FromHours(7)),
             Amenities = ["Full nội thất", "Máy giặt", "Khóa vân tay"]
         }

@@ -98,6 +98,25 @@ public class RoomListingsServiceTests
         {
             Assert.That(room, Is.Not.Null);
             Assert.That(room!.Id, Is.EqualTo("room-ictu-001"));
+            Assert.That(room.IsVerified, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task GetRoomListingsAsync_WhenDebugFallbackUsed_AllMockRoomsAreUnverified()
+    {
+        // Arrange
+        var fakeApiClient = new FakeApiClient(_ => throw new HttpRequestException("Backend offline"));
+        var service = new RoomListingsService(fakeApiClient, enableDebugFallback: true);
+
+        // Act
+        var page = await service.GetRoomListingsAsync(1, 50, RoomSortOption.Newest);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(page.Items, Is.Not.Empty);
+            Assert.That(page.Items.All(r => !r.IsVerified), Is.True);
         });
     }
 
