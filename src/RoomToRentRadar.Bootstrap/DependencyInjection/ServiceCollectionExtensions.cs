@@ -26,40 +26,45 @@ public static class ServiceCollectionExtensions
     {
         var endpoint = configuration["CosmosDb:AccountEndpoint"];
         var authKey = configuration["CosmosDb:AuthKey"];
-        var databaseName = configuration["CosmosDb:DatabaseName"] ?? "RoomToRentRadarDb";
-        var containerName = configuration["CosmosDb:ContainerName"] ?? "Rooms";
+        var databaseName = configuration["CosmosDb:DatabaseName"];
+        var containerName = configuration["CosmosDb:ContainerName"];
 
-        if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(authKey))
+        if (string.IsNullOrWhiteSpace(endpoint) ||
+            string.IsNullOrWhiteSpace(authKey) ||
+            string.IsNullOrWhiteSpace(databaseName) ||
+            string.IsNullOrWhiteSpace(containerName))
         {
-            CosmosClientOptions clientOptions;
-            if (environment != null && environment.IsDevelopment())
-            {
-                // bypass TLS
-                clientOptions = new CosmosClientOptions
-                {
-                    HttpClientFactory = () => new HttpClient(new HttpClientHandler
-                    {
-                        ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-                    }),
-                    ConnectionMode = ConnectionMode.Gateway
-                };
-            }
-            else
-            {
-                // normal validation
-                clientOptions = new CosmosClientOptions
-                {
-                    ConnectionMode = ConnectionMode.Gateway
-                };
-            }
-
-            var cosmosClient = new CosmosClient(endpoint, authKey, clientOptions);
-            var container = cosmosClient.GetContainer(databaseName, containerName);
-
-            services.AddSingleton(cosmosClient);
-            services.AddSingleton(container);
-            services.AddScoped<IRoomRepository, CosmosRoomRepository>();
+            throw new InvalidOperationException("Thiếu cấu hình Cosmos DB (AccountEndpoint, AuthKey, DatabaseName, hoặc ContainerName).");
         }
+
+        CosmosClientOptions clientOptions;
+        if (environment != null && environment.IsDevelopment())
+        {
+            // bypass TLS
+            clientOptions = new CosmosClientOptions
+            {
+                HttpClientFactory = () => new HttpClient(new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                }),
+                ConnectionMode = ConnectionMode.Gateway
+            };
+        }
+        else
+        {
+            // normal validation
+            clientOptions = new CosmosClientOptions
+            {
+                ConnectionMode = ConnectionMode.Gateway
+            };
+        }
+
+        var cosmosClient = new CosmosClient(endpoint, authKey, clientOptions);
+        var container = cosmosClient.GetContainer(databaseName, containerName);
+
+        services.AddSingleton(cosmosClient);
+        services.AddSingleton(container);
+        services.AddScoped<IRoomRepository, CosmosRoomRepository>();
 
         return services;
     }

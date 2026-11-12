@@ -31,8 +31,7 @@ public class RoomsController : ControllerBase
     {
         try
         {
-            // TODO: Thay thế mock isUserVerified bằng xác thực thực tế (ví dụ: User.Identity?.IsAuthenticated == true hoặc claim xác thực) khi hoàn tất cấu hình Auth
-            var isUserVerified = User.Identity?.IsAuthenticated ?? false;
+            var isUserVerified = User.HasClaim(c => c.Type == "IsVerified" && c.Value == "true");
 
             var roomDetails = await _getRoomDetailsUseCase.ExecuteAsync(id, isUserVerified, cancellationToken);
             return Ok(roomDetails);
