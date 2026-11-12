@@ -41,7 +41,7 @@ Technology decisions: `docs/adr/index.md`. Detailed checklist: `.agents/GUARDRAI
 ```
 RoomToRentRadar.slnx
 ├─ RoomToRentRadar.Domain/            pure C#: Aggregates, Entities, ValueObjects, Enums, Events, Services, Specifications, Exceptions
-├─ RoomToRentRadar.Ports/             Contracts/{Requests,Responses,Common} · Inbound/UseCases · Outbound/{Repositories,ExternalServices,Caching}
+├─ RoomToRentRadar.Ports/             Contracts/{Requests,Responses,Common} · Inbound/UseCases · Outbound/{Repositories,ExternalServices,Caching,Transactions}
 ├─ RoomToRentRadar.Application/       UseCases/<Feature>/*UseCase · Mappers · DependencyInjection.cs
 ├─ RoomToRentRadar.Datastore.Sqlite/  Context, Migrations, Tables, Repositories (the only datastore)
 ├─ RoomToRentRadar.Datastore.CosmosDb/ frozen — do not extend
