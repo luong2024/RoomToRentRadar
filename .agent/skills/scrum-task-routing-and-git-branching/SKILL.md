@@ -49,7 +49,7 @@ description: Enforces Group 5's Scrum Sprint 1 task-to-file mapping (T01.1 to T1
 | **T02.2** | US02 | Build Listing Screen & Room Cards | Hiếu | `RoomToRentRadar/Features/Rooms/RoomListPage.xaml(.cs)`, `RoomListPageModel.cs`, `RoomsFeatureModule.cs`, `RoomToRentRadar/Pages/Controls/RoomCardView.xaml(.cs)` | Inject `IRoomListingRepository`; điều hướng `${Constants.Routes.RoomDetail}?roomId={room.Id}` |
 | **T03.1** | US03 | Build Room Detail Data Service | Thùy | `RoomToRentRadar.Infrastructure/Repositories/Rooms/RoomListingRepository.Detail.cs`, `RoomToRentRadar.Api/Endpoints/RoomDetailEndpoints.cs` | Override `GetByIdAsync(int id)` & `GetSimilarRoomsAsync` trong file partial riêng |
 | **T03.2** | US03 | Build Room Detail Screen & Guest Masking | Nam | `RoomToRentRadar/Features/Rooms/RoomDetailPage.xaml(.cs)`, `RoomDetailPageModel.cs`, `RoomsFeatureModule.cs` | Nhận `[QueryProperty(nameof(RoomId), "roomId")]` (Mặc định `RoomId = 1` nếu test độc lập) |
-| **T04.1** | US04 | Build Photo Upload & Gallery Service | Quang | `RoomToRentRadar.Infrastructure/Services/PhotoGalleryService.cs`, `IPhotoGalleryService.cs` | Đọc/ghi `PhotosJson` và `Panorama360Url` trong `RoomListing` |
+| **T04.1** | US04 | Build Photo Upload & Gallery Service | Quang | `RoomToRentRadar.Infrastructure/Services/PhotoGalleryService.cs`, `IPhotoGalleryService.cs`, `RoomToRentRadar.Api/Endpoints/PhotoGalleryEndpoints.cs` | Đọc/ghi `PhotosJson` và `Panorama360Url` trong `RoomListing` |
 | **T04.2** | US04 | Build Photo Gallery UI & 360° Viewer | Hiếu | `RoomToRentRadar/Features/Rooms/PhotoGallery360Page.xaml(.cs)`, `PhotoGallery360PageModel.cs`, `RoomsFeatureModule.cs` | Route: `Constants.Routes.RoomGallery360` |
 | **T05.1** | US05 | Build Multi-Filter Search Service | Thùy | `RoomToRentRadar.Infrastructure/Repositories/Rooms/RoomListingRepository.Search.cs`, `RoomToRentRadar.Api/Endpoints/RoomSearchEndpoints.cs` | Override `SearchAsync(RoomFilterCriteria criteria)` trong file partial riêng |
 | **T05.2** | US05 | Build Filter Panel & Active Filter Count | Nam | `RoomToRentRadar/Features/Rooms/RoomFilterModalPage.xaml(.cs)`, `RoomFilterPageModel.cs`, `RoomsFeatureModule.cs` | Route: `Constants.Routes.RoomFilter` |
@@ -72,14 +72,14 @@ description: Enforces Group 5's Scrum Sprint 1 task-to-file mapping (T01.1 to T1
 
 ---
 
-## Cơ Chế Đăng Ký DI & Route Không Đụng Độ (`FeatureModule` + `TryAddSingleton`)
+## Cơ Chế Đăng Ký DI, Route & Web API Endpoint Không Đụng Độ (`FeatureModule` + `Endpoints` + `TryAddSingleton`)
 
-1. **KHÔNG BAO GIỜ sửa `MauiProgram.cs` hoặc `AppShell.xaml.cs`:**
-   - `MauiProgram.cs` đã gọi sẵn toàn bộ `AddAuthFeature()`, `AddRoomsFeature()`, `AddMapFeature()`, `AddFavoritesFeature()`, `AddAlertsFeature()`, `AddLandlordFeature()`, `AddComparisonFeature()`, `AddReportsFeature()`.
-   - Khi làm Task của tính năng nào, chỉ mở đúng file `RoomToRentRadar/Features/<Feature>/<Feature>FeatureModule.cs` của tính năng đó để đăng ký:
+1. **KHÔNG BAO GIỜ sửa `MauiProgram.cs`, `AppShell.xaml.cs` hoặc `RoomToRentRadar.Api/Program.cs`:**
+   - Trong MAUI App: `MauiProgram.cs` đã gọi sẵn toàn bộ `AddAuthFeature()`, `AddRoomsFeature()`, `AddMapFeature()`, `AddFavoritesFeature()`, `AddAlertsFeature()`, `AddLandlordFeature()`, `AddComparisonFeature()`, `AddReportsFeature()`. Khi làm Task của tính năng nào, chỉ mở đúng file `RoomToRentRadar/Features/<Feature>/<Feature>FeatureModule.cs` của tính năng đó để đăng ký:
      ```csharp
      services.AddTransientWithShellRoute<FavoritesPage, FavoritesPageModel>(Constants.Routes.Favorites);
      ```
+   - Trong Web API (`RoomToRentRadar.Api`): `Program.cs` đã gọi sẵn toàn bộ `app.Map...Endpoints()`. Khi làm Task Backend (`T01.1`, `T02.1`, `T03.1`, `T04.1`, `T05.1`, `T07.1`, `T08.1`, `T09.2`, `T12.1`, `T13.1`), chỉ mở đúng file `RoomToRentRadar.Api/Endpoints/<Task>Endpoints.cs` của Task mình để thêm route HTTP.
 2. **Cách viết `PageModel` của Frontend (Chuẩn DIP — Constructor Injection):**
    - Inject trực tiếp Interface vào constructor của `PageModel` (ví dụ: `public RoomListPageModel(IRoomListingRepository roomRepo)`).
    - **Không cần kiểm tra `null` hay tự viết mock data trong `PageModel`!**

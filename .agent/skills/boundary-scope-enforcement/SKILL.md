@@ -16,10 +16,12 @@ Trước khi gõ bất kỳ dòng code nào, Agent phải tự xác định danh
 - **Safe Zone (Được phép sửa theo đúng Mã Task):**
   - `RoomToRentRadar/Features/<FeatureName>/...` (gồm Page, PageModel và `<FeatureName>FeatureModule.cs`)
   - `RoomToRentRadar.Infrastructure/Repositories/...` hoặc `Services/...` thuộc đúng Mã Task
+  - `RoomToRentRadar.Api/Endpoints/<Task>Endpoints.cs` thuộc đúng Mã Task Backend
   - `RoomToRentRadarUnitTests/<FeatureName>Tests.cs`
 - **No-Touch Zone (Chỉ đọc, CẤM sửa nếu không có lệnh của `@architect`):**
   - 🔒 `RoomToRentRadar.Core/*` (`Models/`, `Abstractions/`, `Constants.cs`)
   - 🔒 `RoomToRentRadar.Infrastructure/Persistence/*` (`RentalDatabaseService.cs`, `DatabaseSchema.cs`, `IctuSeedData.cs`)
+  - 🔒 `RoomToRentRadar.Api/Program.cs` (ánh xạ HTTP route phải đặt trong `RoomToRentRadar.Api/Endpoints/<Task>Endpoints.cs`)
   - 🔒 `RoomToRentRadar/MauiProgram.cs` (đăng ký DI/Route phải đặt trong `<FeatureName>FeatureModule.cs`)
   - 🔒 Cấu hình CI/CD, `.githooks/`, `.csproj`, NuGet packages.
 

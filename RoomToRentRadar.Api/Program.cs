@@ -30,6 +30,7 @@ app.MapGet("/api/health", async (RentalDatabaseService db) =>
 app.MapAuthEndpoints();
 app.MapRoomListingEndpoints();
 app.MapRoomDetailEndpoints();
+app.MapPhotoGalleryEndpoints();
 app.MapRoomSearchEndpoints();
 app.MapRoomPublishEndpoints();
 app.MapFavoriteEndpoints();

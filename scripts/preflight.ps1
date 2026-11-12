@@ -20,7 +20,7 @@ if ($branch -eq "main" -or $branch -eq "master") {
 }
 
 Write-Host "=== [2/4] Static Scan for UI Deadlocks (.Result / .Wait()) & Service Locator ===" -ForegroundColor Cyan
-$featureFiles = Get-ChildItem -Path "RoomToRentRadar\Features","RoomToRentRadar.Infrastructure\Repositories" -Recurse -Include *.cs -ErrorAction SilentlyContinue
+$featureFiles = Get-ChildItem -Path "RoomToRentRadar\Features","RoomToRentRadar.Infrastructure\Repositories","RoomToRentRadar.Api\Endpoints" -Recurse -Include *.cs -ErrorAction SilentlyContinue
 if ($featureFiles) {
     $deadlocks = $featureFiles | Select-String -Pattern '\.(Result\b|Wait\s*\()'
     if ($deadlocks) {
