@@ -179,9 +179,8 @@ public class RoomDetailEndpointIntegrationTests
 
         Assert.That(root.GetProperty("id").GetString(), Is.EqualTo("room-ictu-001"));
         Assert.That(root.GetProperty("title").GetString(), Does.Contain("cổng chính ICTU"));
-        Assert.That(root.GetProperty("monthlyRent").GetDecimal(), Is.EqualTo(1800000m));
+        Assert.That(root.GetProperty("monthlyRentVnd").GetDecimal(), Is.EqualTo(1800000m));
         Assert.That(root.GetProperty("status").GetString(), Is.EqualTo("Available"));
-        Assert.That(root.GetProperty("isAvailable").GetBoolean(), Is.True);
 
         // AC4 & BR-AUTH-07: Guest must receive null for landlord phone and zalo
         var landlord = root.GetProperty("landlord");
@@ -330,10 +329,10 @@ public class RoomDetailEndpointIntegrationTests
         Assert.Multiple(() =>
         {
             Assert.That(unpubJson!.Status, Is.EqualTo(ListingStatus.Unpublished));
-            Assert.That(unpubJson.IsAvailable, Is.False);
+            Assert.That(unpubJson.Status == ListingStatus.Available, Is.False);
 
             Assert.That(rentedJson!.Status, Is.EqualTo(ListingStatus.Rented));
-            Assert.That(rentedJson.IsAvailable, Is.False);
+            Assert.That(rentedJson.Status == ListingStatus.Available, Is.False);
         });
     }
 
@@ -355,7 +354,7 @@ public class RoomDetailEndpointIntegrationTests
             foreach (var card in similar)
             {
                 Assert.That(card.Id, Is.Not.EqualTo("room-ictu-001"), "Must exclude target room itself");
-                Assert.That(card.IsAvailable, Is.True, "Must only return Available rooms");
+                Assert.That(card.Status, Is.EqualTo(ListingStatus.Available), "Must only return Available rooms");
                 Assert.That(card.DistanceKm, Is.LessThanOrEqualTo(2.0), "Must be within 2 km radius (BR-LST-10)");
             }
         });

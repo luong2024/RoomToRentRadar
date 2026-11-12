@@ -13,18 +13,20 @@ public static class RoomMapper
         return new RoomCardDto(
             Id: room.Id,
             Title: room.Title,
-            Description: room.Description,
-            Price: room.Price,
-            Area: room.Area,
-            Address: room.FullAddress,
+            MonthlyRentVnd: (long)room.MonthlyRentVnd,
+            AreaM2: room.AreaM2,
+            RoomType: room.RoomType,
+            DistanceKm: room.DistanceToCampusKm,
+            IsVerified: room.IsVerified,
+            Status: room.Status,
             Latitude: room.Latitude,
             Longitude: room.Longitude,
-            DistanceKm: room.DistanceToCampusKm,
-            IsAvailable: room.IsAvailable,
-            IsVerified: room.IsVerified,
-            CreatedAtUtc: room.CreatedAtUtc
+            CoverThumbUrl: room.PhotoUrls?.FirstOrDefault(),
+            IsFavourite: false,
+            PublishedAtUtc: room.PublishedAtUtc
         );
     }
+
 
     public static RoomDetailDto ToDetailDto(
         Room room,

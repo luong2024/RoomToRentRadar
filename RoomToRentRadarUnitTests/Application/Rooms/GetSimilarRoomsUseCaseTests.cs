@@ -43,8 +43,8 @@ public class GetSimilarRoomsUseCaseTests
 
         var expectedCards = new List<RoomCardDto>
         {
-            new("sim-1", "Phòng 1", "Mô tả 1", 1750000m, 24.0, "Địa chỉ 1", 21.58, 105.80, 0.3, true, true, DateTime.UtcNow),
-            new("sim-2", "Phòng 2", "Mô tả 2", 1900000m, 26.0, "Địa chỉ 2", 21.59, 105.81, 0.5, true, true, DateTime.UtcNow)
+            new("sim-1", "Phòng 1", 1750000m, 24.0, RoomType.BoardingRoom, 0.3, true, ListingStatus.Available, 21.58, 105.80),
+            new("sim-2", "Phòng 2", 1900000m, 26.0, RoomType.BoardingRoom, 0.5, true, ListingStatus.Available, 21.59, 105.81)
         };
 
         _searchReadModel.GetSimilarRoomsAsync(

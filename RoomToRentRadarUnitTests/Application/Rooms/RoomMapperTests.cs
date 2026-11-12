@@ -52,11 +52,15 @@ public class RoomMapperTests
 
         Assert.That(card.Id, Is.EqualTo("room-c-01"));
         Assert.That(card.Title, Is.EqualTo("Phòng trọ mini"));
-        Assert.That(card.Price, Is.EqualTo(1500000m));
-        Assert.That(card.Area, Is.EqualTo(20.0));
+        // M3: canonical OpenAPI field names
+        Assert.That(card.MonthlyRentVnd, Is.EqualTo(1500000m));
+        Assert.That(card.AreaM2, Is.EqualTo(20.0));
         Assert.That(card.DistanceKm, Is.EqualTo(0.5));
         Assert.That(card.IsVerified, Is.True);
-        Assert.That(card.Address, Is.EqualTo("Ngõ 1 Đường Z115"));
+        Assert.That(card.CoverThumbUrl, Is.EqualTo("https://cdn.example.com/thumb.jpg"));
+        Assert.That(card.RoomType, Is.EqualTo(RoomType.BoardingRoom));
+        Assert.That(card.Status, Is.EqualTo(ListingStatus.Available));
+        Assert.That(card.IsFavourite, Is.False);
     }
 
     [Test]
@@ -88,8 +92,9 @@ public class RoomMapperTests
 
         Assert.That(detail.Id, Is.EqualTo("room-d-01"));
         Assert.That(detail.Status, Is.EqualTo(ListingStatus.Available));
-        Assert.That(detail.IsAvailable, Is.True);
-        Assert.That(detail.LandlordPhoneNumber, Is.EqualTo("0912345678"));
+        // M3: use canonical OpenAPI field names — no aliases
+        Assert.That(detail.Status == ListingStatus.Available, Is.True, "Status should be Available");
+        Assert.That(detail.Landlord.PhoneNumber, Is.EqualTo("0912345678"));
         Assert.That(detail.Amenities, Has.Count.EqualTo(2));
         Assert.That(detail.Utilities.EstimatedMonthlyTotalVnd, Is.GreaterThan(0));
         Assert.That(detail.Photos, Has.Count.EqualTo(2)); // Standard + Panorama

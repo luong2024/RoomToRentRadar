@@ -118,7 +118,7 @@ public class RoomsControllerTests
 
         var similarCards = new List<RoomCardDto>
         {
-            new("sim-1", "Phòng 1", "Mô tả 1", 1500000m, 20.0, "Địa chỉ 1", 21.58, 105.80, 0.5, true, true, DateTime.UtcNow)
+            new("sim-1", "Phòng 1", 1500000m, 20.0, RoomType.BoardingRoom, 0.5, true, ListingStatus.Available, 21.58, 105.80)
         };
         _getSimilarRoomsUseCase.ExecuteAsync("room-001", null, Arg.Any<CancellationToken>()).Returns(similarCards);
 
