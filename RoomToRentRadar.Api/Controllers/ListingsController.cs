@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using RoomToRentRadar.Api.Features.Listings;
 using RoomToRentRadar.Shared.Listings;
-using RoomToRentRadar.Shared.Pagination;
 
 namespace RoomToRentRadar.Api.Controllers;
 
@@ -12,10 +11,10 @@ public sealed class ListingsController(
     AreaSearchQueryService areaSearchQueryService) : ControllerBase
 {
     [HttpGet]
-    [ProducesResponseType(typeof(PagedResult<ListingSummaryDto>), StatusCodes.Status200OK, "application/json")]
+    [ProducesResponseType(typeof(ListingSearchResultDto), StatusCodes.Status200OK, "application/json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError, "application/problem+json")]
-    public async Task<ActionResult<PagedResult<ListingSummaryDto>>> GetListings(
+    public async Task<ActionResult<ListingSearchResultDto>> GetListings(
         [FromQuery] ListingQueryParameters parameters,
         CancellationToken cancellationToken)
     {

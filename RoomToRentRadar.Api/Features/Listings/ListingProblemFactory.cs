@@ -9,6 +9,11 @@ public static class ListingProblemFactory
     public const string InvalidCursor = "invalid_cursor";
     public const string CursorSortMismatch = "cursor_sort_mismatch";
     public const string InvalidPriceRange = "invalid_price_range";
+    public const string InvalidAreaRange = "invalid_area_range";
+    public const string InvalidRoomType = "invalid_room_type";
+    public const string InvalidCampusFilter = "invalid_campus_filter";
+    public const string InvalidCampusCoordinates = "invalid_campus_coordinates";
+    public const string InvalidDistanceRange = "invalid_distance_range";
     public const string InvalidBedrooms = "invalid_bedrooms";
     public const string InvalidParameterFormat = "invalid_parameter_format";
     public const string ListingNotFound = "listing_not_found";

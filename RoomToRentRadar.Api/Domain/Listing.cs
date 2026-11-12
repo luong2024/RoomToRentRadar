@@ -10,6 +10,7 @@ public sealed class Listing
     public long Price { get; set; }
     public double AreaM2 { get; set; }
     public int Bedrooms { get; set; }
+    public RoomType RoomType { get; set; }
     public string Address { get; set; } = string.Empty;
     public double Lat { get; set; }
     public double Lng { get; set; }

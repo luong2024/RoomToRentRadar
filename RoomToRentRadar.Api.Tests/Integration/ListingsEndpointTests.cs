@@ -6,7 +6,6 @@ using Microsoft.Extensions.DependencyInjection;
 using RoomToRentRadar.Api.Data;
 using RoomToRentRadar.Api.Tests.Infrastructure;
 using RoomToRentRadar.Shared.Listings;
-using RoomToRentRadar.Shared.Pagination;
 using RoomToRentRadar.Shared.Serialization;
 
 namespace RoomToRentRadar.Api.Tests.Integration;
@@ -155,7 +154,7 @@ public sealed class ListingsEndpointTests
     }
 
     [Test]
-    public async Task CoverPhoto_IsIncludedWithoutAdditionalQuery()
+    public async Task CoverPhoto_IsIncludedByTheCountAndPageQueriesOfTheSqlPath()
     {
         _factory.QueryCounter.Reset();
 
@@ -168,7 +167,10 @@ public sealed class ListingsEndpointTests
             Assert.That(byTitle["Test listing 1"].CoverPhotoUrl, Is.Null);
             Assert.That(byTitle["Test listing 2"].CoverPhotoUrl, Is.EqualTo("/media/test/thumbs/photo-1.jpg"));
             Assert.That(byTitle["Test listing 3"].CoverPhotoUrl, Is.EqualTo("/media/test/thumbs/cover-3.jpg"));
-            Assert.That(_factory.QueryCounter.ListingsSelectCount, Is.EqualTo(1));
+            Assert.That(
+                _factory.QueryCounter.ListingsSelectCount,
+                Is.EqualTo(2),
+                "the total count query and the page query");
         });
     }
 
@@ -199,11 +201,11 @@ public sealed class ListingsEndpointTests
         Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo(expectedCode));
     }
 
-    private async Task<PagedResult<ListingSummaryDto>> GetPageAsync(string url)
+    private async Task<ListingSearchResultDto> GetPageAsync(string url)
     {
         var response = await _client.GetAsync(url);
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), url);
-        var result = await response.Content.ReadFromJsonAsync<PagedResult<ListingSummaryDto>>(ApiJson.Options);
+        var result = await response.Content.ReadFromJsonAsync<ListingSearchResultDto>(ApiJson.Options);
         Assert.That(result, Is.Not.Null);
         return result!;
     }

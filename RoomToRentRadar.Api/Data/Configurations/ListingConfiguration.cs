@@ -16,6 +16,9 @@ public sealed class ListingConfiguration : IEntityTypeConfiguration<Listing>
             table.HasCheckConstraint(
                 "ck_listings_status",
                 "status IN ('draft', 'published', 'hidden', 'removed')");
+            table.HasCheckConstraint(
+                "ck_listings_room_type",
+                "room_type IN ('single_room', 'shared_room', 'studio', 'apartment', 'house')");
         });
 
         builder.HasKey(x => x.Id);
@@ -26,6 +29,11 @@ public sealed class ListingConfiguration : IEntityTypeConfiguration<Listing>
         builder.Property(x => x.Price).HasColumnName("price");
         builder.Property(x => x.AreaM2).HasColumnName("area_m2");
         builder.Property(x => x.Bedrooms).HasColumnName("bedrooms");
+        builder.Property(x => x.RoomType)
+            .HasColumnName("room_type")
+            .HasMaxLength(30)
+            .HasConversion<RoomTypeConverter>()
+            .IsRequired();
         builder.Property(x => x.Address).HasColumnName("address").HasMaxLength(300).IsRequired();
         builder.Property(x => x.Lat).HasColumnName("lat");
         builder.Property(x => x.Lng).HasColumnName("lng");
@@ -57,6 +65,9 @@ public sealed class ListingConfiguration : IEntityTypeConfiguration<Listing>
 
         builder.HasIndex(x => new { x.Status, x.Bedrooms })
             .HasDatabaseName("ix_listings_status_bedrooms");
+
+        builder.HasIndex(x => new { x.Status, x.RoomType })
+            .HasDatabaseName("ix_listings_status_room_type");
 
         // Area search is a bounding-box range scan on the two coordinates after the
         // status equality, so the leading column matches the published filter. The

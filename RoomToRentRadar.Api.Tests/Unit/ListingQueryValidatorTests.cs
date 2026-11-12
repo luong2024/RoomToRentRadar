@@ -21,6 +21,10 @@ public sealed class ListingQueryValidatorTests
             Assert.That(query.MinPrice, Is.Null);
             Assert.That(query.MaxPrice, Is.Null);
             Assert.That(query.Bedrooms, Is.Null);
+            Assert.That(query.MinAreaM2, Is.Null);
+            Assert.That(query.MaxAreaM2, Is.Null);
+            Assert.That(query.RoomType, Is.Null);
+            Assert.That(query.Campus, Is.Null);
         });
     }
 
@@ -34,7 +38,13 @@ public sealed class ListingQueryValidatorTests
             Cursor = "abc",
             MinPrice = 1_000_000,
             MaxPrice = 5_000_000,
-            Bedrooms = 2
+            Bedrooms = 2,
+            MinAreaM2 = 25.5,
+            MaxAreaM2 = 80d,
+            RoomType = RoomTypeWire.Studio,
+            CampusLat = 10.7626,
+            CampusLng = 106.6602,
+            MaxDistanceKm = 3.5
         };
 
         Assert.That(ListingQueryValidator.TryCreate(parameters, out var query, out _), Is.True);
@@ -46,6 +56,10 @@ public sealed class ListingQueryValidatorTests
             Assert.That(query.MinPrice, Is.EqualTo(1_000_000));
             Assert.That(query.MaxPrice, Is.EqualTo(5_000_000));
             Assert.That(query.Bedrooms, Is.EqualTo(2));
+            Assert.That(query.MinAreaM2, Is.EqualTo(25.5));
+            Assert.That(query.MaxAreaM2, Is.EqualTo(80d));
+            Assert.That(query.RoomType, Is.EqualTo(RoomType.Studio));
+            Assert.That(query.Campus, Is.EqualTo(new CampusFilter(10.7626, 106.6602, 3.5)));
         });
     }
 
@@ -75,6 +89,129 @@ public sealed class ListingQueryValidatorTests
     [TestCase(21)]
     public void InvalidBedrooms_IsRejected(int bedrooms)
         => AssertRejected(new ListingQueryParameters { Bedrooms = bedrooms }, "invalid_bedrooms");
+
+    [Test]
+    public void NegativeMinArea_IsRejected()
+        => AssertRejected(
+            new ListingQueryParameters { MinAreaM2 = -0.5 },
+            ListingProblemFactory.InvalidAreaRange);
+
+    [Test]
+    public void NegativeMaxArea_IsRejected()
+        => AssertRejected(
+            new ListingQueryParameters { MaxAreaM2 = -10 },
+            ListingProblemFactory.InvalidAreaRange);
+
+    [Test]
+    public void MinAreaGreaterThanMaxArea_IsRejected()
+        => AssertRejected(
+            new ListingQueryParameters { MinAreaM2 = 60, MaxAreaM2 = 50 },
+            ListingProblemFactory.InvalidAreaRange);
+
+    [TestCase(double.NaN)]
+    [TestCase(double.PositiveInfinity)]
+    [TestCase(double.NegativeInfinity)]
+    public void NonFiniteArea_IsRejected(double area)
+        => AssertRejected(
+            new ListingQueryParameters { MaxAreaM2 = area },
+            ListingProblemFactory.InvalidAreaRange);
+
+    [Test]
+    public void EqualAreaBounds_AreAccepted()
+    {
+        var parameters = new ListingQueryParameters { MinAreaM2 = 30, MaxAreaM2 = 30 };
+
+        Assert.That(ListingQueryValidator.TryCreate(parameters, out var query, out _), Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(query.MinAreaM2, Is.EqualTo(30d));
+            Assert.That(query.MaxAreaM2, Is.EqualTo(30d));
+        });
+    }
+
+    [TestCase("single_room", RoomType.SingleRoom)]
+    [TestCase("shared_room", RoomType.SharedRoom)]
+    [TestCase("studio", RoomType.Studio)]
+    [TestCase("apartment", RoomType.Apartment)]
+    [TestCase("house", RoomType.House)]
+    public void ValidRoomType_IsMapped(string wireValue, RoomType expected)
+    {
+        var parameters = new ListingQueryParameters { RoomType = wireValue };
+
+        Assert.That(ListingQueryValidator.TryCreate(parameters, out var query, out _), Is.True);
+        Assert.That(query.RoomType, Is.EqualTo(expected));
+    }
+
+    [TestCase("castle")]
+    [TestCase("Studio")]
+    [TestCase("")]
+    public void InvalidRoomType_IsRejected(string roomType)
+        => AssertRejected(
+            new ListingQueryParameters { RoomType = roomType },
+            ListingProblemFactory.InvalidRoomType);
+
+    [Test]
+    public void CampusLatitudeWithoutOtherMembers_IsRejected()
+        => AssertRejected(
+            new ListingQueryParameters { CampusLat = 10.7 },
+            ListingProblemFactory.InvalidCampusFilter);
+
+    [Test]
+    public void CampusCoordinatesWithoutDistance_IsRejected()
+        => AssertRejected(
+            new ListingQueryParameters { CampusLat = 10.7, CampusLng = 106.7 },
+            ListingProblemFactory.InvalidCampusFilter);
+
+    [Test]
+    public void CampusDistanceWithoutCentre_IsRejected()
+        => AssertRejected(
+            new ListingQueryParameters { MaxDistanceKm = 5 },
+            ListingProblemFactory.InvalidCampusFilter);
+
+    [TestCase(90.5, 106.7)]
+    [TestCase(-90.5, 106.7)]
+    [TestCase(10.7, 180.5)]
+    [TestCase(10.7, -180.5)]
+    [TestCase(double.NaN, 106.7)]
+    [TestCase(10.7, double.PositiveInfinity)]
+    public void OutOfRangeCampusCoordinates_AreRejected(double lat, double lng)
+        => AssertRejected(
+            new ListingQueryParameters { CampusLat = lat, CampusLng = lng, MaxDistanceKm = 5 },
+            ListingProblemFactory.InvalidCampusCoordinates);
+
+    [TestCase(0d)]
+    [TestCase(-1d)]
+    [TestCase(50.5)]
+    [TestCase(double.NaN)]
+    [TestCase(double.PositiveInfinity)]
+    public void OutOfRangeDistance_IsRejected(double maxDistanceKm)
+        => AssertRejected(
+            new ListingQueryParameters { CampusLat = 10.7, CampusLng = 106.7, MaxDistanceKm = maxDistanceKm },
+            ListingProblemFactory.InvalidDistanceRange);
+
+    [Test]
+    public void MaximumDistance_IsAccepted()
+    {
+        var parameters = new ListingQueryParameters
+        {
+            CampusLat = 10.7,
+            CampusLng = 106.7,
+            MaxDistanceKm = ListingQueryValidator.MaxDistanceKm
+        };
+
+        Assert.That(ListingQueryValidator.TryCreate(parameters, out var query, out _), Is.True);
+        Assert.That(query.Campus!.MaxDistanceKm, Is.EqualTo(ListingQueryValidator.MaxDistanceKm));
+    }
+
+    [TestCase(90d, 180d)]
+    [TestCase(-90d, -180d)]
+    public void ExtremeCampusCoordinates_AreAccepted(double lat, double lng)
+    {
+        var parameters = new ListingQueryParameters { CampusLat = lat, CampusLng = lng, MaxDistanceKm = 1 };
+
+        Assert.That(ListingQueryValidator.TryCreate(parameters, out var query, out _), Is.True);
+        Assert.That(query.Campus, Is.EqualTo(new CampusFilter(lat, lng, 1d)));
+    }
 
     [Test]
     public void WhitespaceCursor_IsTreatedAsMissing()
