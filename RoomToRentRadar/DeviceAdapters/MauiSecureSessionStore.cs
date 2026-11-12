@@ -6,13 +6,20 @@ using RoomToRentRadar.Ports.Contracts.Responses.Auth;
 
 namespace RoomToRentRadar.DeviceAdapters;
 
+/// <summary>
+/// Session store implementation adhering to ADR-005:
+/// Access token is maintained in-memory only; refresh token and user profile are persisted to SecureStorage.
+/// </summary>
 public sealed class MauiSecureSessionStore : ISessionStore
 {
-    private const string KeyAccessToken = "auth_access_token";
     private const string KeyRefreshToken = "auth_refresh_token";
-    private const string KeyAccessExpires = "auth_access_expires";
     private const string KeyRefreshExpires = "auth_refresh_expires";
     private const string KeyUserProfile = "auth_user_profile";
+
+    // In-memory access token storage per ADR-005
+    private string? _accessToken;
+    private DateTimeOffset? _accessTokenExpiresAtUtc;
+    private UserProfileDto? _cachedUser;
 
     private readonly ILogger<MauiSecureSessionStore>? _logger;
 
@@ -27,9 +34,13 @@ public sealed class MauiSecureSessionStore : ISessionStore
 
         try
         {
-            await SecureStorage.Default.SetAsync(KeyAccessToken, tokens.AccessToken);
+            // ADR-005: Access token kept in memory
+            _accessToken = tokens.AccessToken;
+            _accessTokenExpiresAtUtc = tokens.AccessTokenExpiresAtUtc;
+            _cachedUser = tokens.User;
+
+            // Persist refresh token and its expiration to SecureStorage
             await SecureStorage.Default.SetAsync(KeyRefreshToken, tokens.RefreshToken);
-            await SecureStorage.Default.SetAsync(KeyAccessExpires, tokens.AccessTokenExpiresAtUtc.ToString("o"));
             await SecureStorage.Default.SetAsync(KeyRefreshExpires, tokens.RefreshTokenExpiresAtUtc.ToString("o"));
 
             if (tokens.User != null)
@@ -42,22 +53,15 @@ public sealed class MauiSecureSessionStore : ISessionStore
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "Failed to persist authentication session to SecureStorage.");
+            _logger?.LogError(ex, "Failed to persist authentication refresh token to SecureStorage.");
             return false;
         }
     }
 
-    public async Task<string?> GetAccessTokenAsync(CancellationToken ct = default)
+    public Task<string?> GetAccessTokenAsync(CancellationToken ct = default)
     {
-        try
-        {
-            return await SecureStorage.Default.GetAsync(KeyAccessToken);
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogWarning(ex, "Failed to read access token from SecureStorage.");
-            return null;
-        }
+        // ADR-005: Return in-memory access token
+        return Task.FromResult(_accessToken);
     }
 
     public async Task<string?> GetRefreshTokenAsync(CancellationToken ct = default)
@@ -75,13 +79,17 @@ public sealed class MauiSecureSessionStore : ISessionStore
 
     public async Task<UserProfileDto?> GetCachedUserProfileAsync(CancellationToken ct = default)
     {
+        if (_cachedUser != null)
+            return _cachedUser;
+
         try
         {
             var json = await SecureStorage.Default.GetAsync(KeyUserProfile);
             if (string.IsNullOrWhiteSpace(json))
                 return null;
 
-            return JsonSerializer.Deserialize<UserProfileDto>(json);
+            _cachedUser = JsonSerializer.Deserialize<UserProfileDto>(json);
+            return _cachedUser;
         }
         catch (Exception ex)
         {
@@ -94,42 +102,39 @@ public sealed class MauiSecureSessionStore : ISessionStore
     {
         try
         {
-            var token = await SecureStorage.Default.GetAsync(KeyAccessToken);
-            if (string.IsNullOrWhiteSpace(token))
-                return false;
-
-            var expiresStr = await SecureStorage.Default.GetAsync(KeyAccessExpires);
-            if (!string.IsNullOrWhiteSpace(expiresStr) &&
-                DateTime.TryParse(expiresStr, null, System.Globalization.DateTimeStyles.RoundtripKind, out var expiresUtc))
+            // Check in-memory access token
+            if (!string.IsNullOrWhiteSpace(_accessToken) && _accessTokenExpiresAtUtc.HasValue)
             {
-                if (expiresUtc > DateTime.UtcNow)
+                if (_accessTokenExpiresAtUtc.Value > DateTimeOffset.UtcNow)
                     return true;
             }
 
             // Check if Refresh Token is still alive for automatic refresh
             var refreshExpiresStr = await SecureStorage.Default.GetAsync(KeyRefreshExpires);
             if (!string.IsNullOrWhiteSpace(refreshExpiresStr) &&
-                DateTime.TryParse(refreshExpiresStr, null, System.Globalization.DateTimeStyles.RoundtripKind, out var refreshExpiresUtc))
+                DateTimeOffset.TryParse(refreshExpiresStr, null, System.Globalization.DateTimeStyles.RoundtripKind, out var refreshExpiresUtc))
             {
-                return refreshExpiresUtc > DateTime.UtcNow;
+                return refreshExpiresUtc > DateTimeOffset.UtcNow;
             }
 
             return false;
         }
         catch (Exception ex)
         {
-            _logger?.LogWarning(ex, "Failed to validate tokens in SecureStorage.");
+            _logger?.LogWarning(ex, "Failed to validate tokens in session store.");
             return false;
         }
     }
 
     public Task ClearSessionAsync(CancellationToken ct = default)
     {
+        _accessToken = null;
+        _accessTokenExpiresAtUtc = null;
+        _cachedUser = null;
+
         try
         {
-            SecureStorage.Default.Remove(KeyAccessToken);
             SecureStorage.Default.Remove(KeyRefreshToken);
-            SecureStorage.Default.Remove(KeyAccessExpires);
             SecureStorage.Default.Remove(KeyRefreshExpires);
             SecureStorage.Default.Remove(KeyUserProfile);
         }
@@ -141,4 +146,3 @@ public sealed class MauiSecureSessionStore : ISessionStore
         return Task.CompletedTask;
     }
 }
-

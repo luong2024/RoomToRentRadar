@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -26,7 +27,7 @@ public partial class RegisterPageModel : ObservableObject
     public partial bool IsLandlord { get; set; } = false;
 
     [ObservableProperty]
-    public partial string RoleDisplayName { get; set; } = "Sinh viên";
+    public partial string RoleDisplayName { get; set; } = "Student";
 
     [ObservableProperty]
     public partial string FullName { get; set; } = string.Empty;
@@ -94,7 +95,7 @@ public partial class RegisterPageModel : ObservableObject
     {
         IsStudent = !string.Equals(Role, "Landlord", StringComparison.OrdinalIgnoreCase);
         IsLandlord = !IsStudent;
-        RoleDisplayName = IsStudent ? "Sinh viên" : "Chủ trọ";
+        RoleDisplayName = IsStudent ? "Student" : "Landlord";
     }
 
     [RelayCommand]
@@ -122,64 +123,66 @@ public partial class RegisterPageModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(FullName) || FullName.Trim().Length < 2)
         {
-            FullNameError = "Họ và tên phải có tối thiểu 2 ký tự.";
+            FullNameError = "Full name must be at least 2 characters.";
             isValid = false;
         }
 
         if (string.IsNullOrWhiteSpace(Email))
         {
-            EmailError = "Vui lòng nhập địa chỉ email.";
+            EmailError = "Please enter your email address.";
             isValid = false;
         }
         else if (!EmailRegex.IsMatch(Email.Trim()))
         {
-            EmailError = "Email không đúng định dạng.";
+            EmailError = "Invalid email address format.";
             isValid = false;
         }
 
-        if (IsStudent)
-        {
-            // BR-AUTH-04: Student code is optional, derived from email if omitted
-            if (!string.IsNullOrWhiteSpace(StudentCode) && StudentCode.Trim().Length < 5)
-            {
-                StudentCodeError = "Mã sinh viên không hợp lệ (ví dụ: DTC19...).";
-                isValid = false;
-            }
-        }
-        else
+        if (IsLandlord)
         {
             if (string.IsNullOrWhiteSpace(PhoneNumber))
             {
-                PhoneNumberError = "Chủ trọ bắt buộc nhập số điện thoại để liên hệ.";
+                PhoneNumberError = "Phone number is required for landlords.";
                 isValid = false;
             }
             else if (!PhoneRegex.IsMatch(PhoneNumber.Trim()))
             {
-                PhoneNumberError = "Số điện thoại phải gồm 10 chữ số hợp lệ tại Việt Nam (ví dụ: 0912345678 hoặc +84912345678).";
+                PhoneNumberError = "Please enter a valid Vietnamese phone number (e.g. 0912345678 or +84912345678).";
                 isValid = false;
             }
         }
 
-        if (string.IsNullOrWhiteSpace(Password) || Password.Length < 6)
+        // BR-AUTH-05: Password 8–128 chars with >= 1 upper, >= 1 lower, >= 1 digit
+        if (string.IsNullOrWhiteSpace(Password))
         {
-            PasswordError = "Mật khẩu phải có tối thiểu 6 ký tự.";
+            PasswordError = "Password is required.";
+            isValid = false;
+        }
+        else if (Password.Length < 8 || Password.Length > 128)
+        {
+            PasswordError = "Password must be between 8 and 128 characters.";
+            isValid = false;
+        }
+        else if (!Password.Any(char.IsUpper) || !Password.Any(char.IsLower) || !Password.Any(char.IsDigit))
+        {
+            PasswordError = "Password must include at least one uppercase letter, one lowercase letter, and one number.";
             isValid = false;
         }
 
         if (string.IsNullOrWhiteSpace(ConfirmPassword))
         {
-            ConfirmPasswordError = "Vui lòng xác nhận lại mật khẩu.";
+            ConfirmPasswordError = "Please confirm your password.";
             isValid = false;
         }
         else if (Password != ConfirmPassword)
         {
-            ConfirmPasswordError = "Mật khẩu xác nhận không trùng khớp.";
+            ConfirmPasswordError = "Passwords do not match.";
             isValid = false;
         }
 
         if (!IsAgreedToTerms)
         {
-            GeneralError = "Bạn cần đồng ý với Quy chế hoạt động & Điều khoản của RoomToRentRadar.";
+            GeneralError = "You must agree to the Terms of Service & Privacy Policy.";
             HasGeneralError = true;
             isValid = false;
         }
@@ -208,27 +211,40 @@ public partial class RegisterPageModel : ObservableObject
                 var saved = await _sessionStore.SaveSessionAsync(response);
                 if (!saved)
                 {
-                    GeneralError = "Đăng ký thành công nhưng không thể lưu phiên đăng nhập an toàn.";
+                    GeneralError = "Registration succeeded, but failed to securely store your session.";
                     HasGeneralError = true;
                     return;
                 }
 
-                await Shell.Current.GoToAsync("//uicatalog");
+                try
+                {
+                    await Shell.Current.GoToAsync("//main");
+                }
+                catch (Exception)
+                {
+                    GeneralError = "Registration succeeded, but navigation to home screen failed.";
+                    HasGeneralError = true;
+                }
             }
             else
             {
-                GeneralError = "Đăng ký không thành công. Vui lòng kiểm tra lại thông tin.";
+                GeneralError = "Registration failed. Please check your details.";
                 HasGeneralError = true;
             }
         }
         catch (ApiException apiEx)
         {
-            GeneralError = MapRegisterErrorCodeToMessage(apiEx.ErrorCode, apiEx.Message);
+            GeneralError = MapRegisterErrorCodeToMessage(apiEx.ErrorCode, apiEx.StatusCode, apiEx.Message);
+            HasGeneralError = true;
+        }
+        catch (HttpRequestException)
+        {
+            GeneralError = "Unable to connect to the server. Please check your internet connection.";
             HasGeneralError = true;
         }
         catch (Exception)
         {
-            GeneralError = "Không thể hoàn thành đăng ký. Vui lòng thử lại sau.";
+            GeneralError = "An unexpected error occurred during registration. Please try again.";
             HasGeneralError = true;
         }
         finally
@@ -243,15 +259,26 @@ public partial class RegisterPageModel : ObservableObject
         await Shell.Current.GoToAsync("//login");
     }
 
-    private static string MapRegisterErrorCodeToMessage(string? errorCode, string defaultMessage)
+    private static string MapRegisterErrorCodeToMessage(string? errorCode, HttpStatusCode statusCode, string defaultMessage)
     {
-        return errorCode switch
+        if (!string.IsNullOrWhiteSpace(errorCode))
         {
-            "USER_EMAIL_EXISTS" or "AUTH_EMAIL_EXISTS" => "Email này đã được sử dụng trong hệ thống. Vui lòng đăng nhập.",
-            "INVALID_STUDENT_CODE" => "Mã sinh viên không hợp lệ.",
-            "INVALID_PHONE_NUMBER" => "Số điện thoại không hợp lệ.",
-            "INVALID_ROLE" => "Vai trò người dùng không hợp lệ.",
-            _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : "Đăng ký thất bại. Vui lòng kiểm tra lại thông tin."
+            return errorCode switch
+            {
+                "EMAIL_TAKEN" or "USER_EMAIL_EXISTS" or "AUTH_EMAIL_EXISTS"
+                    => "This email address is already in use. Please sign in.",
+                "INVALID_STUDENT_CODE" => "The provided student ID is invalid.",
+                "INVALID_PHONE_NUMBER" => "Please enter a valid Vietnamese phone number.",
+                "INVALID_ROLE" => "Invalid user role selected.",
+                _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : "Registration failed. Please verify your details."
+            };
+        }
+
+        return statusCode switch
+        {
+            HttpStatusCode.Conflict => "This email address is already in use. Please sign in.",
+            HttpStatusCode.BadRequest => "Please check the submitted registration information.",
+            _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : "Registration failed. Please verify your details."
         };
     }
 }

@@ -5,14 +5,14 @@ namespace RoomToRentRadar.Pages.Controls.Feedback;
 public partial class ErrorRetryView : ContentView
 {
     public static readonly BindableProperty TitleProperty =
-        BindableProperty.Create(nameof(Title), typeof(string), typeof(ErrorRetryView), "Đã xảy ra sự cố");
+        BindableProperty.Create(nameof(Title), typeof(string), typeof(ErrorRetryView), "Connection Error");
 
     public static readonly BindableProperty ErrorMessageProperty =
         BindableProperty.Create(nameof(ErrorMessage), typeof(string), typeof(ErrorRetryView),
-            "Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại kết nối mạng của bạn.");
+            "Unable to connect to the server. Please check your internet connection.");
 
     public static readonly BindableProperty RetryTextProperty =
-        BindableProperty.Create(nameof(RetryText), typeof(string), typeof(ErrorRetryView), "Thử lại");
+        BindableProperty.Create(nameof(RetryText), typeof(string), typeof(ErrorRetryView), "Retry");
 
     public static readonly BindableProperty RetryCommandProperty =
         BindableProperty.Create(nameof(RetryCommand), typeof(ICommand), typeof(ErrorRetryView), null);

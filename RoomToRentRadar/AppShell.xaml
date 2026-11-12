@@ -8,17 +8,25 @@
     Shell.FlyoutBehavior="Flyout"
     Title="RoomToRentRadar">
 
-    <!-- 1. Màn hình Khởi động hiện tại: ĐĂNG NHẬP (AUTH FLOW) -->
-    <!-- TODO: T01.2 (Onboarding & Explore Feed): Chuyển màn hình duyệt phòng (ExplorePage) làm điểm bắt đầu cho Guest mode theo docs/ui-ux-spec.md §1 & UC-01 -->
+    <!-- 1. Initial Launch Screen: SIGN IN (AUTH FLOW) -->
     <ShellContent
-        Title="Đăng nhập"
-        Icon="{StaticResource IconDashboard}"
+        Title="Sign In"
+        Icon="{StaticResource IconProjects}"
         ContentTemplate="{DataTemplate pages:LoginPage}"
         Route="login"
-        SemanticProperties.Description="Đăng nhập tài khoản"
-        SemanticProperties.Hint="Đăng nhập bằng Email hoặc ICTU SSO"/>
+        SemanticProperties.Description="Sign in to your account"
+        SemanticProperties.Hint="Sign in using email or ICTU SSO" />
 
-    <!-- 2. Khám phá Hệ thống UI DESIGN SYSTEM & COMPONENTS (Chỉ hiển thị cho Dev/Debug) -->
+    <!-- 2. Main Post-Authentication Landing Screen: EXPLORE / HOME (Always available in Debug and Release) -->
+    <ShellContent
+        Title="Explore"
+        Icon="{StaticResource IconDashboard}"
+        ContentTemplate="{DataTemplate pages:MainLandingPage}"
+        Route="main"
+        SemanticProperties.Description="Explore verified student rooms"
+        SemanticProperties.Hint="Browse student rental properties near ICTU" />
+
+    <!-- 3. UI Design System Catalog (Developer tool - hidden in Release) -->
     <ShellContent
         x:Name="UiCatalogContent"
         Title="UI Catalog"
@@ -26,7 +34,7 @@
         ContentTemplate="{DataTemplate pages:UiCatalogPage}"
         Route="uicatalog"
         SemanticProperties.Description="UI Design System Catalog"
-        SemanticProperties.Hint="Khám phá tokens, bảng màu Navy Teal, buttons, inputs, cards"/>
+        SemanticProperties.Hint="Explore colors, typography, buttons, inputs, and components" />
 
     <Shell.FlyoutFooter>
         <Grid Padding="15">

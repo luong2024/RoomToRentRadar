@@ -38,16 +38,28 @@ namespace RoomToRentRadar
     		builder.Services.AddLogging(configure => configure.AddDebug());
 #endif
 
-            // Register Client Gateways (ADR-003)
-            var baseApiUrl = DeviceInfo.Platform == DevicePlatform.Android
+            // Register Client Gateways (ADR-003 Decision 5 & NFR-05)
+            Uri baseApiUrl;
+#if DEBUG
+            // In local development, Android emulator connects to host via 10.0.2.2; desktop uses localhost
+            baseApiUrl = DeviceInfo.Platform == DevicePlatform.Android
                 ? new Uri("http://10.0.2.2:5000")
                 : new Uri("http://localhost:5000");
+#else
+            // In Release/Production, enforce HTTPS endpoint per ADR-003 / NFR-05
+            var configuredUrl = Preferences.Default.Get("ApiBaseUrl", "https://api.roomtorentradar.com");
+            baseApiUrl = new Uri(configuredUrl);
+#endif
 
             builder.Services.AddClientAuthGateway(baseApiUrl);
 
             // Core UI & Device Services
             builder.Services.AddSingleton<ModalErrorHandler>();
             builder.Services.AddSingleton<ISessionStore, MauiSecureSessionStore>();
+
+            // Main Landing Page
+            builder.Services.AddTransient<PageModels.MainLandingPageModel>();
+            builder.Services.AddTransient<Pages.MainLandingPage>();
 
             // UI Design System Catalog
             builder.Services.AddSingleton<PageModels.UiCatalogPageModel>();

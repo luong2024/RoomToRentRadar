@@ -4,6 +4,7 @@
              xmlns:vm="clr-namespace:RoomToRentRadar.PageModels"
              xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
              xmlns:inputs="clr-namespace:RoomToRentRadar.Pages.Controls.Inputs"
+             xmlns:fonts="clr-namespace:Fonts"
              x:Class="RoomToRentRadar.Pages.RegisterPage"
              x:DataType="vm:RegisterPageModel"
              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCanvasLight}, Dark={StaticResource SurfaceCanvasDark}}">
@@ -11,9 +12,9 @@
     <Grid RowDefinitions="Auto, *">
         <!-- 1. Page Header -->
         <common:PageHeaderBar Grid.Row="0"
-                              Title="Đăng Ký Tài Khoản"
-                              CanGoBack="True"
-                              BackCommand="{Binding NavigateToLoginCommand}" />
+                               Title="Create Account"
+                               CanGoBack="True"
+                               BackCommand="{Binding NavigateToLoginCommand}" />
 
         <!-- 2. Form Scroll Area -->
         <ScrollView Grid.Row="1" Padding="{StaticResource ScreenMargin}">
@@ -28,16 +29,17 @@
                         Margin="0,8,0,0">
                     <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
                         <HorizontalStackLayout Grid.Column="0" Spacing="8" VerticalOptions="Center">
-                            <Label Text="Vai trò:"
+                            <Label Text="Role:"
                                    Style="{StaticResource TextCaption}"
                                    VerticalTextAlignment="Center" />
                             <common:RadaBadge Type="Custom"
                                               BadgeColor="{StaticResource ActionPrimaryLight}"
+                                              BadgeTextColor="White"
                                               Text="{Binding RoleDisplayName}" />
                         </HorizontalStackLayout>
 
                         <Button Grid.Column="1"
-                                Text="Đổi vai trò"
+                                Text="Switch role"
                                 Style="{StaticResource GhostButton}"
                                 FontSize="12"
                                 HeightRequest="32"
@@ -65,7 +67,14 @@
                                 Padding="12,10"
                                 IsVisible="{Binding HasGeneralError}">
                             <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
-                                <Label Text="⚠️" FontSize="14" VerticalTextAlignment="Center" />
+                                <Image WidthRequest="16" HeightRequest="16" VerticalOptions="Center">
+                                    <Image.Source>
+                                        <FontImageSource Glyph="{x:Static fonts:FluentUI.warning_20_regular}"
+                                                         FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                         Color="{StaticResource StatusDangerLight}"
+                                                         Size="16" />
+                                    </Image.Source>
+                                </Image>
                                 <Label Text="{Binding GeneralError}"
                                        Style="{StaticResource TextCaption}"
                                        TextColor="{StaticResource StatusDangerLight}"
@@ -75,43 +84,43 @@
                         </Border>
 
                         <!-- Full Name Input -->
-                        <inputs:ValidatedEntry LabelText="Họ và tên *"
-                                               Placeholder="Nguyễn Văn A"
+                        <inputs:ValidatedEntry LabelText="Full Name *"
+                                               Placeholder="John Doe"
                                                Text="{Binding FullName, Mode=TwoWay}"
                                                ErrorMessage="{Binding FullNameError}" />
 
                         <!-- Email Input -->
-                        <inputs:ValidatedEntry LabelText="Địa chỉ Email *"
-                                               Placeholder="nguyenvana@ictu.edu.vn"
+                        <inputs:ValidatedEntry LabelText="Email Address *"
+                                               Placeholder="student@ictu.edu.vn"
                                                Text="{Binding Email, Mode=TwoWay}"
                                                ErrorMessage="{Binding EmailError}"
                                                Keyboard="Email" />
 
-                        <!-- Student Code Input (Visible only if Student) -->
-                        <inputs:ValidatedEntry LabelText="Mã sinh viên ICTU *"
-                                               Placeholder="DTC195480201..."
+                        <!-- Student Code Input (Visible only if Student, Optional per BR-AUTH-04) -->
+                        <inputs:ValidatedEntry LabelText="Student ID (Optional)"
+                                               Placeholder="e.g. DTC19..."
                                                Text="{Binding StudentCode, Mode=TwoWay}"
                                                ErrorMessage="{Binding StudentCodeError}"
                                                IsVisible="{Binding IsStudent}" />
 
-                        <!-- Phone Number Input (Required for Landlord, optional for student) -->
-                        <inputs:ValidatedEntry LabelText="Số điện thoại liên hệ *"
-                                               Placeholder="0912345678"
+                        <!-- Phone Number Input (Required for Landlord) -->
+                        <inputs:ValidatedEntry LabelText="Phone Number *"
+                                               Placeholder="0912345678 or +84912345678"
                                                Text="{Binding PhoneNumber, Mode=TwoWay}"
                                                ErrorMessage="{Binding PhoneNumberError}"
                                                Keyboard="Telephone"
                                                IsVisible="{Binding IsLandlord}" />
 
-                        <!-- Password Input -->
-                        <inputs:ValidatedEntry LabelText="Mật khẩu *"
-                                               Placeholder="Tối thiểu 6 ký tự"
+                        <!-- Password Input (BR-AUTH-05: 8-128 chars, upper, lower, digit) -->
+                        <inputs:ValidatedEntry LabelText="Password *"
+                                               Placeholder="8–128 characters (upper, lower, digit)"
                                                IsPassword="True"
                                                Text="{Binding Password, Mode=TwoWay}"
                                                ErrorMessage="{Binding PasswordError}" />
 
                         <!-- Confirm Password Input -->
-                        <inputs:ValidatedEntry LabelText="Xác nhận mật khẩu *"
-                                               Placeholder="Nhập lại mật khẩu ở trên"
+                        <inputs:ValidatedEntry LabelText="Confirm Password *"
+                                               Placeholder="Re-enter your password"
                                                IsPassword="True"
                                                Text="{Binding ConfirmPassword, Mode=TwoWay}"
                                                ErrorMessage="{Binding ConfirmPasswordError}" />
@@ -121,14 +130,14 @@
                             <CheckBox IsChecked="{Binding IsAgreedToTerms, Mode=TwoWay}"
                                       Color="{StaticResource ActionPrimaryLight}"
                                       VerticalOptions="Center" />
-                            <Label Text="Tôi đồng ý với Quy chế hoạt động &amp; Điều khoản dịch vụ"
+                            <Label Text="I agree to the Terms of Service &amp; Privacy Policy"
                                    Style="{StaticResource TextCaption}"
                                    VerticalTextAlignment="Center"
                                    MaximumWidthRequest="320" />
                         </HorizontalStackLayout>
 
                         <!-- Submit Button -->
-                        <common:RadaButton Text="Tạo tài khoản"
+                        <common:RadaButton Text="Create Account"
                                            Variant="Primary"
                                            IsLoading="{Binding IsBusy}"
                                            Command="{Binding RegisterCommand}"
@@ -140,12 +149,12 @@
 
                 <!-- Footer to Login -->
                 <HorizontalStackLayout HorizontalOptions="Center" Spacing="4" Margin="0,0,0,24">
-                    <Label Text="Đã có tài khoản?"
+                    <Label Text="Already have an account?"
                            Style="{StaticResource TextBodyMedium}"
                            TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
                            VerticalTextAlignment="Center" />
 
-                    <Button Text="Đăng nhập ngay"
+                    <Button Text="Sign in"
                             Style="{StaticResource GhostButton}"
                             Command="{Binding NavigateToLoginCommand}"
                             FontFamily="{StaticResource FontFamilySemibold}"
@@ -159,4 +168,3 @@
         </ScrollView>
     </Grid>
 </ContentPage>
-

@@ -139,7 +139,7 @@ public partial class RadaButton : ContentView
             case RadaButtonVariant.Accent:
                 ButtonBorder.BackgroundColor = resources.TryGetValue("ActionAccentLight", out var aBg) ? (Color)aBg : Color.FromArgb("#4CB5AE");
                 ButtonBorder.Stroke = Colors.Transparent;
-                TextColor = Colors.White;
+                TextColor = resources.TryGetValue("ActionPrimaryLight", out var aText) ? (Color)aText : Color.FromArgb("#163A5F");
                 break;
 
             case RadaButtonVariant.Outline:

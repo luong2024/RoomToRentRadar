@@ -6,6 +6,7 @@
              xmlns:inputs="clr-namespace:RoomToRentRadar.Pages.Controls.Inputs"
              xmlns:cards="clr-namespace:RoomToRentRadar.Pages.Controls.Cards"
              xmlns:feedback="clr-namespace:RoomToRentRadar.Pages.Controls.Feedback"
+             xmlns:fonts="clr-namespace:Fonts"
              x:Class="RoomToRentRadar.Pages.UiCatalogPage"
              x:DataType="vm:UiCatalogPageModel"
              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCanvasLight}, Dark={StaticResource SurfaceCanvasDark}}">
@@ -13,9 +14,9 @@
     <Grid RowDefinitions="Auto, *">
         <!-- 1. Header Bar -->
         <common:PageHeaderBar Grid.Row="0"
-                              Title="UI Design System"
-                              Subtitle="Bảng màu Navy + Teal · Windows / Android / iOS"
-                              ActionIcon="🎨" />
+                               Title="UI Design System"
+                               Subtitle="Navy + Teal Design System · Cross-Platform Foundation"
+                               CanGoBack="False" />
 
         <!-- 2. Scrollable Catalog Content -->
         <ScrollView Grid.Row="1" Padding="{StaticResource ScreenMargin}">
@@ -36,7 +37,7 @@
 
                 <!-- SECTION 1: COLOR PALETTE SWATCHES -->
                 <VerticalStackLayout Spacing="10">
-                    <Label Text="1. BẢNG MÀU CHỦ ĐẠO (OPTION 1: NAVY BLUE + TEAL)" Style="{StaticResource TextH3}" />
+                    <Label Text="1. CORE COLOR PALETTE (NAVY BLUE + TEAL)" Style="{StaticResource TextH3}" />
                     <FlexLayout Wrap="Wrap" JustifyContent="SpaceBetween" AlignItems="Center">
                         <!-- Primary -->
                         <Border StrokeShape="RoundRectangle 8" WidthRequest="140" HeightRequest="65" BackgroundColor="#163A5F" Margin="4" Padding="8">
@@ -55,8 +56,8 @@
                         <!-- Accent Teal -->
                         <Border StrokeShape="RoundRectangle 8" WidthRequest="140" HeightRequest="65" BackgroundColor="#4CB5AE" Margin="4" Padding="8">
                             <VerticalStackLayout VerticalOptions="Center">
-                                <Label Text="Accent (Teal)" TextColor="White" FontFamily="{StaticResource FontFamilySemibold}" FontSize="12" />
-                                <Label Text="#4CB5AE" TextColor="White" Opacity="0.8" FontSize="11" />
+                                <Label Text="Accent (Teal)" TextColor="#163A5F" FontFamily="{StaticResource FontFamilySemibold}" FontSize="12" />
+                                <Label Text="#4CB5AE" TextColor="#163A5F" Opacity="0.8" FontSize="11" />
                             </VerticalStackLayout>
                         </Border>
                         <!-- Background -->
@@ -85,17 +86,17 @@
 
                 <!-- SECTION 2: TYPOGRAPHY SCALE -->
                 <VerticalStackLayout Spacing="8">
-                    <Label Text="2. PHÂN CẤP CHỮ (TYPOGRAPHY SCALE)" Style="{StaticResource TextH3}" />
+                    <Label Text="2. TYPOGRAPHY SCALE" Style="{StaticResource TextH3}" />
                     <Border Style="{StaticResource BaseCardBorderStyle}" Padding="16">
                         <VerticalStackLayout Spacing="8">
-                            <Label Text="Display Bold (32/40pt) — 2.500.000 đ" Style="{StaticResource TextDisplay}" />
-                            <Label Text="Heading 1 (24/28pt) — Chi tiết phòng trọ" Style="{StaticResource TextH1}" />
-                            <Label Text="Heading 2 (20/22pt) — Tiện ích &amp; Vị trí" Style="{StaticResource TextH2}" />
-                            <Label Text="Heading 3 (16/18pt) — Phòng trọ khép kín gần ICTU" Style="{StaticResource TextH3}" />
-                            <Label Text="Body Large (16pt) — Đoạn văn giới thiệu nổi bật về căn phòng và các điều kiện thuê trọ." Style="{StaticResource TextBodyLarge}" />
-                            <Label Text="Body Medium (14pt) — Văn bản chuẩn: Số 18, Đường Z115, Phường Quyết Thắng, TP. Thái Nguyên." Style="{StaticResource TextBodyMedium}" />
-                            <Label Text="Caption (12pt) — Cách trường CNTT &amp; TT 350m • Đã bao gồm internet tốc độ cao" Style="{StaticResource TextCaption}" />
-                            <Label Text="Price Highlight (20pt) — 2.200.000 đ/tháng" Style="{StaticResource TextPriceLarge}" />
+                            <Label Text="Display Bold (32/40pt) — 2,500,000 VND" Style="{StaticResource TextDisplay}" />
+                            <Label Text="Heading 1 (24/28pt) — Rental Room Details" Style="{StaticResource TextH1}" />
+                            <Label Text="Heading 2 (20/22pt) — Amenities &amp; Location" Style="{StaticResource TextH2}" />
+                            <Label Text="Heading 3 (16/18pt) — Studio Room near ICTU Campus" Style="{StaticResource TextH3}" />
+                            <Label Text="Body Large (16pt) — Overview description for featured room listings and rental conditions." Style="{StaticResource TextBodyLarge}" />
+                            <Label Text="Body Medium (14pt) — Standard text: 18 Z115 Street, Quyet Thang, Thai Nguyen City." Style="{StaticResource TextBodyMedium}" />
+                            <Label Text="Caption (12pt) — 350m from ICTU Campus • High-speed Wi-Fi included" Style="{StaticResource TextCaption}" />
+                            <Label Text="Price Highlight (20pt) — 2,200,000 VND/month" Style="{StaticResource TextPriceLarge}" />
                         </VerticalStackLayout>
                     </Border>
                 </VerticalStackLayout>
@@ -103,9 +104,9 @@
                 <!-- SECTION 3: BUTTON SUITE & INTERACTION -->
                 <VerticalStackLayout Spacing="10">
                     <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
-                        <Label Grid.Column="0" Text="3. HỆ THỐNG NÚT BẤM (BUTTON SUITE)" Style="{StaticResource TextH3}" />
+                        <Label Grid.Column="0" Text="3. BUTTON SUITE &amp; INTERACTION" Style="{StaticResource TextH3}" />
                         <Button Grid.Column="1"
-                                Text="Đổi trạng thái Loading"
+                                Text="Toggle Loading State"
                                 Style="{StaticResource GhostButton}"
                                 Command="{Binding ToggleButtonLoadingCommand}" />
                     </Grid>
@@ -121,14 +122,14 @@
                     </FlexLayout>
 
                     <!-- Advanced RadaButton Component with Spinner State -->
-                    <Label Text="Component RadaButton (Tích hợp Spinner không giật layout):" Style="{StaticResource TextCaption}" Margin="0,4,0,0" />
+                    <Label Text="RadaButton Component (Integrated Spinner with zero layout shift):" Style="{StaticResource TextCaption}" Margin="0,4,0,0" />
                     <HorizontalStackLayout Spacing="12">
-                        <common:RadaButton Text="Nút có Loading State"
+                        <common:RadaButton Text="Button with Loading State"
                                            Variant="Primary"
                                            IsLoading="{Binding IsButtonLoading}"
                                            Command="{Binding ToggleButtonLoadingCommand}" />
 
-                        <common:RadaButton Text="Nút Accent Teal"
+                        <common:RadaButton Text="Accent Teal Button"
                                            Variant="Accent"
                                            IsLoading="{Binding IsButtonLoading}"
                                            Command="{Binding ToggleButtonLoadingCommand}" />
@@ -137,7 +138,7 @@
 
                 <!-- SECTION 4: BADGES & ATOMS -->
                 <VerticalStackLayout Spacing="10">
-                    <Label Text="4. HUY HIỆU &amp; ATOMS (BADGES &amp; CHIPS)" Style="{StaticResource TextH3}" />
+                    <Label Text="4. BADGES &amp; ATOMS" Style="{StaticResource TextH3}" />
                     <HorizontalStackLayout Spacing="10">
                         <common:RadaBadge Type="Verified" />
                         <common:RadaBadge Type="Available" />
@@ -145,37 +146,37 @@
                         <common:RadaBadge Type="Full" />
                     </HorizontalStackLayout>
 
-                    <Label Text="Chips Tiện ích (AmenityChip):" Style="{StaticResource TextCaption}" Margin="0,4,0,0" />
+                    <Label Text="Amenity Chips (AmenityChip):" Style="{StaticResource TextCaption}" Margin="0,4,0,0" />
                     <HorizontalStackLayout Spacing="8">
-                        <common:AmenityChip Title="Wifi miễn phí" IconGlyph="📶" IsSelected="True" />
-                        <common:AmenityChip Title="Điều hòa" IconGlyph="❄️" IsSelected="False" />
-                        <common:AmenityChip Title="Nóng lạnh" IconGlyph="🚿" IsSelected="False" />
-                        <common:AmenityChip Title="Vệ sinh khép kín" IconGlyph="🚪" IsSelected="True" />
+                        <common:AmenityChip Title="Free Wi-Fi" IsSelected="True" />
+                        <common:AmenityChip Title="Air Conditioner" IsSelected="False" />
+                        <common:AmenityChip Title="Water Heater" IsSelected="False" />
+                        <common:AmenityChip Title="Private Bath" IsSelected="True" />
                     </HorizontalStackLayout>
                 </VerticalStackLayout>
 
                 <!-- SECTION 5: FORM INPUT CONTROLS -->
                 <VerticalStackLayout Spacing="10">
                     <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
-                        <Label Grid.Column="0" Text="5. Ô NHẬP LIỆU &amp; TÌM KIẾM (INPUTS)" Style="{StaticResource TextH3}" />
+                        <Label Grid.Column="0" Text="5. INPUT &amp; SEARCH CONTROLS" Style="{StaticResource TextH3}" />
                         <Button Grid.Column="1"
-                                Text="Đổi trạng thái Lỗi"
+                                Text="Toggle Error State"
                                 Style="{StaticResource GhostButton}"
                                 Command="{Binding ToggleInputErrorCommand}" />
                     </Grid>
 
                     <inputs:SearchBarView SearchText="{Binding SearchQuery, Mode=TwoWay}"
-                                         Placeholder="Tìm theo tên đường hoặc tiện ích gần ICTU..." />
+                                         Placeholder="Search by street name or amenities near ICTU..." />
 
-                    <inputs:ValidatedEntry LabelText="Họ và tên người thuê trọ *"
-                                           Placeholder="Nhập đầy đủ họ tên..."
+                    <inputs:ValidatedEntry LabelText="Tenant Full Name *"
+                                           Placeholder="Enter full name..."
                                            Text="{Binding InputText, Mode=TwoWay}"
                                            ErrorMessage="{Binding InputError}" />
                 </VerticalStackLayout>
 
                 <!-- SECTION 6: ADAPTIVE CARD SYSTEM -->
                 <VerticalStackLayout Spacing="12">
-                    <Label Text="6. HỆ THỐNG THẺ THÍCH ỨNG (ROOM CARD &amp; METRIC CARD)" Style="{StaticResource TextH3}" />
+                    <Label Text="6. ADAPTIVE CARD SYSTEM" Style="{StaticResource TextH3}" />
 
                     <!-- Room Card Preview -->
                     <cards:RoomCardView Room="{Binding SampleRoom}"
@@ -185,37 +186,37 @@
                     <!-- Metric Cards Row -->
                     <Grid ColumnDefinitions="*, *" ColumnSpacing="12">
                         <cards:MetricCardView Grid.Column="0"
-                                              Title="PHÒNG ĐÃ DUYỆT"
+                                              Title="VERIFIED ROOMS"
                                               IconGlyph="🏠"
                                               ValueText="128"
-                                              TrendText="+12 phòng mới tuần này" />
+                                              TrendText="+12 new rooms this week" />
 
                         <cards:MetricCardView Grid.Column="1"
-                                              Title="TỶ LỆ LẤP ĐẦY"
+                                              Title="OCCUPANCY RATE"
                                               IconGlyph="📈"
                                               ValueText="94%"
-                                              TrendText="Khu vực cổng ICTU" />
+                                              TrendText="Near ICTU Gate Area" />
                     </Grid>
 
                     <!-- Comparison Card Preview (US10) -->
-                    <Label Text="Thẻ So Sánh 3 Phòng (US10):" Style="{StaticResource TextCaption}" Margin="0,4,0,0" />
+                    <Label Text="3-Room Comparison Card (US10):" Style="{StaticResource TextCaption}" Margin="0,4,0,0" />
                     <cards:ComparisonCardView Room="{Binding SampleRoom}"
                                               RemoveCommand="{Binding ToggleBookmarkCommand}" />
                 </VerticalStackLayout>
 
                 <!-- SECTION 7: THE 4 UX STATES (FEEDBACK & RESILIENCE) -->
                 <VerticalStackLayout Spacing="12">
-                    <Label Text="7. BỘ TRẠNG THÁI UX (UX STATE MACHINE)" Style="{StaticResource TextH3}" />
+                    <Label Text="7. UX RESILIENCE STATES (STATE MACHINE)" Style="{StaticResource TextH3}" />
 
-                    <Label Text="A) Skeleton Shimmer Loader (Đang tải dữ liệu, chống giật layout):" Style="{StaticResource TextCaption}" />
+                    <Label Text="A) Skeleton Shimmer Loader (Prevents layout shifts while loading):" Style="{StaticResource TextCaption}" />
                     <feedback:SkeletonShimmer />
 
-                    <Label Text="B) Empty State (Danh sách rỗng kèm nút phục hồi):" Style="{StaticResource TextCaption}" />
+                    <Label Text="B) Empty State (Empty list with recovery action):" Style="{StaticResource TextCaption}" />
                     <Border Style="{StaticResource BaseCardBorderStyle}">
                         <feedback:EmptyStateView ActionCommand="{Binding ResetFiltersCommand}" />
                     </Border>
 
-                    <Label Text="C) Error State (Sự cố kết nối kèm nút Thử lại):" Style="{StaticResource TextCaption}" />
+                    <Label Text="C) Error State (Connection failure with retry action):" Style="{StaticResource TextCaption}" />
                     <Border Style="{StaticResource BaseCardBorderStyle}">
                         <feedback:ErrorRetryView RetryCommand="{Binding RetryOperationCommand}" />
                     </Border>
@@ -225,4 +226,3 @@
         </ScrollView>
     </Grid>
 </ContentPage>
-

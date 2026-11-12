@@ -48,32 +48,32 @@
             </Grid>
 
             <!-- Price Tag -->
-            <common:PriceTagView Price="{Binding Room.PricePerMonth}" Period="/th" />
+            <common:PriceTagView Price="{Binding Room.PricePerMonth}" Period="/mo" />
 
             <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
 
             <!-- Comparison Rows -->
-            <!-- 1. Diện tích -->
+            <!-- 1. Area -->
             <VerticalStackLayout Spacing="2">
-                <Label Text="DIỆN TÍCH" FontSize="{StaticResource FontSizeBadge}" TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                <Label Text="AREA" FontSize="{StaticResource FontSizeBadge}" TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
                 <Label Text="{Binding Room.AreaFormatted}" FontFamily="{StaticResource FontFamilySemibold}" FontSize="{StaticResource FontSizeBodyMedium}" TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
             </VerticalStackLayout>
 
-            <!-- 2. Khoảng cách ICTU -->
+            <!-- 2. Distance to ICTU -->
             <VerticalStackLayout Spacing="2">
-                <Label Text="KHOẢNG CÁCH ICTU" FontSize="{StaticResource FontSizeBadge}" TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                <Label Text="DISTANCE TO CAMPUS" FontSize="{StaticResource FontSizeBadge}" TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
                 <Label Text="{Binding Room.DistanceFormatted}" FontFamily="{StaticResource FontFamilySemibold}" FontSize="{StaticResource FontSizeBodyMedium}" TextColor="{AppThemeBinding Light={StaticResource ActionAccentLight}, Dark={StaticResource ActionAccentDark}}" />
             </VerticalStackLayout>
 
-            <!-- 3. Trạng thái xác thực -->
+            <!-- 3. Verification Status -->
             <VerticalStackLayout Spacing="4">
-                <Label Text="XÁC THỰC" FontSize="{StaticResource FontSizeBadge}" TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                <Label Text="VERIFICATION" FontSize="{StaticResource FontSizeBadge}" TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
                 <common:RadaBadge Type="Verified" IsVisible="{Binding Room.IsVerified}" />
             </VerticalStackLayout>
 
-            <!-- 4. Địa chỉ -->
+            <!-- 4. Address -->
             <VerticalStackLayout Spacing="2">
-                <Label Text="ĐỊA CHỈ" FontSize="{StaticResource FontSizeBadge}" TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                <Label Text="ADDRESS" FontSize="{StaticResource FontSizeBadge}" TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
                 <Label Text="{Binding Room.Address}" FontFamily="{StaticResource FontFamilyRegular}" FontSize="{StaticResource FontSizeCaption}" MaxLines="2" LineBreakMode="TailTruncation" TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
             </VerticalStackLayout>
         </VerticalStackLayout>

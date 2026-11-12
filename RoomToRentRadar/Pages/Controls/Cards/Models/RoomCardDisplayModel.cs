@@ -15,8 +15,8 @@ public sealed record RoomCardDisplayModel
     public IReadOnlyList<string> Amenities { get; init; } = [];
 
     public string DistanceFormatted => DistanceMeters < 1000
-        ? $"Cách campus {DistanceMeters:F0}m"
-        : $"Cách campus {(DistanceMeters / 1000.0):F1}km";
+        ? $"{DistanceMeters:F0}m from campus"
+        : $"{(DistanceMeters / 1000.0):F1}km from campus";
 
     public string AreaFormatted => $"{AreaSquareMeters:F0} m²";
 }

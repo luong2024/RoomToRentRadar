@@ -5,17 +5,17 @@ namespace RoomToRentRadar.Pages.Controls.Feedback;
 public partial class EmptyStateView : ContentView
 {
     public static readonly BindableProperty IconGlyphProperty =
-        BindableProperty.Create(nameof(IconGlyph), typeof(string), typeof(EmptyStateView), "🔍");
+        BindableProperty.Create(nameof(IconGlyph), typeof(string), typeof(EmptyStateView), string.Empty);
 
     public static readonly BindableProperty TitleProperty =
-        BindableProperty.Create(nameof(Title), typeof(string), typeof(EmptyStateView), "Không tìm thấy phòng trọ phù hợp");
+        BindableProperty.Create(nameof(Title), typeof(string), typeof(EmptyStateView), "No rooms found");
 
     public static readonly BindableProperty MessageProperty =
         BindableProperty.Create(nameof(Message), typeof(string), typeof(EmptyStateView),
-            "Hãy thử giảm bớt tiêu chí lọc hoặc mở rộng bán kính tìm kiếm quanh ICTU.");
+            "Try adjusting your filters or expanding your search radius around ICTU.");
 
     public static readonly BindableProperty ActionTextProperty =
-        BindableProperty.Create(nameof(ActionText), typeof(string), typeof(EmptyStateView), "Xóa bộ lọc");
+        BindableProperty.Create(nameof(ActionText), typeof(string), typeof(EmptyStateView), "Reset Filters");
 
     public static readonly BindableProperty ActionCommandProperty =
         BindableProperty.Create(nameof(ActionCommand), typeof(ICommand), typeof(EmptyStateView), null);

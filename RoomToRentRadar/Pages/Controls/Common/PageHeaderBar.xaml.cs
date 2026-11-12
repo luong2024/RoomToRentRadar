@@ -81,7 +81,6 @@ public partial class PageHeaderBar : ContentView
     public PageHeaderBar()
     {
         InitializeComponent();
-        BindingContext = this;
         UpdateHasSubtitle();
         UpdateHasAction();
     }
@@ -96,4 +95,3 @@ public partial class PageHeaderBar : ContentView
         HasAction = !string.IsNullOrWhiteSpace(ActionIcon);
     }
 }
-

@@ -22,23 +22,23 @@ public partial class UiCatalogPageModel : ObservableObject
     public partial string SearchQuery { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string FeedbackMessage { get; set; } = "Nhấn các nút để thử nghiệm tương tác.";
+    public partial string FeedbackMessage { get; set; } = "Click components below to test interactivity.";
 
     public UiCatalogPageModel()
     {
         SampleRoom = new RoomCardDisplayModel
         {
             Id = "room-demo-01",
-            Title = "Phòng trọ cao cấp Full đồ gần Cổng trường ICTU",
+            Title = "Furnished Studio Room near ICTU Main Gate",
             PricePerMonth = 2200000m,
             AreaSquareMeters = 25.5,
-            Address = "Số 18, Đường Z115, Quyết Thắng, TP. Thái Nguyên",
+            Address = "18 Z115 Street, Quyet Thang, Thai Nguyen City",
             DistanceMeters = 350,
             ThumbnailUrl = "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=600&q=80",
             IsVerified = true,
             IsAvailable = true,
             IsBookmarked = false,
-            Amenities = ["Wifi", "Điều hòa", "Nóng lạnh", "Vệ sinh khép kín"]
+            Amenities = ["Wifi", "Air Conditioner", "Water Heater", "Private Bath"]
         };
     }
 
@@ -46,14 +46,14 @@ public partial class UiCatalogPageModel : ObservableObject
     private void ToggleButtonLoading()
     {
         IsButtonLoading = !IsButtonLoading;
-        FeedbackMessage = IsButtonLoading ? "RadaButton đang ở trạng thái IsLoading = true" : "RadaButton đã hoàn thành";
+        FeedbackMessage = IsButtonLoading ? "RadaButton is currently in IsLoading = true state" : "RadaButton finished loading state";
     }
 
     [RelayCommand]
     private void ToggleInputError()
     {
         InputError = string.IsNullOrEmpty(InputError)
-            ? "Số điện thoại hoặc thông tin không hợp lệ!"
+            ? "Invalid phone number or format!"
             : string.Empty;
     }
 
@@ -62,27 +62,26 @@ public partial class UiCatalogPageModel : ObservableObject
     {
         SampleRoom = SampleRoom with { IsBookmarked = !SampleRoom.IsBookmarked };
         FeedbackMessage = SampleRoom.IsBookmarked
-            ? "Đã lưu phòng vào danh sách Yêu thích (US04)!"
-            : "Đã xóa phòng khỏi danh sách Yêu thích.";
+            ? "Saved room to Favourites (US04)!"
+            : "Removed room from Favourites.";
     }
 
     [RelayCommand]
     private void ViewRoomDetails(string roomId)
     {
-        FeedbackMessage = $"Đã kích hoạt điều hướng đến Chi tiết phòng: {roomId}";
+        FeedbackMessage = $"Navigating to room details: {roomId}";
     }
 
     [RelayCommand]
     private void RetryOperation()
     {
-        FeedbackMessage = "Đã nhấn nút 'Thử lại' từ ErrorRetryView!";
+        FeedbackMessage = "Clicked 'Retry' on ErrorRetryView!";
     }
 
     [RelayCommand]
     private void ResetFilters()
     {
         SearchQuery = string.Empty;
-        FeedbackMessage = "Đã nhấn 'Xóa bộ lọc' từ EmptyStateView!";
+        FeedbackMessage = "Clicked 'Reset Filters' on EmptyStateView!";
     }
 }
-

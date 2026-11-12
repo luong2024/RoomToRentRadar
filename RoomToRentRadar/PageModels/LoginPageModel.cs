@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -37,6 +38,12 @@ public partial class LoginPageModel : ObservableObject
     [ObservableProperty]
     public partial bool IsBusy { get; set; } = false;
 
+#if DEBUG
+    public bool IsSsoVisible => true;
+#else
+    public bool IsSsoVisible => false;
+#endif
+
     public LoginPageModel(
         IAuthGateway authGateway,
         ISessionStore sessionStore)
@@ -60,18 +67,18 @@ public partial class LoginPageModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(Email))
         {
-            EmailError = "Vui lòng nhập địa chỉ email.";
+            EmailError = "Please enter your email address.";
             isValid = false;
         }
         else if (!EmailRegex.IsMatch(Email.Trim()))
         {
-            EmailError = "Định dạng email không hợp lệ (ví dụ: ten@ictu.edu.vn).";
+            EmailError = "Invalid email format (e.g., student@ictu.edu.vn).";
             isValid = false;
         }
 
         if (string.IsNullOrWhiteSpace(Password))
         {
-            PasswordError = "Vui lòng nhập mật khẩu.";
+            PasswordError = "Please enter your password.";
             isValid = false;
         }
 
@@ -88,27 +95,40 @@ public partial class LoginPageModel : ObservableObject
                 var saved = await _sessionStore.SaveSessionAsync(response);
                 if (!saved)
                 {
-                    GeneralError = "Không thể lưu phiên đăng nhập an toàn vào thiết bị.";
+                    GeneralError = "Unable to securely store your session on this device.";
                     HasGeneralError = true;
                     return;
                 }
 
-                await Shell.Current.GoToAsync("//uicatalog");
+                try
+                {
+                    await Shell.Current.GoToAsync("//main");
+                }
+                catch (Exception)
+                {
+                    GeneralError = "Sign in succeeded, but navigation to home screen failed.";
+                    HasGeneralError = true;
+                }
             }
             else
             {
-                GeneralError = "Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại.";
+                GeneralError = "Invalid email or password. Please try again.";
                 HasGeneralError = true;
             }
         }
         catch (ApiException apiEx)
         {
-            GeneralError = MapAuthErrorCodeToMessage(apiEx.ErrorCode, apiEx.Message);
+            GeneralError = MapAuthErrorCodeToMessage(apiEx.ErrorCode, apiEx.StatusCode, apiEx.Message);
+            HasGeneralError = true;
+        }
+        catch (HttpRequestException)
+        {
+            GeneralError = "Unable to connect to the server. Please check your internet connection.";
             HasGeneralError = true;
         }
         catch (Exception)
         {
-            GeneralError = "Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng hoặc thử lại sau.";
+            GeneralError = "An unexpected error occurred. Please try again.";
             HasGeneralError = true;
         }
         finally
@@ -123,13 +143,6 @@ public partial class LoginPageModel : ObservableObject
         if (IsBusy) return;
 
 #if !DEBUG
-        if (Shell.Current != null)
-        {
-            await Shell.Current.DisplayAlertAsync(
-                "ICTU SSO",
-                "Tính năng Đăng nhập một chạm ICTU SSO (Google OIDC) đang được cấu hình bảo mật theo Task T13.04. Vui lòng đăng nhập bằng Email trong thời gian này.",
-                "Đã hiểu");
-        }
         return;
 #else
         try
@@ -138,24 +151,48 @@ public partial class LoginPageModel : ObservableObject
             HasGeneralError = false;
             GeneralError = string.Empty;
 
-            // In development simulation:
             var ssoRequest = new IctuSsoLoginRequest("mock-ictu-sso-id-token", DeviceInfo.Current.Model);
             var response = await _authGateway.LoginWithIctuSsoAsync(ssoRequest);
 
             if (response != null && !string.IsNullOrEmpty(response.AccessToken))
             {
-                await _sessionStore.SaveSessionAsync(response);
-                await Shell.Current.GoToAsync("//uicatalog");
+                var saved = await _sessionStore.SaveSessionAsync(response);
+                if (!saved)
+                {
+                    GeneralError = "Unable to securely store your session on this device.";
+                    HasGeneralError = true;
+                    return;
+                }
+
+                try
+                {
+                    await Shell.Current.GoToAsync("//main");
+                }
+                catch (Exception)
+                {
+                    GeneralError = "SSO sign in succeeded, but navigation to home screen failed.";
+                    HasGeneralError = true;
+                }
+            }
+            else
+            {
+                GeneralError = "Authentication with ICTU SSO failed. Please try again.";
+                HasGeneralError = true;
             }
         }
         catch (ApiException apiEx)
         {
-            GeneralError = MapAuthErrorCodeToMessage(apiEx.ErrorCode, "Xác thực qua ICTU SSO không thành công.");
+            GeneralError = MapAuthErrorCodeToMessage(apiEx.ErrorCode, apiEx.StatusCode, "ICTU SSO authentication failed.");
+            HasGeneralError = true;
+        }
+        catch (HttpRequestException)
+        {
+            GeneralError = "Unable to connect to the authentication server. Please check your network.";
             HasGeneralError = true;
         }
         catch (Exception)
         {
-            GeneralError = "Không thể kết nối đến máy chủ xác thực ICTU SSO. Vui lòng thử lại sau.";
+            GeneralError = "An unexpected error occurred during ICTU SSO login.";
             HasGeneralError = true;
         }
         finally
@@ -177,21 +214,34 @@ public partial class LoginPageModel : ObservableObject
         if (Shell.Current != null)
         {
             await Shell.Current.DisplayAlertAsync(
-                "Quên mật khẩu",
-                "Tính năng khôi phục mật khẩu qua Email đang được bảo trì. Vui lòng liên hệ ban quản trị ICTU Radar.",
-                "Đã hiểu");
+                "Forgot Password",
+                "Password recovery via email is currently under maintenance. Please contact the ICTU Radar administrator.",
+                "OK");
         }
     }
 
-    private static string MapAuthErrorCodeToMessage(string? errorCode, string defaultMessage)
+    private static string MapAuthErrorCodeToMessage(string? errorCode, HttpStatusCode statusCode, string defaultMessage)
     {
-        return errorCode switch
+        if (!string.IsNullOrWhiteSpace(errorCode))
         {
-            "INVALID_CREDENTIALS" or "AUTH_INVALID_CREDENTIALS" => "Email hoặc mật khẩu không chính xác.",
-            "ACCOUNT_LOCKED" or "AUTH_ACCOUNT_LOCKED" => "Tài khoản tạm thời bị khóa do nhập sai nhiều lần. Vui lòng thử lại sau 15 phút.",
-            "USER_NOT_FOUND" or "AUTH_USER_NOT_FOUND" => "Tài khoản không tồn tại trên hệ thống.",
-            "USER_DISABLED" => "Tài khoản đã bị tạm dừng hoạt động. Vui lòng liên hệ hỗ trợ.",
-            _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin."
+            return errorCode switch
+            {
+                "INVALID_CREDENTIALS" or "AUTH_INVALID_CREDENTIALS" or "USER_NOT_FOUND" or "AUTH_USER_NOT_FOUND"
+                    => "Invalid email or password.",
+                "ACCOUNT_LOCKED" or "AUTH_ACCOUNT_LOCKED"
+                    => "Your account is temporarily locked due to multiple failed login attempts. Please try again after 15 minutes.",
+                "USER_DISABLED"
+                    => "This account has been deactivated. Please contact support.",
+                _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : "Sign in failed. Please check your credentials."
+            };
+        }
+
+        return statusCode switch
+        {
+            HttpStatusCode.Unauthorized => "Invalid email or password.",
+            HttpStatusCode.Forbidden => "Your account is locked or suspended.",
+            HttpStatusCode.NotFound => "Invalid email or password.",
+            _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : "Sign in failed. Please check your credentials."
         };
     }
 }

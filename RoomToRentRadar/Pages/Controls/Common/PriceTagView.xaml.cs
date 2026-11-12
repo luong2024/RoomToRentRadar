@@ -11,10 +11,10 @@ public partial class PriceTagView : ContentView
             propertyChanged: (b, o, n) => ((PriceTagView)b).UpdateFormattedPrice());
 
     public static readonly BindableProperty PeriodProperty =
-        BindableProperty.Create(nameof(Period), typeof(string), typeof(PriceTagView), "/ tháng");
+        BindableProperty.Create(nameof(Period), typeof(string), typeof(PriceTagView), "/ month");
 
     public static readonly BindableProperty FormattedPriceProperty =
-        BindableProperty.Create(nameof(FormattedPrice), typeof(string), typeof(PriceTagView), "0 đ");
+        BindableProperty.Create(nameof(FormattedPrice), typeof(string), typeof(PriceTagView), "0 VND");
 
     public decimal Price
     {
@@ -42,7 +42,7 @@ public partial class PriceTagView : ContentView
 
     private void UpdateFormattedPrice()
     {
-        FormattedPrice = $"{Price.ToString("N0", VietnameseCulture)} đ";
+        FormattedPrice = $"{Price.ToString("N0", VietnameseCulture)} VND";
     }
 }
 

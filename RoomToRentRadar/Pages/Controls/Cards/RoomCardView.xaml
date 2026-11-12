@@ -67,7 +67,7 @@
                 <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
                     <common:PriceTagView Grid.Column="0"
                                          Price="{Binding Room.PricePerMonth}"
-                                         Period="/ tháng" />
+                                         Period="/ month" />
 
                     <!-- Area Pill -->
                     <Border Grid.Column="1"

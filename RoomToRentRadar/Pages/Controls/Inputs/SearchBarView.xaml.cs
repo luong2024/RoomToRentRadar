@@ -10,7 +10,7 @@ public partial class SearchBarView : ContentView
             propertyChanged: (b, o, n) => ((SearchBarView)b).UpdateClearButtonVisibility());
 
     public static readonly BindableProperty PlaceholderProperty =
-        BindableProperty.Create(nameof(Placeholder), typeof(string), typeof(SearchBarView), "Tìm phòng trọ gần ICTU...");
+        BindableProperty.Create(nameof(Placeholder), typeof(string), typeof(SearchBarView), "Search rooms near ICTU...");
 
     public static readonly BindableProperty SearchCommandProperty =
         BindableProperty.Create(nameof(SearchCommand), typeof(ICommand), typeof(SearchBarView), null);

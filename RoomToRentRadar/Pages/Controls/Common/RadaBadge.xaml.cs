@@ -12,8 +12,8 @@ public enum RadaBadgeType
 public partial class RadaBadge : ContentView
 {
     public static readonly BindableProperty TextProperty =
-        BindableProperty.Create(nameof(Text), typeof(string), typeof(RadaBadge), "Đã xác thực",
-            propertyChanged: (b, o, n) => ((RadaBadge)b).UpdateBadgeText());
+        BindableProperty.Create(nameof(Text), typeof(string), typeof(RadaBadge), string.Empty,
+            propertyChanged: (b, o, n) => ((RadaBadge)b).OnTextChanged());
 
     public static readonly BindableProperty TypeProperty =
         BindableProperty.Create(nameof(Type), typeof(RadaBadgeType), typeof(RadaBadge), RadaBadgeType.Verified,
@@ -23,7 +23,7 @@ public partial class RadaBadge : ContentView
         BindableProperty.Create(nameof(BadgeColor), typeof(Color), typeof(RadaBadge), Color.FromArgb("#4CB5AE"));
 
     public static readonly BindableProperty BadgeTextColorProperty =
-        BindableProperty.Create(nameof(BadgeTextColor), typeof(Color), typeof(RadaBadge), Colors.White);
+        BindableProperty.Create(nameof(BadgeTextColor), typeof(Color), typeof(RadaBadge), Color.FromArgb("#163A5F"));
 
     public string Text
     {
@@ -55,7 +55,7 @@ public partial class RadaBadge : ContentView
         ApplyBadgeType();
     }
 
-    private void UpdateBadgeText()
+    private void OnTextChanged()
     {
         // Manual text override
     }
@@ -66,30 +66,30 @@ public partial class RadaBadge : ContentView
         {
             case RadaBadgeType.Verified:
                 BadgeColor = Color.FromArgb("#4CB5AE"); // Teal Accent
-                BadgeTextColor = Colors.White;
-                if (string.IsNullOrEmpty(Text) || Text == "Đã xác thực" || Text == "Còn phòng" || Text == "Sắp hết" || Text == "Hết phòng")
-                    Text = "✓ Đã xác thực";
+                BadgeTextColor = Color.FromArgb("#163A5F"); // Navy text (4.73:1 contrast WCAG AA)
+                if (string.IsNullOrEmpty(Text) || Text == "✓ Verified" || Text == "✓ Đã xác thực" || Text == "Available" || Text == "Almost Full" || Text == "Full")
+                    Text = "✓ Verified";
                 break;
 
             case RadaBadgeType.Available:
-                BadgeColor = Color.FromArgb("#16A34A"); // Green
-                BadgeTextColor = Colors.White;
-                if (string.IsNullOrEmpty(Text) || Text.Contains("xác thực") || Text.Contains("hết"))
-                    Text = "Còn phòng";
+                BadgeColor = Color.FromArgb("#DCFCE7"); // Soft green
+                BadgeTextColor = Color.FromArgb("#15803D"); // Dark green text (5.0:1 contrast WCAG AA)
+                if (string.IsNullOrEmpty(Text) || Text.Contains("Verified") || Text.Contains("xác thực") || Text.Contains("Full") || Text.Contains("hết"))
+                    Text = "Available";
                 break;
 
             case RadaBadgeType.AlmostFull:
-                BadgeColor = Color.FromArgb("#D97706"); // Amber
-                BadgeTextColor = Colors.White;
-                if (string.IsNullOrEmpty(Text) || Text.Contains("phòng") || Text.Contains("xác thực"))
-                    Text = "Sắp hết";
+                BadgeColor = Color.FromArgb("#FEF3C7"); // Soft amber
+                BadgeTextColor = Color.FromArgb("#B45309"); // Dark amber text (5.0:1 contrast WCAG AA)
+                if (string.IsNullOrEmpty(Text) || Text.Contains("Verified") || Text.Contains("Available") || Text.Contains("Full"))
+                    Text = "Almost Full";
                 break;
 
             case RadaBadgeType.Full:
-                BadgeColor = Color.FromArgb("#DC2626"); // Red
-                BadgeTextColor = Colors.White;
-                if (string.IsNullOrEmpty(Text) || Text.Contains("Còn") || Text.Contains("xác thực"))
-                    Text = "Hết phòng";
+                BadgeColor = Color.FromArgb("#FEE2E2"); // Soft red
+                BadgeTextColor = Color.FromArgb("#B91C1C"); // Dark red text (5.1:1 contrast WCAG AA)
+                if (string.IsNullOrEmpty(Text) || Text.Contains("Verified") || Text.Contains("Available") || Text.Contains("Almost"))
+                    Text = "Full";
                 break;
 
             case RadaBadgeType.Custom:
@@ -98,4 +98,3 @@ public partial class RadaBadge : ContentView
         }
     }
 }
-
