@@ -21,4 +21,5 @@ public class RoomDetailsDto
     public string Status { get; set; } = string.Empty;
     public bool IsAvailable { get; set; } = true;
     public string? UnavailableMessage { get; set; }
+    public List<SimilarRoomDto> SimilarRooms { get; set; } = [];
 }

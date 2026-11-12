@@ -58,6 +58,26 @@ public class GetRoomDetailsUseCase : IGetRoomDetailsUseCase
             dto.LandlordPhone = "*** (Yêu cầu xác thực để xem)";
         }
 
+        if (!isAvailable)
+        {
+            var similar = await _roomRepository.GetSimilarRoomsAsync(room.Id, room.Price, room.Area, cancellationToken);
+            dto.SimilarRooms = similar
+                .Where(r => r.Status == RoomStatus.Available && r.Id != room.Id)
+                .Select(r => new SimilarRoomDto
+                {
+                    Id = r.Id,
+                    Title = r.Title,
+                    Price = r.Price,
+                    FormattedPrice = $"{r.Price:N0} VNĐ",
+                    Area = r.Area,
+                    FormattedArea = $"{r.Area} m²",
+                    Address = r.Address,
+                    RoomType = r.RoomType,
+                    IsVerified = r.IsVerified
+                })
+                .ToList();
+        }
+
         return dto;
     }
 }

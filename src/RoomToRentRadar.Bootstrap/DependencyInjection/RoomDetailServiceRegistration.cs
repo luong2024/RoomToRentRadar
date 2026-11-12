@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Repositories;
+using RoomToRentRadar.Adapters.Outbound.Persistence.InMemory;
 using RoomToRentRadar.Application.Ports.Inbound;
 using RoomToRentRadar.Application.Ports.Outbound;
 using RoomToRentRadar.Application.UseCases;
@@ -24,7 +25,8 @@ public static class RoomDetailServiceRegistration
 
         if (string.Equals(endpoint, "in-memory", StringComparison.OrdinalIgnoreCase))
         {
-            services.AddScoped<IRoomRepository, CosmosRoomRepository>();
+            services.AddSingleton<InMemoryRoomRepository>();
+            services.AddScoped<IRoomRepository>(sp => sp.GetRequiredService<InMemoryRoomRepository>());
             services.AddScoped<IGetRoomDetailsUseCase, GetRoomDetailsUseCase>();
             return services;
         }

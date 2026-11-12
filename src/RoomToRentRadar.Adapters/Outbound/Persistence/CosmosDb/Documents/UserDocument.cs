@@ -22,6 +22,9 @@ public sealed class UserDocument
     [JsonProperty("isActive")]
     public bool IsActive { get; set; }
 
+    [JsonProperty("isVerified")]
+    public bool IsVerified { get; set; }
+
     [JsonProperty("securityStamp")]
     public string SecurityStamp { get; set; } = string.Empty;
 

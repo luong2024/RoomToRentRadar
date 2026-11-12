@@ -35,4 +35,27 @@ public class CosmosRoomRepository : IRoomRepository
             return null;
         }
     }
+
+    public async Task<IReadOnlyList<Room>> GetSimilarRoomsAsync(string roomId, decimal price, double area, CancellationToken cancellationToken = default)
+    {
+        var minPrice = price * 0.7m;
+        var maxPrice = price * 1.3m;
+
+        var query = new QueryDefinition(
+            "SELECT TOP 5 * FROM c WHERE c.id != @roomId AND c.status = 0 AND c.price >= @minPrice AND c.price <= @maxPrice")
+            .WithParameter("@roomId", roomId)
+            .WithParameter("@minPrice", minPrice)
+            .WithParameter("@maxPrice", maxPrice);
+
+        using var iterator = _container.GetItemQueryIterator<Room>(query);
+        var results = new List<Room>();
+
+        while (iterator.HasMoreResults && results.Count < 5)
+        {
+            var response = await iterator.ReadNextAsync(cancellationToken);
+            results.AddRange(response);
+        }
+
+        return results;
+    }
 }
