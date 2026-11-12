@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using RoomToRentRadar.Api.Errors;
 using RoomToRentRadar.Domain.Exceptions;
 
 namespace RoomToRentRadar.Api.Middlewares;
@@ -32,18 +33,12 @@ public sealed class AuthExceptionHandlingMiddleware
             context.Response.StatusCode = statusCode;
             context.Response.ContentType = "application/problem+json";
 
-            var problem = new ProblemDetails
-            {
-                Status = statusCode,
-                Title = title,
-                Detail = ex.Message,
-                Instance = context.Request.Path
-            };
-
-            if (!string.IsNullOrWhiteSpace(errorCode))
-            {
-                problem.Extensions["errorCode"] = errorCode;
-            }
+            var problem = ApiProblemFactory.Create(
+                statusCode,
+                title,
+                errorCode ?? "UNEXPECTED_ERROR",
+                ex.Message,
+                context.Request.Path);
 
             await JsonSerializer.SerializeAsync(
                 context.Response.Body,

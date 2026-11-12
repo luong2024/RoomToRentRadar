@@ -7,6 +7,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using NUnit.Framework;
 using RoomToRentRadar.Ports.Outbound.Repositories;
@@ -84,6 +85,7 @@ public class PhotosControllerHttpTests
         using var response = await _client.PostAsync(PhotosUrl, content);
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        await AssertProblemBodyAsync(response, HttpStatusCode.Unauthorized, "INVALID_TOKEN");
     }
 
     [Test]
@@ -94,6 +96,7 @@ public class PhotosControllerHttpTests
         using var response = await UploadAsync(MinimalJpeg, "room.jpg", "Standard", token);
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        await AssertProblemBodyAsync(response, HttpStatusCode.Forbidden, "FORBIDDEN_ROLE");
     }
 
     [Test]
@@ -104,6 +107,7 @@ public class PhotosControllerHttpTests
         using var response = await UploadAsync(MinimalJpeg, "room.jpg", "Standard", token);
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        await AssertProblemBodyAsync(response, HttpStatusCode.Forbidden, "FORBIDDEN_ROLE");
     }
 
     [Test]
@@ -177,6 +181,48 @@ public class PhotosControllerHttpTests
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.RequestEntityTooLarge));
         await AssertProblemBodyAsync(response, HttpStatusCode.RequestEntityTooLarge, "FILE_TOO_LARGE");
+    }
+
+    [Test]
+    public async Task Upload_RequestLargerThanServerLimit_Returns413WithFileTooLarge()
+    {
+        var token = CreateToken("landlord-1", "Landlord", isVerified: true);
+        var oversized = new byte[12 * 1024 * 1024];
+        MinimalJpeg.CopyTo(oversized, 0);
+
+        using var response = await UploadAsync(oversized, "huge.jpg", "Standard", token);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.RequestEntityTooLarge));
+        await AssertProblemBodyAsync(response, HttpStatusCode.RequestEntityTooLarge, "FILE_TOO_LARGE");
+    }
+
+    [Test]
+    public async Task Upload_NonMultipartContentType_Returns415WithErrorCode()
+    {
+        var token = CreateToken("landlord-1", "Landlord", isVerified: true);
+        using var content = new StringContent("{}", Encoding.UTF8, "application/json");
+        using var request = new HttpRequestMessage(HttpMethod.Post, PhotosUrl) { Content = content };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        using var response = await _client.SendAsync(request);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.UnsupportedMediaType));
+        await AssertProblemBodyAsync(response, HttpStatusCode.UnsupportedMediaType, "UNSUPPORTED_MEDIA_TYPE");
+    }
+
+    [Test]
+    public async Task Upload_MalformedMultipartBody_Returns400WithErrorCode()
+    {
+        var token = CreateToken("landlord-1", "Landlord", isVerified: true);
+        using var content = new StringContent("not-a-valid-multipart-body");
+        content.Headers.ContentType = MediaTypeHeaderValue.Parse("multipart/form-data; boundary=----broken");
+        using var request = new HttpRequestMessage(HttpMethod.Post, PhotosUrl) { Content = content };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        using var response = await _client.SendAsync(request);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        await AssertProblemBodyAsync(response, HttpStatusCode.BadRequest, "VALIDATION_FAILED");
     }
 
     [Test]
@@ -358,6 +404,7 @@ public class PhotosControllerHttpTests
         using var response = await DeleteAsync("0123456789abcdef0123456789abcdef", token: null);
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        await AssertProblemBodyAsync(response, HttpStatusCode.Unauthorized, "INVALID_TOKEN");
     }
 
     private static string CreateToken(string userId, string role, bool isVerified)
@@ -511,6 +558,14 @@ public class PhotosControllerHttpTests
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment("Development");
+            builder.ConfigureServices(services =>
+            {
+                // Background jobs share the singleton in-memory connection; keep tests deterministic.
+                foreach (var descriptor in services.Where(d => d.ServiceType == typeof(IHostedService)).ToList())
+                {
+                    services.Remove(descriptor);
+                }
+            });
         }
 
         protected override void Dispose(bool disposing)

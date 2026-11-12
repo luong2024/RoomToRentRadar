@@ -1,10 +1,14 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using RoomToRentRadar.Api.Authorization;
+using RoomToRentRadar.Api.Errors;
 using RoomToRentRadar.Api.Middlewares;
 using RoomToRentRadar.Application;
 using RoomToRentRadar.Datastore.Sqlite;
@@ -40,6 +44,11 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+        ApiProblemFactory.ToResult(ApiProblemFactory.FromModelState(context));
+});
 
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new JwtSettings();
 if (string.IsNullOrWhiteSpace(jwtSettings.SigningKey))
@@ -92,6 +101,24 @@ builder.Services.AddAuthorization(AuthorizationPolicies.ConfigurePolicies);
 var app = builder.Build();
 
 app.UseMiddleware<AuthExceptionHandlingMiddleware>();
+app.UseStatusCodePages(async (StatusCodeContext statusCodeContext) =>
+{
+    var response = statusCodeContext.HttpContext.Response;
+    var problem = ApiProblemFactory.FromStatusCode(
+        response.StatusCode,
+        statusCodeContext.HttpContext.Request.Path);
+
+    if (problem is null)
+    {
+        return;
+    }
+
+    response.ContentType = ApiProblemFactory.ProblemContentType;
+    await JsonSerializer.SerializeAsync(
+        response.Body,
+        problem,
+        cancellationToken: statusCodeContext.HttpContext.RequestAborted);
+});
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<AuditLoggingMiddleware>();

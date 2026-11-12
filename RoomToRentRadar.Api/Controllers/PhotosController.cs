@@ -2,8 +2,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using RoomToRentRadar.Api.Authorization;
+using RoomToRentRadar.Api.Errors;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.Exceptions;
+using RoomToRentRadar.Domain.Services;
 using RoomToRentRadar.Ports.Contracts.Requests.Photos;
 using RoomToRentRadar.Ports.Contracts.Responses.Photos;
 using RoomToRentRadar.Ports.Inbound.UseCases.Photos;
@@ -45,6 +47,13 @@ public sealed class PhotosController : ControllerBase
         [FromForm] string? kind,
         CancellationToken ct)
     {
+        // Some servers fail form binding before the action runs; the model-state factory already maps
+        // that to 413, but TestServer and other hosts may still reach the action with a null file.
+        if (ApiProblemFactory.IsRequestTooLarge(ModelState))
+        {
+            throw new FileTooLargeException(PhotoFileRules.MaxFileBytes);
+        }
+
         // RoomId/UploadedByUserId are never accepted from the client (whitelist).
         if (file is null)
         {
@@ -106,23 +115,7 @@ public sealed class PhotosController : ControllerBase
         };
     }
 
-    // Two branches do not justify a new class/service (KISS): a small local ProblemDetails builder
-    // mirroring the middleware shape, with the errorCode extension member and problem+json content type.
-    private ObjectResult PhotoProblem(int statusCode, string title, string errorCode, string detail)
-    {
-        var problem = new ProblemDetails
-        {
-            Status = statusCode,
-            Title = title,
-            Detail = detail,
-            Instance = HttpContext.Request.Path
-        };
-        problem.Extensions["errorCode"] = errorCode;
-
-        return new ObjectResult(problem)
-        {
-            StatusCode = statusCode,
-            ContentTypes = { "application/problem+json" }
-        };
-    }
+    private ObjectResult PhotoProblem(int statusCode, string title, string errorCode, string detail) =>
+        ApiProblemFactory.ToResult(
+            ApiProblemFactory.Create(statusCode, title, errorCode, detail, HttpContext.Request.Path));
 }
