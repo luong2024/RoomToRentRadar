@@ -36,14 +36,8 @@ public static class TestListingsSeed
                 Price = price,
                 Deposit = price,
                 AreaM2 = 30 + index % 5 * 5,
-                RoomType = (index % 4) switch
-                {
-                    0 => RoomType.Apartment,
-                    1 => RoomType.Studio,
-                    2 => RoomType.House,
-                    _ => RoomType.SharedRoom
-                },
                 Bedrooms = index % 4,
+                RoomType = (RoomType)(index % 5),
                 Address = $"Test address {index}, District {index % 3}",
                 Lat = 10.7 + index * 0.001,
                 Lng = 106.7 + index * 0.001,
@@ -103,6 +97,37 @@ public static class TestListingsSeed
             .OrderBy(x => x.Id)
             .Select(x => x.Id)
             .ToListAsync();
+
+    /// <summary>
+    /// Adds <paramref name="count"/> cheap published listings so the total count cap
+    /// can be exercised. Ids start at index 1,000 to stay clear of <see cref="IdFor"/>.
+    /// </summary>
+    public static async Task SeedBulkAsync(AppDbContext dbContext, int count)
+    {
+        var baseDate = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        for (var index = 0; index < count; index++)
+        {
+            dbContext.Listings.Add(new Listing
+            {
+                Id = IdFor(1_000 + index),
+                Title = $"Bulk listing {index}",
+                Description = $"Bulk listing {index} description",
+                Price = 5_000_000L + index % 4 * 1_000_000L,
+                AreaM2 = 30 + index % 5 * 5,
+                Bedrooms = index % 4,
+                RoomType = (RoomType)(index % 5),
+                Address = $"Bulk address {index}",
+                Lat = 10.7 + index % 40 * 0.001,
+                Lng = 106.7 + index % 40 * 0.001,
+                Status = ListingStatus.Published,
+                CreatedAt = baseDate.AddSeconds(-index),
+                UpdatedAt = baseDate.AddSeconds(-index)
+            });
+        }
+
+        await dbContext.SaveChangesAsync();
+    }
 
     private static ListingPhoto CreatePhoto(int listingIndex, int sortOrder, string fileName, bool isCover)
         => new()

@@ -22,14 +22,6 @@ namespace RoomToRentRadar.Api.Data.Migrations
                 defaultValue: 0L);
 
             migrationBuilder.AddColumn<string>(
-                name: "room_type",
-                table: "listings",
-                type: "TEXT",
-                maxLength: 20,
-                nullable: false,
-                defaultValue: "apartment");
-
-            migrationBuilder.AddColumn<string>(
                 name: "landlord_name",
                 table: "listings",
                 type: "TEXT",
@@ -111,10 +103,6 @@ namespace RoomToRentRadar.Api.Data.Migrations
 
             migrationBuilder.DropColumn(
                 name: "deposit",
-                table: "listings");
-
-            migrationBuilder.DropColumn(
-                name: "room_type",
                 table: "listings");
 
             migrationBuilder.DropColumn(

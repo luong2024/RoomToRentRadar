@@ -72,6 +72,7 @@ builder.Services.AddCors(options =>
         .AllowAnyMethod());
 });
 builder.Services.AddScoped<ListingsQueryService>();
+builder.Services.AddScoped<ListingCandidatePageBuilder>();
 builder.Services.AddScoped<AuthService>();
 builder.Services
     .AddAuthentication(BearerTokenAuthenticationHandler.SchemeName)

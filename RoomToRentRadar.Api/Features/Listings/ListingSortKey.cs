@@ -62,8 +62,8 @@ public static class ListingSortKeyOrdering
         };
     }
 
-    public static string EncodeCursor(ListingSort sort, ListingSortKey key)
-        => ListingCursorCodec.Encode(sort, key.Id, key.CreatedAt, key.Price, key.AreaM2);
+    public static string EncodeCursor(ListingSort sort, ListingSortKey key, string filterFingerprint)
+        => ListingCursorCodec.Encode(sort, key.Id, filterFingerprint, key.CreatedAt, key.Price, key.AreaM2);
 
     private sealed class SortKeyComparer(ListingSort sort) : IComparer<ListingSortKey>
     {

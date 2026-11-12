@@ -22,15 +22,6 @@ public static class DatabaseSeeder
         "Phạm Thu Dung"
     ];
 
-    private static readonly RoomType[] SampleRoomTypes =
-    [
-        RoomType.Apartment,
-        RoomType.Studio,
-        RoomType.House,
-        RoomType.Apartment,
-        RoomType.SharedRoom
-    ];
-
     // One sample listing keeps an empty amenity and rule list to cover the empty detail case.
     private const int NoDetailIndex = 7;
 
@@ -78,6 +69,16 @@ public static class DatabaseSeeder
         "Không nuôi thú cưng",
         "Giữ yên tĩnh sau 22 giờ",
         "Không tổ chức tiệc tùng"
+    ];
+
+    // Cycles through every wire value so each filter option has sample rows.
+    private static readonly RoomType[] SampleRoomTypes =
+    [
+        RoomType.SingleRoom,
+        RoomType.SharedRoom,
+        RoomType.Studio,
+        RoomType.Apartment,
+        RoomType.House
     ];
 
     public static async Task<bool> SeedSampleAsync(AppDbContext dbContext, CancellationToken cancellationToken = default)

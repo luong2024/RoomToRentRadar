@@ -258,6 +258,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
             RoomType.Studio => "Studio",
             RoomType.House => "House",
             RoomType.SharedRoom => "Shared room",
+            RoomType.SingleRoom => "Single room",
             _ => "Apartment"
         };
         AmenityLabels = detail.Amenities
