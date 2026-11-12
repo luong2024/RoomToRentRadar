@@ -86,6 +86,11 @@ Thumbs.db
 .env.*
 appsettings.Development.Local.json
 
+# Local Database Artifacts (SEC-002)
+*.db
+*.db-wal
+*.db-shm
+
 # Ignored Markdown Documentation Files
 README.md
 CI-CD.md

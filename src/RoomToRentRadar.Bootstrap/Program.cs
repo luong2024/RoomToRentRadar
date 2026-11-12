@@ -1,4 +1,7 @@
+using Microsoft.Extensions.Options;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb;
+using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Configurations;
+using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Context;
 using RoomToRentRadar.Bootstrap.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -6,22 +9,28 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services
     .AddApplicationUseCases()
     .AddOutboundAdapters(builder.Configuration)
-    .AddInboundAdapters();
+    .AddInboundAdapters(builder.Configuration);
 
 var app = builder.Build();
 
 app.UseExceptionHandler();
 app.UseHttpsRedirection();
+app.UseRateLimiter();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-using (var scope = app.Services.CreateScope())
+await using (var scope = app.Services.CreateAsyncScope())
 {
-    var initializer = scope.ServiceProvider.GetService<CosmosDbInitializer>();
-    if (initializer is not null)
+    var cosmosDbContext = scope.ServiceProvider.GetRequiredService<ICosmosDbContext>();
+    await cosmosDbContext.EnsureDatabaseAndContainersAsync();
+
+    var cosmosSettings = scope.ServiceProvider.GetRequiredService<IOptions<CosmosDbSettings>>().Value;
+    if (!string.Equals(cosmosSettings.AccountEndpoint, "in-memory", StringComparison.OrdinalIgnoreCase))
     {
         try
         {
+            var initializer = scope.ServiceProvider.GetRequiredService<CosmosDbInitializer>();
             await initializer.InitializeAsync();
         }
         catch (Exception ex)
@@ -31,6 +40,6 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-app.Run();
+await app.RunAsync();
 
 public partial class Program;

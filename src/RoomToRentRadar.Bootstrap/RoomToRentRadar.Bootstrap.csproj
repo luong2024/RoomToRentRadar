@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <RootNamespace>RoomToRentRadar.Bootstrap</RootNamespace>
     <AzureCosmosDisableNewtonsoftJsonCheck>true</AzureCosmosDisableNewtonsoftJsonCheck>
+    <UserSecretsId>RoomToRentRadar-Backend-0985c6b0-42b9-4e7b-9d1a-6a1f2c3d4e5f</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
