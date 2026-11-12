@@ -14,6 +14,17 @@ namespace RoomToRentRadar.Features.Rooms
             // T04.2 (Hieu):  services.AddTransientWithShellRoute<PhotoGallery360Page, PhotoGallery360PageModel>(Constants.Routes.RoomGallery360);
             // T05.2 (Nam):   services.AddTransientWithShellRoute<RoomFilterModalPage, RoomFilterPageModel>(Constants.Routes.RoomFilter);
             // T12.1 (Nam):   services.AddSingleton<IHouseRuleRepository, HouseRuleRepository>();
+
+            // T04.1 (Quang): photo upload & gallery. Singleton so the PhotosJson write lock is shared app-wide;
+            // photos are stored under the app's private data folder (outside the repo).
+            services.AddSingleton<IPhotoImageProcessor, MauiPhotoImageProcessor>();
+            services.AddSingleton<IPhotoGalleryService>(sp => new PhotoGalleryService(
+                sp.GetRequiredService<RentalDatabaseService>(),
+                sp.GetRequiredService<IAuthService>(),
+                sp.GetRequiredService<IPhotoImageProcessor>(),
+                sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<PhotoGalleryService>>(),
+                FileSystem.AppDataDirectory));
+
             return services;
         }
     }
