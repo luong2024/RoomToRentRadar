@@ -346,6 +346,24 @@ public class AuthPersistenceTests
     }
 
     [Test]
+    public void CosmosDbOptions_AuthKeyAndContainerName_ShouldMapCorrectly()
+    {
+        var options = new RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Configurations.CosmosDbOptions
+        {
+            AuthKey = "sample-auth-key",
+            ContainerName = "CustomRooms"
+        };
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(options.AuthKeyOrResourceToken, Is.EqualTo("sample-auth-key"));
+            Assert.That(options.AuthKey, Is.EqualTo("sample-auth-key"));
+            Assert.That(options.RoomsContainerName, Is.EqualTo("CustomRooms"));
+            Assert.That(options.ContainerName, Is.EqualTo("CustomRooms"));
+        });
+    }
+
+    [Test]
     public async Task User_WhenUpdatedConcurrently_ShouldEnforceETagAndPreventLostUpdate()
     {
         var email = EmailAddress.Create("concurrent-user-etag@example.com");

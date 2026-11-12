@@ -9,6 +9,7 @@ public class SearchRoomsUseCase : ISearchRoomsUseCase
 {
     public const int MaxPageSize = 50;
     public const int DefaultPageSize = 10;
+    public const int MaxPageNumber = 100_000;
 
     private readonly IRoomRepository _roomRepository;
 
@@ -60,6 +61,11 @@ public class SearchRoomsUseCase : ISearchRoomsUseCase
         if (query.PageNumber < 1)
         {
             throw new ArgumentException("PageNumber phải lớn hơn hoặc bằng 1.");
+        }
+
+        if (query.PageNumber > MaxPageNumber)
+        {
+            throw new ArgumentException($"PageNumber không được vượt quá {MaxPageNumber}.");
         }
 
         if (query.PageSize < 1)

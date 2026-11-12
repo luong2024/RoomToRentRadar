@@ -114,17 +114,17 @@ public class InMemoryRoomRepository : IRoomRepository
                 CalculateHaversineDistanceKm(userLat, userLon, r.Latitude.Value, r.Longitude.Value) <= radius);
         }
 
-        var list = filtered.ToList();
+        var list = filtered.OrderBy(r => r.Id, StringComparer.Ordinal).ToList();
         var totalCount = list.Count;
 
         // 7. Phân trang (Pagination)
         var pageNumber = Math.Max(1, query.PageNumber);
         var pageSize = Math.Clamp(query.PageSize <= 0 ? 10 : query.PageSize, 1, 50);
+        long rawOffset = ((long)pageNumber - 1) * pageSize;
 
-        var pagedItems = list
-            .Skip((pageNumber - 1) * pageSize)
-            .Take(pageSize)
-            .ToList();
+        var pagedItems = rawOffset >= totalCount || rawOffset > int.MaxValue
+            ? new List<Room>()
+            : list.Skip((int)rawOffset).Take(pageSize).ToList();
 
         return Task.FromResult<(IReadOnlyList<Room> Items, int TotalCount)>((pagedItems, totalCount));
     }

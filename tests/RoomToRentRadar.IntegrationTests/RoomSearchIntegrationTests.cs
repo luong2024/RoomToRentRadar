@@ -371,4 +371,17 @@ public class RoomSearchIntegrationTests
         Assert.That(problem, Is.Not.Null);
         Assert.That(problem!.Detail, Does.Contain("PageNumber"));
     }
+
+    [Test]
+    public async Task SearchRooms_WhenPageNumberExceedsMaximumCap_ShouldReturnBadRequest()
+    {
+        // Act - Invalid PageNumber > 100,000 (prevents integer overflow and DoS)
+        var response = await _client.GetAsync("/api/rooms?pageNumber=200000");
+
+        // Assert - Must return 400 Bad Request
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.That(problem, Is.Not.Null);
+        Assert.That(problem!.Detail, Does.Contain("PageNumber"));
+    }
 }

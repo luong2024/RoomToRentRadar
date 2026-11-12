@@ -98,6 +98,17 @@ public class SearchRoomsUseCaseTests
     }
 
     [Test]
+    [TestCase(100_001)]
+    [TestCase(int.MaxValue)]
+    public void ExecuteAsync_WhenPageNumberExceedsMax_ShouldThrowArgumentException(int pageNumber)
+    {
+        var query = new SearchRoomsQuery(pageNumber: pageNumber);
+
+        Assert.ThrowsAsync<ArgumentException>(async () =>
+            await _useCase.ExecuteAsync(query));
+    }
+
+    [Test]
     [TestCase(0)]
     [TestCase(-1)]
     [TestCase(51)]

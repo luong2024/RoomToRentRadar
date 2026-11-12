@@ -17,6 +17,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
     private readonly ICosmosContainer<EmailIndexDocument> _emailIndexContainer;
     private readonly ICosmosContainer<ExternalLoginIndexDocument> _externalLoginIndexContainer;
     private readonly ICosmosContainer<UserProfileDocument> _userProfilesContainer;
+    private readonly Container? _roomsCosmosContainer;
 
     public const string PartitionKeyPath = "/id";
     public const string UniqueTokenHashPath = "/tokenHash";
@@ -42,6 +43,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
             _emailIndexContainer = new InMemoryCosmosContainer<EmailIndexDocument>();
             _externalLoginIndexContainer = new InMemoryCosmosContainer<ExternalLoginIndexDocument>();
             _userProfilesContainer = new InMemoryCosmosContainer<UserProfileDocument>();
+            _roomsCosmosContainer = null;
         }
         else
         {
@@ -66,9 +68,15 @@ public sealed class CosmosDbContext : ICosmosDbContext
                 }
             };
 
-            if (string.Equals(options.ConnectionMode, "Gateway", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(options.ConnectionMode, "Gateway", StringComparison.OrdinalIgnoreCase) ||
+                options.AccountEndpoint.Contains("localhost", StringComparison.OrdinalIgnoreCase) ||
+                options.AccountEndpoint.Contains("127.0.0.1", StringComparison.OrdinalIgnoreCase))
             {
                 clientOptions.ConnectionMode = ConnectionMode.Gateway;
+                clientOptions.HttpClientFactory = () => new HttpClient(new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                });
             }
 
             var authKey = !string.IsNullOrWhiteSpace(options.AuthKey)
@@ -81,6 +89,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
             var emailIndexCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.EmailIndexContainerName);
             var externalLoginIndexCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.ExternalLoginIndexContainerName);
             var userProfilesCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.UserProfilesContainerName);
+            _roomsCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.RoomsContainerName);
 
             _usersContainer = new CosmosContainer<UserDocument>(usersCosmosContainer);
             _refreshTokensContainer = new CosmosContainer<RefreshTokenDocument>(refreshTokensCosmosContainer);
@@ -99,6 +108,10 @@ public sealed class CosmosDbContext : ICosmosDbContext
     public ICosmosContainer<ExternalLoginIndexDocument> ExternalLoginIndex => _externalLoginIndexContainer;
 
     public ICosmosContainer<UserProfileDocument> UserProfiles => _userProfilesContainer;
+
+    public Container? RoomsContainer => _roomsCosmosContainer;
+
+    public CosmosClient? Client => _cosmosClient;
 
     public static CosmosDbContext CreateInMemory()
     {
@@ -178,6 +191,17 @@ public sealed class CosmosDbContext : ICosmosDbContext
             cancellationToken: cancellationToken);
 
         await EnsureUserProfileCompositeIndexesAsync(userProfilesResponse.Container, userProfilesResponse.Resource, cancellationToken);
+
+        var roomsContainerProperties = new ContainerProperties(_options.RoomsContainerName, PartitionKeyPath);
+        roomsContainerProperties.IndexingPolicy.SpatialIndexes.Add(new SpatialPath
+        {
+            Path = "/Location/*",
+            SpatialTypes = { SpatialType.Point }
+        });
+
+        await database.CreateContainerIfNotExistsAsync(
+            roomsContainerProperties,
+            cancellationToken: cancellationToken);
     }
 
     private static async Task EnsureUserProfileCompositeIndexesAsync(

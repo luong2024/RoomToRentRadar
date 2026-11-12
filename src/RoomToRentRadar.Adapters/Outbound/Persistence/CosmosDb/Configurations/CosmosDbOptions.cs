@@ -6,13 +6,15 @@ public sealed class CosmosDbOptions
 
     public string AccountEndpoint { get; set; } = string.Empty;
 
-    public string? AuthKey { get; set; }
+    public string? AuthKey
+    {
+        get => AuthKeyOrResourceToken;
+        set => AuthKeyOrResourceToken = value;
+    }
 
     public string? AuthKeyOrResourceToken { get; set; }
 
     public string DatabaseName { get; set; } = "RoomToRentRadarDb";
-
-    public string ContainerName { get; set; } = "Rooms";
 
     public string UsersContainerName { get; set; } = "Users";
 
@@ -23,6 +25,14 @@ public sealed class CosmosDbOptions
     public string ExternalLoginIndexContainerName { get; set; } = "ExternalLoginIndex";
 
     public string UserProfilesContainerName { get; set; } = "UserProfiles";
+
+    public string RoomsContainerName { get; set; } = "Rooms";
+
+    public string ContainerName
+    {
+        get => RoomsContainerName;
+        set => RoomsContainerName = value;
+    }
 
     public string ConnectionMode { get; set; } = "Direct";
 }

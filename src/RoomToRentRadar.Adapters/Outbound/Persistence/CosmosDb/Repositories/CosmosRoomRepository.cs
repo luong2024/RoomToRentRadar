@@ -152,7 +152,14 @@ public class CosmosRoomRepository : IRoomRepository
         // Paged items query across partitions
         var pageNumber = Math.Max(1, query.PageNumber);
         var pageSize = Math.Clamp(query.PageSize <= 0 ? 10 : query.PageSize, 1, 50);
-        var offset = (pageNumber - 1) * pageSize;
+        long rawOffset = ((long)pageNumber - 1) * pageSize;
+
+        if (rawOffset >= totalCount || rawOffset > int.MaxValue)
+        {
+            return (Array.Empty<Room>(), totalCount);
+        }
+
+        var offset = (int)rawOffset;
 
         var itemsSql = $"SELECT * FROM c WHERE {whereSql} ORDER BY c.id OFFSET @offset LIMIT @limit";
         var itemsQueryDef = new QueryDefinition(itemsSql);

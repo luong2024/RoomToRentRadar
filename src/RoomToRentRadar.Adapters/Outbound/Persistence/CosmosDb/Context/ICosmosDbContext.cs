@@ -1,3 +1,4 @@
+using Microsoft.Azure.Cosmos;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Documents;
 
 namespace RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Context;
@@ -13,6 +14,8 @@ public interface ICosmosDbContext : IDisposable
     ICosmosContainer<ExternalLoginIndexDocument> ExternalLoginIndex { get; }
 
     ICosmosContainer<UserProfileDocument> UserProfiles { get; }
+
+    Container? RoomsContainer { get; }
 
     Task EnsureDatabaseAndContainersAsync(CancellationToken cancellationToken = default);
 }
