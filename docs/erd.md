@@ -174,7 +174,7 @@ erDiagram
 
 Indexes: `IX_Rooms_Status_Lat_Lng (Status, Latitude, Longitude)` (bounding-box prefilter), `IX_Rooms_Status_Rent (Status, MonthlyRentVnd)`, `IX_Rooms_LandlordId`, `IX_Rooms_Status_PublishedAtUtc`, `IX_Rooms_NeedsReReview` (partial `WHERE NeedsReReview = 1`).
 
-Derived (never stored): `DistanceKm` (per campus, BR-CMP-03), `SafetyScore` = count of `RoomSafetyFeatures` with `IsConfirmed = 1` when `IsSafetyVerified = 1`, otherwise count of declared features shown as "Chưa xác minh" (BR-LST-08), `CoverPhoto` = first photo by `SortOrder`.
+Derived (never stored): `DistanceKm` (per campus, BR-CMP-03), `SafetyScore` = count of `RoomSafetyFeatures` with `IsConfirmed = 1` when `IsSafetyVerified = 1`, otherwise count of declared features shown as "Not verified" (BR-LST-08), `CoverPhoto` = first photo by `SortOrder`.
 
 ### 4.5 `RoomAmenities`
 | Column | Type | Constraints |
@@ -292,7 +292,7 @@ IX `(SavedSearchId, LocalDate, WasPushed)`.
 | Id | TEXT | PK | |
 | UserId | TEXT | FK→Users ON DELETE CASCADE, NN | |
 | Type | TEXT | NN | `NewListingMatch`·`ListingApproved`·`ListingRejected`·`ListingSuspended`·`LandlordApproved`·`ReportResolved`·`NewMessage` |
-| Title | TEXT | NN | Vietnamese |
+| Title | TEXT | NN | in the UI language (English in MVP) |
 | Body | TEXT | NN | |
 | TargetType | TEXT | | `Room`·`Conversation`·`SavedSearch` |
 | TargetId | TEXT | | deep-link target |
@@ -380,7 +380,7 @@ Separate file `roomtorentradar-cache.db3` in `FileSystem.AppDataDirectory`; sche
 | `CachedConversations` / `CachedMessages` | `Id` | last 50 messages per conversation | 30 days |
 | `ListingDrafts` | `DraftId` | landlord wizard draft JSON (UC-30 A1) | 30 days |
 
-Preferences (`Preferences` API, not SQLite): `SelectedCampusId` (guest), `HasCompletedOnboarding`, `SeenHouseRules:<roomId>`, `InstallationId`.
+Preferences (`Preferences` API, not SQLite): `SelectedCampusId` (guest), `SeenHouseRules:<roomId>`, `InstallationId`.
 
 ## 6. Delta vs current code (develop2 @ 8524ad8)
 

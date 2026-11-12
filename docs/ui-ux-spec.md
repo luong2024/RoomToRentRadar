@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Status | Draft v1.0 — 2026-11-11 |
-| Platform | .NET MAUI 10 · Android first (ADR-013) · English UI (en-ENG) |
+| Platform | .NET MAUI 10 · Android first (ADR-013) · English UI (en-US) |
 | Detailed method skills | `.agents/skills/ui/01…08` (this spec applies them to our screens) |
 | Inputs | [use-cases.md](use-cases.md) (UC-*), [business-analysis.md](business-analysis.md) (BR-*) |
 
@@ -14,11 +14,11 @@
 ## 1. Design principles (applied)
 
 1. **Visual-first discovery** (marketplace pattern, Rightmove): big cover photo, price in bold, distance to *my campus* on every card.
-2. **One primary action per screen** (Polaris): e.g. detail → *Liên hệ*; filter sheet → *Xem N phòng*; editor step → *Tiếp tục*.
+2. **One primary action per screen** (Polaris): e.g. detail → *Contact*; filter sheet → *Show N rooms*; editor step → *Continue*.
 3. **Trust is visible:** verified badge, Safety Score, last-updated date, status banner — never hidden behind taps.
 4. **Thumb zone:** primary actions in the bottom third (sticky bars, FAB-style buttons); touch targets ≥ 48 dp.
 5. **Recognition over recall:** active filters as chips, saved searches named automatically, campus always shown.
-6. **Never a blank screen:** skeletons for loading, helpful empty states, error with *Thử lại*, offline banner with cached data (ADR-004).
+6. **Never a blank screen:** skeletons for loading, helpful empty states, error with *Retry*, offline banner with cached data (ADR-004).
 7. **Respect the guest:** browsing, details, map, compare work without an account; sign-in is requested only at the moment of a protected action, then the action resumes.
 
 ## 2. Information architecture & navigation
@@ -27,21 +27,22 @@
 
 | Tab (route) | Guest | Student | Landlord | Admin |
 |---|---|---|---|---|
-| Khám phá (`explore`) — list | ✓ | ✓ | ✓ | ✓ |
-| Bản đồ (`map`) | ✓ | ✓ | – | ✓ |
-| Đã lưu (`saved`) — rooms / searches | ✓ (sign-in prompt) | ✓ | – | ✓ |
-| Tin đăng (`my-listings`) | – | – | ✓ | – |
-| Tin nhắn (`messages`) | ✓ (sign-in prompt) | ✓ | ✓ | ✓ |
-| Kiểm duyệt (`moderation`) | – | – | – | ✓ |
-| Tài khoản (`account`) | ✓ (sign in / register) | ✓ | ✓ | ✓ |
+| Explore (`explore`) — list | ✓ | ✓ | ✓ | ✓ |
+| Map (`map`) | ✓ | ✓ | – | ✓ |
+| Saved (`saved`) — rooms / searches | ✓ (sign-in prompt) | ✓ | – | ✓ |
+| My listings (`my-listings`) | – | – | ✓ | – |
+| Messages (`messages`) | ✓ (sign-in prompt) | ✓ | ✓ | ✓ |
+| Moderation (`moderation`) | – | – | – | ✓ |
+| Account (`account`) | ✓ (sign in / register) | ✓ | ✓ | ✓ |
 
-Max 5 tabs visible: Landlord = Khám phá, Tin đăng, Tin nhắn, Tài khoản; Admin = Khám phá, Bản đồ, Kiểm duyệt, Tin nhắn, Tài khoản (Admin reaches *Đã lưu* from Account). Tabs are rebuilt after sign-in/out.
+Max 5 tabs visible: Landlord = Explore, My listings, Messages, Account; Admin = Explore, Map, Moderation, Messages, Account (Admin reaches *Saved* from Account). Tabs are rebuilt after sign-in/out.
 
 ### 2.2 Flow map
 
 ```mermaid
 flowchart LR
-  ONB[SCR-ONB-01 Onboarding/Campus] --> HOME[SCR-HOME-01 Explore]
+  WELCOME[SCR-AUTH-01 Welcome / Sign in] -- browse as guest --> HOME[SCR-HOME-01 Explore]
+  HOME -. campus chip .-> CAMPUS[SCR-ACC-02 Campus picker] --> HOME
   HOME --> FILTER[SCR-SRCH-01 Filters] --> HOME
   HOME --> ROOM[SCR-ROOM-01 Room detail]
   MAP[SCR-MAP-01 Map] --> ROOM
@@ -59,10 +60,11 @@ flowchart LR
 
 ### 2.3 Campus selection pattern (US01, US09 — decided with references)
 
-References: UniHomes/StuRents ("search near your university" as the first question), Airbnb/Rightmove (location chip at the top of results).
-- **Onboarding** (first launch, 1 screen): "Bạn học ở trường nào?" — list of campuses with search box, ICTU preselected, *Bắt đầu* button. Skippable (keeps ICTU).
-- **Campus chip** at the top of *Khám phá* and *Bản đồ*: `📍 Gần ICTU ▾` → bottom sheet picker (SCR-ACC-02). Changing it reloads results and travel times.
-- Distance labels always name the campus: "1,2 km tới ICTU".
+References: Airbnb/Rightmove (location chip at the top of results). UniHomes/StuRents ask "which university?" first, but almost all our users study at ICTU, so a mandatory question would be a wasted step (revised 2026-11-12).
+- **No onboarding step.** First launch uses **ICTU** as the campus (BR-CMP-01); results appear immediately. The campus only matters to students of the other Thái Nguyên University schools, who change it once.
+- **Campus picker** (SCR-ACC-02, full-screen sheet): title "Measure distances from", ICTU listed first, other TNU campuses below with search, primary *Use this campus*. Opened from the campus chip or from *Account*.
+- **Campus chip** at the top of *Explore* and *Map*: `[pin] Near ICTU v` → bottom sheet picker (SCR-ACC-02). Changing it reloads results and travel times.
+- Distance labels always name the campus: "1.2 km to ICTU".
 - Signed-in users: selection saved in profile (syncs); guests: on device (BR-CMP-02).
 
 ## 3. Design tokens (`Resources/Styles/Colors.xaml`, `Styles.xaml`)
@@ -127,131 +129,133 @@ Line height 1.4; support OS font scaling up to 130% without truncating prices.
 Spacing scale 4-pt: `4, 8, 12, 16, 24, 32`. Page padding 16. Card radius 12, chip radius 16 (pill), sheet radius 16 top. Elevation: cards flat with 1 px `Outline`; sheets/dialogs shadow level 2 only.
 
 ### 3.4 Iconography
-Fluent System Icons (bundled `FluentSystemIcons-Regular.ttf`). Icons accompany meaning (♥, map, filter, chat, phone); no decorative icons before every line.
+Fluent System Icons (bundled `FluentSystemIcons-Regular.ttf`). Icons accompany meaning (heart, map, filter, chat, phone); no decorative icons before every line.
 
 ## 4. Global components & states
 
 | Component | Spec |
 |---|---|
-| `RoomCard` | 16:10 cover (thumb), verified badge overlay top-left, ♥ top-right (48 dp hit), title (2 lines max), **price "2,5 tr/tháng"**, `25 m² · Phòng trọ · 1,2 km tới ICTU`, *So sánh* text button. Fixed height for scroll perf. |
-| `FilterChip` | removable chip `Dưới 3 tr ✕`; *Xoá bộ lọc* text chip at end. |
+| `RoomCard` | 16:10 cover (thumb), verified badge overlay top-left, [heart] top-right (48 dp hit), title (2 lines max), **price "2.5M/mo"**, `25 m² · Boarding room · 1.2 km to ICTU`, *Compare* text button. Fixed height for scroll perf. |
+| `FilterChip` | removable chip `Under 3M [x]`; *Clear filters* text chip at end. |
 | `StatusBanner` | full-width under header: Warning colour for `Rented`/`Unpublished` (public) and `PendingReview`/`Rejected`/`Suspended` (owner/admin views), Verified colour for approvals. |
-| `StickyContactBar` | bottom of detail: price + *Gọi* · *Zalo* · primary *Nhắn tin*. Guest: single primary *Đăng nhập để liên hệ*. |
+| `StickyContactBar` | bottom of detail: price + *Call* · *Zalo* · primary *Message*. Guest: single primary *Sign in to contact*. |
 | `Skeleton` | grey blocks matching final layout; shimmer ≤ 1.2 s cycle. |
 | `EmptyState` | illustration-free: icon + title + 1-line hint + one action. |
-| `ErrorState` | message from errorCode map (§6) + *Thử lại*. |
-| `OfflineBanner` | "Đang ngoại tuyến – hiển thị dữ liệu đã lưu" (Warning). |
-| `Snackbar` | bottom, 5 s, one action (e.g. *Hoàn tác*). |
-| `SignInPrompt` sheet | "Đăng nhập để …" + *Đăng nhập* / *Tạo tài khoản* / *Để sau*. |
+| `ErrorState` | message from errorCode map (§6) + *Retry*. |
+| `OfflineBanner` | "You are offline – showing saved data" (Warning). |
+| `Snackbar` | bottom, 5 s, one action (e.g. *Undo*). |
+| `SignInPrompt` sheet | "Sign in to …" + *Sign in* / *Create account* / *Not now*. |
 
 Required states for every data screen: **Loading (skeleton) · Content · Empty · Error · Offline**.
 
 ## 5. Screen catalogue
 
+> Wireframes write icons as `[icon-name]` placeholders (e.g. `[pin]`, `[heart]`). Implement them with Fluent System Icons glyphs — never emoji (AGENTS.md §6).
+
 Format: **Purpose · Primary action · Content · States/edge cases · API · Story**.
 
-### SCR-ONB-01 Onboarding & campus
-Purpose: set campus. Primary: *Bắt đầu*. Content: app value line, campus list with search. API: `listCampuses`. US01.
+### SCR-ONB-01 (retired)
+Retired 2026-11-12: there is no onboarding step; campus selection lives in SCR-ACC-02 (§2.3). The ID is not reused.
 
 ### SCR-AUTH-01 Sign in
-Primary: *Đăng nhập*. Content: email, password (show/hide), *Đăng nhập bằng email ICTU* (outlined), *Quên mật khẩu?* (post-MVP: hidden), link *Tạo tài khoản*. States: inline field errors; `ACCOUNT_LOCKED` shows unlock time. API: `loginUser`, `loginWithIctuSso`. US13.
+Primary: *Sign in*. Content: email, password (show/hide), *Sign in with ICTU email* (outlined), *Forgot password?* (post-MVP: hidden), link *Create account*. States: inline field errors; `ACCOUNT_LOCKED` shows unlock time. API: `loginUser`, `loginWithIctuSso`. US13.
 
 ### SCR-AUTH-02 Register
-Step 1 role cards: *Tôi là sinh viên* / *Tôi là chủ trọ*. Step 2 form (phone required for landlord, password rules shown live). Landlord success → banner "Tài khoản đang chờ xác minh (thường trong 24h)". API: `registerUser`. US13.
+Step 1 role cards: *I am a student* / *I am a landlord*. Step 2 form (phone required for landlord, password rules shown live). Landlord success → banner "Your account is awaiting verification (usually within 24 h)". API: `registerUser`. US13.
 
 ### SCR-HOME-01 Explore (list)
 ```
-┌──────────────────────────────────┐
-│ 📍 Gần ICTU ▾          🔔(2)     │  campus chip · notifications
-│ [ 🔍 Bộ lọc (2) ] [Sắp xếp: Gần nhất ▾] │
-│ (Dưới 3 tr ✕)(Phòng trọ ✕) Xoá bộ lọc  │  active chips
-│ 128 phòng · ⭐ Lưu tìm kiếm           │  count always visible (US04 AC3)
-│ ┌──────────────────────────────┐ │
-│ │ [ cover photo        ✓Đã xác minh ♡] │
-│ │ Phòng trọ khép kín gần ICTU  │ │
-│ │ 2,5 tr/tháng                 │ │
-│ │ 25 m² · Phòng trọ · 1,2 km tới ICTU │
-│ └──────────────────────────────┘ │
-│ ...infinite scroll (20/page)...  │
-│ ┌ So sánh (2) ── So sánh ngay ┐  │  floating compare tray
-├──────────────────────────────────┤
-│ Khám phá  Bản đồ  Đã lưu  Tin nhắn  Tài khoản │
-└──────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│ [pin] Near ICTU v              [bell] 2   │  campus chip · notifications
+│ [filter] Filters (2)   Sort: Nearest v    │
+│ (Under 3M x)(Boarding room x) Clear all   │  active chips
+│ 128 rooms · [star] Save search            │  count always visible (US04 AC3)
+│ ┌──────────────────────────────────────┐ │
+│ │ [cover photo]  [check] Verified [heart]│ │
+│ │ Private room near ICTU               │ │
+│ │ 2.5M/mo                              │ │
+│ │ 25 m² · Boarding room · 1.2 km to ICTU│ │
+│ └──────────────────────────────────────┘ │
+│ ...infinite scroll (20/page)...           │
+│ ┌ Compare (2) ─────────── Compare now ┐  │  floating compare tray
+├──────────────────────────────────────────┤
+│ Explore   Map   Saved   Messages  Account │
+└──────────────────────────────────────────┘
 ```
-Primary: open a room. States: skeleton cards; empty "Không có phòng phù hợp – thử tăng khoảng cách hoặc *Xoá bộ lọc*"; offline cached page. Pull-to-refresh. API: `searchRooms`. US01, US04, US06, US10.
+Primary: open a room. States: skeleton cards; empty "No rooms match – try a larger distance or *Clear filters*"; offline cached page. Pull-to-refresh. API: `searchRooms`. US01, US04, US06, US10.
 
 ### SCR-SRCH-01 Filters (bottom sheet, full height)
-Content: rent range slider (0–10 tr, step 100k) + quick chips (*Dưới 1,5 tr*, *Dưới 2 tr*, *Dưới 3 tr*); area range (5–100 m²); room type multi-select chips; max distance segmented (*1 · 2 · 3 · 5 · 10 km*); sort radio. Sticky footer: *Xoá* (text) · primary **Xem 42 phòng** (live count, debounced 300 ms). API: `searchRooms` (pageSize=1 for count). US04 AC1–AC4.
+Content: rent range slider (0–10M, step 100k) + quick chips (*Under 1.5M*, *Under 2M*, *Under 3M*); area range (5–100 m²); room type multi-select chips; max distance segmented (*1 · 2 · 3 · 5 · 10 km*); sort radio. Sticky footer: *Clear* (text) · primary **Show 42 rooms** (live count, debounced 300 ms). API: `searchRooms` (pageSize=1 for count). US04 AC1–AC4.
 
 ### SCR-MAP-01 Map search
 ```
-┌──────────────────────────────────┐
-│ 📍 Gần ICTU ▾   [Bộ lọc (2)] [☰ Danh sách] │
-│                                  │
-│      (2,5tr)    (1,8tr)          │  price-label pins
-│   ◆ICTU   ·····polygon·····      │  campus marker
-│      (3,2tr)                     │
-│                                  │
-│ ┌ preview card: photo · 2,5 tr · 25 m² · 1,2 km ┐ │  on pin tap
-│ [ ✏ Vẽ khu vực ]  [ ⭐ Lưu ]      │
-└──────────────────────────────────┘
-Draw mode: "Chạm để thêm điểm (3–20)"  [↶ Hoàn tác] [Xoá] [Xong]
+┌──────────────────────────────────────────┐
+│ [pin] Near ICTU v  [filter] (2)  [list]   │
+│                                          │
+│      (2.5M)    (1.8M)                     │  price-label pins
+│   <ICTU>  ·····polygon·····               │  campus marker
+│      (3.2M)                               │
+│                                          │
+│ ┌ preview: photo · 2.5M · 25 m² · 1.2 km ┐│  on pin tap
+│ [ [pen] Draw area ]   [ [star] Save ]     │
+└──────────────────────────────────────────┘
+Draw mode: "Tap to add points (3–20)"  [undo] Undo  [x] Clear  [check] Done
 ```
-Primary: *Vẽ khu vực* → *Xong*. Sort toggle *Giá / Khoảng cách* in list view. States: truncated hint "Phóng to để xem thêm"; invalid polygon message; no location permission required. API: `searchRoomsInArea`, `createSavedSearch`. US05.
+Primary: *Draw area* → *Done*. Sort toggle *Price / Distance* in list view. States: truncated hint "Zoom in to see more"; invalid polygon message; no location permission required. API: `searchRoomsInArea`, `createSavedSearch`. US05.
 
 ### SCR-ROOM-01 Room detail
 Order (inverted pyramid, US11 AC2 rules before contact):
 1. Gallery header (swipe, `1/12`, 360° badge) — placeholder if none.
-2. `StatusBanner` if not Available; *Cập nhật 3 ngày trước* (US02 AC2).
-3. Title, **price/tháng**, deposit, verified badge, ♥, share, ⋯ (Báo cáo).
+2. `StatusBanner` if not Available; *Updated 3 days ago* (US02 AC2).
+3. Title, **price/month**, deposit, verified badge, [heart], share, [more] (Report).
 4. Key facts row: area · room type · max occupants · furnishing · available from.
-5. **Chi phí hằng tháng**: rent, điện ₫/kWh, nước, internet, gửi xe, khác → "Ước tính ~2,9 tr/tháng".
-6. Tiện nghi (grid, first 8 + *Xem tất cả*).
-7. **An ninh**: Safety Score `4/5 ✓ đã xác minh` + checklist.
-8. **Nội quy** (quiet hours, guests, cooking, parking, other) — always expanded summary (US11).
-9. Vị trí: static map + address; **Di chuyển tới ICTU**: 🛵 8 phút · 🚌 ~19 phút (ước tính) · 🚶 25 phút; fallback text (US09).
-10. Landlord block: name, *Đã xác minh*, member since.
-11. If unavailable: **Phòng tương tự** carousel (US02 AC3).
+5. **Monthly costs**: rent, electricity ₫/kWh, water, internet, parking, other → "Estimated ~2.9M/mo".
+6. Amenities (grid, first 8 + *See all*).
+7. **Safety**: Safety Score `4/5 · Verified` + checklist.
+8. **House rules** (quiet hours, guests, cooking, parking, other) — always expanded summary (US11).
+9. Location: static map + address; **Getting to ICTU**: [motorbike] 8 mins · [bus] ~19 mins (est.) · [walk] 25 mins; fallback text (US09).
+10. Landlord block: name, *Verified*, member since.
+11. If unavailable: **Similar rooms** carousel (US02 AC3).
 12. `StickyContactBar` (disabled when unavailable).
-States: header renders from card data instantly; sections skeleton; 404 → "Tin đăng không tồn tại". First contact tap → house-rules summary sheet (BR-HR-03). API: `getRoomDetail`, `getSimilarRooms`, `getRoomTravelTimes`. US02, US03, US09, US11.
+States: header renders from card data instantly; sections skeleton; 404 → "Listing does not exist". First contact tap → house-rules summary sheet (BR-HR-03). API: `getRoomDetail`, `getSimilarRooms`, `getRoomTravelTimes`. US02, US03, US09, US11.
 
 ### SCR-ROOM-02 Gallery · SCR-ROOM-03 360° viewer
-Full-screen black, swipe, pinch-zoom, counter; panorama: drag + gyro toggle, *Đóng*. Progressive thumb→medium. US03.
+Full-screen black, swipe, pinch-zoom, counter; panorama: drag + gyro toggle, *Close*. Progressive thumb→medium. US03.
 
 ### SCR-ROOM-04 Report sheet
-Reason radio list (BR-RPT-01), note field (required for *Khác*), primary *Gửi báo cáo*; confirmation state "Cảm ơn bạn…". US12.
+Reason radio list (BR-RPT-01), note field (required for *Other*), primary *Send report*; confirmation state "Thank you…". US12.
 
 ### SCR-FAV-01 Saved › Rooms
-Segmented control *Phòng | Tìm kiếm*. Cards show current price & availability (unavailable greyed with label). Swipe or ♥ to remove → snackbar *Đã bỏ lưu · Hoàn tác* (5 s). Empty: "Nhấn ♡ để lưu phòng bạn thích". API: `listMyFavourites`, `removeFavourite`. US06.
+Segmented control *Rooms | Searches*. Cards show current price & availability (unavailable greyed with label). Swipe or [heart] to remove → snackbar *Removed from saved · Undo* (5 s). Empty: "Tap the heart icon to save rooms you like". API: `listMyFavourites`, `removeFavourite`. US06.
 
 ### SCR-SAVED-01 Saved › Searches & alerts
-Row: name, summary ("< 3 tr · Phòng trọ · ≤ 2 km · Vùng vẽ"), alert switch with states *Bật / Tạm dừng / Tắt*, ⋯ (Đổi tên, Xoá). Tap → runs search in Explore/Map. API: saved-search ops. US05 AC4, US07.
+Row: name, summary ("< 3M · Boarding room · ≤ 2 km · Drawn area"), alert switch with states *On / Paused / Off*, [more] (Rename, Delete). Tap → runs search in Explore/Map. API: saved-search ops. US05 AC4, US07.
 
 ### SCR-NOTI-01 Notifications
-List grouped *Hôm nay / Trước đó*; unread dot; tap deep-links; *Đánh dấu đã đọc*. API: `listMyNotifications`, `markNotificationsRead`. US07.
+List grouped *Today / Earlier*; unread dot; tap deep-links; *Mark all as read*. API: `listMyNotifications`, `markNotificationsRead`. US07.
 
 ### SCR-CMP-01 Compare
-Horizontal table, sticky first column (row labels), up to 3 columns with cover + title; rows BR-CPR-02; best value cell highlighted (Verified colour + "Tốt nhất"); *Xoá* per column; primary *Chia sẻ ảnh*. Empty (<2 rooms): "Thêm ít nhất 2 phòng để so sánh". API: `compareRooms`. US10.
+Horizontal table, sticky first column (row labels), up to 3 columns with cover + title; rows BR-CPR-02; best value cell highlighted (Verified colour + "Best Value"); *Remove* per column; primary *Share as image*. Empty (<2 rooms): "Add at least 2 rooms to compare". API: `compareRooms`. US10.
 
 ### SCR-CHAT-01 Conversations · SCR-CHAT-02 Conversation
-List: listing thumb, other party name, last message, time, unread badge. Conversation: pinned listing card (tap → detail), bubbles (mine right / Primary), status *Đang gửi / Đã gửi / Chưa gửi · Thử lại*, date separators, composer with send button (disabled when empty), load older on scroll top. Landlord sees the student's name only (no phone). API: chat ops + hub. US14.
+List: listing thumb, other party name, last message, time, unread badge. Conversation: pinned listing card (tap → detail), bubbles (mine right / Primary), status *Sending / Sent / Not sent · Retry*, date separators, composer with send button (disabled when empty), load older on scroll top. Landlord sees the student's name only (no phone). API: chat ops + hub. US14.
 
 ### SCR-ACC-01 Account · SCR-ACC-02 Campus picker
-Profile, role badge, landlord verification status, campus, notification settings (push on/off), *Đăng xuất*. Guest: sign-in/register CTAs. API: `getCurrentUser`, `updateMyProfile`. US13.
+Profile, role badge, landlord verification status, campus, notification settings (push on/off), *Sign out*. Guest: sign-in/register CTAs. API: `getCurrentUser`, `updateMyProfile`. US13.
 
 ### SCR-LL-01 My listings (landlord)
-Header counts by status (chips filter); card with status badge, views placeholder (post-MVP), actions per state (BR-LST-04): *Sửa*, *Đã cho thuê*/*Còn trống*, *Ngừng đăng*/*Đăng lại*, *Gửi duyệt lại*; rejection/suspension reason visible. Unverified landlord: banner + disabled *Đăng tin*. Primary FAB-style *+ Đăng tin*. API: `listMyListings` + transitions. US08.
+Header counts by status (chips filter); card with status badge, views placeholder (post-MVP), actions per state (BR-LST-04): *Edit*, *Mark rented*/*Mark available*, *Unpublish*/*Republish*, *Resubmit*; rejection/suspension reason visible. Unverified landlord: banner + disabled *Post listing*. Primary FAB-style *+ Post listing*. API: `listMyListings` + transitions. US08.
 
 ### SCR-LL-02 Listing editor (wizard, 4 steps + review)
-Progress `1/4`. **Ảnh** (grid, per-photo upload progress, drag to reorder, mark 360°, min 3 indicator) → **Thông tin** (numeric keypad for money with live "2.500.000 ₫" formatting) → **Vị trí** (address fields + draggable pin, starts at campus) → **Tiện ích & an ninh** (chips, utilities) → **Xem lại** → primary *Gửi duyệt*. Sticky *Tiếp tục* in thumb zone; draft autosave on device. Validation inline per BR-LST-01. API: `uploadPhoto`, `createListing`/`updateListing`. US08.
+Progress `1/4`. **Photos** (grid, per-photo upload progress, drag to reorder, mark 360°, min 3 indicator) → **Details** (numeric keypad for money with live "2,500,000 ₫" formatting) → **Location** (address fields + draggable pin, starts at campus) → **Amenities & safety** (chips, utilities) → **Review** → primary *Submit for review*. Sticky *Continue* in thumb zone; draft autosave on device. Validation inline per BR-LST-01. API: `uploadPhoto`, `createListing`/`updateListing`. US08.
 
 ### SCR-LL-03 House rules editor
-Time pickers (quiet hours, curfew), policy segmented controls, parking text, flags, other rules; *Lưu* creates a version; *Lịch sử* list. API: `updateHouseRules`, `listHouseRulesVersions`. US11 AC3.
+Time pickers (quiet hours, curfew), policy segmented controls, parking text, flags, other rules; *Save* creates a version; *History* list. API: `updateHouseRules`, `listHouseRulesVersions`. US11 AC3.
 
 ### SCR-ADM-01 Moderation hub · SCR-ADM-02 Review listing · SCR-ADM-03 Report detail
-Hub segmented *Chủ trọ (n) · Tin đăng (n) · Thay đổi (n) · Báo cáo (n)*, oldest first, high-priority reports pinned. Review listing: all fields, photos, pin, safety checklist toggles to confirm, primary *Duyệt*, secondary *Từ chối* (reason required). Report detail: listing summary, all reports, *Bỏ qua* / *Xử lý* (+ suspend toggle, note). API: admin ops. US08, US12, US13.
+Hub segmented *Landlords (n) · Listings (n) · Changes (n) · Reports (n)*, oldest first, high-priority reports pinned. Review listing: all fields, photos, pin, safety checklist toggles to confirm, primary *Approve*, secondary *Reject* (reason required). Report detail: listing summary, all reports, *Dismiss* / *Take action* (+ suspend toggle, note). API: admin ops. US08, US12, US13.
 
-## 6. Content & formatting rules (en-ENG)
+## 6. Content & formatting rules (en-US)
 
 | Item | Rule | Example |
 |---|---|---|
@@ -260,17 +264,19 @@ Hub segmented *Chủ trọ (n) · Tin đăng (n) · Thay đổi (n) · Báo cáo
 | Area | `m²` | `25 m²` |
 | Distance | 1 decimal | `1.2 km to ICTU`; < 1 km → `850 m` |
 | Duration | minutes, `~` for estimates | `8 mins`, `~19 mins (est.)` |
-| Dates | relative ≤ 7 days, else `yyyy-MM-dd` or `dd/MM/yyyy` | `3 days ago`, `2026-11-15` |
+| Dates | relative ≤ 7 days, else `d MMM yyyy` (unambiguous for VN and EN readers) | `3 days ago`, `15 Nov 2026` |
 | Tone | friendly, concise | "You saved this room" |
+| Localisation | all user-facing strings live in `Resources/Strings/AppResources.resx` (+ `errorCode` map); no literals in XAML/C#, so a Vietnamese `AppResources.vi.resx` can be added later without code changes | `{x:Static strings:AppResources.SignIn}` |
+| Proper nouns | campus names, addresses and people names stay in Vietnamese with diacritics | `Trường Đại học Công nghệ Thông tin và Truyền thông` |
 
 `errorCode` → message map (client `Resources/Strings`): `INVALID_CREDENTIALS` "Invalid email or password." · `ACCOUNT_LOCKED` "Your account is temporarily locked, please try again in {time}." · `EMAIL_TAKEN` "This email address is already in use." · `LANDLORD_NOT_APPROVED` "Landlord account is pending approval." · `ROOM_NOT_FOUND` "Listing does not exist." · `LISTING_NOT_AVAILABLE` "Room is no longer available." · `ALREADY_REPORTED` "You have already reported this listing." · `LIMIT_EXCEEDED` "Limit reached." · `CONCURRENCY_CONFLICT`/`ETAG_MISMATCH` "Data has changed, please refresh." · `RATE_LIMITED` "Too many requests, please try again shortly." · network "No internet connection." · fallback "An unexpected error occurred, please try again.".
 
 ## 7. Accessibility & interaction
 
-- `SemanticProperties.Description` on icon-only buttons (♥, share, filter); headings use `SemanticProperties.HeadingLevel`.
+- `SemanticProperties.Description` on icon-only buttons (heart, share, filter); headings use `SemanticProperties.HeadingLevel`.
 - Do not rely on colour alone (status banners include text; best-value cell includes "Best Value").
 - Motion: 150–250 ms ease-out; respect reduced motion (no shimmer when animations disabled).
-- Gestures always have a visible alternative (swipe-to-remove favourite ↔ ♥ button).
+- Gestures always have a visible alternative (swipe-to-remove favourite ↔ heart button).
 - Keyboard: numeric keypads for money/area; `ReturnType=Next` through forms.
 
 ## 8. Acceptance checklist per screen (for UI PRs)
@@ -278,6 +284,6 @@ Hub segmented *Chủ trọ (n) · Tin đăng (n) · Thay đổi (n) · Báo cáo
 - [ ] Matches screen spec order and primary action; tokens only.
 - [ ] Loading / Empty / Error / Offline states implemented.
 - [ ] `x:DataType` on page and every `DataTemplate`.
-- [ ] Strings English (en-ENG) and formatted per §6; errors via `errorCode` map.
+- [ ] Strings English (en-US), stored in `.resx` and formatted per §6; errors via `errorCode` map.
 - [ ] Touch targets ≥ 48 dp; contrast AA; semantic descriptions.
 - [ ] Protected actions trigger `SignInPrompt` and resume after login.

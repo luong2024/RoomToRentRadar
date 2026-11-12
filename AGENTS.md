@@ -47,7 +47,7 @@ RoomToRentRadar.slnx
 ├─ RoomToRentRadar.Datastore.CosmosDb/ frozen — do not extend
 ├─ RoomToRentRadar.Infrastructure/    Adapters/{Security,Routing,Push,Media,Mocks}
 ├─ RoomToRentRadar.Api/               Controllers, Hubs, BackgroundJobs, Middlewares, Authorization, Program.cs
-├─ RoomToRentRadar.Client.Adapters/   (planned, ADR-003) client gateways: Abstractions, Http, Caching, Realtime
+├─ RoomToRentRadar.Client.Adapters/   client gateways (ADR-003): Abstractions, Http, Session, Mocks (+ Caching, Realtime planned)
 ├─ RoomToRentRadar/                   MAUI app: Pages, PageModels, Pages/Controls, Resources/Styles, DeviceAdapters
 ├─ RoomToRentRadarUnitTests/          Architecture, Domain, Application, Infrastructure, Api
 ├─ RoomToRentRadarUIAppiumTests/      Journeys/
@@ -73,9 +73,9 @@ Put new code only where this map (and `docs/system-architecture.md` §3) says. N
 | Driven ports | `I*Repository` → `Sqlite*Repository`; `I*Port` → `*Adapter`; mocks `Mock*`/`InMemory*` (tests/Development only) |
 | DTOs | immutable `record`: `*Request` (input), `*Dto` (output); JSON camelCase, enums as strings, money = integer VND |
 | Client | `I<Feature>Gateway` → `Http<Feature>Gateway`; `*Page` + `*PageModel` (CommunityToolkit.Mvvm) |
-| Errors | `application/problem+json` + stable `errorCode`; client maps `errorCode` → English text (`docs/ui-ux-spec.md` §6) |
+| Errors | `application/problem+json` + stable `errorCode`; client maps `errorCode` → English text from `.resx` (`docs/ui-ux-spec.md` §6) |
 | Tests | `Method_Scenario_Expected`; async tests are `public async Task` with `await Assert.ThrowsAsync<T>(...)`; every `E*` flow in `docs/use-cases.md` has a test |
-| UI | tokens only (no hard-coded colours/sizes); allowed colour pairs in `docs/ui-ux-spec.md` §3.1.1; `x:DataType` on every page and `DataTemplate`; Loading/Empty/Error/Offline states; touch targets ≥ 48 dp; English strings (en-ENG) |
+| UI | tokens only (no hard-coded colours/sizes); allowed colour pairs in `docs/ui-ux-spec.md` §3.1.1; `x:DataType` on every page and `DataTemplate`; Loading/Empty/Error/Offline states; touch targets ≥ 48 dp; English strings (en-US) kept in `Resources/Strings/*.resx`, no hard-coded literals |
 | Icons | **MUST NOT use emoji as icons.** Use Fluent System Icons glyphs (`Resources/Fonts/FluentUI.cs`) or SVG in `Resources/Images` |
 
 ## 7. Git workflow, commits & PRs

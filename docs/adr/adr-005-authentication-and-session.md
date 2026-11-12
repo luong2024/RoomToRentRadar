@@ -25,7 +25,12 @@ Students and landlords need secure accounts; ICTU students should be able to use
 - Positive: no third-party cost; offline-friendly long sessions.
 - Negative: `is_verified` claim can be stale up to 30 min — acceptable; server re-checks landlord status in `CreateListing` use case.
 - ICTU SSO provider is **Google** (decided 2026-11-11). The real verifier checks Google's signing keys (JWKS), `aud` = our OAuth client ID, `email_verified`, `hd = ictu.edu.vn`. The client opens Google's authorization endpoint with `hd=ictu.edu.vn` as a UI hint only — the server-side `hd` check is the real enforcement.
-- Follow-up: the team creates a Google Cloud OAuth client (Android + Web) and keeps the client ID in configuration (not committed).
+- **Setup in course scope (revised 2026-11-12) — no ICTU IT involvement by default:**
+  - One Google Cloud project owned by the team (free). OAuth consent screen *External*, scopes `openid email profile` only. Basic scopes need no Google verification, so set the publishing status to **In production**; in *Testing* status only the ≤ 100 listed test users can sign in.
+  - Anyone with a Google account can complete Google's sign-in; **recognising ICTU students is our server's job** (BR-AUTH-04: `hd = ictu.edu.vn`, e-mail ends with `@ictu.edu.vn`, `email_verified`). ICTU IT does not need to issue anything.
+  - ICTU IT is needed **only if** the ICTU Google Workspace admin restricts "unconfigured third-party apps" — users would then see *Access blocked*. Test once early with a real `DTC…@ictu.edu.vn` account; if blocked, ask IT to mark our client ID as trusted. Fallback for the demo: ICTU students register with e-mail + password (BR-AUTH-01).
+  - **Redirect to the app:** Google disables custom-URI-scheme redirects (`<ApplicationId>:/oauth2redirect`; the placeholder `com.companyname.roomtorentradar` must be replaced by a final ID before the client is registered) for new Android OAuth clients by default. Chosen: enable *Custom URI scheme* in the Android client's *Advanced settings* and keep `WebAuthenticator` + PKCE (least code). Risk: Google may remove this option; then switch to the Google Identity Services / Credential Manager SDK, which returns the id_token directly (new ADR). The Android client needs the package name + the team keystore SHA-1 (ADR-013).
+  - Client IDs live in configuration, never in git.
 
 ## Compliance
 Existing tests in `RoomToRentRadarUnitTests/Application/Auth` and `Infrastructure/*`; architecture test for mocks disabled in root config.

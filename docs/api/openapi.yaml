@@ -307,6 +307,8 @@ paths:
         Visible for Available, Rented and Unpublished listings (status shown, US02 AC3).
         PendingReview/Rejected/Suspended are 404 for everyone except the owner and Admin (BR-LST-04a).
         `landlord.phoneNumber` and `landlord.zaloUrl` are null for anonymous callers.
+        Caching: weak ETag = hash of this caller's response body, `Cache-Control: private, no-cache`,
+        `Vary: Authorization` (ADR-012 §6) — never a version-only ETag, because the body differs per caller.
       security: [ {}, { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/RoomId'
@@ -1233,7 +1235,7 @@ components:
         instance: { type: string }
         errorCode:
           type: string
-          description: Stable machine code mapped to Vietnamese text by the client (ui-ux-spec §6)
+          description: Stable machine code mapped to localized text by the client (English in MVP, ui-ux-spec §6)
           examples: [VALIDATION_FAILED, INVALID_CREDENTIALS, INVALID_TOKEN, ACCOUNT_LOCKED, FORBIDDEN_ROLE, LANDLORD_NOT_APPROVED, EMAIL_TAKEN, ROOM_NOT_FOUND, LISTING_NOT_AVAILABLE, INVALID_STATE_TRANSITION, ALREADY_REPORTED, LIMIT_EXCEEDED, CONCURRENCY_CONFLICT, ETAG_MISMATCH, IF_MATCH_REQUIRED, FILE_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, RATE_LIMITED]
         errors:
           type: object

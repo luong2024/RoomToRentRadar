@@ -76,7 +76,7 @@ The MVP is exactly the 13 user stories of the project plan plus one addition dec
 ### 5.2 Out of scope for this release (Post-MVP backlog)
 
 Listed in the Project Plan scope but **not** in the MVP backlog — do **not** implement, do not add data structures "for later":
-nearby-amenities map layer, area security data/crime map, online deposit payment, roommate matching, odd-job marketplace, rideshare matching, short-term rental, internet sharing, administrative-procedure assistant, contract-clause scanning, utility consumption prediction, in-app booking of viewings, reviews/ratings of landlords, chat attachments (images/files), user blocking, web front-end.
+nearby-amenities map layer, area security data/crime map, online deposit payment, roommate matching, odd-job marketplace, rideshare matching, short-term rental, internet sharing, administrative-procedure assistant, contract-clause scanning, utility consumption prediction, in-app booking of viewings, reviews/ratings of landlords, chat attachments (images/files), user blocking, web front-end, **password reset by e-mail** (pilot workaround: Admin resets via a support script), **in-app account deletion** (becomes mandatory only if published on Google Play — ADR-013), **Vietnamese UI** (strings are in `.resx`, so `vi` can be added later without code changes).
 
 > Note: US10 AC2 requires a **"security score"**. Because area-security data is out of scope, the MVP defines it as a **listing-level Safety Score (0–5)** computed from landlord-declared safety features that the Admin verifies during moderation — see `BR-LST-08`.
 
@@ -105,7 +105,7 @@ Clarifications:
 
 Clarifications:
 - Also shows **monthly cost breakdown** (rent + electricity/water/internet/parking pricing), available-from date, furnishing, max occupants, Safety Score (`BR-LST-03`, `BR-LST-08`).
-- "Landlord contact" = landlord display name + **Call**, **Zalo**, **Chat** actions. Phone/Zalo/Chat require sign-in; guests see a "Đăng nhập để liên hệ" prompt (`BR-CNT-01`).
+- "Landlord contact" = landlord display name + **Call**, **Zalo**, **Chat** actions. Phone/Zalo/Chat require sign-in; guests see a "Sign in to contact" prompt (`BR-CNT-01`).
 - "Unavailable" = status `Rented` or `Unpublished` (shown with a banner); `Suspended` listings are hidden from the public (`BR-LST-04a`). Similar rooms algorithm: `BR-LST-10`.
 
 ### US03 — Photo gallery and 360° view
@@ -138,7 +138,7 @@ Clarifications: polygon is drawn by tapping vertices (3–20 points) on the nati
 - AC3: The favourites screen shows the current price and availability of each room.
 - AC4: Removing a favourite can be undone within 5 seconds.
 
-Clarifications: requires sign-in (`StudentPolicy`); guest tapping ♥ is prompted to sign in and the action resumes after login (`BR-FAV-01..04`).
+Clarifications: requires sign-in (`StudentPolicy`); guest tapping the heart icon is prompted to sign in and the action resumes after login (`BR-FAV-01..04`).
 
 ### US07 — New-listing alerts
 - AC1: Push notifications can be enabled for any saved search.
@@ -212,8 +212,8 @@ Rules: `BR-CHT-01..07`, [ADR-009](adr/adr-009-in-app-chat.md). Text only in MVP.
 | NFR-05 | Security | OWASP ASVS L1 basics: PBKDF2 passwords, JWT 30 min + rotating refresh 7 days, HTTPS outside Development, rate limiting on auth/report/chat endpoints, no secrets in source. GUARDRAILS 1.5.x apply. |
 | NFR-06 | Privacy | Store the minimum personal data: no national ID, no student GPS history; landlord phone exposed only to signed-in users; chat visible only to its two participants and Admin on report. |
 | NFR-07 | Availability | Read features degrade gracefully offline: last list page, viewed details, favourites and conversations are served from the on-device cache with an "offline" banner. |
-| NFR-08 | Usability | English UI (en-ENG), touch targets ≥ 48 dp, WCAG 2.2 AA contrast, every list has loading/empty/error states. |
-| NFR-09 | Platform | Android 7.0+ (API 24) is the primary demo target; iOS 15+ best-effort; Windows/MacCatalyst not supported in MVP. |
+| NFR-08 | Usability | English UI (en-US; strings in `.resx`, Vietnamese can be added later), touch targets ≥ 48 dp, WCAG 2.2 AA contrast, every list has loading/empty/error states. |
+| NFR-09 | Platform | Android 7.0+ (API 24) is the only tested and distributed target (signed APK, ADR-013). Code stays cross-platform, but iOS is not built or tested (no Mac / Apple Developer account); Windows/MacCatalyst not supported in MVP. |
 | NFR-10 | Maintainability | Hexagonal architecture rules in `.agents/GUARDRAILS.md`; ≥ 80% line coverage on Domain/Application; CI green on every PR to `develop2`. |
 | NFR-11 | Cost | Only free tiers/free OSS (see [ADR index](adr/index.md)); budget sheet caps paid cloud at 11 M VND. |
 

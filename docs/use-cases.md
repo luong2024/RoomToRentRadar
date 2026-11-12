@@ -47,24 +47,24 @@ Each UC: **Actor · Story/AC · Preconditions · Main flow · Alternatives (A) �
 #### UC-01 Browse verified rooms near campus
 - **Actor:** Guest/Student · **Story:** US01 AC1–AC4
 - **Pre:** selected campus known (default ICTU).
-- **Main:** 1) User opens *Khám phá* (SCR-HOME-01). 2) App shows cached first page instantly (if any) and requests `searchRooms` with `campusId`, `sort=distance`, `page=1`. 3) System returns Available + verified listings with distance (BR-LST-06, BR-SRCH-03). 4) App renders cards (cover, title, rent, area, distance, verified badge, ♥). 5) On scroll near end, app requests the next page.
+- **Main:** 1) User opens *Explore* (SCR-HOME-01). 2) App shows cached first page instantly (if any) and requests `searchRooms` with `campusId`, `sort=distance`, `pageNumber=1`. 3) System returns Available + verified listings with distance (BR-LST-06, BR-SRCH-03). 4) App renders cards (cover, title, rent, area, distance, verified badge, [heart]). 5) On scroll near end, app requests the next page.
 - **A1:** user changes campus via chip → UC-02 → list reloads from page 1.
-- **A2:** offline → cached page + banner "Đang ngoại tuyến"; infinite scroll disabled.
-- **E1:** server error → error state with *Thử lại*. **E2:** zero results → empty state suggesting increasing distance/clearing filters.
+- **A2:** offline → cached page + banner "You are offline"; infinite scroll disabled.
+- **E1:** server error → error state with *Retry*. **E2:** zero results → empty state suggesting increasing distance/clearing filters.
 - **Post:** none (read-only). **Rules:** BR-CMP-03, BR-SRCH-03..05.
 
 #### UC-02 Select campus
 - **Actor:** Guest/Student · **Story:** US01 AC1, US09 AC2
-- **Main:** 1) First launch: onboarding asks "Bạn học ở trường nào?" with ICTU preselected (SCR-ONB-01). 2) User picks campus from `listCampuses`. 3) Guest → saved on device; signed-in → `updateMyProfile { selectedCampusId }`.
+- **Main:** 0) First launch uses ICTU as the campus with no question asked (BR-CMP-01). 1) User taps the campus chip on Explore/Map or *Campus* in Account → campus picker (SCR-ACC-02). 2) User picks a campus from `listCampuses`. 3) Guest → saved on device; signed-in → `updateMyProfile { selectedCampusId }`.
 - **A1:** user signs in later → device choice is uploaded if profile has none; profile wins otherwise.
 - **Rules:** BR-CMP-01..03.
 
 #### UC-03 View room details
 - **Actor:** Guest/Student · **Story:** US02 AC1–AC4, US11 AC1–AC2
 - **Main:** 1) User taps a card/pin/favourite/alert. 2) App shows header from the card data immediately, requests `getRoomDetail` (campusId). 3) Screen shows gallery, title, rent, status, last-updated, key facts, monthly cost breakdown, amenities, Safety Score, house rules, location map, travel time (UC-12), landlord block, sticky contact bar.
-- **A1 Guest:** landlord phone is `null`; contact bar shows "Đăng nhập để liên hệ" → UC-21 → returns to detail.
-- **A2 Unavailable** (`Rented`/`Unpublished`, BR-LST-04a): banner "Phòng này hiện không còn trống", contact disabled, section "Phòng tương tự" from `getSimilarRooms` (BR-LST-10).
-- **E1:** listing not found / `PendingReview`/`Rejected`/`Suspended` for non-owner → `404` → "Tin đăng không tồn tại" + back.
+- **A1 Guest:** landlord phone is `null`; contact bar shows "Sign in to contact" → UC-21 → returns to detail.
+- **A2 Unavailable** (`Rented`/`Unpublished`, BR-LST-04a): banner "This room is no longer available", contact disabled, section "Similar rooms" from `getSimilarRooms` (BR-LST-10).
+- **E1:** listing not found / `PendingReview`/`Rejected`/`Suspended` for non-owner → `404` → "Listing does not exist" + back.
 - **Rules:** BR-AUTH-07, BR-LST-03, -06, -08, -09, -10, BR-HR-01, -03, BR-CNT-01.
 
 #### UC-04 View gallery & 360°
@@ -75,23 +75,23 @@ Each UC: **Actor · Story/AC · Preconditions · Main flow · Alternatives (A) �
 
 #### UC-05 Search with filters
 - **Actor:** Guest/Student · **Story:** US04 AC1–AC4
-- **Main:** 1) User taps *Bộ lọc* → filter sheet (SCR-SRCH-01) with live result count. 2) User sets rent/area range, room types, max distance, sort. 3) App calls `searchRooms` (debounced 300 ms) and shows count. 4) *Xem N phòng* applies; active filters show as removable chips + count above the list.
-- **A1:** remove a chip → re-query. **A2:** *Xoá bộ lọc* → defaults (BR-SRCH-06).
+- **Main:** 1) User taps *Filters* → filter sheet (SCR-SRCH-01) with live result count. 2) User sets rent/area range, room types, max distance, sort. 3) App calls `searchRooms` (debounced 300 ms) and shows count. 4) *Show N rooms* applies; active filters show as removable chips + count above the list.
+- **A1:** remove a chip → re-query. **A2:** *Clear filters* → defaults (BR-SRCH-06).
 - **E1:** invalid range is prevented client-side; server `400` shows inline message.
 - **Rules:** BR-SRCH-01..06.
 
 #### UC-06 Draw an area on the map
 - **Actor:** Guest/Student · **Story:** US05 AC1–AC3
-- **Main:** 1) User opens *Bản đồ* (SCR-MAP-01) centred on campus; current filter results shown as pins. 2) Taps *Vẽ khu vực*, taps 3–20 points; polygon renders live; *Xong*. 3) App calls `searchRoomsInArea` with polygon + filters + sort. 4) Pins show price labels; tapping a pin shows a preview card (cover, rent, area, distance) → tap → UC-03. 5) Toggle *Danh sách* shows the same results as a list sorted by the selected order.
-- **A1:** *Xoá vùng* → back to radius/filters results. **A2:** location permission is **not** required (map centres on campus).
-- **E1:** < 3 points or self-intersecting → "Khu vực không hợp lệ" (client) / `400` (server). **E2:** > 200 results → server returns 200 nearest + `truncated = true` → hint "Phóng to để xem thêm".
+- **Main:** 1) User opens *Map* (SCR-MAP-01) centred on campus; current filter results shown as pins. 2) Taps *Draw area*, taps 3–20 points; polygon renders live; *Done*. 3) App calls `searchRoomsInArea` with polygon + filters + sort. 4) Pins show price labels; tapping a pin shows a preview card (cover, rent, area, distance) → tap → UC-03. 5) Toggle *List* shows the same results as a list sorted by the selected order.
+- **A1:** *Clear area* → back to radius/filters results. **A2:** location permission is **not** required (map centres on campus).
+- **E1:** < 3 points or self-intersecting → "Invalid area" (client) / `400` (server). **E2:** > 200 results → server returns 200 nearest + `truncated = true` → hint "Zoom in to see more".
 - **Rules:** BR-SRCH-04, -07.
 
 #### UC-07 Save a search (named area / filters)
 - **Actor:** Student · **Story:** US05 AC4, US07 AC1
-- **Main:** 1) From list or map, user taps *Lưu tìm kiếm*. 2) Sheet: name (prefilled e.g. "Gần ICTU < 2 triệu"), toggle *Nhận thông báo*. 3) App calls `createSavedSearch` with current filters + polygon. 4) Appears in *Đã lưu › Tìm kiếm* (SCR-SAVED-01); tapping re-runs it.
+- **Main:** 1) From list or map, user taps *Save search*. 2) Sheet: name (prefilled e.g. "Near ICTU < 2M"), toggle *Get alerts*. 3) App calls `createSavedSearch` with current filters + polygon. 4) Appears in *Saved › Searches* (SCR-SAVED-01); tapping re-runs it.
 - **A1:** Guest → sign-in prompt, then resumes. **A2:** alert toggle on & notification permission not granted → ask OS permission; if denied keep alert but inbox only (BR-ALR-06).
-- **E1:** 11th saved search → `409` "Tối đa 10 tìm kiếm". **E2:** duplicate name → `409`.
+- **E1:** 11th saved search → `409` "Maximum 10 saved searches". **E2:** duplicate name → `409`.
 - **Rules:** BR-SRCH-08, BR-ALR-01.
 
 #### UC-08 Manage alerts
@@ -109,75 +109,75 @@ Each UC: **Actor · Story/AC · Preconditions · Main flow · Alternatives (A) �
 
 #### UC-10 Add / remove favourite
 - **Actor:** Student · **Story:** US06 AC1, AC2, AC4
-- **Main:** 1) Tap ♡ on card/detail → optimistic fill → `addFavourite` (PUT, idempotent). 2) Tap ♥ → optimistic clear → snackbar *Đã bỏ lưu · Hoàn tác* 5 s → then `removeFavourite`.
-- **A1:** *Hoàn tác* within 5 s → restore, no API call (BR-FAV-03). **A2:** Guest → sign-in prompt, resume action after login. **A3:** offline → queued operation replayed when online.
+- **Main:** 1) Tap [heart-outline] on card/detail → optimistic fill → `addFavourite` (PUT, idempotent). 2) Tap [heart] → optimistic clear → snackbar *Removed from saved · Undo* 5 s → then `removeFavourite`.
+- **A1:** *Undo* within 5 s → restore, no API call (BR-FAV-03). **A2:** Guest → sign-in prompt, resume action after login. **A3:** offline → queued operation replayed when online.
 - **E1:** API failure → revert icon + toast. **E2:** 201st favourite → `409`.
 - **Rules:** BR-FAV-01..03.
 
 #### UC-11 View favourites
 - **Actor:** Student · **Story:** US06 AC2, AC3
-- **Main:** *Đã lưu › Phòng* lists favourites (`listMyFavourites`) with current rent and availability; unavailable ones greyed; actions: open detail, add to compare, remove.
+- **Main:** *Saved › Rooms* lists favourites (`listMyFavourites`) with current rent and availability; unavailable ones greyed; actions: open detail, add to compare, remove.
 - **Rules:** BR-FAV-04.
 
 #### UC-12 View travel time to campus
 - **Actor:** Guest/Student · **Story:** US09 AC1–AC3
-- **Main:** detail requests `getRoomTravelTimes(roomId, campusId)`; shows distance + duration for Motorbike, Bus (ước tính), Walking.
-- **A1:** routing unavailable → `isFallback = true` → "Khoảng cách đường chim bay: 1,2 km".
+- **Main:** detail requests `getRoomTravelTimes(roomId, campusId)`; shows distance + duration for Motorbike, Bus (est.), Walking.
+- **A1:** routing unavailable → `isFallback = true` → "Straight-line distance: 1.2 km".
 - **Rules:** BR-TRV-01..04.
 
 #### UC-13 Compare rooms
 - **Actor:** Guest/Student · **Story:** US10 AC1, AC2
-- **Main:** 1) *So sánh* on card/detail/favourite adds to device tray (badge on floating bar). 2) With ≥ 2 rooms, *So sánh ngay* opens SCR-CMP-01 → `compareRooms(ids, campusId)`. 3) Table rows per BR-CPR-02, best value highlighted.
-- **A1:** 4th room → dialog "Thay phòng nào?". **A2:** a room became unavailable → column shows "Không còn trống" and stays.
+- **Main:** 1) *Compare* on card/detail/favourite adds to device tray (badge on floating bar). 2) With ≥ 2 rooms, *Compare now* opens SCR-CMP-01 → `compareRooms(ids, campusId)`. 3) Table rows per BR-CPR-02, best value highlighted.
+- **A1:** 4th room → dialog "Replace which room?". **A2:** a room became unavailable → column shows "No longer available" and stays.
 - **Rules:** BR-CPR-01, -02.
 
 #### UC-14 Share comparison as image
 - **Actor:** Guest/Student · **Story:** US10 AC3
-- **Main:** *Chia sẻ* renders the table to PNG (captures the view) → OS share sheet (Zalo/Messenger/…).
+- **Main:** *Share* renders the table to PNG (captures the view) → OS share sheet (Zalo/Messenger/…).
 - **Rules:** BR-CPR-03.
 
 ### 3.2 Trust & contact
 
 #### UC-15 Report a listing
 - **Actor:** Student/Landlord · **Story:** US12 AC1–AC3
-- **Main:** 1) ⋯ › *Báo cáo tin đăng* on detail. 2) Sheet: reason (radio), note. 3) `reportRoom` → `201`. 4) Confirmation "Cảm ơn bạn, chúng tôi sẽ xem xét trong 24 giờ".
-- **A1:** Guest → sign-in prompt. **E1:** already reported (open) → `409` "Bạn đã báo cáo tin này". **E2:** `Other` without note → inline error. **E3:** daily limit → `429`.
+- **Main:** 1) [more] › *Report listing* on detail. 2) Sheet: reason (radio), note. 3) `reportRoom` → `201`. 4) Confirmation "Thank you, we will review it within 24 hours".
+- **A1:** Guest → sign-in prompt. **E1:** already reported (open) → `409` "You have already reported this listing". **E2:** `Other` without note → inline error. **E3:** daily limit → `429`.
 - **Rules:** BR-RPT-01..03, -05.
 
 #### UC-16 Call / Zalo the landlord
 - **Actor:** Student · **Story:** US02 AC4, US11 AC2
-- **Main:** 1) Tap *Gọi* or *Zalo* on contact bar. 2) First time for this listing → house-rules summary sheet → *Tiếp tục*. 3) App opens dialer (`tel:`) or `https://zalo.me/<phone>`.
+- **Main:** 1) Tap *Call* or *Zalo* on contact bar. 2) First time for this listing → house-rules summary sheet → *Continue*. 3) App opens dialer (`tel:`) or `https://zalo.me/<phone>`.
 - **Rules:** BR-CNT-01, BR-HR-03.
 
 #### UC-17 Chat with landlord
 - **Actor:** Student, Landlord · **Story:** US14 AC1–AC4
-- **Main (start):** 1) Student taps *Nhắn tin* on detail → (rules sheet, UC-16 step 2) → `startConversation(roomId)` returns existing or new conversation → SCR-CHAT-02 with listing card pinned.
-- **Main (send):** 2) User types → `sendMessage { clientMessageId, body }` → bubble shows *Đang gửi* → *Đã gửi*. 3) Recipient online: SignalR `MessageReceived`; offline: FCM push.
+- **Main (start):** 1) Student taps *Message* on detail → (rules sheet, UC-16 step 2) → `startConversation(roomId)` returns existing or new conversation → SCR-CHAT-02 with listing card pinned.
+- **Main (send):** 2) User types → `sendMessage { clientMessageId, body }` → bubble shows *Sending* → *Sent*. 3) Recipient online: SignalR `MessageReceived`; offline: FCM push.
 - **Main (read):** 4) Opening a conversation calls `markConversationRead`; list (SCR-CHAT-01, `listMyConversations`) shows last message + unread badge; tab badge = total unread.
-- **A1:** network drop → message stays *Chưa gửi · Thử lại*; retry reuses `clientMessageId` (BR-CHT-04). **A2:** history paging `getConversationMessages(before=…)`.
-- **E1:** listing not Available when starting → `409` "Phòng không còn trống". **E2:** non-participant → `404`. **E3:** rate limit → `429`.
+- **A1:** network drop → message stays *Not sent · Retry*; retry reuses `clientMessageId` (BR-CHT-04). **A2:** history paging `getConversationMessages(before=…)`.
+- **E1:** listing not Available when starting → `409` "Room is no longer available". **E2:** non-participant → `404`. **E3:** rate limit → `429`.
 - **Rules:** BR-CHT-01..07.
 
 ### 3.3 Accounts (US13 — backend implemented)
 
 #### UC-20 Register
 - **Actor:** Guest · **Story:** US13 AC1, AC4
-- **Main:** SCR-AUTH-02: choose role *Sinh viên* / *Chủ trọ* → email, password, full name, (phone required for landlord), (student code optional) → `registerUser` → tokens → home. Landlord sees banner "Tài khoản đang chờ xác minh".
+- **Main:** SCR-AUTH-02: choose role *Student* / *Landlord* → email, password, full name, (phone required for landlord), (student code optional) → `registerUser` → tokens → home. Landlord sees banner "Your account is awaiting verification".
 - **E1:** duplicate email `409`. **E2:** weak password / invalid phone `400` (message from server shown inline). **E3:** `Admin` role → `403`.
 - **Rules:** BR-AUTH-01..03, -05.
 
 #### UC-21 Sign in with email/password
 - **Main:** `loginUser` → tokens stored (refresh in SecureStorage) → resume pending action (favourite, contact…).
-- **E1:** wrong credentials `401` "Email hoặc mật khẩu không đúng". **E2:** locked `403` "Tài khoản tạm khoá đến HH:mm".
+- **E1:** wrong credentials `401` "Invalid email or password.". **E2:** locked `403` "Account locked until HH:mm".
 - **Rules:** BR-AUTH-05, -06.
 
 #### UC-22 Sign in with ICTU SSO
-- **Main:** *Đăng nhập bằng email ICTU* → system browser (WebAuthenticator) → id_token → `loginWithIctuSso` → Student account provisioned/linked.
-- **E1:** non-`@ictu.edu.vn` → `400`/`401` "Chỉ chấp nhận email @ictu.edu.vn".
+- **Main:** *Sign in with ICTU email* → system browser (WebAuthenticator) → id_token → `loginWithIctuSso` → Student account provisioned/linked.
+- **E1:** non-`@ictu.edu.vn` → `400`/`401` "Only @ictu.edu.vn accounts are accepted".
 - **Rules:** BR-AUTH-04.
 
 #### UC-23 Keep session / sign out
-- **Main:** HTTP handler refreshes on `401` once (single-flight) via `refreshToken`; *Đăng xuất* → `revokeToken` + clear tokens, device registration removed (`unregisterDevice`).
+- **Main:** HTTP handler refreshes on `401` once (single-flight) via `refreshToken`; *Sign out* → `revokeToken` + clear tokens, device registration removed (`unregisterDevice`).
 - **E1:** refresh fails → sign-out locally, show sign-in.
 
 #### UC-24 Edit profile
@@ -187,22 +187,22 @@ Each UC: **Actor · Story/AC · Preconditions · Main flow · Alternatives (A) �
 
 #### UC-30 Create listing
 - **Actor:** Verified Landlord · **Story:** US08 AC1, AC2, AC4
-- **Pre:** `is_verified = true` (else SCR-LL-01 shows "Chờ xác minh" and *Đăng tin* disabled — `403` server-side).
-- **Main (wizard SCR-LL-02, 4 steps):** 1) *Ảnh*: pick ≥ 3 photos (+ optional 360°) → each uploads immediately in background via `uploadPhoto` (progress per photo). 2) *Thông tin*: title, room type, rent, deposit, area, occupants, furnishing, available-from, description. 3) *Vị trí*: address line, ward, district; drag pin on map (starts at campus). 4) *Tiện ích & an ninh*: amenities, safety features, utilities pricing, house rules (optional, can be added later). 5) *Gửi duyệt* → `createListing { photoIds, … }` → status `PendingReview` → success screen "Tin đang chờ duyệt (thường < 24h)".
+- **Pre:** `is_verified = true` (else SCR-LL-01 shows "Awaiting verification" and *Post listing* disabled — `403` server-side).
+- **Main (wizard SCR-LL-02, 4 steps):** 1) *Photos*: pick ≥ 3 photos (+ optional 360°) → each uploads immediately in background via `uploadPhoto` (progress per photo). 2) *Details*: title, room type, rent, deposit, area, occupants, furnishing, available-from, description. 3) *Location*: address line, ward, district; drag pin on map (starts at campus). 4) *Amenities & safety*: amenities, safety features, utilities pricing, house rules (optional, can be added later). 5) *Submit for review* → `createListing { photoIds, … }` → status `PendingReview` → success screen "Listing submitted for review (usually < 24 h)".
 - **A1:** leave mid-way → draft kept on device (not server) and offered next time.
-- **E1:** photo problems are rejected client-side first, and always re-checked by the server: > 10 MB → `413 FILE_TOO_LARGE`; not a real JPEG/PNG (magic bytes, even if named `.jpg`) → `415 UNSUPPORTED_MEDIA_TYPE`; other invalid input (empty file, panorama not 2:1, missing `kind`) → `400 VALIDATION_FAILED`. **E2:** < 3 photos → *Gửi duyệt* disabled. **E3:** validation `400` per field.
+- **E1:** photo problems are rejected client-side first, and always re-checked by the server: > 10 MB → `413 FILE_TOO_LARGE`; not a real JPEG/PNG (magic bytes, even if named `.jpg`) → `415 UNSUPPORTED_MEDIA_TYPE`; other invalid input (empty file, panorama not 2:1, missing `kind`) → `400 VALIDATION_FAILED`. **E2:** < 3 photos → *Submit for review* disabled. **E3:** validation `400` per field.
 - **Rules:** BR-LST-01..03, -11, BR-MED-01..03, BR-AUTH-03.
 
 #### UC-31 Manage my listings
-- **Main:** SCR-LL-01 lists own listings grouped by status with counts (Chờ duyệt, Đang hiển thị, Đã cho thuê, Ngừng đăng, Bị từ chối/đình chỉ) via `listMyListings`; rejected shows reason.
+- **Main:** SCR-LL-01 lists own listings grouped by status with counts (Pending review, Live, Rented, Unpublished, Rejected/Suspended) via `listMyListings`; rejected shows reason.
 
 #### UC-32 Edit listing
 - **Actor:** Landlord (owner) · **Story:** US08 AC3
 - **Main:** open editor prefilled from `getMyListing` (ETag) → change → `updateListing` with `If-Match` → saved; material changes flag re-review (BR-LST-05).
-- **E1:** `409`/`412` concurrency → "Tin đã được cập nhật ở nơi khác" + reload. **E2:** not owner → `404`.
+- **E1:** `409`/`412` concurrency → "This listing was updated elsewhere" + reload. **E2:** not owner → `404`.
 
 #### UC-33 Change availability / unpublish / republish / resubmit
-- **Main:** actions on SCR-LL-01 item: *Đã cho thuê* (`markListingRented`), *Còn trống* (`markListingAvailable`), *Ngừng đăng* (`unpublishListing`), *Đăng lại* (`republishListing`), *Gửi duyệt lại* (`resubmitListing`). Invalid transitions return `409` (BR-LST-04).
+- **Main:** actions on SCR-LL-01 item: *Mark rented* (`markListingRented`), *Mark available* (`markListingAvailable`), *Unpublish* (`unpublishListing`), *Republish* (`republishListing`), *Resubmit* (`resubmitListing`). Invalid transitions return `409` (BR-LST-04).
 
 #### UC-34 Update house rules
 - **Actor:** Landlord (owner) · **Story:** US11 AC3
@@ -212,15 +212,15 @@ Each UC: **Actor · Story/AC · Preconditions · Main flow · Alternatives (A) �
 ### 3.5 Admin (supporting US08, US12, US13)
 
 #### UC-40 Approve landlord
-- **Main:** SCR-ADM-01 › *Chủ trọ* lists pending landlords (`listPendingLandlords`); Admin calls the phone to verify, taps *Duyệt* → `approveLandlord` → landlord gets push/inbox "Tài khoản đã được xác minh". New tokens carry `is_verified = true` after refresh.
+- **Main:** SCR-ADM-01 › *Landlords* lists pending landlords (`listPendingLandlords`); Admin calls the phone to verify, taps *Approve* → `approveLandlord` → landlord gets push/inbox "Your account has been verified". New tokens carry `is_verified = true` after refresh.
 - **E1:** user not a landlord → `400`.
 
 #### UC-41 Moderate listing
-- **Main:** *Tin đăng* queue (`listModerationRooms?queue=pending`) oldest first → SCR-ADM-02 shows all fields, photos, pin → Admin ticks verified safety features → *Duyệt* (`approveListing`) → `Available`, `VerifiedAtUtc` set (first time) → triggers UC-09. Or *Từ chối* with reason (`rejectListing`) → landlord notified.
-- **A1:** re-review queue (`queue=rereview`) → *Xác nhận thay đổi* (`acknowledgeListingChanges`) or *Đình chỉ* (`suspendListing`).
+- **Main:** *Listings* queue (`listModerationRooms?queue=pending`) oldest first → SCR-ADM-02 shows all fields, photos, pin → Admin ticks verified safety features → *Approve* (`approveListing`) → `Available`, `VerifiedAtUtc` set (first time) → triggers UC-09. Or *Reject* with reason (`rejectListing`) → landlord notified.
+- **A1:** re-review queue (`queue=rereview`) → *Acknowledge changes* (`acknowledgeListingChanges`) or *Suspend* (`suspendListing`).
 
 #### UC-42 Resolve report
-- **Main:** *Báo cáo* queue (`listReports?status=Open`, high-priority first, BR-RPT-05) → SCR-ADM-03 shows listing + all reports → *Bỏ qua* or *Xử lý* (optionally suspend listing) with note → `resolveReport`. Reporter gets inbox notification.
+- **Main:** *Reports* queue (`listReports?status=Open`, high-priority first, BR-RPT-05) → SCR-ADM-03 shows listing + all reports → *Dismiss* or *Take action* (optionally suspend listing) with note → `resolveReport`. Reporter gets inbox notification.
 
 #### UC-44 Query audit logs
 - **Main:** API only (`getAuditLogs`) through Scalar/HTTP client — no mobile screen in MVP. **Rules:** BR-AUD-02.
@@ -231,7 +231,7 @@ Each UC: **Actor · Story/AC · Preconditions · Main flow · Alternatives (A) �
 
 | Story | Use cases | Screens | API operations |
 |---|---|---|---|
-| US01 | UC-01, UC-02 | SCR-ONB-01, SCR-HOME-01, SCR-ACC-02 | `searchRooms`, `listCampuses`, `updateMyProfile` |
+| US01 | UC-01, UC-02 | SCR-HOME-01, SCR-ACC-02 | `searchRooms`, `listCampuses`, `updateMyProfile` |
 | US02 | UC-03, UC-16 | SCR-ROOM-01 | `getRoomDetail`, `getSimilarRooms` |
 | US03 | UC-04 | SCR-ROOM-02, SCR-ROOM-03 | `getRoomDetail` (photos), static `/media/*` |
 | US04 | UC-05 | SCR-SRCH-01, SCR-HOME-01 | `searchRooms` |
