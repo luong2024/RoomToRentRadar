@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
+             xmlns:fonts="clr-namespace:Fonts"
+             x:Class="RoomToRentRadar.Pages.Controls.Common.PageHeaderBar"
+             x:Name="RootHeaderView"
+             x:DataType="common:PageHeaderBar">
+
+    <Border StrokeShape="Rectangle"
+            StrokeThickness="0"
+            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+            Padding="{OnPlatform Default='16,12,16,12', iOS='16,48,16,12'}">
+
+        <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="12" VerticalOptions="Center">
+            <!-- Back Navigation Button: touch target >= 48x48 dp with keyboard accessibility -->
+            <ImageButton Grid.Column="0"
+                         WidthRequest="48"
+                         HeightRequest="48"
+                         Padding="14"
+                         CornerRadius="8"
+                         BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
+                         VerticalOptions="Center"
+                         IsVisible="{Binding CanGoBack, Source={x:Reference RootHeaderView}}"
+                         Command="{Binding BackCommand, Source={x:Reference RootHeaderView}}"
+                         SemanticProperties.Description="Back"
+                         SemanticProperties.Hint="Navigate to previous screen">
+                <ImageButton.Source>
+                    <FontImageSource Glyph="{x:Static fonts:FluentUI.arrow_left_20_regular}"
+                                     FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                     Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+                                     Size="20" />
+                </ImageButton.Source>
+            </ImageButton>
+
+            <!-- Title & Subtitle Column -->
+            <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                <Label Text="{Binding Title, Source={x:Reference RootHeaderView}}"
+                       FontFamily="{StaticResource FontFamilySemibold}"
+                       FontSize="{StaticResource FontSizeH2}"
+                       FontAttributes="Bold"
+                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+                       LineBreakMode="TailTruncation" />
+
+                <Label Text="{Binding Subtitle, Source={x:Reference RootHeaderView}}"
+                       FontFamily="{StaticResource FontFamilyRegular}"
+                       FontSize="{StaticResource FontSizeCaption}"
+                       TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+                       IsVisible="{Binding HasSubtitle, Source={x:Reference RootHeaderView}}"
+                       LineBreakMode="TailTruncation" />
+            </VerticalStackLayout>
+
+            <!-- Trailing Action Slot / Button: touch target >= 48x48 dp with keyboard accessibility -->
+            <Button Grid.Column="2"
+                    WidthRequest="48"
+                    HeightRequest="48"
+                    Padding="0"
+                    CornerRadius="8"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
+                    VerticalOptions="Center"
+                    IsVisible="{Binding HasAction, Source={x:Reference RootHeaderView}}"
+                    Command="{Binding ActionCommand, Source={x:Reference RootHeaderView}}"
+                    Text="{Binding ActionIcon, Source={x:Reference RootHeaderView}}"
+                    FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                    FontSize="18"
+                    TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}"
+                    SemanticProperties.Description="Header action" />
+        </Grid>
+    </Border>
+</ContentView>

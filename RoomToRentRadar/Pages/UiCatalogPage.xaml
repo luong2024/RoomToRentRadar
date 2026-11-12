@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.PageModels"
+             xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
+             xmlns:inputs="clr-namespace:RoomToRentRadar.Pages.Controls.Inputs"
+             xmlns:cards="clr-namespace:RoomToRentRadar.Pages.Controls.Cards"
+             xmlns:feedback="clr-namespace:RoomToRentRadar.Pages.Controls.Feedback"
+             xmlns:fonts="clr-namespace:Fonts"
+             x:Class="RoomToRentRadar.Pages.UiCatalogPage"
+             x:DataType="vm:UiCatalogPageModel"
+             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCanvasLight}, Dark={StaticResource SurfaceCanvasDark}}">
+
+    <Grid RowDefinitions="Auto, *">
+        <!-- 1. Header Bar -->
+        <common:PageHeaderBar Grid.Row="0"
+                               Title="UI Design System"
+                               Subtitle="Navy + Teal Design System · Cross-Platform Foundation"
+                               CanGoBack="False" />
+
+        <!-- 2. Scrollable Catalog Content -->
+        <ScrollView Grid.Row="1" Padding="{StaticResource ScreenMargin}">
+            <VerticalStackLayout Spacing="28" MaximumWidthRequest="1000">
+
+                <!-- Interactive Toast/Feedback Banner -->
+                <Border StrokeShape="RoundRectangle 8"
+                        StrokeThickness="1"
+                        Padding="12,10"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
+                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}">
+                    <Label Text="{Binding FeedbackMessage}"
+                           FontFamily="{StaticResource FontFamilySemibold}"
+                           FontSize="{StaticResource FontSizeCaption}"
+                           TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}"
+                           HorizontalTextAlignment="Center" />
+                </Border>
+
+                <!-- SECTION 1: COLOR PALETTE SWATCHES -->
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="1. CORE COLOR PALETTE (NAVY BLUE + TEAL)" Style="{StaticResource TextH3}" />
+                    <FlexLayout Wrap="Wrap" JustifyContent="SpaceBetween" AlignItems="Center">
+                        <!-- Primary -->
+                        <Border StrokeShape="RoundRectangle 8" WidthRequest="140" HeightRequest="65" BackgroundColor="#163A5F" Margin="4" Padding="8">
+                            <VerticalStackLayout VerticalOptions="Center">
+                                <Label Text="Primary" TextColor="White" FontFamily="{StaticResource FontFamilySemibold}" FontSize="12" />
+                                <Label Text="#163A5F" TextColor="White" Opacity="0.8" FontSize="11" />
+                            </VerticalStackLayout>
+                        </Border>
+                        <!-- Secondary -->
+                        <Border StrokeShape="RoundRectangle 8" WidthRequest="140" HeightRequest="65" BackgroundColor="#256D85" Margin="4" Padding="8">
+                            <VerticalStackLayout VerticalOptions="Center">
+                                <Label Text="Secondary" TextColor="White" FontFamily="{StaticResource FontFamilySemibold}" FontSize="12" />
+                                <Label Text="#256D85" TextColor="White" Opacity="0.8" FontSize="11" />
+                            </VerticalStackLayout>
+                        </Border>
+                        <!-- Accent Teal -->
+                        <Border StrokeShape="RoundRectangle 8" WidthRequest="140" HeightRequest="65" BackgroundColor="#4CB5AE" Margin="4" Padding="8">
+                            <VerticalStackLayout VerticalOptions="Center">
+                                <Label Text="Accent (Teal)" TextColor="#163A5F" FontFamily="{StaticResource FontFamilySemibold}" FontSize="12" />
+                                <Label Text="#4CB5AE" TextColor="#163A5F" Opacity="0.8" FontSize="11" />
+                            </VerticalStackLayout>
+                        </Border>
+                        <!-- Background -->
+                        <Border StrokeShape="RoundRectangle 8" WidthRequest="140" HeightRequest="65" BackgroundColor="#F4F7FA" Stroke="#E2E8F0" StrokeThickness="1" Margin="4" Padding="8">
+                            <VerticalStackLayout VerticalOptions="Center">
+                                <Label Text="Background" TextColor="#1E293B" FontFamily="{StaticResource FontFamilySemibold}" FontSize="12" />
+                                <Label Text="#F4F7FA" TextColor="#64748B" FontSize="11" />
+                            </VerticalStackLayout>
+                        </Border>
+                        <!-- Surface -->
+                        <Border StrokeShape="RoundRectangle 8" WidthRequest="140" HeightRequest="65" BackgroundColor="#FFFFFF" Stroke="#E2E8F0" StrokeThickness="1" Margin="4" Padding="8">
+                            <VerticalStackLayout VerticalOptions="Center">
+                                <Label Text="Surface (Card)" TextColor="#1E293B" FontFamily="{StaticResource FontFamilySemibold}" FontSize="12" />
+                                <Label Text="#FFFFFF" TextColor="#64748B" FontSize="11" />
+                            </VerticalStackLayout>
+                        </Border>
+                        <!-- Text Primary -->
+                        <Border StrokeShape="RoundRectangle 8" WidthRequest="140" HeightRequest="65" BackgroundColor="#1E293B" Margin="4" Padding="8">
+                            <VerticalStackLayout VerticalOptions="Center">
+                                <Label Text="Text Primary" TextColor="White" FontFamily="{StaticResource FontFamilySemibold}" FontSize="12" />
+                                <Label Text="#1E293B" TextColor="White" Opacity="0.8" FontSize="11" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </FlexLayout>
+                </VerticalStackLayout>
+
+                <!-- SECTION 2: TYPOGRAPHY SCALE -->
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="2. TYPOGRAPHY SCALE" Style="{StaticResource TextH3}" />
+                    <Border Style="{StaticResource BaseCardBorderStyle}" Padding="16">
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="Display Bold (32/40pt) — 2,500,000 VND" Style="{StaticResource TextDisplay}" />
+                            <Label Text="Heading 1 (24/28pt) — Rental Room Details" Style="{StaticResource TextH1}" />
+                            <Label Text="Heading 2 (20/22pt) — Amenities &amp; Location" Style="{StaticResource TextH2}" />
+                            <Label Text="Heading 3 (16/18pt) — Studio Room near ICTU Campus" Style="{StaticResource TextH3}" />
+                            <Label Text="Body Large (16pt) — Overview description for featured room listings and rental conditions." Style="{StaticResource TextBodyLarge}" />
+                            <Label Text="Body Medium (14pt) — Standard text: 18 Z115 Street, Quyet Thang, Thai Nguyen City." Style="{StaticResource TextBodyMedium}" />
+                            <Label Text="Caption (12pt) — 350m from ICTU Campus • High-speed Wi-Fi included" Style="{StaticResource TextCaption}" />
+                            <Label Text="Price Highlight (20pt) — 2,200,000 VND/month" Style="{StaticResource TextPriceLarge}" />
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+
+                <!-- SECTION 3: BUTTON SUITE & INTERACTION -->
+                <VerticalStackLayout Spacing="10">
+                    <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
+                        <Label Grid.Column="0" Text="3. BUTTON SUITE &amp; INTERACTION" Style="{StaticResource TextH3}" />
+                        <Button Grid.Column="1"
+                                Text="Toggle Loading State"
+                                Style="{StaticResource GhostButton}"
+                                Command="{Binding ToggleButtonLoadingCommand}" />
+                    </Grid>
+
+                    <FlexLayout Wrap="Wrap" JustifyContent="Start" AlignItems="Center">
+                        <!-- Native Style Buttons -->
+                        <Button Text="Primary CTA" Style="{StaticResource PrimaryButton}" Margin="4" />
+                        <Button Text="Secondary Button" Style="{StaticResource SecondaryButton}" Margin="4" />
+                        <Button Text="Accent Teal" Style="{StaticResource AccentButton}" Margin="4" />
+                        <Button Text="Outline Button" Style="{StaticResource OutlineButton}" Margin="4" />
+                        <Button Text="Ghost Action" Style="{StaticResource GhostButton}" Margin="4" />
+                        <Button Text="Destructive" Style="{StaticResource DestructiveButton}" Margin="4" />
+                    </FlexLayout>
+
+                    <!-- Advanced RadaButton Component with Spinner State -->
+                    <Label Text="RadaButton Component (Integrated Spinner with zero layout shift):" Style="{StaticResource TextCaption}" Margin="0,4,0,0" />
+                    <HorizontalStackLayout Spacing="12">
+                        <common:RadaButton Text="Button with Loading State"
+                                           Variant="Primary"
+                                           IsLoading="{Binding IsButtonLoading}"
+                                           Command="{Binding ToggleButtonLoadingCommand}" />
+
+                        <common:RadaButton Text="Accent Teal Button"
+                                           Variant="Accent"
+                                           IsLoading="{Binding IsButtonLoading}"
+                                           Command="{Binding ToggleButtonLoadingCommand}" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+
+                <!-- SECTION 4: BADGES & ATOMS -->
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="4. BADGES &amp; ATOMS" Style="{StaticResource TextH3}" />
+                    <HorizontalStackLayout Spacing="10">
+                        <common:RadaBadge Type="Verified" />
+                        <common:RadaBadge Type="Available" />
+                        <common:RadaBadge Type="AlmostFull" />
+                        <common:RadaBadge Type="Full" />
+                    </HorizontalStackLayout>
+
+                    <Label Text="Amenity Chips (AmenityChip):" Style="{StaticResource TextCaption}" Margin="0,4,0,0" />
+                    <HorizontalStackLayout Spacing="8">
+                        <common:AmenityChip Title="Free Wi-Fi" IsSelected="True" />
+                        <common:AmenityChip Title="Air Conditioner" IsSelected="False" />
+                        <common:AmenityChip Title="Water Heater" IsSelected="False" />
+                        <common:AmenityChip Title="Private Bath" IsSelected="True" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+
+                <!-- SECTION 5: FORM INPUT CONTROLS -->
+                <VerticalStackLayout Spacing="10">
+                    <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
+                        <Label Grid.Column="0" Text="5. INPUT &amp; SEARCH CONTROLS" Style="{StaticResource TextH3}" />
+                        <Button Grid.Column="1"
+                                Text="Toggle Error State"
+                                Style="{StaticResource GhostButton}"
+                                Command="{Binding ToggleInputErrorCommand}" />
+                    </Grid>
+
+                    <inputs:SearchBarView SearchText="{Binding SearchQuery, Mode=TwoWay}"
+                                         Placeholder="Search by street name or amenities near ICTU..." />
+
+                    <inputs:ValidatedEntry LabelText="Tenant Full Name *"
+                                           Placeholder="Enter full name..."
+                                           Text="{Binding InputText, Mode=TwoWay}"
+                                           ErrorMessage="{Binding InputError}" />
+                </VerticalStackLayout>
+
+                <!-- SECTION 6: ADAPTIVE CARD SYSTEM -->
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="6. ADAPTIVE CARD SYSTEM" Style="{StaticResource TextH3}" />
+
+                    <!-- Room Card Preview -->
+                    <cards:RoomCardView Room="{Binding SampleRoom}"
+                                        BookmarkCommand="{Binding ToggleBookmarkCommand}"
+                                        DetailsCommand="{Binding ViewRoomDetailsCommand}" />
+
+                    <!-- Metric Cards Row -->
+                    <Grid ColumnDefinitions="*, *" ColumnSpacing="12">
+                        <cards:MetricCardView Grid.Column="0"
+                                              Title="VERIFIED ROOMS"
+                                              IconGlyph="{x:Static fonts:FluentUI.home_20_regular}"
+                                              ValueText="128"
+                                              TrendText="+12 new rooms this week" />
+
+                        <cards:MetricCardView Grid.Column="1"
+                                              Title="OCCUPANCY RATE"
+                                              IconGlyph="{x:Static fonts:FluentUI.data_trending_20_regular}"
+                                              ValueText="94%"
+                                              TrendText="Near ICTU Gate Area" />
+                    </Grid>
+
+                    <!-- Comparison Card Preview (US10) -->
+                    <Label Text="3-Room Comparison Card (US10):" Style="{StaticResource TextCaption}" Margin="0,4,0,0" />
+                    <cards:ComparisonCardView Room="{Binding SampleRoom}"
+                                              RemoveCommand="{Binding ToggleBookmarkCommand}" />
+                </VerticalStackLayout>
+
+                <!-- SECTION 7: THE 4 UX STATES (FEEDBACK & RESILIENCE) -->
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="7. UX RESILIENCE STATES (STATE MACHINE)" Style="{StaticResource TextH3}" />
+
+                    <Label Text="A) Skeleton Shimmer Loader (Prevents layout shifts while loading):" Style="{StaticResource TextCaption}" />
+                    <feedback:SkeletonShimmer />
+
+                    <Label Text="B) Empty State (Empty list with recovery action):" Style="{StaticResource TextCaption}" />
+                    <Border Style="{StaticResource BaseCardBorderStyle}">
+                        <feedback:EmptyStateView ActionCommand="{Binding ResetFiltersCommand}" />
+                    </Border>
+
+                    <Label Text="C) Error State (Connection failure with retry action):" Style="{StaticResource TextCaption}" />
+                    <Border Style="{StaticResource BaseCardBorderStyle}">
+                        <feedback:ErrorRetryView RetryCommand="{Binding RetryOperationCommand}" />
+                    </Border>
+                </VerticalStackLayout>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>
