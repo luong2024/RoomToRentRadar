@@ -346,13 +346,35 @@ public class AuthAndRbacIntegrationTests
 
         var responses = await Task.WhenAll(request1, request2);
 
-        var okCount = responses.Count(r => r.StatusCode == HttpStatusCode.OK);
-        var conflictCount = responses.Count(r => r.StatusCode == HttpStatusCode.Conflict);
+        // Depending on request scheduling:
+        // - If both pass GetByExternalLoginAsync concurrently: 1 succeeds (200 OK) and 1 gets 409 Conflict.
+        // - If request 1 finishes before request 2 reads: request 2 logs into the same created user (200 OK) or hits ETag 409 Conflict.
+        // In all cases, every response must be 200 or 409, all 200 responses must share the exact same UserId,
+        // and only 1 user document may exist for "shared-concurrent-sub".
+        Assert.That(
+            responses.All(r => r.StatusCode is HttpStatusCode.OK or HttpStatusCode.Conflict),
+            Is.True,
+            "All concurrent responses must be either 200 OK or 409 Conflict.");
+
+        var okResponses = responses.Where(r => r.StatusCode == HttpStatusCode.OK).ToList();
+        Assert.That(okResponses, Is.Not.Empty, "At least one request must succeed.");
+
+        var sessions = new List<AuthSessionResponse>();
+        foreach (var okResponse in okResponses)
+        {
+            var session = await okResponse.Content.ReadFromJsonAsync<AuthSessionResponse>();
+            Assert.That(session, Is.Not.Null);
+            sessions.Add(session!);
+        }
+
+        var distinctUserIds = sessions.Select(s => s.UserId).Distinct().ToList();
+        var matchingUsers = await _factory.CosmosDb.Users.QueryAsync(
+            u => u.ExternalLogins.Any(el => el.ProviderSubject == "shared-concurrent-sub"));
 
         Assert.Multiple(() =>
         {
-            Assert.That(okCount, Is.EqualTo(1), "Exactly one registration should succeed.");
-            Assert.That(conflictCount, Is.EqualTo(1), "Concurrent registration with same Google subject should return 409 Conflict.");
+            Assert.That(distinctUserIds, Has.Count.EqualTo(1), "All successful sessions must belong to the same single User.");
+            Assert.That(matchingUsers, Has.Count.EqualTo(1), "Only one User document may exist for the external subject.");
         });
     }
 
