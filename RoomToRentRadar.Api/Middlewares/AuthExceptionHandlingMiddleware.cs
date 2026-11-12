@@ -40,9 +40,13 @@ public sealed class AuthExceptionHandlingMiddleware
                 Instance = context.Request.Path
             };
 
-            if (!string.IsNullOrWhiteSpace(errorCode))
+            var effectiveErrorCode = ex is DomainValidationException { ErrorCode: not null } dve
+                ? dve.ErrorCode
+                : errorCode;
+
+            if (!string.IsNullOrWhiteSpace(effectiveErrorCode))
             {
-                problem.Extensions["errorCode"] = errorCode;
+                problem.Extensions["errorCode"] = effectiveErrorCode;
             }
 
             await JsonSerializer.SerializeAsync(
@@ -108,6 +112,7 @@ public sealed class AuthExceptionHandlingMiddleware
                 return true;
 
             case ConcurrencyConflictException:
+            case InvalidStateTransitionException:
                 statusCode = StatusCodes.Status409Conflict;
                 title = "Conflict";
                 errorCode = "CONCURRENCY_CONFLICT";
