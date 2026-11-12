@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:maps="clr-namespace:Microsoft.Maui.Controls.Maps;assembly=Microsoft.Maui.Controls.Maps"
+             xmlns:pageModels="clr-namespace:RoomToRentRadar.PageModels"
+             xmlns:fonts="clr-namespace:Fonts"
+             x:Class="RoomToRentRadar.Pages.MapSearchPage"
+             x:DataType="pageModels:MapSearchViewModel"
+             Title="Tìm theo bản đồ">
+
+    <Grid RowDefinitions="*,Auto">
+
+        <!-- Bản đồ + Lớp GraphicsView thu nét cảm ứng -->
+        <Grid Grid.Row="0">
+            <maps:Map x:Name="CampusMap"
+                      AutomationId="CampusMap"
+                      MapType="Street"
+                      IsShowingUser="False" />
+
+            <GraphicsView x:Name="PolygonCanvas"
+                          AutomationId="PolygonCanvas"
+                          InputTransparent="True"
+                          StartInteraction="OnPolygonCanvasStartInteraction"
+                          DragInteraction="OnPolygonCanvasDragInteraction"
+                          EndInteraction="OnPolygonCanvasEndInteraction" />
+
+            <!-- Cụm nút điều khiển nổi góc trên trái -->
+            <HorizontalStackLayout Margin="12"
+                                   Spacing="8"
+                                   HorizontalOptions="Start"
+                                   VerticalOptions="Start">
+                <Button AutomationId="DrawPolygonToggleButton"
+                        Text="{Binding DrawToggleButtonText}"
+                        Command="{Binding ToggleDrawModeCommand}"
+                        FontSize="13"
+                        FontAttributes="Bold"
+                        TextColor="White"
+                        Padding="14,8"
+                        CornerRadius="5">
+                    <Button.Triggers>
+                        <DataTrigger TargetType="Button"
+                                     Binding="{Binding IsDrawingMode}"
+                                     Value="True">
+                            <Setter Property="BackgroundColor" Value="#1D4ED8" />
+                        </DataTrigger>
+                        <DataTrigger TargetType="Button"
+                                     Binding="{Binding IsDrawingMode}"
+                                     Value="False">
+                            <Setter Property="BackgroundColor" Value="#0F172A" />
+                        </DataTrigger>
+                    </Button.Triggers>
+                </Button>
+
+                <Button AutomationId="ClearPolygonButton"
+                        Text="Xóa vùng"
+                        Command="{Binding ClearPolygonCommand}"
+                        Clicked="OnClearPolygonClicked"
+                        IsVisible="{Binding HasPolygon}"
+                        FontSize="13"
+                        BackgroundColor="White"
+                        TextColor="#0F172A"
+                        BorderColor="#CBD5E1"
+                        BorderWidth="1"
+                        Padding="12,8"
+                        CornerRadius="5" />
+            </HorizontalStackLayout>
+
+            <!-- Nút căn lại tâm ĐH CNTT&TT ICTU -->
+            <Border AutomationId="CenterIctuButton"
+                    Margin="12"
+                    Padding="8"
+                    HorizontalOptions="End"
+                    VerticalOptions="Start"
+                    BackgroundColor="White"
+                    Stroke="#CBD5E1"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 5">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnCenterIctuTapped" />
+                </Border.GestureRecognizers>
+                <Image HeightRequest="20"
+                       WidthRequest="20">
+                    <Image.Source>
+                        <FontImageSource Glyph="{x:Static fonts:FluentUI.my_location_20_regular}"
+                                         FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                         Color="#0F172A"
+                                         Size="20" />
+                    </Image.Source>
+                </Image>
+            </Border>
+        </Grid>
+
+        <!-- Thanh trạng thái & số phòng tìm được (handoff sang T05.3) -->
+        <Border Grid.Row="1"
+                Padding="14,12"
+                BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark={StaticResource DarkSecondaryBackground}}"
+                Stroke="{AppThemeBinding Light=#E2E8F0, Dark=#32323C}"
+                StrokeThickness="1"
+                StrokeShape="RoundRectangle 0">
+            <Grid ColumnDefinitions="*,Auto"
+                  ColumnSpacing="10">
+                <VerticalStackLayout Grid.Column="0"
+                                     Spacing="2"
+                                     VerticalOptions="Center">
+                    <Label Text="{Binding StatusMessage}"
+                           FontSize="13.5"
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#0F172A, Dark=#F8FAFC}" />
+                    <Label Text="{Binding ErrorMessage}"
+                           IsVisible="{Binding HasError}"
+                           FontSize="12"
+                           TextColor="#DC2626" />
+                </VerticalStackLayout>
+
+                <ActivityIndicator Grid.Column="1"
+                                   IsRunning="{Binding IsSearching}"
+                                   IsVisible="{Binding IsSearching}"
+                                   VerticalOptions="Center" />
+            </Grid>
+        </Border>
+    </Grid>
+</ContentPage>
