@@ -1,12 +1,12 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using RoomToRentRadar.Api.Authorization;
+using RoomToRentRadar.Api.Binders;
 using RoomToRentRadar.Api.Middlewares;
 using RoomToRentRadar.Application;
-using RoomToRentRadar.Datastore.CosmosDb;
-using RoomToRentRadar.Datastore.CosmosDb.Configurations;
 using RoomToRentRadar.Datastore.Sqlite;
 using RoomToRentRadar.Datastore.Sqlite.Configurations;
 using RoomToRentRadar.Infrastructure;
@@ -14,7 +14,16 @@ using RoomToRentRadar.Infrastructure.Adapters.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+    {
+        // US04: ?roomTypes=MiniApartment,WholeHouse (OpenAPI style: form, explode: false).
+        options.ModelBinderProviders.Insert(0, new RoomTypesModelBinderProvider());
+    })
+    .AddJsonOptions(options =>
+    {
+        // ADR-012: enums are serialized as strings ("Available", "MiniApartment"); numbers are still accepted on input.
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 builder.Services.AddEndpointsApiExplorer();
 
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new JwtSettings();
@@ -29,26 +38,11 @@ if (string.IsNullOrWhiteSpace(jwtSettings.SigningKey))
     jwtSettings.SigningKey = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
 }
 
-var databaseProvider = builder.Configuration["DatabaseProvider"] ?? "Sqlite";
-if (string.Equals(databaseProvider, "CosmosDb", StringComparison.OrdinalIgnoreCase))
-{
-    var cosmosSettings = builder.Configuration.GetSection(CosmosDbSettings.SectionName).Get<CosmosDbSettings>() ?? new CosmosDbSettings();
-    builder.Services.AddCosmosDatastore(cosmosSettings);
-
-    if (string.IsNullOrEmpty(builder.Configuration["AllowInMemoryRoomFallback"]))
-    {
-        throw new InvalidOperationException(
-            "Search API (US04) is not yet implemented for the CosmosDb provider. Use DatabaseProvider=Sqlite, " +
-            "or set AllowInMemoryRoomFallback=true to run the in-memory seed fallback explicitly.");
-    }
-}
-else
-{
-    var sqliteSettings = builder.Configuration.GetSection(SqliteSettings.SectionName).Get<SqliteSettings>() ?? new SqliteSettings();
-    sqliteSettings.SeedDemoRooms = builder.Configuration.GetValue<bool?>("Sqlite:SeedDemoRooms")
-        ?? builder.Environment.IsDevelopment(); // H4: demo seed only for local development
-    builder.Services.AddSqliteDatastore(sqliteSettings);
-}
+// ADR-002: SQLite is the only datastore (the CosmosDb provider is frozen).
+var sqliteSettings = builder.Configuration.GetSection(SqliteSettings.SectionName).Get<SqliteSettings>() ?? new SqliteSettings();
+sqliteSettings.SeedDemoRooms = builder.Configuration.GetValue<bool?>("Sqlite:SeedDemoRooms")
+    ?? builder.Environment.IsDevelopment(); // H4: demo seed only for local development
+builder.Services.AddSqliteDatastore(sqliteSettings);
 
 var useMockSso = builder.Configuration.GetValue("IctuSso:UseMockVerifier", defaultValue: false);
 if (useMockSso && !builder.Environment.IsDevelopment())

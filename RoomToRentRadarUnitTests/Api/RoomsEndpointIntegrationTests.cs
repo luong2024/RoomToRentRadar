@@ -2,7 +2,6 @@ using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Configuration;
 
 namespace RoomToRentRadarUnitTests.Api;
 
@@ -34,22 +33,22 @@ public class RoomsEndpointIntegrationTests
         _factory.Dispose();
     }
 
+    /// <summary>
+    /// Ruling #24: <c>Program</c> gọi <c>WebApplication.CreateBuilder(args)</c> nên
+    /// <c>ConfigureAppConfiguration</c> của <see cref="WebHostBuilderExtensions"/> không tới được
+    /// <c>builder.Configuration</c>. Dùng <c>UseSetting</c> (chuyển thành host configuration, được đưa
+    /// vào <c>builder.Configuration</c>) để test luôn chạy SQLite <c>:memory:</c> và cờ seed đúng.
+    /// </summary>
     private static WebApplicationFactory<Program> CreateFactory(bool seedDemoRooms) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(webHost =>
         {
             webHost.UseEnvironment("Development");
-            webHost.ConfigureAppConfiguration((_, config) =>
-            {
-                config.AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    ["DatabaseProvider"] = "Sqlite",
-                    ["Sqlite:ConnectionString"] = "Data Source=:memory:",
-                    ["Sqlite:SeedDemoRooms"] = seedDemoRooms ? "true" : "false",
-                    ["Jwt:SigningKey"] = JwtSigningKey,
-                    ["Jwt:Issuer"] = "RoomToRentRadar.Api",
-                    ["Jwt:Audience"] = "RoomToRentRadar.Client"
-                });
-            });
+            webHost.UseSetting("DatabaseProvider", "Sqlite");
+            webHost.UseSetting("Sqlite:ConnectionString", "Data Source=:memory:");
+            webHost.UseSetting("Sqlite:SeedDemoRooms", seedDemoRooms ? "true" : "false");
+            webHost.UseSetting("Jwt:SigningKey", JwtSigningKey);
+            webHost.UseSetting("Jwt:Issuer", "RoomToRentRadar.Api");
+            webHost.UseSetting("Jwt:Audience", "RoomToRentRadar.Client");
         });
 
     [Test]
