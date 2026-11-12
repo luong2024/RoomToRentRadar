@@ -20,11 +20,11 @@
     </FlyoutItem>
 
     <!-- 2. Sign In / Register available via Flyout and navigation buttons -->
-    <FlyoutItem Title="Sign In / Register" Icon="{StaticResource IconProjects}">
+    <FlyoutItem Title="Sign In / Register" Route="auth" Icon="{StaticResource IconProjects}">
         <ShellContent
             Title="Authentication"
             ContentTemplate="{DataTemplate authViews:AuthPage}"
-            Route="auth/login"
+            Route="login"
             SemanticProperties.Description="Sign In and Sign Up"
             SemanticProperties.Hint="Navigate to authentication" />
     </FlyoutItem>
