@@ -64,6 +64,12 @@ namespace RoomToRentRadar.Api.Data.Migrations
                         .HasColumnType("INTEGER")
                         .HasColumnName("price");
 
+                    b.Property<string>("RoomType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("room_type");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -88,6 +94,9 @@ namespace RoomToRentRadar.Api.Data.Migrations
                     b.HasIndex("Status", "Lng")
                         .HasDatabaseName("ix_listings_status_lng");
 
+                    b.HasIndex("Status", "RoomType")
+                        .HasDatabaseName("ix_listings_status_room_type");
+
                     b.HasIndex("Status", "AreaM2", "Id")
                         .IsDescending(false, true, false)
                         .HasDatabaseName("ix_listings_status_area_m2_desc_id");
@@ -110,6 +119,8 @@ namespace RoomToRentRadar.Api.Data.Migrations
                             t.HasCheckConstraint("ck_listings_bedrooms_non_negative", "bedrooms >= 0");
 
                             t.HasCheckConstraint("ck_listings_price_non_negative", "price >= 0");
+
+                            t.HasCheckConstraint("ck_listings_room_type", "room_type IN ('single_room', 'shared_room', 'studio', 'apartment', 'house')");
 
                             t.HasCheckConstraint("ck_listings_status", "status IN ('draft', 'published', 'hidden', 'removed')");
                         });

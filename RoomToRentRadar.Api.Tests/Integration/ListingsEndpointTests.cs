@@ -6,7 +6,6 @@ using Microsoft.Extensions.DependencyInjection;
 using RoomToRentRadar.Api.Data;
 using RoomToRentRadar.Api.Tests.Infrastructure;
 using RoomToRentRadar.Shared.Listings;
-using RoomToRentRadar.Shared.Pagination;
 using RoomToRentRadar.Shared.Serialization;
 
 namespace RoomToRentRadar.Api.Tests.Integration;
@@ -155,7 +154,7 @@ public sealed class ListingsEndpointTests
     }
 
     [Test]
-    public async Task CoverPhoto_IsIncludedWithoutAdditionalQuery()
+    public async Task CoverPhoto_IsIncludedByTheCountAndPageQueriesOfTheSqlPath()
     {
         _factory.QueryCounter.Reset();
 
@@ -168,7 +167,10 @@ public sealed class ListingsEndpointTests
             Assert.That(byTitle["Test listing 1"].CoverPhotoUrl, Is.Null);
             Assert.That(byTitle["Test listing 2"].CoverPhotoUrl, Is.EqualTo("/media/test/thumbs/photo-1.jpg"));
             Assert.That(byTitle["Test listing 3"].CoverPhotoUrl, Is.EqualTo("/media/test/thumbs/cover-3.jpg"));
-            Assert.That(_factory.QueryCounter.ListingsSelectCount, Is.EqualTo(1));
+            Assert.That(
+                _factory.QueryCounter.ListingsSelectCount,
+                Is.EqualTo(2),
+                "the total count query and the page query");
         });
     }
 
@@ -182,6 +184,39 @@ public sealed class ListingsEndpointTests
             $"/api/v1/listings?limit=2&sort=newest&cursor={Uri.EscapeDataString(firstPage.Pagination.NextCursor!)}");
 
         Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo("cursor_sort_mismatch"));
+    }
+
+    [Test]
+    public async Task CursorFilterMismatch_IsRejected()
+    {
+        var firstPage = await GetPageAsync("/api/v1/listings?limit=2&min_price=6000000");
+        Assert.That(firstPage.Pagination.NextCursor, Is.Not.Null);
+
+        var problem = await GetProblemAsync(
+            "/api/v1/listings?limit=2&min_price=7000000&cursor="
+            + Uri.EscapeDataString(firstPage.Pagination.NextCursor!));
+
+        Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo("cursor_filter_mismatch"));
+    }
+
+    [Test]
+    public async Task Cursor_IsAcceptedWhenFiltersAreUnchanged()
+    {
+        var firstPage = await GetPageAsync("/api/v1/listings?limit=2&min_price=6000000");
+        Assert.That(firstPage.Pagination.NextCursor, Is.Not.Null);
+
+        var secondPage = await GetPageAsync(
+            "/api/v1/listings?limit=2&min_price=6000000&cursor="
+            + Uri.EscapeDataString(firstPage.Pagination.NextCursor!));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(secondPage.Data, Has.Count.EqualTo(2));
+            Assert.That(
+                secondPage.Data.Select(item => item.Id)
+                    .Intersect(firstPage.Data.Select(item => item.Id)),
+                Is.Empty);
+        });
     }
 
     [TestCase("limit=0", "invalid_limit")]
@@ -199,11 +234,11 @@ public sealed class ListingsEndpointTests
         Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo(expectedCode));
     }
 
-    private async Task<PagedResult<ListingSummaryDto>> GetPageAsync(string url)
+    private async Task<ListingSearchResultDto> GetPageAsync(string url)
     {
         var response = await _client.GetAsync(url);
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), url);
-        var result = await response.Content.ReadFromJsonAsync<PagedResult<ListingSummaryDto>>(ApiJson.Options);
+        var result = await response.Content.ReadFromJsonAsync<ListingSearchResultDto>(ApiJson.Options);
         Assert.That(result, Is.Not.Null);
         return result!;
     }

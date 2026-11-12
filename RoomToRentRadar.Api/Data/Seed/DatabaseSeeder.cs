@@ -62,6 +62,16 @@ public static class DatabaseSeeder
         "Không tổ chức tiệc tùng"
     ];
 
+    // Cycles through every wire value so each filter option has sample rows.
+    private static readonly RoomType[] SampleRoomTypes =
+    [
+        RoomType.SingleRoom,
+        RoomType.SharedRoom,
+        RoomType.Studio,
+        RoomType.Apartment,
+        RoomType.House
+    ];
+
     public static async Task<bool> SeedSampleAsync(AppDbContext dbContext, CancellationToken cancellationToken = default)
     {
         if (await dbContext.Listings.AnyAsync(cancellationToken))
@@ -173,6 +183,7 @@ public static class DatabaseSeeder
             Price = 3_500_000L + (index % 40) * 1_150_000L,
             AreaM2 = 20 + (index * 7 % 90),
             Bedrooms = bedrooms,
+            RoomType = SampleRoomTypes[index % SampleRoomTypes.Length],
             Address = $"{location.Address}, {location.District}, TP. Hồ Chí Minh",
             Lat = Math.Round(location.Lat + (index % 7 - 3) * 0.0015, 6),
             Lng = Math.Round(location.Lng + (index % 5 - 2) * 0.0015, 6),
@@ -202,6 +213,7 @@ public static class DatabaseSeeder
             Price = 3_000_000L + index % 200 * 250_000L,
             AreaM2 = 18 + index % 110,
             Bedrooms = bedrooms,
+            RoomType = SampleRoomTypes[index % SampleRoomTypes.Length],
             Address = $"{location.Address}, {location.District}, TP. Hồ Chí Minh",
             Lat = location.Lat,
             Lng = location.Lng,

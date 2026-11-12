@@ -6,6 +6,4 @@ public sealed record ListingQuery(
     int Limit,
     string? Cursor,
     ListingSort Sort,
-    long? MinPrice,
-    long? MaxPrice,
-    int? Bedrooms);
+    ListingFilters Filters);

@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using RoomToRentRadar.Api.Features.Listings;
 using RoomToRentRadar.Shared.Listings;
-using RoomToRentRadar.Shared.Pagination;
 
 namespace RoomToRentRadar.Api.Controllers;
 
@@ -12,10 +11,10 @@ public sealed class ListingsController(
     AreaSearchQueryService areaSearchQueryService) : ControllerBase
 {
     [HttpGet]
-    [ProducesResponseType(typeof(PagedResult<ListingSummaryDto>), StatusCodes.Status200OK, "application/json")]
+    [ProducesResponseType(typeof(ListingSearchResultDto), StatusCodes.Status200OK, "application/json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError, "application/problem+json")]
-    public async Task<ActionResult<PagedResult<ListingSummaryDto>>> GetListings(
+    public async Task<ActionResult<ListingSearchResultDto>> GetListings(
         [FromQuery] ListingQueryParameters parameters,
         CancellationToken cancellationToken)
     {
@@ -51,11 +50,11 @@ public sealed class ListingsController(
     }
 
     [HttpPost("search/area")]
-    [ProducesResponseType(typeof(AreaSearchResultDto), StatusCodes.Status200OK, "application/json")]
+    [ProducesResponseType(typeof(SearchResultDto<ListingSummaryDto>), StatusCodes.Status200OK, "application/json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity, "application/problem+json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError, "application/problem+json")]
-    public async Task<ActionResult<AreaSearchResultDto>> SearchListingsByArea(
+    public async Task<ActionResult<SearchResultDto<ListingSummaryDto>>> SearchListingsByArea(
         [FromBody] AreaSearchRequest request,
         CancellationToken cancellationToken)
     {
@@ -116,6 +115,17 @@ public sealed class ListingsController(
             problem = ListingProblemFactory.InvalidQuery(
                 ListingProblemFactory.CursorSortMismatch,
                 "cursor does not belong to the requested sort.");
+            return false;
+        }
+
+        if (!string.Equals(
+                decoded.FilterFingerprint,
+                ListingFilterFingerprint.Compute(query.Filters),
+                StringComparison.Ordinal))
+        {
+            problem = ListingProblemFactory.InvalidQuery(
+                ListingProblemFactory.CursorFilterMismatch,
+                "cursor does not belong to the requested filters.");
             return false;
         }
 

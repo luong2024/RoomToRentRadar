@@ -31,6 +31,16 @@ public sealed class ListingStatusConverter : ValueConverter<ListingStatus, strin
     };
 }
 
+public sealed class RoomTypeConverter : ValueConverter<RoomType, string>
+{
+    public RoomTypeConverter()
+        : base(
+            value => RoomTypeWire.ToWireValue(value),
+            value => RoomTypeWire.FromWireValue(value))
+    {
+    }
+}
+
 public sealed class ListingPhotoKindConverter : ValueConverter<ListingPhotoKind, string>
 {
     public ListingPhotoKindConverter()

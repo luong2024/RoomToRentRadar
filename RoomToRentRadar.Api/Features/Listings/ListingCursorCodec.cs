@@ -8,19 +8,26 @@ namespace RoomToRentRadar.Api.Features.Listings;
 
 public static class ListingCursorCodec
 {
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = 2;
 
     private const int MaxCursorLength = 512;
 
-    private sealed record Payload(int Version, string Sort, string Key, Guid Id);
+    private sealed record Payload(int Version, string Sort, string Key, Guid Id, string Fingerprint);
 
     public static string Encode(
         ListingSort sort,
         Guid id,
+        string filterFingerprint,
         DateTime? createdAt = null,
         long? price = null,
         double? areaM2 = null)
     {
+        if (string.IsNullOrWhiteSpace(filterFingerprint))
+        {
+            throw new ArgumentException(
+                "The filter fingerprint is required.", nameof(filterFingerprint));
+        }
+
         var key = sort switch
         {
             ListingSort.Newest => createdAt?.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
@@ -34,7 +41,12 @@ public static class ListingCursorCodec
             throw new ArgumentException("A sort key is required for the selected sort.", nameof(sort));
         }
 
-        var payload = new Payload(CurrentVersion, ListingSortWire.ToWireValue(sort), key, id);
+        var payload = new Payload(
+            CurrentVersion,
+            ListingSortWire.ToWireValue(sort),
+            key,
+            id,
+            filterFingerprint);
         return Base64Url.EncodeToString(JsonSerializer.SerializeToUtf8Bytes(payload, ApiJson.Options));
     }
 
@@ -61,6 +73,7 @@ public static class ListingCursorCodec
         if (payload is null
             || payload.Version != CurrentVersion
             || payload.Id == Guid.Empty
+            || string.IsNullOrWhiteSpace(payload.Fingerprint)
             || !ListingSortWire.TryParse(payload.Sort, out var sort))
         {
             return false;
@@ -111,7 +124,13 @@ public static class ListingCursorCodec
                 return false;
         }
 
-        cursor = new ListingCursor(sort, payload.Id, createdAt, price, areaM2);
+        cursor = new ListingCursor(
+            sort,
+            payload.Id,
+            payload.Fingerprint,
+            createdAt,
+            price,
+            areaM2);
         return true;
     }
 }
