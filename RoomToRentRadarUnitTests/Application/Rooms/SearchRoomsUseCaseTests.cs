@@ -1,593 +1,517 @@
 using RoomToRentRadar.Application.UseCases.Rooms;
 using RoomToRentRadar.Domain.Entities;
+using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.Exceptions;
 using RoomToRentRadar.Domain.Services;
 using RoomToRentRadar.Ports.Contracts.Requests.Rooms;
+using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 
 namespace RoomToRentRadarUnitTests.Application.Rooms;
 
+/// <summary>
+/// UC-05 (Search and Filter Listings) / <c>operationId: searchRooms</c> / BR-SRCH-01..06, BR-CMP-01..03.
+/// RED ở Task 1: <see cref="SearchRoomsUseCase"/> chỉ có stub ném <see cref="NotImplementedException"/>;
+/// Task 2 (Giai đoạn 2) làm xanh toàn bộ fixture này mà không cần sửa test.
+/// </summary>
 [TestFixture]
 public class SearchRoomsUseCaseTests
 {
-    private const double IctuLat = 21.5851;
-    private const double IctuLng = 105.8066;
+    private static readonly DateTime BasePublishedAt = new(2026, 11, 1, 8, 0, 0, DateTimeKind.Utc);
+    private static readonly Campus Ictu = new(
+        "ICTU", "Trường Đại học Công nghệ Thông tin và Truyền thông", "ICTU", 21.5851, 105.8066, isDefault: true, sortOrder: 1);
+    private static readonly Campus Tnut = new(
+        "TNUT", "Trường Đại học Kỹ thuật Công nghiệp", "TNUT", 21.54954, 105.84350, isDefault: false, sortOrder: 8);
 
-    private const string PriceValidationMessage = "MinPrice cannot be greater than MaxPrice or negative.";
-    private const string AreaValidationMessage = "MinArea cannot be greater than MaxArea or negative.";
-    private const string MaxDistanceValidationMessage = "MaxDistanceKm must be greater than 0.";
-
-    private readonly DateTime _baseCreatedAt = new(2026, 11, 1, 8, 0, 0, DateTimeKind.Utc);
-    private IRoomRepository _repository = null!;
+    private ICampusRepository _campusRepository = null!;
+    private IRoomSearchReadModel _readModel = null!;
     private SearchRoomsUseCase _sut = null!;
-    private List<Room> _rooms = null!;
-    private Room _unverifiedRoom = null!;
-    private Room _rentedRoom = null!;
+    private RoomSearchQueryFilter? _capturedFilter;
+
+    /// <summary>
+    /// 5 phòng Available quanh ICTU (cùng dữ liệu tinh thần với seed Task 3) + 1 phòng BankHouse
+    /// ở TNUT (xa) để kiểm lọc khoảng cách và campus.
+    /// </summary>
+    private static readonly RoomSearchCandidate[] Candidates =
+    {
+        NewCandidate("cand-z115", "Phòng trọ Sinh viên Z115", RoomType.BoardingRoom, 1_500_000L, 18.0, 21.5875, 105.8080, BasePublishedAt.AddMinutes(1)),
+        NewCandidate("cand-tan-thinh", "Chung cư mini Tân Thịnh", RoomType.MiniApartment, 2_800_000L, 28.0, 21.5790, 105.8120, BasePublishedAt.AddMinutes(2)),
+        NewCandidate("cand-thao-nguyen", "Nhà trọ Thảo Nguyên", RoomType.BoardingRoom, 1_200_000L, 15.0, 21.5900, 105.8020, BasePublishedAt.AddMinutes(3)),
+        NewCandidate("cand-thinh-dan", "Phòng cao cấp Thịnh Đán", RoomType.MiniApartment, 3_500_000L, 35.0, 21.5710, 105.8190, BasePublishedAt.AddMinutes(4)),
+        NewCandidate("cand-ktx-32", "Ký túc xá tư nhân Đường 3/2", RoomType.Dormitory, 2_000_000L, 22.0, 21.5600, 105.8250, BasePublishedAt.AddMinutes(5)),
+        NewCandidate("cand-tnut-house", "Nhà nguyên căn gần TNUT", RoomType.WholeHouse, 4_200_000L, 45.0, 21.54954, 105.84350, BasePublishedAt.AddMinutes(6))
+    };
 
     [SetUp]
     public void SetUp()
     {
-        _repository = Substitute.For<IRoomRepository>();
-        _sut = new SearchRoomsUseCase(_repository);
+        _campusRepository = Substitute.For<ICampusRepository>();
+        _readModel = Substitute.For<IRoomSearchReadModel>();
+        _sut = new SearchRoomsUseCase(_campusRepository, _readModel);
+        _capturedFilter = null;
 
-        _rooms = new List<Room>
-        {
-            NewRoom("Z115", "Phòng trọ Sinh viên Z115", 1_500_000m, 18, 21.5875, 105.8080,
-                "Z115, phường Tân Thịnh, Thái Nguyên", createdAt: _baseCreatedAt.AddMinutes(1)),
-            NewRoom("TAN-THINH", "Chung cư mini Tân Thịnh", 2_800_000m, 28, 21.5790, 105.8120,
-                "Tân Thịnh, Thái Nguyên", createdAt: _baseCreatedAt.AddMinutes(2)),
-            NewRoom("THAO-NGUYEN", "Nhà trọ Thảo Nguyên - Quyết Thắng", 1_200_000m, 15, 21.5900, 105.8020,
-                "Quyết Thắng, Thái Nguyên", createdAt: _baseCreatedAt.AddMinutes(6)),
-            NewRoom("THINH-DAN", "Phòng cao cấp Thịnh Đán", 3_500_000m, 35, 21.5710, 105.8190,
-                "Thịnh Đán, Thái Nguyên", createdAt: _baseCreatedAt.AddMinutes(3)),
-            NewRoom("KTX-32", "Ký túc xá tư nhân Đường 3/2", 2_000_000m, 22, 21.5600, 105.8250,
-                "Đường 3/2, Thái Nguyên", createdAt: _baseCreatedAt.AddMinutes(4)),
-            NewRoom("DONG-HY", "Nhà trọ sinh viên giá rẻ Đồng Hỷ", 900_000m, 12, 21.6200, 105.8500,
-                "Chợ Điện Đồng Hỷ, Thái Nguyên", createdAt: _baseCreatedAt.AddMinutes(5))
-        };
+        _campusRepository.GetDefaultCampusAsync(Arg.Any<CancellationToken>()).Returns(Ictu);
+        _campusRepository.GetByIdAsync("ICTU", Arg.Any<CancellationToken>()).Returns(Ictu);
+        _campusRepository.GetByIdAsync("TNUT", Arg.Any<CancellationToken>()).Returns(Tnut);
+        _campusRepository.GetByIdAsync(Arg.Is<string>(id => id != "ICTU" && id != "TNUT"), Arg.Any<CancellationToken>())
+            .Returns((Campus?)null);
 
-        _unverifiedRoom = NewRoom("UNVERIFIED", "Nhà trọ chưa xác minh (phụ)", 1_300_000m, 16, 21.5860, 105.8070,
-            "Tân Thịnh, Thái Nguyên", isVerified: false, createdAt: _baseCreatedAt.AddMinutes(7));
-        _rentedRoom = NewRoom("RENTED", "Nhà trọ đã thuê (phụ)", 1_400_000m, 17, 21.5862, 105.8072,
-            "Tân Thịnh, Thái Nguyên", isAvailable: false, createdAt: _baseCreatedAt.AddMinutes(8));
-        _rooms.Add(_unverifiedRoom);
-        _rooms.Add(_rentedRoom);
-
-        _repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(_rooms);
+        _readModel
+            .QueryCandidatesAsync(Arg.Any<RoomSearchQueryFilter>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                _capturedFilter = callInfo.Arg<RoomSearchQueryFilter>();
+                return Task.FromResult<IReadOnlyList<RoomSearchCandidate>>(Candidates);
+            });
     }
 
-    private static Room NewRoom(
+    private static RoomSearchCandidate NewCandidate(
         string id,
         string title,
-        decimal price,
-        double area,
+        RoomType roomType,
+        long monthlyRentVnd,
+        double areaM2,
         double latitude,
         double longitude,
-        string address,
-        bool isVerified = true,
-        bool isAvailable = true,
-        DateTime? createdAt = null)
-        => Room.Reconstitute(
-            id: id,
-            title: title,
-            description: $"{title} - mô tả",
-            price: price,
-            area: area,
-            address: address,
-            latitude: latitude,
-            longitude: longitude,
-            landlordId: "landlord-1",
-            isAvailable: isAvailable,
-            isVerified: isVerified,
-            createdAtUtc: createdAt ?? DateTime.UtcNow);
+        DateTime? publishedAtUtc) => new(
+            Id: id,
+            Title: title,
+            MonthlyRentVnd: monthlyRentVnd,
+            AreaM2: areaM2,
+            RoomType: roomType,
+            Status: ListingStatus.Available,
+            IsVerified: true,
+            CoverThumbUrl: null,
+            Latitude: latitude,
+            Longitude: longitude,
+            PublishedAtUtc: publishedAtUtc);
 
-    private static string[] Ids(params string[] ids) => ids;
+    // ----------------------------------------------------------------- validation
 
-    // ---------------------------------------------------------------- Lọc giá
-
-    [Test]
-    public async Task ExecuteAsync_WithPriceRange_ReturnsOnlyRoomsWithinPriceRange()
+    [TestCase("area_asc")]
+    [TestCase("price")]
+    [TestCase("DISTANCE")]
+    [TestCase("")]
+    public void ExecuteAsync_UnknownSort_ThrowsDomainValidationExceptionWithInvalidSortOption(string sort)
     {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(MinPrice: 1_000_000m, MaxPrice: 2_000_000m));
+        var request = new RoomSearchRequest(Sort: sort);
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.Items.Select(i => i.Id), Is.EquivalentTo(Ids("Z115", "THAO-NGUYEN", "KTX-32")));
-            Assert.That(result.TotalCount, Is.EqualTo(3));
-            Assert.That(result.TotalCount, Is.LessThan(_rooms.Count), "Phòng phụ (chưa xác minh / đã thuê) phải bị loại");
-        });
+        var exception = Assert.ThrowsAsync<DomainValidationException>(
+            async () => await _sut.ExecuteAsync(request));
+
+        Assert.That(exception!.ErrorCode, Is.EqualTo("INVALID_SORT_OPTION")); // BR-SRCH-02
     }
 
     [Test]
-    public async Task ExecuteAsync_PriceRangeIsInclusiveOnBothBounds()
+    public async Task ExecuteAsync_UnknownSort_DoesNotQueryRepository()
     {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(MinPrice: 900_000m, MaxPrice: 1_500_000m));
+        var request = new RoomSearchRequest(Sort: "area_desc");
 
-        Assert.That(result.Items.Select(i => i.Id), Is.EquivalentTo(Ids("Z115", "THAO-NGUYEN", "DONG-HY")));
-    }
+        Assert.ThrowsAsync<DomainValidationException>(async () => await _sut.ExecuteAsync(request));
 
-    // ---------------------------------------------------------- Lọc diện tích
-
-    [Test]
-    public async Task ExecuteAsync_WithAreaRange_ReturnsOnlyRoomsWithinAreaRange()
-    {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(MinArea: 20, MaxArea: 30));
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.Items.Select(i => i.Id), Is.EquivalentTo(Ids("TAN-THINH", "KTX-32")));
-            Assert.That(result.TotalCount, Is.EqualTo(2));
-        });
-    }
-
-    // --------------------------------------------------------- Lọc khoảng cách
-
-    [Test]
-    public async Task ExecuteAsync_WithMaxDistance_ExcludesRoomsFartherThanLimit()
-    {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(MaxDistanceKm: 1.5));
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.Items.Select(i => i.Id),
-                Is.EquivalentTo(Ids("Z115", "TAN-THINH", "THAO-NGUYEN")));
-            Assert.That(result.Items.Select(i => i.Id), Has.None.EqualTo("THINH-DAN"));
-            Assert.That(result.Items.Select(i => i.Id), Has.None.EqualTo("KTX-32"));
-            Assert.That(result.Items.Select(i => i.Id), Has.None.EqualTo("DONG-HY"));
-            Assert.That(result.Items.All(i => i.DistanceKm <= 1.5), Is.True);
-        });
-    }
-
-    // ---------------------------------------------------------- Kết hợp bộ lọc
-
-    [Test]
-    public async Task ExecuteAsync_WithPriceAreaAndDistanceCombined_ReturnsIntersection()
-    {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(
-            MinPrice: 1_000_000m, MaxPrice: 2_000_000m,
-            MinArea: 20, MaxArea: 30,
-            MaxDistanceKm: 1.5));
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.Items.Select(i => i.Id), Is.Empty);
-            Assert.That(result.TotalCount, Is.EqualTo(0));
-        });
-    }
-
-    // ------------------------------------------------ Verified + Available
-
-    [Test]
-    public async Task ExecuteAsync_AlwaysExcludesUnverifiedAndUnavailableRooms()
-    {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest());
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.Items.Select(i => i.Id), Has.None.EqualTo("UNVERIFIED"));
-            Assert.That(result.Items.Select(i => i.Id), Has.None.EqualTo("RENTED"));
-            Assert.That(result.Items.Select(i => i.Id),
-                Is.EquivalentTo(Ids("Z115", "TAN-THINH", "THAO-NGUYEN", "THINH-DAN", "KTX-32", "DONG-HY")));
-            Assert.That(result.TotalCount, Is.EqualTo(6));
-            Assert.That(result.Items.All(i => i.IsVerified && i.IsAvailable), Is.True);
-        });
+        await _readModel.DidNotReceiveWithAnyArgs().QueryCandidatesAsync(default!);
+        await _campusRepository.DidNotReceiveWithAnyArgs().GetDefaultCampusAsync();
     }
 
     [Test]
-    public async Task ExecuteAsync_UnverifiedAndUnavailableRooms_StillCountInRepositoryButNeverInResult()
+    public void ExecuteAsync_MinRentGreaterThanMaxRent_ThrowsInvalidPriceRange()
     {
-        _repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(new List<Room> { _unverifiedRoom, _rentedRoom });
+        var request = new RoomSearchRequest(MinRentVnd: 3_000_000L, MaxRentVnd: 1_000_000L);
 
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest());
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.Items, Is.Empty);
-            Assert.That(result.TotalCount, Is.EqualTo(0));
-        });
-    }
-
-    // ------------------------------------------------------------- Validation
-
-    private static IEnumerable<TestCaseData> InvalidRequests()
-    {
-        yield return new TestCaseData(new RoomSearchRequest(MinPrice: 2_000_000m, MaxPrice: 1_000_000m), PriceValidationMessage)
-            .SetName("Validate_MinPriceGreaterThanMaxPrice_Throws");
-        yield return new TestCaseData(new RoomSearchRequest(MinPrice: -1m), PriceValidationMessage)
-            .SetName("Validate_NegativeMinPrice_Throws");
-        yield return new TestCaseData(new RoomSearchRequest(MaxPrice: -1m), PriceValidationMessage)
-            .SetName("Validate_NegativeMaxPrice_Throws");
-        yield return new TestCaseData(new RoomSearchRequest(MinArea: 30, MaxArea: 20), AreaValidationMessage)
-            .SetName("Validate_MinAreaGreaterThanMaxArea_Throws");
-        yield return new TestCaseData(new RoomSearchRequest(MinArea: -1), AreaValidationMessage)
-            .SetName("Validate_NegativeMinArea_Throws");
-        yield return new TestCaseData(new RoomSearchRequest(MaxArea: -1), AreaValidationMessage)
-            .SetName("Validate_NegativeMaxArea_Throws");
-        yield return new TestCaseData(new RoomSearchRequest(MaxDistanceKm: 0), MaxDistanceValidationMessage)
-            .SetName("Validate_ZeroMaxDistance_Throws");
-        yield return new TestCaseData(new RoomSearchRequest(MaxDistanceKm: -2), MaxDistanceValidationMessage)
-            .SetName("Validate_NegativeMaxDistance_Throws");
-    }
-
-    [TestCaseSource(nameof(InvalidRequests))]
-    public async Task ExecuteAsync_InvalidRequest_ThrowsDomainValidationExceptionWithoutCallingRepository(
-        RoomSearchRequest request, string expectedMessage)
-    {
         var exception = Assert.ThrowsAsync<DomainValidationException>(async () => await _sut.ExecuteAsync(request));
 
-        Assert.That(exception!.Message, Is.EqualTo(expectedMessage));
-        await _repository.DidNotReceive().GetAllAsync(Arg.Any<CancellationToken>());
+        Assert.That(exception!.ErrorCode, Is.EqualTo("INVALID_PRICE_RANGE"));
     }
 
     [Test]
-    public async Task ExecuteAsync_ZeroDistanceBounds_AreAllowed()
+    public void ExecuteAsync_NegativeRent_Throws()
     {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(MinPrice: 0m, MaxPrice: 0m, MinArea: 0, MaxArea: 0));
+        var request = new RoomSearchRequest(MinRentVnd: -1);
 
+        Assert.ThrowsAsync<DomainValidationException>(async () => await _sut.ExecuteAsync(request));
+    }
+
+    [Test]
+    public void ExecuteAsync_MinAreaGreaterThanMaxArea_ThrowsInvalidAreaRange()
+    {
+        var request = new RoomSearchRequest(MinAreaM2: 40, MaxAreaM2: 10);
+
+        var exception = Assert.ThrowsAsync<DomainValidationException>(async () => await _sut.ExecuteAsync(request));
+
+        Assert.That(exception!.ErrorCode, Is.EqualTo("INVALID_AREA_RANGE"));
+    }
+
+    [TestCase(double.NaN)]
+    [TestCase(double.PositiveInfinity)]
+    [TestCase(double.NegativeInfinity)]
+    public void ExecuteAsync_NonFiniteAreaFilter_Throws(double area)
+    {
         Assert.Multiple(() =>
         {
-            Assert.That(result.Items, Is.Empty);
-            Assert.That(result.TotalCount, Is.EqualTo(0));
+            Assert.ThrowsAsync<DomainValidationException>(
+                async () => await _sut.ExecuteAsync(new RoomSearchRequest(MaxAreaM2: area)));
+            Assert.ThrowsAsync<DomainValidationException>(
+                async () => await _sut.ExecuteAsync(new RoomSearchRequest(MinAreaM2: area)));
         });
     }
 
-    // --------------------------------------------------------------- Sắp xếp
-
-    [Test]
-    public async Task ExecuteAsync_DefaultSort_OrdersByDistanceAscending()
+    [TestCase(0.0)]
+    [TestCase(0.05)]
+    [TestCase(50.1)]
+    [TestCase(double.NaN)]
+    [TestCase(double.PositiveInfinity)]
+    public void ExecuteAsync_MaxDistanceOutOfRange_Throws(double maxDistanceKm)
     {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(PageSize: 50));
-
-        var distances = result.Items.Select(i => i.DistanceKm).ToList();
-        Assert.Multiple(() =>
-        {
-            Assert.That(distances, Is.Ordered.Ascending);
-            Assert.That(result.Items[0].Id, Is.EqualTo("Z115"));
-            Assert.That(result.Items[^1].Id, Is.EqualTo("DONG-HY"));
-        });
+        Assert.ThrowsAsync<DomainValidationException>(
+            async () => await _sut.ExecuteAsync(new RoomSearchRequest(MaxDistanceKm: maxDistanceKm)));
     }
 
-    [Test]
-    public async Task ExecuteAsync_SortByDistanceExplicit_OrdersByDistanceAscending()
-    {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(SortBy: "distance", PageSize: 50));
-
-        Assert.That(result.Items.Select(i => i.DistanceKm), Is.Ordered.Ascending);
-    }
+    // ----------------------------------------------------------------- campus (BR-CMP-01..03)
 
     [Test]
-    public async Task ExecuteAsync_SortByPriceAscending_OrdersByPriceAscending()
+    public void ExecuteAsync_UnknownCampusId_ThrowsCampusNotFound()
     {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(SortBy: "price_asc", PageSize: 50));
+        var request = new RoomSearchRequest(CampusId: "NOPE");
+
+        var exception = Assert.ThrowsAsync<DomainValidationException>(async () => await _sut.ExecuteAsync(request));
 
         Assert.Multiple(() =>
         {
-            Assert.That(result.Items.Select(i => i.Price), Is.Ordered.Ascending);
-            Assert.That(result.Items[0].Id, Is.EqualTo("DONG-HY"));
-            Assert.That(result.Items[^1].Id, Is.EqualTo("THINH-DAN"));
-        });
-    }
-
-    [Test]
-    public async Task ExecuteAsync_SortByPriceDescending_OrdersByPriceDescending()
-    {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(SortBy: "price_desc", PageSize: 50));
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.Items.Select(i => i.Price), Is.Ordered.Descending);
-            Assert.That(result.Items[0].Id, Is.EqualTo("THINH-DAN"));
-            Assert.That(result.Items[^1].Id, Is.EqualTo("DONG-HY"));
+            Assert.That(exception!.ErrorCode, Is.EqualTo("CAMPUS_NOT_FOUND"));
+            Assert.That(exception.Message, Does.Contain("NOPE"));
         });
     }
 
     [Test]
-    public async Task ExecuteAsync_SortByAreaAscending_OrdersByAreaAscending()
+    public async Task ExecuteAsync_WithoutCampusId_UsesDefaultCampusIctu()
     {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(SortBy: "area_asc", PageSize: 50));
+        var result = await _sut.ExecuteAsync(new RoomSearchRequest());
 
+        await _campusRepository.Received(1).GetDefaultCampusAsync(Arg.Any<CancellationToken>());
+        Assert.That(result.Items, Is.Not.Empty);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithCampusId_UsesThatCampusAsDistanceOrigin()
+    {
+        var result = await _sut.ExecuteAsync(new RoomSearchRequest(CampusId: "TNUT"));
+
+        var nearest = result.Items[0];
+        Assert.That(nearest.Id, Is.EqualTo("cand-tnut-house"), "Sắp xếp mặc định 'distance' tính từ TNUT");
+    }
+
+    // ----------------------------------------------------------------- read model query (M2 / ADR-006)
+
+    [Test]
+    public async Task ExecuteAsync_WithoutFilters_PassesEmptyFilterWithNullBoundingBox()
+    {
+        await _sut.ExecuteAsync(new RoomSearchRequest());
+
+        Assert.That(_capturedFilter, Is.Not.Null);
         Assert.Multiple(() =>
         {
-            Assert.That(result.Items.Select(i => i.Area), Is.Ordered.Ascending);
-            Assert.That(result.Items[0].Id, Is.EqualTo("DONG-HY"));
-            Assert.That(result.Items[^1].Id, Is.EqualTo("THINH-DAN"));
+            Assert.That(_capturedFilter!.MinRentVnd, Is.Null);
+            Assert.That(_capturedFilter.MaxRentVnd, Is.Null);
+            Assert.That(_capturedFilter.MinAreaM2, Is.Null);
+            Assert.That(_capturedFilter.MaxAreaM2, Is.Null);
+            Assert.That(_capturedFilter.RoomTypes, Is.Null);
+            Assert.That(_capturedFilter.MinLat, Is.Null);
+            Assert.That(_capturedFilter.MaxLat, Is.Null);
+            Assert.That(_capturedFilter.MinLng, Is.Null);
+            Assert.That(_capturedFilter.MaxLng, Is.Null);
         });
     }
 
     [Test]
-    public async Task ExecuteAsync_SortByAreaDescending_OrdersByAreaDescending()
+    public async Task ExecuteAsync_WithFilters_PushesPriceAreaRoomTypesToReadModel()
     {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(SortBy: "area_desc", PageSize: 50));
+        var request = new RoomSearchRequest(
+            MinRentVnd: 1_000_000L,
+            MaxRentVnd: 3_000_000L,
+            MinAreaM2: 15,
+            MaxAreaM2: 30,
+            RoomTypes: new[] { RoomType.BoardingRoom, RoomType.Dormitory });
+
+        await _sut.ExecuteAsync(request);
 
         Assert.Multiple(() =>
         {
-            Assert.That(result.Items.Select(i => i.Area), Is.Ordered.Descending);
-            Assert.That(result.Items[0].Id, Is.EqualTo("THINH-DAN"));
-            Assert.That(result.Items[^1].Id, Is.EqualTo("DONG-HY"));
+            Assert.That(_capturedFilter!.MinRentVnd, Is.EqualTo(1_000_000L));
+            Assert.That(_capturedFilter.MaxRentVnd, Is.EqualTo(3_000_000L));
+            Assert.That(_capturedFilter.MinAreaM2, Is.EqualTo(15));
+            Assert.That(_capturedFilter.MaxAreaM2, Is.EqualTo(30));
+            Assert.That(_capturedFilter.RoomTypes, Is.EquivalentTo(new[] { RoomType.BoardingRoom, RoomType.Dormitory }));
         });
     }
 
     [Test]
-    public async Task ExecuteAsync_SortByNewest_OrdersByCreatedAtDescending()
+    public async Task ExecuteAsync_WithMaxDistance_ComputesBoundingBoxAroundCampus()
     {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(SortBy: "newest", PageSize: 50));
+        // ADR-006: deltaLat = km / 110.574; deltaLng = km / (111.320 * cos(lat))
+        await _sut.ExecuteAsync(new RoomSearchRequest(MaxDistanceKm: 2.0));
+
+        var deltaLat = 2.0 / 110.574;
+        var deltaLng = 2.0 / (111.320 * Math.Cos(21.5851 * Math.PI / 180.0));
+
+        Assert.That(_capturedFilter, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(_capturedFilter!.MinLat, Is.EqualTo(21.5851 - deltaLat).Within(1e-9));
+            Assert.That(_capturedFilter.MaxLat, Is.EqualTo(21.5851 + deltaLat).Within(1e-9));
+            Assert.That(_capturedFilter.MinLng, Is.EqualTo(105.8066 - deltaLng).Within(1e-9));
+            Assert.That(_capturedFilter.MaxLng, Is.EqualTo(105.8066 + deltaLng).Within(1e-9));
+        });
+    }
+
+    // ----------------------------------------------------------------- filtering (AC1/AC2)
+
+    [Test]
+    public async Task ExecuteAsync_WithRoomTypes_ReturnsOnlySelectedTypes()
+    {
+        var request = new RoomSearchRequest(RoomTypes: new[] { RoomType.MiniApartment });
+
+        var result = await _sut.ExecuteAsync(request);
+
+        Assert.That(result.Items, Is.Not.Empty);
+        Assert.That(result.Items.Select(item => item.RoomType), Is.All.EqualTo(RoomType.MiniApartment));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithMaxDistance_KeepsOnlyRoomsWithinExactHaversineDistance()
+    {
+        var result = await _sut.ExecuteAsync(new RoomSearchRequest(MaxDistanceKm: 2.0));
 
         Assert.Multiple(() =>
         {
-            Assert.That(result.Items.Select(i => i.CreatedAtUtc), Is.Ordered.Descending);
-            Assert.That(result.Items[0].Id, Is.EqualTo("THAO-NGUYEN"));
-            Assert.That(result.Items[^1].Id, Is.EqualTo("Z115"));
+            Assert.That(result.Items, Is.Not.Empty);
+            Assert.That(result.Items.Select(item => item.Id), Does.Not.Contain("cand-tnut-house"));
+            foreach (var item in result.Items)
+            {
+                var expected = HaversineDistanceCalculator.CalculateDistanceKm(
+                    Ictu.Latitude, Ictu.Longitude, item.Latitude, item.Longitude);
+                Assert.That(item.DistanceKm, Is.EqualTo(expected).Within(0.005));
+                Assert.That(item.DistanceKm, Is.LessThanOrEqualTo(2.0));
+            }
         });
     }
 
     [Test]
-    public async Task ExecuteAsync_SortByIsCaseInsensitive()
+    public async Task ExecuteAsync_ReturnsOnlyAvailableRooms_AsReportedByReadModel()
     {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(SortBy: "PRICE_ASC", PageSize: 50));
+        _readModel
+            .QueryCandidatesAsync(Arg.Any<RoomSearchQueryFilter>(), Arg.Any<CancellationToken>())
+            .Returns(new[]
+            {
+                NewCandidate("cand-available", "Phòng còn trống", RoomType.BoardingRoom, 1_500_000L, 18, 21.5875, 105.8080, BasePublishedAt),
+                NewCandidate("cand-other", "Phòng khác", RoomType.BoardingRoom, 1_600_000L, 19, 21.5880, 105.8085, BasePublishedAt)
+                    with { Status = ListingStatus.Rented }
+            });
 
-        Assert.That(result.Items.Select(i => i.Price), Is.Ordered.Ascending);
+        var result = await _sut.ExecuteAsync(new RoomSearchRequest());
+
+        Assert.That(result.Items.Select(item => item.Id), Is.EquivalentTo(new[] { "cand-available" }));
+    }
+
+    // ----------------------------------------------------------------- sorting (BR-SRCH-04)
+
+    [Test]
+    public async Task ExecuteAsync_DefaultSort_OrdersByDistanceFromCampus()
+    {
+        var result = await _sut.ExecuteAsync(new RoomSearchRequest());
+
+        var distances = result.Items.Select(item => item.DistanceKm).ToList();
+        Assert.That(distances, Is.Ordered, "Mặc định sort = 'distance' (BR-SRCH-04)");
     }
 
     [Test]
-    public async Task ExecuteAsync_UnknownSortBy_FallsBackToDistance()
+    public async Task ExecuteAsync_SortPriceAsc_OrdersByMonthlyRentAscending()
     {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(SortBy: "rating_desc", PageSize: 50));
+        var result = await _sut.ExecuteAsync(new RoomSearchRequest(Sort: "price_asc"));
 
-        Assert.That(result.Items.Select(i => i.DistanceKm), Is.Ordered.Ascending);
+        Assert.That(result.Items.Select(item => item.MonthlyRentVnd), Is.Ordered);
     }
 
-    // ------------------------------------------------------------- Phân trang
+    [Test]
+    public async Task ExecuteAsync_SortPriceDesc_OrdersByMonthlyRentDescending()
+    {
+        var result = await _sut.ExecuteAsync(new RoomSearchRequest(Sort: "price_desc"));
+
+        Assert.That(result.Items.Select(item => item.MonthlyRentVnd), Is.Ordered.Descending);
+    }
 
     [Test]
-    public async Task ExecuteAsync_FirstPage_ReturnsRequestedPageSizeAndTotalCountBeforePaging()
+    public async Task ExecuteAsync_SortNewest_OrdersByPublishedAtDescending()
     {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(SortBy: "price_asc", Page: 1, PageSize: 2));
+        var result = await _sut.ExecuteAsync(new RoomSearchRequest(Sort: "newest"));
+
+        var publishedDates = result.Items.Select(item => item.PublishedAtUtc ?? DateTime.MinValue).ToList();
+        Assert.That(publishedDates, Is.Ordered.Descending);
+        Assert.That(result.Items[0].Id, Is.EqualTo("cand-tnut-house"));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_SortNewest_NullPublishedAtGoesLast()
+    {
+        _readModel
+            .QueryCandidatesAsync(Arg.Any<RoomSearchQueryFilter>(), Arg.Any<CancellationToken>())
+            .Returns(new[]
+            {
+                NewCandidate("cand-null", "Chưa publish", RoomType.BoardingRoom, 1_500_000L, 18, 21.5875, 105.8080, null),
+                NewCandidate("cand-old", "Publish cũ", RoomType.BoardingRoom, 1_500_000L, 18, 21.5876, 105.8081, BasePublishedAt)
+            });
+
+        var result = await _sut.ExecuteAsync(new RoomSearchRequest(Sort: "newest"));
+
+        Assert.That(result.Items.Select(item => item.Id), Is.EqualTo(new[] { "cand-old", "cand-null" }));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_EqualValues_AreTiedByRoomId()
+    {
+        _readModel
+            .QueryCandidatesAsync(Arg.Any<RoomSearchQueryFilter>(), Arg.Any<CancellationToken>())
+            .Returns(new[]
+            {
+                NewCandidate("cand-b", "Phòng B", RoomType.BoardingRoom, 1_500_000L, 18, 21.5875, 105.8080, BasePublishedAt),
+                NewCandidate("cand-a", "Phòng A", RoomType.BoardingRoom, 1_500_000L, 18, 21.5875, 105.8080, BasePublishedAt)
+            });
+
+        var result = await _sut.ExecuteAsync(new RoomSearchRequest(Sort: "price_asc"));
+
+        Assert.That(result.Items.Select(item => item.Id), Is.EqualTo(new[] { "cand-a", "cand-b" }));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_SortIsCaseInsensitiveAndTrimmed()
+    {
+        var result = await _sut.ExecuteAsync(new RoomSearchRequest(Sort: "  PRICE_DESC  "));
+
+        Assert.That(result.Items.Select(item => item.MonthlyRentVnd), Is.Ordered.Descending);
+    }
+
+    // ----------------------------------------------------------------- paging (US04 AC3)
+
+    [Test]
+    public async Task ExecuteAsync_FirstPage_ReturnsRequestedPageSizeAndTotalCount()
+    {
+        var result = await _sut.ExecuteAsync(new RoomSearchRequest(PageNumber: 1, PageSize: 2));
 
         Assert.Multiple(() =>
         {
-            Assert.That(result.Items.Select(i => i.Id), Is.EqualTo(Ids("DONG-HY", "THAO-NGUYEN")));
-            Assert.That(result.TotalCount, Is.EqualTo(6), "TotalCount = số phần tử sau lọc, trước phân trang");
+            Assert.That(result.Items, Has.Count.EqualTo(2));
+            Assert.That(result.TotalCount, Is.EqualTo(Candidates.Length));
             Assert.That(result.PageNumber, Is.EqualTo(1));
             Assert.That(result.PageSize, Is.EqualTo(2));
             Assert.That(result.TotalPages, Is.EqualTo(3));
+            Assert.That(result.HasNextPage, Is.True);
+            Assert.That(result.HasPreviousPage, Is.False);
         });
     }
 
     [Test]
-    public async Task ExecuteAsync_SecondPage_ReturnsNextSlice()
+    public async Task ExecuteAsync_SecondPage_ReturnsNextSliceWithoutOverlap()
     {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(SortBy: "price_asc", Page: 2, PageSize: 2));
+        var first = await _sut.ExecuteAsync(new RoomSearchRequest(PageNumber: 1, PageSize: 2));
+        var second = await _sut.ExecuteAsync(new RoomSearchRequest(PageNumber: 2, PageSize: 2));
 
         Assert.Multiple(() =>
         {
-            Assert.That(result.Items.Select(i => i.Id), Is.EqualTo(Ids("Z115", "KTX-32")));
-            Assert.That(result.TotalCount, Is.EqualTo(6));
-            Assert.That(result.PageNumber, Is.EqualTo(2));
+            Assert.That(second.Items, Has.Count.EqualTo(2));
+            Assert.That(second.Items.Select(item => item.Id).Intersect(first.Items.Select(item => item.Id)), Is.Empty);
         });
     }
 
     [Test]
     public async Task ExecuteAsync_PageBeyondLast_ReturnsEmptyItemsButKeepsTotalCount()
     {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(Page: 10, PageSize: 2));
+        var result = await _sut.ExecuteAsync(new RoomSearchRequest(PageNumber: 99, PageSize: 20));
 
         Assert.Multiple(() =>
         {
             Assert.That(result.Items, Is.Empty);
-            Assert.That(result.TotalCount, Is.EqualTo(6));
+            Assert.That(result.TotalCount, Is.EqualTo(Candidates.Length));
         });
     }
 
     [Test]
-    public async Task ExecuteAsync_PageIntMaxValue_ReturnsEmptyItemsInsteadOfOverflowingToFirstPage()
+    public async Task ExecuteAsync_PageSizeAboveMax_IsClampedTo50AndPageBelowOneToOne()
     {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(Page: int.MaxValue, PageSize: 10));
+        var result = await _sut.ExecuteAsync(new RoomSearchRequest(PageNumber: 0, PageSize: 500));
 
         Assert.Multiple(() =>
         {
-            Assert.That(result.Items, Is.Empty, "(page - 1) * pageSize tràn int không được kéo Skip về 0");
-            Assert.That(result.TotalCount, Is.EqualTo(6));
-            Assert.That(result.PageNumber, Is.EqualTo(int.MaxValue));
-            Assert.That(result.PageSize, Is.EqualTo(10));
-        });
-    }
-
-    [Test]
-    public async Task ExecuteAsync_PageThatOverflowsIntWhenMultipliedByPageSize_ReturnsEmptyItems()
-    {
-        // 536870912 * 10 = 5_368_709_120 > int.MaxValue -> Skip(int) cũ tràn thành số âm.
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(Page: 536_870_912, PageSize: 10));
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.Items, Is.Empty);
-            Assert.That(result.TotalCount, Is.EqualTo(6));
-        });
-    }
-
-    [Test]
-    public async Task ExecuteAsync_PageAndPageSizeBelowOne_AreClampedToOne()
-    {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(Page: 0, PageSize: 0));
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.Items, Has.Count.EqualTo(1));
+            Assert.That(result.PageSize, Is.EqualTo(RoomSearchRequest.MaxPageSize));
             Assert.That(result.PageNumber, Is.EqualTo(1));
-            Assert.That(result.PageSize, Is.EqualTo(1));
-            Assert.That(result.TotalCount, Is.EqualTo(6));
         });
     }
 
-    // --------------------------------------------------------- Tọa độ gốc tùy chỉnh
+    [Test]
+    public async Task ExecuteAsync_HugePageNumber_DoesNotOverflow()
+    {
+        var result = await _sut.ExecuteAsync(new RoomSearchRequest(PageNumber: int.MaxValue, PageSize: 50));
+
+        Assert.That(result.Items, Is.Empty);
+    }
+
+    // ----------------------------------------------------------------- mapping / robustness
 
     [Test]
-    public async Task ExecuteAsync_CustomOrigin_RecalculatesDistancesAndDistanceSortOrder()
+    public async Task ExecuteAsync_MapsRoomCardDtoAndMarksAnonymousAsNotFavourite()
     {
-        // Gốc tùy chỉnh ngay tại Thịnh Đán (21.5710, 105.8190)
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(
-            Latitude: 21.5710, Longitude: 105.8190, SortBy: "distance", PageSize: 50));
+        var result = await _sut.ExecuteAsync(new RoomSearchRequest(RoomTypes: new[] { RoomType.WholeHouse }));
 
-        var thinhDan = result.Items.Single(i => i.Id == "THINH-DAN");
-        var z115 = result.Items.Single(i => i.Id == "Z115");
-
+        var card = result.Items.Single();
         Assert.Multiple(() =>
         {
-            Assert.That(thinhDan.DistanceKm, Is.EqualTo(0.0));
-            Assert.That(z115.DistanceKm,
-                Is.EqualTo(HaversineDistanceCalculator.CalculateDistanceKm(21.5710, 105.8190, 21.5875, 105.8080)));
-            Assert.That(z115.DistanceKm, Is.GreaterThan(1.5));
-            Assert.That(result.Items[0].Id, Is.EqualTo("THINH-DAN"), "Phòng ở gốc phải đứng đầu khi sắp xếp theo khoảng cách");
+            Assert.That(card.Id, Is.EqualTo("cand-tnut-house"));
+            Assert.That(card.Title, Is.EqualTo("Nhà nguyên căn gần TNUT"));
+            Assert.That(card.MonthlyRentVnd, Is.EqualTo(4_200_000L));
+            Assert.That(card.AreaM2, Is.EqualTo(45.0));
+            Assert.That(card.RoomType, Is.EqualTo(RoomType.WholeHouse));
+            Assert.That(card.IsVerified, Is.True);
+            Assert.That(card.Status, Is.EqualTo(ListingStatus.Available));
+            Assert.That(card.Latitude, Is.EqualTo(21.54954));
+            Assert.That(card.Longitude, Is.EqualTo(105.84350));
+            Assert.That(card.PublishedAtUtc, Is.EqualTo(BasePublishedAt.AddMinutes(6)));
+            Assert.That(card.IsFavourite, Is.False);
         });
     }
 
     [Test]
-    public async Task ExecuteAsync_CustomOrigin_AppliesMaxDistanceAgainstCustomOrigin()
+    public async Task ExecuteAsync_WhenNoCandidates_ReturnsEmptyPagedResult()
     {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(
-            Latitude: 21.5710, Longitude: 105.8190, MaxDistanceKm: 0.1));
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.Items.Select(i => i.Id), Is.EqualTo(Ids("THINH-DAN")));
-            Assert.That(result.TotalCount, Is.EqualTo(1));
-        });
-    }
-
-    [Test]
-    public async Task ExecuteAsync_OnlyLatitudeProvided_UsesIctuLongitudeDefault()
-    {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(Latitude: 21.5710, SortBy: "distance", PageSize: 50));
-
-        var z115 = result.Items.Single(i => i.Id == "Z115");
-        Assert.That(z115.DistanceKm,
-            Is.EqualTo(HaversineDistanceCalculator.CalculateDistanceKm(21.5710, IctuLng, 21.5875, 105.8080)));
-    }
-
-    // ---------------------------------------------------------------- Keyword
-
-    [Test]
-    public async Task ExecuteAsync_KeywordWithoutDiacritics_MatchesVietnameseTitleAndAddress()
-    {
-        var byTitle = await _sut.ExecuteAsync(new RoomSearchRequest(Keyword: "dien", PageSize: 50));
-        var byAddress = await _sut.ExecuteAsync(new RoomSearchRequest(Keyword: "duong 3/2", PageSize: 50));
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(byTitle.Items.Select(i => i.Id), Is.EqualTo(Ids("DONG-HY")), "\"dien\" phải khớp \"Điện\", không khớp \"Đường\"");
-            Assert.That(byAddress.Items.Select(i => i.Id), Is.EqualTo(Ids("KTX-32")), "\"duong\" phải khớp \"Đường\"");
-        });
-    }
-
-    [Test]
-    public async Task ExecuteAsync_KeywordWithDiacritics_MatchesTitle()
-    {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(Keyword: "Điện"));
-
-        Assert.That(result.Items.Select(i => i.Id), Is.EqualTo(Ids("DONG-HY")));
-    }
-
-    [Test]
-    public async Task ExecuteAsync_KeywordIsCaseInsensitiveAndMatchesRoomCode()
-    {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(Keyword: "z115"));
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.Items.Select(i => i.Id), Is.EqualTo(Ids("Z115")));
-            Assert.That(result.TotalCount, Is.EqualTo(1));
-        });
-    }
-
-    [Test]
-    public async Task ExecuteAsync_DiacriticKeyword_MatchesDiacriticTitleToo()
-    {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(Keyword: "Phòng"));
-
-        Assert.That(result.Items.Select(i => i.Id), Has.Member("Z115"));
-    }
-
-    [Test]
-    public async Task ExecuteAsync_KeywordMatchesOnlyFilteredRooms_NeverUnverified()
-    {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(Keyword: "chua xac minh"));
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.Items, Is.Empty);
-            Assert.That(result.TotalCount, Is.EqualTo(0));
-        });
-    }
-
-    [Test]
-    public async Task ExecuteAsync_WhitespaceKeyword_IsIgnored()
-    {
-        var blank = await _sut.ExecuteAsync(new RoomSearchRequest(Keyword: "   "));
-        var none = await _sut.ExecuteAsync(new RoomSearchRequest());
-
-        Assert.That(blank.TotalCount, Is.EqualTo(none.TotalCount));
-    }
-
-    // ---------------------------------------------------------------- Mapping
-
-    [Test]
-    public async Task ExecuteAsync_MapsAllRoomCardFieldsAndHaversineDistance()
-    {
-        var result = await _sut.ExecuteAsync(new RoomSearchRequest(Keyword: "z115"));
-        var source = _rooms.Single(r => r.Id == "Z115");
-        var dto = result.Items.Single();
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(dto.Id, Is.EqualTo(source.Id));
-            Assert.That(dto.Title, Is.EqualTo(source.Title));
-            Assert.That(dto.Description, Is.EqualTo(source.Description));
-            Assert.That(dto.Price, Is.EqualTo(source.Price));
-            Assert.That(dto.Area, Is.EqualTo(source.Area));
-            Assert.That(dto.Address, Is.EqualTo(source.Address));
-            Assert.That(dto.Latitude, Is.EqualTo(source.Latitude));
-            Assert.That(dto.Longitude, Is.EqualTo(source.Longitude));
-            Assert.That(dto.DistanceKm,
-                Is.EqualTo(HaversineDistanceCalculator.CalculateDistanceKm(IctuLat, IctuLng, source.Latitude, source.Longitude)));
-            Assert.That(dto.DistanceKm, Is.EqualTo(0.30).Within(0.01));
-            Assert.That(dto.IsAvailable, Is.True);
-            Assert.That(dto.IsVerified, Is.True);
-            Assert.That(dto.CreatedAtUtc, Is.EqualTo(source.CreatedAtUtc));
-            Assert.That(result.TotalCount, Is.EqualTo(1));
-            Assert.That(result.PageNumber, Is.EqualTo(1));
-            Assert.That(result.PageSize, Is.EqualTo(10));
-        });
-    }
-
-    [Test]
-    public async Task ExecuteAsync_WhenNoRoomsInRepository_ReturnsEmptyPagedResult()
-    {
-        _repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(new List<Room>());
+        _readModel
+            .QueryCandidatesAsync(Arg.Any<RoomSearchQueryFilter>(), Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<RoomSearchCandidate>());
 
         var result = await _sut.ExecuteAsync(new RoomSearchRequest());
 
         Assert.Multiple(() =>
         {
             Assert.That(result.Items, Is.Empty);
-            Assert.That(result.TotalCount, Is.EqualTo(0));
-            Assert.That(result.PageNumber, Is.EqualTo(1));
-            Assert.That(result.PageSize, Is.EqualTo(10));
+            Assert.That(result.TotalCount, Is.Zero);
+            Assert.That(result.TotalPages, Is.Zero);
         });
     }
 
     [Test]
-    public async Task ExecuteAsync_ForwardsCancellationTokenToRepository()
+    public async Task ExecuteAsync_ForwardsCancellationToken()
     {
         using var cts = new CancellationTokenSource();
 
         await _sut.ExecuteAsync(new RoomSearchRequest(), cts.Token);
 
-        await _repository.Received(1).GetAllAsync(cts.Token);
+        await _campusRepository.Received(1).GetDefaultCampusAsync(cts.Token);
+        await _readModel.Received(1).QueryCandidatesAsync(Arg.Any<RoomSearchQueryFilter>(), cts.Token);
     }
 
     [Test]
-    public void Constructor_WithNullRepository_ThrowsArgumentNullException()
+    public void Constructor_WithNullDependency_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new SearchRoomsUseCase(null!));
+        Assert.Multiple(() =>
+        {
+            Assert.Throws<ArgumentNullException>(() => new SearchRoomsUseCase(null!, _readModel));
+            Assert.Throws<ArgumentNullException>(() => new SearchRoomsUseCase(_campusRepository, null!));
+        });
     }
 }

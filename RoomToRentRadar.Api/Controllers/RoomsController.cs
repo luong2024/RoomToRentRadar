@@ -28,8 +28,8 @@ public sealed class RoomsController : ControllerBase
         CancellationToken ct)
     {
         var clampedPageSize = Math.Clamp(request.PageSize, 1, 50);
-        var safePage = Math.Max(request.Page, 1);
-        var safeRequest = request with { Page = safePage, PageSize = clampedPageSize };
+        var safePage = Math.Max(request.PageNumber, 1);
+        var safeRequest = request with { PageNumber = safePage, PageSize = clampedPageSize };
 
         var result = await _searchRoomsUseCase.ExecuteAsync(safeRequest, ct);
         return Ok(result);

@@ -1,11 +1,13 @@
-using System.Globalization;
-using Microsoft.Data.Sqlite;
 using RoomToRentRadar.Datastore.Sqlite.Context;
-using RoomToRentRadar.Domain.Entities;
+using RoomToRentRadar.Domain.Aggregates;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 
 namespace RoomToRentRadar.Datastore.Sqlite.Repositories;
 
+/// <summary>
+/// Phase 0 stub: only the new <see cref="IRoomRepository"/> shape exists here.
+/// Task 3 rewrites this against the ERD §4.4 schema (Campuses + Rooms, optimistic concurrency).
+/// </summary>
 public sealed class SqliteRoomRepository : IRoomRepository
 {
     private readonly SqliteDbContext _dbContext;
@@ -16,117 +18,12 @@ public sealed class SqliteRoomRepository : IRoomRepository
         _dbContext = dbContext;
     }
 
-    public async Task<IReadOnlyList<Room>> GetAllAsync(CancellationToken ct = default)
-    {
-        var conn = _dbContext.CreateOpenConnection();
-        try
-        {
-            await using var cmd = conn.CreateCommand();
-            cmd.CommandText = """
-                SELECT Id, Title, Description, Price, Area, Address, Latitude, Longitude,
-                       LandlordId, IsAvailable, IsVerified, CreatedAtUtc
-                FROM Rooms
-                ORDER BY CreatedAtUtc ASC, Id ASC;
-                """;
+    public Task<Room?> GetByIdAsync(string id, CancellationToken ct = default) =>
+        throw new NotImplementedException("SqliteRoomRepository.GetByIdAsync is implemented in Task 3 (Giai đoạn 3).");
 
-            var rooms = new List<Room>();
-            await using var reader = await cmd.ExecuteReaderAsync(ct);
-            while (await reader.ReadAsync(ct))
-            {
-                rooms.Add(ReadRoom(reader));
-            }
+    public Task AddAsync(Room room, CancellationToken ct = default) =>
+        throw new NotImplementedException("SqliteRoomRepository.AddAsync is implemented in Task 3 (Giai đoạn 3).");
 
-            return rooms;
-        }
-        finally
-        {
-            ReleaseConnection(conn);
-        }
-    }
-
-    public async Task<Room?> GetByIdAsync(string id, CancellationToken ct = default)
-    {
-        var conn = _dbContext.CreateOpenConnection();
-        try
-        {
-            await using var cmd = conn.CreateCommand();
-            cmd.CommandText = """
-                SELECT Id, Title, Description, Price, Area, Address, Latitude, Longitude,
-                       LandlordId, IsAvailable, IsVerified, CreatedAtUtc
-                FROM Rooms
-                WHERE Id = @id
-                LIMIT 1;
-                """;
-            cmd.Parameters.AddWithValue("@id", id);
-
-            await using var reader = await cmd.ExecuteReaderAsync(ct);
-            return await reader.ReadAsync(ct) ? ReadRoom(reader) : null;
-        }
-        finally
-        {
-            ReleaseConnection(conn);
-        }
-    }
-
-    public async Task AddAsync(Room room, CancellationToken ct = default)
-    {
-        ArgumentNullException.ThrowIfNull(room);
-        var conn = _dbContext.CreateOpenConnection();
-        try
-        {
-            await using var cmd = conn.CreateCommand();
-            cmd.CommandText = """
-                INSERT INTO Rooms (
-                    Id, Title, Description, Price, Area, Address, Latitude, Longitude,
-                    LandlordId, IsAvailable, IsVerified, CreatedAtUtc
-                ) VALUES (
-                    @id, @title, @description, @price, @area, @address, @latitude, @longitude,
-                    @landlordId, @isAvailable, @isVerified, @createdAtUtc
-                );
-                """;
-            cmd.Parameters.AddWithValue("@id", room.Id);
-            cmd.Parameters.AddWithValue("@title", room.Title);
-            cmd.Parameters.AddWithValue("@description", room.Description);
-            cmd.Parameters.AddWithValue("@price", room.Price);
-            cmd.Parameters.AddWithValue("@area", room.Area);
-            cmd.Parameters.AddWithValue("@address", room.Address);
-            cmd.Parameters.AddWithValue("@latitude", room.Latitude);
-            cmd.Parameters.AddWithValue("@longitude", room.Longitude);
-            cmd.Parameters.AddWithValue("@landlordId", room.LandlordId);
-            cmd.Parameters.AddWithValue("@isAvailable", room.IsAvailable ? 1 : 0);
-            cmd.Parameters.AddWithValue("@isVerified", room.IsVerified ? 1 : 0);
-            cmd.Parameters.AddWithValue("@createdAtUtc", room.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture));
-
-            await cmd.ExecuteNonQueryAsync(ct);
-        }
-        finally
-        {
-            ReleaseConnection(conn);
-        }
-    }
-
-    private static Room ReadRoom(SqliteDataReader reader) => Room.Reconstitute(
-        id: reader.GetString(0),
-        title: reader.GetString(1),
-        description: reader.GetString(2),
-        price: Convert.ToDecimal(reader.GetValue(3), CultureInfo.InvariantCulture),
-        area: Convert.ToDouble(reader.GetValue(4), CultureInfo.InvariantCulture),
-        address: reader.GetString(5),
-        latitude: Convert.ToDouble(reader.GetValue(6), CultureInfo.InvariantCulture),
-        longitude: Convert.ToDouble(reader.GetValue(7), CultureInfo.InvariantCulture),
-        landlordId: reader.GetString(8),
-        isAvailable: Convert.ToInt64(reader.GetValue(9), CultureInfo.InvariantCulture) != 0,
-        isVerified: Convert.ToInt64(reader.GetValue(10), CultureInfo.InvariantCulture) != 0,
-        createdAtUtc: ParseUtc(reader.GetString(11)));
-
-    private static DateTime ParseUtc(string iso8601) =>
-        DateTime.Parse(iso8601, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
-
-    private void ReleaseConnection(SqliteConnection conn)
-    {
-        if (!_dbContext.OwnsSharedConnection)
-        {
-            conn.Dispose();
-        }
-    }
+    public Task UpdateAsync(Room room, CancellationToken ct = default) =>
+        throw new NotImplementedException("SqliteRoomRepository.UpdateAsync is implemented in Task 3 (Giai đoạn 3).");
 }

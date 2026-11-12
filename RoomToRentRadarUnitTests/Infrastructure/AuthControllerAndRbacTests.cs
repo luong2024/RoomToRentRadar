@@ -241,6 +241,13 @@ public class AuthControllerAndRbacTests
             return new AccountLockedException(DateTime.UtcNow.AddMinutes(15));
         }
 
+        if (exceptionType == typeof(DomainValidationException))
+        {
+            // DomainValidationException was widened with an optional errorCode (ADR-012), so it no
+            // longer exposes a single-string constructor for reflection.
+            return new DomainValidationException("Test error detail");
+        }
+
         return (Exception)Activator.CreateInstance(exceptionType, "Test error detail")!;
     }
 }

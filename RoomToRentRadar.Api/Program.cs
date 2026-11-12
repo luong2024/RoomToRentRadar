@@ -45,6 +45,8 @@ if (string.Equals(databaseProvider, "CosmosDb", StringComparison.OrdinalIgnoreCa
 else
 {
     var sqliteSettings = builder.Configuration.GetSection(SqliteSettings.SectionName).Get<SqliteSettings>() ?? new SqliteSettings();
+    sqliteSettings.SeedDemoRooms = builder.Configuration.GetValue<bool?>("Sqlite:SeedDemoRooms")
+        ?? builder.Environment.IsDevelopment(); // H4: demo seed only for local development
     builder.Services.AddSqliteDatastore(sqliteSettings);
 }
 

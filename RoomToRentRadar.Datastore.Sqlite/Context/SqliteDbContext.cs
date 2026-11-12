@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.Data.Sqlite;
 using RoomToRentRadar.Datastore.Sqlite.Configurations;
+using RoomToRentRadar.Datastore.Sqlite.Seed;
 using SQLitePCL;
 
 namespace RoomToRentRadar.Datastore.Sqlite.Context;
@@ -123,27 +124,39 @@ public sealed class SqliteDbContext : IDisposable
                     CREATE INDEX IF NOT EXISTS IX_AuditLogs_UserId ON AuditLogs(UserId);
                     CREATE INDEX IF NOT EXISTS IX_AuditLogs_Action ON AuditLogs(Action);
 
+                    -- Temporary Phase 0 table: Task 3 replaces it with the full ERD §4.4 schema
+                    -- (Campuses table, Status/RoomType as TEXT, concurrency columns).
                     CREATE TABLE IF NOT EXISTS Rooms (
                         Id TEXT PRIMARY KEY NOT NULL,
+                        LandlordId TEXT NOT NULL,
                         Title TEXT NOT NULL,
-                        Description TEXT NOT NULL,
-                        Price NUMERIC NOT NULL,
-                        Area REAL NOT NULL,
-                        Address TEXT NOT NULL,
+                        RoomType TEXT NOT NULL,
+                        MonthlyRentVnd INTEGER NOT NULL,
+                        DepositVnd INTEGER NOT NULL,
+                        AreaM2 REAL NOT NULL,
+                        AddressLine TEXT NOT NULL,
+                        Ward TEXT NOT NULL,
+                        District TEXT NOT NULL,
                         Latitude REAL NOT NULL,
                         Longitude REAL NOT NULL,
-                        LandlordId TEXT NOT NULL,
-                        IsAvailable INTEGER NOT NULL,
-                        IsVerified INTEGER NOT NULL,
-                        CreatedAtUtc TEXT NOT NULL
+                        Status TEXT NOT NULL,
+                        StatusReason TEXT NULL,
+                        VerifiedAtUtc TEXT NULL,
+                        PublishedAtUtc TEXT NULL,
+                        LastUpdatedAtUtc TEXT NOT NULL,
+                        CreatedAtUtc TEXT NOT NULL,
+                        Version INTEGER NOT NULL DEFAULT 1,
+                        ConcurrencyToken TEXT NOT NULL
                     );
 
-                    CREATE INDEX IF NOT EXISTS IX_Rooms_Price ON Rooms(Price);
-                    CREATE INDEX IF NOT EXISTS IX_Rooms_Area ON Rooms(Area);
+                    CREATE INDEX IF NOT EXISTS IX_Rooms_Status_Rent ON Rooms(Status, MonthlyRentVnd);
                     """;
                 cmd.ExecuteNonQuery();
 
-                SeedRoomsIfEmpty(conn);
+                if (_settings.SeedDemoRooms)
+                {
+                    SeedRoomsIfEmpty(conn);
+                }
                 _schemaInitialized = true;
             }
             finally
@@ -178,18 +191,21 @@ public sealed class SqliteDbContext : IDisposable
             insertCmd.Transaction = tx;
             insertCmd.CommandText = """
                 INSERT OR IGNORE INTO Rooms (
-                    Id, Title, Description, Price, Area, Address, Latitude, Longitude,
-                    LandlordId, IsAvailable, IsVerified, CreatedAtUtc
+                    Id, LandlordId, Title, RoomType, MonthlyRentVnd, DepositVnd, AreaM2,
+                    AddressLine, Ward, District, Latitude, Longitude, Status, StatusReason,
+                    VerifiedAtUtc, PublishedAtUtc, LastUpdatedAtUtc, CreatedAtUtc, Version, ConcurrencyToken
                 ) VALUES (
-                    @id, @title, @description, @price, @area, @address, @latitude, @longitude,
-                    @landlordId, @isAvailable, @isVerified, @createdAtUtc
+                    @id, @landlordId, @title, @roomType, @monthlyRentVnd, @depositVnd, @areaM2,
+                    @addressLine, @ward, @district, @latitude, @longitude, @status, @statusReason,
+                    @verifiedAtUtc, @publishedAtUtc, @lastUpdatedAtUtc, @createdAtUtc, @version, @concurrencyToken
                 );
                 """;
 
             var parameters = new[]
             {
-                "@id", "@title", "@description", "@price", "@area", "@address", "@latitude", "@longitude",
-                "@landlordId", "@isAvailable", "@isVerified", "@createdAtUtc"
+                "@id", "@landlordId", "@title", "@roomType", "@monthlyRentVnd", "@depositVnd", "@areaM2",
+                "@addressLine", "@ward", "@district", "@latitude", "@longitude", "@status", "@statusReason",
+                "@verifiedAtUtc", "@publishedAtUtc", "@lastUpdatedAtUtc", "@createdAtUtc", "@version", "@concurrencyToken"
             }.Select(name =>
             {
                 var parameter = insertCmd.CreateParameter();
@@ -201,17 +217,29 @@ public sealed class SqliteDbContext : IDisposable
             foreach (var room in RoomSeedData.CreateRooms())
             {
                 parameters[0].Value = room.Id;
-                parameters[1].Value = room.Title;
-                parameters[2].Value = room.Description;
-                parameters[3].Value = room.Price;
-                parameters[4].Value = room.Area;
-                parameters[5].Value = room.Address;
-                parameters[6].Value = room.Latitude;
-                parameters[7].Value = room.Longitude;
-                parameters[8].Value = room.LandlordId;
-                parameters[9].Value = room.IsAvailable ? 1 : 0;
-                parameters[10].Value = room.IsVerified ? 1 : 0;
-                parameters[11].Value = room.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture);
+                parameters[1].Value = room.LandlordId;
+                parameters[2].Value = room.Title;
+                parameters[3].Value = room.RoomType.ToString();
+                parameters[4].Value = room.MonthlyRentVnd;
+                parameters[5].Value = room.DepositVnd;
+                parameters[6].Value = room.AreaM2;
+                parameters[7].Value = room.AddressLine;
+                parameters[8].Value = room.Ward;
+                parameters[9].Value = room.District;
+                parameters[10].Value = room.Latitude;
+                parameters[11].Value = room.Longitude;
+                parameters[12].Value = room.Status.ToString();
+                parameters[13].Value = (object?)room.StatusReason ?? DBNull.Value;
+                parameters[14].Value = room.VerifiedAtUtc.HasValue
+                    ? room.VerifiedAtUtc.Value.ToString("O", CultureInfo.InvariantCulture)
+                    : DBNull.Value;
+                parameters[15].Value = room.PublishedAtUtc.HasValue
+                    ? room.PublishedAtUtc.Value.ToString("O", CultureInfo.InvariantCulture)
+                    : DBNull.Value;
+                parameters[16].Value = room.LastUpdatedAtUtc.ToString("O", CultureInfo.InvariantCulture);
+                parameters[17].Value = room.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture);
+                parameters[18].Value = room.Version;
+                parameters[19].Value = room.ConcurrencyToken;
                 insertCmd.ExecuteNonQuery();
             }
         }

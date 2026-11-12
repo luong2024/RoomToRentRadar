@@ -40,6 +40,11 @@ public sealed class AuthExceptionHandlingMiddleware
                 Instance = context.Request.Path
             };
 
+            if (ex is DomainValidationException { ErrorCode: not null } dve)
+            {
+                problem.Extensions["errorCode"] = dve.ErrorCode;
+            }
+
             await JsonSerializer.SerializeAsync(
                 context.Response.Body,
                 problem,
@@ -80,6 +85,7 @@ public sealed class AuthExceptionHandlingMiddleware
 
             case DuplicateEmailException:
             case ConcurrencyConflictException:
+            case InvalidStateTransitionException:
                 statusCode = StatusCodes.Status409Conflict;
                 title = "Conflict";
                 return true;

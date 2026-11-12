@@ -2,6 +2,7 @@ using RoomToRentRadar.Domain.Services;
 
 namespace RoomToRentRadarUnitTests.Domain;
 
+/// <summary>H3 / BR-CMP-03: distance must be finite-safe and rounded to 0.01 km.</summary>
 [TestFixture]
 public class HaversineDistanceCalculatorTests
 {
@@ -19,9 +20,7 @@ public class HaversineDistanceCalculatorTests
     [Test]
     public void CalculateDistanceKm_IctuToZ115_ReturnsAboutZeroPointThreeKm()
     {
-        // ICTU (21.5851, 105.8066) -> Z115 (21.5875, 105.8080)
-        // Delta lat 0.0024 -> ~0.267 km; delta lng 0.0014 -> ~0.145 km
-        // => ~0.3036 km -> round 2dp = 0.30 (plan ghi "~0.42" là ước lượng sai, đã xác minh bằng 3 cách tính độc lập)
+        // ICTU (21.5851, 105.8066) -> phòng Z115 (21.5875, 105.8080) ≈ 0.3036 km -> 0.30 sau làm tròn.
         var distance = HaversineDistanceCalculator.CalculateDistanceKm(IctuLat, IctuLng, 21.5875, 105.8080);
 
         Assert.That(distance, Is.EqualTo(0.30).Within(0.01));
@@ -37,10 +36,61 @@ public class HaversineDistanceCalculatorTests
     }
 
     [Test]
+    public void CalculateDistanceKm_AntipodalPoints_ReturnsHalfCircumferenceWithoutNaN()
+    {
+        var distance = HaversineDistanceCalculator.CalculateDistanceKm(IctuLat, IctuLng, -IctuLat, IctuLng - 180);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(double.IsNaN(distance), Is.False, "Điểm đối cực không được trả NaN (clamp [0,1] trước Sqrt).");
+            Assert.That(distance, Is.EqualTo(20015.09).Within(1.0), "Nửa chu vi Trái Đất ≈ 20,015 km");
+        });
+    }
+
+    [Test]
+    public void CalculateDistanceKm_PolesAndDateLine_AreFinite()
+    {
+        var northToSouth = HaversineDistanceCalculator.CalculateDistanceKm(90, 0, -90, 0);
+        var acrossDateLine = HaversineDistanceCalculator.CalculateDistanceKm(21.5851, 179.9999, 21.5851, -179.9999);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(double.IsFinite(northToSouth), Is.True);
+            Assert.That(northToSouth, Is.EqualTo(20015.09).Within(1.0));
+            Assert.That(double.IsFinite(acrossDateLine), Is.True);
+            Assert.That(acrossDateLine, Is.LessThan(0.1));
+        });
+    }
+
+    [TestCase(double.NaN, 105.8066, 21.5875, 105.8080, TestName = "CalculateDistanceKm_Lat1NaN_ReturnsNaN")]
+    [TestCase(double.PositiveInfinity, 105.8066, 21.5875, 105.8080, TestName = "CalculateDistanceKm_Lat1Infinity_ReturnsNaN")]
+    [TestCase(21.5851, double.NegativeInfinity, 21.5875, 105.8080, TestName = "CalculateDistanceKm_Lng1Infinity_ReturnsNaN")]
+    [TestCase(21.5851, 105.8066, double.NaN, 105.8080, TestName = "CalculateDistanceKm_Lat2NaN_ReturnsNaN")]
+    [TestCase(21.5851, 105.8066, 21.5875, double.PositiveInfinity, TestName = "CalculateDistanceKm_Lng2Infinity_ReturnsNaN")]
+    [TestCase(21.5851, 105.8066, 21.5875, double.NegativeInfinity, TestName = "CalculateDistanceKm_Lng2NegativeInfinity_ReturnsNaN")]
+    public void CalculateDistanceKm_NonFiniteInput_ReturnsNaN(double lat1, double lon1, double lat2, double lon2)
+    {
+        var distance = HaversineDistanceCalculator.CalculateDistanceKm(lat1, lon1, lat2, lon2);
+
+        Assert.That(double.IsNaN(distance), Is.True);
+    }
+
+    [Test]
     public void CalculateDistanceKm_IsRoundedToTwoDecimalPlaces()
     {
-        var distance = HaversineDistanceCalculator.CalculateDistanceKm(IctuLat, IctuLng, 21.5600, 105.8250);
+        var samples = new[]
+        {
+            (21.5875, 105.8080),
+            (21.5710, 105.8190),
+            (21.5600, 105.8250),
+            (21.59861, 105.82163),
+            (21.54954, 105.84350)
+        };
 
-        Assert.That(Math.Round(distance, 2), Is.EqualTo(distance));
+        foreach (var (lat, lng) in samples)
+        {
+            var distance = HaversineDistanceCalculator.CalculateDistanceKm(IctuLat, IctuLng, lat, lng);
+            Assert.That(Math.Round(distance, 2), Is.EqualTo(distance), $"({lat}, {lng})");
+        }
     }
 }

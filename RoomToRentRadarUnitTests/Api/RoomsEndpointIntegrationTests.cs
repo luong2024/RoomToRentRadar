@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -8,9 +7,10 @@ using Microsoft.Extensions.Configuration;
 namespace RoomToRentRadarUnitTests.Api;
 
 /// <summary>
-/// Test tích hợp HTTP thật (US04 - T04.1): boot cả pipeline API (middleware, controller,
-/// DI, SQLite in-memory có seed) qua <see cref="WebApplicationFactory{TEntryPoint}"/>.
-/// Mỗi test tự tạo và dispose factory để cô lập dữ liệu in-memory.
+/// US04 / T04.1 — <c>operationId: searchRooms</c> qua pipeline HTTP thật
+/// (<see cref="WebApplicationFactory{TEntryPoint}"/>), kiểm hợp đồng OpenAPI và mã lỗi ADR-012.
+/// RED ở Task 1: use case là stub, seed/schema/cấu hình JSON enum thuộc Task 2–4.
+/// Mỗi test tạo factory riêng để cô lập SQLite in-memory.
 /// </summary>
 [TestFixture]
 public class RoomsEndpointIntegrationTests
@@ -23,22 +23,7 @@ public class RoomsEndpointIntegrationTests
     [SetUp]
     public void SetUp()
     {
-        _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(webHost =>
-        {
-            webHost.UseEnvironment("Development");
-            webHost.ConfigureAppConfiguration((_, config) =>
-            {
-                config.AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    ["DatabaseProvider"] = "Sqlite",
-                    ["Sqlite:ConnectionString"] = "Data Source=:memory:",
-                    ["Jwt:SigningKey"] = JwtSigningKey,
-                    ["Jwt:Issuer"] = "RoomToRentRadar.Api",
-                    ["Jwt:Audience"] = "RoomToRentRadar.Client"
-                });
-            });
-        });
-
+        _factory = CreateFactory(seedDemoRooms: true);
         _client = _factory.CreateClient();
     }
 
@@ -49,8 +34,26 @@ public class RoomsEndpointIntegrationTests
         _factory.Dispose();
     }
 
+    private static WebApplicationFactory<Program> CreateFactory(bool seedDemoRooms) =>
+        new WebApplicationFactory<Program>().WithWebHostBuilder(webHost =>
+        {
+            webHost.UseEnvironment("Development");
+            webHost.ConfigureAppConfiguration((_, config) =>
+            {
+                config.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["DatabaseProvider"] = "Sqlite",
+                    ["Sqlite:ConnectionString"] = "Data Source=:memory:",
+                    ["Sqlite:SeedDemoRooms"] = seedDemoRooms ? "true" : "false",
+                    ["Jwt:SigningKey"] = JwtSigningKey,
+                    ["Jwt:Issuer"] = "RoomToRentRadar.Api",
+                    ["Jwt:Audience"] = "RoomToRentRadar.Client"
+                });
+            });
+        });
+
     [Test]
-    public async Task GetRooms_WithoutQuery_ReturnsVerifiedAndAvailableSeedWithDistance()
+    public async Task GetRooms_WithoutQuery_ReturnsFiveAvailableSeededCards()
     {
         var response = await _client.GetAsync("/api/rooms");
 
@@ -61,39 +64,79 @@ public class RoomsEndpointIntegrationTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(root.GetProperty("totalCount").GetInt32(), Is.EqualTo(6),
-                "Seed 8 phòng, 6 phòng đã xác minh và còn trống");
+            Assert.That(root.GetProperty("totalCount").GetInt32(), Is.EqualTo(5), "Seed demo có 5 phòng Available");
             Assert.That(root.GetProperty("pageNumber").GetInt32(), Is.EqualTo(1));
-            Assert.That(root.GetProperty("pageSize").GetInt32(), Is.EqualTo(10));
-            Assert.That(root.GetProperty("items").GetArrayLength(), Is.EqualTo(6));
+            Assert.That(root.GetProperty("pageSize").GetInt32(), Is.EqualTo(20));
+            Assert.That(root.GetProperty("items").GetArrayLength(), Is.EqualTo(5));
 
             foreach (var item in root.GetProperty("items").EnumerateArray())
             {
-                Assert.That(item.GetProperty("id").GetString(), Is.Not.Empty);
+                Assert.That(item.GetProperty("status").GetString(), Is.EqualTo("Available"), "enum JSON dạng chuỗi");
+                Assert.That(item.GetProperty("roomType").ValueKind, Is.EqualTo(JsonValueKind.String));
                 Assert.That(item.GetProperty("isVerified").GetBoolean(), Is.True);
-                Assert.That(item.GetProperty("isAvailable").GetBoolean(), Is.True);
-                Assert.That(item.TryGetProperty("distanceKm", out var distance), Is.True, "Mỗi item phải có distanceKm");
-                Assert.That(distance.ValueKind, Is.EqualTo(JsonValueKind.Number));
-                Assert.That(distance.GetDouble(), Is.GreaterThanOrEqualTo(0d));
+                Assert.That(item.GetProperty("distanceKm").GetDouble(), Is.GreaterThanOrEqualTo(0d));
+                Assert.That(item.TryGetProperty("isAvailable", out _), Is.False, "schema mới không còn isAvailable");
             }
         });
     }
 
     [Test]
-    public async Task GetRooms_MinPriceGreaterThanMaxPrice_Returns400ProblemDetails()
+    public async Task GetRooms_RoomTypesCommaSeparated_FiltersByType()
     {
-        var response = await _client.GetAsync("/api/rooms?minPrice=3000000&maxPrice=1000000");
+        var response = await _client.GetAsync("/api/rooms?roomTypes=MiniApartment,WholeHouse");
 
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var items = body.RootElement.GetProperty("items").EnumerateArray().ToList();
+
+        Assert.That(items, Is.Not.Empty);
+        Assert.That(
+            items.Select(item => item.GetProperty("roomType").GetString()).ToList(),
+            Has.All.Matches<string?>(roomType => roomType is "MiniApartment" or "WholeHouse"));
+    }
+
+    [TestCase("/api/rooms?sort=area_asc")]
+    [TestCase("/api/rooms?minRentVnd=3000000&maxRentVnd=1000000")]
+    [TestCase("/api/rooms?campusId=NOPE")]
+    [TestCase("/api/rooms?maxDistanceKm=NaN")]
+    [TestCase("/api/rooms?maxDistanceKm=Infinity")]
+    [TestCase("/api/rooms?maxDistanceKm=-Infinity")]
+    [TestCase("/api/rooms?maxAreaM2=NaN")]
+    public async Task GetRooms_InvalidInput_Returns400ProblemDetailsWithErrorCode(string url)
+    {
+        var response = await _client.GetAsync(url);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest), url);
 
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.Multiple(() =>
         {
             Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
-            Assert.That(body.RootElement.GetProperty("title").GetString(), Is.EqualTo("Validation Error"));
-            Assert.That(body.RootElement.GetProperty("detail").GetString(),
-                Is.EqualTo("MinPrice cannot be greater than MaxPrice or negative."));
+            Assert.That(body.RootElement.GetProperty("errorCode").GetString(), Is.Not.Empty, "ADR-012 errorCode");
         });
+    }
+
+    [Test]
+    public async Task GetRooms_UnknownSort_ReturnsInvalidSortOptionErrorCode()
+    {
+        var response = await _client.GetAsync("/api/rooms?sort=price");
+
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(body.RootElement.GetProperty("errorCode").GetString(), Is.EqualTo("INVALID_SORT_OPTION"));
+    }
+
+    [Test]
+    public async Task GetRooms_UnknownCampus_ReturnsCampusNotFoundErrorCode()
+    {
+        var response = await _client.GetAsync("/api/rooms?campusId=NOPE");
+
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(body.RootElement.GetProperty("errorCode").GetString(), Is.EqualTo("CAMPUS_NOT_FOUND"));
     }
 
     [Test]
@@ -103,7 +146,25 @@ public class RoomsEndpointIntegrationTests
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
-        var paged = await response.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.That(paged.GetProperty("pageSize").GetInt32(), Is.EqualTo(50));
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.That(body.RootElement.GetProperty("pageSize").GetInt32(), Is.EqualTo(50));
+    }
+
+    [Test]
+    public async Task GetRooms_DemoSeedDisabled_ReturnsEmptyPage()
+    {
+        using var productionLike = CreateFactory(seedDemoRooms: false);
+        using var client = productionLike.CreateClient();
+
+        var response = await client.GetAsync("/api/rooms");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Multiple(() =>
+        {
+            Assert.That(body.RootElement.GetProperty("totalCount").GetInt32(), Is.Zero, "H4: không seed demo ngoài Development/flag");
+            Assert.That(body.RootElement.GetProperty("items").GetArrayLength(), Is.Zero);
+        });
     }
 }
