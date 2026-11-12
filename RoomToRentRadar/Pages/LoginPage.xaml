@@ -61,7 +61,7 @@
                     <Border StrokeShape="RoundRectangle 8"
                             StrokeThickness="1"
                             Stroke="{StaticResource StatusDangerLight}"
-                            BackgroundColor="#15DC2626"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource StatusDangerSubtleLight}, Dark={StaticResource StatusDangerSubtleDark}}"
                             Padding="12,10"
                             IsVisible="{Binding HasGeneralError}">
                         <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
@@ -115,7 +115,9 @@
                         <HorizontalStackLayout Grid.Column="0" Spacing="8" VerticalOptions="Center">
                             <CheckBox IsChecked="{Binding IsRememberMe, Mode=TwoWay}"
                                       Color="{StaticResource ActionPrimaryLight}"
-                                      VerticalOptions="Center" />
+                                      VerticalOptions="Center"
+                                      SemanticProperties.Description="Remember me on this device"
+                                      SemanticProperties.Hint="Keeps your session active on this device" />
                             <Label Text="Remember me"
                                    Style="{StaticResource TextCaption}"
                                    VerticalTextAlignment="Center" />

@@ -62,32 +62,34 @@ public partial class RadaBadge : ContentView
 
     private void ApplyBadgeType()
     {
+        var resources = Microsoft.Maui.Controls.Application.Current?.Resources;
+
         switch (Type)
         {
             case RadaBadgeType.Verified:
-                BadgeColor = Color.FromArgb("#4CB5AE"); // Teal Accent
-                BadgeTextColor = Color.FromArgb("#163A5F"); // Navy text (4.73:1 contrast WCAG AA)
-                if (string.IsNullOrEmpty(Text) || Text == "✓ Verified" || Text == "✓ Đã xác thực" || Text == "Available" || Text == "Almost Full" || Text == "Full")
-                    Text = "✓ Verified";
+                BadgeColor = resources != null && resources.TryGetValue("ActionAccentLight", out var aBg) ? (Color)aBg : Color.FromArgb("#4CB5AE");
+                BadgeTextColor = resources != null && resources.TryGetValue("ActionPrimaryLight", out var aTxt) ? (Color)aTxt : Color.FromArgb("#163A5F");
+                if (string.IsNullOrEmpty(Text) || Text == "Verified" || Text == "Available" || Text == "Almost Full" || Text == "Full")
+                    Text = "Verified";
                 break;
 
             case RadaBadgeType.Available:
-                BadgeColor = Color.FromArgb("#DCFCE7"); // Soft green
-                BadgeTextColor = Color.FromArgb("#15803D"); // Dark green text (5.0:1 contrast WCAG AA)
+                BadgeColor = resources != null && resources.TryGetValue("SurfaceSubtleLight", out var avBg) ? (Color)avBg : Color.FromArgb("#DCFCE7");
+                BadgeTextColor = resources != null && resources.TryGetValue("StatusSuccessTextLight", out var avTxt) ? (Color)avTxt : Color.FromArgb("#15803D");
                 if (string.IsNullOrEmpty(Text) || Text.Contains("Verified") || Text.Contains("xác thực") || Text.Contains("Full") || Text.Contains("hết"))
                     Text = "Available";
                 break;
 
             case RadaBadgeType.AlmostFull:
-                BadgeColor = Color.FromArgb("#FEF3C7"); // Soft amber
-                BadgeTextColor = Color.FromArgb("#B45309"); // Dark amber text (5.0:1 contrast WCAG AA)
+                BadgeColor = resources != null && resources.TryGetValue("SurfaceSubtleLight", out var afBg) ? (Color)afBg : Color.FromArgb("#FEF3C7");
+                BadgeTextColor = resources != null && resources.TryGetValue("StatusWarningTextLight", out var afTxt) ? (Color)afTxt : Color.FromArgb("#B45309");
                 if (string.IsNullOrEmpty(Text) || Text.Contains("Verified") || Text.Contains("Available") || Text.Contains("Full"))
                     Text = "Almost Full";
                 break;
 
             case RadaBadgeType.Full:
-                BadgeColor = Color.FromArgb("#FEE2E2"); // Soft red
-                BadgeTextColor = Color.FromArgb("#B91C1C"); // Dark red text (5.1:1 contrast WCAG AA)
+                BadgeColor = resources != null && resources.TryGetValue("SurfaceSubtleLight", out var fBg) ? (Color)fBg : Color.FromArgb("#FEE2E2");
+                BadgeTextColor = resources != null && resources.TryGetValue("StatusDangerLight", out var fTxt) ? (Color)fTxt : Color.FromArgb("#B91C1C");
                 if (string.IsNullOrEmpty(Text) || Text.Contains("Verified") || Text.Contains("Available") || Text.Contains("Almost"))
                     Text = "Full";
                 break;

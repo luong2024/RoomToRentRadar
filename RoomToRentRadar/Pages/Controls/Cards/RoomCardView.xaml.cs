@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using Fonts;
 using RoomToRentRadar.Pages.Controls.Cards.Models;
 
 namespace RoomToRentRadar.Pages.Controls.Cards;
@@ -16,7 +17,7 @@ public partial class RoomCardView : ContentView
         BindableProperty.Create(nameof(DetailsCommand), typeof(ICommand), typeof(RoomCardView), null);
 
     public static readonly BindableProperty BookmarkIconGlyphProperty =
-        BindableProperty.Create(nameof(BookmarkIconGlyph), typeof(string), typeof(RoomCardView), "♡");
+        BindableProperty.Create(nameof(BookmarkIconGlyph), typeof(string), typeof(RoomCardView), FluentUI.heart_20_regular);
 
     public static readonly BindableProperty BookmarkIconColorProperty =
         BindableProperty.Create(nameof(BookmarkIconColor), typeof(Color), typeof(RoomCardView), Color.FromArgb("#1E293B"));
@@ -60,15 +61,20 @@ public partial class RoomCardView : ContentView
 
     private void UpdateBookmarkState()
     {
+        var resources = Microsoft.Maui.Controls.Application.Current?.Resources;
+        BookmarkIconGlyph = FluentUI.heart_20_regular;
+
         if (Room?.IsBookmarked == true)
         {
-            BookmarkIconGlyph = "♥";
-            BookmarkIconColor = Color.FromArgb("#DC2626"); // Red
+            BookmarkIconColor = resources != null && resources.TryGetValue("StatusDangerLight", out var dangerColor)
+                ? (Color)dangerColor
+                : Color.FromArgb("#DC2626"); // Red
         }
         else
         {
-            BookmarkIconGlyph = "♡";
-            BookmarkIconColor = Color.FromArgb("#1E293B"); // Slate
+            BookmarkIconColor = resources != null && resources.TryGetValue("TextMutedLight", out var mutedColor)
+                ? (Color)mutedColor
+                : Color.FromArgb("#94A3B8"); // Muted
         }
     }
 }

@@ -2,22 +2,24 @@
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:inputs="clr-namespace:RoomToRentRadar.Pages.Controls.Inputs"
+             xmlns:fonts="clr-namespace:Fonts"
              x:Class="RoomToRentRadar.Pages.Controls.Inputs.SearchBarView"
              x:Name="RootSearchView">
 
     <Border StrokeShape="RoundRectangle 10"
             StrokeThickness="1"
-            HeightRequest="48"
-            Padding="12,0"
+            HeightRequest="52"
+            Padding="8,0"
             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
             Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
             Shadow="{StaticResource Elevation1Shadow}">
 
-        <Grid ColumnDefinitions="Auto, *, Auto, Auto" ColumnSpacing="8" VerticalOptions="Center">
+        <Grid ColumnDefinitions="Auto, *, Auto, Auto" ColumnSpacing="6" VerticalOptions="Center">
             <!-- Search Icon -->
             <Label Grid.Column="0"
-                   Text="🔍"
-                   FontSize="16"
+                   Text="{x:Static fonts:FluentUI.search_20_regular}"
+                   FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                   FontSize="18"
                    VerticalTextAlignment="Center"
                    TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
 
@@ -33,35 +35,41 @@
                    VerticalOptions="Center"
                    ReturnCommand="{Binding Source={x:Reference RootSearchView}, Path=SearchCommand}"
                    ReturnCommandParameter="{Binding Source={x:Reference RootSearchView}, Path=SearchText}"
-                   SemanticProperties.Description="Ô tìm kiếm phòng trọ"
-                   SemanticProperties.Hint="Nhập tên đường, khu vực hoặc tiện ích để tìm kiếm" />
+                   SemanticProperties.Description="Search rooms"
+                   SemanticProperties.Hint="Enter street, area, or amenities to search" />
 
             <!-- Clear Button -->
             <ImageButton Grid.Column="2"
                          x:Name="ClearSearchBtn"
                          Source="{StaticResource IconMeta}"
-                         WidthRequest="18"
-                         HeightRequest="18"
+                         WidthRequest="48"
+                         HeightRequest="48"
+                         Padding="15"
                          VerticalOptions="Center"
                          IsVisible="False"
+                         SemanticProperties.Description="Clear search"
+                         SemanticProperties.Hint="Clears the search input field"
                          Clicked="ClearSearchBtn_Clicked" />
 
             <!-- Filter Button Divider & Button -->
-            <HorizontalStackLayout Grid.Column="3" Spacing="8" VerticalOptions="Center">
+            <HorizontalStackLayout Grid.Column="3" Spacing="6" VerticalOptions="Center">
                 <BoxView WidthRequest="1" HeightRequest="24"
                          Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
 
-                <Border StrokeShape="RoundRectangle 6"
+                <Border StrokeShape="RoundRectangle 8"
                         StrokeThickness="0"
-                        WidthRequest="32"
-                        HeightRequest="32"
+                        WidthRequest="48"
+                        HeightRequest="48"
                         BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
-                        VerticalOptions="Center">
+                        VerticalOptions="Center"
+                        SemanticProperties.Description="Filter listings"
+                        SemanticProperties.Hint="Open search filter options">
                     <Border.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding Source={x:Reference RootSearchView}, Path=FilterCommand}" />
                     </Border.GestureRecognizers>
-                    <Label Text="⚙"
-                           FontSize="16"
+                    <Label Text="{x:Static fonts:FluentUI.filter_20_regular}"
+                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                           FontSize="18"
                            HorizontalTextAlignment="Center"
                            VerticalTextAlignment="Center"
                            TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}" />

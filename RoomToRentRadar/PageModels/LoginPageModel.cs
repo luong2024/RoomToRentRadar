@@ -232,6 +232,8 @@ public partial class LoginPageModel : ObservableObject
                     => "Your account is temporarily locked due to multiple failed login attempts. Please try again after 15 minutes.",
                 "USER_DISABLED"
                     => "This account has been deactivated. Please contact support.",
+                "LANDLORD_NOT_APPROVED" or "AUTH_LANDLORD_NOT_APPROVED"
+                    => "Your landlord account is pending administrative verification.",
                 _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : "Sign in failed. Please check your credentials."
             };
         }

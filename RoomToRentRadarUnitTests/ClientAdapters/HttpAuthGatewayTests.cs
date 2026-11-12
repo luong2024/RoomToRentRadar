@@ -73,7 +73,7 @@ public class HttpAuthGatewayTests
     }
 
     [Test]
-    public void LoginAsync_InvalidCredentials_ThrowsApiExceptionWithErrorCode()
+    public async Task LoginAsync_InvalidCredentials_ThrowsApiExceptionWithErrorCode()
     {
         // Arrange
         var problemDetails = new
@@ -100,11 +100,40 @@ public class HttpAuthGatewayTests
         // Act & Assert
         var ex = Assert.ThrowsAsync<ApiException>(async () =>
             await gateway.LoginAsync(new LoginRequest("wrong@ictu.edu.vn", "WrongPassword!")));
+        await Task.CompletedTask;
 
         Assert.That(ex, Is.Not.Null);
         Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         Assert.That(ex.ErrorCode, Is.EqualTo("AUTH_INVALID_CREDENTIALS"));
         Assert.That(ex.Message, Is.EqualTo("Email hoặc mật khẩu không chính xác."));
+    }
+
+    [Test]
+    public async Task LoginAsync_ProblemDetailsWithExtensionsErrorCode_ParsesErrorCodeCorrectly()
+    {
+        // Arrange
+        var rawJson = "{\"type\":\"https://tools.ietf.org/html/rfc9110#section-15.5.2\",\"title\":\"Authentication Failed\",\"status\":401,\"detail\":\"Invalid email or password.\",\"instance\":\"/api/auth/login\",\"extensions\":{\"errorCode\":\"AUTH_INVALID_CREDENTIALS\"}}";
+
+        var handler = new MockHttpMessageHandler(req =>
+        {
+            var res = new HttpResponseMessage(HttpStatusCode.Unauthorized)
+            {
+                Content = new StringContent(rawJson, System.Text.Encoding.UTF8, "application/problem+json")
+            };
+            return res;
+        });
+
+        var client = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:5000") };
+        var gateway = new HttpAuthGateway(client);
+
+        // Act & Assert
+        var ex = Assert.ThrowsAsync<ApiException>(async () =>
+            await gateway.LoginAsync(new LoginRequest("test@ictu.edu.vn", "WrongPassword!")));
+        await Task.CompletedTask;
+
+        Assert.That(ex, Is.Not.Null);
+        Assert.That(ex!.ErrorCode, Is.EqualTo("AUTH_INVALID_CREDENTIALS"));
+        Assert.That(ex.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]
@@ -157,7 +186,7 @@ public class HttpAuthGatewayTests
     }
 
     [Test]
-    public void RegisterAsync_EmailAlreadyExists_ThrowsApiExceptionWith409()
+    public async Task RegisterAsync_EmailAlreadyExists_ThrowsApiExceptionWith409()
     {
         // Arrange
         var problemDetails = new
@@ -190,6 +219,7 @@ public class HttpAuthGatewayTests
                 PhoneNumber: null,
                 StudentCode: null
             )));
+        await Task.CompletedTask;
 
         Assert.That(ex, Is.Not.Null);
         Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
@@ -264,7 +294,7 @@ public class HttpAuthGatewayTests
     }
 
     [Test]
-    public void LoginWithIctuSsoAsync_InvalidToken_ThrowsApiException()
+    public async Task LoginWithIctuSsoAsync_InvalidToken_ThrowsApiException()
     {
         // Arrange
         var handler = new MockHttpMessageHandler(req =>
@@ -289,6 +319,7 @@ public class HttpAuthGatewayTests
         // Act & Assert
         var ex = Assert.ThrowsAsync<ApiException>(async () =>
             await gateway.LoginWithIctuSsoAsync(new IctuSsoLoginRequest("invalid-token", "Device")));
+        await Task.CompletedTask;
 
         Assert.That(ex, Is.Not.Null);
         Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
@@ -338,7 +369,7 @@ public class HttpAuthGatewayTests
     }
 
     [Test]
-    public void RefreshTokenAsync_RevokedOrExpiredToken_ThrowsApiException()
+    public async Task RefreshTokenAsync_RevokedOrExpiredToken_ThrowsApiException()
     {
         // Arrange
         var handler = new MockHttpMessageHandler(req =>
@@ -363,6 +394,7 @@ public class HttpAuthGatewayTests
         // Act & Assert
         var ex = Assert.ThrowsAsync<ApiException>(async () =>
             await gateway.RefreshTokenAsync(new RefreshTokenRequest("expired-token")));
+        await Task.CompletedTask;
 
         Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         Assert.That(ex.ErrorCode, Is.EqualTo("REFRESH_TOKEN_EXPIRED"));
@@ -408,7 +440,7 @@ public class HttpAuthGatewayTests
     }
 
     [Test]
-    public void GetCurrentUserProfileAsync_Unauthorized_ThrowsApiException()
+    public async Task GetCurrentUserProfileAsync_Unauthorized_ThrowsApiException()
     {
         // Arrange
         var handler = new MockHttpMessageHandler(req =>
@@ -422,6 +454,7 @@ public class HttpAuthGatewayTests
         // Act & Assert
         var ex = Assert.ThrowsAsync<ApiException>(async () =>
             await gateway.GetCurrentUserProfileAsync("expired-or-missing-token"));
+        await Task.CompletedTask;
 
         Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }

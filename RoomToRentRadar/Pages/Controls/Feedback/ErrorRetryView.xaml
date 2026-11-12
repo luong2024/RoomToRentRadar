@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:feedback="clr-namespace:RoomToRentRadar.Pages.Controls.Feedback"
              xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
+             xmlns:fonts="clr-namespace:Fonts"
              x:Class="RoomToRentRadar.Pages.Controls.Feedback.ErrorRetryView"
              x:Name="RootErrorView">
 
@@ -19,8 +20,10 @@
                 HorizontalOptions="Center"
                 BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}">
 
-            <Label Text="⚠️"
+            <Label Text="{x:Static fonts:FluentUI.warning_24_regular}"
+                   FontFamily="{x:Static fonts:FluentUI.FontFamily}"
                    FontSize="36"
+                   TextColor="{AppThemeBinding Light={StaticResource StatusDangerLight}, Dark={StaticResource StatusDangerDark}}"
                    HorizontalTextAlignment="Center"
                    VerticalTextAlignment="Center" />
         </Border>

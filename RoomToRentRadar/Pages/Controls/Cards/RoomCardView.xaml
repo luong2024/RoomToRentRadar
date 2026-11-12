@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
              xmlns:cards="clr-namespace:RoomToRentRadar.Pages.Controls.Cards"
+             xmlns:fonts="clr-namespace:Fonts"
              xmlns:rooms="clr-namespace:RoomToRentRadar.Ports.Contracts.Responses.Rooms;assembly=RoomToRentRadar.Ports"
              x:Class="RoomToRentRadar.Pages.Controls.Cards.RoomCardView"
              x:Name="RootRoomCard"
@@ -43,18 +44,21 @@
                 <!-- Bookmark Favorite Button Top Right -->
                 <Border StrokeShape="RoundRectangle 9999"
                         StrokeThickness="0"
-                        WidthRequest="36"
-                        HeightRequest="36"
+                        WidthRequest="48"
+                        HeightRequest="48"
                         BackgroundColor="#CCFFFFFF"
-                        Margin="0,12,12,0"
+                        Margin="0,8,8,0"
                         HorizontalOptions="End"
-                        VerticalOptions="Start">
+                        VerticalOptions="Start"
+                        SemanticProperties.Description="Save room bookmark"
+                        SemanticProperties.Hint="Toggles bookmark for this room">
                     <Border.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding BookmarkCommand}"
                                               CommandParameter="{Binding Room.Id}" />
                     </Border.GestureRecognizers>
                     <Label Text="{Binding BookmarkIconGlyph}"
-                           FontSize="18"
+                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                           FontSize="20"
                            TextColor="{Binding BookmarkIconColor}"
                            HorizontalTextAlignment="Center"
                            VerticalTextAlignment="Center" />
@@ -96,8 +100,10 @@
 
                 <!-- P3: Distance to ICTU Campus & Address -->
                 <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
-                    <Label Text="📍"
-                           FontSize="13"
+                    <Label Text="{x:Static fonts:FluentUI.location_16_regular}"
+                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                           FontSize="14"
+                           TextColor="{AppThemeBinding Light={StaticResource ActionAccentLight}, Dark={StaticResource ActionAccentDark}}"
                            VerticalTextAlignment="Center" />
                     <Label Text="{Binding Room.DistanceFormatted}"
                            FontFamily="{StaticResource FontFamilySemibold}"

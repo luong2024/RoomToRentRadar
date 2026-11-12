@@ -53,6 +53,8 @@
     <Color x:Key="StatusWarningTextLight">#B45309</Color> <!-- High contrast AA for small text -->
     <Color x:Key="StatusDangerLight">#DC2626</Color>
     <Color x:Key="StatusDangerDark">#EF4444</Color>
+    <Color x:Key="StatusDangerSubtleLight">#15DC2626</Color>
+    <Color x:Key="StatusDangerSubtleDark">#25EF4444</Color>
     <Color x:Key="StatusInfoLight">#0284C7</Color>
     <Color x:Key="StatusInfoDark">#38BDF8</Color>
 

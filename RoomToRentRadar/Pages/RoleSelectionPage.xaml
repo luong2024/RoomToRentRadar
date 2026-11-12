@@ -86,19 +86,19 @@
                             <!-- Features List -->
                             <VerticalStackLayout Spacing="8">
                                 <HorizontalStackLayout Spacing="8">
-                                    <Label Text="✓" TextColor="{StaticResource ActionAccentLight}" FontAttributes="Bold" />
+                                    <Label Text="{x:Static fonts:FluentUI.checkmark_16_regular}" FontFamily="{x:Static fonts:FluentUI.FontFamily}" TextColor="{StaticResource ActionAccentLight}" FontSize="14" VerticalTextAlignment="Center" />
                                     <Label Text="Search verified rooms near ICTU campus" Style="{StaticResource TextCaption}" VerticalTextAlignment="Center" />
                                 </HorizontalStackLayout>
                                 <HorizontalStackLayout Spacing="8">
-                                    <Label Text="✓" TextColor="{StaticResource ActionAccentLight}" FontAttributes="Bold" />
+                                    <Label Text="{x:Static fonts:FluentUI.checkmark_16_regular}" FontFamily="{x:Static fonts:FluentUI.FontFamily}" TextColor="{StaticResource ActionAccentLight}" FontSize="14" VerticalTextAlignment="Center" />
                                     <Label Text="Explore listings with 360° virtual tours" Style="{StaticResource TextCaption}" VerticalTextAlignment="Center" />
                                 </HorizontalStackLayout>
                                 <HorizontalStackLayout Spacing="8">
-                                    <Label Text="✓" TextColor="{StaticResource ActionAccentLight}" FontAttributes="Bold" />
+                                    <Label Text="{x:Static fonts:FluentUI.checkmark_16_regular}" FontFamily="{x:Static fonts:FluentUI.FontFamily}" TextColor="{StaticResource ActionAccentLight}" FontSize="14" VerticalTextAlignment="Center" />
                                     <Label Text="Compare up to 3 rooms side-by-side" Style="{StaticResource TextCaption}" VerticalTextAlignment="Center" />
                                 </HorizontalStackLayout>
                                 <HorizontalStackLayout Spacing="8">
-                                    <Label Text="✓" TextColor="{StaticResource ActionAccentLight}" FontAttributes="Bold" />
+                                    <Label Text="{x:Static fonts:FluentUI.checkmark_16_regular}" FontFamily="{x:Static fonts:FluentUI.FontFamily}" TextColor="{StaticResource ActionAccentLight}" FontSize="14" VerticalTextAlignment="Center" />
                                     <Label Text="1-Click sign in with your ICTU Google SSO" Style="{StaticResource TextCaption}" VerticalTextAlignment="Center" />
                                 </HorizontalStackLayout>
                             </VerticalStackLayout>
@@ -150,19 +150,19 @@
                             <!-- Features List -->
                             <VerticalStackLayout Spacing="8">
                                 <HorizontalStackLayout Spacing="8">
-                                    <Label Text="✓" TextColor="{StaticResource ActionPrimaryLight}" FontAttributes="Bold" />
+                                    <Label Text="{x:Static fonts:FluentUI.checkmark_16_regular}" FontFamily="{x:Static fonts:FluentUI.FontFamily}" TextColor="{StaticResource ActionPrimaryLight}" FontSize="14" VerticalTextAlignment="Center" />
                                     <Label Text="Publish room listings with 360° photos" Style="{StaticResource TextCaption}" VerticalTextAlignment="Center" />
                                 </HorizontalStackLayout>
                                 <HorizontalStackLayout Spacing="8">
-                                    <Label Text="✓" TextColor="{StaticResource ActionPrimaryLight}" FontAttributes="Bold" />
+                                    <Label Text="{x:Static fonts:FluentUI.checkmark_16_regular}" FontFamily="{x:Static fonts:FluentUI.FontFamily}" TextColor="{StaticResource ActionPrimaryLight}" FontSize="14" VerticalTextAlignment="Center" />
                                     <Label Text="Manage room availability and vacancies" Style="{StaticResource TextCaption}" VerticalTextAlignment="Center" />
                                 </HorizontalStackLayout>
                                 <HorizontalStackLayout Spacing="8">
-                                    <Label Text="✓" TextColor="{StaticResource ActionPrimaryLight}" FontAttributes="Bold" />
+                                    <Label Text="{x:Static fonts:FluentUI.checkmark_16_regular}" FontFamily="{x:Static fonts:FluentUI.FontFamily}" TextColor="{StaticResource ActionPrimaryLight}" FontSize="14" VerticalTextAlignment="Center" />
                                     <Label Text="Direct connection with verified students" Style="{StaticResource TextCaption}" VerticalTextAlignment="Center" />
                                 </HorizontalStackLayout>
                                 <HorizontalStackLayout Spacing="8">
-                                    <Label Text="✓" TextColor="{StaticResource ActionPrimaryLight}" FontAttributes="Bold" />
+                                    <Label Text="{x:Static fonts:FluentUI.checkmark_16_regular}" FontFamily="{x:Static fonts:FluentUI.FontFamily}" TextColor="{StaticResource ActionPrimaryLight}" FontSize="14" VerticalTextAlignment="Center" />
                                     <Label Text="'Verified' trust badge for published rooms" Style="{StaticResource TextCaption}" VerticalTextAlignment="Center" />
                                 </HorizontalStackLayout>
                             </VerticalStackLayout>

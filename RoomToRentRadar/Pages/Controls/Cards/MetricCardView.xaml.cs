@@ -1,3 +1,5 @@
+using Fonts;
+
 namespace RoomToRentRadar.Pages.Controls.Cards;
 
 public partial class MetricCardView : ContentView
@@ -6,7 +8,7 @@ public partial class MetricCardView : ContentView
         BindableProperty.Create(nameof(Title), typeof(string), typeof(MetricCardView), string.Empty);
 
     public static readonly BindableProperty IconGlyphProperty =
-        BindableProperty.Create(nameof(IconGlyph), typeof(string), typeof(MetricCardView), "📊");
+        BindableProperty.Create(nameof(IconGlyph), typeof(string), typeof(MetricCardView), FluentUI.poll_20_regular);
 
     public static readonly BindableProperty ValueTextProperty =
         BindableProperty.Create(nameof(ValueText), typeof(string), typeof(MetricCardView), "0");

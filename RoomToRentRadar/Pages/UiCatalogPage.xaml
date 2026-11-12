@@ -187,13 +187,13 @@
                     <Grid ColumnDefinitions="*, *" ColumnSpacing="12">
                         <cards:MetricCardView Grid.Column="0"
                                               Title="VERIFIED ROOMS"
-                                              IconGlyph="🏠"
+                                              IconGlyph="{x:Static fonts:FluentUI.home_20_regular}"
                                               ValueText="128"
                                               TrendText="+12 new rooms this week" />
 
                         <cards:MetricCardView Grid.Column="1"
                                               Title="OCCUPANCY RATE"
-                                              IconGlyph="📈"
+                                              IconGlyph="{x:Static fonts:FluentUI.data_trending_20_regular}"
                                               ValueText="94%"
                                               TrendText="Near ICTU Gate Area" />
                     </Grid>

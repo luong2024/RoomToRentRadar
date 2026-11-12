@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:cards="clr-namespace:RoomToRentRadar.Pages.Controls.Cards"
              xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
+             xmlns:fonts="clr-namespace:Fonts"
              xmlns:rooms="clr-namespace:RoomToRentRadar.Ports.Contracts.Responses.Rooms;assembly=RoomToRentRadar.Ports"
              x:Class="RoomToRentRadar.Pages.Controls.Cards.ComparisonCardView"
              x:Name="RootComparisonView"
@@ -31,16 +32,19 @@
                 <Border Grid.Column="1"
                         StrokeShape="RoundRectangle 9999"
                         StrokeThickness="0"
-                        WidthRequest="24"
-                        HeightRequest="24"
+                        WidthRequest="48"
+                        HeightRequest="48"
                         BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
-                        VerticalOptions="Start">
+                        VerticalOptions="Start"
+                        SemanticProperties.Description="Remove from comparison"
+                        SemanticProperties.Hint="Removes this room from comparison view">
                     <Border.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding RemoveCommand}"
                                               CommandParameter="{Binding Room.Id}" />
                     </Border.GestureRecognizers>
-                    <Label Text="✕"
-                           FontSize="11"
+                    <Label Text="{x:Static fonts:FluentUI.dismiss_16_regular}"
+                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                           FontSize="14"
                            HorizontalTextAlignment="Center"
                            VerticalTextAlignment="Center"
                            TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />

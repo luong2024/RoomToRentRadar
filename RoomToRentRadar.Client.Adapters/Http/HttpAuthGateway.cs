@@ -119,6 +119,13 @@ public sealed class HttpAuthGateway : IAuthGateway
                 {
                     errorCode = codeElem.GetString();
                 }
+                else if (root.TryGetProperty("extensions", out var extElem) && extElem.ValueKind == JsonValueKind.Object)
+                {
+                    if (extElem.TryGetProperty("errorCode", out var extCodeElem))
+                    {
+                        errorCode = extCodeElem.GetString();
+                    }
+                }
 
                 if (root.TryGetProperty("detail", out var detailElem))
                 {

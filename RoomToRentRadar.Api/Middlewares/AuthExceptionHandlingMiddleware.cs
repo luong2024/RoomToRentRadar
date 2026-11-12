@@ -21,7 +21,7 @@ public sealed class AuthExceptionHandlingMiddleware
         {
             await _next(context);
         }
-        catch (Exception ex) when (TryMapException(ex, out var statusCode, out var title))
+        catch (Exception ex) when (TryMapException(ex, out var statusCode, out var title, out var errorCode))
         {
             if (context.Response.HasStarted)
             {
@@ -40,6 +40,11 @@ public sealed class AuthExceptionHandlingMiddleware
                 Instance = context.Request.Path
             };
 
+            if (!string.IsNullOrWhiteSpace(errorCode))
+            {
+                problem.Extensions["errorCode"] = errorCode;
+            }
+
             await JsonSerializer.SerializeAsync(
                 context.Response.Body,
                 problem,
@@ -47,46 +52,71 @@ public sealed class AuthExceptionHandlingMiddleware
         }
     }
 
-    public static bool TryMapException(Exception exception, out int statusCode, out string title)
+    public static bool TryMapException(Exception exception, out int statusCode, out string title) =>
+        TryMapException(exception, out statusCode, out title, out _);
+
+    public static bool TryMapException(Exception exception, out int statusCode, out string title, out string? errorCode)
     {
         switch (exception)
         {
             case DomainValidationException:
                 statusCode = StatusCodes.Status400BadRequest;
                 title = "Validation Error";
+                errorCode = "VALIDATION_ERROR";
                 return true;
 
             case InvalidCredentialsException:
+                statusCode = StatusCodes.Status401Unauthorized;
+                title = "Authentication Failed";
+                errorCode = "AUTH_INVALID_CREDENTIALS";
+                return true;
+
             case InvalidTokenException:
                 statusCode = StatusCodes.Status401Unauthorized;
                 title = "Authentication Failed";
+                errorCode = "AUTH_INVALID_TOKEN";
                 return true;
 
             case AccountLockedException:
                 statusCode = StatusCodes.Status403Forbidden;
                 title = "Account Locked";
+                errorCode = "AUTH_ACCOUNT_LOCKED";
                 return true;
 
             case ForbiddenRoleException:
+                statusCode = StatusCodes.Status403Forbidden;
+                title = "Access Forbidden";
+                errorCode = "AUTH_FORBIDDEN_ROLE";
+                return true;
+
             case LandlordNotApprovedException:
                 statusCode = StatusCodes.Status403Forbidden;
                 title = "Access Forbidden";
+                errorCode = "AUTH_LANDLORD_NOT_APPROVED";
                 return true;
 
             case UserNotFoundException:
                 statusCode = StatusCodes.Status404NotFound;
                 title = "User Not Found";
+                errorCode = "AUTH_USER_NOT_FOUND";
                 return true;
 
             case DuplicateEmailException:
+                statusCode = StatusCodes.Status409Conflict;
+                title = "Conflict";
+                errorCode = "AUTH_EMAIL_EXISTS";
+                return true;
+
             case ConcurrencyConflictException:
                 statusCode = StatusCodes.Status409Conflict;
                 title = "Conflict";
+                errorCode = "CONCURRENCY_CONFLICT";
                 return true;
 
             default:
                 statusCode = StatusCodes.Status500InternalServerError;
                 title = "Unexpected Error";
+                errorCode = null;
                 return false;
         }
     }

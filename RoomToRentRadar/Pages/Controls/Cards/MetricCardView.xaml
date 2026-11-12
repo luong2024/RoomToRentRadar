@@ -2,6 +2,7 @@
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:cards="clr-namespace:RoomToRentRadar.Pages.Controls.Cards"
+             xmlns:fonts="clr-namespace:Fonts"
              x:Class="RoomToRentRadar.Pages.Controls.Cards.MetricCardView"
              x:Name="RootMetricView"
              x:DataType="cards:MetricCardView">
@@ -24,6 +25,7 @@
 
                 <Label Grid.Column="1"
                        Text="{Binding IconGlyph}"
+                       FontFamily="{x:Static fonts:FluentUI.FontFamily}"
                        FontSize="18"
                        TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}" />
             </Grid>

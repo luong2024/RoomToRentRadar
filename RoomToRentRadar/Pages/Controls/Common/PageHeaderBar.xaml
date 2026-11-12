@@ -13,29 +13,25 @@
             Padding="{OnPlatform Default='16,12,16,12', iOS='16,48,16,12'}">
 
         <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="12" VerticalOptions="Center">
-            <!-- Back Navigation Button: touch target >= 48x48 dp with accessibility semantics -->
-            <Border Grid.Column="0"
-                    StrokeShape="RoundRectangle 8"
-                    StrokeThickness="0"
-                    WidthRequest="48"
-                    HeightRequest="48"
-                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
-                    VerticalOptions="Center"
-                    IsVisible="{Binding CanGoBack, Source={x:Reference RootHeaderView}}"
-                    SemanticProperties.Description="Back"
-                    SemanticProperties.Hint="Navigate to previous screen">
-                <Border.GestureRecognizers>
-                    <TapGestureRecognizer Command="{Binding BackCommand, Source={x:Reference RootHeaderView}}" />
-                </Border.GestureRecognizers>
-                <Image WidthRequest="20" HeightRequest="20" HorizontalOptions="Center" VerticalOptions="Center">
-                    <Image.Source>
-                        <FontImageSource Glyph="{x:Static fonts:FluentUI.arrow_left_20_regular}"
-                                         FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                                         Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
-                                         Size="20" />
-                    </Image.Source>
-                </Image>
-            </Border>
+            <!-- Back Navigation Button: touch target >= 48x48 dp with keyboard accessibility -->
+            <ImageButton Grid.Column="0"
+                         WidthRequest="48"
+                         HeightRequest="48"
+                         Padding="14"
+                         CornerRadius="8"
+                         BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
+                         VerticalOptions="Center"
+                         IsVisible="{Binding CanGoBack, Source={x:Reference RootHeaderView}}"
+                         Command="{Binding BackCommand, Source={x:Reference RootHeaderView}}"
+                         SemanticProperties.Description="Back"
+                         SemanticProperties.Hint="Navigate to previous screen">
+                <ImageButton.Source>
+                    <FontImageSource Glyph="{x:Static fonts:FluentUI.arrow_left_20_regular}"
+                                     FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                     Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+                                     Size="20" />
+                </ImageButton.Source>
+            </ImageButton>
 
             <!-- Title & Subtitle Column -->
             <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
@@ -54,25 +50,21 @@
                        LineBreakMode="TailTruncation" />
             </VerticalStackLayout>
 
-            <!-- Trailing Action Slot / Button: touch target >= 48x48 dp -->
-            <Border Grid.Column="2"
-                    StrokeShape="RoundRectangle 8"
-                    StrokeThickness="0"
+            <!-- Trailing Action Slot / Button: touch target >= 48x48 dp with keyboard accessibility -->
+            <Button Grid.Column="2"
                     WidthRequest="48"
                     HeightRequest="48"
+                    Padding="0"
+                    CornerRadius="8"
                     BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
                     VerticalOptions="Center"
                     IsVisible="{Binding HasAction, Source={x:Reference RootHeaderView}}"
-                    SemanticProperties.Description="Action button">
-                <Border.GestureRecognizers>
-                    <TapGestureRecognizer Command="{Binding ActionCommand, Source={x:Reference RootHeaderView}}" />
-                </Border.GestureRecognizers>
-                <Label Text="{Binding ActionIcon, Source={x:Reference RootHeaderView}}"
-                       FontSize="18"
-                       HorizontalTextAlignment="Center"
-                       VerticalTextAlignment="Center"
-                       TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}" />
-            </Border>
+                    Command="{Binding ActionCommand, Source={x:Reference RootHeaderView}}"
+                    Text="{Binding ActionIcon, Source={x:Reference RootHeaderView}}"
+                    FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                    FontSize="18"
+                    TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}"
+                    SemanticProperties.Description="Header action" />
         </Grid>
     </Border>
 </ContentView>
