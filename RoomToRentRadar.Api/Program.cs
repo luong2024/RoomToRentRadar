@@ -22,7 +22,6 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserContextPort, HttpContextUserContextAdapter>();
-builder.Services.AddScoped<ICurrentUserContext>(sp => (HttpContextUserContextAdapter)sp.GetRequiredService<ICurrentUserContextPort>());
 
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new JwtSettings();
 if (string.IsNullOrWhiteSpace(jwtSettings.SigningKey))

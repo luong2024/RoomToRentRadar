@@ -1,3 +1,4 @@
+#pragma warning disable CS0618
 using RoomToRentRadar.Domain.Aggregates;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Infrastructure.Adapters.Mocks;

@@ -44,7 +44,6 @@ public static class DependencyInjection
         services.TryAddScoped<IRoomRepository>(sp => sp.GetRequiredService<InMemoryRoomRepository>());
         services.TryAddScoped<IRoomSearchReadModel>(sp => sp.GetRequiredService<InMemoryRoomRepository>());
         services.TryAddScoped<ICurrentUserContextPort, InMemoryCurrentUserContext>();
-        services.TryAddScoped<ICurrentUserContext>(sp => (InMemoryCurrentUserContext)sp.GetRequiredService<ICurrentUserContextPort>());
 
         return services;
     }
