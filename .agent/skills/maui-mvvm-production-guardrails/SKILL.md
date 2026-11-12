@@ -6,49 +6,49 @@ description: Best practices, architecture patterns, and concurrency safeguards f
 # MAUI MVVM Production Guardrails Skill
 
 ## Mục đích
-Hướng dẫn AI Agent tuân thủ chuẩn mực kiến trúc của dự án .NET MAUI: tách bạch rõ ràng giữa View, ViewModel (PageModel), Model, và Service; tránh rò rỉ bộ nhớ (memory leaks), deadlock UI luồng và lỗi ràng buộc dữ liệu (Data Binding).
+Hướng dẫn AI Agent tuân thủ chuẩn mực kiến trúc 3 tầng SOLID của dự án .NET MAUI `RoomToRentRadar`: tách bạch rõ ràng giữa View (`Features/<Feature>/*Page.xaml`), ViewModel (`*PageModel.cs`), Domain Contract (`RoomToRentRadar.Core`), và Data/SQLite (`RoomToRentRadar.Infrastructure`).
 
 ## Khi nào kích hoạt Skill này
-- Khi tạo mới hoặc chỉnh sửa XAML Pages trong `RoomToRentRadar/Pages/`.
-- Khi viết logic trong `RoomToRentRadar/PageModels/`.
-- Khi đăng ký Dependency Injection trong `MauiProgram.cs`.
+- Khi tạo mới hoặc chỉnh sửa XAML Pages và PageModels trong `RoomToRentRadar/Features/<Feature>/`.
+- Khi đăng ký Dependency Injection và Shell Route trong `RoomToRentRadar/Features/<Feature>/<Feature>FeatureModule.cs`.
 
 ---
 
 ## Chuẩn Mực Kiến Trúc Chi Tiết
 
-### 1. Chuẩn Hóa PageModel (CommunityToolkit.Mvvm)
-- Sử dụng các Source Generator attribute:
+### 1. Chuẩn Hóa PageModel (CommunityToolkit.Mvvm + Constructor Injection)
+- Nhận trực tiếp các Interface từ `RoomToRentRadar.Core.Abstractions` qua Constructor Injection (**CẤM dùng `IServiceProvider.GetService` hay tự tạo mock data trong PageModel**):
   ```csharp
-  public partial class TaskDetailPageModel : ObservableObject
+  public partial class RoomListPageModel : ObservableObject
   {
-      private readonly TaskRepository _taskRepository;
+      private readonly IRoomListingRepository _roomRepository;
+      private readonly IErrorHandler _errorHandler;
 
       [ObservableProperty]
-      private ProjectTask _currentTask;
+      public partial bool IsBusy { get; set; }
 
-      [ObservableProperty]
-      private bool _isBusy;
+      public ObservableCollection<RoomListing> Rooms { get; } = new();
 
-      public TaskDetailPageModel(TaskRepository taskRepository)
+      public RoomListPageModel(IRoomListingRepository roomRepository, IErrorHandler errorHandler)
       {
-          _taskRepository = taskRepository;
+          _roomRepository = roomRepository;
+          _errorHandler = errorHandler;
       }
 
       [RelayCommand]
-      private async Task SaveTaskAsync()
+      private async Task LoadRoomsAsync()
       {
           if (IsBusy) return;
           try
           {
               IsBusy = true;
-              await _taskRepository.SaveItemAsync(CurrentTask);
-              await Shell.Current.GoToAsync("..");
+              var items = await _roomRepository.ListVerifiedRoomsAsync();
+              Rooms.Clear();
+              foreach (var item in items) Rooms.Add(item);
           }
           catch (Exception ex)
           {
-              // Log và hiển thị lỗi an toàn
-              System.Diagnostics.Debug.WriteLine($"[Error] SaveTask failed: {ex.Message}");
+              _errorHandler.HandleError(ex);
           }
           finally
           {
@@ -59,44 +59,25 @@ Hướng dẫn AI Agent tuân thủ chuẩn mực kiến trúc của dự án .N
   ```
 
 ### 2. Code-Behind (`.xaml.cs`) Tối Giản
-- Không viết logic tính toán, validate nghiệp vụ, hoặc gọi trực tiếp SQLite/API trong file `.xaml.cs`.
-- File `.xaml.cs` chỉ thực hiện inject BindingContext:
-  ```csharp
-  public partial class TaskDetailPage : ContentPage
-  {
-      public TaskDetailPage(TaskDetailPageModel viewModel)
-      {
-          InitializeComponent();
-          BindingContext = viewModel;
-      }
-  }
-  ```
+- Không viết logic tính toán, validate nghiệp vụ, hoặc gọi trực tiếp SQLite trong file `.xaml.cs`.
+- File `.xaml.cs` chỉ thực hiện inject `BindingContext`.
 
 ### 3. Quy Tắc Xử Lý Đa Luồng (Threading & UI Safety)
-- **Quy tắc 1:** Không chặn luồng UI bằng `.Result` hoặc `.Wait()`. Luôn dùng `await`.
-- **Quy tắc 2:** Bất kỳ thay đổi nào tác động tới `ObservableCollection` hoặc các thuộc tính bind lên UI phải được kích hoạt từ Main Thread nếu đang ở background context:
-  ```csharp
-  MainThread.BeginInvokeOnMainThread(() =>
-  {
-      Items.Add(newItem);
-  });
-  ```
+- Không chặn luồng UI bằng `.Result` hoặc `.Wait()`. Luôn dùng `await`.
 
-### 4. Đăng Ký Dependency Injection Đúng Vòng Đời (`MauiProgram.cs`)
-- **Transient:** Thích hợp cho Pages và PageModels (tạo mới mỗi lần điều hướng).
+### 4. Đăng Ký Dependency Injection & Route Trong `<Feature>FeatureModule.cs` (Chuẩn OCP)
+- **TUYỆT ĐỐI KHÔNG sửa `MauiProgram.cs`**.
+- Mở đúng file `RoomToRentRadar/Features/<Feature>/<Feature>FeatureModule.cs` của tính năng mình để đăng ký:
   ```csharp
-  builder.Services.AddTransient<TaskDetailPage>();
-  builder.Services.AddTransient<TaskDetailPageModel>();
-  ```
-- **Singleton:** Dành cho Repositories, Services quản lý state xuyên suốt ứng dụng.
-  ```csharp
-  builder.Services.AddSingleton<TaskRepository>();
+  // Ví dụ trong FavoritesFeatureModule.cs:
+  services.AddSingleton<IFavoriteRepository, FavoriteRepository>(); // T07.1
+  services.AddTransientWithShellRoute<FavoritesPage, FavoritesPageModel>(Constants.Routes.Favorites); // T07.2
   ```
 
 ---
 
 ## Production Verification Checklist
 - [ ] Không có `.Result` hoặc `.Wait()` trong toàn bộ code mới.
-- [ ] View và ViewModel được giải phóng tài nguyên an toàn (hủy đăng ký sự kiện nếu có).
-- [ ] Mọi command đều có cờ `IsBusy` để ngăn chặn người dùng bấm đúp liên tục (Double tap issue).
-- [ ] Đã đăng ký Page và PageModel vào `MauiProgram.cs`.
+- [ ] Inject trực tiếp Interface qua Constructor (không dùng Service Locator).
+- [ ] Mọi command bất đồng bộ đều có cờ `IsBusy` chống bấm đúp.
+- [ ] Đã đăng ký Page/PageModel/Service trong `<Feature>FeatureModule.cs` (không chạm vào `MauiProgram.cs`).

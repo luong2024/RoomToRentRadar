@@ -1,0 +1,46 @@
+#!/usr/bin/env sh
+# ============================================================================
+# Group 5 Pre-Push Guardrail
+# 1. Blocks ANY push to `main` (ZERO TOLERANCE for everyone).
+# 2. Blocks direct push to `group-5` unless performed by Gatekeepers (@Duc-Nguyen-Github / @quangtldc0301)
+#    or with ALLOW_GROUP5_INTEGRATION=1.
+# 3. Runs Unit + API Contract Tests (with 30s hang timeout) before allowing push.
+# ============================================================================
+
+current_branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
+git_user="$(git config user.name 2>/dev/null)"
+
+while read local_ref local_sha remote_ref remote_sha; do
+    case "$remote_ref" in
+        refs/heads/main|refs/heads/master)
+            echo "============================================================================" >&2
+            echo "[CHẶN PUSH] CẤM TUYỆT ĐỐI push lên nhánh 'main'!" >&2
+            echo "============================================================================" >&2
+            exit 1
+            ;;
+        refs/heads/group-5)
+            if [ "${ALLOW_GROUP5_INTEGRATION:-0}" = "1" ] || [ "$git_user" = "Duc-Nguyen-Github" ] || [ "$git_user" = "quangtldc0301" ]; then
+                echo "[Group-5 Gatekeeper] Xác nhận quyền push nhánh 'group-5' của Gatekeeper ($git_user)."
+            else
+                echo "============================================================================" >&2
+                echo "[CHẶN PUSH] Không được push thẳng lên nhánh 'group-5'!" >&2
+                echo "Hãy push nhánh 'feature/group-5/Txx.x-...' và tạo Pull Request để" >&2
+                echo "Scrum Master (@Duc-Nguyen-Github) hoặc Lead (@quangtldc0301) duyệt & bấm Merge." >&2
+                echo "============================================================================" >&2
+                exit 1
+            fi
+            ;;
+    esac
+done
+
+echo "[Group-5 Gatekeeper] Đang kiểm tra build & chạy API Contract / Unit Tests trước khi push '$current_branch'..."
+dotnet test RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj --nologo -v q --blame-hang-timeout 30s
+if [ $? -ne 0 ]; then
+    echo "============================================================================" >&2
+    echo "[CHẶN PUSH] Build hoặc Unit Tests đang FAIL (hoặc bị treo quá 30s)! Hãy sửa lỗi trước khi push." >&2
+    echo "============================================================================" >&2
+    exit 1
+fi
+
+echo "[Group-5 Gatekeeper] Build & Unit Tests PASS! Cho phép push."
+exit 0

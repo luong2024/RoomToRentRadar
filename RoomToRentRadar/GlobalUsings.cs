@@ -1,6 +1,11 @@
 global using Fonts;
+global using RoomToRentRadar.Abstractions.Alerts;
+global using RoomToRentRadar.Abstractions.Auth;
+global using RoomToRentRadar.Abstractions.Favorites;
+global using RoomToRentRadar.Abstractions.HouseRules;
+global using RoomToRentRadar.Abstractions.Reports;
+global using RoomToRentRadar.Abstractions.Rooms;
 global using RoomToRentRadar.Data;
-global using RoomToRentRadar.PageModels;
-global using RoomToRentRadar.Pages;
+global using RoomToRentRadar.Models;
 global using RoomToRentRadar.Services;
 global using RoomToRentRadar.Utilities;

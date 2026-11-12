@@ -4,13 +4,14 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:sf="clr-namespace:Syncfusion.Maui.Toolkit.SegmentedControl;assembly=Syncfusion.Maui.Toolkit"
-    xmlns:pages="clr-namespace:RoomToRentRadar.Pages"
+    xmlns:home="clr-namespace:RoomToRentRadar.Features.Home"
     Shell.FlyoutBehavior="Flyout"
     Title="RoomToRentRadar - ICTU">
 
     <!-- ========================================================================= -->
     <!-- ROOMTORENTRADAR SPRINT 1 MENU ZONES (CONFLICT-FREE DEVELOPER ZONES)       -->
-    <!-- Each developer only adds ShellContent inside their own designated zone.   -->
+    <!-- Route registration for non-flyout pages goes in your FeatureModule.cs!    -->
+    <!-- Only add Flyout ShellContent inside your own designated zone below.       -->
     <!-- ========================================================================= -->
 
     <!-- [ZONE 2: LAM MINH HIEU - T02.2 RoomListPage, T06.1 RoomMapPage, T07.2 FavoritesPage, T11.1 RoomComparePage] -->
@@ -21,29 +22,14 @@
 
     <!-- [ZONE 4: LIEU HAI NAM - T01.2 LoginPage, T08.2 SearchAlertsPage] -->
 
-    <!-- Baseline Home Screen (Visible until T02.2 RoomListPage is added above) -->
+    <!-- Baseline Home Screen -->
     <ShellContent
         Title="Trang chủ ICTU Radar"
         Icon="{StaticResource IconDashboard}"
-        ContentTemplate="{DataTemplate pages:MainPage}"
-        Route="main"
+        ContentTemplate="{DataTemplate home:HomePage}"
+        Route="home"
         SemanticProperties.Description="Trang chủ RoomToRentRadar"
         SemanticProperties.Hint="Màn hình khởi động RoomToRentRadar"/>
-
-    <!-- Legacy template pages hidden from Flyout Menu -->
-    <ShellContent
-        Title="Projects"
-        FlyoutItemIsVisible="False"
-        Icon="{StaticResource IconProjects}"
-        ContentTemplate="{DataTemplate pages:ProjectListPage}"
-        Route="projects" />
-
-    <ShellContent
-        Title="Manage Meta"
-        FlyoutItemIsVisible="False"
-        Icon="{StaticResource IconMeta}"
-        ContentTemplate="{DataTemplate pages:ManageMetaPage}"
-        Route="manage" />
 
     <Shell.FlyoutFooter>
         <Grid Padding="15">
