@@ -4,6 +4,7 @@ using RoomToRentRadar.Datastore.Sqlite.Context;
 using RoomToRentRadar.Domain.Aggregates;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.Policies;
+using RoomToRentRadar.Domain.Services;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 
@@ -134,7 +135,7 @@ public sealed class SqliteRoomRepository : IRoomRepository, IRoomSearchReadModel
             .Select(r => new
             {
                 Room = r,
-                DistanceKm = CalculateDistance(targetLatitude, targetLongitude, r.Latitude, r.Longitude)
+                DistanceKm = HaversineCalculator.DistanceKm(targetLatitude, targetLongitude, r.Latitude, r.Longitude)
             })
             .Where(x => x.DistanceKm <= SimilarRoomsPolicy.MaxDistanceKm)
             .ToList();
@@ -201,35 +202,22 @@ public sealed class SqliteRoomRepository : IRoomRepository, IRoomSearchReadModel
     private static DateTime ParseUtc(string iso8601) =>
         DateTime.Parse(iso8601, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
 
-    private static double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
-    {
-        const double earthRadiusKm = 6371.0;
-        var dLat = ToRadians(lat2 - lat1);
-        var dLon = ToRadians(lon2 - lon1);
-
-        var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
-                Math.Cos(ToRadians(lat1)) * Math.Cos(ToRadians(lat2)) *
-                Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
-
-        var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
-        return Math.Round(earthRadiusKm * c, 2);
-    }
-
-    private static double ToRadians(double degrees) => degrees * Math.PI / 180.0;
+    // Haversine distance is provided by HaversineCalculator (Domain.Services) — no inline duplication per M2 fix.
 
     private static RoomCardDto MapToCardDto(Room room, double distanceKm) => new(
         Id: room.Id,
         Title: room.Title,
-        Description: room.Description,
-        Price: room.Price,
-        Area: room.Area,
-        Address: room.FullAddress,
+        MonthlyRentVnd: (long)room.MonthlyRentVnd,
+        AreaM2: room.AreaM2,
+        RoomType: room.RoomType,
+        DistanceKm: distanceKm,
+        IsVerified: room.IsVerified,
+        Status: room.Status,
         Latitude: room.Latitude,
         Longitude: room.Longitude,
-        DistanceKm: distanceKm,
-        IsAvailable: room.IsAvailable,
-        IsVerified: room.IsVerified,
-        CreatedAtUtc: room.CreatedAtUtc
+        CoverThumbUrl: null,
+        IsFavourite: false,
+        PublishedAtUtc: room.PublishedAtUtc
     );
 
     private void ReleaseConnection(SqliteConnection conn)

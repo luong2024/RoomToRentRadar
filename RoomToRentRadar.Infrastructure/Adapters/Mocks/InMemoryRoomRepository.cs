@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using RoomToRentRadar.Domain.Aggregates;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.Policies;
+using RoomToRentRadar.Domain.Services;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 
@@ -70,7 +71,7 @@ public sealed class InMemoryRoomRepository : IRoomRepository, IRoomSearchReadMod
             .Select(r => new
             {
                 Room = r,
-                DistanceKm = CalculateDistance(targetLatitude, targetLongitude, r.Latitude, r.Longitude)
+                DistanceKm = HaversineCalculator.DistanceKm(targetLatitude, targetLongitude, r.Latitude, r.Longitude)
             })
             .Where(x => x.DistanceKm <= SimilarRoomsPolicy.MaxDistanceKm)
             .ToList();
@@ -103,16 +104,17 @@ public sealed class InMemoryRoomRepository : IRoomRepository, IRoomSearchReadMod
     private static RoomCardDto MapToCardDto(Room room) => new(
         Id: room.Id,
         Title: room.Title,
-        Description: room.Description,
-        Price: room.Price,
-        Area: room.Area,
-        Address: room.FullAddress,
+        MonthlyRentVnd: (long)room.MonthlyRentVnd,
+        AreaM2: room.AreaM2,
+        RoomType: room.RoomType,
+        DistanceKm: room.DistanceToCampusKm,
+        IsVerified: room.IsVerified,
+        Status: room.Status,
         Latitude: room.Latitude,
         Longitude: room.Longitude,
-        DistanceKm: room.DistanceToCampusKm,
-        IsAvailable: room.IsAvailable,
-        IsVerified: room.IsVerified,
-        CreatedAtUtc: room.CreatedAtUtc
+        CoverThumbUrl: room.PhotoUrls?.FirstOrDefault(),
+        IsFavourite: false,
+        PublishedAtUtc: room.PublishedAtUtc
     );
 
     [Obsolete("Use IRoomSearchReadModel.GetSimilarRoomsAsync per BR-LST-10")]
@@ -144,17 +146,7 @@ public sealed class InMemoryRoomRepository : IRoomRepository, IRoomSearchReadMod
         _rooms[room.Id] = room;
     }
 
-    private static double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
-    {
-        const double r = 6371.0; // Earth radius in km
-        var dLat = (lat2 - lat1) * Math.PI / 180.0;
-        var dLon = (lon2 - lon1) * Math.PI / 180.0;
-        var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
-                Math.Cos(lat1 * Math.PI / 180.0) * Math.Cos(lat2 * Math.PI / 180.0) *
-                Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
-        var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
-        return Math.Round(r * c, 1);
-    }
+    // Haversine distance is provided by HaversineCalculator (Domain.Services) — no inline duplication per M2 fix.
 
     private void SeedDefaultRooms()
     {
