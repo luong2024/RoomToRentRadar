@@ -119,6 +119,24 @@ paths:
               schema: { $ref: '#/components/schemas/AuthTokensDto' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/auth/google:
+    post:
+      tags: [Auth]
+      operationId: loginWithGoogle
+      summary: Sign in with Google (Student with @ictu.edu.vn, Landlord with phone number)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GoogleLoginRequest' }
+      responses:
+        '200':
+          description: Signed in
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthTokensDto' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /api/auth/refresh:
     post:
       tags: [Auth]
@@ -1266,7 +1284,7 @@ components:
     # ------------------------------------------------ enums
     UserRole: { type: string, enum: [Student, Landlord, Admin] }
     PublicRole: { type: string, enum: [Student, Landlord], description: BR-AUTH-02 }
-    AuthProvider: { type: string, enum: [Local, IctuSso] }
+    AuthProvider: { type: string, enum: [Local, IctuSso, Google] }
     RoomType: { type: string, enum: [BoardingRoom, MiniApartment, WholeHouse, Dormitory] }
     ListingStatus: { type: string, enum: [PendingReview, Rejected, Available, Rented, Unpublished, Suspended] }
     Furnishing: { type: string, enum: [Unfurnished, Basic, Full] }
@@ -1310,6 +1328,14 @@ components:
       required: [idToken]
       properties:
         idToken: { type: string }
+        deviceInfo: { type: [string, 'null'] }
+    GoogleLoginRequest:
+      type: object
+      required: [idToken, role]
+      properties:
+        idToken: { type: string }
+        role: { $ref: '#/components/schemas/PublicRole' }
+        phoneNumber: { type: [string, 'null'] }
         deviceInfo: { type: [string, 'null'] }
     RefreshTokenRequest:
       type: object

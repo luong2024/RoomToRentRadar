@@ -13,6 +13,7 @@ public static class DependencyInjection
         services.AddScoped<IRegisterUserUseCase, RegisterUserUseCase>();
         services.AddScoped<ILoginUserUseCase, LoginUserUseCase>();
         services.AddScoped<ILoginWithIctuSsoUseCase, LoginWithIctuSsoUseCase>();
+        services.AddScoped<ILoginWithGoogleUseCase, LoginWithGoogleUseCase>();
         services.AddScoped<IRefreshTokenUseCase, RefreshTokenUseCase>();
         services.AddScoped<IRevokeTokenUseCase, RevokeTokenUseCase>();
         services.AddScoped<IGetCurrentUserProfileUseCase, GetCurrentUserProfileUseCase>();

@@ -27,10 +27,12 @@ public static class DependencyInjection
         if (useMockSsoVerifier)
         {
             services.AddSingleton<IIctuSsoVerifierPort, MockIctuSsoVerifierAdapter>();
+            services.AddSingleton<IGoogleAuthVerifierPort, MockGoogleAuthVerifierAdapter>();
         }
         else
         {
             services.AddSingleton<IIctuSsoVerifierPort, IctuSsoVerifierAdapter>();
+            services.AddSingleton<IGoogleAuthVerifierPort, GoogleAuthVerifierAdapter>();
         }
 
         services.AddSingleton<InMemoryUserRepository>();

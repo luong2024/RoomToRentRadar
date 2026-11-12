@@ -45,6 +45,13 @@ public sealed class HttpAuthGateway : IAuthGateway
         return await HandleResponseAsync<AuthTokensDto>(response, ct);
     }
 
+    public async Task<AuthTokensDto> LoginWithGoogleAsync(GoogleLoginRequest request, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var response = await _httpClient.PostAsJsonAsync("/api/auth/google", request, JsonOptions, ct);
+        return await HandleResponseAsync<AuthTokensDto>(response, ct);
+    }
+
     public async Task<AuthTokensDto> RefreshTokenAsync(RefreshTokenRequest request, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(request);

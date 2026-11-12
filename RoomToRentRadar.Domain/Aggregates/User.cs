@@ -173,6 +173,83 @@ public sealed class User
             updatedAtUtc: utcNow);
     }
 
+    public static User RegisterGoogle(
+        string email,
+        string fullName,
+        string googleSubjectId,
+        UserRole role,
+        string? phoneNumber,
+        DateTime utcNow)
+    {
+        if (!Enum.IsDefined(typeof(UserRole), role))
+        {
+            throw new DomainValidationException($"Role '{(int)role}' is not a recognized role.");
+        }
+
+        if (role != UserRole.Student && role != UserRole.Landlord)
+        {
+            throw new ForbiddenRoleException("Public self-registration is only permitted for Student and Landlord roles.");
+        }
+
+        if (string.IsNullOrWhiteSpace(fullName))
+        {
+            throw new DomainValidationException("Full name is required for Google registration.");
+        }
+
+        if (string.IsNullOrWhiteSpace(googleSubjectId))
+        {
+            throw new DomainValidationException("Google subject identifier is required.");
+        }
+
+        var emailAddress = EmailAddress.Create(email);
+
+        if (role == UserRole.Student)
+        {
+            if (!emailAddress.IsIctuStudentEmail())
+            {
+                throw new DomainValidationException($"Student Google login requires an '{EmailAddress.IctuDomain}' email address.");
+            }
+
+            var derivedStudentCode = emailAddress.Value.Split('@')[0].ToUpperInvariant();
+
+            return new User(
+                id: Guid.NewGuid().ToString("N"),
+                email: emailAddress,
+                fullName: fullName.Trim(),
+                passwordHash: null,
+                role: UserRole.Student,
+                authProvider: AuthProvider.Google,
+                ssoSubjectId: googleSubjectId.Trim(),
+                phoneNumber: null,
+                studentCode: derivedStudentCode,
+                isVerified: true,
+                failedLoginCount: 0,
+                lockoutEndUtc: null,
+                createdAtUtc: utcNow,
+                updatedAtUtc: utcNow);
+        }
+        else
+        {
+            var normalizedPhone = NormalizeAndValidatePhone(phoneNumber, required: true);
+
+            return new User(
+                id: Guid.NewGuid().ToString("N"),
+                email: emailAddress,
+                fullName: fullName.Trim(),
+                passwordHash: null,
+                role: UserRole.Landlord,
+                authProvider: AuthProvider.Google,
+                ssoSubjectId: googleSubjectId.Trim(),
+                phoneNumber: normalizedPhone,
+                studentCode: null,
+                isVerified: false, // Landlord requires Admin approval per BR-AUTH-03
+                failedLoginCount: 0,
+                lockoutEndUtc: null,
+                createdAtUtc: utcNow,
+                updatedAtUtc: utcNow);
+        }
+    }
+
     public static User Reconstitute(
         string id,
         string email,
@@ -269,6 +346,24 @@ public sealed class User
         }
 
         IsVerified = true;
+        UpdatedAtUtc = utcNow;
+    }
+
+    public void LinkGoogle(string googleSubjectId, string? phoneNumber, DateTime utcNow)
+    {
+        if (string.IsNullOrWhiteSpace(googleSubjectId))
+        {
+            throw new DomainValidationException("Google subject identifier is required.");
+        }
+
+        SsoSubjectId = googleSubjectId.Trim();
+        AuthProvider = AuthProvider.Google;
+
+        if (Role == UserRole.Landlord && string.IsNullOrWhiteSpace(PhoneNumber) && !string.IsNullOrWhiteSpace(phoneNumber))
+        {
+            PhoneNumber = NormalizeAndValidatePhone(phoneNumber, required: true);
+        }
+
         UpdatedAtUtc = utcNow;
     }
 

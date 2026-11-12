@@ -21,6 +21,7 @@ public class AuthControllerAndRbacTests
     private IRegisterUserUseCase _registerUseCase = null!;
     private ILoginUserUseCase _loginUseCase = null!;
     private ILoginWithIctuSsoUseCase _ssoUseCase = null!;
+    private ILoginWithGoogleUseCase _googleUseCase = null!;
     private IRefreshTokenUseCase _refreshUseCase = null!;
     private IRevokeTokenUseCase _revokeUseCase = null!;
     private IGetCurrentUserProfileUseCase _getProfileUseCase = null!;
@@ -33,6 +34,7 @@ public class AuthControllerAndRbacTests
         _registerUseCase = Substitute.For<IRegisterUserUseCase>();
         _loginUseCase = Substitute.For<ILoginUserUseCase>();
         _ssoUseCase = Substitute.For<ILoginWithIctuSsoUseCase>();
+        _googleUseCase = Substitute.For<ILoginWithGoogleUseCase>();
         _refreshUseCase = Substitute.For<IRefreshTokenUseCase>();
         _revokeUseCase = Substitute.For<IRevokeTokenUseCase>();
         _getProfileUseCase = Substitute.For<IGetCurrentUserProfileUseCase>();
@@ -42,6 +44,7 @@ public class AuthControllerAndRbacTests
             _registerUseCase,
             _loginUseCase,
             _ssoUseCase,
+            _googleUseCase,
             _refreshUseCase,
             _revokeUseCase,
             _getProfileUseCase,
@@ -86,6 +89,25 @@ public class AuthControllerAndRbacTests
             "student-123",
             Arg.Is<RevokeTokenRequest>(r => r.RefreshToken == "refresh-token-1"),
             Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task GoogleLogin_Returns200OkWithAuthTokensDto()
+    {
+        var expected = CreateSampleTokens("google-user-1", "Student", isVerified: true);
+        _googleUseCase.ExecuteAsync(Arg.Any<GoogleLoginRequest>(), Arg.Any<CancellationToken>())
+            .Returns(expected);
+
+        var actionResult = await _controller.GoogleLogin(
+            new GoogleLoginRequest("valid-token", "Student"),
+            CancellationToken.None);
+
+        var okResult = actionResult.Result as OkObjectResult;
+        Assert.Multiple(() =>
+        {
+            Assert.That(okResult, Is.Not.Null);
+            Assert.That(okResult!.Value, Is.EqualTo(expected));
+        });
     }
 
     [Test]

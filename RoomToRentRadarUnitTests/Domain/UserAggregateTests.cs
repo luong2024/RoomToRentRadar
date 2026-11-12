@@ -223,5 +223,96 @@ public class UserAggregateTests
             createdAtUtc: FixedNow,
             expiresAtUtc: FixedNow.AddMinutes(-5)));
     }
+
+    [Test]
+    public void RegisterGoogle_AsStudent_ValidIctuEmail_CreatesVerifiedStudentAccount()
+    {
+        var user = User.RegisterGoogle(
+            email: "student@ictu.edu.vn",
+            fullName: "Google Student",
+            googleSubjectId: "google-sub-12345",
+            role: UserRole.Student,
+            phoneNumber: null,
+            utcNow: FixedNow);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(user.Id, Is.Not.Empty);
+            Assert.That(user.Email.Value, Is.EqualTo("student@ictu.edu.vn"));
+            Assert.That(user.FullName, Is.EqualTo("Google Student"));
+            Assert.That(user.Role, Is.EqualTo(UserRole.Student));
+            Assert.That(user.AuthProvider, Is.EqualTo(AuthProvider.Google));
+            Assert.That(user.SsoSubjectId, Is.EqualTo("google-sub-12345"));
+            Assert.That(user.IsVerified, Is.True);
+            Assert.That(user.StudentCode, Is.EqualTo("STUDENT"));
+        });
+    }
+
+    [Test]
+    public void RegisterGoogle_AsStudent_NonIctuEmail_ThrowsValidationException()
+    {
+        Assert.Throws<DomainValidationException>(() => User.RegisterGoogle(
+            email: "student@gmail.com",
+            fullName: "Student Personal",
+            googleSubjectId: "google-sub-123",
+            role: UserRole.Student,
+            phoneNumber: null,
+            utcNow: FixedNow));
+    }
+
+    [Test]
+    public void RegisterGoogle_AsLandlord_ValidPhone_CreatesUnverifiedLandlord()
+    {
+        var landlord = User.RegisterGoogle(
+            email: "landlord@gmail.com",
+            fullName: "Google Landlord",
+            googleSubjectId: "google-sub-67890",
+            role: UserRole.Landlord,
+            phoneNumber: "0912345678",
+            utcNow: FixedNow);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(landlord.Role, Is.EqualTo(UserRole.Landlord));
+            Assert.That(landlord.AuthProvider, Is.EqualTo(AuthProvider.Google));
+            Assert.That(landlord.SsoSubjectId, Is.EqualTo("google-sub-67890"));
+            Assert.That(landlord.PhoneNumber, Is.EqualTo("0912345678"));
+            Assert.That(landlord.IsVerified, Is.False);
+        });
+    }
+
+    [Test]
+    public void RegisterGoogle_AsLandlord_MissingPhone_ThrowsValidationException()
+    {
+        Assert.Throws<DomainValidationException>(() => User.RegisterGoogle(
+            email: "landlord@gmail.com",
+            fullName: "Google Landlord",
+            googleSubjectId: "google-sub-67890",
+            role: UserRole.Landlord,
+            phoneNumber: null,
+            utcNow: FixedNow));
+    }
+
+    [Test]
+    public void LinkGoogle_ExistingUser_UpdatesSsoSubjectIdAndAuthProvider()
+    {
+        var user = User.RegisterLocal(
+            email: "landlord@gmail.com",
+            passwordHash: "hash",
+            fullName: "Local Landlord",
+            role: UserRole.Landlord,
+            phoneNumber: "0987654321",
+            studentCode: null,
+            utcNow: FixedNow);
+
+        user.LinkGoogle("google-sub-999", null, FixedNow.AddMinutes(5));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(user.AuthProvider, Is.EqualTo(AuthProvider.Google));
+            Assert.That(user.SsoSubjectId, Is.EqualTo("google-sub-999"));
+            Assert.That(user.UpdatedAtUtc, Is.EqualTo(FixedNow.AddMinutes(5)));
+        });
+    }
 }
 
