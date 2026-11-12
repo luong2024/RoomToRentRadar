@@ -8,7 +8,7 @@ using RoomToRentRadar.Shared.Pagination;
 namespace RoomToRentRadarUnitTests;
 
 [TestFixture]
-public class HomeViewModelTests
+public partial class HomeViewModelTests
 {
     [Test]
     public async Task LoadAsync_WhenApiReturnsFirstPage_PopulatesListingsAndPagination()
@@ -559,6 +559,8 @@ public class HomeViewModelTests
 
         public List<ActiveListingFiltersDto?> RequestedFilters { get; } = new();
 
+        public List<CancellationToken> RequestedCancellationTokens { get; } = new();
+
         public Task<ListingSearchResultDto> GetListingsAsync(
             int limit,
             string? cursor = null,
@@ -568,6 +570,7 @@ public class HomeViewModelTests
             RequestedLimits.Add(limit);
             RequestedCursors.Add(cursor);
             RequestedFilters.Add(filters);
+            RequestedCancellationTokens.Add(cancellationToken);
 
             if (_responses.Count == 0)
                 throw new InvalidOperationException("No fake listings response was queued.");
@@ -575,6 +578,7 @@ public class HomeViewModelTests
             return _responses.Dequeue() switch
             {
                 ListingSearchResultDto page => Task.FromResult(page),
+                Task<ListingSearchResultDto> pending => pending,
                 Exception exception => Task.FromException<ListingSearchResultDto>(exception),
                 _ => throw new InvalidOperationException("Unsupported fake listings response.")
             };

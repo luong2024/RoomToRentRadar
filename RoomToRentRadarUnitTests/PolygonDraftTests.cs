@@ -38,6 +38,38 @@ public class PolygonDraftTests
     }
 
     [Test]
+    public void AddFiveVertices_DoesNotAutoCloseAtThree_ClosesFullRingOnRequest()
+    {
+        var vertices = new[]
+        {
+            new GeoPoint(10.77, 106.69), new GeoPoint(10.77, 106.70),
+            new GeoPoint(10.775, 106.705), new GeoPoint(10.78, 106.70),
+            new GeoPoint(10.78, 106.69)
+        };
+        var draft = new PolygonDraft();
+        foreach (var vertex in vertices)
+        {
+            Assert.That(draft.Add(vertex), Is.True);
+            Assert.That(draft.IsClosed, Is.False);
+        }
+
+        Assert.That(draft.Close(), Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(draft.Vertices, Is.EqualTo(vertices));
+            Assert.That(draft.Ring, Is.EqualTo(vertices.Append(vertices[0])));
+            Assert.That(draft.ToGeoJsonCoordinates()[0], Has.Length.EqualTo(6));
+        });
+        draft.Clear();
+        Assert.Multiple(() =>
+        {
+            Assert.That(draft.Vertices, Is.Empty);
+            Assert.That(draft.Ring, Is.Empty);
+            Assert.That(draft.IsClosed, Is.False);
+        });
+    }
+
+    [Test]
     public void Add_RejectsDuplicateConsecutiveVerticesAndInvalidCoordinates()
     {
         var draft = new PolygonDraft();

@@ -18,18 +18,24 @@ public partial class MapSearchPageModel : ObservableObject
     private readonly ISavedAreaSearchStore _savedAreaStore;
     private readonly IErrorHandler _errorHandler;
     private CancellationTokenSource? _searchCts;
+    private readonly INavigationService? _navigationService;
+    private string? _nextCursor;
+    private readonly HashSet<Guid> _listingIds = [];
+    private bool _restoringArea;
+    private bool _savedAreasLoaded;
+    private bool _areaRejected;
 
     public MapSearchPageModel(
         IApiClient apiClient,
         ISavedAreaSearchStore savedAreaStore,
-        IErrorHandler errorHandler)
+        IErrorHandler errorHandler, INavigationService? navigationService = null)
     {
         _apiClient = apiClient;
         _savedAreaStore = savedAreaStore;
         _errorHandler = errorHandler;
+        _navigationService = navigationService;
 
-        foreach (var area in _savedAreaStore.GetAll())
-            SavedAreas.Add(area);
+        TryLoadSavedAreas();
     }
 
     /// <summary>Raised when the draft polygon or the pins need to be redrawn.</summary>
@@ -51,6 +57,18 @@ public partial class MapSearchPageModel : ObservableObject
 
     [ObservableProperty]
     public partial bool IsBusy { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsLoadingMore { get; set; }
+
+    public bool CanLoadMore => _nextCursor is not null && !IsBusy && !IsLoadingMore && HasPolygon;
+
+    partial void OnIsBusyChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanLoadMore));
+        OnPropertyChanged(nameof(CanSaveCurrentArea));
+    }
+    partial void OnIsLoadingMoreChanged(bool value) => OnPropertyChanged(nameof(CanLoadMore));
 
     [ObservableProperty]
     public partial string StatusMessage { get; set; }
@@ -75,6 +93,11 @@ public partial class MapSearchPageModel : ObservableObject
     public partial bool IsSavedPanelOpen { get; set; }
 
     public bool HasPolygon => Draft.IsClosed;
+    public bool HasDraft => Draft.Vertices.Count > 0;
+    public int DraftVertexCount => Draft.Vertices.Count;
+    public string DrawingHint => IsDrawing
+        ? StatusMessage
+        : HasPolygon ? $"Vùng đã chọn · {DraftVertexCount} điểm" : "Vẽ vùng quanh nơi bạn muốn tìm trọ.";
 
     public bool HasSelection => SelectedListing is not null;
 
@@ -93,18 +116,22 @@ public partial class MapSearchPageModel : ObservableObject
 
     public bool CanFinishDrawing => IsDrawing && Draft.Vertices.Count >= PolygonDraft.MinimumVertices;
 
-    public bool CanSaveCurrentArea => HasPolygon && !string.IsNullOrWhiteSpace(NewAreaName);
+    public bool CanSaveCurrentArea => HasPolygon && !_areaRejected && !IsBusy && !IsDrawing
+        && !string.IsNullOrWhiteSpace(NewAreaName);
 
     public bool ShowSearchButton => HasPolygon && !IsDrawing;
 
     partial void OnIsDrawingChanged(bool value)
     {
+        OnPropertyChanged(nameof(DrawingHint));
         OnPropertyChanged(nameof(ShowStartDrawing));
         OnPropertyChanged(nameof(ShowDrawingTools));
         OnPropertyChanged(nameof(CanFinishDrawing));
         OnPropertyChanged(nameof(CanSaveCurrentArea));
         OnPropertyChanged(nameof(ShowSearchButton));
     }
+
+    partial void OnStatusMessageChanged(string value) => OnPropertyChanged(nameof(DrawingHint));
 
     partial void OnSelectedListingChanged(MapListingItem? value)
     {
@@ -121,52 +148,82 @@ public partial class MapSearchPageModel : ObservableObject
 
     partial void OnSelectedSortIndexChanged(int value)
     {
-        if (Draft.IsClosed)
+        if (Draft.IsClosed && !_restoringArea)
             SearchCommand.Execute(null);
     }
 
     public void AddVertex(double latitude, double longitude)
     {
+        if (IsDrawing && Draft.Vertices.Count >= SavedAreaSearch.MaximumVertices)
+        {
+            StatusMessage = $"Khu vực có tối đa {SavedAreaSearch.MaximumVertices} đỉnh.";
+            return;
+        }
         if (!IsDrawing || !Draft.Add(new GeoPoint(latitude, longitude)))
             return;
 
         StatusMessage = Draft.Vertices.Count < PolygonDraft.MinimumVertices
-            ? $"Đã thêm {Draft.Vertices.Count} đỉnh · cần ít nhất {PolygonDraft.MinimumVertices} đỉnh."
-            : $"Đã thêm {Draft.Vertices.Count} đỉnh · chạm “Hoàn tất” để tìm phòng.";
+            ? $"Đã thêm {Draft.Vertices.Count} điểm · tiếp tục chấm quanh vùng muốn tìm."
+            : $"Đã thêm {Draft.Vertices.Count} điểm · tiếp tục chấm hoặc bấm Tìm phòng để khép vùng.";
         NotifyDraftChanged();
     }
 
-    public void SelectListing(MapListingItem? listing) => SelectedListing = listing;
+    public void SelectListing(MapListingItem? listing)
+        => SelectedListing = listing is null ? null : Listings.FirstOrDefault(item => item.Listing.Id == listing.Listing.Id);
+
+    public void CancelPendingSearch()
+    {
+        Interlocked.Exchange(ref _searchCts, null)?.Cancel();
+        IsBusy = false;
+        IsLoadingMore = false;
+    }
+
+    private void ClearResults()
+    {
+        SelectedListing = null;
+        Listings.Clear();
+        _listingIds.Clear();
+        _nextCursor = null;
+        ResultsText = "";
+        OnPropertyChanged(nameof(HasResults));
+        OnPropertyChanged(nameof(CanLoadMore));
+        MapDataChanged?.Invoke(this, EventArgs.Empty);
+    }
 
     [RelayCommand]
     private void StartDrawing()
     {
-        _searchCts?.Cancel();
+        CancelPendingSearch();
         Draft.Clear();
-        Listings.Clear();
-        SelectedListing = null;
-        ResultsText = "";
+        ClearResults();
+        _areaRejected = false;
+        IsSavedPanelOpen = false;
         IsDrawing = true;
         OnPropertyChanged(nameof(HasResults));
-        StatusMessage = "Chạm lên bản đồ để thêm đỉnh. Cần ít nhất 3 đỉnh, hoàn tác bằng nút bên dưới.";
+        StatusMessage = "Chạm để chấm nhiều điểm quanh khu vực. Bấm Tìm phòng khi đã vẽ xong.";
         NotifyDraftChanged();
     }
 
     [RelayCommand]
     private void UndoVertex()
     {
-        if (!Draft.RemoveLast())
+        if (!IsDrawing || !Draft.RemoveLast())
             return;
 
         StatusMessage = Draft.Vertices.Count == 0
             ? "Chạm lên bản đồ để thêm đỉnh đầu tiên."
-            : $"Đã thêm {Draft.Vertices.Count} đỉnh · cần ít nhất {PolygonDraft.MinimumVertices} đỉnh.";
+            : $"Còn {Draft.Vertices.Count} điểm · chạm để thêm hoặc bấm Tìm phòng khi đã vẽ xong.";
         NotifyDraftChanged();
     }
 
     [RelayCommand]
     private async Task FinishDrawingAsync()
     {
+        if (Draft.CanClose && !Draft.HasValidGeometry)
+        {
+            StatusMessage = "Vùng bị tự cắt hoặc các điểm nằm trên một đường thẳng. Hãy hoàn tác điểm rồi vẽ lại.";
+            return;
+        }
         if (!Draft.Close())
         {
             StatusMessage = $"Cần ít nhất {PolygonDraft.MinimumVertices} đỉnh trước khi hoàn tất.";
@@ -184,8 +241,9 @@ public partial class MapSearchPageModel : ObservableObject
     [RelayCommand]
     private void CancelDrawing()
     {
-        _searchCts?.Cancel();
+        CancelPendingSearch();
         Draft.Clear();
+        ClearResults();
         IsDrawing = false;
         StatusMessage = "Đã xóa khu vực đang vẽ.";
         NotifyDraftChanged();
@@ -194,15 +252,36 @@ public partial class MapSearchPageModel : ObservableObject
     [RelayCommand(AllowConcurrentExecutions = true)]
     private Task Search() => SearchInternalAsync();
 
-    private async Task SearchInternalAsync()
+    [RelayCommand]
+    private Task LoadMoreAsync() => CanLoadMore ? SearchInternalAsync(true) : Task.CompletedTask;
+
+    [RelayCommand]
+    private async Task OpenSelectedListingAsync()
+    {
+        if (_navigationService is null || SelectedListing is not { } selected
+            || !Listings.Contains(selected))
+            return;
+        try { await _navigationService.GoToRoomDetailAsync(selected.Listing.Id); }
+        catch (Exception ex) { _errorHandler.HandleError(ex); }
+    }
+
+    private async Task SearchInternalAsync(bool append = false)
     {
         if (!Draft.IsClosed)
             return;
 
         var cts = new CancellationTokenSource();
         Interlocked.Exchange(ref _searchCts, cts)?.Cancel();
-
-        IsBusy = true;
+        var cursor = append ? _nextCursor : null;
+        var centroid = Draft.Centroid;
+        if (!append)
+        {
+            ClearResults();
+            _areaRejected = false;
+        }
+        IsLoadingMore = append;
+        IsBusy = !append;
+        StatusMessage = append ? "Đang tải thêm phòng…" : "Đang tìm phòng trong khu vực…";
         try
         {
             var request = new AreaSearchRequest
@@ -213,24 +292,24 @@ public partial class MapSearchPageModel : ObservableObject
                     Coordinates = Draft.ToGeoJsonCoordinates()
                 },
                 Sort = SortOptions[Math.Clamp(SelectedSortIndex, 0, SortOptions.Count - 1)].WireValue,
-                Limit = ResultLimit
+                Limit = ResultLimit,
+                Cursor = cursor
             };
 
             var result = await _apiClient.SearchByAreaAsync(request, cts.Token);
             if (cts.IsCancellationRequested)
                 return;
 
-            var centroid = Draft.Centroid;
-
-            Listings.Clear();
             foreach (var listing in result.Data)
             {
+                if (!_listingIds.Add(listing.Id))
+                    continue;
                 Listings.Add(new MapListingItem(
                     listing,
                     RoomListingService.DistanceKm(centroid.Lat, centroid.Lng, listing.Lat, listing.Lng)));
             }
 
-            SelectedListing = null;
+            _nextCursor = result.Pagination.HasMore ? result.Pagination.NextCursor : null;
             ResultsText = result.TotalCountCapped
                 ? $"Hiển thị {Listings.Count} / {result.TotalCount}+ phòng"
                 : $"Hiển thị {Listings.Count} / {result.TotalCount} phòng";
@@ -246,7 +325,10 @@ public partial class MapSearchPageModel : ObservableObject
         catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.UnprocessableEntity)
         {
             if (!cts.IsCancellationRequested)
+            {
+                _areaRejected = true;
                 StatusMessage = InvalidAreaStatusMessage(ex.Code);
+            }
         }
         catch (Exception ex)
         {
@@ -262,6 +344,7 @@ public partial class MapSearchPageModel : ObservableObject
             {
                 _searchCts = null;
                 IsBusy = false;
+                IsLoadingMore = false;
                 OnPropertyChanged(nameof(HasResults));
                 MapDataChanged?.Invoke(this, EventArgs.Empty);
             }
@@ -281,16 +364,29 @@ public partial class MapSearchPageModel : ObservableObject
     [RelayCommand]
     private void SaveArea()
     {
-        if (!Draft.IsClosed)
+        if (!Draft.IsClosed || IsBusy || IsDrawing || _areaRejected)
         {
             StatusMessage = "Hãy hoàn tất khu vực trước khi lưu.";
             return;
         }
 
         var name = NewAreaName.Trim();
-        if (name.Length == 0)
+        if (name.Length == 0 || name.Length > SavedAreaSearch.MaximumNameLength)
         {
-            StatusMessage = "Nhập tên cho khu vực đã lưu.";
+            StatusMessage = $"Tên khu vực cần từ 1 đến {SavedAreaSearch.MaximumNameLength} ký tự.";
+            return;
+        }
+
+        if (!TryLoadSavedAreas())
+            return;
+        if (SavedAreas.Any(area => string.Equals(area.Name.Trim(), name, StringComparison.OrdinalIgnoreCase)))
+        {
+            StatusMessage = "Tên khu vực đã tồn tại. Hãy chọn tên khác.";
+            return;
+        }
+        if (SavedAreas.Count >= SavedAreaSearch.MaximumCount)
+        {
+            StatusMessage = $"Có thể lưu tối đa {SavedAreaSearch.MaximumCount} khu vực.";
             return;
         }
 
@@ -298,10 +394,24 @@ public partial class MapSearchPageModel : ObservableObject
             Guid.NewGuid().ToString("N"),
             name,
             Draft.Vertices.ToArray(),
-            DateTime.UtcNow);
+            DateTime.UtcNow)
+        {
+            Sort = SortOptions[Math.Clamp(SelectedSortIndex, 0, SortOptions.Count - 1)].WireValue
+        };
+
+        if (!saved.IsValid)
+        {
+            StatusMessage = "Khu vực vẽ không hợp lệ. Hãy xóa và vẽ lại.";
+            return;
+        }
 
         var areas = SavedAreas.Append(saved).ToArray();
-        _savedAreaStore.ReplaceAll(areas);
+        try { _savedAreaStore.ReplaceAll(areas); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            StatusMessage = "Không thể lưu khu vực. Dữ liệu hiện có được giữ nguyên; hãy thử lại.";
+            return;
+        }
         SavedAreas.Add(saved);
         SelectedSavedArea = saved;
         NewAreaName = "";
@@ -312,9 +422,11 @@ public partial class MapSearchPageModel : ObservableObject
     [RelayCommand]
     private void ApplySavedArea()
     {
-        if (SelectedSavedArea is not { } saved)
+        if (SelectedSavedArea is not { } saved || !SavedAreas.Contains(saved) || !saved.IsValid)
             return;
 
+        CancelPendingSearch();
+        ClearResults();
         if (!Draft.Load(saved.Vertices))
         {
             StatusMessage = $"Khu vực “{saved.Name}” không hợp lệ.";
@@ -324,6 +436,9 @@ public partial class MapSearchPageModel : ObservableObject
 
         IsDrawing = false;
         IsSavedPanelOpen = false;
+        _restoringArea = true;
+        try { SelectedSortIndex = saved.Sort == ListingSortWire.PriceAsc ? 0 : 1; }
+        finally { _restoringArea = false; }
         SelectedListing = null;
         Listings.Clear();
         ResultsText = "";
@@ -341,7 +456,17 @@ public partial class MapSearchPageModel : ObservableObject
             return;
 
         var remaining = SavedAreas.Where(area => area.Id != saved.Id).ToArray();
-        _savedAreaStore.ReplaceAll(remaining);
+        try
+        {
+            if (!TryLoadSavedAreas())
+                return;
+            _savedAreaStore.ReplaceAll(remaining);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            StatusMessage = "Không thể xóa khu vực. Dữ liệu hiện có được giữ nguyên; hãy thử lại.";
+            return;
+        }
         SavedAreas.Remove(saved);
         SelectedSavedArea = SavedAreas.FirstOrDefault();
         StatusMessage = $"Đã xóa khu vực “{saved.Name}”.";
@@ -354,8 +479,32 @@ public partial class MapSearchPageModel : ObservableObject
     [RelayCommand]
     private void ToggleSavedAreas() => IsSavedPanelOpen = !IsSavedPanelOpen;
 
+    private bool TryLoadSavedAreas()
+    {
+        if (_savedAreasLoaded)
+            return true;
+        try
+        {
+            var areas = _savedAreaStore.GetAll();
+            SavedAreas.Clear();
+            foreach (var area in areas)
+                SavedAreas.Add(area);
+            _savedAreasLoaded = true;
+            OnPropertyChanged(nameof(HasSavedAreas));
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            StatusMessage = "Không thể đọc khu vực đã lưu. Dữ liệu hiện có được giữ nguyên; hãy thử lại.";
+            return false;
+        }
+    }
+
     private void NotifyDraftChanged()
     {
+        OnPropertyChanged(nameof(HasDraft));
+        OnPropertyChanged(nameof(DraftVertexCount));
+        OnPropertyChanged(nameof(DrawingHint));
         OnPropertyChanged(nameof(HasPolygon));
         OnPropertyChanged(nameof(CanFinishDrawing));
         OnPropertyChanged(nameof(CanSaveCurrentArea));

@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
-    <Color x:Key="Canvas">#FAFAF7</Color>
+    <Color x:Key="Canvas">#F6F7F2</Color>
     <Color x:Key="Surface">#FFFFFF</Color>
-    <Color x:Key="SoftSurface">#F3F4EF</Color>
-    <Color x:Key="Ink">#252E2A</Color>
-    <Color x:Key="Muted">#69736D</Color>
-    <Color x:Key="Accent">#355F50</Color>
-    <Color x:Key="AccentSoft">#EDF3ED</Color>
-    <Color x:Key="Line">#E7EAE3</Color>
+    <Color x:Key="SoftSurface">#F0F3EC</Color>
+    <Color x:Key="Ink">#20352B</Color>
+    <Color x:Key="Muted">#65736B</Color>
+    <Color x:Key="Accent">#234F40</Color>
+    <Color x:Key="AccentSoft">#E7F0E6</Color>
+    <Color x:Key="Line">#E5EAE0</Color>
+    <Color x:Key="WarmAccent">#B38C5B</Color>
+    <Color x:Key="CanvasDark">#14221C</Color>
+    <Color x:Key="SurfaceDark">#203229</Color>
+    <Color x:Key="InkDark">#F0F4EA</Color>
 </ResourceDictionary>

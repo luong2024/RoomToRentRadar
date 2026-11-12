@@ -1,72 +1,72 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:viewModels="clr-namespace:RoomToRentRadar.Features.Login.ViewModels"
              x:Class="RoomToRentRadar.Features.Login.Views.LoginPage"
              x:DataType="viewModels:LoginViewModel"
-             Title="Sign in"
+             Title="Đăng nhập"
              Shell.NavBarIsVisible="True"
              SafeAreaEdges="All">
-
     <ScrollView>
-        <VerticalStackLayout Padding="20"
-                             Spacing="16"
-                             MaximumWidthRequest="480"
-                             HorizontalOptions="Center">
+        <VerticalStackLayout x:Name="LoginContent" Padding="24,28,24,24" Spacing="24"
+                             MaximumWidthRequest="480" HorizontalOptions="Fill">
+            <VerticalStackLayout Spacing="14">
+                <Border WidthRequest="62" HeightRequest="62" Padding="12" StrokeThickness="0"
+                        BackgroundColor="{StaticResource AccentSoft}" StrokeShape="RoundRectangle 20"
+                        HorizontalOptions="Start">
+                    <Image Source="radar_mark.png" SemanticProperties.Description="Room Radar" />
+                </Border>
+                <Label Text="KẾT NỐI VỚI CHỦ PHÒNG" Style="{StaticResource Eyebrow}"
+                       TextColor="{StaticResource Accent}" />
+                <Label Text="Một bước nữa,&#10;gần nơi ở mới hơn." FontSize="28" FontFamily="OpenSansSemibold"
+                       CharacterSpacing="-0.5" SemanticProperties.HeadingLevel="Level1" />
+                <Label Text="Đăng nhập để xem số điện thoại và trao đổi trực tiếp với chủ phòng."
+                       Style="{StaticResource Caption}" FontSize="14" LineHeight="1.25" />
+            </VerticalStackLayout>
 
-            <Label Text="Sign in to see the landlord's phone number"
-                   FontSize="22" FontFamily="OpenSansSemibold"
-                   SemanticProperties.HeadingLevel="Level1" />
-            <Label Text="Use the demo account configured on the API."
-                   Style="{StaticResource Caption}" />
-
-            <Border Padding="16">
-                <VerticalStackLayout Spacing="12">
-                    <Label Text="EMAIL" Style="{StaticResource Eyebrow}" />
-                    <Entry Text="{Binding Email}"
-                           Keyboard="Email"
-                           IsSpellCheckEnabled="False"
-                           IsTextPredictionEnabled="False"
-                           Placeholder="you@example.com"
-                           PlaceholderColor="{StaticResource Muted}"
-                           TextColor="{StaticResource Ink}"
-                           FontSize="14"
-                           ClearButtonVisibility="WhileEditing"
-                           SemanticProperties.Description="Email address" />
-
-                    <Label Text="PASSWORD" Style="{StaticResource Eyebrow}" />
-                    <Entry Text="{Binding Password}"
-                           IsPassword="True"
-                           Placeholder="Your password"
-                           PlaceholderColor="{StaticResource Muted}"
-                           TextColor="{StaticResource Ink}"
-                           FontSize="14"
-                           SemanticProperties.Description="Password" />
-
-                    <Label Text="{Binding ErrorMessage}"
-                           IsVisible="{Binding HasError}"
-                           TextColor="#B3261E"
-                           Style="{StaticResource Caption}" />
+            <Border Padding="22" StrokeShape="RoundRectangle 24">
+                <Border.Shadow>
+                    <Shadow Brush="{StaticResource Accent}" Offset="0,5" Radius="18" Opacity="0.06" />
+                </Border.Shadow>
+                <VerticalStackLayout Spacing="16">
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="Email" FontFamily="OpenSansSemibold" FontSize="13" />
+                        <Border Padding="12,0" BackgroundColor="{StaticResource SoftSurface}"
+                                StrokeThickness="0" StrokeShape="RoundRectangle 12">
+                            <Entry Text="{Binding Email}" Keyboard="Email" ReturnType="Next"
+                                   IsSpellCheckEnabled="False" IsTextPredictionEnabled="False"
+                                   Placeholder="ban@example.com" PlaceholderColor="{StaticResource Muted}"
+                                   TextColor="{StaticResource Ink}" FontSize="14" MinimumHeightRequest="50"
+                                   ClearButtonVisibility="WhileEditing" AutomationId="LoginEmail"
+                                   SemanticProperties.Description="Địa chỉ email" />
+                        </Border>
+                    </VerticalStackLayout>
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="Mật khẩu" FontFamily="OpenSansSemibold" FontSize="13" />
+                        <Border Padding="12,0" BackgroundColor="{StaticResource SoftSurface}"
+                                StrokeThickness="0" StrokeShape="RoundRectangle 12">
+                            <Entry Text="{Binding Password}" IsPassword="True" ReturnType="Go"
+                                   ReturnCommand="{Binding SignInCommand}" Placeholder="Nhập mật khẩu của bạn"
+                                   PlaceholderColor="{StaticResource Muted}" TextColor="{StaticResource Ink}"
+                                   FontSize="14" MinimumHeightRequest="50" AutomationId="LoginPassword"
+                                   SemanticProperties.Description="Mật khẩu" />
+                        </Border>
+                    </VerticalStackLayout>
+                    <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}"
+                           TextColor="#B3261E" Style="{StaticResource Caption}" />
+                    <Button Text="Đăng nhập" Command="{Binding SignInCommand}" IsEnabled="{Binding IsNotBusy}"
+                            CornerRadius="16" MinimumHeightRequest="52" AutomationId="LoginSignIn"
+                            SemanticProperties.Description="Đăng nhập"
+                            SemanticProperties.Hint="Đăng nhập để xem liên hệ của chủ phòng" />
+                    <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
+                                       HorizontalOptions="Center" HeightRequest="24"
+                                       SemanticProperties.Description="Đang đăng nhập" />
                 </VerticalStackLayout>
             </Border>
-
-            <Button Text="Sign in"
-                    Command="{Binding SignInCommand}"
-                    IsEnabled="{Binding IsNotBusy}"
-                    SemanticProperties.Description="Sign in"
-                    SemanticProperties.Hint="Signs in with the demo account" />
-
-            <ActivityIndicator IsRunning="{Binding IsBusy}"
-                               IsVisible="{Binding IsBusy}"
-                               HorizontalOptions="Center"
-                               SemanticProperties.Description="Signing in" />
-
-            <Button Text="Cancel"
-                    Command="{Binding CancelCommand}"
-                    BackgroundColor="Transparent"
-                    TextColor="{StaticResource Accent}"
-                    SemanticProperties.Description="Cancel sign in"
-                    SemanticProperties.Hint="Returns to the room details" />
+            <Button Text="Quay lại phòng đang xem" Command="{Binding CancelCommand}"
+                    BackgroundColor="Transparent" TextColor="{StaticResource Accent}" MinimumHeightRequest="48"
+                    SemanticProperties.Description="Hủy đăng nhập"
+                    SemanticProperties.Hint="Quay lại trang thông tin phòng" />
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

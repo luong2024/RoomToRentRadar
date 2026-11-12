@@ -11,13 +11,23 @@ public sealed record MapListingItem(ListingSummaryDto Listing, double DistanceKm
 
     public string RentText => $"{Listing.Price.ToString("N0", Vietnamese)} đ/tháng";
 
-    public string AreaText => $"{Listing.AreaM2:0.#} m²";
+    public string MapPriceText => Listing.Price >= 1_000_000
+        ? $"{(Listing.Price / 1_000_000d).ToString("0.#", Vietnamese)} tr"
+        : Listing.Price >= 1_000 ? $"{(Listing.Price / 1_000d).ToString("0.#", Vietnamese)}k"
+        : $"{Listing.Price.ToString("N0", Vietnamese)} đ";
+
+    public string AreaText => $"{Listing.AreaM2.ToString("0.#", Vietnamese)} m²";
+
+    public string PhotoSource => Uri.TryCreate(Listing.CoverPhotoUrl, UriKind.Absolute, out var photo)
+        && photo.Scheme == Uri.UriSchemeHttps
+            ? photo.AbsoluteUri
+            : $"room_{Listing.Id.ToByteArray()[0] % 3 + 1}.png";
 
     public string BedroomText => $"{Listing.Bedrooms} phòng ngủ";
 
     public string AddressText => Listing.Address;
 
     public string DistanceText => DistanceKm < 1
-        ? $"{DistanceKm * 1000:0} m từ tâm khu vực"
-        : $"{DistanceKm:0.00} km từ tâm khu vực";
+        ? $"{(DistanceKm * 1000).ToString("0", Vietnamese)} m từ tâm khu vực"
+        : $"{DistanceKm.ToString("0.00", Vietnamese)} km từ tâm khu vực";
 }
