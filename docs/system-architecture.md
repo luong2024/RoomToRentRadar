@@ -1,5 +1,10 @@
 # System Architecture — RoomToRentRadar
 
+<!--
+CONTEXT NOTE (2026-11-12): §3 describes the TARGET solution; §10 lists what exists today. Client.Adapters already exists
+(PR #22: Abstractions, Http, Session, Mocks); Caching/ and Realtime/ are still to be added. Localization design: §7.6.
+-->
+
 | Field | Value |
 |---|---|
 | Status | Draft v1.0 — 2026-11-11 |
@@ -34,6 +39,7 @@ flowchart LR
 | API | ASP.NET Core 10 controllers, JWT bearer, SignalR hub, BackgroundServices | Business use cases, auth/RBAC, moderation, search, alerts, chat, media serving. |
 | Database | SQLite file (`roomtorentradar.db`, WAL) | All server data ([erd.md](erd.md)). |
 | Media store | Local disk folder behind `IPhotoStoragePort` | Photo originals and renditions ([ADR-008](adr/adr-008-media-storage-and-360-viewer.md)). |
+| Demo hosting | Team laptop + Microsoft Dev Tunnels (HTTPS for physical phones) | No public server in course scope; Docker/Caddy/VM is a documented upgrade path only ([ADR-013](adr/adr-013-hosting-and-environments.md)). |
 
 ## 3. Solution structure (target)
 
@@ -84,7 +90,7 @@ RoomToRentRadar.slnx
 │   │   ├── Middlewares/  ProblemDetails (errorCode), AuditLogging
 │   │   ├── Authorization/ policies, ClaimsPrincipal extensions
 │   │   └── Program.cs
-│   ├── RoomToRentRadar.Client.Adapters/     net10.0 · NEW (ADR-003)
+│   ├── RoomToRentRadar.Client.Adapters/     net10.0 · exists since PR #22 (Abstractions, Http, Session, Mocks) — add Caching/, Realtime/ (ADR-003)
 │   │   ├── Abstractions/  I*Gateway, ISessionStore, ICacheStore, IConnectivity, IPushTokenProvider
 │   │   ├── Http/          Http*Gateway, AuthTokenHandler, ApiJsonContext (source-gen), ApiOptions
 │   │   ├── Caching/       SqliteCacheStore, Cached*Gateway decorators, PendingOperationQueue
@@ -152,7 +158,7 @@ builder.Services.AddTransientWithShellRoute<RoomDetailPage, RoomDetailPageModel>
 | Feature | API | Used by |
 |---|---|---|
 | Secure token storage | `SecureStorage` | ADR-005 |
-| Preferences (guest campus, onboarding) | `Preferences` | BR-CMP-02 |
+| Preferences (guest campus, app language, seen house rules) | `Preferences` | BR-CMP-02, BR-I18N-02 |
 | Connectivity | `Connectivity.ConnectivityChanged` | ADR-004 |
 | Dialer / Zalo | `PhoneDialer`, `Launcher.OpenAsync("https://zalo.me/…")` | UC-16 |
 | Share image | `VisualElement.CaptureAsync()` + `Share.RequestAsync(ShareFileRequest)` | US10 AC3 |
@@ -246,11 +252,16 @@ RoomsController.Search(query) → ISearchRoomsUseCase.ExecuteAsync(RoomSearchReq
 | `Admin:SeedAccounts` | seeded admin e-mails | empty |
 | Client `ApiOptions:BaseUrl` | per build/environment | emulator `http://10.0.2.2:5000` |
 
+### 7.6 Localization (US15)
+- **Client:** `Resources/Strings/AppResources.resx` (en-US, neutral/fallback) + `AppResources.vi.resx`. A singleton `LocalizedStrings` (indexer `this[string key]`, implements `INotifyPropertyChanged`) wraps `AppResources.ResourceManager`; XAML binds `{Binding [Key], Source={x:Static loc:LocalizedStrings.Instance}}`. `ILanguageService.SetLanguage(code)` sets `CultureInfo.CurrentUICulture`/`CurrentCulture` (+ `DefaultThread*`), saves `AppLanguage` in `Preferences`, raises `PropertyChanged(string.Empty)` so open pages re-render, and (signed in) calls the profile gateway (`updateMyProfile`). PageModels format money/dates with the current culture via shared converters — never `ToString("N0")` with a fixed culture.
+- **Server:** only text the server itself generates is localized — push and inbox notifications. Templates per language live in the Application layer (`Resources/NotificationTexts.resx` + `.vi.resx`, plain .NET, no ASP.NET dependency) and are chosen from `Users.PreferredLanguage` (BR-I18N-04). API errors stay English `ProblemDetails` + `errorCode`; the client translates `errorCode`.
+- **Reference data:** enums and catalog codes (room types, amenities, safety features, statuses) are sent as codes; the client maps code → label from `.resx`. Campus names are proper nouns and are not translated.
+
 ## 8. Performance budget & tactics
 
 | Target | Tactic |
 |---|---|
-| List ≤ 3 s (NFR-01) | cache-then-network; `RoomCardDto` ~0.5 KB × 20; thumbs ≤ 60 KB; compiled bindings; server read cache 30 s |
+| List ≤ 3 s (NFR-01) | cache-then-network; `RoomCardDto` ~0.5 KB × 20; thumbs ≤ 60 KB; compiled bindings; server read cache 30 s of **caller-independent** card data only — `isFavourite` and other per-user fields are merged per request, never cached across users |
 | Filter ≤ 2 s (NFR-02) | 300 ms debounce; count-only query for live count in filter sheet; indexed bbox query + in-memory exact filter |
 | Map ≤ 2 s | `RoomCardDto` (~0.5 KB, includes lat/lng) max 200 ≈ 100 KB compressed-friendly; pin preview needs no extra request |
 | Detail instant feel | navigate with card data → render header immediately → fetch detail with `If-None-Match` |
@@ -273,7 +284,7 @@ RoomsController.Search(query) → ISearchRoomsUseCase.ExecuteAsync(RoomSearchReq
 ## 10. Migration from current state (develop2 @ 8524ad8)
 
 1. Replace MAUI template (`Data/`, `Models/`, template Pages/PageModels, `GlobalUsings` entries) with the shell in §5.2.
-2. Create `RoomToRentRadar.Client.Adapters`; change MAUI project references (ADR-003) — requires csproj/slnx approval.
+2. ~~Create `RoomToRentRadar.Client.Adapters`~~ (done in PR #22 with the Auth gateway); remaining: `AuthTokenHandler`, cache store, other gateways, and the architecture test on MAUI references.
 3. Add `*.db` to `.gitignore`, untrack `RoomToRentRadar.Api/roomtorentradar.db`.
 4. Introduce migration runner + `Users.SelectedCampusId`, `Users.Version`.
 5. Generalise `AuthExceptionHandlingMiddleware` → `ProblemDetailsMiddleware` with `errorCode`.
