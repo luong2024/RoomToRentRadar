@@ -5,6 +5,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton<IListingRepository, InMemoryListingRepository>();
 builder.Services.AddScoped<IListingDetailService, ListingDetailService>();
+builder.Services.AddScoped<IListingSearchService, ListingSearchService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
