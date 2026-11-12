@@ -8,8 +8,22 @@ namespace RoomToRentRadar.Api.Controllers;
 [ApiController]
 [Route("api/v1/[controller]")]
 [Produces("application/json")]
-public sealed class ListingsController(IListingDetailService listingDetailService) : ControllerBase
+public sealed class ListingsController(
+    IListingDetailService listingDetailService,
+    IListingSearchService listingSearchService) : ControllerBase
 {
+    [HttpGet("search")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(SearchResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<SearchResponseDto>> Search(
+        [FromQuery] ListingSearchQuery query,
+        CancellationToken cancellationToken)
+    {
+        var result = await listingSearchService.SearchAsync(query, cancellationToken);
+        return Ok(result);
+    }
+
     [HttpGet("{id}")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(ListingDetailDto), StatusCodes.Status200OK)]
