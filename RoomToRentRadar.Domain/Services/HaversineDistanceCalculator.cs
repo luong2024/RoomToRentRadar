@@ -5,7 +5,7 @@ public static class HaversineDistanceCalculator
     private const double EarthRadiusKm = 6371.0;
 
     /// <summary>
-    /// Great-circle distance in km, rounded to 2 decimals. Returns <see cref="double.NaN"/>
+    /// Great-circle distance in km, rounded to 0.1 km (BR-SRCH-03). Returns <see cref="double.NaN"/>
     /// when any argument is NaN or infinite so callers can reject the request (H3) instead of
     /// serializing an invalid number.
     /// </summary>
@@ -28,7 +28,7 @@ public static class HaversineDistanceCalculator
         var clampedA = Math.Clamp(a, 0.0, 1.0);
         var c = 2.0 * Math.Atan2(Math.Sqrt(clampedA), Math.Sqrt(Math.Max(0.0, 1.0 - clampedA)));
 
-        return Math.Round(EarthRadiusKm * c, 2);
+        return Math.Round(EarthRadiusKm * c, 1);
     }
 
     private static double ToRadians(double degrees) => degrees * Math.PI / 180.0;

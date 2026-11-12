@@ -2,7 +2,7 @@ using RoomToRentRadar.Domain.Services;
 
 namespace RoomToRentRadarUnitTests.Domain;
 
-/// <summary>H3 / BR-CMP-03: distance must be finite-safe and rounded to 0.01 km.</summary>
+/// <summary>H3 / BR-CMP-03: distance must be finite-safe and rounded to 0.1 km (BR-SRCH-03).</summary>
 [TestFixture]
 public class HaversineDistanceCalculatorTests
 {
@@ -18,12 +18,12 @@ public class HaversineDistanceCalculatorTests
     }
 
     [Test]
-    public void CalculateDistanceKm_IctuToZ115_ReturnsAboutZeroPointThreeKm()
+    public void CalculateDistanceKm_IctuToZ115_ReturnsZeroPointThreeKm()
     {
-        // ICTU (21.5851, 105.8066) -> phòng Z115 (21.5875, 105.8080) ≈ 0.3036 km -> 0.30 sau làm tròn.
+        // ICTU (21.5851, 105.8066) -> phòng Z115 (21.5875, 105.8080) ≈ 0.3036 km -> 0.3 sau làm tròn 0.1 km (BR-SRCH-03).
         var distance = HaversineDistanceCalculator.CalculateDistanceKm(IctuLat, IctuLng, 21.5875, 105.8080);
 
-        Assert.That(distance, Is.EqualTo(0.30).Within(0.01));
+        Assert.That(distance, Is.EqualTo(0.3));
     }
 
     [Test]
@@ -76,7 +76,7 @@ public class HaversineDistanceCalculatorTests
     }
 
     [Test]
-    public void CalculateDistanceKm_IsRoundedToTwoDecimalPlaces()
+    public void CalculateDistanceKm_IsRoundedToOneDecimalPlace()
     {
         var samples = new[]
         {
@@ -90,7 +90,7 @@ public class HaversineDistanceCalculatorTests
         foreach (var (lat, lng) in samples)
         {
             var distance = HaversineDistanceCalculator.CalculateDistanceKm(IctuLat, IctuLng, lat, lng);
-            Assert.That(Math.Round(distance, 2), Is.EqualTo(distance), $"({lat}, {lng})");
+            Assert.That(Math.Round(distance, 1), Is.EqualTo(distance), $"({lat}, {lng})");
         }
     }
 }
