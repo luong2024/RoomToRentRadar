@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:map="clr-namespace:RoomToRentRadar.Features.Map"
+             xmlns:models="clr-namespace:RoomToRentRadar.Models;assembly=RoomToRentRadar.Core"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:fonts="clr-namespace:Fonts"
+             x:Class="RoomToRentRadar.Features.Map.RoomMapPage"
+             x:DataType="map:RoomMapPageModel"
+             Title="Bản đồ phòng trọ quanh ICTU">
+
+    <Grid>
+        <!-- INTERACTIVE MAP WEBVIEW (US06 AC1) -->
+        <WebView x:Name="MapWebView"
+                 Navigating="OnMapNavigating"
+                 HorizontalOptions="Fill"
+                 VerticalOptions="Fill" />
+
+        <!-- TOP BAR: TITLE & VERIFIED ROOMS COUNTER -->
+        <Border VerticalOptions="Start"
+                HorizontalOptions="Fill"
+                Margin="16, 16, 16, 0"
+                StrokeShape="RoundRectangle 16"
+                Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
+                BackgroundColor="{AppThemeBinding Light=#EEFFFFFF, Dark=#EE1F1F23}"
+                Padding="14, 10"
+                Shadow="{OnPlatform Android='0,2,8,#30000000', WinUI='0,2,10,#20000000', Default=null}">
+
+            <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="10" VerticalOptions="Center">
+                <!-- Back / Menu Icon -->
+                <Border Grid.Column="0"
+                        StrokeShape="RoundRectangle 8"
+                        Stroke="Transparent"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSecondaryBackground}}"
+                        HeightRequest="36"
+                        WidthRequest="36"
+                        Padding="0">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnBackTapped" />
+                    </Border.GestureRecognizers>
+                    <Label Text="{x:Static fonts:FluentUI.chevron_left_24_regular}"
+                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                           FontSize="18"
+                           TextColor="{StaticResource Primary}"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center" />
+                </Border>
+
+                <!-- Title & Campus Subtitle -->
+                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                    <Label Text="Bản đồ quanh ICTU"
+                           FontSize="15"
+                           FontAttributes="Bold" />
+                    <Label Text="ĐH CNTT &amp; TT Thái Nguyên (Quyết Thắng)"
+                           FontSize="11"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}"
+                           LineBreakMode="TailTruncation" />
+                </VerticalStackLayout>
+
+                <!-- Count Badge -->
+                <Border Grid.Column="2"
+                        StrokeShape="RoundRectangle 10"
+                        Stroke="Transparent"
+                        BackgroundColor="#E8F5E9"
+                        Padding="8, 4"
+                        VerticalOptions="Center">
+                    <Label Text="{Binding VerifiedRoomsCount, StringFormat='{0} phòng'}"
+                           FontSize="11"
+                           FontAttributes="Bold"
+                           TextColor="#2E7D32" />
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- FLOATING ACTION BUTTON: CENTER ICTU CAMPUS (US06 AC4) -->
+        <Border VerticalOptions="End"
+                HorizontalOptions="End"
+                Margin="0, 0, 16, 170"
+                StrokeShape="RoundRectangle 25"
+                Stroke="Transparent"
+                BackgroundColor="{StaticResource Primary}"
+                HeightRequest="50"
+                WidthRequest="50"
+                Padding="0"
+                Shadow="{OnPlatform Android='0,4,10,#50000000', WinUI='0,4,12,#40000000', Default=null}">
+
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Command="{Binding CenterIctuCampusCommand}" />
+            </Border.GestureRecognizers>
+
+            <Grid HorizontalOptions="Center" VerticalOptions="Center">
+                <Label Text="{x:Static fonts:FluentUI.my_location_24_regular}"
+                       FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                       FontSize="22"
+                       TextColor="{StaticResource White}"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center"
+                       SemanticProperties.Description="Căn giữa trường ICTU" />
+            </Grid>
+        </Border>
+
+        <!-- BOTTOM ROOM PREVIEW CARD (US06 AC2 & AC3) -->
+        <Border IsVisible="{Binding IsPreviewCardVisible}"
+                VerticalOptions="End"
+                HorizontalOptions="Fill"
+                Margin="16, 0, 16, 20"
+                StrokeShape="RoundRectangle 18"
+                Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
+                BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource DarkSecondaryBackground}}"
+                Padding="12"
+                Shadow="{OnPlatform Android='0,4,14,#40000000', WinUI='0,4,16,#30000000', Default=null}">
+
+            <Border.GestureRecognizers>
+                <!-- Tapping preview card navigates to full room detail (US06 AC3) -->
+                <TapGestureRecognizer Command="{Binding NavigateToDetailCommand}" CommandParameter="{Binding SelectedRoom}" />
+            </Border.GestureRecognizers>
+
+            <Grid ColumnDefinitions="90, *, Auto" ColumnSpacing="12">
+                <!-- Thumbnail with ICTU badge -->
+                <Grid Grid.Column="0" HeightRequest="90">
+                    <Image Source="{Binding SelectedRoom.ThumbnailUrl}"
+                           Aspect="AspectFill"
+                           HeightRequest="90"
+                           WidthRequest="90">
+                        <Image.Clip>
+                            <RoundRectangleGeometry CornerRadius="12" Rect="0,0,90,90" />
+                        </Image.Clip>
+                    </Image>
+
+                    <!-- Mini Verified Badge -->
+                    <Border HorizontalOptions="Start"
+                            VerticalOptions="Start"
+                            Margin="4"
+                            StrokeShape="RoundRectangle 4"
+                            Stroke="Transparent"
+                            BackgroundColor="#D00D47A1"
+                            Padding="4, 2">
+                        <Label Text="ICTU"
+                               FontSize="9"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource White}" />
+                    </Border>
+                </Grid>
+
+                <!-- Information Section -->
+                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="4">
+                    <Label Text="{Binding SelectedRoom.Title}"
+                           FontSize="14"
+                           FontAttributes="Bold"
+                           LineBreakMode="TailTruncation"
+                           MaxLines="2" />
+
+                    <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                        <Label Text="{Binding SelectedRoom.MonthlyRent, StringFormat='{0:N0} đ/th'}"
+                               FontSize="14"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource Primary}" />
+                        <Label Text="•" TextColor="{StaticResource Gray400}" />
+                        <Label Text="{Binding SelectedRoom.Area, StringFormat='{0:F0} m²'}"
+                               FontSize="12"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                    </HorizontalStackLayout>
+
+                    <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+                        <Label Text="{x:Static fonts:FluentUI.location_16_regular}"
+                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                               FontSize="12"
+                               TextColor="#F57F17" />
+                        <Label Text="{Binding SelectedRoom.DistanceToCampusKm, StringFormat='{0:F1} km tới ICTU'}"
+                               FontSize="11"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+
+                <!-- Actions: Close & Detail Button -->
+                <VerticalStackLayout Grid.Column="2" VerticalOptions="Center" Spacing="8">
+                    <!-- Close button -->
+                    <ImageButton Source="{StaticResource IconDelete}"
+                                 Command="{Binding DismissPreviewCardCommand}"
+                                 HeightRequest="24"
+                                 WidthRequest="24"
+                                 HorizontalOptions="End"
+                                 Opacity="0.6" />
+
+                    <!-- View Detail Button -->
+                    <Button Text="Xem"
+                            Command="{Binding NavigateToDetailCommand}"
+                            CommandParameter="{Binding SelectedRoom}"
+                            BackgroundColor="{StaticResource Primary}"
+                            TextColor="{StaticResource White}"
+                            FontSize="11"
+                            FontAttributes="Bold"
+                            CornerRadius="8"
+                            HeightRequest="32"
+                            Padding="10, 0" />
+                </VerticalStackLayout>
+            </Grid>
+        </Border>
+
+    </Grid>
+
+</ContentPage>
+
