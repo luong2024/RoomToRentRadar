@@ -1,6 +1,9 @@
 using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
+using RoomToRentRadar.Features.Map.ViewModels;
+using RoomToRentRadar.Features.Map.Views;
 using RoomToRentRadar.Infrastructure.DependencyInjection;
+using SkiaSharp.Views.Maui.Controls.Hosting;
 using Syncfusion.Maui.Toolkit.Hosting;
 
 namespace RoomToRentRadar;
@@ -13,6 +16,7 @@ public static class MauiProgram
         builder
             .UseMauiApp<App>()
             .UseMauiCommunityToolkit()
+            .UseSkiaSharp()
             .ConfigureSyncfusionToolkit()
             .ConfigureFonts(fonts =>
             {
@@ -29,7 +33,9 @@ public static class MauiProgram
             .AddMobileFeatures()
             .AddSingleton<IRoomListingService>(_ => new RoomListingService(DemoRoomListings.Create()))
             .AddTransient<RoomListingPageModel>()
-            .AddTransient<RoomListingPage>();
+            .AddTransient<RoomListingPage>()
+            .AddTransient<MapSearchPageModel>()
+            .AddTransient<MapSearchPage>();
 
         return builder.Build();
     }

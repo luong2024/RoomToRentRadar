@@ -37,7 +37,11 @@ public sealed class ListingsQueryService(
 
         var candidates = await GetRadiusCandidatesAsync(query, campus, cancellationToken);
         var radiusPage = await candidatePageBuilder.BuildAsync(
-            candidates, query, cursor, cancellationToken);
+            candidates,
+            query,
+            cursor,
+            ListingFilterFingerprint.Compute(query.Filters),
+            cancellationToken);
 
         return new ListingSearchResultDto(
             radiusPage.Items,

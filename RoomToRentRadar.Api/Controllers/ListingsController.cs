@@ -23,7 +23,11 @@ public sealed class ListingsController(
             return ToProblem(validationProblem!);
         }
 
-        if (!TryResolveCursor(query, out var cursor, out var cursorProblem))
+        if (!TryResolveCursor(
+                query,
+                ListingFilterFingerprint.Compute(query.Filters),
+                out var cursor,
+                out var cursorProblem))
         {
             return ToProblem(cursorProblem!);
         }
@@ -70,14 +74,13 @@ public sealed class ListingsController(
             Bedrooms = request.Filters?.Bedrooms
         };
 
-        if (!ListingQueryValidator.TryCreate(parameters, out var query, out var validationProblem))
+        if (!ListingQueryValidator.TryCreate(
+                parameters,
+                out var query,
+                out var validationProblem,
+                allowDistanceSort: true))
         {
             return ToProblem(validationProblem!);
-        }
-
-        if (!TryResolveCursor(query, out var cursor, out var cursorProblem))
-        {
-            return ToProblem(cursorProblem!);
         }
 
         if (!GeoSearch.TryCreateSearchArea(request.Area, out var area, out var areaError))
@@ -85,12 +88,70 @@ public sealed class ListingsController(
             return ToProblem(AreaSearchProblemFactory.InvalidArea(areaError!));
         }
 
-        var result = await areaSearchQueryService.SearchAsync(query, area, cursor, cancellationToken);
+        if (!TryResolveOrigin(request.Origin, area, out var originLat, out var originLng, out var originProblem))
+        {
+            return ToProblem(originProblem!);
+        }
+
+        // The resolved polygon and origin are part of the paging context: a cursor
+        // issued for another drawn area must not be reused for this one.
+        if (!TryResolveCursor(
+                query,
+                ListingFilterFingerprint.ComputeForArea(query.Filters, area, originLat, originLng),
+                out var cursor,
+                out var cursorProblem))
+        {
+            return ToProblem(cursorProblem!);
+        }
+
+        var result = await areaSearchQueryService.SearchAsync(
+            query, area, originLat, originLng, cursor, cancellationToken);
         return Ok(result);
+    }
+
+    private static bool TryResolveOrigin(
+        AreaSearchOrigin? origin,
+        SearchArea area,
+        out double lat,
+        out double lng,
+        out ProblemDetails? problem)
+    {
+        problem = null;
+
+        if (origin is null)
+        {
+            lat = area.CentroidLat;
+            lng = area.CentroidLng;
+            return true;
+        }
+
+        if (origin.Lat is not { } providedLat || origin.Lng is not { } providedLng)
+        {
+            lat = 0;
+            lng = 0;
+            problem = AreaSearchProblemFactory.InvalidOrigin(
+                "origin must provide both lat and lng.");
+            return false;
+        }
+
+        if (!double.IsFinite(providedLat) || providedLat is < -90d or > 90d
+            || !double.IsFinite(providedLng) || providedLng is < -180d or > 180d)
+        {
+            lat = 0;
+            lng = 0;
+            problem = AreaSearchProblemFactory.InvalidOrigin(
+                "origin.lat must be within [-90, 90] and origin.lng within [-180, 180].");
+            return false;
+        }
+
+        lat = providedLat;
+        lng = providedLng;
+        return true;
     }
 
     private static bool TryResolveCursor(
         ListingQuery query,
+        string filterFingerprint,
         out ListingCursor? cursor,
         out ProblemDetails? problem)
     {
@@ -120,7 +181,7 @@ public sealed class ListingsController(
 
         if (!string.Equals(
                 decoded.FilterFingerprint,
-                ListingFilterFingerprint.Compute(query.Filters),
+                filterFingerprint,
                 StringComparison.Ordinal))
         {
             problem = ListingProblemFactory.InvalidQuery(

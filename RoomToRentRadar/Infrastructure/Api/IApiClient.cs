@@ -6,4 +6,6 @@ namespace RoomToRentRadar.Infrastructure.Api;
 public interface IApiClient
 {
     Task<PagedResult<ListingSummaryDto>> GetListingsAsync(int limit, CancellationToken cancellationToken = default);
+
+    Task<SearchResultDto<ListingSummaryDto>> SearchByAreaAsync(AreaSearchRequest request, CancellationToken cancellationToken = default);
 }

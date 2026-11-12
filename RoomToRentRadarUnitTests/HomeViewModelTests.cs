@@ -77,6 +77,11 @@ public class HomeViewModelTests
                 ? Task.FromResult(_result!)
                 : Task.FromException<PagedResult<ListingSummaryDto>>(_exception);
         }
+
+        public Task<SearchResultDto<ListingSummaryDto>> SearchByAreaAsync(
+            AreaSearchRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 
     private sealed class FakeErrorHandler : IErrorHandler

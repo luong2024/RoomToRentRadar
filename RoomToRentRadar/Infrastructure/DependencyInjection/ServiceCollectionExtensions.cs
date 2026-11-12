@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Maui.Storage;
 using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Features.Home.ViewModels;
@@ -19,6 +20,8 @@ public static class ServiceCollectionExtensions
         });
         services.AddSingleton<IApiClient, ApiClient>();
         services.AddSingleton<IErrorHandler, ModalErrorHandler>();
+        services.AddSingleton<IPreferences>(Preferences.Default);
+        services.AddSingleton<ISavedAreaSearchStore, PreferencesSavedAreaSearchStore>();
         return services;
     }
 

@@ -14,7 +14,8 @@ public static class ListingQueryValidator
     public static bool TryCreate(
         ListingQueryParameters parameters,
         out ListingQuery query,
-        out ProblemDetails? problem)
+        out ProblemDetails? problem,
+        bool allowDistanceSort = false)
     {
         query = null!;
         problem = null;
@@ -33,7 +34,17 @@ public static class ListingQueryValidator
         {
             problem = ListingProblemFactory.InvalidQuery(
                 ListingProblemFactory.InvalidSort,
-                "sort must be one of: newest, price_asc, price_desc, area_desc.");
+                SortMessage(allowDistanceSort));
+            return false;
+        }
+
+        // Distance needs the drawn area (or an explicit origin), so it belongs to
+        // the area search endpoint only.
+        if (sort == ListingSort.DistanceAsc && !allowDistanceSort)
+        {
+            problem = ListingProblemFactory.InvalidQuery(
+                ListingProblemFactory.InvalidSort,
+                SortMessage(allowDistanceSort: false));
             return false;
         }
 
@@ -116,6 +127,11 @@ public static class ListingQueryValidator
             filters);
         return true;
     }
+
+    private static string SortMessage(bool allowDistanceSort)
+        => allowDistanceSort
+            ? "sort must be one of: newest, price_asc, price_desc, area_desc, distance_asc."
+            : "sort must be one of: newest, price_asc, price_desc, area_desc.";
 
     private static bool IsValidArea(double? area)
         => area is not { } value || (double.IsFinite(value) && value >= 0d);

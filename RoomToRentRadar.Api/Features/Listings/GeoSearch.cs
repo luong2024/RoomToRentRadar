@@ -33,6 +33,10 @@ public sealed class SearchArea
         MaxLng = envelope.MaxX;
         MinLat = envelope.MinY;
         MaxLat = envelope.MaxY;
+
+        var centroid = polygon.Centroid;
+        CentroidLng = centroid.X;
+        CentroidLat = centroid.Y;
     }
 
     public Polygon Polygon { get; }
@@ -48,6 +52,12 @@ public sealed class SearchArea
 
     /// <summary>Inclusive latitude bound of the prepared polygon.</summary>
     public double MaxLat { get; }
+
+    /// <summary>Default distance reference: the polygon centroid longitude.</summary>
+    public double CentroidLng { get; }
+
+    /// <summary>Default distance reference: the polygon centroid latitude.</summary>
+    public double CentroidLat { get; }
 
     /// <summary>
     /// Area in square kilometres from a local equirectangular projection scaled by

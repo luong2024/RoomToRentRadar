@@ -19,7 +19,8 @@ public sealed record ListingCandidate(
     string Address,
     double Lat,
     double Lng,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    double? DistanceKm = null);
 
 public sealed record ListingCandidatePage(
     IReadOnlyList<ListingSummaryDto> Items,
@@ -39,6 +40,7 @@ public sealed class ListingCandidatePageBuilder(AppDbContext dbContext)
         IReadOnlyList<ListingCandidate> candidates,
         ListingQuery query,
         ListingCursor? cursor,
+        string filterFingerprint,
         CancellationToken cancellationToken)
     {
         // Counted before the cursor so every page of a walk reports the same total.
@@ -54,7 +56,8 @@ public sealed class ListingCandidatePageBuilder(AppDbContext dbContext)
                 candidate.Id,
                 candidate.CreatedAt,
                 candidate.Price,
-                candidate.AreaM2));
+                candidate.AreaM2,
+                candidate.DistanceKm));
         }
 
         var remaining = cursor is null
@@ -95,7 +98,7 @@ public sealed class ListingCandidatePageBuilder(AppDbContext dbContext)
             nextCursor = ListingSortKeyOrdering.EncodeCursor(
                 query.Sort,
                 pageKeys[^1],
-                ListingFilterFingerprint.Compute(query.Filters));
+                filterFingerprint);
         }
 
         return new ListingCandidatePage(

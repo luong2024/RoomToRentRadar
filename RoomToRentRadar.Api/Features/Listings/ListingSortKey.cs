@@ -10,7 +10,8 @@ public readonly record struct ListingSortKey(
     Guid Id,
     DateTime CreatedAt,
     long Price,
-    double AreaM2);
+    double AreaM2,
+    double? DistanceKm = null);
 
 /// <summary>
 /// In-memory counterpart of <see cref="ListingSortStrategy"/> for sequences that
@@ -26,6 +27,7 @@ public static class ListingSortKeyOrdering
         ListingSort.PriceAsc => new SortKeyComparer(ListingSort.PriceAsc),
         ListingSort.PriceDesc => new SortKeyComparer(ListingSort.PriceDesc),
         ListingSort.AreaDesc => new SortKeyComparer(ListingSort.AreaDesc),
+        ListingSort.DistanceAsc => new SortKeyComparer(ListingSort.DistanceAsc),
         _ => throw new ArgumentOutOfRangeException(nameof(sort), sort, null)
     };
 
@@ -58,12 +60,30 @@ public static class ListingSortKeyOrdering
             ListingSort.AreaDesc =>
                 key.AreaM2 < cursor.AreaM2!.Value
                 || (key.AreaM2 == cursor.AreaM2.Value && idComparison > 0),
+            ListingSort.DistanceAsc => IsAfterDistanceCursor(key, cursor, idComparison),
             _ => throw new ArgumentOutOfRangeException(nameof(cursor), cursor.Sort, null)
         };
     }
 
     public static string EncodeCursor(ListingSort sort, ListingSortKey key, string filterFingerprint)
-        => ListingCursorCodec.Encode(sort, key.Id, filterFingerprint, key.CreatedAt, key.Price, key.AreaM2);
+        => ListingCursorCodec.Encode(
+            sort,
+            key.Id,
+            filterFingerprint,
+            key.CreatedAt,
+            key.Price,
+            key.AreaM2,
+            key.DistanceKm);
+
+    private static bool IsAfterDistanceCursor(ListingSortKey key, ListingCursor cursor, int idComparison)
+    {
+        if (key.DistanceKm is not { } distance || cursor.DistanceKm is not { } cursorDistance)
+        {
+            return false;
+        }
+
+        return distance > cursorDistance || (distance == cursorDistance && idComparison > 0);
+    }
 
     private sealed class SortKeyComparer(ListingSort sort) : IComparer<ListingSortKey>
     {
@@ -75,10 +95,13 @@ public static class ListingSortKeyOrdering
                 ListingSort.PriceAsc => x.Price.CompareTo(y.Price),
                 ListingSort.PriceDesc => y.Price.CompareTo(x.Price),
                 ListingSort.AreaDesc => y.AreaM2.CompareTo(x.AreaM2),
+                ListingSort.DistanceAsc => NullSafeDistance(x.DistanceKm).CompareTo(NullSafeDistance(y.DistanceKm)),
                 _ => throw new ArgumentOutOfRangeException(nameof(sort), sort, null)
             };
 
             return primary != 0 ? primary : x.Id.CompareTo(y.Id);
         }
+
+        private static double NullSafeDistance(double? distance) => distance ?? double.PositiveInfinity;
     }
 }

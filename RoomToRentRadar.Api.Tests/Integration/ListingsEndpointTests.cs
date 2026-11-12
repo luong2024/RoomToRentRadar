@@ -223,6 +223,7 @@ public sealed class ListingsEndpointTests
     [TestCase("limit=101", "invalid_limit")]
     [TestCase("limit=abc", "invalid_parameter_format")]
     [TestCase("sort=popular", "invalid_sort")]
+    [TestCase("sort=distance_asc", "invalid_sort")]
     [TestCase("min_price=-1", "invalid_price_range")]
     [TestCase("min_price=10&max_price=5", "invalid_price_range")]
     [TestCase("bedrooms=21", "invalid_bedrooms")]
