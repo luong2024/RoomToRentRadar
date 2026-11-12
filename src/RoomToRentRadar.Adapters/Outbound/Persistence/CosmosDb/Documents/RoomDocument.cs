@@ -62,7 +62,7 @@ public sealed class RoomDocument
     [JsonProperty("longitude")]
     public double? Longitude { get; set; }
 
-    [JsonProperty("Location")]
+    [JsonProperty("location")]
     public CosmosPoint? Location { get; set; }
 
     public static RoomDocument FromDomain(Room room)

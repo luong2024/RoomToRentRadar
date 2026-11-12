@@ -122,7 +122,7 @@ public class CosmosRoomRepository : IRoomRepository
 
         if (query.Latitude.HasValue && query.Longitude.HasValue && query.RadiusInKm.HasValue)
         {
-            whereClauses.Add("ST_DISTANCE(c.Location, {'type': 'Point', 'coordinates': [@lon, @lat]}) <= (@radius * 1000)");
+            whereClauses.Add("(ST_DISTANCE(c.location, @location) <= (@radius * 1000) OR ST_DISTANCE(c.Location, @location) <= (@radius * 1000))");
         }
 
         var whereSql = string.Join(" AND ", whereClauses);
@@ -220,8 +220,12 @@ public class CosmosRoomRepository : IRoomRepository
 
         if (query.Latitude.HasValue && query.Longitude.HasValue && query.RadiusInKm.HasValue)
         {
-            queryDef = queryDef.WithParameter("@lon", query.Longitude.Value);
-            queryDef = queryDef.WithParameter("@lat", query.Latitude.Value);
+            var locationPoint = new
+            {
+                type = "Point",
+                coordinates = new[] { query.Longitude.Value, query.Latitude.Value }
+            };
+            queryDef = queryDef.WithParameter("@location", locationPoint);
             queryDef = queryDef.WithParameter("@radius", query.RadiusInKm.Value);
         }
 

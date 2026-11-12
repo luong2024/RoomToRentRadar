@@ -35,4 +35,6 @@ public sealed class CosmosDbOptions
     }
 
     public string ConnectionMode { get; set; } = "Direct";
+
+    public bool DisableTlsValidation { get; set; } = false;
 }

@@ -1,6 +1,8 @@
 using System.Net;
 using Microsoft.Azure.Cosmos;
+using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Documents;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Repositories;
+using RoomToRentRadar.Application.DTOs;
 using RoomToRentRadar.Domain.Entities;
 
 namespace RoomToRentRadar.IntegrationTests.Repositories;
@@ -11,12 +13,13 @@ public class CosmosRoomRepositoryTests
     private const string Endpoint = "https://localhost:8081";
     private const string AuthKey = "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";
     private const string DatabaseName = "RoomToRentRadarDb_Integration";
-    private const string ContainerName = "Rooms_Test";
+    private const string ContainerName = "Rooms_Search_Test";
 
-    private CosmosClient _client = null!;
-    private Database _database = null!;
-    private Container _container = null!;
-    private CosmosRoomRepository _repository = null!;
+    private CosmosClient? _client;
+    private Database? _database;
+    private Container? _container;
+    private CosmosRoomRepository? _repository;
+    private string _batchId = null!;
 
     [OneTimeSetUp]
     public async Task OneTimeSetUp()
@@ -40,24 +43,112 @@ public class CosmosRoomRepositoryTests
         };
 
         _client = new CosmosClient(Endpoint, AuthKey, clientOptions);
+        _batchId = Guid.NewGuid().ToString("N")[..8];
 
         try
         {
             var dbResponse = await _client.CreateDatabaseIfNotExistsAsync(DatabaseName);
             _database = dbResponse.Database;
 
-            var containerResponse = await _database.CreateContainerIfNotExistsAsync(ContainerName, "/id");
+            var containerProperties = new ContainerProperties(ContainerName, "/id");
+            containerProperties.IndexingPolicy.SpatialIndexes.Add(new SpatialPath
+            {
+                Path = "/location/*",
+                SpatialTypes = { SpatialType.Point }
+            });
+            containerProperties.IndexingPolicy.SpatialIndexes.Add(new SpatialPath
+            {
+                Path = "/Location/*",
+                SpatialTypes = { SpatialType.Point }
+            });
+
+            var containerResponse = await _database.CreateContainerIfNotExistsAsync(containerProperties);
             _container = containerResponse.Container;
 
             _repository = new CosmosRoomRepository(_container);
+
+            // Seed test rooms
+            await SeedRoomsAsync();
         }
         catch (Exception ex) when (ex is HttpRequestException ||
                                   ex is System.Net.Sockets.SocketException ||
                                   ex.InnerException is HttpRequestException ||
                                   ex.InnerException is System.Net.Sockets.SocketException ||
-                                  ex.Message.Contains("Connection refused", StringComparison.OrdinalIgnoreCase))
+                                  ex.Message.Contains("Connection refused", StringComparison.OrdinalIgnoreCase) ||
+                                  ex.Message.Contains("No connection could be made", StringComparison.OrdinalIgnoreCase))
         {
             Assert.Ignore($"Cosmos DB Emulator is not reachable at {Endpoint}. Skipping live integration tests on environments without running emulator. Details: {ex.Message}");
+        }
+    }
+
+    private async Task SeedRoomsAsync()
+    {
+        if (_container is null) return;
+
+        var rooms = new[]
+        {
+            new Room
+            {
+                Id = $"room-near-{_batchId}",
+                Title = $"Phòng gần trung tâm {_batchId}",
+                Description = "Gần trường và bến xe",
+                Price = 2500000m,
+                Area = 25.0,
+                RoomType = "Khép kín",
+                Address = "Đường Lương Ngọc Quyến, Thái Nguyên",
+                Latitude = 21.5890,
+                Longitude = 105.8100,
+                Status = RoomStatus.Available,
+                IsVerified = true
+            },
+            new Room
+            {
+                Id = $"room-far-{_batchId}",
+                Title = $"Phòng xa ngoại ô {_batchId}",
+                Description = "Yên tĩnh",
+                Price = 2800000m,
+                Area = 30.0,
+                RoomType = "Khép kín",
+                Address = "Khu ngoại ô, Thái Nguyên",
+                Latitude = 21.7500,
+                Longitude = 105.9500,
+                Status = RoomStatus.Available,
+                IsVerified = true
+            },
+            new Room
+            {
+                Id = $"room-expensive-{_batchId}",
+                Title = $"Căn hộ cao cấp {_batchId}",
+                Description = "Full tiện nghi",
+                Price = 6000000m,
+                Area = 55.0,
+                RoomType = "Căn hộ",
+                Address = "Khu đô thị, Thái Nguyên",
+                Latitude = 21.5850,
+                Longitude = 105.8050,
+                Status = RoomStatus.Available,
+                IsVerified = true
+            },
+            new Room
+            {
+                Id = $"room-unverified-{_batchId}",
+                Title = $"Phòng chưa duyệt {_batchId}",
+                Description = "Giá rẻ",
+                Price = 2400000m,
+                Area = 24.0,
+                RoomType = "Khép kín",
+                Address = "Đường Z115, Thái Nguyên",
+                Latitude = 21.5880,
+                Longitude = 105.8090,
+                Status = RoomStatus.Available,
+                IsVerified = false
+            }
+        };
+
+        foreach (var room in rooms)
+        {
+            var doc = RoomDocument.FromDomain(room);
+            await _container.UpsertItemAsync(doc, new PartitionKey(room.Id));
         }
     }
 
@@ -72,16 +163,21 @@ public class CosmosRoomRepositoryTests
             }
             catch
             {
-                // Silently ignore cleanup errors if database was already deleted
+                // Silently ignore cleanup errors
             }
         }
 
         _client?.Dispose();
     }
 
+    // ==========================================
+    // TESTS TỪ TASK T02.1 (Basic CRUD & Similar)
+    // ==========================================
     [Test]
     public async Task AddRoom_DirectToCosmosEmulator_ShouldSucceed()
     {
+        if (_repository is null) Assert.Ignore("Cosmos DB repository is not initialized.");
+
         // Arrange
         var room = new Room
         {
@@ -98,7 +194,7 @@ public class CosmosRoomRepositoryTests
         };
 
         // Act
-        var created = await _repository.CreateAsync(room);
+        var created = await _repository!.CreateAsync(room);
 
         // Assert
         Assert.That(created, Is.Not.Null);
@@ -114,6 +210,8 @@ public class CosmosRoomRepositoryTests
     [Test]
     public async Task GetByIdAsync_WhenRoomExists_ShouldReturnRoomSuccessfully()
     {
+        if (_repository is null) Assert.Ignore("Cosmos DB repository is not initialized.");
+
         // Arrange
         var room = new Room
         {
@@ -128,7 +226,7 @@ public class CosmosRoomRepositoryTests
             IsVerified = true,
             RoomType = "Ở ghép"
         };
-        await _repository.CreateAsync(room);
+        await _repository!.CreateAsync(room);
 
         // Act
         var loaded = await _repository.GetByIdAsync(room.Id);
@@ -148,9 +246,8 @@ public class CosmosRoomRepositoryTests
     [Test]
     public async Task GetSimilarRoomsAsync_ShouldReturnRoomsMatchingBothPriceAndAreaConditions()
     {
-        // Target room parameters:
-        // Price = 3,000,000 => range [2,100,000 ; 3,900,000] (0.7 to 1.3)
-        // Area  = 30.0      => range [21.0 ; 39.0]           (0.7 to 1.3)
+        if (_repository is null) Assert.Ignore("Cosmos DB repository is not initialized.");
+
         var testBatchId = Guid.NewGuid().ToString("N")[..8];
         var targetRoomId = $"target-{testBatchId}";
 
@@ -163,77 +260,15 @@ public class CosmosRoomRepositoryTests
             Status = RoomStatus.Rented
         };
 
-        // 1. Thỏa mãn cả Giá và Diện tích (Status = Available) -> Mong muốn trả về
-        var matchingRoom1 = new Room
-        {
-            Id = $"match1-{testBatchId}",
-            Title = "Phòng tương tự chuẩn 1",
-            Price = 3100000m,
-            Area = 31.0,
-            Status = RoomStatus.Available
-        };
+        var matchingRoom1 = new Room { Id = $"match1-{testBatchId}", Title = "Phòng tương tự chuẩn 1", Price = 3100000m, Area = 31.0, Status = RoomStatus.Available };
+        var matchingRoom2 = new Room { Id = $"match2-{testBatchId}", Title = "Phòng tương tự chuẩn 2", Price = 2500000m, Area = 26.0, Status = RoomStatus.Available };
+        var areaTooSmallRoom = new Room { Id = $"small-area-{testBatchId}", Title = "Phòng diện tích quá nhỏ", Price = 3000000m, Area = 18.0, Status = RoomStatus.Available };
+        var areaTooLargeRoom = new Room { Id = $"large-area-{testBatchId}", Title = "Phòng diện tích quá lớn", Price = 3000000m, Area = 45.0, Status = RoomStatus.Available };
+        var priceTooCheapRoom = new Room { Id = $"cheap-price-{testBatchId}", Title = "Phòng giá quá rẻ", Price = 1800000m, Area = 30.0, Status = RoomStatus.Available };
+        var priceTooExpensiveRoom = new Room { Id = $"expensive-price-{testBatchId}", Title = "Phòng giá quá đắt", Price = 4500000m, Area = 30.0, Status = RoomStatus.Available };
+        var nonAvailableRoom = new Room { Id = $"rented-{testBatchId}", Title = "Phòng đã cho thuê", Price = 3000000m, Area = 30.0, Status = RoomStatus.Rented };
 
-        var matchingRoom2 = new Room
-        {
-            Id = $"match2-{testBatchId}",
-            Title = "Phòng tương tự chuẩn 2",
-            Price = 2500000m,
-            Area = 26.0,
-            Status = RoomStatus.Available
-        };
-
-        // 2. Thỏa mãn giá nhưng Diện tích quá NHỎ (< 21.0) -> Bị loại
-        var areaTooSmallRoom = new Room
-        {
-            Id = $"small-area-{testBatchId}",
-            Title = "Phòng diện tích quá nhỏ",
-            Price = 3000000m,
-            Area = 18.0,
-            Status = RoomStatus.Available
-        };
-
-        // 3. Thỏa mãn giá nhưng Diện tích quá LỚN (> 39.0) -> Bị loại
-        var areaTooLargeRoom = new Room
-        {
-            Id = $"large-area-{testBatchId}",
-            Title = "Phòng diện tích quá lớn",
-            Price = 3000000m,
-            Area = 45.0,
-            Status = RoomStatus.Available
-        };
-
-        // 4. Thỏa mãn diện tích nhưng Giá quá RẺ (< 2,100,000) -> Bị loại
-        var priceTooCheapRoom = new Room
-        {
-            Id = $"cheap-price-{testBatchId}",
-            Title = "Phòng giá quá rẻ",
-            Price = 1800000m,
-            Area = 30.0,
-            Status = RoomStatus.Available
-        };
-
-        // 5. Thỏa mãn diện tích nhưng Giá quá ĐẮT (> 3,900,000) -> Bị loại
-        var priceTooExpensiveRoom = new Room
-        {
-            Id = $"expensive-price-{testBatchId}",
-            Title = "Phòng giá quá đắt",
-            Price = 4500000m,
-            Area = 30.0,
-            Status = RoomStatus.Available
-        };
-
-        // 6. Thỏa mãn giá và diện tích nhưng không Available -> Bị loại
-        var nonAvailableRoom = new Room
-        {
-            Id = $"rented-{testBatchId}",
-            Title = "Phòng đã cho thuê",
-            Price = 3000000m,
-            Area = 30.0,
-            Status = RoomStatus.Rented
-        };
-
-        // Seed all test rooms to Cosmos DB container
-        await _repository.CreateAsync(targetRoom);
+        await _repository!.CreateAsync(targetRoom);
         await _repository.CreateAsync(matchingRoom1);
         await _repository.CreateAsync(matchingRoom2);
         await _repository.CreateAsync(areaTooSmallRoom);
@@ -242,29 +277,92 @@ public class CosmosRoomRepositoryTests
         await _repository.CreateAsync(priceTooExpensiveRoom);
         await _repository.CreateAsync(nonAvailableRoom);
 
-        // Act - Call GetSimilarRoomsAsync for target room
-        var similarRooms = await _repository.GetSimilarRoomsAsync(
-            targetRoomId,
-            price: 3000000m,
-            area: 30.0);
+        var similarRooms = await _repository.GetSimilarRoomsAsync(targetRoomId, price: 3000000m, area: 30.0);
 
-        // Assert
         Assert.That(similarRooms, Is.Not.Null);
         var similarIds = similarRooms.Select(r => r.Id).ToList();
 
         Assert.Multiple(() =>
         {
-            // Matching rooms must be returned
-            Assert.That(similarIds, Does.Contain(matchingRoom1.Id), "Phòng thỏa mãn giá và diện tích (match1) phải có trong kết quả.");
-            Assert.That(similarIds, Does.Contain(matchingRoom2.Id), "Phòng thỏa mãn giá và diện tích (match2) phải có trong kết quả.");
-
-            // Filtered out rooms must NOT be returned
-            Assert.That(similarIds, Does.Not.Contain(targetRoom.Id), "Chính phòng target không được có trong kết quả tương tự.");
-            Assert.That(similarIds, Does.Not.Contain(areaTooSmallRoom.Id), "Phòng diện tích quá nhỏ không được có trong kết quả.");
-            Assert.That(similarIds, Does.Not.Contain(areaTooLargeRoom.Id), "Phòng diện tích quá lớn không được có trong kết quả.");
-            Assert.That(similarIds, Does.Not.Contain(priceTooCheapRoom.Id), "Phòng giá quá rẻ không được có trong kết quả.");
-            Assert.That(similarIds, Does.Not.Contain(priceTooExpensiveRoom.Id), "Phòng giá quá đắt không được có trong kết quả.");
-            Assert.That(similarIds, Does.Not.Contain(nonAvailableRoom.Id), "Phòng không Available không được có trong kết quả.");
+            Assert.That(similarIds, Does.Contain(matchingRoom1.Id));
+            Assert.That(similarIds, Does.Contain(matchingRoom2.Id));
+            Assert.That(similarIds, Does.Not.Contain(targetRoom.Id));
+            Assert.That(similarIds, Does.Not.Contain(areaTooSmallRoom.Id));
+            Assert.That(similarIds, Does.Not.Contain(areaTooLargeRoom.Id));
+            Assert.That(similarIds, Does.Not.Contain(priceTooCheapRoom.Id));
+            Assert.That(similarIds, Does.Not.Contain(priceTooExpensiveRoom.Id));
+            Assert.That(similarIds, Does.Not.Contain(nonAvailableRoom.Id));
         });
+    }
+
+    // ==========================================
+    // TESTS TỪ TASK T04.1 (Search & GPS)
+    // ==========================================
+    [Test]
+    public async Task SearchAsync_ShouldReturnRooms_WhenMatchingPriceAndArea()
+    {
+        if (_repository is null) Assert.Ignore("Cosmos DB repository is not initialized.");
+
+        var query = new SearchRoomsQuery(
+            minPrice: 2000000m,
+            maxPrice: 3000000m,
+            minArea: 20.0,
+            maxArea: 35.0,
+            keyword: _batchId);
+
+        var (items, totalCount) = await _repository!.SearchAsync(query);
+
+        Assert.That(totalCount, Is.GreaterThanOrEqualTo(2));
+        var itemIds = items.Select(r => r.Id).ToList();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(itemIds, Does.Contain($"room-near-{_batchId}"));
+            Assert.That(itemIds, Does.Contain($"room-far-{_batchId}"));
+            Assert.That(itemIds, Does.Not.Contain($"room-expensive-{_batchId}"));
+            Assert.That(itemIds, Does.Not.Contain($"room-unverified-{_batchId}"));
+        });
+    }
+
+    [Test]
+    public async Task SearchAsync_WithGPSLocation_ShouldReturnRoomsWithinRadius()
+    {
+        if (_repository is null) Assert.Ignore("Cosmos DB repository is not initialized.");
+
+        var query = new SearchRoomsQuery(
+            latitude: 21.5852,
+            longitude: 105.8073,
+            radiusInKm: 2.0,
+            keyword: _batchId);
+
+        var (items, totalCount) = await _repository!.SearchAsync(query);
+
+        Assert.That(totalCount, Is.GreaterThanOrEqualTo(1));
+        var itemIds = items.Select(r => r.Id).ToList();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(itemIds, Does.Contain($"room-near-{_batchId}"));
+            Assert.That(itemIds, Does.Not.Contain($"room-far-{_batchId}"));
+        });
+    }
+
+    [Test]
+    public async Task SearchAsync_ShouldHandlePaginationCorrectly()
+    {
+        if (_repository is null) Assert.Ignore("Cosmos DB repository is not initialized.");
+
+        var page1Query = new SearchRoomsQuery(keyword: _batchId, pageNumber: 1, pageSize: 1);
+        var (page1Items, totalCount) = await _repository!.SearchAsync(page1Query);
+
+        Assert.That(totalCount, Is.GreaterThanOrEqualTo(2));
+        Assert.That(page1Items.Count, Is.EqualTo(1));
+
+        var page2Query = new SearchRoomsQuery(keyword: _batchId, pageNumber: 2, pageSize: 1);
+        var (page2Items, totalCount2) = await _repository!.SearchAsync(page2Query);
+
+        Assert.That(totalCount2, Is.EqualTo(totalCount));
+        Assert.That(page2Items.Count, Is.EqualTo(1));
+        Assert.That(page1Items[0].Id, Is.Not.EqualTo(page2Items[0].Id));
     }
 }

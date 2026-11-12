@@ -73,6 +73,10 @@ public sealed class CosmosDbContext : ICosmosDbContext
                 options.AccountEndpoint.Contains("127.0.0.1", StringComparison.OrdinalIgnoreCase))
             {
                 clientOptions.ConnectionMode = ConnectionMode.Gateway;
+            }
+
+            if (options.DisableTlsValidation)
+            {
                 clientOptions.HttpClientFactory = () => new HttpClient(new HttpClientHandler
                 {
                     ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
@@ -193,6 +197,11 @@ public sealed class CosmosDbContext : ICosmosDbContext
         await EnsureUserProfileCompositeIndexesAsync(userProfilesResponse.Container, userProfilesResponse.Resource, cancellationToken);
 
         var roomsContainerProperties = new ContainerProperties(_options.RoomsContainerName, PartitionKeyPath);
+        roomsContainerProperties.IndexingPolicy.SpatialIndexes.Add(new SpatialPath
+        {
+            Path = "/location/*",
+            SpatialTypes = { SpatialType.Point }
+        });
         roomsContainerProperties.IndexingPolicy.SpatialIndexes.Add(new SpatialPath
         {
             Path = "/Location/*",
