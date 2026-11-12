@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.PageModels"
+             xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
+             xmlns:inputs="clr-namespace:RoomToRentRadar.Pages.Controls.Inputs"
+             x:Class="RoomToRentRadar.Pages.MainLandingPage"
+             x:DataType="vm:MainLandingPageModel"
+             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCanvasLight}, Dark={StaticResource SurfaceCanvasDark}}">
+
+    <Grid RowDefinitions="Auto, *">
+        <!-- Top App Bar -->
+        <common:PageHeaderBar Grid.Row="0"
+                               Title="RoomToRentRadar"
+                               Subtitle="ICTU Student Rentals"
+                               CanGoBack="False" />
+
+        <ScrollView Grid.Row="1" Padding="{StaticResource ScreenMargin}">
+            <VerticalStackLayout Spacing="20" MaximumWidthRequest="640" HorizontalOptions="Center">
+
+                <!-- 1. Search Bar -->
+                <inputs:SearchBarView Placeholder="Search rooms near ICTU, amenities, price..."
+                                      Margin="0,8,0,0" />
+
+                <!-- 2. Hero Welcome Card -->
+                <Border StrokeShape="RoundRectangle 16"
+                        StrokeThickness="1"
+                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+                        Padding="20"
+                        Shadow="{StaticResource Elevation2Shadow}">
+                    <VerticalStackLayout Spacing="12">
+                        <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
+                            <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                <Label Text="{Binding WelcomeMessage}"
+                                       Style="{StaticResource TextH2}" />
+                                <Label Text="{Binding UserEmail}"
+                                       Style="{StaticResource TextCaption}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+                                       IsVisible="{Binding IsUserSignedIn}" />
+                            </VerticalStackLayout>
+                            <common:RadaBadge Grid.Column="1"
+                                              Type="Custom"
+                                              BadgeColor="{StaticResource ActionAccentLight}"
+                                              BadgeTextColor="{StaticResource ActionPrimaryLight}"
+                                              Text="{Binding UserRole}" />
+                        </Grid>
+
+                        <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
+
+                        <Label Text="Your authenticated session is active and secured. The full Explore Feed and Interactive Map view are being integrated in Sprint Task T01.2."
+                               Style="{StaticResource TextBodyMedium}" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- 3. Category & Filter Chips -->
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Popular Categories"
+                           Style="{StaticResource TextH3}" />
+                    <HorizontalStackLayout Spacing="8">
+                        <common:AmenityChip Title="Near ICTU" IsSelected="True" />
+                        <common:AmenityChip Title="Air Conditioner" />
+                        <common:AmenityChip Title="Private Bath" />
+                        <common:AmenityChip Title="Under 2M" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+
+                <!-- 4. Quick Actions & Sign Out -->
+                <VerticalStackLayout Spacing="12" Margin="0,16,0,32">
+                    <common:RadaButton Text="Sign Out"
+                                       Variant="Outline"
+                                       Command="{Binding SignOutCommand}"
+                                       ButtonHeight="48"
+                                       HorizontalOptions="Fill" />
+
+                    <common:RadaButton Text="Open UI Design System Catalog"
+                                       Variant="Ghost"
+                                       Command="{Binding OpenUiCatalogCommand}"
+                                       ButtonHeight="44"
+                                       HorizontalOptions="Center"
+                                       IsVisible="{Binding IsDebugMode}" />
+                </VerticalStackLayout>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>
+

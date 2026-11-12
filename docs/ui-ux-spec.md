@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Status | Draft v1.0 — 2026-11-11 |
-| Platform | .NET MAUI 10 · Android first (ADR-013) · Vietnamese UI (vi-VN) |
+| Platform | .NET MAUI 10 · Android first (ADR-013) · English UI (en-ENG) |
 | Detailed method skills | `.agents/skills/ui/01…08` (this spec applies them to our screens) |
 | Inputs | [use-cases.md](use-cases.md) (UC-*), [business-analysis.md](business-analysis.md) (BR-*) |
 
@@ -251,24 +251,24 @@ Time pickers (quiet hours, curfew), policy segmented controls, parking text, fla
 ### SCR-ADM-01 Moderation hub · SCR-ADM-02 Review listing · SCR-ADM-03 Report detail
 Hub segmented *Chủ trọ (n) · Tin đăng (n) · Thay đổi (n) · Báo cáo (n)*, oldest first, high-priority reports pinned. Review listing: all fields, photos, pin, safety checklist toggles to confirm, primary *Duyệt*, secondary *Từ chối* (reason required). Report detail: listing summary, all reports, *Bỏ qua* / *Xử lý* (+ suspend toggle, note). API: admin ops. US08, US12, US13.
 
-## 6. Content & formatting rules (vi-VN)
+## 6. Content & formatting rules (en-ENG)
 
 | Item | Rule | Example |
 |---|---|---|
-| Price on card | million with 1 decimal, comma separator | `2,5 tr/tháng`, `950k/tháng` (< 1 tr) |
-| Price on detail/forms | full VND, dot thousands | `2.500.000 ₫` |
+| Price on card | million with 1 decimal, dot/comma separator | `2.5M/mo`, `950k/mo` (< 1M) |
+| Price on detail/forms | full VND, comma thousands | `2,500,000 ₫` |
 | Area | `m²` | `25 m²` |
-| Distance | 1 decimal, comma | `1,2 km tới ICTU`; < 1 km → `850 m` |
-| Duration | minutes, `~` for estimates | `8 phút`, `~19 phút (ước tính)` |
-| Dates | relative ≤ 7 days, else `dd/MM/yyyy` | `3 ngày trước`, `15/11/2026` |
-| Tone | friendly, short, "bạn" | "Bạn đã lưu phòng này" |
+| Distance | 1 decimal | `1.2 km to ICTU`; < 1 km → `850 m` |
+| Duration | minutes, `~` for estimates | `8 mins`, `~19 mins (est.)` |
+| Dates | relative ≤ 7 days, else `yyyy-MM-dd` or `dd/MM/yyyy` | `3 days ago`, `2026-11-15` |
+| Tone | friendly, concise | "You saved this room" |
 
-`errorCode` → message map (client `Resources/Strings`): `INVALID_CREDENTIALS` "Email hoặc mật khẩu không đúng" · `ACCOUNT_LOCKED` "Tài khoản tạm khoá, thử lại sau {time}" · `EMAIL_TAKEN` "Email đã được sử dụng" · `LANDLORD_NOT_APPROVED` "Tài khoản chủ trọ đang chờ xác minh" · `ROOM_NOT_FOUND` "Tin đăng không tồn tại" · `LISTING_NOT_AVAILABLE` "Phòng không còn trống" · `ALREADY_REPORTED` "Bạn đã báo cáo tin này" · `LIMIT_EXCEEDED` "Bạn đã đạt giới hạn" · `CONCURRENCY_CONFLICT`/`ETAG_MISMATCH` "Dữ liệu đã thay đổi, vui lòng tải lại" · `RATE_LIMITED` "Thao tác quá nhanh, thử lại sau ít phút" · network "Không có kết nối mạng" · fallback "Đã có lỗi xảy ra, vui lòng thử lại".
+`errorCode` → message map (client `Resources/Strings`): `INVALID_CREDENTIALS` "Invalid email or password." · `ACCOUNT_LOCKED` "Your account is temporarily locked, please try again in {time}." · `EMAIL_TAKEN` "This email address is already in use." · `LANDLORD_NOT_APPROVED` "Landlord account is pending approval." · `ROOM_NOT_FOUND` "Listing does not exist." · `LISTING_NOT_AVAILABLE` "Room is no longer available." · `ALREADY_REPORTED` "You have already reported this listing." · `LIMIT_EXCEEDED` "Limit reached." · `CONCURRENCY_CONFLICT`/`ETAG_MISMATCH` "Data has changed, please refresh." · `RATE_LIMITED` "Too many requests, please try again shortly." · network "No internet connection." · fallback "An unexpected error occurred, please try again.".
 
 ## 7. Accessibility & interaction
 
 - `SemanticProperties.Description` on icon-only buttons (♥, share, filter); headings use `SemanticProperties.HeadingLevel`.
-- Do not rely on colour alone (status banners include text; best-value cell includes "Tốt nhất").
+- Do not rely on colour alone (status banners include text; best-value cell includes "Best Value").
 - Motion: 150–250 ms ease-out; respect reduced motion (no shimmer when animations disabled).
 - Gestures always have a visible alternative (swipe-to-remove favourite ↔ ♥ button).
 - Keyboard: numeric keypads for money/area; `ReturnType=Next` through forms.
@@ -278,6 +278,6 @@ Hub segmented *Chủ trọ (n) · Tin đăng (n) · Thay đổi (n) · Báo cáo
 - [ ] Matches screen spec order and primary action; tokens only.
 - [ ] Loading / Empty / Error / Offline states implemented.
 - [ ] `x:DataType` on page and every `DataTemplate`.
-- [ ] Strings Vietnamese and formatted per §6; errors via `errorCode` map.
+- [ ] Strings English (en-ENG) and formatted per §6; errors via `errorCode` map.
 - [ ] Touch targets ≥ 48 dp; contrast AA; semantic descriptions.
 - [ ] Protected actions trigger `SignInPrompt` and resume after login.

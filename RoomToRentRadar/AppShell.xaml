@@ -8,29 +8,33 @@
     Shell.FlyoutBehavior="Flyout"
     Title="RoomToRentRadar">
 
+    <!-- 1. Initial Launch Screen: SIGN IN (AUTH FLOW) -->
     <ShellContent
-        Title="Dashboard"
-        Icon="{StaticResource IconDashboard}"
-        ContentTemplate="{DataTemplate pages:MainPage}"
-        Route="main"
-        SemanticProperties.Description="Dashboard"
-        SemanticProperties.Hint="Navigate to dashboard"/>
-
-    <ShellContent
-        Title="Projects"
+        Title="Sign In"
         Icon="{StaticResource IconProjects}"
-        ContentTemplate="{DataTemplate pages:ProjectListPage}"
-        Route="projects"
-        SemanticProperties.Description="Projects"
-        SemanticProperties.Hint="Navigate to projects"/>
+        ContentTemplate="{DataTemplate pages:LoginPage}"
+        Route="login"
+        SemanticProperties.Description="Sign in to your account"
+        SemanticProperties.Hint="Sign in using email or ICTU SSO" />
 
+    <!-- 2. Main Post-Authentication Landing Screen: EXPLORE / HOME (Always available in Debug and Release) -->
     <ShellContent
-        Title="Manage Meta"
-        Icon="{StaticResource IconMeta}"
-        ContentTemplate="{DataTemplate pages:ManageMetaPage}"
-        Route="manage"
-        SemanticProperties.Description="Manage Meta"
-        SemanticProperties.Hint="Navigate to manage meta"/>
+        Title="Explore"
+        Icon="{StaticResource IconDashboard}"
+        ContentTemplate="{DataTemplate pages:MainLandingPage}"
+        Route="main"
+        SemanticProperties.Description="Explore verified student rooms"
+        SemanticProperties.Hint="Browse student rental properties near ICTU" />
+
+    <!-- 3. UI Design System Catalog (Developer tool - hidden in Release) -->
+    <ShellContent
+        x:Name="UiCatalogContent"
+        Title="UI Catalog"
+        Icon="{StaticResource IconRibbon}"
+        ContentTemplate="{DataTemplate pages:UiCatalogPage}"
+        Route="uicatalog"
+        SemanticProperties.Description="UI Design System Catalog"
+        SemanticProperties.Hint="Explore colors, typography, buttons, inputs, and components" />
 
     <Shell.FlyoutFooter>
         <Grid Padding="15">

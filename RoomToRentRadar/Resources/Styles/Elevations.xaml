@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary 
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!-- ========================================================================= -->
+    <!-- SHADOW ELEVATIONS                                                         -->
+    <!-- ========================================================================= -->
+
+    <!-- Low elevation: Standard content card on canvas -->
+    <Shadow x:Key="Elevation1Shadow"
+            Brush="{AppThemeBinding Light=#14000000, Dark=#40000000}"
+            Offset="0,2"
+            Radius="4"
+            Opacity="0.8" />
+
+    <!-- Medium elevation: Dropdowns, bottom sheets, hover states -->
+    <Shadow x:Key="Elevation2Shadow"
+            Brush="{AppThemeBinding Light=#20000000, Dark=#55000000}"
+            Offset="0,4"
+            Radius="10"
+            Opacity="0.85" />
+
+    <!-- High elevation: Floating CTA buttons, Modals, Dialogs -->
+    <Shadow x:Key="Elevation3Shadow"
+            Brush="{AppThemeBinding Light=#30000000, Dark=#70000000}"
+            Offset="0,8"
+            Radius="20"
+            Opacity="0.9" />
+
+    <!-- ========================================================================= -->
+    <!-- CARD & CONTAINER BORDER STYLES                                            -->
+    <!-- ========================================================================= -->
+
+    <!-- Standard Room Card Container Border -->
+    <Style x:Key="BaseCardBorderStyle" TargetType="Border">
+        <Setter Property="StrokeShape" Value="RoundRectangle 12" />
+        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}" />
+        <Setter Property="Padding" Value="{StaticResource CardPadding}" />
+        <Setter Property="Shadow" Value="{StaticResource Elevation1Shadow}" />
+    </Style>
+
+    <!-- Elevated Floating Card / Dialog Container Border -->
+    <Style x:Key="ElevatedCardBorderStyle" TargetType="Border">
+        <Setter Property="StrokeShape" Value="RoundRectangle 16" />
+        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SurfaceElevatedLight}, Dark={StaticResource SurfaceElevatedDark}}" />
+        <Setter Property="Padding" Value="{StaticResource PaddingLg}" />
+        <Setter Property="Shadow" Value="{StaticResource Elevation2Shadow}" />
+    </Style>
+
+    <!-- Flat Subtle Container (e.g. Filter bar or input background) -->
+    <Style x:Key="SubtleContainerBorderStyle" TargetType="Border">
+        <Setter Property="StrokeShape" Value="RoundRectangle 8" />
+        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}" />
+        <Setter Property="Padding" Value="{StaticResource PaddingSm}" />
+    </Style>
+
+</ResourceDictionary>
+
