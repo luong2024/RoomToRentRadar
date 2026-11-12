@@ -181,7 +181,15 @@ Each UC: **Actor · Story/AC · Preconditions · Main flow · Alternatives (A) �
 - **E1:** refresh fails → sign-out locally, show sign-in.
 
 #### UC-24 Edit profile
-- **Main:** SCR-ACC-01: full name, phone (landlord), selected campus, notification preferences → `updateMyProfile`.
+- **Main:** SCR-ACC-01: full name, phone (landlord), selected campus, language (UC-25), notification preferences → `updateMyProfile`.
+
+#### UC-25 Change app language
+- **Actor:** any user (Guest/Student/Landlord/Admin) · **Story:** US15 AC1–AC4
+- **Main:** 1) Account → *Language* opens the language picker (SCR-ACC-03) showing *English* and *Tiếng Việt*, current one checked. 2) User picks one. 3) App switches culture and every visible page re-renders immediately; the back stack is kept. 4) Choice saved on device; signed-in → `updateMyProfile { preferredLanguage }`.
+- **A1:** offline and signed in → device switches immediately; the profile update is retried when back online (last choice wins).
+- **A2:** first launch → language from the device (BR-I18N-01), no question asked.
+- **E1:** profile update fails (5xx) → language stays switched on device; silent retry on next start.
+- **Rules:** BR-I18N-01..04.
 
 ### 3.4 Landlord (US08, US11)
 
@@ -246,3 +254,4 @@ Each UC: **Actor · Story/AC · Preconditions · Main flow · Alternatives (A) �
 | US13 | UC-20…UC-24, UC-40, UC-44 | SCR-AUTH-01, SCR-AUTH-02, SCR-ACC-01, SCR-ADM-01 | `registerUser`, `loginUser`, `loginWithIctuSso`, `refreshToken`, `revokeToken`, `getCurrentUser`, `updateMyProfile`, `listPendingLandlords`, `approveLandlord`, `getAuditLogs` |
 | — (ops) | — | — | `getHealth` |
 | US14 | UC-17 | SCR-CHAT-01, SCR-CHAT-02 | `startConversation`, `listMyConversations`, `getConversation`, `getConversationMessages`, `sendMessage`, `markConversationRead`, hub `/hubs/chat` |
+| US15 | UC-25 | SCR-ACC-01, SCR-ACC-03 | `updateMyProfile`, `getCurrentUser` |

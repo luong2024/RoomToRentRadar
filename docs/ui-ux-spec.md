@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Status | Draft v1.0 — 2026-11-11 |
-| Platform | .NET MAUI 10 · Android first (ADR-013) · English UI (en-US) |
+| Platform | .NET MAUI 10 · Android first (ADR-013) · bilingual UI: English (en-US) + Vietnamese (vi-VN), switchable in-app (US15) |
 | Detailed method skills | `.agents/skills/ui/01…08` (this spec applies them to our screens) |
 | Inputs | [use-cases.md](use-cases.md) (UC-*), [business-analysis.md](business-analysis.md) (BR-*) |
 
@@ -240,8 +240,9 @@ Horizontal table, sticky first column (row labels), up to 3 columns with cover +
 ### SCR-CHAT-01 Conversations · SCR-CHAT-02 Conversation
 List: listing thumb, other party name, last message, time, unread badge. Conversation: pinned listing card (tap → detail), bubbles (mine right / Primary), status *Sending / Sent / Not sent · Retry*, date separators, composer with send button (disabled when empty), load older on scroll top. Landlord sees the student's name only (no phone). API: chat ops + hub. US14.
 
-### SCR-ACC-01 Account · SCR-ACC-02 Campus picker
-Profile, role badge, landlord verification status, campus, notification settings (push on/off), *Sign out*. Guest: sign-in/register CTAs. API: `getCurrentUser`, `updateMyProfile`. US13.
+### SCR-ACC-01 Account · SCR-ACC-02 Campus picker · SCR-ACC-03 Language
+Account: profile, role badge, landlord verification status, *Campus*, *Language* (shows current: "English" / "Tiếng Việt"), notification settings (push on/off), *Sign out*. Guest: sign-in/register CTAs plus *Campus* and *Language* rows. API: `getCurrentUser`, `updateMyProfile`. US13.
+Language (SCR-ACC-03): bottom sheet titled "Language / Ngôn ngữ" (always bilingual so a user who picked the wrong language can find it), two radio rows each written in its own language — *English*, *Tiếng Việt* — current one checked; selecting applies immediately and closes the sheet. API: `updateMyProfile { preferredLanguage }` when signed in. US15, UC-25.
 
 ### SCR-LL-01 My listings (landlord)
 Header counts by status (chips filter); card with status badge, views placeholder (post-MVP), actions per state (BR-LST-04): *Edit*, *Mark rented*/*Mark available*, *Unpublish*/*Republish*, *Resubmit*; rejection/suspension reason visible. Unverified landlord: banner + disabled *Post listing*. Primary FAB-style *+ Post listing*. API: `listMyListings` + transitions. US08.
@@ -255,21 +256,25 @@ Time pickers (quiet hours, curfew), policy segmented controls, parking text, fla
 ### SCR-ADM-01 Moderation hub · SCR-ADM-02 Review listing · SCR-ADM-03 Report detail
 Hub segmented *Landlords (n) · Listings (n) · Changes (n) · Reports (n)*, oldest first, high-priority reports pinned. Review listing: all fields, photos, pin, safety checklist toggles to confirm, primary *Approve*, secondary *Reject* (reason required). Report detail: listing summary, all reports, *Dismiss* / *Take action* (+ suspend toggle, note). API: admin ops. US08, US12, US13.
 
-## 6. Content & formatting rules (en-US)
+## 6. Content & formatting rules (en-US, vi-VN)
 
-| Item | Rule | Example |
-|---|---|---|
-| Price on card | million with 1 decimal, dot/comma separator | `2.5M/mo`, `950k/mo` (< 1M) |
-| Price on detail/forms | full VND, comma thousands | `2,500,000 ₫` |
-| Area | `m²` | `25 m²` |
-| Distance | 1 decimal | `1.2 km to ICTU`; < 1 km → `850 m` |
-| Duration | minutes, `~` for estimates | `8 mins`, `~19 mins (est.)` |
-| Dates | relative ≤ 7 days, else `d MMM yyyy` (unambiguous for VN and EN readers) | `3 days ago`, `15 Nov 2026` |
+| Item | Rule | English (en-US) | Tiếng Việt (vi-VN) |
+|---|---|---|---|
+| Price on card | million with 1 decimal | `2.5M/mo`, `950k/mo` (< 1M) | `2,5 tr/tháng`, `950k/tháng` |
+| Price on detail/forms | full VND, culture thousands separator | `2,500,000 ₫` | `2.500.000 ₫` |
+| Area | `m²` | `25 m²` | `25 m²` |
+| Distance | 1 decimal | `1.2 km to ICTU`; < 1 km → `850 m` | `1,2 km tới ICTU`; `850 m` |
+| Duration | minutes, `~` for estimates | `8 mins`, `~19 mins (est.)` | `8 phút`, `~19 phút (ước tính)` |
+| Dates | relative ≤ 7 days, else absolute | `3 days ago`, `15 Nov 2026` | `3 ngày trước`, `15/11/2026` |
+
+Formatting always uses the **current UI culture** (`CultureInfo.CurrentCulture`), never a hard-coded separator.
 | Tone | friendly, concise | "You saved this room" |
-| Localisation | all user-facing strings live in `Resources/Strings/AppResources.resx` (+ `errorCode` map); no literals in XAML/C#, so a Vietnamese `AppResources.vi.resx` can be added later without code changes | `{x:Static strings:AppResources.SignIn}` |
+| Localisation | every user-facing string exists in `Resources/Strings/AppResources.resx` (en-US, fallback) **and** `AppResources.vi.resx` (vi-VN), including the `errorCode` map and enum labels (`RoomType_BoardingRoom`, `Amenity_Wifi`…). XAML binds through a localization source that raises change notifications (not `x:Static`) so an in-app switch re-renders open pages (US15). Vietnamese text is ~20–30 % longer: labels must wrap, never truncate buttons | `{Binding [SignIn], Source={x:Static loc:LocalizedStrings.Instance}}` |
 | Proper nouns | campus names, addresses and people names stay in Vietnamese with diacritics | `Trường Đại học Công nghệ Thông tin và Truyền thông` |
 
 `errorCode` → message map (client `Resources/Strings`): `INVALID_CREDENTIALS` "Invalid email or password." · `ACCOUNT_LOCKED` "Your account is temporarily locked, please try again in {time}." · `EMAIL_TAKEN` "This email address is already in use." · `LANDLORD_NOT_APPROVED` "Landlord account is pending approval." · `ROOM_NOT_FOUND` "Listing does not exist." · `LISTING_NOT_AVAILABLE` "Room is no longer available." · `ALREADY_REPORTED` "You have already reported this listing." · `LIMIT_EXCEEDED` "Limit reached." · `CONCURRENCY_CONFLICT`/`ETAG_MISMATCH` "Data has changed, please refresh." · `RATE_LIMITED` "Too many requests, please try again shortly." · network "No internet connection." · fallback "An unexpected error occurred, please try again.".
+
+Vietnamese (`AppResources.vi.resx`): `INVALID_CREDENTIALS` "Email hoặc mật khẩu không đúng." · `ACCOUNT_LOCKED` "Tài khoản tạm thời bị khoá, vui lòng thử lại sau {time}." · `EMAIL_TAKEN` "Email này đã được sử dụng." · `LANDLORD_NOT_APPROVED` "Tài khoản chủ trọ đang chờ duyệt." · `ROOM_NOT_FOUND` "Tin đăng không tồn tại." · `LISTING_NOT_AVAILABLE` "Phòng không còn trống." · `ALREADY_REPORTED` "Bạn đã báo cáo tin đăng này." · `LIMIT_EXCEEDED` "Đã đạt giới hạn." · `CONCURRENCY_CONFLICT`/`ETAG_MISMATCH` "Dữ liệu đã thay đổi, vui lòng tải lại." · `RATE_LIMITED` "Quá nhiều yêu cầu, vui lòng thử lại sau ít phút." · network "Không có kết nối mạng." · fallback "Đã có lỗi xảy ra, vui lòng thử lại.".
 
 ## 7. Accessibility & interaction
 
@@ -284,6 +289,6 @@ Hub segmented *Landlords (n) · Listings (n) · Changes (n) · Reports (n)*, old
 - [ ] Matches screen spec order and primary action; tokens only.
 - [ ] Loading / Empty / Error / Offline states implemented.
 - [ ] `x:DataType` on page and every `DataTemplate`.
-- [ ] Strings English (en-US), stored in `.resx` and formatted per §6; errors via `errorCode` map.
+- [ ] Every string in both `AppResources.resx` and `AppResources.vi.resx`, formatted per §6 for the current culture; errors via `errorCode` map; screen checked in **both** languages (no truncation).
 - [ ] Touch targets ≥ 48 dp; contrast AA; semantic descriptions.
 - [ ] Protected actions trigger `SignInPrompt` and resume after login.

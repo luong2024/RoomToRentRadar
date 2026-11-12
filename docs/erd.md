@@ -112,7 +112,7 @@ erDiagram
 | `TUMP` | Trường Đại học Y Dược | 21.58827 | 105.82712 | 0 | 7 |
 | `TNUT` | Trường Đại học Kỹ thuật Công nghiệp | 21.54954 | 105.84350 | 0 | 8 |
 
-### 4.2 `Users` *(exists — migration adds 2 columns)*
+### 4.2 `Users` *(exists — migration adds 3 columns)*
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
 | Id | TEXT | PK | |
@@ -129,6 +129,7 @@ erDiagram
 | FailedLoginCount | INTEGER | NN | |
 | LockoutEndUtc | TEXT | | |
 | **SelectedCampusId** | TEXT | FK→Campuses.Id, NN, default `'ICTU'` | **new** — BR-CMP-02 |
+| **PreferredLanguage** | TEXT | NN, default `'en'`, CHECK IN (`'en'`,`'vi'`) | **new** — BR-I18N-02/04 (language of push and inbox text) |
 | CreatedAtUtc | TEXT | NN | |
 | UpdatedAtUtc | TEXT | NN | |
 | **Version** | INTEGER | NN, default 1 | **new** — replaces the unused `ConcurrencyToken` gap in SQLite (GUARDRAILS 1.5.2) |
@@ -292,7 +293,7 @@ IX `(SavedSearchId, LocalDate, WasPushed)`.
 | Id | TEXT | PK | |
 | UserId | TEXT | FK→Users ON DELETE CASCADE, NN | |
 | Type | TEXT | NN | `NewListingMatch`·`ListingApproved`·`ListingRejected`·`ListingSuspended`·`LandlordApproved`·`ReportResolved`·`NewMessage` |
-| Title | TEXT | NN | in the UI language (English in MVP) |
+| Title | TEXT | NN | rendered in the recipient's `PreferredLanguage` at creation (BR-I18N-04) |
 | Body | TEXT | NN | |
 | TargetType | TEXT | | `Room`·`Conversation`·`SavedSearch` |
 | TargetId | TEXT | | deep-link target |
@@ -380,7 +381,7 @@ Separate file `roomtorentradar-cache.db3` in `FileSystem.AppDataDirectory`; sche
 | `CachedConversations` / `CachedMessages` | `Id` | last 50 messages per conversation | 30 days |
 | `ListingDrafts` | `DraftId` | landlord wizard draft JSON (UC-30 A1) | 30 days |
 
-Preferences (`Preferences` API, not SQLite): `SelectedCampusId` (guest), `SeenHouseRules:<roomId>`, `InstallationId`.
+Preferences (`Preferences` API, not SQLite): `SelectedCampusId` (guest), `AppLanguage` (`en`/`vi`, BR-I18N-02), `SeenHouseRules:<roomId>`, `InstallationId`.
 
 ## 6. Delta vs current code (develop2 @ 8524ad8)
 

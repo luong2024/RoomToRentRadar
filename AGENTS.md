@@ -6,7 +6,7 @@
 ## 1. Overview
 
 - **Product:** mobile app that helps ICTU / Thái Nguyên University students find **verified** rooms near their campus ("Rightmove for students"). Landlords publish listings, an Admin moderates.
-- **MVP scope:** US01–US13 from the project plan + US14 in-app chat. Anything else is out of scope (`docs/prd.md` §5.2).
+- **MVP scope:** US01–US13 from the project plan + team additions US14 in-app chat and US15 English/Vietnamese language switch. Anything else is out of scope (`docs/prd.md` §5.2).
 - **Team:** PO = instructor · SM = Nguyễn Văn Tuân (`ngvantun205`) · Devs: `thinhlai06`, `Hieu209Cnttqtk22a`, `thienthedude`, `tranthuyduyen`.
 - **Quality bar:** 100% of AC met · 0 Critical / ≤ 3 High defects · CI green on every PR.
 
@@ -73,9 +73,9 @@ Put new code only where this map (and `docs/system-architecture.md` §3) says. N
 | Driven ports | `I*Repository` → `Sqlite*Repository`; `I*Port` → `*Adapter`; mocks `Mock*`/`InMemory*` (tests/Development only) |
 | DTOs | immutable `record`: `*Request` (input), `*Dto` (output); JSON camelCase, enums as strings, money = integer VND |
 | Client | `I<Feature>Gateway` → `Http<Feature>Gateway`; `*Page` + `*PageModel` (CommunityToolkit.Mvvm) |
-| Errors | `application/problem+json` + stable `errorCode`; client maps `errorCode` → English text from `.resx` (`docs/ui-ux-spec.md` §6) |
+| Errors | `application/problem+json` + stable `errorCode`; client maps `errorCode` → localized text from `.resx` (en/vi) (`docs/ui-ux-spec.md` §6) |
 | Tests | `Method_Scenario_Expected`; async tests are `public async Task` with `await Assert.ThrowsAsync<T>(...)`; every `E*` flow in `docs/use-cases.md` has a test |
-| UI | tokens only (no hard-coded colours/sizes); allowed colour pairs in `docs/ui-ux-spec.md` §3.1.1; `x:DataType` on every page and `DataTemplate`; Loading/Empty/Error/Offline states; touch targets ≥ 48 dp; English strings (en-US) kept in `Resources/Strings/*.resx`, no hard-coded literals |
+| UI | tokens only (no hard-coded colours/sizes); allowed colour pairs in `docs/ui-ux-spec.md` §3.1.1; `x:DataType` on every page and `DataTemplate`; Loading/Empty/Error/Offline states; touch targets ≥ 48 dp; every string in both `AppResources.resx` (en-US) and `AppResources.vi.resx` (vi-VN), bound so it re-renders on language switch (US15); no hard-coded literals |
 | Icons | **MUST NOT use emoji as icons.** Use Fluent System Icons glyphs (`Resources/Fonts/FluentUI.cs`) or SVG in `Resources/Images` |
 
 ## 7. Git workflow, commits & PRs

@@ -52,7 +52,7 @@ Reference product: **Rightmove** (rightmove.co.uk). We adopt its proven patterns
 
 ### 5.1 In scope — MVP (all must ship)
 
-The MVP is exactly the 13 user stories of the project plan plus one addition decided by the team (US14, in-app chat). Story points from the plan.
+The MVP is exactly the 13 user stories of the project plan plus two additions decided by the team: US14 (in-app chat) and US15 (English/Vietnamese language switch). Story points from the plan.
 
 | Epic | ID | User story (short) | SP | Priority |
 |---|---|---|---|---|
@@ -70,13 +70,14 @@ The MVP is exactly the 13 user stories of the project plan plus one addition dec
 | E5 Trust | **US12** | Report a suspicious/inaccurate listing | 2 | Must |
 | E5 Trust | **US13** | Register, sign in, role-based access | 5 | Must |
 | E6 Contact | **US14** | In-app chat with the landlord *(team addition, 2026-11-11)* | TBD (not in plan sheet) | Must |
+| E7 Experience | **US15** | Switch the app language between English and Vietnamese *(team addition, 2026-11-12)* | TBD (not in plan sheet) | Must |
 
 > **Supporting capability (not a separate story):** an **Admin console inside the mobile app** (role-gated tab) — required by US08 AC2 (verification), US12 AC3 (moderation queue) and US13 (landlord approval). See [use-cases.md](use-cases.md) UC-40…UC-44.
 
 ### 5.2 Out of scope for this release (Post-MVP backlog)
 
 Listed in the Project Plan scope but **not** in the MVP backlog — do **not** implement, do not add data structures "for later":
-nearby-amenities map layer, area security data/crime map, online deposit payment, roommate matching, odd-job marketplace, rideshare matching, short-term rental, internet sharing, administrative-procedure assistant, contract-clause scanning, utility consumption prediction, in-app booking of viewings, reviews/ratings of landlords, chat attachments (images/files), user blocking, web front-end, **password reset by e-mail** (pilot workaround: Admin resets via a support script), **in-app account deletion** (becomes mandatory only if published on Google Play — ADR-013), **Vietnamese UI** (strings are in `.resx`, so `vi` can be added later without code changes).
+nearby-amenities map layer, area security data/crime map, online deposit payment, roommate matching, odd-job marketplace, rideshare matching, short-term rental, internet sharing, administrative-procedure assistant, contract-clause scanning, utility consumption prediction, in-app booking of viewings, reviews/ratings of landlords, chat attachments (images/files), user blocking, web front-end, **password reset by e-mail** (pilot workaround: Admin resets via a support script), **in-app account deletion** (becomes mandatory only if published on Google Play — ADR-013), machine translation of user-written content (titles, descriptions, chat), languages other than English and Vietnamese.
 
 > Note: US10 AC2 requires a **"security score"**. Because area-security data is out of scope, the MVP defines it as a **listing-level Safety Score (0–5)** computed from landlord-declared safety features that the Admin verifies during moderation — see `BR-LST-08`.
 
@@ -201,6 +202,15 @@ Locked rules: `BR-AUTH-01..07` (originally in `.agents/plans/US13_BACKEND_PLAN.m
 
 Rules: `BR-CHT-01..07`, [ADR-009](adr/adr-009-in-app-chat.md). Text only in MVP.
 
+### US15 — Switch the app language *(team addition)*
+*As a user (student, landlord or admin), I want to use the app in English or Vietnamese so that I understand every screen in the language I am most comfortable with.*
+- AC1: From *Account → Language*, any user (guest or signed in) can choose **English** or **Tiếng Việt**; every screen switches immediately, without restarting the app or losing the current screen.
+- AC2: On first launch the app uses Vietnamese when the device language is Vietnamese, otherwise English.
+- AC3: Labels, buttons, validation and error messages, empty states, room types, amenities, safety features and statuses are translated; prices, dates and distances use the chosen language's format (`2,500,000 ₫` / `2.500.000 ₫`). Content written by users (titles, descriptions, house rules, chat) is shown exactly as written.
+- AC4: The choice is remembered after the app restarts; for signed-in users it is saved to the profile, and new push notifications and inbox items arrive in that language.
+
+Rules: `BR-I18N-01..04`; UI: [ui-ux-spec.md §6](ui-ux-spec.md#6-content--formatting-rules-en-us-vi-vn), SCR-ACC-03; UC-25.
+
 ## 7. Non-functional requirements
 
 | ID | Category | Requirement |
@@ -212,7 +222,7 @@ Rules: `BR-CHT-01..07`, [ADR-009](adr/adr-009-in-app-chat.md). Text only in MVP.
 | NFR-05 | Security | OWASP ASVS L1 basics: PBKDF2 passwords, JWT 30 min + rotating refresh 7 days, HTTPS outside Development, rate limiting on auth/report/chat endpoints, no secrets in source. GUARDRAILS 1.5.x apply. |
 | NFR-06 | Privacy | Store the minimum personal data: no national ID, no student GPS history; landlord phone exposed only to signed-in users; chat visible only to its two participants and Admin on report. |
 | NFR-07 | Availability | Read features degrade gracefully offline: last list page, viewed details, favourites and conversations are served from the on-device cache with an "offline" banner. |
-| NFR-08 | Usability | English UI (en-US; strings in `.resx`, Vietnamese can be added later), touch targets ≥ 48 dp, WCAG 2.2 AA contrast, every list has loading/empty/error states. |
+| NFR-08 | Usability | Bilingual UI: English (en-US) and Vietnamese (vi-VN), switchable in-app (US15, `BR-I18N-01..04`); strings in `.resx`; touch targets ≥ 48 dp, WCAG 2.2 AA contrast, every list has loading/empty/error states. |
 | NFR-09 | Platform | Android 7.0+ (API 24) is the only tested target, demonstrated on the emulator and team phones (ADR-013; no store or APK distribution). Code stays cross-platform, but iOS is not built or tested (no Mac / Apple Developer account); Windows/MacCatalyst not supported in MVP. |
 | NFR-10 | Maintainability | Hexagonal architecture rules in `.agents/GUARDRAILS.md`; ≥ 80% line coverage on Domain/Application; CI green on every PR to `develop2`. |
 | NFR-11 | Cost | Only free tiers/free OSS (see [ADR index](adr/index.md)); budget sheet caps paid cloud at 11 M VND. |

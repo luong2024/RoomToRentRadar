@@ -153,7 +153,7 @@ builder.Services.AddTransientWithShellRoute<RoomDetailPage, RoomDetailPageModel>
 | Feature | API | Used by |
 |---|---|---|
 | Secure token storage | `SecureStorage` | ADR-005 |
-| Preferences (guest campus, seen house rules) | `Preferences` | BR-CMP-02 |
+| Preferences (guest campus, app language, seen house rules) | `Preferences` | BR-CMP-02, BR-I18N-02 |
 | Connectivity | `Connectivity.ConnectivityChanged` | ADR-004 |
 | Dialer / Zalo | `PhoneDialer`, `Launcher.OpenAsync("https://zalo.me/…")` | UC-16 |
 | Share image | `VisualElement.CaptureAsync()` + `Share.RequestAsync(ShareFileRequest)` | US10 AC3 |
@@ -245,6 +245,11 @@ RoomsController.Search(query) → ISearchRoomsUseCase.ExecuteAsync(RoomSearchReq
 | `IctuSso:*`, `IctuSso:UseMockVerifier` | ADR-005 | `false` |
 | `Admin:SeedAccounts` | seeded admin e-mails | empty |
 | Client `ApiOptions:BaseUrl` | per build/environment | emulator `http://10.0.2.2:5000` |
+
+### 7.6 Localization (US15)
+- **Client:** `Resources/Strings/AppResources.resx` (en-US, neutral/fallback) + `AppResources.vi.resx`. A singleton `LocalizedStrings` (indexer `this[string key]`, implements `INotifyPropertyChanged`) wraps `AppResources.ResourceManager`; XAML binds `{Binding [Key], Source={x:Static loc:LocalizedStrings.Instance}}`. `ILanguageService.SetLanguage(code)` sets `CultureInfo.CurrentUICulture`/`CurrentCulture` (+ `DefaultThread*`), saves `AppLanguage` in `Preferences`, raises `PropertyChanged(string.Empty)` so open pages re-render, and (signed in) calls the profile gateway (`updateMyProfile`). PageModels format money/dates with the current culture via shared converters — never `ToString("N0")` with a fixed culture.
+- **Server:** only text the server itself generates is localized — push and inbox notifications. Templates per language live in the Application layer (`Resources/NotificationTexts.resx` + `.vi.resx`, plain .NET, no ASP.NET dependency) and are chosen from `Users.PreferredLanguage` (BR-I18N-04). API errors stay English `ProblemDetails` + `errorCode`; the client translates `errorCode`.
+- **Reference data:** enums and catalog codes (room types, amenities, safety features, statuses) are sent as codes; the client maps code → label from `.resx`. Campus names are proper nouns and are not translated.
 
 ## 8. Performance budget & tactics
 

@@ -74,7 +74,7 @@ To-be: register as Landlord (phone required) → Admin approves the landlord →
 
 ## 6. Domain glossary (EN ↔ VI)
 
-| Term (English UI) | Vietnamese Reference | Definition |
+| Term (English UI) | Vietnamese UI term (use in `AppResources.vi.resx`) | Definition |
 |---|---|---|
 | Listing / Room | Tin đăng / Phòng | A rentable unit advertised by a landlord. In code: `Room` aggregate. |
 | Room type | Loại phòng | `BoardingRoom` — UI "Boarding room" (phòng trọ), `MiniApartment` — "Mini apartment" (chung cư mini), `WholeHouse` — "Whole house" (nhà nguyên căn), `Dormitory` — "Dormitory" (ký túc xá / KTX tư nhân). |
@@ -111,6 +111,14 @@ To-be: register as Landlord (phone required) → Admin approves the landlord →
 | BR-CMP-01 | Campuses are reference data seeded from [erd.md §4.1](erd.md#41-campuses-reference-seeded) (8 Thái Nguyên University campuses). Default campus is **ICTU** (`21.5851, 105.8066`). Adding a campus = adding one seed row; no code change. |
 | BR-CMP-02 | A signed-in user's selected campus is stored in the profile (`Users.SelectedCampusId`) and syncs across devices; a guest's selection is stored on the device only. |
 | BR-CMP-03 | Every distance, distance filter, distance sort and travel time is relative to the *selected* campus at request time; it is never stored on the listing. |
+
+### 7.2a Language (`BR-I18N`) — US15
+| ID | Rule |
+|---|---|
+| BR-I18N-01 | Supported UI languages: **English (`en`, en-US)** and **Vietnamese (`vi`, vi-VN)**. First launch: Vietnamese when the device UI language is Vietnamese, otherwise English. English is the fallback for any missing string. |
+| BR-I18N-02 | The language can be changed at any time in *Account → Language* by guests and signed-in users; it applies immediately to every screen without restarting the app. It is stored on the device; for signed-in users it is also saved to `Users.PreferredLanguage`. On sign-in, a device that has never had an explicit choice adopts the profile language; otherwise the device choice is uploaded. |
+| BR-I18N-03 | Translated: all app text, validation and `errorCode` messages, enum/reference labels (room types, amenities, safety features, listing/report statuses), and number/date/price formats (§6 of ui-ux-spec). **Not** translated: user-written content (titles, descriptions, house rules, report notes, chat) and proper nouns (campus names, addresses, people). |
+| BR-I18N-04 | Server-generated text (push notifications and inbox `Notifications.Title/Body`) is rendered in the recipient's `PreferredLanguage` when it is created; existing inbox items are not re-translated after a language change. API `ProblemDetails.title/detail` stay English (for developers) — the client shows only its own text for `errorCode`. |
 
 ### 7.3 Listings (`BR-LST`)
 | ID | Rule |
@@ -226,7 +234,7 @@ To-be: register as Landlord (phone required) → Admin approves the landlord →
 | Cloud cost | SQLite single datastore ([ADR-002](adr/adr-002-sqlite-single-datastore.md)); free tiers only. |
 | Map/geolocation API limits | Native map SDK (free for mobile), no paid geocoding (pin-drop), routing cache ([ADR-006](adr/adr-006-maps-and-spatial-search.md), [ADR-007](adr/adr-007-routing-and-travel-time.md)). |
 | Fake listings & privacy | Two-level verification, Safety Score verification, reports, EXIF stripping, phone gating, minimal data. |
-| English-only UI vs. older, non-technical landlords (persona P3) | Short labels, icons with text, landlord wizard with examples; all strings in `.resx` so a Vietnamese resource file can be added later without code changes; Admin can help landlords publish during the pilot. |
+| Older, non-technical landlords (persona P3) do not read English | Vietnamese UI with in-app switch (US15, BR-I18N-01..04); short labels, icons with text, landlord wizard with examples; Admin can help landlords publish during the pilot. |
 | ICTU Google Workspace may block unknown third-party OAuth apps | Test early with one real `DTC…@ictu.edu.vn` account; only if it shows *Access blocked*, ask ICTU IT to trust the team's client ID; email/password sign-in stays the fallback (ADR-005). |
 | Free-tier services change or need a card (Google Maps billing account) | Pre-approved fallback Mapsui + OpenFreeMap (ADR-006); every external service sits behind a port with a Development mock (§10). |
 
