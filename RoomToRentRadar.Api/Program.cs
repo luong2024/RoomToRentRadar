@@ -53,17 +53,9 @@ if (string.IsNullOrWhiteSpace(jwtSettings.SigningKey))
     jwtSettings.SigningKey = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
 }
 
-var databaseProvider = builder.Configuration["DatabaseProvider"] ?? "Sqlite";
-if (string.Equals(databaseProvider, "CosmosDb", StringComparison.OrdinalIgnoreCase))
-{
-    var cosmosSettings = builder.Configuration.GetSection(CosmosDbSettings.SectionName).Get<CosmosDbSettings>() ?? new CosmosDbSettings();
-    builder.Services.AddCosmosDatastore(cosmosSettings);
-}
-else
-{
-    var sqliteSettings = builder.Configuration.GetSection(SqliteSettings.SectionName).Get<SqliteSettings>() ?? new SqliteSettings();
-    builder.Services.AddSqliteDatastore(sqliteSettings);
-}
+// ADR-002: Cosmos frozen, SQLite only for datastore
+var sqliteSettings = builder.Configuration.GetSection(SqliteSettings.SectionName).Get<SqliteSettings>() ?? new SqliteSettings();
+builder.Services.AddSqliteDatastore(sqliteSettings);
 
 var useMockSso = builder.Configuration.GetValue("IctuSso:UseMockVerifier", defaultValue: false);
 if (useMockSso && !builder.Environment.IsDevelopment())

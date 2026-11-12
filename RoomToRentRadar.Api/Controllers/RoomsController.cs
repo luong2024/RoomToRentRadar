@@ -67,7 +67,6 @@ public sealed class RoomsController : ControllerBase
         {
             var clientEtag = ifNoneMatchHeader.ToString().Trim();
             if (string.Equals(clientEtag, etag, StringComparison.Ordinal) ||
-                string.Equals(clientEtag, $"\"{result.Id}\"", StringComparison.Ordinal) ||
                 clientEtag == "*")
             {
                 return StatusCode(StatusCodes.Status304NotModified);

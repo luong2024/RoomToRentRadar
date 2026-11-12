@@ -34,16 +34,11 @@ public static class DependencyInjection
             services.AddSingleton<IIctuSsoVerifierPort, IctuSsoVerifierAdapter>();
         }
 
+        // Mocks for local development (users/audit). SQLite is used for rooms per ADR-002.
         services.AddSingleton<InMemoryUserRepository>();
         services.TryAddScoped<IUserRepository>(sp => sp.GetRequiredService<InMemoryUserRepository>());
         services.AddSingleton<InMemoryAuditLogRepository>();
         services.TryAddScoped<IAuditLogRepository>(sp => sp.GetRequiredService<InMemoryAuditLogRepository>());
-
-        // TODO [US02/T02.2 - Cosmos/Sqlite Migration]: Replace InMemoryRoomRepository with production adapter when datastore slice is implemented
-        services.AddSingleton<InMemoryRoomRepository>();
-        services.TryAddScoped<IRoomRepository>(sp => sp.GetRequiredService<InMemoryRoomRepository>());
-        services.TryAddScoped<IRoomSearchReadModel>(sp => sp.GetRequiredService<InMemoryRoomRepository>());
-        services.TryAddScoped<ICurrentUserContextPort, InMemoryCurrentUserContext>();
 
         return services;
     }
