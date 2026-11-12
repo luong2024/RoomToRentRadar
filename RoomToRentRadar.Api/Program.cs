@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using RoomToRentRadar.Api.Authorization;
+using RoomToRentRadar.Api.BackgroundJobs;
 using RoomToRentRadar.Api.Errors;
 using RoomToRentRadar.Api.Middlewares;
 using RoomToRentRadar.Application;
@@ -74,6 +75,7 @@ if (useMockSso && !builder.Environment.IsDevelopment())
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructure(jwtSettings, useMockSsoVerifier: useMockSso);
 builder.Services.AddPhotoInfrastructure(mediaRoot, mediaPublicBaseUrl);
+builder.Services.AddHostedService<PhotoCleanupService>();
 
 var signingKeyBytes = Encoding.UTF8.GetBytes(jwtSettings.SigningKey);
 builder.Services

@@ -4,6 +4,9 @@ public static class PhotoFileRules
 {
     public const long MaxFileBytes = 10 * 1024 * 1024;
 
+    // BR-MED-03: an uploaded photo that is never attached expires after 24 h.
+    public static readonly TimeSpan UnattachedPhotoLifetime = TimeSpan.FromHours(24);
+
     private static readonly byte[] JpgMagicBytes = { 0xFF, 0xD8, 0xFF };
     private static readonly byte[] PngMagicBytes = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
 

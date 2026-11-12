@@ -45,10 +45,17 @@ public sealed class DeletePhotoUseCase : IDeletePhotoUseCase
             return DeletePhotoResult.Attached;
         }
 
-        var deleted = await _repository.DeleteUnattachedAsync(photoId, userId, ct);
-        if (!deleted)
+        // The DELETE and its miss-reason lookup happen atomically in the repository, so a room
+        // attached between the read above and the delete still yields 409 (anti-TOCTOU).
+        var outcome = await _repository.DeleteUnattachedAsync(photoId, userId, ct);
+        if (outcome == RoomPhotoDeleteOutcome.NotFound)
         {
             return DeletePhotoResult.NotFound;
+        }
+
+        if (outcome == RoomPhotoDeleteOutcome.Attached)
+        {
+            return DeletePhotoResult.Attached;
         }
 
         // Metadata is gone, so still try to remove every stored object; storage failures

@@ -62,7 +62,8 @@ public class DeletePhotoUseCaseTests
             mediumPath: "rooms/2026/11/photo-001/medium.jpg",
             thumbPath: "rooms/2026/11/photo-001/thumb.jpg");
         _repository.GetOwnedAsync(PhotoId, UserId, Arg.Any<CancellationToken>()).Returns(photo);
-        _repository.DeleteUnattachedAsync(PhotoId, UserId, Arg.Any<CancellationToken>()).Returns(true);
+        _repository.DeleteUnattachedAsync(PhotoId, UserId, Arg.Any<CancellationToken>())
+            .Returns(RoomPhotoDeleteOutcome.Deleted);
 
         var result = await _sut.ExecuteAsync(PhotoId, UserId);
 
@@ -88,7 +89,8 @@ public class DeletePhotoUseCaseTests
     {
         var photo = CreatePhoto();
         _repository.GetOwnedAsync(PhotoId, UserId, Arg.Any<CancellationToken>()).Returns(photo);
-        _repository.DeleteUnattachedAsync(PhotoId, UserId, Arg.Any<CancellationToken>()).Returns(true);
+        _repository.DeleteUnattachedAsync(PhotoId, UserId, Arg.Any<CancellationToken>())
+            .Returns(RoomPhotoDeleteOutcome.Deleted);
 
         var result = await _sut.ExecuteAsync(PhotoId, UserId);
 
@@ -100,7 +102,8 @@ public class DeletePhotoUseCaseTests
     public async Task ExecuteAsync_WhenMetadataDeleteLosesRace_ReturnsNotFoundAndSkipsStorage()
     {
         _repository.GetOwnedAsync(PhotoId, UserId, Arg.Any<CancellationToken>()).Returns(CreatePhoto());
-        _repository.DeleteUnattachedAsync(PhotoId, UserId, Arg.Any<CancellationToken>()).Returns(false);
+        _repository.DeleteUnattachedAsync(PhotoId, UserId, Arg.Any<CancellationToken>())
+            .Returns(RoomPhotoDeleteOutcome.NotFound);
 
         var result = await _sut.ExecuteAsync(PhotoId, UserId);
 
@@ -110,11 +113,26 @@ public class DeletePhotoUseCaseTests
     }
 
     [Test]
+    public async Task ExecuteAsync_WhenPhotoIsAttachedDuringDelete_ReturnsAttachedAndSkipsStorage()
+    {
+        _repository.GetOwnedAsync(PhotoId, UserId, Arg.Any<CancellationToken>()).Returns(CreatePhoto());
+        _repository.DeleteUnattachedAsync(PhotoId, UserId, Arg.Any<CancellationToken>())
+            .Returns(RoomPhotoDeleteOutcome.Attached);
+
+        var result = await _sut.ExecuteAsync(PhotoId, UserId);
+
+        Assert.That(result, Is.EqualTo(DeletePhotoResult.Attached));
+        await _storage.DidNotReceiveWithAnyArgs().DeleteAsync(
+            Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
     public async Task ExecuteAsync_WhenStorageDeleteFails_StillReturnsDeleted()
     {
         var photo = CreatePhoto();
         _repository.GetOwnedAsync(PhotoId, UserId, Arg.Any<CancellationToken>()).Returns(photo);
-        _repository.DeleteUnattachedAsync(PhotoId, UserId, Arg.Any<CancellationToken>()).Returns(true);
+        _repository.DeleteUnattachedAsync(PhotoId, UserId, Arg.Any<CancellationToken>())
+            .Returns(RoomPhotoDeleteOutcome.Deleted);
         _storage.DeleteAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .ThrowsAsync(new IOException("storage offline"));
 

@@ -22,6 +22,7 @@ public static class DependencyInjection
         services.AddScoped<IGetAuditLogsUseCase, GetAuditLogsUseCase>();
         services.AddScoped<IUploadPhotoUseCase, UploadPhotoUseCase>();
         services.AddScoped<IDeletePhotoUseCase, DeletePhotoUseCase>();
+        services.AddScoped<ICleanupExpiredPhotosUseCase, CleanupExpiredPhotosUseCase>();
 
         return services;
     }

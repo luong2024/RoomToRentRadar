@@ -5,6 +5,7 @@ using RoomToRentRadar.Datastore.Sqlite.Context;
 using RoomToRentRadar.Datastore.Sqlite.Transactions;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
+using RoomToRentRadar.Domain.Services;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 
 namespace RoomToRentRadar.Datastore.Sqlite.Repositories;
@@ -16,8 +17,6 @@ public sealed class SqliteRoomPhotoRepository : IRoomPhotoRepository
                OriginalPath, MediumPath, ThumbPath, SortOrder, CreatedAtUtc, AttachedAtUtc
         FROM RoomPhotos
         """;
-
-    private const int UnattachedPhotoLifetimeHours = 24; // BR-MED-03
 
     private readonly SqliteDbContext _dbContext;
     private readonly SqliteUnitOfWork _unitOfWork;
@@ -102,7 +101,10 @@ public sealed class SqliteRoomPhotoRepository : IRoomPhotoRepository
         }
     }
 
-    public async Task<bool> DeleteUnattachedAsync(string photoId, string userId, CancellationToken ct = default)
+    public async Task<RoomPhotoDeleteOutcome> DeleteUnattachedAsync(
+        string photoId,
+        string userId,
+        CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(photoId);
         ArgumentNullException.ThrowIfNull(userId);
@@ -120,7 +122,62 @@ public sealed class SqliteRoomPhotoRepository : IRoomPhotoRepository
             cmd.Parameters.AddWithValue("@photoId", photoId);
             cmd.Parameters.AddWithValue("@userId", userId);
 
-            return await cmd.ExecuteNonQueryAsync(ct) > 0;
+            if (await cmd.ExecuteNonQueryAsync(ct) > 0)
+            {
+                return RoomPhotoDeleteOutcome.Deleted;
+            }
+
+            await using var check = conn.CreateCommand();
+            check.Transaction = _unitOfWork.CurrentTransaction;
+            // A concurrent attach makes the DELETE miss; report Attached instead of NotFound.
+            check.CommandText = """
+                SELECT RoomId FROM RoomPhotos
+                WHERE Id = @photoId AND UploadedByUserId = @userId
+                LIMIT 1;
+                """;
+            check.Parameters.AddWithValue("@photoId", photoId);
+            check.Parameters.AddWithValue("@userId", userId);
+
+            var roomId = await check.ExecuteScalarAsync(ct);
+            return roomId is string ? RoomPhotoDeleteOutcome.Attached : RoomPhotoDeleteOutcome.NotFound;
+        }
+        finally
+        {
+            ReleaseConnection(conn);
+        }
+    }
+
+    public async Task<IReadOnlyList<RoomPhoto>> ListExpiredUnattachedAsync(
+        DateTime cutoffUtc,
+        int maxCount,
+        CancellationToken ct = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxCount);
+
+        var conn = _unitOfWork.CurrentConnection ?? _dbContext.CreateOpenConnection();
+        try
+        {
+            await using var cmd = conn.CreateCommand();
+            cmd.Transaction = _unitOfWork.CurrentTransaction;
+            cmd.CommandText = $"""
+                {SelectColumns}
+                WHERE RoomId IS NULL AND CreatedAtUtc < @cutoff
+                ORDER BY CreatedAtUtc ASC
+                LIMIT @maxCount;
+                """;
+            cmd.Parameters.AddWithValue(
+                "@cutoff",
+                cutoffUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
+            cmd.Parameters.AddWithValue("@maxCount", maxCount);
+
+            var photos = new List<RoomPhoto>();
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+            {
+                photos.Add(ReadRow(reader));
+            }
+
+            return photos;
         }
         finally
         {
@@ -179,7 +236,7 @@ public sealed class SqliteRoomPhotoRepository : IRoomPhotoRepository
         {
             var attachedAtUtc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
             // Both sides use the fixed-width round-trip UTC format, so text order equals time order (BR-MED-03).
-            var cutoff = DateTime.UtcNow.AddHours(-UnattachedPhotoLifetimeHours)
+            var cutoff = DateTime.UtcNow.Subtract(PhotoFileRules.UnattachedPhotoLifetime)
                 .ToString("O", CultureInfo.InvariantCulture);
             var updated = 0;
 
