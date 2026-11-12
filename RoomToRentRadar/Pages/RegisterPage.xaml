@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.PageModels"
+             xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
+             xmlns:inputs="clr-namespace:RoomToRentRadar.Pages.Controls.Inputs"
+             xmlns:fonts="clr-namespace:Fonts"
+             x:Class="RoomToRentRadar.Pages.RegisterPage"
+             x:DataType="vm:RegisterPageModel"
+             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCanvasLight}, Dark={StaticResource SurfaceCanvasDark}}">
+
+    <Grid RowDefinitions="Auto, *">
+        <!-- 1. Page Header -->
+        <common:PageHeaderBar Grid.Row="0"
+                               Title="Create Account"
+                               CanGoBack="True"
+                               BackCommand="{Binding NavigateToLoginCommand}" />
+
+        <!-- 2. Form Scroll Area -->
+        <ScrollView Grid.Row="1" Padding="{StaticResource ScreenMargin}">
+            <VerticalStackLayout Spacing="20" MaximumWidthRequest="480" HorizontalOptions="Center">
+
+                <!-- Role Selection Header Bar -->
+                <Border StrokeShape="RoundRectangle 12"
+                        StrokeThickness="1"
+                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
+                        Padding="12,10"
+                        Margin="0,8,0,0">
+                    <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
+                        <HorizontalStackLayout Grid.Column="0" Spacing="8" VerticalOptions="Center">
+                            <Label Text="Role:"
+                                   Style="{StaticResource TextCaption}"
+                                   VerticalTextAlignment="Center" />
+                            <common:RadaBadge Type="Custom"
+                                              BadgeColor="{StaticResource ActionPrimaryLight}"
+                                              BadgeTextColor="White"
+                                              Text="{Binding RoleDisplayName}" />
+                        </HorizontalStackLayout>
+
+                        <Button Grid.Column="1"
+                                Text="Switch role"
+                                Style="{StaticResource GhostButton}"
+                                FontSize="12"
+                                HeightRequest="32"
+                                Padding="8,0"
+                                Command="{Binding SwitchRoleCommand}"
+                                VerticalOptions="Center" />
+                    </Grid>
+                </Border>
+
+                <!-- Form Container -->
+                <Border StrokeShape="RoundRectangle 16"
+                        StrokeThickness="1"
+                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+                        Padding="24"
+                        Shadow="{StaticResource Elevation2Shadow}">
+
+                    <VerticalStackLayout Spacing="14">
+
+                        <!-- General Error Alert Banner -->
+                        <Border StrokeShape="RoundRectangle 8"
+                                StrokeThickness="1"
+                                Stroke="{StaticResource StatusDangerLight}"
+                                BackgroundColor="#15DC2626"
+                                Padding="12,10"
+                                IsVisible="{Binding HasGeneralError}">
+                            <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                                <Image WidthRequest="16" HeightRequest="16" VerticalOptions="Center">
+                                    <Image.Source>
+                                        <FontImageSource Glyph="{x:Static fonts:FluentUI.warning_20_regular}"
+                                                         FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                         Color="{StaticResource StatusDangerLight}"
+                                                         Size="16" />
+                                    </Image.Source>
+                                </Image>
+                                <Label Text="{Binding GeneralError}"
+                                       Style="{StaticResource TextCaption}"
+                                       TextColor="{StaticResource StatusDangerLight}"
+                                       VerticalTextAlignment="Center"
+                                       LineBreakMode="WordWrap" />
+                            </HorizontalStackLayout>
+                        </Border>
+
+                        <!-- Full Name Input -->
+                        <inputs:ValidatedEntry LabelText="Full Name *"
+                                               Placeholder="John Doe"
+                                               Text="{Binding FullName, Mode=TwoWay}"
+                                               ErrorMessage="{Binding FullNameError}" />
+
+                        <!-- Email Input -->
+                        <inputs:ValidatedEntry LabelText="Email Address *"
+                                               Placeholder="student@ictu.edu.vn"
+                                               Text="{Binding Email, Mode=TwoWay}"
+                                               ErrorMessage="{Binding EmailError}"
+                                               Keyboard="Email" />
+
+                        <!-- Student Code Input (Visible only if Student, Optional per BR-AUTH-04) -->
+                        <inputs:ValidatedEntry LabelText="Student ID (Optional)"
+                                               Placeholder="e.g. DTC19..."
+                                               Text="{Binding StudentCode, Mode=TwoWay}"
+                                               ErrorMessage="{Binding StudentCodeError}"
+                                               IsVisible="{Binding IsStudent}" />
+
+                        <!-- Phone Number Input (Required for Landlord) -->
+                        <inputs:ValidatedEntry LabelText="Phone Number *"
+                                               Placeholder="0912345678 or +84912345678"
+                                               Text="{Binding PhoneNumber, Mode=TwoWay}"
+                                               ErrorMessage="{Binding PhoneNumberError}"
+                                               Keyboard="Telephone"
+                                               IsVisible="{Binding IsLandlord}" />
+
+                        <!-- Password Input (BR-AUTH-05: 8-128 chars, upper, lower, digit) -->
+                        <inputs:ValidatedEntry LabelText="Password *"
+                                               Placeholder="8–128 characters (upper, lower, digit)"
+                                               IsPassword="True"
+                                               Text="{Binding Password, Mode=TwoWay}"
+                                               ErrorMessage="{Binding PasswordError}" />
+
+                        <!-- Confirm Password Input -->
+                        <inputs:ValidatedEntry LabelText="Confirm Password *"
+                                               Placeholder="Re-enter your password"
+                                               IsPassword="True"
+                                               Text="{Binding ConfirmPassword, Mode=TwoWay}"
+                                               ErrorMessage="{Binding ConfirmPasswordError}" />
+
+                        <!-- Terms of Service Checkbox -->
+                        <HorizontalStackLayout Spacing="8" VerticalOptions="Center" Margin="0,4,0,0">
+                            <CheckBox IsChecked="{Binding IsAgreedToTerms, Mode=TwoWay}"
+                                      Color="{StaticResource ActionPrimaryLight}"
+                                      VerticalOptions="Center" />
+                            <Label Text="I agree to the Terms of Service &amp; Privacy Policy"
+                                   Style="{StaticResource TextCaption}"
+                                   VerticalTextAlignment="Center"
+                                   MaximumWidthRequest="320" />
+                        </HorizontalStackLayout>
+
+                        <!-- Submit Button -->
+                        <common:RadaButton Text="Create Account"
+                                           Variant="Primary"
+                                           IsLoading="{Binding IsBusy}"
+                                           Command="{Binding RegisterCommand}"
+                                           ButtonHeight="48"
+                                           HorizontalOptions="Fill"
+                                           Margin="0,12,0,0" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Footer to Login -->
+                <HorizontalStackLayout HorizontalOptions="Center" Spacing="4" Margin="0,0,0,24">
+                    <Label Text="Already have an account?"
+                           Style="{StaticResource TextBodyMedium}"
+                           TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+                           VerticalTextAlignment="Center" />
+
+                    <Button Text="Sign in"
+                            Style="{StaticResource GhostButton}"
+                            Command="{Binding NavigateToLoginCommand}"
+                            FontFamily="{StaticResource FontFamilySemibold}"
+                            FontSize="{StaticResource FontSizeBodyMedium}"
+                            Padding="4,0"
+                            HeightRequest="36"
+                            VerticalOptions="Center" />
+                </HorizontalStackLayout>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

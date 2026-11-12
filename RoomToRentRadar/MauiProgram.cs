@@ -1,8 +1,8 @@
 using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
-using RoomToRentRadar.Application;
-using RoomToRentRadar.Datastore;
-using RoomToRentRadar.Infrastructure;
+using RoomToRentRadar.Client.Adapters;
+using RoomToRentRadar.Client.Adapters.Abstractions;
+using RoomToRentRadar.DeviceAdapters;
 using Syncfusion.Maui.Toolkit.Hosting;
 
 namespace RoomToRentRadar
@@ -23,14 +23,6 @@ namespace RoomToRentRadar
     				{
     					handler.PlatformView.SingleSelectionFollowsFocus = false;
     				});
-
-    				Microsoft.Maui.Handlers.ContentViewHandler.Mapper.AppendToMapping(nameof(Pages.Controls.CategoryChart), (handler, view) =>
-    				{
-    					if (view is Pages.Controls.CategoryChart && handler.PlatformView is Microsoft.Maui.Platform.ContentPanel contentPanel)
-    					{
-    						contentPanel.IsTabStop = true;
-    					}
-    				});
 #endif
                 })
                 .ConfigureFonts(fonts =>
@@ -46,27 +38,40 @@ namespace RoomToRentRadar
     		builder.Services.AddLogging(configure => configure.AddDebug());
 #endif
 
-            // Register Hexagonal Architecture Layers
-            builder.Services.AddApplicationServices();
-            builder.Services.AddDatastore();
-            builder.Services.AddInfrastructure();
+            // Register Client Gateways (ADR-003 Decision 5 & NFR-05)
+            Uri baseApiUrl;
+#if DEBUG
+            // In local development, Android emulator connects to host via 10.0.2.2; desktop uses localhost
+            baseApiUrl = DeviceInfo.Platform == DevicePlatform.Android
+                ? new Uri("http://10.0.2.2:5000")
+                : new Uri("http://localhost:5000");
+#else
+            // In Release/Production, enforce HTTPS endpoint per ADR-003 / NFR-05
+            var configuredUrl = Preferences.Default.Get("ApiBaseUrl", "https://api.roomtorentradar.com");
+            baseApiUrl = new Uri(configuredUrl);
+#endif
 
-            // Core UI Services
+            builder.Services.AddClientAuthGateway(baseApiUrl);
+
+            // Core UI & Device Services
             builder.Services.AddSingleton<ModalErrorHandler>();
+            builder.Services.AddSingleton<ISessionStore, MauiSecureSessionStore>();
 
-            // TODO [Template Cleanup Plan]: Remove legacy template repositories and PageModels below
-            // once MainPage/AppShell is migrated to RoomToRentRadar Sprint 1 pages (US01).
-            builder.Services.AddSingleton<ProjectRepository>();
-            builder.Services.AddSingleton<TaskRepository>();
-            builder.Services.AddSingleton<CategoryRepository>();
-            builder.Services.AddSingleton<TagRepository>();
-            builder.Services.AddSingleton<SeedDataService>();
-            builder.Services.AddSingleton<MainPageModel>();
-            builder.Services.AddSingleton<ProjectListPageModel>();
-            builder.Services.AddSingleton<ManageMetaPageModel>();
+            // Main Landing Page
+            builder.Services.AddTransient<PageModels.MainLandingPageModel>();
+            builder.Services.AddTransient<Pages.MainLandingPage>();
 
-            builder.Services.AddTransientWithShellRoute<ProjectDetailPage, ProjectDetailPageModel>("project");
-            builder.Services.AddTransientWithShellRoute<TaskDetailPage, TaskDetailPageModel>("task");
+            // UI Design System Catalog
+            builder.Services.AddSingleton<PageModels.UiCatalogPageModel>();
+            builder.Services.AddTransient<Pages.UiCatalogPage>();
+
+            // Auth Flow Services & Pages
+            builder.Services.AddTransient<PageModels.LoginPageModel>();
+            builder.Services.AddTransient<Pages.LoginPage>();
+            builder.Services.AddTransient<PageModels.RegisterPageModel>();
+            builder.Services.AddTransient<Pages.RegisterPage>();
+            builder.Services.AddTransient<PageModels.RoleSelectionPageModel>();
+            builder.Services.AddTransient<Pages.RoleSelectionPage>();
 
             return builder.Build();
         }
