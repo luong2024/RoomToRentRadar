@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using RoomToRentRadar.Api.Controllers;
 using RoomToRentRadar.Api.Security;
 using RoomToRentRadar.Application.UseCases.Rooms;
-using RoomToRentRadar.Domain.Entities;
+using RoomToRentRadar.Domain.Aggregates;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Infrastructure.Adapters.Mocks;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
@@ -121,7 +121,7 @@ public class RoomDetailEndpointIntegrationTests
             depositAmount: 500000m,
             areaSquareMeters: 20.0,
             roomType: "Khép kín",
-            status: RoomStatus.PendingVerification
+            status: ListingStatus.PendingReview
         );
         _roomRepository.AddOrUpdate(pendingRoom);
 

@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
-using RoomToRentRadar.Domain.Entities;
+using RoomToRentRadar.Domain.Aggregates;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 
@@ -77,7 +77,7 @@ public sealed class InMemoryRoomRepository : IRoomRepository
                 photoUrls: new[] { "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267", "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688" },
                 panorama360Url: "https://my.matterport.com/show/?m=sample360room1",
                 houseRules: new[] { "Không nuôi thú cưng", "Giữ gìn vệ sinh chung", "Khóa cổng sau 23h30" },
-                status: RoomStatus.Available,
+                status: ListingStatus.Available,
                 lastUpdatedAt: new DateTime(2026, 11, 10, 8, 30, 0, DateTimeKind.Utc),
                 isVerified: true,
                 distanceToCampusKm: 0.2
@@ -96,7 +96,7 @@ public sealed class InMemoryRoomRepository : IRoomRepository
                 landlordPhoneNumber: "0912345678",
                 photoUrls: new[] { "https://images.unsplash.com/photo-1493809842364-78817add7ffb" },
                 houseRules: new[] { "Giữ yên lặng sau 23h" },
-                status: RoomStatus.Available,
+                status: ListingStatus.Available,
                 lastUpdatedAt: new DateTime(2026, 11, 9, 14, 0, 0, DateTimeKind.Utc),
                 isVerified: true,
                 distanceToCampusKm: 0.5
@@ -115,7 +115,7 @@ public sealed class InMemoryRoomRepository : IRoomRepository
                 landlordPhoneNumber: "0977888999",
                 photoUrls: new[] { "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2" },
                 houseRules: new[] { "Không hút thuốc trong phòng" },
-                status: RoomStatus.Unavailable,
+                status: ListingStatus.Unpublished,
                 lastUpdatedAt: new DateTime(2026, 11, 10, 10, 0, 0, DateTimeKind.Utc),
                 isVerified: true,
                 distanceToCampusKm: 1.2
@@ -134,7 +134,7 @@ public sealed class InMemoryRoomRepository : IRoomRepository
                 landlordPhoneNumber: "0966554433",
                 photoUrls: new[] { "https://images.unsplash.com/photo-1505691938895-1758d7feb511" },
                 houseRules: new[] { "Đóng tiền nhà đúng ngày mùng 5" },
-                status: RoomStatus.Rented,
+                status: ListingStatus.Rented,
                 lastUpdatedAt: new DateTime(2026, 11, 8, 9, 0, 0, DateTimeKind.Utc),
                 isVerified: false,
                 distanceToCampusKm: 0.8

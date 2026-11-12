@@ -1,4 +1,4 @@
-using RoomToRentRadar.Domain.Entities;
+using RoomToRentRadar.Domain.Aggregates;
 
 namespace RoomToRentRadar.Ports.Outbound.Repositories;
 

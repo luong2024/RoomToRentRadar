@@ -1,4 +1,5 @@
 using RoomToRentRadar.Application.UseCases.Rooms;
+using RoomToRentRadar.Domain.Aggregates;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
@@ -24,7 +25,7 @@ public class GetRoomDetailUseCaseTests
 
     private static Room CreateSampleRoom(
         string id = "room-001",
-        RoomStatus status = RoomStatus.Available,
+        ListingStatus status = ListingStatus.Available,
         string landlordPhone = "0987654321")
     {
         return new Room(
@@ -60,7 +61,7 @@ public class GetRoomDetailUseCaseTests
     public async Task ExecuteAsync_WhenRoomExistsAndAvailable_ReturnsFullDetailsWithEmptySimilarRooms()
     {
         // Arrange (AC1, AC2)
-        var sampleRoom = CreateSampleRoom(status: RoomStatus.Available);
+        var sampleRoom = CreateSampleRoom(status: ListingStatus.Available);
         _roomRepository.GetByIdAsync("room-001", Arg.Any<CancellationToken>()).Returns(sampleRoom);
         _currentUserContext.IsAuthenticated.Returns(true);
 
@@ -126,7 +127,7 @@ public class GetRoomDetailUseCaseTests
     public async Task ExecuteAsync_WhenRoomIsUnavailable_ReturnsStatusAndSuggestedSimilarRooms()
     {
         // Arrange (AC2, AC3: Status shows unavailable & suggests similar rooms)
-        var unavailableRoom = CreateSampleRoom(id: "room-unavailable", status: RoomStatus.Unavailable);
+        var unavailableRoom = CreateSampleRoom(id: "room-unavailable", status: ListingStatus.Unpublished);
         _roomRepository.GetByIdAsync("room-unavailable", Arg.Any<CancellationToken>()).Returns(unavailableRoom);
         _currentUserContext.IsAuthenticated.Returns(true);
 
@@ -194,8 +195,8 @@ public class GetRoomDetailUseCaseTests
     [Test]
     public async Task ExecuteAsync_WhenRoomIsRented_TreatsAsUnavailableAndSuggestsSimilarRooms()
     {
-        // Arrange (AC3: RoomStatus.Rented is also unavailable)
-        var rentedRoom = CreateSampleRoom(id: "room-rented", status: RoomStatus.Rented);
+        // Arrange (AC3: ListingStatus.Rented is also unavailable)
+        var rentedRoom = CreateSampleRoom(id: "room-rented", status: ListingStatus.Rented);
         _roomRepository.GetByIdAsync("room-rented", Arg.Any<CancellationToken>()).Returns(rentedRoom);
         _currentUserContext.IsAuthenticated.Returns(true);
 
@@ -242,7 +243,7 @@ public class GetRoomDetailUseCaseTests
     public async Task ExecuteAsync_WhenUnavailableAndNoSimilarRoomsFound_ReturnsEmptySimilarList()
     {
         // Arrange (AC3: Unavailable room but 0 similar rooms in repository)
-        var unavailableRoom = CreateSampleRoom(id: "room-isolated", status: RoomStatus.Unavailable);
+        var unavailableRoom = CreateSampleRoom(id: "room-isolated", status: ListingStatus.Unpublished);
         _roomRepository.GetByIdAsync("room-isolated", Arg.Any<CancellationToken>()).Returns(unavailableRoom);
         _roomRepository.GetSimilarRoomsAsync(
             excludeRoomId: "room-isolated",
@@ -309,7 +310,7 @@ public class GetRoomDetailUseCaseTests
     public async Task ExecuteAsync_WhenRoomIsPendingVerification_ReturnsNullAndDoesNotExposeDetails()
     {
         // Arrange (M4: Unverified rooms must not be visible to public callers)
-        var pendingRoom = CreateSampleRoom(id: "room-pending", status: RoomStatus.PendingVerification);
+        var pendingRoom = CreateSampleRoom(id: "room-pending", status: ListingStatus.PendingReview);
         _roomRepository.GetByIdAsync("room-pending", Arg.Any<CancellationToken>()).Returns(pendingRoom);
 
         // Act

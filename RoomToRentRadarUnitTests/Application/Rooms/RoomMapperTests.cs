@@ -1,4 +1,5 @@
 using RoomToRentRadar.Application.Mappers;
+using RoomToRentRadar.Domain.Aggregates;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
@@ -8,6 +9,18 @@ namespace RoomToRentRadarUnitTests.Application.Rooms;
 [TestFixture]
 public class RoomMapperTests
 {
+    [TestCase(ListingStatus.Available, "Available")]
+    [TestCase(ListingStatus.Rented, "Rented")]
+    [TestCase(ListingStatus.Unpublished, "Unavailable")]
+    [TestCase(ListingStatus.PendingReview, "PendingVerification")]
+    [TestCase(ListingStatus.Rejected, "Unavailable")]
+    [TestCase(ListingStatus.Suspended, "Unavailable")]
+    public void MapRoomStatus_MapsListingStatusValuesToExplicitStableStrings(ListingStatus status, string expectedString)
+    {
+        var mapped = RoomMapper.MapRoomStatus(status);
+        Assert.That(mapped, Is.EqualTo(expectedString));
+    }
+
     [TestCase(RoomStatus.Available, "Available")]
     [TestCase(RoomStatus.Unavailable, "Unavailable")]
     [TestCase(RoomStatus.Rented, "Rented")]
@@ -65,7 +78,7 @@ public class RoomMapperTests
             photoUrls: new[] { "https://cdn.example.com/p1.jpg" },
             panorama360Url: "https://my.matterport.com/show/?m=xyz",
             houseRules: new[] { "Không nuôi thú cưng" },
-            status: RoomStatus.Available,
+            status: ListingStatus.Available,
             isVerified: true,
             distanceToCampusKm: 0.4
         );

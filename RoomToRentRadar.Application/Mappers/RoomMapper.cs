@@ -1,4 +1,4 @@
-using RoomToRentRadar.Domain.Entities;
+using RoomToRentRadar.Domain.Aggregates;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 
@@ -37,7 +37,7 @@ public static class RoomMapper
             MonthlyRent: room.MonthlyRent,
             DepositAmount: room.DepositAmount,
             AreaSquareMeters: room.AreaSquareMeters,
-            RoomType: room.RoomType,
+            RoomType: room.RoomTypeDisplay,
             Amenities: room.Amenities,
             FullAddress: room.FullAddress,
             LandlordName: room.LandlordName,
@@ -53,6 +53,18 @@ public static class RoomMapper
         );
     }
 
+    public static string MapRoomStatus(ListingStatus status) => status switch
+    {
+        ListingStatus.Available => "Available",
+        ListingStatus.Rented => "Rented",
+        ListingStatus.Unpublished => "Unavailable",
+        ListingStatus.PendingReview => "PendingVerification",
+        ListingStatus.Rejected => "Unavailable",
+        ListingStatus.Suspended => "Unavailable",
+        _ => "Unavailable"
+    };
+
+    [Obsolete("Use ListingStatus overload")]
     public static string MapRoomStatus(RoomStatus status) => status switch
     {
         RoomStatus.Available => "Available",

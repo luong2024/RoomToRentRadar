@@ -1,4 +1,4 @@
-using RoomToRentRadar.Domain.Entities;
+using RoomToRentRadar.Domain.Aggregates;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Infrastructure.Adapters.Mocks;
 
@@ -50,7 +50,7 @@ public class InMemoryRoomRepositoryTests
             depositAmount: 1000000m,
             areaSquareMeters: targetRoom.AreaSquareMeters,
             roomType: "Khép kín",
-            status: RoomStatus.Rented,
+            status: ListingStatus.Rented,
             distanceToCampusKm: targetRoom.DistanceToCampusKm
         );
         _sut.AddOrUpdate(rentedRoom);
@@ -83,7 +83,7 @@ public class InMemoryRoomRepositoryTests
             depositAmount: 1000000m,
             areaSquareMeters: 25.0,
             roomType: "Khép kín",
-            status: RoomStatus.Available,
+            status: ListingStatus.Available,
             distanceToCampusKm: 0.3
         );
         var roomFar = new Room(
@@ -94,7 +94,7 @@ public class InMemoryRoomRepositoryTests
             depositAmount: 1000000m,
             areaSquareMeters: 25.0,
             roomType: "Khép kín",
-            status: RoomStatus.Available,
+            status: ListingStatus.Available,
             distanceToCampusKm: 2.5
         );
         _sut.AddOrUpdate(roomNear);
