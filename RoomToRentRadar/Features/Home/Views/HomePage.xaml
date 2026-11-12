@@ -7,6 +7,71 @@
              Title="room radar"
              SafeAreaEdges="All">
 
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <Style x:Key="FilterToggleButton" TargetType="Button">
+                <Setter Property="FontFamily" Value="OpenSansSemibold" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="BackgroundColor" Value="{StaticResource AccentSoft}" />
+                <Setter Property="TextColor" Value="{StaticResource Accent}" />
+                <Setter Property="CornerRadius" Value="16" />
+                <Setter Property="Padding" Value="14,7" />
+                <Setter Property="MinimumHeightRequest" Value="34" />
+            </Style>
+            <Style x:Key="SecondaryButton" TargetType="Button">
+                <Setter Property="FontFamily" Value="OpenSansSemibold" />
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="BackgroundColor" Value="{StaticResource SoftSurface}" />
+                <Setter Property="TextColor" Value="{StaticResource Accent}" />
+                <Setter Property="CornerRadius" Value="10" />
+                <Setter Property="Padding" Value="16,10" />
+                <Setter Property="MinimumHeightRequest" Value="44" />
+            </Style>
+            <Style x:Key="LinkButton" TargetType="Button">
+                <Setter Property="FontFamily" Value="OpenSansSemibold" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="BackgroundColor" Value="Transparent" />
+                <Setter Property="TextColor" Value="{StaticResource Accent}" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="MinimumHeightRequest" Value="30" />
+                <Setter Property="HorizontalOptions" Value="Start" />
+            </Style>
+            <Style x:Key="FilterEntry" TargetType="Entry">
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="TextColor" Value="{StaticResource Ink}" />
+                <Setter Property="PlaceholderColor" Value="{StaticResource Muted}" />
+                <Setter Property="BackgroundColor" Value="{StaticResource SoftSurface}" />
+                <Setter Property="MinimumHeightRequest" Value="44" />
+            </Style>
+            <DataTemplate x:Key="FilterChipTemplate" x:DataType="viewModels:FilterChip">
+                <Border Margin="0,0,8,8" Padding="12,7" StrokeShape="RoundRectangle 16">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding SelectCommand}" />
+                    </Border.GestureRecognizers>
+                    <Border.Triggers>
+                        <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
+                            <Setter Property="BackgroundColor" Value="{StaticResource Accent}" />
+                            <Setter Property="Stroke" Value="{StaticResource Accent}" />
+                        </DataTrigger>
+                    </Border.Triggers>
+                    <Label Text="{Binding Label}" FontSize="12">
+                        <Label.Triggers>
+                            <DataTrigger TargetType="Label" Binding="{Binding IsSelected}" Value="True">
+                                <Setter Property="TextColor" Value="White" />
+                            </DataTrigger>
+                        </Label.Triggers>
+                    </Label>
+                </Border>
+            </DataTemplate>
+            <DataTemplate x:Key="ActiveFilterChipTemplate" x:DataType="viewModels:FilterSummaryChip">
+                <Border Margin="0,0,8,8" Padding="10,5" StrokeThickness="0" StrokeShape="RoundRectangle 14"
+                        BackgroundColor="{StaticResource AccentSoft}">
+                    <Label Text="{Binding Label}" FontSize="11" TextColor="{StaticResource Accent}" />
+                </Border>
+            </DataTemplate>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
     <Grid RowDefinitions="Auto,*,Auto">
         <Border StrokeShape="Rectangle" StrokeThickness="0" BackgroundColor="{StaticResource Surface}">
             <Grid x:Name="TopBar" Padding="20,18" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"
@@ -48,14 +113,92 @@
                                    WidthRequest="220" HeightRequest="150" IsVisible="False" Aspect="AspectFit"
                                    SemanticProperties.Description="Minh họa khuôn viên trường" />
                         </Grid>
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                            <VerticalStackLayout Spacing="5">
-                                <Label Text="Phòng dành cho bạn" FontSize="22" FontFamily="OpenSansSemibold" CharacterSpacing="-0.5" />
-                                <Label Text="{Binding ResultsText}" Style="{StaticResource Caption}" FontSize="11" />
+                        <VerticalStackLayout Spacing="12">
+                            <VerticalStackLayout Spacing="6">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                    <Label Text="Phòng dành cho bạn" FontSize="22" FontFamily="OpenSansSemibold"
+                                           CharacterSpacing="-0.5" VerticalOptions="Center" />
+                                    <Button Grid.Column="1" Text="Bộ lọc" Command="{Binding ToggleFilterPanelCommand}"
+                                            Style="{StaticResource FilterToggleButton}"
+                                            SemanticProperties.Description="Mở hoặc đóng bộ lọc tìm phòng" />
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                    <Label Text="{Binding ResultsText}" Style="{StaticResource Caption}" FontSize="11" />
+                                    <Label Grid.Column="1" Text="Mới nhất trước" FontSize="11" TextColor="{StaticResource Muted}"
+                                           VerticalOptions="Center" />
+                                </Grid>
                             </VerticalStackLayout>
-                            <Label Grid.Column="1" Text="Mới nhất trước" FontSize="11" TextColor="{StaticResource Muted}"
-                                   VerticalOptions="Center" />
-                        </Grid>
+                            <VerticalStackLayout IsVisible="{Binding HasActiveFilters}" Spacing="4">
+                                <FlexLayout Wrap="Wrap" Direction="Row" AlignItems="Center"
+                                            BindableLayout.ItemsSource="{Binding ActiveFilterChips}"
+                                            BindableLayout.ItemTemplate="{StaticResource ActiveFilterChipTemplate}" />
+                                <Button Text="Xóa bộ lọc" Command="{Binding ClearFiltersCommand}"
+                                        Style="{StaticResource LinkButton}"
+                                        SemanticProperties.Description="Bỏ toàn bộ bộ lọc và tải lại danh sách đầy đủ" />
+                            </VerticalStackLayout>
+                            <Border IsVisible="{Binding IsFilterPanelOpen}" Padding="18" StrokeShape="RoundRectangle 18">
+                                <VerticalStackLayout Spacing="16">
+                                    <Label Text="BỘ LỌC TÌM PHÒNG" Style="{StaticResource Eyebrow}" TextColor="{StaticResource Accent}" />
+                                    <VerticalStackLayout Spacing="8">
+                                        <Label Text="Giá thuê (triệu đồng/tháng)" Style="{StaticResource Eyebrow}" />
+                                        <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="10">
+                                            <Entry Grid.Column="0" Placeholder="Từ" Text="{Binding PriceMinText}"
+                                                   Keyboard="Numeric" Style="{StaticResource FilterEntry}"
+                                                   SemanticProperties.Description="Giá thuê tối thiểu, triệu đồng" />
+                                            <Label Grid.Column="1" Text="–" VerticalOptions="Center"
+                                                   TextColor="{StaticResource Muted}" />
+                                            <Entry Grid.Column="2" Placeholder="Đến" Text="{Binding PriceMaxText}"
+                                                   Keyboard="Numeric" Style="{StaticResource FilterEntry}"
+                                                   SemanticProperties.Description="Giá thuê tối đa, triệu đồng" />
+                                        </Grid>
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout Spacing="8">
+                                        <Label Text="Diện tích (m²)" Style="{StaticResource Eyebrow}" />
+                                        <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="10">
+                                            <Entry Grid.Column="0" Placeholder="Từ" Text="{Binding AreaMinText}"
+                                                   Keyboard="Numeric" Style="{StaticResource FilterEntry}"
+                                                   SemanticProperties.Description="Diện tích tối thiểu, mét vuông" />
+                                            <Label Grid.Column="1" Text="–" VerticalOptions="Center"
+                                                   TextColor="{StaticResource Muted}" />
+                                            <Entry Grid.Column="2" Placeholder="Đến" Text="{Binding AreaMaxText}"
+                                                   Keyboard="Numeric" Style="{StaticResource FilterEntry}"
+                                                   SemanticProperties.Description="Diện tích tối đa, mét vuông" />
+                                        </Grid>
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout Spacing="8">
+                                        <Label Text="Loại phòng" Style="{StaticResource Eyebrow}" />
+                                        <FlexLayout Wrap="Wrap" Direction="Row" AlignItems="Center"
+                                                    BindableLayout.ItemsSource="{Binding RoomTypeChips}"
+                                                    BindableLayout.ItemTemplate="{StaticResource FilterChipTemplate}" />
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout Spacing="8">
+                                        <Label Text="Cách trường" Style="{StaticResource Eyebrow}" />
+                                        <FlexLayout Wrap="Wrap" Direction="Row" AlignItems="Center"
+                                                    BindableLayout.ItemsSource="{Binding CampusChips}"
+                                                    BindableLayout.ItemTemplate="{StaticResource FilterChipTemplate}" />
+                                        <FlexLayout Wrap="Wrap" Direction="Row" AlignItems="Center"
+                                                    IsEnabled="{Binding IsDistanceEnabled}"
+                                                    BindableLayout.ItemsSource="{Binding DistanceChips}"
+                                                    BindableLayout.ItemTemplate="{StaticResource FilterChipTemplate}">
+                                            <FlexLayout.Triggers>
+                                                <DataTrigger TargetType="FlexLayout" Binding="{Binding IsDistanceEnabled}" Value="False">
+                                                    <Setter Property="Opacity" Value="0.45" />
+                                                </DataTrigger>
+                                            </FlexLayout.Triggers>
+                                        </FlexLayout>
+                                        <Label Text="Khoảng cách áp dụng sau khi chọn trường." Style="{StaticResource Caption}" FontSize="10" />
+                                    </VerticalStackLayout>
+                                    <Label Text="{Binding FilterError}" IsVisible="{Binding HasFilterError}" FontSize="12"
+                                           TextColor="#B3261E" />
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                        <Button Text="Áp dụng" Command="{Binding ApplyFiltersCommand}"
+                                                SemanticProperties.Description="Áp dụng bộ lọc và cập nhật kết quả" />
+                                        <Button Grid.Column="1" Text="Xóa bộ lọc" Command="{Binding ClearFiltersCommand}"
+                                                Style="{StaticResource SecondaryButton}" />
+                                    </Grid>
+                                </VerticalStackLayout>
+                            </Border>
+                        </VerticalStackLayout>
                     </VerticalStackLayout>
                 </CollectionView.Header>
                 <CollectionView.ItemTemplate>

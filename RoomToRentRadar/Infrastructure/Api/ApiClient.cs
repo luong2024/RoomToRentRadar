@@ -1,27 +1,24 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
 using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.Shared.Listings;
-using RoomToRentRadar.Shared.Pagination;
 using RoomToRentRadar.Shared.Serialization;
 
 namespace RoomToRentRadar.Infrastructure.Api;
 
 public sealed class ApiClient(HttpClient httpClient) : IApiClient
 {
-    public async Task<PagedResult<ListingSummaryDto>> GetListingsAsync(
+    public async Task<ListingSearchResultDto> GetListingsAsync(
         int limit,
         string? cursor = null,
+        ActiveListingFiltersDto? filters = null,
         CancellationToken cancellationToken = default)
     {
-        var url = $"api/v1/listings?limit={limit}";
-        if (!string.IsNullOrEmpty(cursor))
-        {
-            url += $"&cursor={Uri.EscapeDataString(cursor)}";
-        }
-
-        var result = await httpClient.GetFromJsonAsync<PagedResult<ListingSummaryDto>>(
-            url,
+        var result = await httpClient.GetFromJsonAsync<ListingSearchResultDto>(
+            BuildListingsUrl(limit, cursor, filters),
+            ApiJson.Options,
             cancellationToken);
 
         return result ?? throw new InvalidOperationException("The listings endpoint returned an empty response.");
@@ -145,5 +142,53 @@ public sealed class ApiClient(HttpClient httpClient) : IApiClient
         }
 
         response.EnsureSuccessStatusCode();
+    }
+
+    private static string BuildListingsUrl(
+        int limit,
+        string? cursor,
+        ActiveListingFiltersDto? filters)
+    {
+        var url = new StringBuilder($"api/v1/listings?limit={limit}");
+
+        if (!string.IsNullOrEmpty(cursor))
+        {
+            url.Append("&cursor=").Append(Uri.EscapeDataString(cursor));
+        }
+
+        if (filters is null)
+            return url.ToString();
+
+        AppendLong(url, "min_price", filters.MinPrice);
+        AppendLong(url, "max_price", filters.MaxPrice);
+        AppendDouble(url, "min_area_m2", filters.MinAreaM2);
+        AppendDouble(url, "max_area_m2", filters.MaxAreaM2);
+        AppendLong(url, "bedrooms", filters.Bedrooms);
+        if (filters.RoomType is { } roomType)
+        {
+            url.Append("&room_type=").Append(Uri.EscapeDataString(RoomTypeWire.ToWireValue(roomType)));
+        }
+
+        AppendDouble(url, "campus_lat", filters.CampusLat);
+        AppendDouble(url, "campus_lng", filters.CampusLng);
+        AppendDouble(url, "max_distance_km", filters.MaxDistanceKm);
+
+        return url.ToString();
+    }
+
+    private static void AppendLong(StringBuilder url, string name, long? value)
+    {
+        if (value is { } number)
+        {
+            url.Append('&').Append(name).Append('=').Append(number.ToString(CultureInfo.InvariantCulture));
+        }
+    }
+
+    private static void AppendDouble(StringBuilder url, string name, double? value)
+    {
+        if (value is { } number)
+        {
+            url.Append('&').Append(name).Append('=').Append(number.ToString("R", CultureInfo.InvariantCulture));
+        }
     }
 }

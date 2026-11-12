@@ -89,9 +89,10 @@ public class AuthServiceTests
 
         public Exception? DemoLoginException { get; set; }
 
-        public Task<PagedResult<ListingSummaryDto>> GetListingsAsync(
+        public Task<ListingSearchResultDto> GetListingsAsync(
             int limit,
             string? cursor = null,
+            ActiveListingFiltersDto? filters = null,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException("Automatic sign-in does not load listings.");
 

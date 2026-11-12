@@ -24,13 +24,15 @@ public class HomeViewModelTests
         {
             Assert.That(viewModel.Listings, Has.Count.EqualTo(2));
             Assert.That(viewModel.Listings[0].Id, Is.EqualTo(first.Id));
-            Assert.That(viewModel.ResultsText, Is.EqualTo("Đã tải 2 phòng"));
+            Assert.That(viewModel.ResultsText, Is.EqualTo("2 phòng phù hợp"));
+            Assert.That(viewModel.TotalCount, Is.EqualTo(2));
             Assert.That(viewModel.IsBusy, Is.False);
             Assert.That(viewModel.IsRefreshing, Is.False);
             Assert.That(viewModel.HasError, Is.False);
             Assert.That(viewModel.CanLoadMore, Is.True);
             Assert.That(apiClient.RequestedLimits, Is.EqualTo(new[] { 12 }));
             Assert.That(apiClient.RequestedCursors, Is.EqualTo(new string?[] { null }));
+            Assert.That(apiClient.RequestedFilters, Is.EqualTo(new ActiveListingFiltersDto?[] { null }));
         });
     }
 
@@ -65,8 +67,8 @@ public class HomeViewModelTests
         var first = CreateListing("First room");
         var second = CreateListing("Second room");
         var apiClient = new FakeApiClient(
-            CreatePage("cursor-2", first),
-            CreatePage(null, second));
+            CreatePage(2, false, "cursor-2", first),
+            CreatePage(2, false, null, second));
         var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
@@ -76,7 +78,7 @@ public class HomeViewModelTests
         {
             Assert.That(viewModel.Listings, Has.Count.EqualTo(2));
             Assert.That(viewModel.Listings[1].Id, Is.EqualTo(second.Id));
-            Assert.That(viewModel.ResultsText, Is.EqualTo("Đã tải 2 phòng"));
+            Assert.That(viewModel.ResultsText, Is.EqualTo("2 phòng phù hợp"));
             Assert.That(viewModel.CanLoadMore, Is.False);
             Assert.That(viewModel.IsLoadingMore, Is.False);
             Assert.That(apiClient.RequestedLimits, Is.EqualTo(new[] { 12, 12 }));
@@ -100,7 +102,7 @@ public class HomeViewModelTests
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.Listings, Has.Count.EqualTo(2));
-            Assert.That(viewModel.ResultsText, Is.EqualTo("Đã tải 2 phòng"));
+            Assert.That(viewModel.ResultsText, Is.EqualTo("2 phòng phù hợp"));
         });
     }
 
@@ -145,7 +147,7 @@ public class HomeViewModelTests
         {
             Assert.That(viewModel.Listings, Has.Count.EqualTo(1));
             Assert.That(viewModel.Listings[0].Id, Is.EqualTo(refreshed.Id));
-            Assert.That(viewModel.ResultsText, Is.EqualTo("Đã tải 1 phòng"));
+            Assert.That(viewModel.ResultsText, Is.EqualTo("1 phòng phù hợp"));
             Assert.That(viewModel.CanLoadMore, Is.False);
             Assert.That(viewModel.IsRefreshing, Is.False);
             Assert.That(apiClient.RequestedCursors, Is.EqualTo(new string?[] { null, null }));
@@ -241,10 +243,195 @@ public class HomeViewModelTests
         });
     }
 
-    private static PagedResult<ListingSummaryDto> CreatePage(
+    [Test]
+    public async Task ApplyFiltersAsync_WithCombinedFilters_SendsEveryFilterAndResetsCursor()
+    {
+        var apiClient = new FakeApiClient(
+            CreatePage("cursor-2", CreateListing("First room")),
+            CreatePage(null, CreateListing("Studio near BK")));
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+
+        await viewModel.LoadCommand.ExecuteAsync(null);
+
+        viewModel.PriceMinText = "1,5";
+        viewModel.PriceMaxText = "3";
+        viewModel.AreaMinText = "20";
+        viewModel.AreaMaxText = "40";
+        viewModel.RoomTypeChips.Single(chip => chip.Label == "Studio").SelectCommand.Execute(null);
+        viewModel.CampusChips.Single(chip => chip.Label == "Bách Khoa").SelectCommand.Execute(null);
+
+        await viewModel.ApplyFiltersCommand.ExecuteAsync(null);
+
+        var expectedFilters = new ActiveListingFiltersDto(
+            1_500_000,
+            3_000_000,
+            20,
+            40,
+            null,
+            RoomType.Studio,
+            10.7721,
+            106.6579,
+            3);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(apiClient.RequestedFilters, Has.Count.EqualTo(2));
+            Assert.That(apiClient.RequestedFilters[1], Is.EqualTo(expectedFilters));
+            Assert.That(apiClient.RequestedCursors[1], Is.Null);
+            Assert.That(viewModel.IsFilterPanelOpen, Is.False);
+            Assert.That(viewModel.HasActiveFilters, Is.True);
+            Assert.That(
+                viewModel.ActiveFilterChips.Select(chip => chip.Label),
+                Is.EqualTo(new[]
+                {
+                    "Giá 1,5 – 3 triệu",
+                    "DT 20 – 40 m²",
+                    "Studio",
+                    "Bách Khoa · 3 km"
+                }));
+            Assert.That(viewModel.ResultsText, Is.EqualTo("1 phòng phù hợp"));
+        });
+    }
+
+    [Test]
+    public async Task ApplyFiltersAsync_WithInvalidPriceRange_ShowsErrorAndKeepsResults()
+    {
+        var apiClient = new FakeApiClient(CreatePage(null, CreateListing()));
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+
+        await viewModel.LoadCommand.ExecuteAsync(null);
+        viewModel.ToggleFilterPanelCommand.Execute(null);
+        viewModel.PriceMinText = "5";
+        viewModel.PriceMaxText = "2";
+
+        await viewModel.ApplyFiltersCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(apiClient.RequestedFilters, Has.Count.EqualTo(1));
+            Assert.That(viewModel.HasFilterError, Is.True);
+            Assert.That(viewModel.FilterError, Is.EqualTo("Giá tối thiểu không được lớn hơn giá tối đa."));
+            Assert.That(viewModel.IsFilterPanelOpen, Is.True);
+            Assert.That(viewModel.Listings, Has.Count.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task ClearFiltersAsync_AfterFiltersApplied_RestoresUnfilteredList()
+    {
+        var fullListRoom = CreateListing("Full list room");
+        var filteredRoom = CreateListing("Filtered room");
+        var apiClient = new FakeApiClient(
+            CreatePage(null, fullListRoom),
+            CreatePage(null, filteredRoom),
+            CreatePage(null, fullListRoom));
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+
+        await viewModel.LoadCommand.ExecuteAsync(null);
+        viewModel.RoomTypeChips.Single(chip => chip.Label == "Studio").SelectCommand.Execute(null);
+        await viewModel.ApplyFiltersCommand.ExecuteAsync(null);
+        await viewModel.ClearFiltersCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(apiClient.RequestedFilters, Has.Count.EqualTo(3));
+            Assert.That(apiClient.RequestedFilters[1], Is.Not.Null);
+            Assert.That(apiClient.RequestedFilters[2], Is.Null);
+            Assert.That(viewModel.HasActiveFilters, Is.False);
+            Assert.That(viewModel.ActiveFilterChips, Is.Empty);
+            Assert.That(viewModel.Listings.Select(item => item.Id), Is.EqualTo(new[] { fullListRoom.Id }));
+            Assert.That(viewModel.PriceMinText, Is.Empty);
+            Assert.That(viewModel.RoomTypeChips.Single(chip => chip.Label == "Tất cả").IsSelected, Is.True);
+        });
+    }
+
+    [Test]
+    public async Task ApplyFiltersAsync_WhenNoMatches_ShowsFilteredEmptyMessage()
+    {
+        var apiClient = new FakeApiClient(
+            CreatePage(null, CreateListing()),
+            CreatePage(0, false, null));
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+
+        await viewModel.LoadCommand.ExecuteAsync(null);
+        viewModel.PriceMaxText = "1";
+        await viewModel.ApplyFiltersCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.Listings, Is.Empty);
+            Assert.That(viewModel.ResultsText, Is.EqualTo("0 phòng phù hợp."));
+            Assert.That(viewModel.EmptyMessage, Is.EqualTo("Không tìm thấy phòng phù hợp. Hãy thử nới lỏng bộ lọc."));
+        });
+    }
+
+    [Test]
+    public async Task LoadMoreAsync_AfterFiltersApplied_SendsSameFiltersWithCursor()
+    {
+        var first = CreateListing("First filtered");
+        var second = CreateListing("Second filtered");
+        var apiClient = new FakeApiClient(
+            CreatePage(null, CreateListing()),
+            CreatePage("cursor-2", first),
+            CreatePage(null, second));
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+
+        await viewModel.LoadCommand.ExecuteAsync(null);
+        viewModel.AreaMaxText = "30";
+        await viewModel.ApplyFiltersCommand.ExecuteAsync(null);
+        await viewModel.LoadMoreCommand.ExecuteAsync(null);
+
+        var expectedFilters = new ActiveListingFiltersDto(
+            null,
+            null,
+            null,
+            30,
+            null,
+            null,
+            null,
+            null,
+            null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(apiClient.RequestedFilters[2], Is.EqualTo(expectedFilters));
+            Assert.That(apiClient.RequestedCursors[2], Is.EqualTo("cursor-2"));
+            Assert.That(viewModel.Listings, Has.Count.EqualTo(2));
+        });
+    }
+
+    [Test]
+    public async Task LoadAsync_WhenServerReportsCappedTotal_ShowsCappedResultCount()
+    {
+        var apiClient = new FakeApiClient(CreatePage(1000, true, null, CreateListing()));
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+
+        await viewModel.LoadCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.TotalCount, Is.EqualTo(1000));
+            Assert.That(viewModel.IsTotalCountCapped, Is.True);
+            Assert.That(viewModel.ResultsText, Is.EqualTo("1.000+ phòng phù hợp"));
+        });
+    }
+
+    private static ListingSearchResultDto CreatePage(
         string? nextCursor,
         params ListingSummaryDto[] items)
-        => new(items, new PaginationInfo(12, nextCursor, nextCursor is not null));
+        => CreatePage(items.Length, false, nextCursor, items);
+
+    private static ListingSearchResultDto CreatePage(
+        int totalCount,
+        bool totalCountCapped,
+        string? nextCursor,
+        params ListingSummaryDto[] items)
+        => new(
+            items,
+            new PaginationInfo(12, nextCursor, nextCursor is not null),
+            totalCount,
+            totalCountCapped,
+            null);
 
     private static ListingSummaryDto CreateListing(string title = "Sunny room")
         => new(
@@ -273,21 +460,25 @@ public class HomeViewModelTests
 
         public List<string?> RequestedCursors { get; } = new();
 
-        public Task<PagedResult<ListingSummaryDto>> GetListingsAsync(
+        public List<ActiveListingFiltersDto?> RequestedFilters { get; } = new();
+
+        public Task<ListingSearchResultDto> GetListingsAsync(
             int limit,
             string? cursor = null,
+            ActiveListingFiltersDto? filters = null,
             CancellationToken cancellationToken = default)
         {
             RequestedLimits.Add(limit);
             RequestedCursors.Add(cursor);
+            RequestedFilters.Add(filters);
 
             if (_responses.Count == 0)
                 throw new InvalidOperationException("No fake listings response was queued.");
 
             return _responses.Dequeue() switch
             {
-                PagedResult<ListingSummaryDto> page => Task.FromResult(page),
-                Exception exception => Task.FromException<PagedResult<ListingSummaryDto>>(exception),
+                ListingSearchResultDto page => Task.FromResult(page),
+                Exception exception => Task.FromException<ListingSearchResultDto>(exception),
                 _ => throw new InvalidOperationException("Unsupported fake listings response.")
             };
         }

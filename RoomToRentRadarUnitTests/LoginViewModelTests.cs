@@ -146,9 +146,10 @@ public class LoginViewModelTests
 
         public Exception? LoginException { get; set; }
 
-        public Task<PagedResult<ListingSummaryDto>> GetListingsAsync(
+        public Task<ListingSearchResultDto> GetListingsAsync(
             int limit,
             string? cursor = null,
+            ActiveListingFiltersDto? filters = null,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The login screen does not load listings.");
 
