@@ -366,6 +366,103 @@ public class HomeViewModelTests
     }
 
     [Test]
+    public async Task ApplyFiltersAsync_WithPriceTwoToFourMillionAndBachKhoa_WhenEmpty_ClearFiltersRestoresResults()
+    {
+        var listing = new ListingSummaryDto(
+            Guid.Parse("bd978bb6-3472-46cb-bd2c-743347a82e64"),
+            "Restored room", 1_500_000, 25, 1, "1 Main St", 16.0, 108.0,
+            new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), null);
+        var apiClient = new FakeApiClient(
+            CreatePage(2, false, "cursor-2", listing),
+            CreatePage(0, false, null),
+            CreatePage(2, false, "cursor-2", listing));
+        var errorHandler = new FakeErrorHandler();
+        var viewModel = new HomeViewModel(apiClient, errorHandler, new FakeNavigationService());
+
+        await viewModel.LoadCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.Listings.Select(item => item.Id), Is.EqualTo(new[] { listing.Id }));
+            Assert.That(viewModel.CanLoadMore, Is.True);
+        });
+
+        viewModel.ToggleFilterPanelCommand.Execute(null);
+        viewModel.PriceMinText = "2";
+        viewModel.PriceMaxText = "4";
+        viewModel.CampusChips.Single(chip => chip.Label == "Bách Khoa").SelectCommand.Execute(null);
+        await viewModel.ApplyFiltersCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(apiClient.RequestedFilters, Is.EqualTo(new ActiveListingFiltersDto?[]
+            {
+                null,
+                new(2_000_000, 4_000_000, null, null, null, null, 10.7721, 106.6579, 3)
+            }));
+            Assert.That(viewModel.ActiveFilterChips.Select(chip => chip.Label),
+                Is.EqualTo(new[] { "Giá 2 – 4 triệu", "Bách Khoa · 3 km" }));
+            Assert.That(viewModel.Listings, Is.Empty);
+            Assert.That(viewModel.TotalCount, Is.Zero);
+            Assert.That(viewModel.ResultsText, Is.EqualTo("0 phòng phù hợp."));
+            Assert.That(viewModel.EmptyMessage, Is.EqualTo("Không tìm thấy phòng phù hợp. Hãy thử nới lỏng bộ lọc."));
+            Assert.That(viewModel.HasActiveFilters, Is.True);
+            Assert.That(viewModel.IsFilterPanelOpen, Is.False);
+            Assert.That(viewModel.IsBusy, Is.False);
+            Assert.That(viewModel.IsRefreshing, Is.False);
+            Assert.That(viewModel.IsLoadingMore, Is.False);
+            Assert.That(viewModel.HasMore, Is.False);
+            Assert.That(viewModel.CanLoadMore, Is.False);
+            Assert.That(viewModel.HasError, Is.False);
+            Assert.That(viewModel.HasFilterError, Is.False);
+        });
+
+        // Repeated collection threshold notifications must not fetch another page while empty.
+        for (var attempt = 0; attempt < 3; attempt++)
+            await viewModel.LoadMoreCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(apiClient.RequestedCursors, Is.EqualTo(new string?[] { null, null }));
+            Assert.That(viewModel.Listings, Is.Empty);
+            Assert.That(viewModel.IsBusy, Is.False);
+            Assert.That(viewModel.IsRefreshing, Is.False);
+            Assert.That(viewModel.IsLoadingMore, Is.False);
+            Assert.That(viewModel.CanLoadMore, Is.False);
+            Assert.That(errorHandler.HandledException, Is.Null);
+        });
+
+        await viewModel.ClearFiltersCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(apiClient.RequestedFilters, Is.EqualTo(new ActiveListingFiltersDto?[]
+            {
+                null,
+                new(2_000_000, 4_000_000, null, null, null, null, 10.7721, 106.6579, 3),
+                null
+            }));
+            Assert.That(apiClient.RequestedCursors, Is.EqualTo(new string?[] { null, null, null }));
+            Assert.That(viewModel.Listings.Select(item => item.Id), Is.EqualTo(new[] { listing.Id }));
+            Assert.That(viewModel.TotalCount, Is.EqualTo(2));
+            Assert.That(viewModel.ResultsText, Is.EqualTo("2 phòng phù hợp"));
+            Assert.That(viewModel.HasActiveFilters, Is.False);
+            Assert.That(viewModel.ActiveFilterChips, Is.Empty);
+            Assert.That(viewModel.PriceMinText, Is.Empty);
+            Assert.That(viewModel.PriceMaxText, Is.Empty);
+            Assert.That(viewModel.CampusChips.Where(chip => chip.IsSelected).Select(chip => chip.Label),
+                Is.EqualTo(new[] { "Tất cả" }));
+            Assert.That(viewModel.IsDistanceEnabled, Is.False);
+            Assert.That(viewModel.IsBusy, Is.False);
+            Assert.That(viewModel.IsRefreshing, Is.False);
+            Assert.That(viewModel.IsLoadingMore, Is.False);
+            Assert.That(viewModel.CanLoadMore, Is.True);
+            Assert.That(viewModel.HasError, Is.False);
+            Assert.That(errorHandler.HandledException, Is.Null);
+        });
+    }
+
+    [Test]
     public async Task LoadMoreAsync_AfterFiltersApplied_SendsSameFiltersWithCursor()
     {
         var first = CreateListing("First filtered");

@@ -199,6 +199,21 @@
                                 </VerticalStackLayout>
                             </Border>
                         </VerticalStackLayout>
+                        <!-- Keep the empty state in the scrolling header. MAUI's Windows FormsGridView
+                             disables ScrollViewer hit testing when its native EmptyView is visible,
+                             which also disables the filter controls hosted in this header. -->
+                        <ContentView IsVisible="False" AutomationId="HomeEmptyState">
+                            <ContentView.Triggers>
+                                <DataTrigger TargetType="ContentView" Binding="{Binding Listings.Count}" Value="0">
+                                    <Setter Property="IsVisible" Value="True" />
+                                </DataTrigger>
+                            </ContentView.Triggers>
+                            <VerticalStackLayout Padding="24,32" Spacing="12" HorizontalOptions="Center">
+                                <Image Source="location_pin.png" WidthRequest="32" HeightRequest="32" />
+                                <Label Text="{Binding EmptyMessage}" AutomationId="HomeEmptyMessage"
+                                       HorizontalTextAlignment="Center" TextColor="{StaticResource Muted}" />
+                            </VerticalStackLayout>
+                        </ContentView>
                     </VerticalStackLayout>
                 </CollectionView.Header>
                 <CollectionView.ItemTemplate>
@@ -247,12 +262,6 @@
                         </Border>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
-                <CollectionView.EmptyView>
-                    <VerticalStackLayout Padding="24,32" Spacing="12" HorizontalOptions="Center">
-                        <Image Source="location_pin.png" WidthRequest="32" HeightRequest="32" />
-                        <Label Text="{Binding EmptyMessage}" HorizontalTextAlignment="Center" TextColor="{StaticResource Muted}" />
-                    </VerticalStackLayout>
-                </CollectionView.EmptyView>
                 <CollectionView.Footer>
                     <VerticalStackLayout Padding="0,12,18,32" Spacing="16">
                         <ActivityIndicator IsRunning="{Binding IsLoadingMore}" IsVisible="{Binding IsLoadingMore}" HeightRequest="32" />
