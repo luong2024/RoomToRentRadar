@@ -38,6 +38,7 @@ public static class RoomDetailServiceRegistration
             services.AddSingleton<InMemoryRoomRepository>();
             services.AddScoped<IRoomRepository>(sp => sp.GetRequiredService<InMemoryRoomRepository>());
             services.AddScoped<IGetRoomDetailsUseCase, GetRoomDetailsUseCase>();
+            services.AddScoped<ISearchRoomsUseCase, SearchRoomsUseCase>();
             return services;
         }
 
@@ -78,6 +79,7 @@ public static class RoomDetailServiceRegistration
         services.AddSingleton(container);
         services.AddScoped<IRoomRepository, CosmosRoomRepository>();
         services.AddScoped<IGetRoomDetailsUseCase, GetRoomDetailsUseCase>();
+        services.AddScoped<ISearchRoomsUseCase, SearchRoomsUseCase>();
 
         return services;
     }

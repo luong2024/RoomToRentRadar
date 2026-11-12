@@ -31,6 +31,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddApplicationUseCases(this IServiceCollection services)
     {
         services.AddScoped<IGetRoomDetailsUseCase, GetRoomDetailsUseCase>();
+        services.AddScoped<ISearchRoomsUseCase, SearchRoomsUseCase>();
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<IRegisterUserUseCase, RegisterUserUseCase>();
         services.AddScoped<ILoginWithEmailUseCase, LoginWithEmailUseCase>();
