@@ -11,7 +11,16 @@ public static class DatabaseSeeder
     private const int SamplePublishedCount = 60;
     private const int SampleDraftCount = 4;
     private const int SampleHiddenCount = 3;
+    private const int SampleCount = SamplePublishedCount + SampleDraftCount + SampleHiddenCount + 1;
     private const int BenchmarkBatchSize = 1000;
+
+    private static readonly string[] LandlordNames =
+    [
+        "Nguyễn Văn An",
+        "Trần Thị Bình",
+        "Lê Minh Cường",
+        "Phạm Thu Dung"
+    ];
 
     // One sample listing keeps an empty amenity and rule list to cover the empty detail case.
     private const int NoDetailIndex = 7;
@@ -80,8 +89,7 @@ public static class DatabaseSeeder
         }
 
         var now = DateTime.UtcNow;
-        var listings = new List<Listing>(
-            SamplePublishedCount + SampleDraftCount + SampleHiddenCount + 1);
+        var listings = new List<Listing>(SampleCount);
 
         for (var index = 0; index < SamplePublishedCount; index++)
         {
@@ -104,13 +112,95 @@ public static class DatabaseSeeder
         }
 
         listings.Add(CreateSampleListing(
-            SamplePublishedCount + SampleDraftCount + SampleHiddenCount,
+            SampleCount - 1,
             ListingStatus.Removed,
             now));
 
         dbContext.Listings.AddRange(listings);
         await dbContext.SaveChangesAsync(cancellationToken);
         return true;
+    }
+
+    // Databases seeded before the detail fields existed keep default column values;
+    // this restores the sample data without deleting anyone's local listings.
+    public static async Task<int> BackfillSampleDetailsAsync(
+        AppDbContext dbContext,
+        CancellationToken cancellationToken = default)
+    {
+        var ids = Enumerable.Range(0, SampleCount)
+            .Select(index => CreateDeterministicGuid($"sample-listing-{index}"))
+            .ToList();
+
+        var listings = await dbContext.Listings
+            .Include(listing => listing.Amenities)
+            .Include(listing => listing.Rules)
+            .AsSplitQuery()
+            .Where(listing => ids.Contains(listing.Id))
+            .ToDictionaryAsync(listing => listing.Id, cancellationToken);
+
+        var updated = 0;
+        for (var index = 0; index < SampleCount; index++)
+        {
+            if (!listings.TryGetValue(CreateDeterministicGuid($"sample-listing-{index}"), out var listing))
+            {
+                continue;
+            }
+
+            var price = GetSamplePrice(index);
+            var landlordName = LandlordNames[index % LandlordNames.Length];
+            var landlordPhone = GetSamplePhone(index);
+            var roomType = SampleRoomTypes[index % SampleRoomTypes.Length];
+            var changed = false;
+
+            if (listing.Deposit != price ||
+                listing.RoomType != roomType ||
+                listing.LandlordName != landlordName ||
+                listing.LandlordPhone != landlordPhone)
+            {
+                listing.Deposit = price;
+                listing.RoomType = roomType;
+                listing.LandlordName = landlordName;
+                listing.LandlordPhone = landlordPhone;
+                changed = true;
+            }
+
+            if (index != NoDetailIndex)
+            {
+                if (listing.Amenities.Count == 0)
+                {
+                    AddSampleAmenities(listing, index);
+                    foreach (var amenity in listing.Amenities)
+                    {
+                        dbContext.ListingAmenities.Add(amenity);
+                    }
+
+                    changed = true;
+                }
+
+                if (listing.Rules.Count == 0)
+                {
+                    AddSampleRules(listing, index);
+                    foreach (var rule in listing.Rules)
+                    {
+                        dbContext.ListingRules.Add(rule);
+                    }
+
+                    changed = true;
+                }
+            }
+
+            if (changed)
+            {
+                updated++;
+            }
+        }
+
+        if (updated > 0)
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        return updated;
     }
 
     public static async Task<int> SeedBenchmarkAsync(
@@ -172,6 +262,7 @@ public static class DatabaseSeeder
             .AddDays(-(index % 120))
             .AddHours(-(index % 24))
             .AddMinutes(-(index % 60));
+        var price = GetSamplePrice(index);
 
         var listing = new Listing
         {
@@ -180,16 +271,19 @@ public static class DatabaseSeeder
             Description =
                 $"{title}. Diện tích {20 + (index * 7 % 90)} m², gần chợ, siêu thị và tuyến xe buýt. " +
                 "Nhà mới sửa, nội thất cơ bản, phù hợp gia đình nhỏ hoặc người đi làm.",
-            Price = 3_500_000L + (index % 40) * 1_150_000L,
+            Price = price,
+            Deposit = price,
             AreaM2 = 20 + (index * 7 % 90),
-            Bedrooms = bedrooms,
             RoomType = SampleRoomTypes[index % SampleRoomTypes.Length],
+            Bedrooms = bedrooms,
             Address = $"{location.Address}, {location.District}, TP. Hồ Chí Minh",
             Lat = Math.Round(location.Lat + (index % 7 - 3) * 0.0015, 6),
             Lng = Math.Round(location.Lng + (index % 5 - 2) * 0.0015, 6),
             Status = status,
             CreatedAt = createdAt,
-            UpdatedAt = createdAt.AddHours(1)
+            UpdatedAt = createdAt.AddHours(1),
+            LandlordName = LandlordNames[index % LandlordNames.Length],
+            LandlordPhone = GetSamplePhone(index)
         };
 
         AddSampleAmenities(listing, index);
@@ -204,22 +298,26 @@ public static class DatabaseSeeder
         var bedrooms = index % 6;
         var title = $"Benchmark listing {index} - {bedrooms}PN {location.District}";
         var createdAt = baseDate.AddMinutes(-index);
+        var price = 3_000_000L + index % 200 * 250_000L;
 
         var listing = new Listing
         {
             Id = CreateDeterministicGuid($"benchmark-listing-{index}"),
             Title = title,
             Description = $"Benchmark row {index} for the listings performance test.",
-            Price = 3_000_000L + index % 200 * 250_000L,
+            Price = price,
+            Deposit = price,
             AreaM2 = 18 + index % 110,
-            Bedrooms = bedrooms,
             RoomType = SampleRoomTypes[index % SampleRoomTypes.Length],
+            Bedrooms = bedrooms,
             Address = $"{location.Address}, {location.District}, TP. Hồ Chí Minh",
             Lat = location.Lat,
             Lng = location.Lng,
             Status = ListingStatus.Published,
             CreatedAt = createdAt,
-            UpdatedAt = createdAt.AddMinutes(5)
+            UpdatedAt = createdAt.AddMinutes(5),
+            LandlordName = LandlordNames[index % LandlordNames.Length],
+            LandlordPhone = GetSamplePhone(index)
         };
 
         listing.Photos.Add(new ListingPhoto
@@ -306,6 +404,13 @@ public static class DatabaseSeeder
             });
         }
     }
+
+    private static long GetSamplePrice(int index) =>
+        3_500_000L + (index % 40) * 1_150_000L;
+
+    // Fake, obviously non-personal placeholder numbers for the sample data.
+    private static string GetSamplePhone(int index) =>
+        $"0900 000 {index % 1000:D3}";
 
     private static Guid CreateDeterministicGuid(string key)
     {

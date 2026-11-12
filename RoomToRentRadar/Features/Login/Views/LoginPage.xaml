@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewModels="clr-namespace:RoomToRentRadar.Features.Login.ViewModels"
+             x:Class="RoomToRentRadar.Features.Login.Views.LoginPage"
+             x:DataType="viewModels:LoginViewModel"
+             Title="Sign in"
+             Shell.NavBarIsVisible="True"
+             SafeAreaEdges="All">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20"
+                             Spacing="16"
+                             MaximumWidthRequest="480"
+                             HorizontalOptions="Center">
+
+            <Label Text="Sign in to see the landlord's phone number"
+                   FontSize="22" FontFamily="OpenSansSemibold"
+                   SemanticProperties.HeadingLevel="Level1" />
+            <Label Text="Use the demo account configured on the API."
+                   Style="{StaticResource Caption}" />
+
+            <Border Padding="16">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="EMAIL" Style="{StaticResource Eyebrow}" />
+                    <Entry Text="{Binding Email}"
+                           Keyboard="Email"
+                           IsSpellCheckEnabled="False"
+                           IsTextPredictionEnabled="False"
+                           Placeholder="you@example.com"
+                           PlaceholderColor="{StaticResource Muted}"
+                           TextColor="{StaticResource Ink}"
+                           FontSize="14"
+                           ClearButtonVisibility="WhileEditing"
+                           SemanticProperties.Description="Email address" />
+
+                    <Label Text="PASSWORD" Style="{StaticResource Eyebrow}" />
+                    <Entry Text="{Binding Password}"
+                           IsPassword="True"
+                           Placeholder="Your password"
+                           PlaceholderColor="{StaticResource Muted}"
+                           TextColor="{StaticResource Ink}"
+                           FontSize="14"
+                           SemanticProperties.Description="Password" />
+
+                    <Label Text="{Binding ErrorMessage}"
+                           IsVisible="{Binding HasError}"
+                           TextColor="#B3261E"
+                           Style="{StaticResource Caption}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Button Text="Sign in"
+                    Command="{Binding SignInCommand}"
+                    IsEnabled="{Binding IsNotBusy}"
+                    SemanticProperties.Description="Sign in"
+                    SemanticProperties.Hint="Signs in with the demo account" />
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               IsVisible="{Binding IsBusy}"
+                               HorizontalOptions="Center"
+                               SemanticProperties.Description="Signing in" />
+
+            <Button Text="Cancel"
+                    Command="{Binding CancelCommand}"
+                    BackgroundColor="Transparent"
+                    TextColor="{StaticResource Accent}"
+                    SemanticProperties.Description="Cancel sign in"
+                    SemanticProperties.Hint="Returns to the room details" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

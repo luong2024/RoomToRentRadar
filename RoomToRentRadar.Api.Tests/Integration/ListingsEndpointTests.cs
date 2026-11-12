@@ -234,6 +234,70 @@ public sealed class ListingsEndpointTests
         Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo(expectedCode));
     }
 
+    [Test]
+    public async Task GetListing_PublishedListing_ReturnsDetail()
+    {
+        // Arrange
+        // EF Core replaces the default key of the first seeded listing (IdFor(0) is Guid.Empty)
+        // with a generated value, so the published listing is resolved by its unique title.
+        var id = await QueryListingIdByTitleAsync("Test listing 0");
+
+        // Act
+        var response = await _client.GetAsync($"/api/v1/listings/{id}");
+        var detail = await response.Content.ReadFromJsonAsync<ListingDetailDto>(ApiJson.Options);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/json"));
+            Assert.That(detail, Is.Not.Null);
+            Assert.That(detail!.Id, Is.EqualTo(id));
+            Assert.That(detail.Title, Is.EqualTo("Test listing 0"));
+            Assert.That(detail.Description, Is.EqualTo("Test listing 0 description"));
+            Assert.That(detail.Price, Is.EqualTo(5_000_000));
+            Assert.That(detail.AreaM2, Is.EqualTo(30));
+            Assert.That(detail.Bedrooms, Is.EqualTo(0));
+            Assert.That(detail.Address, Is.EqualTo("Test address 0, District 0"));
+            Assert.That(detail.CreatedAt, Is.Not.EqualTo(default(DateTime)));
+            Assert.That(detail.UpdatedAt, Is.Not.EqualTo(default(DateTime)));
+            Assert.That(detail.CreatedAt, Is.EqualTo(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
+            Assert.That(detail.UpdatedAt, Is.EqualTo(new DateTime(2026, 1, 1, 0, 5, 0, DateTimeKind.Utc)));
+        });
+    }
+
+    [TestCase(20)]
+    [TestCase(22)]
+    [TestCase(24)]
+    public async Task GetListing_NonPublishedListing_ReturnsGone(int index)
+    {
+        // Arrange
+        var id = TestListingsSeed.IdFor(index);
+
+        // Act
+        var problem = await GetProblemAsync($"/api/v1/listings/{id}", HttpStatusCode.Gone);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo("listing_unavailable"));
+            Assert.That(problem.GetRawText(), Does.Not.Contain($"Test listing {index}"));
+        });
+    }
+
+    [Test]
+    public async Task GetListing_UnknownListing_ReturnsNotFound()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+
+        // Act
+        var problem = await GetProblemAsync($"/api/v1/listings/{id}", HttpStatusCode.NotFound);
+
+        // Assert
+        Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo("listing_not_found"));
+    }
+
     private async Task<ListingSearchResultDto> GetPageAsync(string url)
     {
         var response = await _client.GetAsync(url);
@@ -243,12 +307,14 @@ public sealed class ListingsEndpointTests
         return result!;
     }
 
-    private async Task<JsonElement> GetProblemAsync(string url)
+    private async Task<JsonElement> GetProblemAsync(
+        string url,
+        HttpStatusCode expectedStatus = HttpStatusCode.BadRequest)
     {
         var response = await _client.GetAsync(url);
         Assert.Multiple(() =>
         {
-            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest), url);
+            Assert.That(response.StatusCode, Is.EqualTo(expectedStatus), url);
             Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
         });
 
@@ -260,6 +326,16 @@ public sealed class ListingsEndpointTests
         => await QueryIdsAsync(dbContext => dbContext.Listings
             .Where(x => x.Status == ListingStatus.Published)
             .Select(x => x.Id));
+
+    private async Task<Guid> QueryListingIdByTitleAsync(string title)
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        return await dbContext.Listings
+            .Where(x => x.Title == title)
+            .Select(x => x.Id)
+            .SingleAsync();
+    }
 
     private async Task<List<Guid>> QueryIdsAsync(Func<AppDbContext, IQueryable<Guid>> query)
     {
