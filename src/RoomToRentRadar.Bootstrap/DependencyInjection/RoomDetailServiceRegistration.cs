@@ -3,6 +3,7 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Configurations;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Repositories;
 using RoomToRentRadar.Adapters.Outbound.Persistence.InMemory;
 using RoomToRentRadar.Application.Ports.Inbound;
@@ -18,10 +19,19 @@ public static class RoomDetailServiceRegistration
         IConfiguration configuration,
         IWebHostEnvironment environment)
     {
-        var endpoint = configuration["CosmosDb:AccountEndpoint"];
-        var authKey = configuration["CosmosDb:AuthKey"] ?? configuration["CosmosDb:AuthKeyOrResourceToken"];
-        var databaseName = configuration["CosmosDb:DatabaseName"] ?? "RoomToRentRadarDb";
-        var containerName = configuration["CosmosDb:ContainerName"] ?? "Rooms";
+        var cosmosOptions = configuration.GetSection(CosmosDbOptions.SectionName).Get<CosmosDbOptions>() ?? new CosmosDbOptions();
+        var endpoint = !string.IsNullOrWhiteSpace(cosmosOptions.AccountEndpoint)
+            ? cosmosOptions.AccountEndpoint
+            : configuration["CosmosDb:AccountEndpoint"];
+        var authKey = !string.IsNullOrWhiteSpace(cosmosOptions.AuthKey)
+            ? cosmosOptions.AuthKey
+            : (cosmosOptions.AuthKeyOrResourceToken ?? configuration["CosmosDb:AuthKey"] ?? configuration["CosmosDb:AuthKeyOrResourceToken"]);
+        var databaseName = !string.IsNullOrWhiteSpace(cosmosOptions.DatabaseName)
+            ? cosmosOptions.DatabaseName
+            : (configuration["CosmosDb:DatabaseName"] ?? "RoomToRentRadarDb");
+        var containerName = !string.IsNullOrWhiteSpace(cosmosOptions.ContainerName)
+            ? cosmosOptions.ContainerName
+            : (configuration["CosmosDb:ContainerName"] ?? "Rooms");
 
         if (string.Equals(endpoint, "in-memory", StringComparison.OrdinalIgnoreCase))
         {

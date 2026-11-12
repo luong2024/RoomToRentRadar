@@ -1,73 +1,69 @@
-# Pull Request: Task T04.1 - Build Search API with Price, Area, and Distance Filters (US04)
+# Pull Request: Task T02.1 - Build Room Detail API (Description, Amenities, Rules)
 
 ## 📌 Description
-Pull Request này hiện thực hóa **Task T04.1 (User Story US04 - Search API with filters)** theo chuẩn kiến trúc **Hexagonal Architecture (Ports & Adapters)**. 
-Cung cấp endpoint tìm kiếm phòng trọ linh hoạt cho ứng dụng di động dựa trên đa tiêu chí lọc: khoảng giá, diện tích, loại phòng, từ khóa và bán kính khoảng cách địa lý (GPS), có phân trang và bảo vệ nghiêm ngặt tài nguyên hệ thống.
+Pull Request này hoàn thiện **Task T02.1 (User Story US02 - Room Detail API)** theo chuẩn kiến trúc **Hexagonal Architecture (Ports & Adapters)**.
+Cung cấp endpoint chi tiết phòng trọ phục vụ ứng dụng di động hiển thị thông tin mô tả, giá, diện tích, tiện nghi, nội quy, địa chỉ, trạng thái xác thực và xử lý nghiệp vụ bảo mật thông tin liên hệ chủ nhà cùng gợi ý phòng tương tự khi phòng không khả dụng.
 
 ---
 
 ## 🚀 Các thay đổi chính (Key Changes)
 
-### 1. API Contract & DTOs (`src/RoomToRentRadar.Application/DTOs`)
-- **`SearchRoomsQuery`**: Nhận các tham số tìm kiếm nullable: `MinPrice`, `MaxPrice`, `MinArea`, `MaxArea`, `RoomType`, `Keyword`, `Latitude`, `Longitude`, `RadiusInKm`, cùng `PageNumber` (mặc định 1) và `PageSize` (mặc định 10).
-- **`RoomSummaryDto`**: DTO tinh gọn phục vụ hiển thị danh sách phòng: `Id`, `Title`, `Price`, `Area`, `RoomType`, `IsVerified`, `DistanceInKm`.
-- **`SearchRoomsResult`**: DTO phản hồi chứa danh sách `Items`, `TotalCount`, `TotalPages`, `CurrentPage`, và danh sách `ActiveFilters` (tên các filter đang có hiệu lực).
+### 1. Domain Layer (`src/RoomToRentRadar.Domain`)
+- **`Room.cs` (`Entities/Room.cs`)**:
+  - Thực thể phòng trọ cốt lõi: `Id`, `Title`, `Description`, `Price`, `Area`, `Address`, `IsVerified`, `Status` (Enum: `Available`, `Rented`, `Pending`, `UnderMaintenance`), `Deposit`, `RoomType`, `Amenities` (danh sách tiện ích), `HouseRules` (danh sách nội quy), `LandlordPhone`, `LastUpdatedDate`.
+  - Giữ vững tính thuần khiết của Core Domain: không phụ thuộc framework hay SDK lưu trữ.
 
-### 2. Core & Ports (`src/RoomToRentRadar.Domain` & `Application`)
-- **Domain Layer (`Entities/Room.cs`)**:
-  - Giữ vững tính thuần khiết của Domain Core: chỉ chứa các thuộc tính tọa độ nguyên thủy `double? Latitude` và `double? Longitude`.
-  - **Tuyệt đối không rò rỉ cấu trúc hạ tầng GeoJSON của Cosmos DB vào Domain**.
-- **Outbound Port (`Ports/Outbound/IRoomRepository.cs`)**:
-  - Bổ sung phương thức `Task<(IReadOnlyList<Room> Items, int TotalCount)> SearchAsync(SearchRoomsQuery query, CancellationToken ct)`.
-- **Inbound Port & Use Case (`UseCases/SearchRoomsUseCase.cs`)**:
-  - Triển khai `ISearchRoomsUseCase`.
-  - **Validate đầu vào nghiêm ngặt**: kiểm tra `MinPrice <= MaxPrice`, `MinArea <= MaxArea`, các giá trị không âm, tọa độ hợp lệ, và bắt buộc truyền tọa độ khi lọc theo bán kính.
-  - **Chống tấn công từ chối dịch vụ (Pagination DoS Protection)**: Giới hạn cứng `PageSize` tối đa là 50 và `PageNumber >= 1`. Các request vượt quá 50 sẽ bị từ chối ngay lập tức (`400 Bad Request`).
-  - **Bảo đảm quy tắc nghiệp vụ AC4**: Chỉ tìm kiếm và trả về các phòng có `Status == Available` và `IsVerified == true`.
-  - **Tính toán khoảng cách động**: Tự động tính `DistanceInKm` theo công thức toán học **Haversine** dựa trên tọa độ người dùng truyền vào và tọa độ phòng. **Không hardcode bất kỳ tọa độ địa phương nào vào Domain/Use Case**.
+### 2. Application Layer (`src/RoomToRentRadar.Application`)
+- **DTOs (`DTOs/RoomDetailsDto.cs`)**:
+  - `RoomDetailsDto`: Chứa đầy đủ thông tin phòng, tiện ích, nội quy, tiền cọc, số điện thoại chủ nhà (được xử lý che/hiển thị theo quyền), cờ `IsAvailable`, thông báo `UnavailableMessage`, và danh sách `SimilarRooms`.
+  - `SimilarRoomDto`: DTO rút gọn cho các phòng gợi ý tương tự (`Id`, `Title`, `Price`, `Area`, `Address`, `ThumbnailUrl`).
+- **Ports & Use Cases (`Ports/` & `UseCases/`)**:
+  - **Inbound Port:** `IGetRoomDetailsUseCase`.
+  - **Outbound Port:** `IRoomRepository` (`GetByIdAsync`, `GetSimilarRoomsAsync`).
+  - **`GetRoomDetailsUseCase`**: Hiện thực toàn bộ các quy tắc nghiệp vụ của US02:
+    - **AC1:** Trả về đầy đủ thông tin chi tiết phòng (mô tả, giá, diện tích, tiện nghi, nội quy, loại phòng).
+    - **AC2 (Bảo mật liên hệ):** Với khách vãng lai hoặc sinh viên chưa xác thực (`IsVerified = false`), số điện thoại chủ trọ được che thành `"*** (Yêu cầu xác thực để xem)"`. Chỉ hiển thị số điện thoại thật khi người dùng đã xác thực sinh viên (`IsVerified = true`).
+    - **AC3 (Phòng không khả dụng):** Khi phòng có trạng thái khác `Available` (đã thuê/bảo trì): đặt `IsAvailable = false`, hiển thị `UnavailableMessage = "Phòng này hiện không khả dụng."`, che thông tin nhạy cảm (địa chỉ và số điện thoại), đồng thời tự động truy vấn danh sách tối đa 5 phòng tương tự thỏa mãn cả dải giá [70% - 130%] và dải diện tích [70% - 130%].
+    - **AC4 (Không tồn tại):** Ném `NotFoundException` khi không tìm thấy phòng theo `id`.
 
-### 3. Outbound Persistence Adapters (`src/RoomToRentRadar.Adapters`)
-- **`RoomDocument.cs` & `CosmosPoint.cs`**: Tách riêng cấu trúc lưu trữ và GeoJSON Point (`type: 'Point'`, `coordinates: [lon, lat]`) về đúng tầng Adapter, mapping 2 chiều với Domain Entity `Room`.
-- **`CosmosRoomRepository.cs`**:
-  - Xây dựng câu truy vấn SQL động kèm tham số hóa (@params) chống SQL Injection: lọc `status = 0`, `isVerified = true`, giá, diện tích, loại phòng, từ khóa.
-  - Sử dụng hàm không gian tích hợp của Cosmos DB: `ST_DISTANCE(c.Location, {'type': 'Point', 'coordinates': [@lon, @lat]}) <= (@radius * 1000)`.
-  - **An toàn vận hành đa phân vùng (Cross-Partition Query)**: Cấu hình tường minh `QueryRequestOptions { MaxItemCount = pageSize }` khi gọi `GetItemQueryIterator` cho cả câu đếm và câu phân trang (`OFFSET @offset LIMIT @limit`).
-- **`InMemoryRoomRepository.cs`**:
-  - Cài đặt `SearchAsync` bằng LINQ phục vụ chạy automated testing nội bộ.
-  - Hiện thực hàm `CalculateHaversineDistanceKm` để lọc bán kính.
+### 3. Adapters Layer (`src/RoomToRentRadar.Adapters`)
+- **Inbound Web API Controller (`RoomsController.cs`)**:
+  - Endpoint `GET /api/rooms/{id}`: Cho phép truy cập nặc danh hoặc có JWT Bearer token.
+  - Tự động trích xuất claim `is_verified` từ JWT token để xác định quyền xem số điện thoại chủ trọ.
+  - Xử lý status code chuẩn RESTful: `200 OK`, `404 Not Found`.
+- **Outbound Persistence (`CosmosDb/` & `InMemory/`)**:
+  - **`CosmosDbOptions.cs`**: Bổ sung `AuthKey` đồng bộ với `AuthKeyOrResourceToken`.
+  - **`CosmosDbContext.cs`**:
+    - Ưu tiên sử dụng `AuthKey`, fallback sang `AuthKeyOrResourceToken`.
+    - Tự động khởi tạo Container `"Rooms"` với Partition Key `"/id"` trong `EnsureDatabaseAndContainersAsync()`.
+  - **`CosmosRoomRepository.cs`**:
+    - `GetByIdAsync`: Đọc point-read tối ưu O(1) qua Partition Key `new PartitionKey(id)`.
+    - `GetSimilarRoomsAsync`: Truy vấn SQL tìm phòng tương tự lọc theo cả dải giá và dải diện tích:
+      `SELECT TOP 5 * FROM c WHERE c.id != @roomId AND c.status = 0 AND c.price >= @minPrice AND c.price <= @maxPrice AND c.area >= @minArea AND c.area <= @maxArea`.
+  - **`InMemoryRoomRepository.cs`**: Cung cấp repository giả lập chạy trong RAM phục vụ unit test và integration test nhanh độc lập.
 
-### 4. Inbound Web API Controller (`src/RoomToRentRadar.Adapters/Inbound/WebApi/Controllers`)
-- **`RoomsController.cs`**:
-  - Bổ sung endpoint: `GET /api/rooms` nhận `[FromQuery] SearchRoomsQuery query`.
-  - Gắn `[AllowAnonymous]` cho phép sinh viên/khách vãng lai tìm kiếm phòng trọ mà không bắt buộc đăng nhập.
-  - Trả về `200 OK(SearchRoomsResult)` hoặc `400 BadRequest(ProblemDetails)` nếu tham số filter/phân trang không hợp lệ.
-
-### 5. Dependency Injection (`src/RoomToRentRadar.Bootstrap`)
-- Đăng ký scoped `ISearchRoomsUseCase` -> `SearchRoomsUseCase` trong `RoomDetailServiceRegistration` và `ServiceCollectionExtensions`.
+### 4. Bootstrap Layer (`src/RoomToRentRadar.Bootstrap`)
+- **`RoomDetailServiceRegistration.cs`**: Đăng ký Scoped cho `IRoomRepository`, `IGetRoomDetailsUseCase` và cấu hình Cosmos DB Client linh hoạt theo môi trường.
+- **`Program.cs`**: Gọi `EnsureDatabaseAndContainersAsync()` tự động provision các container cần thiết khi app khởi động.
 
 ---
 
 ## 🧪 Kết quả kiểm thử (Verification & Test Coverage)
 
-Toàn bộ test suite được thực thi tự động và đạt 100% tỷ lệ pass:
+Toàn bộ test suite được thực thi tự động và đạt **100% tỷ lệ pass**:
 
-- [x] **Kiến trúc Hexagonal & Domain Purity (`RoomToRentRadar.Domain.Tests`)**: **43/43 Passed**
-  - Đảm bảo Domain Core không bị ô nhiễm bởi bất kỳ thư viện bên ngoài hay cơ chế lưu trữ Cosmos DB nào.
-- [x] **Unit Tests Use Case (`RoomToRentRadar.Application.Tests`)**: **57/57 Passed**
-  - Kiểm tra toàn diện các trường hợp validation (giá, diện tích, tọa độ, bán kính).
-  - Kiểm tra chặn `PageSize > 50`, `PageSize <= 0`, `PageNumber < 1`.
-  - Kiểm tra bất biến AC4 (chỉ phòng khả dụng & đã xác thực mới xuất hiện trong kết quả).
-  - Kiểm tra tính đúng đắn của công thức Haversine và danh sách `ActiveFilters`.
-- [x] **Adapter Unit Tests (`RoomToRentRadar.Adapters.Tests`)**: **49/49 Passed**
-  - Kiểm tra controller bindings và status code mapping.
-- [x] **Integration Tests (`RoomToRentRadar.IntegrationTests`)**: **24/24 Passed**
-  - Bơm biến môi trường giả lập trong `SetUp()` để bypass Fail-Fast Cosmos DB.
-  - Test gọi API nặc danh (`[AllowAnonymous]`) trả về `200 OK`.
-  - Test truy vấn kết hợp nhiều filter (khoảng giá, diện tích, loại phòng, từ khóa, bán kính GPS).
-  - Test bảo vệ DoS khi hacker gửi `?pageSize=1000000` $\rightarrow$ bị chặn với `400 Bad Request`.
+- [x] **Domain Tests (`RoomToRentRadar.Domain.Tests`)**: **43/43 Passed**
+  - Kiểm tra tính thuần khiết và bất biến của thực thể phòng trọ.
+- [x] **Application Use Case Tests (`RoomToRentRadar.Application.Tests`)**: **31/31 Passed**
+  - Kiểm tra đầy đủ AC1 (hiển thị chi tiết), AC2 (che số điện thoại), AC3 (phòng không khả dụng & gợi ý phòng tương tự), AC4 (báo lỗi 404).
+- [x] **Adapter Unit Tests (`RoomToRentRadar.Adapters.Tests`)**: **47/47 Passed**
+  - Kiểm tra controller bindings, authentication/claims mapping, exception handling.
+- [x] **Integration Tests (`RoomToRentRadar.IntegrationTests`)**: **18/18 Passed**
+  - `RoomDetailsIntegrationTests`: Kiểm tra toàn diện luồng API thực tế qua `WebApplicationFactory` cho cả khách nặc danh, sinh viên chưa xác thực, và sinh viên đã xác thực.
+  - `CosmosRoomRepositoryTests`: Kiểm chứng trực tiếp với **Azure Cosmos DB Emulator** (Thêm phòng, đọc theo partition key, và truy vấn lọc phòng tương tự theo cả giá và diện tích).
 
 ---
 
 ## 🔗 Related Tickets
-- Closes: **#T04.1**
-- Implements: **US04 - Search API with filters**
+- Closes: **#T02.1**
+- Implements: **US02 - Room Detail API (Description, Amenities, Rules)**

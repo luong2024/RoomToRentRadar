@@ -12,6 +12,8 @@ public sealed class CosmosDbOptions
 
     public string DatabaseName { get; set; } = "RoomToRentRadarDb";
 
+    public string ContainerName { get; set; } = "Rooms";
+
     public string UsersContainerName { get; set; } = "Users";
 
     public string RefreshTokensContainerName { get; set; } = "RefreshTokens";

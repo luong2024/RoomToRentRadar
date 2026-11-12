@@ -115,7 +115,8 @@ public sealed class CosmosDbContext : ICosmosDbContext
 
         var database = databaseResponse.Database;
 
-        await database.CreateContainerIfNotExistsAsync("Rooms", "/id");
+        var roomsContainerName = string.IsNullOrWhiteSpace(_options.ContainerName) ? "Rooms" : _options.ContainerName;
+        await database.CreateContainerIfNotExistsAsync(roomsContainerName, PartitionKeyPath, cancellationToken: cancellationToken);
 
         var usersContainerProperties = new ContainerProperties(_options.UsersContainerName, PartitionKeyPath);
 
