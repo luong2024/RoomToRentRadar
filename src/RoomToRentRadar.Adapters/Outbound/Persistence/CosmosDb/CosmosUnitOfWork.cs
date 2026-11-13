@@ -484,6 +484,7 @@ public sealed class CosmosUnitOfWork : IUnitOfWork
             PasswordHash = user.PasswordHash,
             Role = user.Role.ToRoleName(),
             IsActive = user.IsActive,
+            IsVerified = user.IsVerified,
             SecurityStamp = user.SecurityStamp,
             CreatedAt = user.CreatedAt,
             UpdatedAt = user.UpdatedAt,

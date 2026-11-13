@@ -48,6 +48,7 @@ public sealed class JwtTokenService : ITokenService
             new(ClaimTypes.Role, roleName),
             new(AuthClaimTypes.Role, roleName),
             new(AuthClaimTypes.SecurityStamp, user.SecurityStamp),
+            new("IsVerified", user.IsVerified ? "true" : "false"),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N")),
             new(
                 JwtRegisteredClaimNames.Iat,

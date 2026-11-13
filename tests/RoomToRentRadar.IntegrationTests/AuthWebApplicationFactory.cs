@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Context;
+using RoomToRentRadar.Adapters.Outbound.Persistence.InMemory;
 using RoomToRentRadar.Application.Ports.Outbound;
 using RoomToRentRadar.IntegrationTests.TestControllers;
 
@@ -20,6 +21,8 @@ public sealed class AuthWebApplicationFactory : WebApplicationFactory<Program>
     public StubGoogleIdentityVerifier GoogleVerifier { get; } = new();
 
     public CosmosDbContext CosmosDb { get; } = CosmosDbContext.CreateInMemory();
+
+    public InMemoryRoomRepository RoomRepository { get; } = new();
 
     public AuthWebApplicationFactory(int authPermitLimit = 100)
     {
@@ -50,6 +53,11 @@ public sealed class AuthWebApplicationFactory : WebApplicationFactory<Program>
         {
             services.RemoveAll<ICosmosDbContext>();
             services.AddSingleton<ICosmosDbContext>(CosmosDb);
+
+            services.RemoveAll<InMemoryRoomRepository>();
+            services.AddSingleton(RoomRepository);
+            services.RemoveAll<IRoomRepository>();
+            services.AddSingleton<IRoomRepository>(RoomRepository);
 
             services.RemoveAll<IGoogleIdentityVerifier>();
             services.AddSingleton<IGoogleIdentityVerifier>(GoogleVerifier);
