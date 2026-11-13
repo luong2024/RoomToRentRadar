@@ -66,7 +66,7 @@ public sealed class AuthExceptionHandlingMiddleware
             case DomainValidationException:
                 statusCode = StatusCodes.Status400BadRequest;
                 title = "Validation Error";
-                errorCode = "VALIDATION_ERROR";
+                errorCode = "VALIDATION_FAILED";
                 return true;
 
             case InvalidCredentialsException:
@@ -112,10 +112,15 @@ public sealed class AuthExceptionHandlingMiddleware
                 return true;
 
             case ConcurrencyConflictException:
-            case InvalidStateTransitionException:
                 statusCode = StatusCodes.Status409Conflict;
                 title = "Conflict";
                 errorCode = "CONCURRENCY_CONFLICT";
+                return true;
+
+            case InvalidStateTransitionException:
+                statusCode = StatusCodes.Status409Conflict;
+                title = "Conflict";
+                errorCode = "INVALID_STATE_TRANSITION";
                 return true;
 
             default:

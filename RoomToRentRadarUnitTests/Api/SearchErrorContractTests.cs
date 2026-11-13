@@ -49,6 +49,40 @@ public class SearchErrorContractTests
     }
 
     [Test]
+    public void Middleware_MapsDomainValidationWithoutCodeToValidationFailed()
+    {
+        var mapped = AuthExceptionHandlingMiddleware.TryMapException(
+            new DomainValidationException("missing"),
+            out var statusCode,
+            out _,
+            out var errorCode);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(mapped, Is.True);
+            Assert.That(statusCode, Is.EqualTo(400));
+            Assert.That(errorCode, Is.EqualTo("VALIDATION_FAILED"), "system-architecture §7.2");
+        });
+    }
+
+    [Test]
+    public void Middleware_MapsInvalidStateTransitionToInvalidStateTransitionCode()
+    {
+        var mapped = AuthExceptionHandlingMiddleware.TryMapException(
+            new InvalidStateTransitionException("Cannot Approve: listing is 'Rejected'."),
+            out var statusCode,
+            out _,
+            out var errorCode);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(mapped, Is.True);
+            Assert.That(statusCode, Is.EqualTo(409));
+            Assert.That(errorCode, Is.EqualTo("INVALID_STATE_TRANSITION"), "system-architecture §7.2");
+        });
+    }
+
+    [Test]
     public void Middleware_MapsInvalidStateTransitionTo409()
     {
         var mapped = AuthExceptionHandlingMiddleware.TryMapException(

@@ -116,6 +116,26 @@ public class RoomsEndpointIntegrationTests
         });
     }
 
+    [TestCase("/api/rooms?pageNumber=abc")]
+    [TestCase("/api/rooms?minRentVnd=1.5")]
+    [TestCase("/api/rooms?roomTypes=Bogus")]
+    public async Task GetRooms_ModelBindingFailure_ReturnsValidationFailedProblemDetails(string url)
+    {
+        var response = await _client.GetAsync(url);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest), url);
+
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
+            Assert.That(body.RootElement.GetProperty("errorCode").GetString(), Is.EqualTo("VALIDATION_FAILED"),
+                "system-architecture §7.2: lỗi model-binding dùng cùng errorCode với domain validation");
+            Assert.That(body.RootElement.TryGetProperty("errors", out var errors), Is.True, "ADR-012: phải có errors{{}}");
+            Assert.That(errors.ValueKind, Is.EqualTo(JsonValueKind.Object));
+        });
+    }
+
     [Test]
     public async Task GetRooms_UnknownSort_ReturnsInvalidSortOptionErrorCode()
     {
