@@ -1,56 +1,48 @@
-using Microsoft.Maui.Storage;
-
 namespace RoomToRentRadar.DeviceAdapters;
 
 public static class EnvLoader
 {
+    private static readonly HashSet<string> AllowedKeys = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_REDIRECT_URI",
+        "API_BASE_URL"
+    };
+
     public static void Load()
     {
         try
         {
-            // 1. Try file system on host (Windows / Desktop debug)
+            // 1. Try local client.env or .env in current directory only (never traverse parent folders)
+            if (File.Exists("client.env"))
+            {
+                ParseLines(File.ReadAllLines("client.env"));
+                return;
+            }
+
             if (File.Exists(".env"))
             {
                 ParseLines(File.ReadAllLines(".env"));
                 return;
             }
 
-            if (File.Exists("../.env"))
+            // 2. Try packaged asset client.env
+            try
             {
-                ParseLines(File.ReadAllLines("../.env"));
-                return;
-            }
-
-            var dir = new DirectoryInfo(AppContext.BaseDirectory);
-            for (var i = 0; i < 6 && dir != null; i++, dir = dir.Parent)
-            {
-                var candidate = Path.Combine(dir.FullName, ".env");
-                if (File.Exists(candidate))
-                {
-                    ParseLines(File.ReadAllLines(candidate));
-                    return;
-                }
-            }
-
-            // 2. Try bundled app package asset (Android / iOS)
-            // Only load client-specific configuration asset (client.env)
-            string? assetName = null;
-            if (FileSystem.AppPackageFileExistsAsync("client.env").GetAwaiter().GetResult())
-            {
-                assetName = "client.env";
-            }
-
-            if (assetName != null)
-            {
-                using var stream = FileSystem.OpenAppPackageFileAsync(assetName).GetAwaiter().GetResult();
+                using var stream = FileSystem.OpenAppPackageFileAsync("client.env")
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
                 using var reader = new StreamReader(stream);
                 var content = reader.ReadToEnd();
                 ParseLines(content.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries));
             }
+            catch (FileNotFoundException)
+            {
+                // Optional client.env asset
+            }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[EnvLoader] Error loading env: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[EnvLoader] Error loading client env: {ex.Message}");
         }
     }
 
@@ -73,20 +65,9 @@ public static class EnvLoader
             var key = trimmed[..separatorIndex].Trim();
             var value = trimmed[(separatorIndex + 1)..].Trim().Trim('"', '\'');
 
-            if (!string.IsNullOrEmpty(key))
+            if (!string.IsNullOrEmpty(key) && AllowedKeys.Contains(key))
             {
                 Environment.SetEnvironmentVariable(key, value);
-                Preferences.Default.Set(key, value);
-
-                // Support normalized keys
-                if (key.Equals("GOOGLE_CLIENT_ID", StringComparison.OrdinalIgnoreCase))
-                {
-                    Preferences.Default.Set("GoogleClientId", value);
-                }
-                else if (key.Equals("GOOGLE_REDIRECT_URI", StringComparison.OrdinalIgnoreCase))
-                {
-                    Preferences.Default.Set("GoogleRedirectUri", value);
-                }
             }
         }
     }

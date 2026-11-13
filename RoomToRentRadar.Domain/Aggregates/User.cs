@@ -179,7 +179,8 @@ public sealed class User
         string googleSubjectId,
         UserRole role,
         string? phoneNumber,
-        DateTime utcNow)
+        DateTime utcNow,
+        string? passwordHash = null)
     {
         if (!Enum.IsDefined(typeof(UserRole), role))
         {
@@ -216,7 +217,7 @@ public sealed class User
                 id: Guid.NewGuid().ToString("N"),
                 email: emailAddress,
                 fullName: fullName.Trim(),
-                passwordHash: null,
+                passwordHash: passwordHash,
                 role: UserRole.Student,
                 authProvider: AuthProvider.Google,
                 ssoSubjectId: googleSubjectId.Trim(),
@@ -236,7 +237,7 @@ public sealed class User
                 id: Guid.NewGuid().ToString("N"),
                 email: emailAddress,
                 fullName: fullName.Trim(),
-                passwordHash: null,
+                passwordHash: passwordHash,
                 role: UserRole.Landlord,
                 authProvider: AuthProvider.Google,
                 ssoSubjectId: googleSubjectId.Trim(),
@@ -349,7 +350,7 @@ public sealed class User
         UpdatedAtUtc = utcNow;
     }
 
-    public void LinkGoogle(string googleSubjectId, string? phoneNumber, DateTime utcNow)
+    public void LinkGoogle(string googleSubjectId, string? phoneNumber, DateTime utcNow, string? newPasswordHash = null)
     {
         if (Role != UserRole.Student && Role != UserRole.Landlord)
         {
@@ -369,11 +370,27 @@ public sealed class User
         SsoSubjectId = googleSubjectId.Trim();
         AuthProvider = AuthProvider.Google;
 
+        if (!string.IsNullOrWhiteSpace(newPasswordHash))
+        {
+            PasswordHash = newPasswordHash;
+        }
+
         if (Role == UserRole.Landlord && string.IsNullOrWhiteSpace(PhoneNumber) && !string.IsNullOrWhiteSpace(phoneNumber))
         {
             PhoneNumber = NormalizeAndValidatePhone(phoneNumber, required: true);
         }
 
+        UpdatedAtUtc = utcNow;
+    }
+
+    public void SetPassword(string passwordHash, DateTime utcNow)
+    {
+        if (string.IsNullOrWhiteSpace(passwordHash))
+        {
+            throw new DomainValidationException("Password hash is required.");
+        }
+
+        PasswordHash = passwordHash;
         UpdatedAtUtc = utcNow;
     }
 

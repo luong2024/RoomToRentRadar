@@ -12,31 +12,34 @@ using RoomToRentRadar.Datastore.Sqlite.Configurations;
 using RoomToRentRadar.Infrastructure;
 using RoomToRentRadar.Infrastructure.Adapters.Security;
 
-// Load local .env file if exists (never committed to git)
-var envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
-if (!File.Exists(envPath))
-{
-    var parentEnv = Path.Combine(Directory.GetCurrentDirectory(), "..", ".env");
-    if (File.Exists(parentEnv)) envPath = parentEnv;
-}
+var builder = WebApplication.CreateBuilder(args);
 
-if (File.Exists(envPath))
+// Load local .env file only in Development (never committed to git)
+if (builder.Environment.IsDevelopment())
 {
-    foreach (var line in File.ReadAllLines(envPath))
+    var envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
+    if (!File.Exists(envPath))
     {
-        var trimmed = line.Trim();
-        if (string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith('#')) continue;
-        var separatorIdx = trimmed.IndexOf('=');
-        if (separatorIdx > 0)
+        var parentEnv = Path.Combine(Directory.GetCurrentDirectory(), "..", ".env");
+        if (File.Exists(parentEnv)) envPath = parentEnv;
+    }
+
+    if (File.Exists(envPath))
+    {
+        foreach (var line in File.ReadAllLines(envPath))
         {
-            var k = trimmed[..separatorIdx].Trim();
-            var v = trimmed[(separatorIdx + 1)..].Trim().Trim('"', '\'');
-            Environment.SetEnvironmentVariable(k, v);
+            var trimmed = line.Trim();
+            if (string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith('#')) continue;
+            var separatorIdx = trimmed.IndexOf('=');
+            if (separatorIdx > 0)
+            {
+                var k = trimmed[..separatorIdx].Trim();
+                var v = trimmed[(separatorIdx + 1)..].Trim().Trim('"', '\'');
+                Environment.SetEnvironmentVariable(k, v);
+            }
         }
     }
 }
-
-var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -79,6 +82,11 @@ if (useMockSso && !builder.Environment.IsDevelopment())
 var googleClientId = builder.Configuration["Google:ClientId"]
     ?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID")
     ?? Environment.GetEnvironmentVariable("Google__ClientId");
+
+if (!builder.Environment.IsDevelopment() && string.IsNullOrWhiteSpace(googleClientId))
+{
+    throw new InvalidOperationException("CRITICAL: GOOGLE_CLIENT_ID must be configured in Production/Staging environments.");
+}
 
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructure(jwtSettings, useMockSsoVerifier: useMockSso, googleClientId: googleClientId);

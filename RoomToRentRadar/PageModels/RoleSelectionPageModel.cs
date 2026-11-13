@@ -110,20 +110,74 @@ public partial class RoleSelectionPageModel : ObservableObject
                 return;
             }
 
-            var request = new GoogleLoginRequest(
-                IdToken: token,
-                Role: SelectedRole,
-                PhoneNumber: phoneNumber,
-                DeviceInfo: DeviceInfo.Current.Model);
+            string? password = null;
+            string? currentPassword = null;
 
-            var response = await _authGateway.LoginWithGoogleAsync(request);
-
-            if (response != null && !string.IsNullOrEmpty(response.AccessToken))
+            while (true)
             {
-                var saved = await _sessionStore.SaveSessionAsync(response);
-                if (saved && Shell.Current != null)
+                var request = new GoogleLoginRequest(
+                    IdToken: token,
+                    Role: SelectedRole,
+                    PhoneNumber: phoneNumber,
+                    DeviceInfo: DeviceInfo.Current.Model,
+                    Password: password,
+                    CurrentPassword: currentPassword);
+
+                try
                 {
-                    await Shell.Current.GoToAsync("//main");
+                    var response = await _authGateway.LoginWithGoogleAsync(request);
+
+                    if (response != null && !string.IsNullOrEmpty(response.AccessToken))
+                    {
+                        var saved = await _sessionStore.SaveSessionAsync(response);
+                        if (saved && Shell.Current != null)
+                        {
+                            await Shell.Current.GoToAsync("//main");
+                        }
+                    }
+                    return;
+                }
+                catch (ApiException apiEx) when (apiEx.ErrorCode == "AUTH_PHONE_REQUIRED" && Shell.Current != null)
+                {
+                    var phoneInput = await Shell.Current.DisplayPromptAsync(
+                        AppResources.PromptLandlordPhoneTitle,
+                        AppResources.PromptLandlordPhoneMessage,
+                        accept: AppResources.Confirm,
+                        cancel: AppResources.Cancel,
+                        placeholder: "0912345678",
+                        maxLength: 12,
+                        keyboard: Keyboard.Telephone);
+
+                    if (string.IsNullOrWhiteSpace(phoneInput)) return;
+                    phoneNumber = phoneInput.Trim();
+                }
+                catch (ApiException apiEx) when (apiEx.ErrorCode == "AUTH_PASSWORD_REQUIRED" && Shell.Current != null)
+                {
+                    var passInput = await Shell.Current.DisplayPromptAsync(
+                        AppResources.PromptCreatePasswordTitle,
+                        AppResources.PromptCreatePasswordMessage,
+                        accept: AppResources.Confirm,
+                        cancel: AppResources.Cancel,
+                        placeholder: "••••••••",
+                        maxLength: 64,
+                        keyboard: Keyboard.Text);
+
+                    if (string.IsNullOrWhiteSpace(passInput)) return;
+                    password = passInput.Trim();
+                }
+                catch (ApiException apiEx) when (apiEx.ErrorCode == "AUTH_CURRENT_PASSWORD_REQUIRED" && Shell.Current != null)
+                {
+                    var curPassInput = await Shell.Current.DisplayPromptAsync(
+                        AppResources.PromptCurrentPasswordTitle,
+                        AppResources.PromptCurrentPasswordMessage,
+                        accept: AppResources.Confirm,
+                        cancel: AppResources.Cancel,
+                        placeholder: "••••••••",
+                        maxLength: 64,
+                        keyboard: Keyboard.Text);
+
+                    if (string.IsNullOrWhiteSpace(curPassInput)) return;
+                    currentPassword = curPassInput.Trim();
                 }
             }
         }
@@ -131,14 +185,15 @@ public partial class RoleSelectionPageModel : ObservableObject
         {
             if (Shell.Current != null)
             {
-                await Shell.Current.DisplayAlertAsync(AppResources.GoogleSignInErrorTitle, apiEx.Message, AppResources.Ok);
+                var message = !string.IsNullOrWhiteSpace(apiEx.Message) ? apiEx.Message : AppResources.GoogleAuthFailed;
+                await Shell.Current.DisplayAlertAsync(AppResources.GoogleSignInErrorTitle, message, AppResources.Ok);
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             if (Shell.Current != null)
             {
-                await Shell.Current.DisplayAlertAsync(AppResources.SignInFailedTitle, ex.Message, AppResources.Ok);
+                await Shell.Current.DisplayAlertAsync(AppResources.SignInFailedTitle, AppResources.GoogleAuthFailed, AppResources.Ok);
             }
         }
         finally

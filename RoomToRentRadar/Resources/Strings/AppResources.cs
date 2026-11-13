@@ -33,5 +33,12 @@ public static class AppResources
     public static string ContinueWithGoogleStudent => GetString(nameof(ContinueWithGoogleStudent));
     public static string ContinueWithGoogleLandlord => GetString(nameof(ContinueWithGoogleLandlord));
     public static string OrSignInWithEmail => GetString(nameof(OrSignInWithEmail));
+    public static string PromptCreatePasswordTitle => GetString(nameof(PromptCreatePasswordTitle));
+    public static string PromptCreatePasswordMessage => GetString(nameof(PromptCreatePasswordMessage));
+    public static string PromptCurrentPasswordTitle => GetString(nameof(PromptCurrentPasswordTitle));
+    public static string PromptCurrentPasswordMessage => GetString(nameof(PromptCurrentPasswordMessage));
+    public static string PasswordRequiredTitle => GetString(nameof(PasswordRequiredTitle));
+    public static string PasswordValidationRule => GetString(nameof(PasswordValidationRule));
+    public static string GoogleClientIdMissing => GetString(nameof(GoogleClientIdMissing));
 }
 

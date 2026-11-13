@@ -93,6 +93,7 @@ public class MockGoogleAuthVerifierAdapterTests
             [
                 new Claim("sub", "google-12345"),
                 new Claim("email", "student@ictu.edu.vn"),
+                new Claim("email_verified", "true"),
                 new Claim("name", "Student Google")
             ]),
             Expires = DateTime.UtcNow.AddHours(1),
@@ -203,12 +204,11 @@ public class MockGoogleAuthVerifierAdapterTests
         var verifier = new GoogleAuthVerifierAdapter(validationParams);
         var ex = Assert.ThrowsAsync<InvalidTokenException>(async () =>
             await verifier.VerifyIdTokenAsync(tamperedJwt));
-        await Task.CompletedTask;
         Assert.That(ex, Is.Not.Null);
     }
 
     [Test]
-    public async Task VerifyIdTokenAsync_WithMismatchedAudience_ThrowsInvalidTokenException()
+    public void VerifyIdTokenAsync_WithMismatchedAudience_ThrowsInvalidTokenException()
     {
         var testKeyBytes = Encoding.UTF8.GetBytes("a-very-secret-test-key-of-at-least-32-bytes!");
         var securityKey = new SymmetricSecurityKey(testKeyBytes);
@@ -246,7 +246,102 @@ public class MockGoogleAuthVerifierAdapterTests
         var verifier = new GoogleAuthVerifierAdapter(validationParams);
         var ex = Assert.ThrowsAsync<InvalidTokenException>(async () =>
             await verifier.VerifyIdTokenAsync(jwt));
-        await Task.CompletedTask;
+        Assert.That(ex, Is.Not.Null);
+    }
+
+    [Test]
+    public void VerifyIdTokenAsync_MissingEmailVerifiedClaim_ThrowsInvalidTokenException()
+    {
+        var testKeyBytes = Encoding.UTF8.GetBytes("a-very-secret-test-key-of-at-least-32-bytes!");
+        var securityKey = new SymmetricSecurityKey(testKeyBytes);
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var descriptor = new SecurityTokenDescriptor
+        {
+            Issuer = "https://accounts.google.com",
+            Audience = "roomtorentradar-client-id",
+            Subject = new ClaimsIdentity(
+            [
+                new Claim("sub", "google-12345"),
+                new Claim("email", "student@ictu.edu.vn")
+                // email_verified omitted
+            ]),
+            Expires = DateTime.UtcNow.AddHours(1),
+            SigningCredentials = credentials
+        };
+
+        var jwt = tokenHandler.CreateEncodedJwt(descriptor);
+
+        var validationParams = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = "https://accounts.google.com",
+            ValidateAudience = true,
+            ValidAudience = "roomtorentradar-client-id",
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = securityKey,
+            ClockSkew = TimeSpan.Zero
+        };
+
+        var verifier = new GoogleAuthVerifierAdapter(validationParams);
+        var ex = Assert.ThrowsAsync<InvalidTokenException>(async () =>
+            await verifier.VerifyIdTokenAsync(jwt));
+        Assert.That(ex!.Message, Does.Contain("email is not verified"));
+    }
+
+    [Test]
+    public void VerifyIdTokenAsync_FalseEmailVerifiedClaim_ThrowsInvalidTokenException()
+    {
+        var testKeyBytes = Encoding.UTF8.GetBytes("a-very-secret-test-key-of-at-least-32-bytes!");
+        var securityKey = new SymmetricSecurityKey(testKeyBytes);
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var descriptor = new SecurityTokenDescriptor
+        {
+            Issuer = "https://accounts.google.com",
+            Audience = "roomtorentradar-client-id",
+            Subject = new ClaimsIdentity(
+            [
+                new Claim("sub", "google-12345"),
+                new Claim("email", "student@ictu.edu.vn"),
+                new Claim("email_verified", "false")
+            ]),
+            Expires = DateTime.UtcNow.AddHours(1),
+            SigningCredentials = credentials
+        };
+
+        var jwt = tokenHandler.CreateEncodedJwt(descriptor);
+
+        var validationParams = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = "https://accounts.google.com",
+            ValidateAudience = true,
+            ValidAudience = "roomtorentradar-client-id",
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = securityKey,
+            ClockSkew = TimeSpan.Zero
+        };
+
+        var verifier = new GoogleAuthVerifierAdapter(validationParams);
+        var ex = Assert.ThrowsAsync<InvalidTokenException>(async () =>
+            await verifier.VerifyIdTokenAsync(jwt));
+        Assert.That(ex!.Message, Does.Contain("email is not verified"));
+    }
+
+    [Test]
+    public void IctuSsoVerifierAdapter_ForgedSignature_ThrowsInvalidTokenException()
+    {
+        var forgedToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiZW1haWwiOiJmb3JnZWRAaWN0dS5lZHUudm4iLCJleHAiOjE5OTk5OTk5OTksImlzcyI6Imh0dHBzOi8vbG9naW4ubWljcm9zb2Z0b25saW5lLmNvbS9jb21tb24vdjIuMCJ9.notasignature";
+
+        var adapter = new IctuSsoVerifierAdapter();
+        var ex = Assert.ThrowsAsync<InvalidTokenException>(async () =>
+            await adapter.VerifyIdTokenAsync(forgedToken));
+
         Assert.That(ex, Is.Not.Null);
     }
 

@@ -1338,6 +1338,8 @@ components:
         role: { $ref: '#/components/schemas/PublicRole' }
         phoneNumber: { type: [string, 'null'] }
         deviceInfo: { type: [string, 'null'] }
+        password: { type: [string, 'null'], description: 'Required for initial Google registration to enable dual login' }
+        currentPassword: { type: [string, 'null'], description: 'Required when linking an existing local account to Google' }
     RefreshTokenRequest:
       type: object
       required: [refreshToken]

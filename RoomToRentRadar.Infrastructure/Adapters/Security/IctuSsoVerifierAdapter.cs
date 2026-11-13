@@ -19,13 +19,17 @@ public sealed class IctuSsoVerifierAdapter : IIctuSsoVerifierPort
 
     private readonly JwtSecurityTokenHandler _tokenHandler = new();
     private readonly TokenValidationParameters? _customValidationParameters;
+    private readonly GoogleAuthVerifierAdapter _googleVerifier;
 
-    public IctuSsoVerifierAdapter(TokenValidationParameters? customValidationParameters = null)
+    public IctuSsoVerifierAdapter(
+        TokenValidationParameters? customValidationParameters = null,
+        GoogleAuthVerifierAdapter? googleVerifier = null)
     {
         _customValidationParameters = customValidationParameters;
+        _googleVerifier = googleVerifier ?? new GoogleAuthVerifierAdapter(customValidationParameters);
     }
 
-    public Task<IctuSsoUserPayload> VerifyIdTokenAsync(string idToken, CancellationToken ct = default)
+    public async Task<IctuSsoUserPayload> VerifyIdTokenAsync(string idToken, CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
 
@@ -45,90 +49,78 @@ public sealed class IctuSsoVerifierAdapter : IIctuSsoVerifierPort
             throw new InvalidTokenException("OIDC ID token is malformed.");
         }
 
-        ClaimsPrincipal principal;
         if (_customValidationParameters != null)
         {
+            ClaimsPrincipal principal;
             try
             {
                 principal = _tokenHandler.ValidateToken(idToken, _customValidationParameters, out _);
             }
-            catch (SecurityTokenException ex)
+            catch (SecurityTokenException)
             {
-                throw new InvalidTokenException($"OIDC token signature or lifetime validation failed: {ex.Message}");
+                throw new InvalidTokenException("OIDC token signature or lifetime validation failed.");
             }
+
+            var emailClaim = principal.FindFirst(ClaimTypes.Email)?.Value ??
+                             principal.FindFirst("email")?.Value;
+
+            if (string.IsNullOrWhiteSpace(emailClaim))
+            {
+                throw new InvalidTokenException("OIDC ID token does not contain an email claim.");
+            }
+
+            var email = EmailAddress.Create(emailClaim);
+            if (!email.IsIctuStudentEmail())
+            {
+                throw new DomainValidationException($"ICTU Student SSO requires an '{EmailAddress.IctuDomain}' email address.");
+            }
+
+            var subClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value ??
+                           principal.FindFirst("sub")?.Value;
+
+            if (string.IsNullOrWhiteSpace(subClaim))
+            {
+                throw new InvalidTokenException("OIDC ID token does not contain a subject ('sub') claim.");
+            }
+
+            var nameClaim = principal.FindFirst(ClaimTypes.Name)?.Value ??
+                            principal.FindFirst("name")?.Value;
+
+            var fullName = !string.IsNullOrWhiteSpace(nameClaim)
+                ? nameClaim.Trim()
+                : email.Value.Split('@')[0].ToUpperInvariant();
+
+            var studentCodeClaim = principal.FindFirst("student_code")?.Value;
+            var studentCode = !string.IsNullOrWhiteSpace(studentCodeClaim)
+                ? studentCodeClaim.Trim().ToUpperInvariant()
+                : email.Value.Split('@')[0].ToUpperInvariant();
+
+            return new IctuSsoUserPayload(
+                Email: email.Value,
+                FullName: fullName,
+                SubjectId: subClaim.Trim(),
+                StudentCode: studentCode);
         }
-        else
+
+        if (!string.IsNullOrWhiteSpace(_googleVerifier.Audience))
         {
-            // Cryptographic signature check: A valid cryptographic signature is strictly required.
-            // Fake signatures (e.g. "signature") or unsigned tokens are strictly rejected.
-            var jwt = _tokenHandler.ReadJwtToken(idToken);
-            if (string.IsNullOrWhiteSpace(jwt.RawSignature) || string.Equals(jwt.RawSignature, "signature", StringComparison.OrdinalIgnoreCase))
+            var googlePayload = await _googleVerifier.VerifyIdTokenAsync(idToken, ct);
+            var ictuEmail = EmailAddress.Create(googlePayload.Email);
+            if (!ictuEmail.IsIctuStudentEmail())
             {
-                throw new InvalidTokenException("Token signature verification failed: invalid or fake cryptographic signature.");
+                throw new DomainValidationException($"ICTU Student SSO requires an '{EmailAddress.IctuDomain}' email address.");
             }
 
-            // Verify required claims exist and are valid
-            if (jwt.ValidTo == DateTime.MinValue || jwt.ValidTo <= DateTime.UtcNow)
-            {
-                throw new InvalidTokenException("OIDC ID token has expired or does not contain a valid 'exp' claim.");
-            }
+            var sCode = ictuEmail.Value.Split('@')[0].ToUpperInvariant();
 
-            if (string.IsNullOrWhiteSpace(jwt.Issuer))
-            {
-                throw new InvalidTokenException("OIDC ID token does not contain an issuer ('iss') claim.");
-            }
-
-            var isAllowedIssuer = AllowedIssuers.Contains(jwt.Issuer) ||
-                jwt.Issuer.StartsWith("https://login.microsoftonline.com/", StringComparison.OrdinalIgnoreCase);
-
-            if (!isAllowedIssuer)
-            {
-                throw new InvalidTokenException($"OIDC token issuer '{jwt.Issuer}' is not trusted for ICTU SSO.");
-            }
-
-            var identity = new ClaimsIdentity(jwt.Claims, "OIDC");
-            principal = new ClaimsPrincipal(identity);
+            return new IctuSsoUserPayload(
+                Email: ictuEmail.Value,
+                FullName: googlePayload.FullName,
+                SubjectId: googlePayload.SubjectId,
+                StudentCode: sCode);
         }
 
-        var emailClaim = principal.FindFirst(ClaimTypes.Email)?.Value ??
-                         principal.FindFirst("email")?.Value;
-
-        if (string.IsNullOrWhiteSpace(emailClaim))
-        {
-            throw new InvalidTokenException("OIDC ID token does not contain an email claim.");
-        }
-
-        var email = EmailAddress.Create(emailClaim);
-        if (!email.IsIctuStudentEmail())
-        {
-            throw new DomainValidationException($"ICTU Student SSO requires an '{EmailAddress.IctuDomain}' email address.");
-        }
-
-        var subClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value ??
-                       principal.FindFirst("sub")?.Value;
-
-        if (string.IsNullOrWhiteSpace(subClaim))
-        {
-            throw new InvalidTokenException("OIDC ID token does not contain a subject ('sub') claim.");
-        }
-
-        var nameClaim = principal.FindFirst(ClaimTypes.Name)?.Value ??
-                        principal.FindFirst("name")?.Value;
-
-        var fullName = !string.IsNullOrWhiteSpace(nameClaim)
-            ? nameClaim.Trim()
-            : email.Value.Split('@')[0].ToUpperInvariant();
-
-        var studentCodeClaim = principal.FindFirst("student_code")?.Value;
-        var studentCode = !string.IsNullOrWhiteSpace(studentCodeClaim)
-            ? studentCodeClaim.Trim().ToUpperInvariant()
-            : email.Value.Split('@')[0].ToUpperInvariant();
-
-        return Task.FromResult(new IctuSsoUserPayload(
-            Email: email.Value,
-            FullName: fullName,
-            SubjectId: subClaim.Trim(),
-            StudentCode: studentCode));
+        // When no Google audience is configured, unverified/fake signatures are strictly rejected
+        throw new InvalidTokenException("Token signature verification failed: unverified or forged cryptographic signature.");
     }
 }
-

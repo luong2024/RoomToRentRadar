@@ -4,6 +4,8 @@ public record GoogleLoginRequest(
     string IdToken,
     string Role,
     string? PhoneNumber = null,
-    string? DeviceInfo = null
+    string? DeviceInfo = null,
+    string? Password = null,
+    string? CurrentPassword = null
 );
 

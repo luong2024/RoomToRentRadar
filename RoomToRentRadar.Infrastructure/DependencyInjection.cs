@@ -21,11 +21,6 @@ public static class DependencyInjection
             services.AddSingleton<IJwtTokenServicePort, JwtTokenServiceAdapter>();
         }
 
-        if (!string.IsNullOrWhiteSpace(googleClientId))
-        {
-            Environment.SetEnvironmentVariable("GOOGLE_CLIENT_ID", googleClientId);
-        }
-
         services.AddSingleton<IPasswordHasherPort, Pbkdf2PasswordHasherAdapter>();
         services.AddSingleton<ISecurityAuditLoggerPort>(sp =>
             new SecurityAuditLoggerAdapter(scopeFactory: sp.GetService<IServiceScopeFactory>()));

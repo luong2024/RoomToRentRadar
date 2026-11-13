@@ -106,5 +106,26 @@
   <data name="OrSignInWithEmail" xml:space="preserve">
     <value>hoặc đăng nhập bằng Email</value>
   </data>
+  <data name="PromptCreatePasswordTitle" xml:space="preserve">
+    <value>Thiết lập mật khẩu tài khoản</value>
+  </data>
+  <data name="PromptCreatePasswordMessage" xml:space="preserve">
+    <value>Vui lòng tạo mật khẩu cho tài khoản để có thể đăng nhập bằng mật khẩu sau này (tối thiểu 8 ký tự, 1 chữ hoa, 1 chữ thường, 1 số):</value>
+  </data>
+  <data name="PromptCurrentPasswordTitle" xml:space="preserve">
+    <value>Xác nhận mật khẩu hiện tại</value>
+  </data>
+  <data name="PromptCurrentPasswordMessage" xml:space="preserve">
+    <value>Đã có tài khoản sử dụng email này. Vui lòng nhập mật khẩu hiện tại để xác nhận liên kết Google:</value>
+  </data>
+  <data name="PasswordRequiredTitle" xml:space="preserve">
+    <value>Yêu cầu mật khẩu</value>
+  </data>
+  <data name="PasswordValidationRule" xml:space="preserve">
+    <value>Mật khẩu phải dài tối thiểu 8 ký tự, bao gồm chữ hoa, chữ thường và chữ số.</value>
+  </data>
+  <data name="GoogleClientIdMissing" xml:space="preserve">
+    <value>Chưa cấu hình Google Client ID. Vui lòng kiểm tra cấu hình trong client.env.</value>
+  </data>
 </root>
 

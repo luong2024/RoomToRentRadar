@@ -177,10 +177,13 @@ Each UC: **Actor · Story/AC · Preconditions · Main flow · Alternatives (A) �
 - **E1:** wrong credentials `401` "Invalid email or password.". **E2:** locked `403` "Account locked until HH:mm".
 - **Rules:** BR-AUTH-05, -06.
 
-#### UC-22 Sign in with ICTU SSO
-- **Main:** *Sign in with ICTU email* → system browser (WebAuthenticator) → id_token → `loginWithIctuSso` → Student account provisioned/linked.
-- **E1:** non-`@ictu.edu.vn` → `400`/`401` "Only @ictu.edu.vn accounts are accepted".
-- **Rules:** BR-AUTH-04.
+#### UC-22 Sign in with Google / ICTU SSO
+- **Main:** *Tiếp tục với Google / ICTU SSO* → system browser (WebAuthenticator) → id_token → `loginWithGoogle` → Student or Landlord account provisioned/linked. On initial registration, sets account password. On linking existing local account, verifies current password.
+- **E1:** Student non-`@ictu.edu.vn` or missing `hd` → `400` "Student Google login requires an @ictu.edu.vn email address with verified hosted domain 'ictu.edu.vn'".
+- **E2:** Landlord missing phone → `400` `AUTH_PHONE_REQUIRED` → prompt phone.
+- **E3:** Missing password on initial register → `400` `AUTH_PASSWORD_REQUIRED` → prompt password.
+- **E4:** Existing local account unconfirmed → `400` `AUTH_CURRENT_PASSWORD_REQUIRED` → prompt current password.
+- **Rules:** BR-AUTH-03, BR-AUTH-04.
 
 #### UC-23 Keep session / sign out
 - **Main:** HTTP handler refreshes on `401` once (single-flight) via `refreshToken`; *Sign out* → `revokeToken` + clear tokens, device registration removed (`unregisterDevice`).

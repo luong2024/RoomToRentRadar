@@ -16,17 +16,20 @@ public sealed class LoginWithGoogleUseCase : ILoginWithGoogleUseCase
     private readonly IUserRepository _userRepository;
     private readonly IGoogleAuthVerifierPort _googleVerifier;
     private readonly IJwtTokenServicePort _jwtTokenService;
+    private readonly IPasswordHasherPort _passwordHasher;
     private readonly ISecurityAuditLoggerPort _auditLogger;
 
     public LoginWithGoogleUseCase(
         IUserRepository userRepository,
         IGoogleAuthVerifierPort googleVerifier,
         IJwtTokenServicePort jwtTokenService,
+        IPasswordHasherPort passwordHasher,
         ISecurityAuditLoggerPort auditLogger)
     {
         _userRepository = userRepository;
         _googleVerifier = googleVerifier;
         _jwtTokenService = jwtTokenService;
+        _passwordHasher = passwordHasher;
         _auditLogger = auditLogger;
     }
 
@@ -48,6 +51,16 @@ public sealed class LoginWithGoogleUseCase : ILoginWithGoogleUseCase
         var payload = await _googleVerifier.VerifyIdTokenAsync(request.IdToken, ct);
         var email = EmailAddress.Create(payload.Email);
         var utcNow = DateTime.UtcNow;
+
+        // BR-AUTH-04: Student role domain and hd enforcement
+        if (role == UserRole.Student)
+        {
+            if (!email.IsIctuStudentEmail() || !string.Equals(payload.HostedDomain, "ictu.edu.vn", StringComparison.OrdinalIgnoreCase))
+            {
+                _auditLogger.LogLoginFailed(email.Value, "InvalidIctuHostedDomain");
+                throw new DomainValidationException($"Student Google login requires an '{EmailAddress.IctuDomain}' email address with verified hosted domain 'ictu.edu.vn'.");
+            }
+        }
 
         var existingUser = await _userRepository.GetByEmailAsync(email.Value, ct);
         User user;
@@ -77,7 +90,23 @@ public sealed class LoginWithGoogleUseCase : ILoginWithGoogleUseCase
                 string.IsNullOrWhiteSpace(existingUser.PhoneNumber) &&
                 string.IsNullOrWhiteSpace(request.PhoneNumber))
             {
-                throw new DomainValidationException("Phone number is required for Landlord registration.");
+                throw new PhoneNumberRequiredException();
+            }
+
+            // Anti Pre-Hijacking: if account already exists with a password and is not yet linked to Google,
+            // require current password confirmation on the first link
+            if (!string.IsNullOrWhiteSpace(existingUser.PasswordHash) && string.IsNullOrWhiteSpace(existingUser.SsoSubjectId))
+            {
+                if (string.IsNullOrWhiteSpace(request.CurrentPassword))
+                {
+                    throw new CurrentPasswordRequiredException("Current password is required to link this Google account.");
+                }
+
+                if (!_passwordHasher.VerifyPassword(request.CurrentPassword, existingUser.PasswordHash))
+                {
+                    _auditLogger.LogLoginFailed(email.Value, "InvalidCurrentPasswordForGoogleLink");
+                    throw new InvalidCredentialsException("Current password verification failed.");
+                }
             }
 
             existingUser.EnsureNotLockedOut(utcNow);
@@ -87,16 +116,19 @@ public sealed class LoginWithGoogleUseCase : ILoginWithGoogleUseCase
         }
         else
         {
-            if (role == UserRole.Student && !email.IsIctuStudentEmail())
-            {
-                _auditLogger.LogLoginFailed(email.Value, "NonIctuGoogleDomain");
-                throw new DomainValidationException($"Student Google login requires an '{EmailAddress.IctuDomain}' email address.");
-            }
-
             if (role == UserRole.Landlord && string.IsNullOrWhiteSpace(request.PhoneNumber))
             {
-                throw new DomainValidationException("Phone number is required for Landlord registration.");
+                throw new PhoneNumberRequiredException();
             }
+
+            // Dual login password creation on initial Google registration
+            if (string.IsNullOrWhiteSpace(request.Password))
+            {
+                throw new PasswordRequiredException("Password creation is required for initial Google registration.");
+            }
+
+            User.ValidatePlainPasswordComplexity(request.Password);
+            var passwordHash = _passwordHasher.HashPassword(request.Password);
 
             user = User.RegisterGoogle(
                 email: email.Value,
@@ -104,7 +136,8 @@ public sealed class LoginWithGoogleUseCase : ILoginWithGoogleUseCase
                 googleSubjectId: payload.SubjectId,
                 role: role,
                 phoneNumber: request.PhoneNumber,
-                utcNow: utcNow);
+                utcNow: utcNow,
+                passwordHash: passwordHash);
             isNewUser = true;
         }
 
@@ -142,4 +175,3 @@ public sealed class LoginWithGoogleUseCase : ILoginWithGoogleUseCase
             User: UserMapper.ToProfileDto(user));
     }
 }
-

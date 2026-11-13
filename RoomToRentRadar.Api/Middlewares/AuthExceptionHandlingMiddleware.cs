@@ -65,6 +65,24 @@ public sealed class AuthExceptionHandlingMiddleware
                 errorCode = "VALIDATION_ERROR";
                 return true;
 
+            case PhoneNumberRequiredException:
+                statusCode = StatusCodes.Status400BadRequest;
+                title = "Phone Number Required";
+                errorCode = "AUTH_PHONE_REQUIRED";
+                return true;
+
+            case PasswordRequiredException:
+                statusCode = StatusCodes.Status400BadRequest;
+                title = "Password Required";
+                errorCode = "AUTH_PASSWORD_REQUIRED";
+                return true;
+
+            case CurrentPasswordRequiredException:
+                statusCode = StatusCodes.Status400BadRequest;
+                title = "Current Password Required";
+                errorCode = "AUTH_CURRENT_PASSWORD_REQUIRED";
+                return true;
+
             case InvalidCredentialsException:
                 statusCode = StatusCodes.Status401Unauthorized;
                 title = "Authentication Failed";

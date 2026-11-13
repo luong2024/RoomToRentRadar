@@ -195,7 +195,7 @@ Clarifications: "shown before contact" = the House Rules section is placed above
 Clarifications: requires sign-in (anti-spam); one open report per user per listing (`BR-RPT-01..05`).
 
 ### US13 — Authentication & RBAC *(backend done on develop2)*
-- AC1: Users can sign up and sign in using email/password or ICTU student SSO.
+- AC1: Users can sign up and sign in using email/password or ICTU student SSO. *(Approved addition: Landlords can also register/sign in using Google OAuth with phone number prompt; dual sign-in supported via password creation).*
 - AC2: The system issues JWT access and refresh tokens and enforces role-based permissions (Student, Landlord, Admin).
 - AC3: Protected actions (publishing listings, viewing landlord phone numbers, saving favourites) require authentication.
 - AC4: Passwords are encrypted and invalid login attempts return clear error messages.

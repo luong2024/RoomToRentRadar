@@ -106,5 +106,26 @@
   <data name="OrSignInWithEmail" xml:space="preserve">
     <value>or sign in with Email</value>
   </data>
+  <data name="PromptCreatePasswordTitle" xml:space="preserve">
+    <value>Set Account Password</value>
+  </data>
+  <data name="PromptCreatePasswordMessage" xml:space="preserve">
+    <value>Please create a password for your account to enable password login later (at least 8 chars, 1 uppercase, 1 lowercase, 1 number):</value>
+  </data>
+  <data name="PromptCurrentPasswordTitle" xml:space="preserve">
+    <value>Confirm Current Password</value>
+  </data>
+  <data name="PromptCurrentPasswordMessage" xml:space="preserve">
+    <value>An account already exists with this email. Please enter your current password to link your Google account:</value>
+  </data>
+  <data name="PasswordRequiredTitle" xml:space="preserve">
+    <value>Password Required</value>
+  </data>
+  <data name="PasswordValidationRule" xml:space="preserve">
+    <value>Password must be at least 8 characters long with uppercase, lowercase, and numbers.</value>
+  </data>
+  <data name="GoogleClientIdMissing" xml:space="preserve">
+    <value>Google Client ID is not configured. Please check your client.env configuration.</value>
+  </data>
 </root>
 

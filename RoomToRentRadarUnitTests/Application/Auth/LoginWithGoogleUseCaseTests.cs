@@ -1,3 +1,4 @@
+using NSubstitute;
 using RoomToRentRadar.Application.UseCases.Auth;
 using RoomToRentRadar.Domain.Aggregates;
 using RoomToRentRadar.Domain.Enums;
@@ -15,6 +16,7 @@ public class LoginWithGoogleUseCaseTests
     private IUserRepository _userRepository = null!;
     private IGoogleAuthVerifierPort _googleVerifier = null!;
     private IJwtTokenServicePort _jwtTokenService = null!;
+    private IPasswordHasherPort _passwordHasher = null!;
     private ISecurityAuditLoggerPort _auditLogger = null!;
     private LoginWithGoogleUseCase _sut = null!;
 
@@ -24,6 +26,7 @@ public class LoginWithGoogleUseCaseTests
         _userRepository = Substitute.For<IUserRepository>();
         _googleVerifier = Substitute.For<IGoogleAuthVerifierPort>();
         _jwtTokenService = Substitute.For<IJwtTokenServicePort>();
+        _passwordHasher = Substitute.For<IPasswordHasherPort>();
         _auditLogger = Substitute.For<ISecurityAuditLoggerPort>();
 
         _jwtTokenService.RefreshTokenLifetime.Returns(TimeSpan.FromDays(7));
@@ -32,22 +35,31 @@ public class LoginWithGoogleUseCaseTests
         _jwtTokenService.GenerateAccessToken(Arg.Any<User>(), Arg.Any<DateTime>())
             .Returns(ci => new GeneratedAccessToken("google-jwt-access-token", "jti-google-1", ci.Arg<DateTime>().AddMinutes(30)));
 
-        _sut = new LoginWithGoogleUseCase(_userRepository, _googleVerifier, _jwtTokenService, _auditLogger);
+        _passwordHasher.HashPassword(Arg.Any<string>()).Returns(ci => "hashed-" + ci.Arg<string>());
+        _passwordHasher.VerifyPassword(Arg.Any<string>(), Arg.Any<string>()).Returns(ci =>
+            ci.ArgAt<string>(1) == "hashed-" + ci.ArgAt<string>(0) || ci.ArgAt<string>(1) == "hash");
+
+        _sut = new LoginWithGoogleUseCase(_userRepository, _googleVerifier, _jwtTokenService, _passwordHasher, _auditLogger);
     }
 
     [Test]
-    public async Task ExecuteAsync_ValidStudentToken_ProvisionsVerifiedStudentAndIssuesTokens()
+    public async Task ExecuteAsync_ValidStudentTokenWithPassword_ProvisionsVerifiedStudentAndIssuesTokens()
     {
         _googleVerifier.VerifyIdTokenAsync("valid-google-student-token", Arg.Any<CancellationToken>())
             .Returns(new GoogleUserPayload(
                 Email: "student.ictu@ictu.edu.vn",
                 FullName: "Sinh Vien Google",
-                SubjectId: "google-sub-student-1"));
+                SubjectId: "google-sub-student-1",
+                EmailVerified: true,
+                HostedDomain: "ictu.edu.vn"));
 
         _userRepository.GetByEmailAsync("student.ictu@ictu.edu.vn", Arg.Any<CancellationToken>())
             .Returns((User?)null);
 
-        var result = await _sut.ExecuteAsync(new GoogleLoginRequest("valid-google-student-token", "Student"));
+        var result = await _sut.ExecuteAsync(new GoogleLoginRequest(
+            IdToken: "valid-google-student-token",
+            Role: "Student",
+            Password: "Password123!"));
 
         Assert.Multiple(() =>
         {
@@ -62,37 +74,81 @@ public class LoginWithGoogleUseCaseTests
             Arg.Is<User>(u =>
                 u.Role == UserRole.Student &&
                 u.AuthProvider == AuthProvider.Google &&
-                u.IsVerified),
+                u.IsVerified &&
+                u.PasswordHash == "hashed-Password123!"),
             Arg.Any<CancellationToken>());
     }
 
     [Test]
-    public async Task ExecuteAsync_StudentWithNonIctuEmail_ThrowsValidationException()
+    public void ExecuteAsync_StudentInitialRegistrationWithoutPassword_ThrowsPasswordRequiredException()
     {
-        _googleVerifier.VerifyIdTokenAsync("valid-google-personal-token", Arg.Any<CancellationToken>())
+        _googleVerifier.VerifyIdTokenAsync("valid-google-student-token", Arg.Any<CancellationToken>())
             .Returns(new GoogleUserPayload(
-                Email: "student@gmail.com",
-                FullName: "Personal Student",
-                SubjectId: "google-sub-2"));
+                Email: "student.ictu@ictu.edu.vn",
+                FullName: "Sinh Vien Google",
+                SubjectId: "google-sub-student-1",
+                EmailVerified: true,
+                HostedDomain: "ictu.edu.vn"));
 
-        _userRepository.GetByEmailAsync("student@gmail.com", Arg.Any<CancellationToken>())
+        _userRepository.GetByEmailAsync("student.ictu@ictu.edu.vn", Arg.Any<CancellationToken>())
             .Returns((User?)null);
 
-        var ex = Assert.ThrowsAsync<DomainValidationException>(async () =>
-            await _sut.ExecuteAsync(new GoogleLoginRequest("valid-google-personal-token", "Student")));
-        await Task.CompletedTask;
+        var ex = Assert.ThrowsAsync<PasswordRequiredException>(async () =>
+            await _sut.ExecuteAsync(new GoogleLoginRequest("valid-google-student-token", "Student", Password: null)));
 
         Assert.That(ex, Is.Not.Null);
     }
 
     [Test]
-    public async Task ExecuteAsync_ValidLandlordTokenWithPhone_ProvisionsUnverifiedLandlord()
+    public void ExecuteAsync_StudentWithNonIctuEmail_ThrowsValidationException()
+    {
+        _googleVerifier.VerifyIdTokenAsync("valid-google-personal-token", Arg.Any<CancellationToken>())
+            .Returns(new GoogleUserPayload(
+                Email: "student@gmail.com",
+                FullName: "Personal Student",
+                SubjectId: "google-sub-2",
+                EmailVerified: true,
+                HostedDomain: null));
+
+        _userRepository.GetByEmailAsync("student@gmail.com", Arg.Any<CancellationToken>())
+            .Returns((User?)null);
+
+        var ex = Assert.ThrowsAsync<DomainValidationException>(async () =>
+            await _sut.ExecuteAsync(new GoogleLoginRequest("valid-google-personal-token", "Student", Password: "Password123!")));
+
+        Assert.That(ex, Is.Not.Null);
+    }
+
+    [Test]
+    public void ExecuteAsync_StudentWithIctuEmailButInvalidHostedDomain_ThrowsValidationException()
+    {
+        _googleVerifier.VerifyIdTokenAsync("valid-token-wrong-hd", Arg.Any<CancellationToken>())
+            .Returns(new GoogleUserPayload(
+                Email: "student@ictu.edu.vn",
+                FullName: "Student Fake Domain",
+                SubjectId: "google-sub-fake-hd",
+                EmailVerified: true,
+                HostedDomain: "otherdomain.com"));
+
+        _userRepository.GetByEmailAsync("student@ictu.edu.vn", Arg.Any<CancellationToken>())
+            .Returns((User?)null);
+
+        var ex = Assert.ThrowsAsync<DomainValidationException>(async () =>
+            await _sut.ExecuteAsync(new GoogleLoginRequest("valid-token-wrong-hd", "Student", Password: "Password123!")));
+
+        Assert.That(ex.Message, Does.Contain("verified hosted domain 'ictu.edu.vn'"));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_ValidLandlordTokenWithPhoneAndPassword_ProvisionsUnverifiedLandlord()
     {
         _googleVerifier.VerifyIdTokenAsync("valid-google-landlord-token", Arg.Any<CancellationToken>())
             .Returns(new GoogleUserPayload(
                 Email: "landlord@gmail.com",
                 FullName: "Chu Tro Google",
-                SubjectId: "google-sub-landlord-1"));
+                SubjectId: "google-sub-landlord-1",
+                EmailVerified: true,
+                HostedDomain: null));
 
         _userRepository.GetByEmailAsync("landlord@gmail.com", Arg.Any<CancellationToken>())
             .Returns((User?)null);
@@ -100,7 +156,8 @@ public class LoginWithGoogleUseCaseTests
         var result = await _sut.ExecuteAsync(new GoogleLoginRequest(
             IdToken: "valid-google-landlord-token",
             Role: "Landlord",
-            PhoneNumber: "0912345678"));
+            PhoneNumber: "0912345678",
+            Password: "Password123!"));
 
         Assert.Multiple(() =>
         {
@@ -116,40 +173,45 @@ public class LoginWithGoogleUseCaseTests
             Arg.Is<User>(u =>
                 u.Role == UserRole.Landlord &&
                 u.AuthProvider == AuthProvider.Google &&
-                !u.IsVerified),
+                !u.IsVerified &&
+                u.PasswordHash == "hashed-Password123!"),
             Arg.Any<CancellationToken>());
     }
 
     [Test]
-    public async Task ExecuteAsync_LandlordWithoutPhone_ThrowsValidationException()
+    public void ExecuteAsync_LandlordWithoutPhone_ThrowsPhoneNumberRequiredException()
     {
         _googleVerifier.VerifyIdTokenAsync("valid-google-landlord-token", Arg.Any<CancellationToken>())
             .Returns(new GoogleUserPayload(
                 Email: "landlord@gmail.com",
                 FullName: "Chu Tro Google",
-                SubjectId: "google-sub-landlord-1"));
+                SubjectId: "google-sub-landlord-1",
+                EmailVerified: true,
+                HostedDomain: null));
 
         _userRepository.GetByEmailAsync("landlord@gmail.com", Arg.Any<CancellationToken>())
             .Returns((User?)null);
 
-        var ex = Assert.ThrowsAsync<DomainValidationException>(async () =>
+        var ex = Assert.ThrowsAsync<PhoneNumberRequiredException>(async () =>
             await _sut.ExecuteAsync(new GoogleLoginRequest(
                 IdToken: "valid-google-landlord-token",
                 Role: "Landlord",
-                PhoneNumber: null)));
-        await Task.CompletedTask;
+                PhoneNumber: null,
+                Password: "Password123!")));
 
         Assert.That(ex, Is.Not.Null);
     }
 
     [Test]
-    public async Task ExecuteAsync_ExistingUser_LinksGoogleAndLogsIn()
+    public void ExecuteAsync_ExistingLocalUserWithoutCurrentPassword_ThrowsCurrentPasswordRequiredException()
     {
         _googleVerifier.VerifyIdTokenAsync("valid-google-token", Arg.Any<CancellationToken>())
             .Returns(new GoogleUserPayload(
                 Email: "existing@gmail.com",
                 FullName: "Existing Landlord",
-                SubjectId: "google-sub-existing"));
+                SubjectId: "google-sub-existing",
+                EmailVerified: true,
+                HostedDomain: null));
 
         var existingUser = User.RegisterLocal(
             email: "existing@gmail.com",
@@ -163,7 +225,69 @@ public class LoginWithGoogleUseCaseTests
         _userRepository.GetByEmailAsync("existing@gmail.com", Arg.Any<CancellationToken>())
             .Returns(existingUser);
 
-        var result = await _sut.ExecuteAsync(new GoogleLoginRequest("valid-google-token", "Landlord"));
+        var ex = Assert.ThrowsAsync<CurrentPasswordRequiredException>(async () =>
+            await _sut.ExecuteAsync(new GoogleLoginRequest("valid-google-token", "Landlord", CurrentPassword: null)));
+
+        Assert.That(ex, Is.Not.Null);
+    }
+
+    [Test]
+    public void ExecuteAsync_ExistingLocalUserWithWrongCurrentPassword_ThrowsInvalidCredentialsException()
+    {
+        _googleVerifier.VerifyIdTokenAsync("valid-google-token", Arg.Any<CancellationToken>())
+            .Returns(new GoogleUserPayload(
+                Email: "existing@gmail.com",
+                FullName: "Existing Landlord",
+                SubjectId: "google-sub-existing",
+                EmailVerified: true,
+                HostedDomain: null));
+
+        var existingUser = User.RegisterLocal(
+            email: "existing@gmail.com",
+            passwordHash: "hash",
+            fullName: "Existing Landlord",
+            role: UserRole.Landlord,
+            phoneNumber: "0987654321",
+            studentCode: null,
+            utcNow: DateTime.UtcNow.AddDays(-1));
+
+        _userRepository.GetByEmailAsync("existing@gmail.com", Arg.Any<CancellationToken>())
+            .Returns(existingUser);
+
+        _passwordHasher.VerifyPassword("wrong-pass", "hash").Returns(false);
+
+        var ex = Assert.ThrowsAsync<InvalidCredentialsException>(async () =>
+            await _sut.ExecuteAsync(new GoogleLoginRequest("valid-google-token", "Landlord", CurrentPassword: "wrong-pass")));
+
+        Assert.That(ex, Is.Not.Null);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_ExistingLocalUserWithValidCurrentPassword_LinksGoogleAndLogsIn()
+    {
+        _googleVerifier.VerifyIdTokenAsync("valid-google-token", Arg.Any<CancellationToken>())
+            .Returns(new GoogleUserPayload(
+                Email: "existing@gmail.com",
+                FullName: "Existing Landlord",
+                SubjectId: "google-sub-existing",
+                EmailVerified: true,
+                HostedDomain: null));
+
+        var existingUser = User.RegisterLocal(
+            email: "existing@gmail.com",
+            passwordHash: "hash",
+            fullName: "Existing Landlord",
+            role: UserRole.Landlord,
+            phoneNumber: "0987654321",
+            studentCode: null,
+            utcNow: DateTime.UtcNow.AddDays(-1));
+
+        _userRepository.GetByEmailAsync("existing@gmail.com", Arg.Any<CancellationToken>())
+            .Returns(existingUser);
+
+        _passwordHasher.VerifyPassword("correct-pass", "hash").Returns(true);
+
+        var result = await _sut.ExecuteAsync(new GoogleLoginRequest("valid-google-token", "Landlord", CurrentPassword: "correct-pass"));
 
         Assert.Multiple(() =>
         {
@@ -178,23 +302,24 @@ public class LoginWithGoogleUseCaseTests
     [TestCase("Admin")]
     [TestCase("InvalidRole")]
     [TestCase("")]
-    public async Task ExecuteAsync_InvalidRole_ThrowsValidationException(string role)
+    public void ExecuteAsync_InvalidRole_ThrowsValidationException(string role)
     {
         var ex = Assert.ThrowsAsync<DomainValidationException>(async () =>
             await _sut.ExecuteAsync(new GoogleLoginRequest("some-token", role)));
-        await Task.CompletedTask;
 
         Assert.That(ex, Is.Not.Null);
     }
 
     [Test]
-    public async Task ExecuteAsync_ExistingAdminUser_ThrowsForbiddenRoleException()
+    public void ExecuteAsync_ExistingAdminUser_ThrowsForbiddenRoleException()
     {
         _googleVerifier.VerifyIdTokenAsync("valid-admin-token", Arg.Any<CancellationToken>())
             .Returns(new GoogleUserPayload(
                 Email: "admin@ictu.edu.vn",
                 FullName: "Administrator",
-                SubjectId: "google-sub-admin"));
+                SubjectId: "google-sub-admin",
+                EmailVerified: true,
+                HostedDomain: "ictu.edu.vn"));
 
         var adminUser = User.Reconstitute(
             id: "admin-1",
@@ -217,19 +342,20 @@ public class LoginWithGoogleUseCaseTests
 
         var ex = Assert.ThrowsAsync<ForbiddenRoleException>(async () =>
             await _sut.ExecuteAsync(new GoogleLoginRequest("valid-admin-token", "Student")));
-        await Task.CompletedTask;
 
         Assert.That(ex, Is.Not.Null);
     }
 
     [Test]
-    public async Task ExecuteAsync_ExistingLandlordRequestingStudentRole_ThrowsValidationException()
+    public void ExecuteAsync_ExistingLandlordRequestingStudentRole_ThrowsValidationException()
     {
         _googleVerifier.VerifyIdTokenAsync("valid-landlord-token", Arg.Any<CancellationToken>())
             .Returns(new GoogleUserPayload(
                 Email: "chutro@ictu.edu.vn",
                 FullName: "Landlord Account",
-                SubjectId: "google-sub-landlord"));
+                SubjectId: "google-sub-landlord",
+                EmailVerified: true,
+                HostedDomain: "ictu.edu.vn"));
 
         var landlordUser = User.RegisterLocal(
             email: "chutro@ictu.edu.vn",
@@ -245,19 +371,20 @@ public class LoginWithGoogleUseCaseTests
 
         var ex = Assert.ThrowsAsync<DomainValidationException>(async () =>
             await _sut.ExecuteAsync(new GoogleLoginRequest("valid-landlord-token", "Student")));
-        await Task.CompletedTask;
 
         Assert.That(ex, Is.Not.Null);
     }
 
     [Test]
-    public async Task ExecuteAsync_ExistingStudentWithNonIctuEmail_ThrowsValidationException()
+    public void ExecuteAsync_ExistingStudentWithNonIctuEmail_ThrowsValidationException()
     {
         _googleVerifier.VerifyIdTokenAsync("valid-personal-token", Arg.Any<CancellationToken>())
             .Returns(new GoogleUserPayload(
                 Email: "student@gmail.com",
                 FullName: "Personal Student",
-                SubjectId: "google-sub-personal"));
+                SubjectId: "google-sub-personal",
+                EmailVerified: true,
+                HostedDomain: null));
 
         var studentUser = User.RegisterLocal(
             email: "student@gmail.com",
@@ -273,9 +400,7 @@ public class LoginWithGoogleUseCaseTests
 
         var ex = Assert.ThrowsAsync<DomainValidationException>(async () =>
             await _sut.ExecuteAsync(new GoogleLoginRequest("valid-personal-token", "Student")));
-        await Task.CompletedTask;
 
         Assert.That(ex, Is.Not.Null);
     }
 }
-

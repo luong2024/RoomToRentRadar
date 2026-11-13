@@ -82,17 +82,10 @@
                         </HorizontalStackLayout>
                     </Border>
 
-                    <!-- 1-Click ICTU SSO Login Button (Hidden in Release builds) -->
-                    <common:RadaButton Text="Sign in with ICTU SSO"
-                                       Variant="Accent"
-                                       IsLoading="{Binding IsBusy}"
-                                       Command="{Binding LoginWithIctuSsoCommand}"
-                                       IsVisible="{Binding IsSsoVisible}"
-                                       HorizontalOptions="Fill" />
-
-                    <!-- Sign in with Google Button -->
+                    <!-- Single Google / ICTU SSO Button -->
                     <common:RadaButton Text="{Binding SignInWithGoogleText}"
-                                       Variant="Secondary"
+                                       Variant="Accent"
+                                       ButtonHeight="48"
                                        IsLoading="{Binding IsBusy}"
                                        Command="{Binding LoginWithGoogleCommand}"
                                        HorizontalOptions="Fill" />

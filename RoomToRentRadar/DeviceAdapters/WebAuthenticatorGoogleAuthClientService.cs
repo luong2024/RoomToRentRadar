@@ -1,5 +1,5 @@
 using Microsoft.Maui.Authentication;
-using Microsoft.Maui.Storage;
+using RoomToRentRadar.Resources.Strings;
 
 namespace RoomToRentRadar.DeviceAdapters;
 
@@ -16,10 +16,10 @@ public sealed class WebAuthenticatorGoogleAuthClientService : IGoogleAuthClientS
     {
         _clientId = clientId
             ?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID")
-            ?? Preferences.Default.Get("GoogleClientId", string.Empty);
+            ?? string.Empty;
         _redirectUri = redirectUri
             ?? Environment.GetEnvironmentVariable("GOOGLE_REDIRECT_URI")
-            ?? Preferences.Default.Get("GoogleRedirectUri", "com.companyname.roomtorentradar:/oauth2redirect");
+            ?? "com.companyname.roomtorentradar:/oauth2redirect";
     }
 
     public async Task<string?> AuthenticateAndGetIdTokenAsync(string? roleHint = null, CancellationToken ct = default)
@@ -28,7 +28,7 @@ public sealed class WebAuthenticatorGoogleAuthClientService : IGoogleAuthClientS
             _clientId.Contains("your-google-client-id", StringComparison.OrdinalIgnoreCase) ||
             _clientId.Contains("roomtorentradar-google-client-id", StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException("Google Client ID chưa được cấu hình. Vui lòng thêm GOOGLE_CLIENT_ID của bạn vào file .env.");
+            throw new InvalidOperationException(AppResources.GoogleClientIdMissing);
         }
 
         try
@@ -52,7 +52,7 @@ public sealed class WebAuthenticatorGoogleAuthClientService : IGoogleAuthClientS
                 if (authResult.Properties.TryGetValue("error", out var errorMsg))
                 {
                     var desc = authResult.Properties.TryGetValue("error_description", out var d) ? d : errorMsg;
-                    throw new InvalidOperationException($"Lỗi từ Google OAuth: {desc}");
+                    throw new InvalidOperationException($"Google OAuth Error: {desc}");
                 }
 
                 if (authResult.Properties.TryGetValue("id_token", out var idToken) && !string.IsNullOrWhiteSpace(idToken))

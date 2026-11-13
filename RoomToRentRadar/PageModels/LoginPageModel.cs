@@ -43,8 +43,6 @@ public partial class LoginPageModel : ObservableObject
     [ObservableProperty]
     public partial bool IsBusy { get; set; } = false;
 
-    public bool IsSsoVisible => true;
-
     public string SignInWithGoogleText => AppResources.SignInWithGoogle;
     public string OrSignInWithEmailText => AppResources.OrSignInWithEmail;
 
@@ -150,73 +148,6 @@ public partial class LoginPageModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task LoginWithIctuSsoAsync()
-    {
-        if (IsBusy) return;
-
-        try
-        {
-            IsBusy = true;
-            HasGeneralError = false;
-            GeneralError = string.Empty;
-
-            var idToken = await _googleAuthService.AuthenticateAndGetIdTokenAsync("Student");
-            if (string.IsNullOrWhiteSpace(idToken))
-            {
-                return;
-            }
-
-            var ssoRequest = new IctuSsoLoginRequest(idToken, DeviceInfo.Current.Model);
-            var response = await _authGateway.LoginWithIctuSsoAsync(ssoRequest);
-
-            if (response != null && !string.IsNullOrEmpty(response.AccessToken))
-            {
-                var saved = await _sessionStore.SaveSessionAsync(response);
-                if (!saved)
-                {
-                    GeneralError = AppResources.SessionStorageError;
-                    HasGeneralError = true;
-                    return;
-                }
-
-                try
-                {
-                    await Shell.Current.GoToAsync("//main");
-                }
-                catch (Exception)
-                {
-                    GeneralError = "SSO sign in succeeded, but navigation to home screen failed.";
-                    HasGeneralError = true;
-                }
-            }
-            else
-            {
-                GeneralError = "Authentication with ICTU SSO failed. Please try again.";
-                HasGeneralError = true;
-            }
-        }
-        catch (ApiException apiEx)
-        {
-            GeneralError = MapAuthErrorCodeToMessage(apiEx.ErrorCode, apiEx.StatusCode, "ICTU SSO authentication failed.");
-            HasGeneralError = true;
-        }
-        catch (HttpRequestException)
-        {
-            GeneralError = "Unable to connect to the authentication server. Please check your network.";
-            HasGeneralError = true;
-        }
-        catch (Exception ex)
-        {
-            GeneralError = !string.IsNullOrWhiteSpace(ex.Message) ? ex.Message : "An unexpected error occurred during ICTU SSO login.";
-            HasGeneralError = true;
-        }
-        finally
-        {
-            IsBusy = false;
-        }
-    }
-
-    [RelayCommand]
     private async Task LoginWithGoogleAsync()
     {
         if (IsBusy) return;
@@ -235,21 +166,9 @@ public partial class LoginPageModel : ObservableObject
 
             var email = JwtPayloadHelper.ExtractEmail(idToken);
             var isIctuStudent = JwtPayloadHelper.IsIctuStudentEmail(email);
+            var role = isIctuStudent ? "Student" : "Landlord";
 
-            if (isIctuStudent)
-            {
-                var request = new GoogleLoginRequest(
-                    IdToken: idToken,
-                    Role: "Student",
-                    DeviceInfo: DeviceInfo.Current.Model);
-
-                var response = await _authGateway.LoginWithGoogleAsync(request);
-                await HandleLoginResponseAsync(response);
-            }
-            else
-            {
-                await HandleLandlordGoogleLoginAsync(idToken);
-            }
+            await ExecuteGoogleLoginWithChallengeHandlingAsync(idToken, role);
         }
         catch (ApiException apiEx)
         {
@@ -272,71 +191,103 @@ public partial class LoginPageModel : ObservableObject
         }
     }
 
-    private async Task HandleLandlordGoogleLoginAsync(string idToken)
+    private async Task ExecuteGoogleLoginWithChallengeHandlingAsync(string idToken, string role)
     {
-        // 1. Attempt login assuming Landlord is already registered with a phone number
-        try
-        {
-            var initialReq = new GoogleLoginRequest(
-                IdToken: idToken,
-                Role: "Landlord",
-                PhoneNumber: null,
-                DeviceInfo: DeviceInfo.Current.Model);
+        string? phone = null;
+        string? password = null;
+        string? currentPassword = null;
 
-            var initialResponse = await _authGateway.LoginWithGoogleAsync(initialReq);
-            if (initialResponse != null && !string.IsNullOrEmpty(initialResponse.AccessToken))
+        while (true)
+        {
+            var request = new GoogleLoginRequest(
+                IdToken: idToken,
+                Role: role,
+                PhoneNumber: phone,
+                DeviceInfo: DeviceInfo.Current.Model,
+                Password: password,
+                CurrentPassword: currentPassword);
+
+            try
             {
-                await HandleLoginResponseAsync(initialResponse);
+                var response = await _authGateway.LoginWithGoogleAsync(request);
+                await HandleLoginResponseAsync(response);
                 return;
             }
+            catch (ApiException apiEx) when (apiEx.ErrorCode == "AUTH_PHONE_REQUIRED" && Shell.Current != null)
+            {
+                var phoneInput = await Shell.Current.DisplayPromptAsync(
+                    AppResources.PromptLandlordPhoneTitle,
+                    AppResources.PromptLandlordPhoneMessage,
+                    accept: AppResources.Confirm,
+                    cancel: AppResources.Cancel,
+                    placeholder: "0912345678",
+                    maxLength: 12,
+                    keyboard: Keyboard.Telephone);
+
+                if (string.IsNullOrWhiteSpace(phoneInput))
+                {
+                    return; // user cancelled prompt
+                }
+
+                var trimmedPhone = phoneInput.Trim();
+                if (!PhoneRegex.IsMatch(trimmedPhone))
+                {
+                    await Shell.Current.DisplayAlertAsync(
+                        AppResources.PhoneNumberRequiredTitle,
+                        AppResources.PhoneNumberRequiredMessage,
+                        AppResources.Ok);
+                    return;
+                }
+
+                phone = trimmedPhone;
+            }
+            catch (ApiException apiEx) when (apiEx.ErrorCode == "AUTH_PASSWORD_REQUIRED" && Shell.Current != null)
+            {
+                var passInput = await Shell.Current.DisplayPromptAsync(
+                    AppResources.PromptCreatePasswordTitle,
+                    AppResources.PromptCreatePasswordMessage,
+                    accept: AppResources.Confirm,
+                    cancel: AppResources.Cancel,
+                    placeholder: "••••••••",
+                    maxLength: 64,
+                    keyboard: Keyboard.Text);
+
+                if (string.IsNullOrWhiteSpace(passInput))
+                {
+                    return; // user cancelled prompt
+                }
+
+                var trimmedPass = passInput.Trim();
+                if (trimmedPass.Length < 8)
+                {
+                    await Shell.Current.DisplayAlertAsync(
+                        AppResources.PasswordRequiredTitle,
+                        AppResources.PasswordValidationRule,
+                        AppResources.Ok);
+                    return;
+                }
+
+                password = trimmedPass;
+            }
+            catch (ApiException apiEx) when (apiEx.ErrorCode == "AUTH_CURRENT_PASSWORD_REQUIRED" && Shell.Current != null)
+            {
+                var currentPassInput = await Shell.Current.DisplayPromptAsync(
+                    AppResources.PromptCurrentPasswordTitle,
+                    AppResources.PromptCurrentPasswordMessage,
+                    accept: AppResources.Confirm,
+                    cancel: AppResources.Cancel,
+                    placeholder: "••••••••",
+                    maxLength: 64,
+                    keyboard: Keyboard.Text);
+
+                if (string.IsNullOrWhiteSpace(currentPassInput))
+                {
+                    return; // user cancelled prompt
+                }
+
+                currentPassword = currentPassInput.Trim();
+            }
         }
-        catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.BadRequest &&
-                                      (ex.Message?.Contains("Phone", StringComparison.OrdinalIgnoreCase) == true ||
-                                       ex.ErrorCode?.Contains("Phone", StringComparison.OrdinalIgnoreCase) == true))
-        {
-            // Expected for new landlord registration where phone number is required
-        }
-
-        // 2. Prompt for Vietnamese phone number if new registration or phone missing
-        if (Shell.Current == null)
-        {
-            return;
-        }
-
-        var phoneInput = await Shell.Current.DisplayPromptAsync(
-            AppResources.PromptLandlordPhoneTitle,
-            AppResources.PromptLandlordPhoneMessage,
-            accept: AppResources.Confirm,
-            cancel: AppResources.Cancel,
-            placeholder: "0912345678",
-            maxLength: 12,
-            keyboard: Keyboard.Telephone);
-
-        if (phoneInput == null)
-        {
-            // User cancelled prompt
-            return;
-        }
-
-        var trimmedPhone = phoneInput.Trim();
-        if (string.IsNullOrWhiteSpace(trimmedPhone) || !PhoneRegex.IsMatch(trimmedPhone))
-        {
-            await Shell.Current.DisplayAlertAsync(
-                AppResources.PhoneNumberRequiredTitle,
-                AppResources.PhoneNumberRequiredMessage,
-                AppResources.Ok);
-            return;
-        }
-
-        // 3. Complete registration / login with phone number
-        var registeredReq = new GoogleLoginRequest(
-            IdToken: idToken,
-            Role: "Landlord",
-            PhoneNumber: trimmedPhone,
-            DeviceInfo: DeviceInfo.Current.Model);
-
-        var finalResponse = await _authGateway.LoginWithGoogleAsync(registeredReq);
-        await HandleLoginResponseAsync(finalResponse);
     }
 
     private async Task HandleLoginResponseAsync(AuthTokensDto? response)
@@ -400,6 +351,12 @@ public partial class LoginPageModel : ObservableObject
                     => "This account has been deactivated. Please contact support.",
                 "LANDLORD_NOT_APPROVED" or "AUTH_LANDLORD_NOT_APPROVED"
                     => "Your landlord account is pending administrative verification.",
+                "AUTH_PHONE_REQUIRED" or "PHONE_REQUIRED"
+                    => AppResources.PhoneNumberRequiredMessage,
+                "AUTH_PASSWORD_REQUIRED" or "PASSWORD_REQUIRED"
+                    => AppResources.PasswordValidationRule,
+                "AUTH_CURRENT_PASSWORD_REQUIRED"
+                    => AppResources.PromptCurrentPasswordMessage,
                 _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : "Sign in failed. Please check your credentials."
             };
         }

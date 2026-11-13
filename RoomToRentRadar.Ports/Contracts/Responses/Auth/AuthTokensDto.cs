@@ -18,7 +18,9 @@ public record IctuSsoUserPayload(
 public record GoogleUserPayload(
     string Email,
     string FullName,
-    string SubjectId
+    string SubjectId,
+    bool EmailVerified = true,
+    string? HostedDomain = null
 );
 
 public record GeneratedAccessToken(

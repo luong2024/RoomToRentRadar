@@ -26,6 +26,8 @@ public sealed class GoogleAuthVerifierAdapter : IGoogleAuthVerifierPort
     private static DateTime _keysCachedUntilUtc = DateTime.MinValue;
     private static readonly SemaphoreSlim _keyFetchLock = new(1, 1);
 
+    public string? Audience => _audience;
+
     public GoogleAuthVerifierAdapter(
         TokenValidationParameters? customValidationParameters = null,
         HttpClient? httpClient = null,
@@ -95,14 +97,15 @@ public sealed class GoogleAuthVerifierAdapter : IGoogleAuthVerifierPort
         {
             principal = _tokenHandler.ValidateToken(idToken, validationParams, out _);
         }
-        catch (SecurityTokenException ex)
+        catch (SecurityTokenException)
         {
-            throw new InvalidTokenException($"Google token signature or lifetime validation failed: {ex.Message}");
+            throw new InvalidTokenException("Google token signature or lifetime validation failed.");
         }
 
         var emailVerifiedClaim = principal.FindFirst("email_verified")?.Value;
-        if (!string.IsNullOrWhiteSpace(emailVerifiedClaim) &&
-            bool.TryParse(emailVerifiedClaim, out var isVerified) && !isVerified)
+        if (string.IsNullOrWhiteSpace(emailVerifiedClaim) ||
+            !bool.TryParse(emailVerifiedClaim, out var isVerified) ||
+            !isVerified)
         {
             throw new InvalidTokenException("Google account email is not verified.");
         }
@@ -132,10 +135,14 @@ public sealed class GoogleAuthVerifierAdapter : IGoogleAuthVerifierPort
             ? nameClaim.Trim()
             : email.Value.Split('@')[0];
 
+        var hdClaim = principal.FindFirst("hd")?.Value?.Trim();
+
         return new GoogleUserPayload(
             Email: email.Value,
             FullName: fullName,
-            SubjectId: subClaim.Trim());
+            SubjectId: subClaim.Trim(),
+            EmailVerified: true,
+            HostedDomain: hdClaim);
     }
 
     private async Task<ICollection<SecurityKey>> GetGoogleSigningKeysAsync(CancellationToken ct)

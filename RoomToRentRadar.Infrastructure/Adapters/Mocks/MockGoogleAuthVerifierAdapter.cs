@@ -33,11 +33,14 @@ public sealed class MockGoogleAuthVerifierAdapter : IGoogleAuthVerifierPort
 
             var email = EmailAddress.Create(parts[0]);
             var fullName = parts[1];
+            var hd = email.IsIctuStudentEmail() ? "ictu.edu.vn" : null;
 
             return Task.FromResult(new GoogleUserPayload(
                 Email: email.Value,
                 FullName: fullName,
-                SubjectId: $"mock-google-sub-{email.Value}"));
+                SubjectId: $"mock-google-sub-{email.Value}",
+                EmailVerified: true,
+                HostedDomain: hd));
         }
 
         // 2. Convenience tokens for simple tests / UI demo
@@ -47,7 +50,9 @@ public sealed class MockGoogleAuthVerifierAdapter : IGoogleAuthVerifierPort
             return Task.FromResult(new GoogleUserPayload(
                 Email: "student.radar@ictu.edu.vn",
                 FullName: "ICTU Demo Student",
-                SubjectId: "mock-google-sub-student-01"));
+                SubjectId: "mock-google-sub-student-01",
+                EmailVerified: true,
+                HostedDomain: "ictu.edu.vn"));
         }
 
         if (string.Equals(trimmed, "mock-google-landlord-token", StringComparison.OrdinalIgnoreCase))
@@ -55,7 +60,9 @@ public sealed class MockGoogleAuthVerifierAdapter : IGoogleAuthVerifierPort
             return Task.FromResult(new GoogleUserPayload(
                 Email: "landlord.radar@gmail.com",
                 FullName: "Demo Landlord",
-                SubjectId: "mock-google-sub-landlord-01"));
+                SubjectId: "mock-google-sub-landlord-01",
+                EmailVerified: true,
+                HostedDomain: null));
         }
 
         return _googleVerifier.VerifyIdTokenAsync(trimmed, ct);
