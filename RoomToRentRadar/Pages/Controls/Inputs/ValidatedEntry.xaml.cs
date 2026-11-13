@@ -11,11 +11,11 @@ public partial class ValidatedEntry : ContentView
 
     public static readonly BindableProperty TextProperty =
         BindableProperty.Create(nameof(Text), typeof(string), typeof(ValidatedEntry), string.Empty,
-            defaultBindingMode: BindingMode.TwoWay,
-            propertyChanged: (b, o, n) => ((ValidatedEntry)b).UpdateClearButtonVisibility());
+            defaultBindingMode: BindingMode.TwoWay);
 
     public static readonly BindableProperty IsPasswordProperty =
-        BindableProperty.Create(nameof(IsPassword), typeof(bool), typeof(ValidatedEntry), false);
+        BindableProperty.Create(nameof(IsPassword), typeof(bool), typeof(ValidatedEntry), false,
+            propertyChanged: (b, o, n) => ((ValidatedEntry)b).UpdatePasswordVisibility((bool)n));
 
     public static readonly BindableProperty KeyboardProperty =
         BindableProperty.Create(nameof(Keyboard), typeof(Keyboard), typeof(ValidatedEntry), Keyboard.Default);
@@ -30,6 +30,8 @@ public partial class ValidatedEntry : ContentView
 
     public static readonly BindableProperty HasLabelProperty =
         BindableProperty.Create(nameof(HasLabel), typeof(bool), typeof(ValidatedEntry), false);
+
+    private bool _isPasswordHidden = true;
 
     public string LabelText
     {
@@ -83,7 +85,7 @@ public partial class ValidatedEntry : ContentView
     {
         InitializeComponent();
         UpdateHasLabel();
-        UpdateClearButtonVisibility();
+        UpdatePasswordVisibility(IsPassword);
         UpdateBorderStyle();
     }
 
@@ -92,9 +94,31 @@ public partial class ValidatedEntry : ContentView
         HasLabel = !string.IsNullOrWhiteSpace(LabelText);
     }
 
-    private void UpdateClearButtonVisibility()
+    private void UpdatePasswordVisibility(bool isPassword)
     {
-        ClearButton.IsVisible = !string.IsNullOrEmpty(Text);
+        _isPasswordHidden = isPassword;
+        InnerEntry.IsPassword = isPassword;
+        if (PasswordToggleButton != null)
+        {
+            PasswordToggleButton.IsVisible = isPassword;
+        }
+        if (PasswordToggleIcon != null)
+        {
+            PasswordToggleIcon.Glyph = Fonts.FluentUI.eye_20_regular;
+        }
+    }
+
+    private void PasswordToggleButton_Clicked(object? sender, EventArgs e)
+    {
+        _isPasswordHidden = !_isPasswordHidden;
+        InnerEntry.IsPassword = _isPasswordHidden;
+
+        if (PasswordToggleIcon != null)
+        {
+            PasswordToggleIcon.Glyph = _isPasswordHidden
+                ? Fonts.FluentUI.eye_20_regular
+                : Fonts.FluentUI.eye_off_20_regular;
+        }
     }
 
     private void UpdateErrorState()
@@ -111,12 +135,6 @@ public partial class ValidatedEntry : ContentView
     private void InnerEntry_Unfocused(object? sender, FocusEventArgs e)
     {
         UpdateBorderStyle(isFocused: false);
-    }
-
-    private void ClearButton_Clicked(object? sender, EventArgs e)
-    {
-        Text = string.Empty;
-        InnerEntry.Focus();
     }
 
     private void UpdateBorderStyle(bool isFocused = false)

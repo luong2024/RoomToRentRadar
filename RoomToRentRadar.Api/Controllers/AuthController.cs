@@ -15,6 +15,7 @@ public sealed class AuthController : ControllerBase
     private readonly IRegisterUserUseCase _registerUserUseCase;
     private readonly ILoginUserUseCase _loginUserUseCase;
     private readonly ILoginWithIctuSsoUseCase _loginWithIctuSsoUseCase;
+    private readonly ILoginWithGoogleUseCase _loginWithGoogleUseCase;
     private readonly IRefreshTokenUseCase _refreshTokenUseCase;
     private readonly IRevokeTokenUseCase _revokeTokenUseCase;
     private readonly IGetCurrentUserProfileUseCase _getCurrentUserProfileUseCase;
@@ -24,6 +25,7 @@ public sealed class AuthController : ControllerBase
         IRegisterUserUseCase registerUserUseCase,
         ILoginUserUseCase loginUserUseCase,
         ILoginWithIctuSsoUseCase loginWithIctuSsoUseCase,
+        ILoginWithGoogleUseCase loginWithGoogleUseCase,
         IRefreshTokenUseCase refreshTokenUseCase,
         IRevokeTokenUseCase revokeTokenUseCase,
         IGetCurrentUserProfileUseCase getCurrentUserProfileUseCase,
@@ -32,6 +34,7 @@ public sealed class AuthController : ControllerBase
         _registerUserUseCase = registerUserUseCase;
         _loginUserUseCase = loginUserUseCase;
         _loginWithIctuSsoUseCase = loginWithIctuSsoUseCase;
+        _loginWithGoogleUseCase = loginWithGoogleUseCase;
         _refreshTokenUseCase = refreshTokenUseCase;
         _revokeTokenUseCase = revokeTokenUseCase;
         _getCurrentUserProfileUseCase = getCurrentUserProfileUseCase;
@@ -76,6 +79,20 @@ public sealed class AuthController : ControllerBase
         CancellationToken ct)
     {
         var result = await _loginWithIctuSsoUseCase.ExecuteAsync(request, ct);
+        return Ok(result);
+    }
+
+    [HttpPost("google")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(AuthTokensDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<AuthTokensDto>> GoogleLogin(
+        [FromBody] GoogleLoginRequest request,
+        CancellationToken ct)
+    {
+        var result = await _loginWithGoogleUseCase.ExecuteAsync(request, ct);
         return Ok(result);
     }
 

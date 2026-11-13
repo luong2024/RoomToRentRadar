@@ -15,6 +15,14 @@ public record IctuSsoUserPayload(
     string? StudentCode = null
 );
 
+public record GoogleUserPayload(
+    string Email,
+    string FullName,
+    string SubjectId,
+    bool EmailVerified = true,
+    string? HostedDomain = null
+);
+
 public record GeneratedAccessToken(
     string Token,
     string JwtId,

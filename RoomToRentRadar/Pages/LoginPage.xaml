@@ -5,6 +5,7 @@
              xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
              xmlns:inputs="clr-namespace:RoomToRentRadar.Pages.Controls.Inputs"
              xmlns:fonts="clr-namespace:Fonts"
+             xmlns:loc="clr-namespace:RoomToRentRadar.Resources.Strings"
              x:Class="RoomToRentRadar.Pages.LoginPage"
              x:DataType="vm:LoginPageModel"
              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCanvasLight}, Dark={StaticResource SurfaceCanvasDark}}">
@@ -81,18 +82,18 @@
                         </HorizontalStackLayout>
                     </Border>
 
-                    <!-- 1-Click ICTU SSO Login Button (Hidden in Release builds) -->
-                    <common:RadaButton Text="Sign in with ICTU SSO"
+                    <!-- Single Google / ICTU SSO Button -->
+                    <common:RadaButton Text="{Binding SignInWithGoogleText}"
                                        Variant="Accent"
+                                       ButtonHeight="48"
                                        IsLoading="{Binding IsBusy}"
-                                       Command="{Binding LoginWithIctuSsoCommand}"
-                                       IsVisible="{Binding IsSsoVisible}"
+                                       Command="{Binding LoginWithGoogleCommand}"
                                        HorizontalOptions="Fill" />
 
-                    <!-- Divider (Hidden in Release builds) -->
-                    <Grid ColumnDefinitions="*, Auto, *" ColumnSpacing="12" Margin="0,4" IsVisible="{Binding IsSsoVisible}">
+                    <!-- Divider -->
+                    <Grid ColumnDefinitions="*, Auto, *" ColumnSpacing="12" Margin="0,4">
                         <BoxView Grid.Column="0" HeightRequest="1" VerticalOptions="Center" Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
-                        <Label Grid.Column="1" Text="or sign in with Email" Style="{StaticResource TextCaption}" TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" VerticalTextAlignment="Center" />
+                        <Label Grid.Column="1" Text="{Binding OrSignInWithEmailText}" Style="{StaticResource TextCaption}" TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" VerticalTextAlignment="Center" />
                         <BoxView Grid.Column="2" HeightRequest="1" VerticalOptions="Center" Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
                     </Grid>
 

@@ -7,10 +7,14 @@ using Syncfusion.Maui.Toolkit.Hosting;
 
 namespace RoomToRentRadar
 {
-    public static class MauiProgram
+    public static partial class MauiProgram
     {
+        static partial void InitLocalSettings();
+
         public static MauiApp CreateMauiApp()
         {
+            EnvLoader.Load();
+            InitLocalSettings();
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()
@@ -56,6 +60,7 @@ namespace RoomToRentRadar
             // Core UI & Device Services
             builder.Services.AddSingleton<ModalErrorHandler>();
             builder.Services.AddSingleton<ISessionStore, MauiSecureSessionStore>();
+            builder.Services.AddSingleton<IGoogleAuthClientService, GoogleAuthClientService>();
 
             // Main Landing Page
             builder.Services.AddTransient<PageModels.MainLandingPageModel>();

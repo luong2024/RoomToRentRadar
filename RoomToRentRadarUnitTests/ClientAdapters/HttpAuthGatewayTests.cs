@@ -327,6 +327,83 @@ public class HttpAuthGatewayTests
     }
 
     [Test]
+    public async Task LoginWithGoogleAsync_ValidToken_ReturnsTokensDto()
+    {
+        // Arrange
+        var expectedTokens = new AuthTokensDto(
+            AccessToken: "google-access-token",
+            RefreshToken: "google-refresh-token",
+            AccessTokenExpiresAtUtc: DateTime.UtcNow.AddMinutes(30),
+            RefreshTokenExpiresAtUtc: DateTime.UtcNow.AddDays(7),
+            User: new UserProfileDto(
+                Id: "google-user-1",
+                Email: "student@ictu.edu.vn",
+                FullName: "Google User",
+                Role: "Student",
+                AuthProvider: "Google",
+                PhoneNumber: null,
+                StudentCode: "DTC999",
+                IsVerified: true,
+                CreatedAtUtc: DateTime.UtcNow
+            )
+        );
+
+        var handler = new MockHttpMessageHandler(req =>
+        {
+            Assert.That(req.RequestUri!.AbsolutePath, Is.EqualTo("/api/auth/google"));
+            Assert.That(req.Method, Is.EqualTo(HttpMethod.Post));
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(expectedTokens)
+            };
+        });
+
+        var client = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:5000") };
+        var gateway = new HttpAuthGateway(client);
+
+        // Act
+        var result = await gateway.LoginWithGoogleAsync(new GoogleLoginRequest("google-id-token", "Student", DeviceInfo: "Pixel 8"));
+
+        // Assert
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result.AccessToken, Is.EqualTo("google-access-token"));
+        Assert.That(result.User.AuthProvider, Is.EqualTo("Google"));
+    }
+
+    [Test]
+    public async Task LoginWithGoogleAsync_InvalidToken_ThrowsApiException()
+    {
+        // Arrange
+        var handler = new MockHttpMessageHandler(req =>
+        {
+            var problem = new
+            {
+                type = "https://httpstatuses.com/401",
+                title = "Unauthorized",
+                status = 401,
+                detail = "Invalid Google ID token.",
+                errorCode = "INVALID_TOKEN"
+            };
+            return new HttpResponseMessage(HttpStatusCode.Unauthorized)
+            {
+                Content = JsonContent.Create(problem)
+            };
+        });
+
+        var client = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:5000") };
+        var gateway = new HttpAuthGateway(client);
+
+        // Act & Assert
+        var ex = Assert.ThrowsAsync<ApiException>(async () =>
+            await gateway.LoginWithGoogleAsync(new GoogleLoginRequest("invalid-token", "Student")));
+        await Task.CompletedTask;
+
+        Assert.That(ex, Is.Not.Null);
+        Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That(ex.ErrorCode, Is.EqualTo("INVALID_TOKEN"));
+    }
+
+    [Test]
     public async Task RefreshTokenAsync_ValidRefreshToken_ReturnsNewTokensDto()
     {
         // Arrange

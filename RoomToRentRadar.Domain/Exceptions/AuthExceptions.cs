@@ -94,3 +94,43 @@ public class UserNotFoundException : Exception
     }
 }
 
+public class PhoneNumberRequiredException : Exception
+{
+    public PhoneNumberRequiredException(string message = "Phone number is required for Landlord registration.")
+        : base(message)
+    {
+    }
+}
+
+public class PasswordRequiredException : Exception
+{
+    public PasswordRequiredException(string message = "Password creation is required for initial Google registration.")
+        : base(message)
+    {
+    }
+}
+
+public class CurrentPasswordRequiredException : Exception
+{
+    public CurrentPasswordRequiredException(string message = "Current password is required to link this Google account.")
+        : base(message)
+    {
+    }
+}
+
+public class HouseNameRequiredException : Exception
+{
+    public HouseNameRequiredException(string message = "House name is required for Landlord registration.")
+        : base(message)
+    {
+    }
+}
+
+public class HouseAddressRequiredException : Exception
+{
+    public HouseAddressRequiredException(string message = "House address is required for Landlord registration.")
+        : base(message)
+    {
+    }
+}
+

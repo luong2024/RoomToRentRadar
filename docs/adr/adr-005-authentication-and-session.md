@@ -32,5 +32,9 @@ Students and landlords need secure accounts; ICTU students should be able to use
   - **Redirect to the app:** Google disables custom-URI-scheme redirects (`<ApplicationId>:/oauth2redirect`; the placeholder `com.companyname.roomtorentradar` must be replaced by a final ID before the client is registered) for new Android OAuth clients by default. Chosen: enable *Custom URI scheme* in the Android client's *Advanced settings* and keep `WebAuthenticator` + PKCE (least code). Risk: Google may remove this option; then switch to the Google Identity Services / Credential Manager SDK, which returns the id_token directly (new ADR). The Android client needs the package name + the SHA-1 of each developer's debug keystore (one Android client entry per fingerprint, ADR-013).
   - Client IDs live in configuration, never in git.
 
+### Amendment (2026-11-13) - Direct ID Token Acquisition on MAUI WebAuthenticator
+- **Context:** When using Google OAuth 2.0 with MAUI's `WebAuthenticator.AuthenticateAsync` on Android and Windows, specifying `response_type=code id_token` directly returns the signed `id_token` in the callback redirect parameters without requiring an intermediate authorization-code token exchange on the mobile client.
+- **Security boundary:** The mobile client never receives or stores an OAuth client secret (`ADR-003`). The backend API acts as the Relying Party, cryptographically verifying the `id_token`'s authenticity via Google's public JWKS endpoint (`https://www.googleapis.com/oauth2/v3/certs`), matching `aud` to the configured Google Client ID, validating `iss`, `exp`, `email_verified=true`, and enforcing `hd=ictu.edu.vn` for students (`BR-AUTH-04`). Standalone PKCE is deferred until full server-mediated OAuth authorization-code exchange is implemented.
+
 ## Compliance
 Existing tests in `RoomToRentRadarUnitTests/Application/Auth` and `Infrastructure/*`; architecture test for mocks disabled in root config.

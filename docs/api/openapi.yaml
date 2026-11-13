@@ -119,6 +119,25 @@ paths:
               schema: { $ref: '#/components/schemas/AuthTokensDto' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/auth/google:
+    post:
+      tags: [Auth]
+      operationId: loginWithGoogle
+      summary: Sign in with Google (Student with @ictu.edu.vn, Landlord with phone number)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GoogleLoginRequest' }
+      responses:
+        '200':
+          description: Signed in
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthTokensDto' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /api/auth/refresh:
     post:
       tags: [Auth]
@@ -1266,7 +1285,7 @@ components:
     # ------------------------------------------------ enums
     UserRole: { type: string, enum: [Student, Landlord, Admin] }
     PublicRole: { type: string, enum: [Student, Landlord], description: BR-AUTH-02 }
-    AuthProvider: { type: string, enum: [Local, IctuSso] }
+    AuthProvider: { type: string, enum: [Local, IctuSso, Google] }
     RoomType: { type: string, enum: [BoardingRoom, MiniApartment, WholeHouse, Dormitory] }
     ListingStatus: { type: string, enum: [PendingReview, Rejected, Available, Rented, Unpublished, Suspended] }
     Furnishing: { type: string, enum: [Unfurnished, Basic, Full] }
@@ -1298,6 +1317,8 @@ components:
         fullName: { type: string, minLength: 1, maxLength: 100 }
         role: { $ref: '#/components/schemas/PublicRole' }
         phoneNumber: { type: [string, 'null'], pattern: '^(0|\+84)[0-9]{9}$', description: Required for Landlord }
+        houseName: { type: [string, 'null'], minLength: 3, maxLength: 100, description: Required for Landlord }
+        houseAddress: { type: [string, 'null'], minLength: 5, maxLength: 250, description: Required for Landlord }
         studentCode: { type: [string, 'null'], maxLength: 20 }
     LoginRequest:
       type: object
@@ -1311,6 +1332,18 @@ components:
       properties:
         idToken: { type: string }
         deviceInfo: { type: [string, 'null'] }
+    GoogleLoginRequest:
+      type: object
+      required: [idToken, role]
+      properties:
+        idToken: { type: string }
+        role: { $ref: '#/components/schemas/PublicRole' }
+        phoneNumber: { type: [string, 'null'] }
+        houseName: { type: [string, 'null'], description: Required for Landlord upon initial registration }
+        houseAddress: { type: [string, 'null'], description: Required for Landlord upon initial registration }
+        deviceInfo: { type: [string, 'null'] }
+        password: { type: [string, 'null'], description: 'Required for initial Google registration to enable dual login' }
+        currentPassword: { type: [string, 'null'], description: 'Required when linking an existing local account to Google' }
     RefreshTokenRequest:
       type: object
       required: [refreshToken]
@@ -1331,6 +1364,8 @@ components:
         role: { $ref: '#/components/schemas/UserRole' }
         authProvider: { $ref: '#/components/schemas/AuthProvider' }
         phoneNumber: { type: [string, 'null'] }
+        houseName: { type: [string, 'null'] }
+        houseAddress: { type: [string, 'null'] }
         studentCode: { type: [string, 'null'] }
         isVerified: { type: boolean }
         createdAtUtc: { type: string, format: date-time }

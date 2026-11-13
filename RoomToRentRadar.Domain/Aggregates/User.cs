@@ -26,6 +26,8 @@ public sealed class User
     public AuthProvider AuthProvider { get; private set; }
     public string? SsoSubjectId { get; private set; }
     public string? PhoneNumber { get; private set; }
+    public string? HouseName { get; private set; }
+    public string? HouseAddress { get; private set; }
     public string? StudentCode { get; private set; }
     public bool IsVerified { get; private set; }
     public int FailedLoginCount { get; private set; }
@@ -45,6 +47,8 @@ public sealed class User
         AuthProvider authProvider,
         string? ssoSubjectId,
         string? phoneNumber,
+        string? houseName,
+        string? houseAddress,
         string? studentCode,
         bool isVerified,
         int failedLoginCount,
@@ -62,6 +66,8 @@ public sealed class User
         AuthProvider = authProvider;
         SsoSubjectId = ssoSubjectId;
         PhoneNumber = phoneNumber;
+        HouseName = houseName;
+        HouseAddress = houseAddress;
         StudentCode = studentCode;
         IsVerified = isVerified;
         FailedLoginCount = failedLoginCount;
@@ -83,7 +89,9 @@ public sealed class User
         UserRole role,
         string? phoneNumber,
         string? studentCode,
-        DateTime utcNow)
+        DateTime utcNow,
+        string? houseName = null,
+        string? houseAddress = null)
     {
         if (!Enum.IsDefined(typeof(UserRole), role))
         {
@@ -109,6 +117,33 @@ public sealed class User
         var normalizedPhone = NormalizeAndValidatePhone(phoneNumber, required: role == UserRole.Landlord);
         var normalizedStudentCode = string.IsNullOrWhiteSpace(studentCode) ? null : studentCode.Trim().ToUpperInvariant();
 
+        string? normalizedHouseName = null;
+        string? normalizedHouseAddress = null;
+        if (role == UserRole.Landlord)
+        {
+            if (string.IsNullOrWhiteSpace(houseName))
+            {
+                throw new DomainValidationException("A boarding house name is required for Landlord registration.");
+            }
+
+            normalizedHouseName = houseName.Trim();
+            if (normalizedHouseName.Length < 3 || normalizedHouseName.Length > 100)
+            {
+                throw new DomainValidationException("House name must be between 3 and 100 characters.");
+            }
+
+            if (string.IsNullOrWhiteSpace(houseAddress))
+            {
+                throw new DomainValidationException("A boarding house address is required for Landlord registration.");
+            }
+
+            normalizedHouseAddress = houseAddress.Trim();
+            if (normalizedHouseAddress.Length < 5 || normalizedHouseAddress.Length > 250)
+            {
+                throw new DomainValidationException("House address must be between 5 and 250 characters.");
+            }
+        }
+
         // Student is verified immediately; Landlord requires Admin approval before publishing rooms.
         var isVerified = role == UserRole.Student;
 
@@ -121,6 +156,8 @@ public sealed class User
             authProvider: AuthProvider.Local,
             ssoSubjectId: null,
             phoneNumber: normalizedPhone,
+            houseName: normalizedHouseName,
+            houseAddress: normalizedHouseAddress,
             studentCode: normalizedStudentCode,
             isVerified: isVerified,
             failedLoginCount: 0,
@@ -165,12 +202,120 @@ public sealed class User
             authProvider: AuthProvider.IctuSso,
             ssoSubjectId: ssoSubjectId.Trim(),
             phoneNumber: null,
+            houseName: null,
+            houseAddress: null,
             studentCode: derivedStudentCode,
             isVerified: true,
             failedLoginCount: 0,
             lockoutEndUtc: null,
             createdAtUtc: utcNow,
             updatedAtUtc: utcNow);
+    }
+
+    public static User RegisterGoogle(
+        string email,
+        string fullName,
+        string googleSubjectId,
+        UserRole role,
+        string? phoneNumber,
+        DateTime utcNow,
+        string? passwordHash = null,
+        string? houseName = null,
+        string? houseAddress = null)
+    {
+        if (!Enum.IsDefined(typeof(UserRole), role))
+        {
+            throw new DomainValidationException($"Role '{(int)role}' is not a recognized role.");
+        }
+
+        if (role != UserRole.Student && role != UserRole.Landlord)
+        {
+            throw new ForbiddenRoleException("Public self-registration is only permitted for Student and Landlord roles.");
+        }
+
+        if (string.IsNullOrWhiteSpace(fullName))
+        {
+            throw new DomainValidationException("Full name is required for Google registration.");
+        }
+
+        if (string.IsNullOrWhiteSpace(googleSubjectId))
+        {
+            throw new DomainValidationException("Google subject identifier is required.");
+        }
+
+        var emailAddress = EmailAddress.Create(email);
+
+        if (role == UserRole.Student)
+        {
+            if (!emailAddress.IsIctuStudentEmail())
+            {
+                throw new DomainValidationException($"Student Google login requires an '{EmailAddress.IctuDomain}' email address.");
+            }
+
+            var derivedStudentCode = emailAddress.Value.Split('@')[0].ToUpperInvariant();
+
+            return new User(
+                id: Guid.NewGuid().ToString("N"),
+                email: emailAddress,
+                fullName: fullName.Trim(),
+                passwordHash: passwordHash,
+                role: UserRole.Student,
+                authProvider: AuthProvider.Google,
+                ssoSubjectId: googleSubjectId.Trim(),
+                phoneNumber: null,
+                houseName: null,
+                houseAddress: null,
+                studentCode: derivedStudentCode,
+                isVerified: true,
+                failedLoginCount: 0,
+                lockoutEndUtc: null,
+                createdAtUtc: utcNow,
+                updatedAtUtc: utcNow);
+        }
+        else
+        {
+            var normalizedPhone = NormalizeAndValidatePhone(phoneNumber, required: true);
+
+            if (string.IsNullOrWhiteSpace(houseName))
+            {
+                throw new HouseNameRequiredException("House name is required for Landlord registration.");
+            }
+
+            var normalizedHouseName = houseName.Trim();
+            if (normalizedHouseName.Length < 3 || normalizedHouseName.Length > 100)
+            {
+                throw new DomainValidationException("House name must be between 3 and 100 characters.");
+            }
+
+            if (string.IsNullOrWhiteSpace(houseAddress))
+            {
+                throw new HouseAddressRequiredException("House address is required for Landlord registration.");
+            }
+
+            var normalizedHouseAddress = houseAddress.Trim();
+            if (normalizedHouseAddress.Length < 5 || normalizedHouseAddress.Length > 250)
+            {
+                throw new DomainValidationException("House address must be between 5 and 250 characters.");
+            }
+
+            return new User(
+                id: Guid.NewGuid().ToString("N"),
+                email: emailAddress,
+                fullName: fullName.Trim(),
+                passwordHash: passwordHash,
+                role: UserRole.Landlord,
+                authProvider: AuthProvider.Google,
+                ssoSubjectId: googleSubjectId.Trim(),
+                phoneNumber: normalizedPhone,
+                houseName: normalizedHouseName,
+                houseAddress: normalizedHouseAddress,
+                studentCode: null,
+                isVerified: false, // Landlord requires Admin approval per BR-AUTH-03
+                failedLoginCount: 0,
+                lockoutEndUtc: null,
+                createdAtUtc: utcNow,
+                updatedAtUtc: utcNow);
+        }
     }
 
     public static User Reconstitute(
@@ -189,7 +334,9 @@ public sealed class User
         DateTime createdAtUtc,
         DateTime updatedAtUtc,
         IEnumerable<RefreshTokenSession>? refreshTokens = null,
-        string? concurrencyToken = null)
+        string? concurrencyToken = null,
+        string? houseName = null,
+        string? houseAddress = null)
     {
         return new User(
             id,
@@ -200,6 +347,8 @@ public sealed class User
             authProvider,
             ssoSubjectId,
             phoneNumber,
+            houseName,
+            houseAddress,
             studentCode,
             isVerified,
             failedLoginCount,
@@ -269,6 +418,76 @@ public sealed class User
         }
 
         IsVerified = true;
+        UpdatedAtUtc = utcNow;
+    }
+
+    public void LinkGoogle(
+        string googleSubjectId,
+        string? phoneNumber,
+        DateTime utcNow,
+        string? newPasswordHash = null,
+        string? houseName = null,
+        string? houseAddress = null)
+    {
+        if (Role != UserRole.Student && Role != UserRole.Landlord)
+        {
+            throw new ForbiddenRoleException("Only Student and Landlord accounts can be linked to Google authentication.");
+        }
+
+        if (Role == UserRole.Student && !Email.IsIctuStudentEmail())
+        {
+            throw new DomainValidationException($"Only '{EmailAddress.IctuDomain}' student accounts can be linked to Google.");
+        }
+
+        if (string.IsNullOrWhiteSpace(googleSubjectId))
+        {
+            throw new DomainValidationException("Google subject identifier is required.");
+        }
+
+        SsoSubjectId = googleSubjectId.Trim();
+        AuthProvider = AuthProvider.Google;
+
+        if (!string.IsNullOrWhiteSpace(newPasswordHash))
+        {
+            PasswordHash = newPasswordHash;
+        }
+
+        if (Role == UserRole.Landlord && string.IsNullOrWhiteSpace(PhoneNumber) && !string.IsNullOrWhiteSpace(phoneNumber))
+        {
+            PhoneNumber = NormalizeAndValidatePhone(phoneNumber, required: true);
+        }
+
+        if (Role == UserRole.Landlord && string.IsNullOrWhiteSpace(HouseName) && !string.IsNullOrWhiteSpace(houseName))
+        {
+            var trimmed = houseName.Trim();
+            if (trimmed.Length < 3 || trimmed.Length > 100)
+            {
+                throw new DomainValidationException("House name must be between 3 and 100 characters.");
+            }
+            HouseName = trimmed;
+        }
+
+        if (Role == UserRole.Landlord && string.IsNullOrWhiteSpace(HouseAddress) && !string.IsNullOrWhiteSpace(houseAddress))
+        {
+            var trimmedAddress = houseAddress.Trim();
+            if (trimmedAddress.Length < 5 || trimmedAddress.Length > 250)
+            {
+                throw new DomainValidationException("House address must be between 5 and 250 characters.");
+            }
+            HouseAddress = trimmedAddress;
+        }
+
+        UpdatedAtUtc = utcNow;
+    }
+
+    public void SetPassword(string passwordHash, DateTime utcNow)
+    {
+        if (string.IsNullOrWhiteSpace(passwordHash))
+        {
+            throw new DomainValidationException("Password hash is required.");
+        }
+
+        PasswordHash = passwordHash;
         UpdatedAtUtc = utcNow;
     }
 

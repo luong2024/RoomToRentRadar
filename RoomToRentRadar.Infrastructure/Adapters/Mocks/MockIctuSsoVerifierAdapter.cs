@@ -27,6 +27,8 @@ public sealed class MockIctuSsoVerifierAdapter : IIctuSsoVerifierPort
         }
 
         var trimmed = idToken.Trim();
+
+        // 1. Format: mock-ictu:<email>:<fullName>[:<studentCode>]
         if (trimmed.StartsWith(MockPrefix, StringComparison.OrdinalIgnoreCase))
         {
             var parts = trimmed[MockPrefix.Length..].Split(':', StringSplitOptions.TrimEntries);
@@ -51,6 +53,17 @@ public sealed class MockIctuSsoVerifierAdapter : IIctuSsoVerifierPort
                 FullName: fullName,
                 SubjectId: $"mock-sub-{email.Value}",
                 StudentCode: studentCode));
+        }
+
+        // 2. Convenience tokens for simple tests / UI demo
+        if (string.Equals(trimmed, "mock-ictu-sso-id-token", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(trimmed, "mock-ictu-student-token", StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(new IctuSsoUserPayload(
+                Email: "student.radar@ictu.edu.vn",
+                FullName: "ICTU Demo Student",
+                SubjectId: "mock-ictu-sub-student-01",
+                StudentCode: "DTC215210001"));
         }
 
         return _oidcVerifier.VerifyIdTokenAsync(trimmed, ct);

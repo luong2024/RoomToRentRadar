@@ -4,10 +4,16 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Client.Adapters.Abstractions;
 using RoomToRentRadar.Ports.Contracts.Requests.Auth;
+using RoomToRentRadar.Ports.Contracts.Responses.Auth;
+using RoomToRentRadar.Resources.Strings;
 
 namespace RoomToRentRadar.PageModels;
 
 [QueryProperty(nameof(Role), "role")]
+[QueryProperty(nameof(Email), "email")]
+[QueryProperty(nameof(FullName), "fullName")]
+[QueryProperty(nameof(GoogleToken), "googleToken")]
+[QueryProperty(nameof(IsGoogleOnboardingString), "isGoogle")]
 public partial class RegisterPageModel : ObservableObject
 {
     private static readonly Regex EmailRegex = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -30,6 +36,24 @@ public partial class RegisterPageModel : ObservableObject
     public partial string RoleDisplayName { get; set; } = "Student";
 
     [ObservableProperty]
+    public partial string GoogleToken { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool IsGoogleOnboarding { get; set; } = false;
+
+    public string IsGoogleOnboardingString
+    {
+        get => IsGoogleOnboarding.ToString();
+        set => IsGoogleOnboarding = bool.TryParse(value, out var b) && b;
+    }
+
+    [ObservableProperty]
+    public partial bool IsEmailEditable { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool CanSwitchRole { get; set; } = true;
+
+    [ObservableProperty]
     public partial string FullName { get; set; } = string.Empty;
 
     [ObservableProperty]
@@ -42,10 +66,22 @@ public partial class RegisterPageModel : ObservableObject
     public partial string PhoneNumber { get; set; } = string.Empty;
 
     [ObservableProperty]
+    public partial string HouseName { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string HouseAddress { get; set; } = string.Empty;
+
+    [ObservableProperty]
     public partial string Password { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial string ConfirmPassword { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string PageTitle { get; set; } = "Create Account";
+
+    [ObservableProperty]
+    public partial string SubmitButtonText { get; set; } = "Create Account";
 
     [ObservableProperty]
     public partial bool IsAgreedToTerms { get; set; } = false;
@@ -61,6 +97,12 @@ public partial class RegisterPageModel : ObservableObject
 
     [ObservableProperty]
     public partial string PhoneNumberError { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string HouseNameError { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string HouseAddressError { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial string PasswordError { get; set; } = string.Empty;
@@ -83,12 +125,32 @@ public partial class RegisterPageModel : ObservableObject
     {
         _authGateway = authGateway ?? throw new ArgumentNullException(nameof(authGateway));
         _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
+        PageTitle = AppResources.RegisterButtonText;
+        SubmitButtonText = AppResources.RegisterButtonText;
         UpdateRoleState();
     }
 
     partial void OnRoleChanged(string value)
     {
         UpdateRoleState();
+    }
+
+    partial void OnIsGoogleOnboardingChanged(bool value)
+    {
+        if (value)
+        {
+            IsEmailEditable = false;
+            CanSwitchRole = false;
+            PageTitle = AppResources.GoogleOnboardingTitle;
+            SubmitButtonText = AppResources.CompleteRegistration;
+        }
+        else
+        {
+            IsEmailEditable = true;
+            CanSwitchRole = true;
+            PageTitle = AppResources.RegisterButtonText;
+            SubmitButtonText = AppResources.RegisterButtonText;
+        }
     }
 
     private void UpdateRoleState()
@@ -114,6 +176,7 @@ public partial class RegisterPageModel : ObservableObject
         EmailError = string.Empty;
         StudentCodeError = string.Empty;
         PhoneNumberError = string.Empty;
+        HouseNameError = string.Empty;
         PasswordError = string.Empty;
         ConfirmPasswordError = string.Empty;
         GeneralError = string.Empty;
@@ -148,6 +211,28 @@ public partial class RegisterPageModel : ObservableObject
             else if (!PhoneRegex.IsMatch(PhoneNumber.Trim()))
             {
                 PhoneNumberError = "Please enter a valid Vietnamese phone number (e.g. 0912345678 or +84912345678).";
+                isValid = false;
+            }
+
+            if (string.IsNullOrWhiteSpace(HouseName))
+            {
+                HouseNameError = "Boarding house name is required for landlords.";
+                isValid = false;
+            }
+            else if (HouseName.Trim().Length < 3 || HouseName.Trim().Length > 100)
+            {
+                HouseNameError = "Boarding house name must be between 3 and 100 characters.";
+                isValid = false;
+            }
+
+            if (string.IsNullOrWhiteSpace(HouseAddress))
+            {
+                HouseAddressError = AppResources.HouseAddressRequiredError;
+                isValid = false;
+            }
+            else if (HouseAddress.Trim().Length < 5 || HouseAddress.Trim().Length > 250)
+            {
+                HouseAddressError = AppResources.HouseAddressRequiredError;
                 isValid = false;
             }
         }
@@ -194,17 +279,39 @@ public partial class RegisterPageModel : ObservableObject
             IsBusy = true;
             var normalizedStudentCode = IsStudent && !string.IsNullOrWhiteSpace(StudentCode) ? StudentCode.Trim().ToUpperInvariant() : null;
             var normalizedPhone = !IsStudent && !string.IsNullOrWhiteSpace(PhoneNumber) ? PhoneNumber.Trim() : null;
+            var normalizedHouseName = !IsStudent && !string.IsNullOrWhiteSpace(HouseName) ? HouseName.Trim() : null;
+            var normalizedHouseAddress = !IsStudent && !string.IsNullOrWhiteSpace(HouseAddress) ? HouseAddress.Trim() : null;
 
-            var request = new RegisterUserRequest(
-                Email: Email.Trim(),
-                Password: Password,
-                FullName: FullName.Trim(),
-                Role: IsStudent ? "Student" : "Landlord",
-                PhoneNumber: normalizedPhone,
-                StudentCode: normalizedStudentCode
-            );
+            AuthTokensDto? response;
 
-            var response = await _authGateway.RegisterAsync(request);
+            if (IsGoogleOnboarding && !string.IsNullOrWhiteSpace(GoogleToken))
+            {
+                var googleRequest = new GoogleLoginRequest(
+                    IdToken: GoogleToken,
+                    Role: IsStudent ? "Student" : "Landlord",
+                    PhoneNumber: normalizedPhone,
+                    HouseName: normalizedHouseName,
+                    HouseAddress: normalizedHouseAddress,
+                    Password: Password,
+                    DeviceInfo: DeviceInfo.Current.Model);
+
+                response = await _authGateway.LoginWithGoogleAsync(googleRequest);
+            }
+            else
+            {
+                var request = new RegisterUserRequest(
+                    Email: Email.Trim(),
+                    Password: Password,
+                    FullName: FullName.Trim(),
+                    Role: IsStudent ? "Student" : "Landlord",
+                    PhoneNumber: normalizedPhone,
+                    StudentCode: normalizedStudentCode,
+                    HouseName: normalizedHouseName,
+                    HouseAddress: normalizedHouseAddress
+                );
+
+                response = await _authGateway.RegisterAsync(request);
+            }
 
             if (response != null && !string.IsNullOrEmpty(response.AccessToken))
             {
@@ -266,19 +373,21 @@ public partial class RegisterPageModel : ObservableObject
             return errorCode switch
             {
                 "EMAIL_TAKEN" or "USER_EMAIL_EXISTS" or "AUTH_EMAIL_EXISTS"
-                    => "This email address is already in use. Please sign in.",
-                "INVALID_STUDENT_CODE" => "The provided student ID is invalid.",
-                "INVALID_PHONE_NUMBER" => "Please enter a valid Vietnamese phone number.",
-                "INVALID_ROLE" => "Invalid user role selected.",
-                _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : "Registration failed. Please verify your details."
+                    => AppResources.EmailAlreadyInUse,
+                "INVALID_STUDENT_CODE" => AppResources.InvalidStudentCode,
+                "INVALID_PHONE_NUMBER" or "AUTH_PHONE_REQUIRED" => AppResources.PhoneNumberRequiredMessage,
+                "AUTH_HOUSE_NAME_REQUIRED" or "INVALID_HOUSE_NAME" => AppResources.HouseNameRequiredMessage,
+                "AUTH_HOUSE_ADDRESS_REQUIRED" or "INVALID_HOUSE_ADDRESS" => AppResources.HouseAddressRequiredMessage,
+                "INVALID_ROLE" => AppResources.InvalidRoleSelected,
+                _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : AppResources.RegistrationFailedDefault
             };
         }
 
         return statusCode switch
         {
-            HttpStatusCode.Conflict => "This email address is already in use. Please sign in.",
-            HttpStatusCode.BadRequest => "Please check the submitted registration information.",
-            _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : "Registration failed. Please verify your details."
+            HttpStatusCode.Conflict => AppResources.EmailAlreadyInUse,
+            HttpStatusCode.BadRequest => AppResources.RegistrationCheckInfo,
+            _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : AppResources.RegistrationFailedDefault
         };
     }
 }

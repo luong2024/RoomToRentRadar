@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="ShowOrHidePassword" xml:space="preserve">
+    <value>Ẩn hoặc hiện mật khẩu</value>
+  </data>
+  <data name="SignInWithGoogle" xml:space="preserve">
+    <value>Đăng nhập bằng Google</value>
+  </data>
+  <data name="RegisterWithEmailPassword" xml:space="preserve">
+    <value>Đăng ký bằng Email &amp; Mật khẩu</value>
+  </data>
+  <data name="PromptLandlordPhoneTitle" xml:space="preserve">
+    <value>Số điện thoại chủ trọ</value>
+  </data>
+  <data name="PromptLandlordPhoneMessage" xml:space="preserve">
+    <value>Vui lòng nhập số điện thoại liên hệ (bắt buộc để xác minh chủ trọ):</value>
+  </data>
+  <data name="Confirm" xml:space="preserve">
+    <value>Xác nhận</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Hủy</value>
+  </data>
+  <data name="PhoneNumberRequiredTitle" xml:space="preserve">
+    <value>Yêu cầu số điện thoại</value>
+  </data>
+  <data name="PhoneNumberRequiredMessage" xml:space="preserve">
+    <value>Cần có số điện thoại hợp lệ để đăng ký vai trò Chủ trọ.</value>
+  </data>
+  <data name="Ok" xml:space="preserve">
+    <value>Đồng ý</value>
+  </data>
+  <data name="GoogleSignInErrorTitle" xml:space="preserve">
+    <value>Lỗi đăng nhập Google</value>
+  </data>
+  <data name="SignInFailedTitle" xml:space="preserve">
+    <value>Đăng nhập thất bại</value>
+  </data>
+  <data name="SessionStorageError" xml:space="preserve">
+    <value>Không thể lưu phiên đăng nhập an toàn trên thiết bị này.</value>
+  </data>
+  <data name="GoogleNavError" xml:space="preserve">
+    <value>Đăng nhập Google thành công, nhưng không thể chuyển đến màn hình chính.</value>
+  </data>
+  <data name="GoogleAuthFailed" xml:space="preserve">
+    <value>Xác thực với Google thất bại. Vui lòng thử lại.</value>
+  </data>
+  <data name="ContinueWithGoogleStudent" xml:space="preserve">
+    <value>Tiếp tục với Google (Sinh viên)</value>
+  </data>
+  <data name="ContinueWithGoogleLandlord" xml:space="preserve">
+    <value>Tiếp tục với Google (Chủ trọ)</value>
+  </data>
+  <data name="OrSignInWithEmail" xml:space="preserve">
+    <value>hoặc đăng nhập bằng Email</value>
+  </data>
+  <data name="PromptCreatePasswordTitle" xml:space="preserve">
+    <value>Thiết lập mật khẩu tài khoản</value>
+  </data>
+  <data name="PromptCreatePasswordMessage" xml:space="preserve">
+    <value>Vui lòng tạo mật khẩu cho tài khoản để có thể đăng nhập bằng mật khẩu sau này (tối thiểu 8 ký tự, 1 chữ hoa, 1 chữ thường, 1 số):</value>
+  </data>
+  <data name="PromptCurrentPasswordTitle" xml:space="preserve">
+    <value>Xác nhận mật khẩu hiện tại</value>
+  </data>
+  <data name="PromptCurrentPasswordMessage" xml:space="preserve">
+    <value>Đã có tài khoản sử dụng email này. Vui lòng nhập mật khẩu hiện tại để xác nhận liên kết Google:</value>
+  </data>
+  <data name="PasswordRequiredTitle" xml:space="preserve">
+    <value>Yêu cầu mật khẩu</value>
+  </data>
+  <data name="PasswordValidationRule" xml:space="preserve">
+    <value>Mật khẩu phải dài tối thiểu 8 ký tự, bao gồm chữ hoa, chữ thường và chữ số.</value>
+  </data>
+  <data name="GoogleClientIdMissing" xml:space="preserve">
+    <value>Chưa cấu hình Google Client ID. Vui lòng kiểm tra cấu hình trong client.env.</value>
+  </data>
+  <data name="PromptLandlordHouseNameTitle" xml:space="preserve">
+    <value>Tên nhà trọ</value>
+  </data>
+  <data name="PromptLandlordHouseNameMessage" xml:space="preserve">
+    <value>Vui lòng nhập tên nhà trọ của bạn để tiếp tục:</value>
+  </data>
+  <data name="HouseNameRequiredTitle" xml:space="preserve">
+    <value>Yêu cầu tên nhà trọ</value>
+  </data>
+  <data name="HouseNameRequiredMessage" xml:space="preserve">
+    <value>Tên nhà trọ phải có độ dài từ 3 đến 100 ký tự.</value>
+  </data>
+  <data name="HouseNameLabel" xml:space="preserve">
+    <value>Tên nhà trọ *</value>
+  </data>
+  <data name="HouseNamePlaceholder" xml:space="preserve">
+    <value>Ví dụ: Nhà trọ An Bình</value>
+  </data>
+  <data name="HouseAddressLabel" xml:space="preserve">
+    <value>Địa chỉ nhà trọ *</value>
+  </data>
+  <data name="HouseAddressPlaceholder" xml:space="preserve">
+    <value>VD: Số 123 đường Z115, Quyết Thắng, TP Thái Nguyên</value>
+  </data>
+  <data name="HouseAddressRequiredError" xml:space="preserve">
+    <value>Địa chỉ nhà trọ là bắt buộc đối với Chủ trọ (5-250 ký tự).</value>
+  </data>
+  <data name="HouseAddressRequiredTitle" xml:space="preserve">
+    <value>Yêu cầu địa chỉ nhà trọ</value>
+  </data>
+  <data name="HouseAddressRequiredMessage" xml:space="preserve">
+    <value>Địa chỉ nhà trọ phải có độ dài từ 5 đến 250 ký tự.</value>
+  </data>
+  <data name="CompleteRegistration" xml:space="preserve">
+    <value>Hoàn tất đăng ký</value>
+  </data>
+  <data name="RegisterButtonText" xml:space="preserve">
+    <value>Tạo tài khoản</value>
+  </data>
+  <data name="GoogleOnboardingTitle" xml:space="preserve">
+    <value>Hoàn tất đăng ký với Google</value>
+  </data>
+  <data name="PromptLandlordHouseAddressTitle" xml:space="preserve">
+    <value>Địa chỉ nhà trọ</value>
+  </data>
+  <data name="PromptLandlordHouseAddressMessage" xml:space="preserve">
+    <value>Vui lòng nhập địa chỉ nhà trọ của bạn để tiếp tục:</value>
+  </data>
+  <data name="InvalidCredentials" xml:space="preserve">
+    <value>Email hoặc mật khẩu không đúng.</value>
+  </data>
+  <data name="AccountLocked" xml:space="preserve">
+    <value>Tài khoản tạm thời bị khoá do đăng nhập sai nhiều lần. Vui lòng thử lại sau 15 phút.</value>
+  </data>
+  <data name="AccountDisabled" xml:space="preserve">
+    <value>Tài khoản này đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.</value>
+  </data>
+  <data name="LandlordPendingApproval" xml:space="preserve">
+    <value>Tài khoản chủ trọ đang chờ quản trị viên phê duyệt.</value>
+  </data>
+  <data name="AccountLockedOrSuspended" xml:space="preserve">
+    <value>Tài khoản của bạn đã bị khóa hoặc tạm ngưng.</value>
+  </data>
+  <data name="SignInFailedDefault" xml:space="preserve">
+    <value>Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.</value>
+  </data>
+  <data name="EmailAlreadyInUse" xml:space="preserve">
+    <value>Email này đã được sử dụng. Vui lòng đăng nhập.</value>
+  </data>
+  <data name="InvalidStudentCode" xml:space="preserve">
+    <value>Mã sinh viên không hợp lệ.</value>
+  </data>
+  <data name="InvalidRoleSelected" xml:space="preserve">
+    <value>Vai trò người dùng không hợp lệ.</value>
+  </data>
+  <data name="RegistrationFailedDefault" xml:space="preserve">
+    <value>Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.</value>
+  </data>
+  <data name="RegistrationCheckInfo" xml:space="preserve">
+    <value>Vui lòng kiểm tra lại thông tin đăng ký đã nhập.</value>
+  </data>
+</root>
+

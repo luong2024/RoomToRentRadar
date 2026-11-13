@@ -17,6 +17,9 @@ public class InfrastructureSecurityAndConfigTests
 
         var descriptor = services.Single(d => d.ServiceType == typeof(IIctuSsoVerifierPort));
         Assert.That(descriptor.ImplementationType, Is.EqualTo(typeof(IctuSsoVerifierAdapter)));
+
+        var googleDescriptor = services.Single(d => d.ServiceType == typeof(IGoogleAuthVerifierPort));
+        Assert.That(googleDescriptor.ImplementationType, Is.EqualTo(typeof(GoogleAuthVerifierAdapter)));
     }
 
     [Test]
@@ -27,6 +30,9 @@ public class InfrastructureSecurityAndConfigTests
 
         var descriptor = services.Single(d => d.ServiceType == typeof(IIctuSsoVerifierPort));
         Assert.That(descriptor.ImplementationType, Is.EqualTo(typeof(MockIctuSsoVerifierAdapter)));
+
+        var googleDescriptor = services.Single(d => d.ServiceType == typeof(IGoogleAuthVerifierPort));
+        Assert.That(googleDescriptor.ImplementationType, Is.EqualTo(typeof(MockGoogleAuthVerifierAdapter)));
     }
 }
 

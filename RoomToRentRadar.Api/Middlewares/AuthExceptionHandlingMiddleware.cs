@@ -69,6 +69,36 @@ public sealed class AuthExceptionHandlingMiddleware
                 errorCode = "VALIDATION_FAILED";
                 return true;
 
+            case PhoneNumberRequiredException:
+                statusCode = StatusCodes.Status400BadRequest;
+                title = "Phone Number Required";
+                errorCode = "AUTH_PHONE_REQUIRED";
+                return true;
+
+            case HouseNameRequiredException:
+                statusCode = StatusCodes.Status400BadRequest;
+                title = "House Name Required";
+                errorCode = "AUTH_HOUSE_NAME_REQUIRED";
+                return true;
+
+            case HouseAddressRequiredException:
+                statusCode = StatusCodes.Status400BadRequest;
+                title = "House Address Required";
+                errorCode = "AUTH_HOUSE_ADDRESS_REQUIRED";
+                return true;
+
+            case PasswordRequiredException:
+                statusCode = StatusCodes.Status400BadRequest;
+                title = "Password Required";
+                errorCode = "AUTH_PASSWORD_REQUIRED";
+                return true;
+
+            case CurrentPasswordRequiredException:
+                statusCode = StatusCodes.Status400BadRequest;
+                title = "Current Password Required";
+                errorCode = "AUTH_CURRENT_PASSWORD_REQUIRED";
+                return true;
+
             case InvalidCredentialsException:
                 statusCode = StatusCodes.Status401Unauthorized;
                 title = "Authentication Failed";

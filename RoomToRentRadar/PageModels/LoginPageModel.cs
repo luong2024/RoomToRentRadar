@@ -3,16 +3,21 @@ using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Client.Adapters.Abstractions;
+using RoomToRentRadar.DeviceAdapters;
 using RoomToRentRadar.Ports.Contracts.Requests.Auth;
+using RoomToRentRadar.Ports.Contracts.Responses.Auth;
+using RoomToRentRadar.Resources.Strings;
 
 namespace RoomToRentRadar.PageModels;
 
 public partial class LoginPageModel : ObservableObject
 {
     private static readonly Regex EmailRegex = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex PhoneRegex = new(@"^(0|\+84)[0-9]{9}$", RegexOptions.Compiled);
 
     private readonly IAuthGateway _authGateway;
     private readonly ISessionStore _sessionStore;
+    private readonly IGoogleAuthClientService _googleAuthService;
 
     [ObservableProperty]
     public partial string Email { get; set; } = string.Empty;
@@ -38,18 +43,23 @@ public partial class LoginPageModel : ObservableObject
     [ObservableProperty]
     public partial bool IsBusy { get; set; } = false;
 
-#if DEBUG
-    public bool IsSsoVisible => true;
-#else
-    public bool IsSsoVisible => false;
-#endif
+    public string SignInWithGoogleText => AppResources.SignInWithGoogle;
+    public string OrSignInWithEmailText => AppResources.OrSignInWithEmail;
 
     public LoginPageModel(
         IAuthGateway authGateway,
-        ISessionStore sessionStore)
+        ISessionStore sessionStore,
+        IGoogleAuthClientService? googleAuthService = null)
     {
         _authGateway = authGateway ?? throw new ArgumentNullException(nameof(authGateway));
         _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
+        _googleAuthService = googleAuthService ?? new GoogleAuthClientService();
+
+        LocalizedStrings.Instance.PropertyChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(SignInWithGoogleText));
+            OnPropertyChanged(nameof(OrSignInWithEmailText));
+        };
     }
 
     [RelayCommand]
@@ -138,51 +148,31 @@ public partial class LoginPageModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task LoginWithIctuSsoAsync()
+    private async Task LoginWithGoogleAsync()
     {
         if (IsBusy) return;
 
-#if !DEBUG
-        return;
-#else
         try
         {
             IsBusy = true;
             HasGeneralError = false;
             GeneralError = string.Empty;
 
-            var ssoRequest = new IctuSsoLoginRequest("mock-ictu-sso-id-token", DeviceInfo.Current.Model);
-            var response = await _authGateway.LoginWithIctuSsoAsync(ssoRequest);
-
-            if (response != null && !string.IsNullOrEmpty(response.AccessToken))
+            var idToken = await _googleAuthService.AuthenticateAndGetIdTokenAsync();
+            if (string.IsNullOrWhiteSpace(idToken))
             {
-                var saved = await _sessionStore.SaveSessionAsync(response);
-                if (!saved)
-                {
-                    GeneralError = "Unable to securely store your session on this device.";
-                    HasGeneralError = true;
-                    return;
-                }
+                return;
+            }
 
-                try
-                {
-                    await Shell.Current.GoToAsync("//main");
-                }
-                catch (Exception)
-                {
-                    GeneralError = "SSO sign in succeeded, but navigation to home screen failed.";
-                    HasGeneralError = true;
-                }
-            }
-            else
-            {
-                GeneralError = "Authentication with ICTU SSO failed. Please try again.";
-                HasGeneralError = true;
-            }
+            var email = JwtPayloadHelper.ExtractEmail(idToken);
+            var isIctuStudent = JwtPayloadHelper.IsIctuStudentEmail(email);
+            var role = isIctuStudent ? "Student" : "Landlord";
+
+            await ExecuteGoogleLoginWithChallengeHandlingAsync(idToken, role);
         }
         catch (ApiException apiEx)
         {
-            GeneralError = MapAuthErrorCodeToMessage(apiEx.ErrorCode, apiEx.StatusCode, "ICTU SSO authentication failed.");
+            GeneralError = MapAuthErrorCodeToMessage(apiEx.ErrorCode, apiEx.StatusCode, apiEx.Message);
             HasGeneralError = true;
         }
         catch (HttpRequestException)
@@ -190,16 +180,102 @@ public partial class LoginPageModel : ObservableObject
             GeneralError = "Unable to connect to the authentication server. Please check your network.";
             HasGeneralError = true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            GeneralError = "An unexpected error occurred during ICTU SSO login.";
+            GeneralError = !string.IsNullOrWhiteSpace(ex.Message) ? ex.Message : "An unexpected error occurred during Google login.";
             HasGeneralError = true;
         }
         finally
         {
             IsBusy = false;
         }
-#endif
+    }
+
+    private async Task ExecuteGoogleLoginWithChallengeHandlingAsync(string idToken, string role)
+    {
+        string? currentPassword = null;
+
+        while (true)
+        {
+            var request = new GoogleLoginRequest(
+                IdToken: idToken,
+                Role: role,
+                DeviceInfo: DeviceInfo.Current.Model,
+                CurrentPassword: currentPassword);
+
+            try
+            {
+                var response = await _authGateway.LoginWithGoogleAsync(request);
+                await HandleLoginResponseAsync(response);
+                return;
+            }
+            catch (ApiException apiEx) when (
+                apiEx.ErrorCode is "AUTH_PASSWORD_REQUIRED" or "AUTH_PHONE_REQUIRED" or "AUTH_HOUSE_NAME_REQUIRED" or "AUTH_HOUSE_ADDRESS_REQUIRED")
+            {
+                // First-time Google registration: navigate to RegisterPage for unified onboarding (Phương án B)
+                var email = JwtPayloadHelper.ExtractEmail(idToken) ?? string.Empty;
+                var fullName = JwtPayloadHelper.ExtractFullName(idToken) ?? string.Empty;
+
+                var queryParams = new Dictionary<string, object>
+                {
+                    ["role"] = role,
+                    ["isGoogle"] = "true",
+                    ["googleToken"] = idToken,
+                    ["email"] = email,
+                    ["fullName"] = fullName
+                };
+
+                await Shell.Current.GoToAsync("register", queryParams);
+                return;
+            }
+            catch (ApiException apiEx) when (apiEx.ErrorCode == "AUTH_CURRENT_PASSWORD_REQUIRED" && Shell.Current != null)
+            {
+                var currentPassInput = await Shell.Current.DisplayPromptAsync(
+                    AppResources.PromptCurrentPasswordTitle,
+                    AppResources.PromptCurrentPasswordMessage,
+                    accept: AppResources.Confirm,
+                    cancel: AppResources.Cancel,
+                    placeholder: "••••••••",
+                    maxLength: 64,
+                    keyboard: Keyboard.Text);
+
+                if (string.IsNullOrWhiteSpace(currentPassInput))
+                {
+                    return; // user cancelled prompt
+                }
+
+                currentPassword = currentPassInput.Trim();
+            }
+        }
+    }
+
+    private async Task HandleLoginResponseAsync(AuthTokensDto? response)
+    {
+        if (response != null && !string.IsNullOrEmpty(response.AccessToken))
+        {
+            var saved = await _sessionStore.SaveSessionAsync(response);
+            if (!saved)
+            {
+                GeneralError = AppResources.SessionStorageError;
+                HasGeneralError = true;
+                return;
+            }
+
+            try
+            {
+                await Shell.Current.GoToAsync("//main");
+            }
+            catch (Exception)
+            {
+                GeneralError = AppResources.GoogleNavError;
+                HasGeneralError = true;
+            }
+        }
+        else
+        {
+            GeneralError = AppResources.GoogleAuthFailed;
+            HasGeneralError = true;
+        }
     }
 
     [RelayCommand]
@@ -227,23 +303,29 @@ public partial class LoginPageModel : ObservableObject
             return errorCode switch
             {
                 "INVALID_CREDENTIALS" or "AUTH_INVALID_CREDENTIALS" or "USER_NOT_FOUND" or "AUTH_USER_NOT_FOUND"
-                    => "Invalid email or password.",
+                    => AppResources.InvalidCredentials,
                 "ACCOUNT_LOCKED" or "AUTH_ACCOUNT_LOCKED"
-                    => "Your account is temporarily locked due to multiple failed login attempts. Please try again after 15 minutes.",
+                    => AppResources.AccountLocked,
                 "USER_DISABLED"
-                    => "This account has been deactivated. Please contact support.",
+                    => AppResources.AccountDisabled,
                 "LANDLORD_NOT_APPROVED" or "AUTH_LANDLORD_NOT_APPROVED"
-                    => "Your landlord account is pending administrative verification.",
-                _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : "Sign in failed. Please check your credentials."
+                    => AppResources.LandlordPendingApproval,
+                "AUTH_PHONE_REQUIRED" or "PHONE_REQUIRED"
+                    => AppResources.PhoneNumberRequiredMessage,
+                "AUTH_PASSWORD_REQUIRED" or "PASSWORD_REQUIRED"
+                    => AppResources.PasswordValidationRule,
+                "AUTH_CURRENT_PASSWORD_REQUIRED"
+                    => AppResources.PromptCurrentPasswordMessage,
+                _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : AppResources.SignInFailedDefault
             };
         }
 
         return statusCode switch
         {
-            HttpStatusCode.Unauthorized => "Invalid email or password.",
-            HttpStatusCode.Forbidden => "Your account is locked or suspended.",
-            HttpStatusCode.NotFound => "Invalid email or password.",
-            _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : "Sign in failed. Please check your credentials."
+            HttpStatusCode.Unauthorized => AppResources.InvalidCredentials,
+            HttpStatusCode.Forbidden => AppResources.AccountLockedOrSuspended,
+            HttpStatusCode.NotFound => AppResources.InvalidCredentials,
+            _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : AppResources.SignInFailedDefault
         };
     }
 }

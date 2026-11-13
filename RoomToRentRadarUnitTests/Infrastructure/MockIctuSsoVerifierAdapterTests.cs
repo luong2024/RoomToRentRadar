@@ -34,6 +34,21 @@ public class MockIctuSsoVerifierAdapterTests
         });
     }
 
+    [TestCase("mock-ictu-sso-id-token")]
+    [TestCase("mock-ictu-student-token")]
+    public async Task VerifyIdTokenAsync_WithConvenienceToken_ReturnsStudentPayload(string token)
+    {
+        var payload = await _sut.VerifyIdTokenAsync(token);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(payload.Email, Is.EqualTo("student.radar@ictu.edu.vn"));
+            Assert.That(payload.FullName, Is.EqualTo("ICTU Demo Student"));
+            Assert.That(payload.StudentCode, Is.EqualTo("DTC215210001"));
+            Assert.That(payload.SubjectId, Is.EqualTo("mock-ictu-sub-student-01"));
+        });
+    }
+
     [Test]
     public async Task VerifyIdTokenAsync_WithFakeSignature_ThrowsInvalidTokenException()
     {

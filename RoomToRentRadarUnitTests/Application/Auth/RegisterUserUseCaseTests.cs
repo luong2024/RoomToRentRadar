@@ -80,7 +80,9 @@ public class RegisterUserUseCaseTests
             Password: "StrongPass123",
             FullName: "Tran Thi Chu Tro",
             Role: "Landlord",
-            PhoneNumber: "0987654321");
+            PhoneNumber: "0987654321",
+            HouseName: "Nha tro Co Hoa",
+            HouseAddress: "So 12 ngo 34 Z115, TP Thai Nguyen");
 
         var result = await _sut.ExecuteAsync(request);
 
@@ -89,11 +91,49 @@ public class RegisterUserUseCaseTests
             Assert.That(result.User.Role, Is.EqualTo("Landlord"));
             Assert.That(result.User.IsVerified, Is.False);
             Assert.That(result.User.PhoneNumber, Is.EqualTo("0987654321"));
+            Assert.That(result.User.HouseName, Is.EqualTo("Nha tro Co Hoa"));
+            Assert.That(result.User.HouseAddress, Is.EqualTo("So 12 ngo 34 Z115, TP Thai Nguyen"));
         });
 
         await _userRepository.Received(1).AddAsync(
             Arg.Is<User>(u => u.Role == UserRole.Landlord && !u.IsVerified),
             Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public void ExecuteAsync_LandlordWithoutHouseName_ThrowsDomainValidationException()
+    {
+        _userRepository.ExistsByEmailAsync("landlord@gmail.com", Arg.Any<CancellationToken>()).Returns(false);
+
+        var request = new RegisterUserRequest(
+            Email: "landlord@gmail.com",
+            Password: "StrongPass123",
+            FullName: "Tran Thi Chu Tro",
+            Role: "Landlord",
+            PhoneNumber: "0987654321",
+            HouseName: null,
+            HouseAddress: "So 12 ngo 34 Z115, TP Thai Nguyen");
+
+        Assert.ThrowsAsync<DomainValidationException>(
+            async () => await _sut.ExecuteAsync(request));
+    }
+
+    [Test]
+    public void ExecuteAsync_LandlordWithoutHouseAddress_ThrowsDomainValidationException()
+    {
+        _userRepository.ExistsByEmailAsync("landlord@gmail.com", Arg.Any<CancellationToken>()).Returns(false);
+
+        var request = new RegisterUserRequest(
+            Email: "landlord@gmail.com",
+            Password: "StrongPass123",
+            FullName: "Tran Thi Chu Tro",
+            Role: "Landlord",
+            PhoneNumber: "0987654321",
+            HouseName: "Nha tro Co Hoa",
+            HouseAddress: null);
+
+        Assert.ThrowsAsync<DomainValidationException>(
+            async () => await _sut.ExecuteAsync(request));
     }
 
     [Test]

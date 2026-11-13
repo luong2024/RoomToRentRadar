@@ -12,7 +12,8 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         JwtSettings? jwtSettings = null,
-        bool useMockSsoVerifier = false)
+        bool useMockSsoVerifier = false,
+        string? googleClientId = null)
     {
         if (jwtSettings != null)
         {
@@ -27,10 +28,12 @@ public static class DependencyInjection
         if (useMockSsoVerifier)
         {
             services.AddSingleton<IIctuSsoVerifierPort, MockIctuSsoVerifierAdapter>();
+            services.AddSingleton<IGoogleAuthVerifierPort, MockGoogleAuthVerifierAdapter>();
         }
         else
         {
             services.AddSingleton<IIctuSsoVerifierPort, IctuSsoVerifierAdapter>();
+            services.AddSingleton<IGoogleAuthVerifierPort, GoogleAuthVerifierAdapter>();
         }
 
         services.AddSingleton<InMemoryUserRepository>();

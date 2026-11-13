@@ -97,6 +97,8 @@ public sealed class SqliteDbContext : IDisposable
                             AuthProvider TEXT NOT NULL,
                             SsoSubjectId TEXT NULL,
                             PhoneNumber TEXT NULL,
+                            HouseName TEXT NULL,
+                            HouseAddress TEXT NULL,
                             StudentCode TEXT NULL,
                             IsVerified INTEGER NOT NULL,
                             FailedLoginCount INTEGER NOT NULL,
@@ -197,6 +199,9 @@ public sealed class SqliteDbContext : IDisposable
                         """;
                     cmd.ExecuteNonQuery();
                 }
+
+                // BR-AUTH-03 / H2: Ensure HouseName and HouseAddress columns exist on existing databases.
+                EnsureUserColumnsExist(conn);
 
                 // Campuses is reference data: always seeded, in every environment (H4 / ADR-002).
                 SeedCampuses(conn);
@@ -346,6 +351,43 @@ public sealed class SqliteDbContext : IDisposable
     }
 
     /// <summary>
+    /// BR-AUTH-03 / H2: CREATE TABLE IF NOT EXISTS không cập nhật bảng Users khi database đã tồn tại.
+    /// Phương thức kiểm tra PRAGMA table_info và tự động bổ sung cột HouseName, HouseAddress nếu thiếu.
+    /// </summary>
+    private static void EnsureUserColumnsExist(SqliteConnection conn)
+    {
+        var existingColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        using (var tableInfo = conn.CreateCommand())
+        {
+            tableInfo.CommandText = "PRAGMA table_info(Users);";
+            using var reader = tableInfo.ExecuteReader();
+            while (reader.Read())
+            {
+                existingColumns.Add(reader.GetString(1));
+            }
+        }
+
+        if (existingColumns.Count == 0)
+        {
+            return;
+        }
+
+        if (!existingColumns.Contains("HouseName"))
+        {
+            using var alterCmd = conn.CreateCommand();
+            alterCmd.CommandText = "ALTER TABLE Users ADD COLUMN HouseName TEXT NULL;";
+            alterCmd.ExecuteNonQuery();
+        }
+
+        if (!existingColumns.Contains("HouseAddress"))
+        {
+            using var alterCmd = conn.CreateCommand();
+            alterCmd.CommandText = "ALTER TABLE Users ADD COLUMN HouseAddress TEXT NULL;";
+            alterCmd.ExecuteNonQuery();
+        }
+    }
+
+    /// <summary>
     /// BR-LST-06: the search read model joins <c>Users</c> on <c>IsVerified</c>, so demo rooms need a
     /// verified landlord row. <c>INSERT OR IGNORE</c> keeps any real landlord that already owns the id.
     /// </summary>
@@ -357,11 +399,11 @@ public sealed class SqliteDbContext : IDisposable
         cmd.CommandText = """
             INSERT OR IGNORE INTO Users (
                 Id, Email, NormalizedEmail, FullName, PasswordHash, Role, AuthProvider,
-                SsoSubjectId, PhoneNumber, StudentCode, IsVerified, FailedLoginCount,
+                SsoSubjectId, PhoneNumber, HouseName, HouseAddress, StudentCode, IsVerified, FailedLoginCount,
                 LockoutEndUtc, CreatedAtUtc, UpdatedAtUtc
             ) VALUES (
                 @id, @email, @normalizedEmail, @fullName, NULL, 'Landlord', 'Local',
-                NULL, NULL, NULL, 1, 0,
+                NULL, @phoneNumber, @houseName, @houseAddress, NULL, 1, 0,
                 NULL, @createdAtUtc, @createdAtUtc
             );
             """;
@@ -369,6 +411,9 @@ public sealed class SqliteDbContext : IDisposable
         cmd.Parameters.AddWithValue("@email", "seed-landlord@roomtorentradar.local");
         cmd.Parameters.AddWithValue("@normalizedEmail", "seed-landlord@roomtorentradar.local");
         cmd.Parameters.AddWithValue("@fullName", "Seed Landlord");
+        cmd.Parameters.AddWithValue("@phoneNumber", "0987654321");
+        cmd.Parameters.AddWithValue("@houseName", "Nhà trọ Mẫu Thái Nguyên");
+        cmd.Parameters.AddWithValue("@houseAddress", "Số 123 Đường Z115, TP. Thái Nguyên");
         cmd.Parameters.AddWithValue("@createdAtUtc", "2026-11-01T08:00:00.0000000Z");
         cmd.ExecuteNonQuery();
     }

@@ -11,6 +11,8 @@ public sealed class UserTable
     public string AuthProvider { get; set; } = string.Empty;
     public string? SsoSubjectId { get; set; }
     public string? PhoneNumber { get; set; }
+    public string? HouseName { get; set; }
+    public string? HouseAddress { get; set; }
     public string? StudentCode { get; set; }
     public bool IsVerified { get; set; }
     public int FailedLoginCount { get; set; }

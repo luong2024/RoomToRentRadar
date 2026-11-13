@@ -37,7 +37,9 @@ public class JwtTokenServiceAdapterTests
             role: UserRole.Landlord,
             phoneNumber: "0987654321",
             studentCode: null,
-            utcNow: FixedNow);
+            utcNow: FixedNow,
+            houseName: "Nha tro JWT",
+            houseAddress: "So 12 ngo 34 Z115, TP Thai Nguyen");
 
         var generated = _sut.GenerateAccessToken(landlord, FixedNow);
         var isValid = _sut.TryValidateAccessToken(generated.Token, FixedNow.AddMinutes(5), out var claims);

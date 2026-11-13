@@ -49,7 +49,9 @@ public class SqliteUserRepositoryTests
             role: UserRole.Landlord,
             phoneNumber: "0987654321",
             studentCode: null,
-            utcNow: FixedNow);
+            utcNow: FixedNow,
+            houseName: "Nha tro SQLite",
+            houseAddress: "So 12 ngo 34 Z115, TP Thai Nguyen");
 
         landlord.IssueRefreshToken("token-hash-100", "jti-100", FixedNow, TimeSpan.FromDays(7));
         await repo.AddAsync(landlord);
@@ -62,6 +64,8 @@ public class SqliteUserRepositoryTests
             Assert.That(byEmail, Is.Not.Null);
             Assert.That(byEmail!.Id, Is.EqualTo(landlord.Id));
             Assert.That(byEmail.IsVerified, Is.False);
+            Assert.That(byEmail.HouseName, Is.EqualTo("Nha tro SQLite"));
+            Assert.That(byEmail.HouseAddress, Is.EqualTo("So 12 ngo 34 Z115, TP Thai Nguyen"));
             Assert.That(byToken, Is.Not.Null);
             Assert.That(byToken!.RefreshTokens, Has.Count.EqualTo(1));
         });
