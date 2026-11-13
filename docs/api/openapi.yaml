@@ -1193,7 +1193,7 @@ components:
 
   responses:
     BadRequest:
-      description: Validation failed (errorCode VALIDATION_FAILED or specific)
+      description: Validation failed (errorCode VALIDATION_FAILED or a specific code; model-binding errors also carry `errors`)
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/ProblemDetails' }
@@ -1258,7 +1258,7 @@ components:
         errorCode:
           type: string
           description: Stable machine code mapped to localized text by the client (en-US / vi-VN, US15, ui-ux-spec §6)
-          examples: [VALIDATION_FAILED, INVALID_CREDENTIALS, INVALID_TOKEN, ACCOUNT_LOCKED, FORBIDDEN_ROLE, LANDLORD_NOT_APPROVED, EMAIL_TAKEN, ROOM_NOT_FOUND, LISTING_NOT_AVAILABLE, INVALID_STATE_TRANSITION, ALREADY_REPORTED, LIMIT_EXCEEDED, CONCURRENCY_CONFLICT, ETAG_MISMATCH, IF_MATCH_REQUIRED, FILE_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, RATE_LIMITED]
+          examples: [VALIDATION_FAILED, INVALID_SORT_OPTION, INVALID_PRICE_RANGE, INVALID_AREA_RANGE, INVALID_DISTANCE_RANGE, CAMPUS_NOT_FOUND, DUPLICATE_ROOM, INVALID_CREDENTIALS, INVALID_TOKEN, ACCOUNT_LOCKED, FORBIDDEN_ROLE, LANDLORD_NOT_APPROVED, EMAIL_TAKEN, ROOM_NOT_FOUND, LISTING_NOT_AVAILABLE, INVALID_STATE_TRANSITION, ALREADY_REPORTED, LIMIT_EXCEEDED, CONCURRENCY_CONFLICT, ETAG_MISMATCH, IF_MATCH_REQUIRED, FILE_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, RATE_LIMITED]
         errors:
           type: object
           description: Field-level validation messages

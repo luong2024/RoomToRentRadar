@@ -2,7 +2,19 @@ namespace RoomToRentRadar.Domain.Exceptions;
 
 public class DomainValidationException : Exception
 {
-    public DomainValidationException(string message) : base(message)
+    /// <summary>Stable UPPER_SNAKE code exposed as <c>errorCode</c> in ProblemDetails (ADR-012).</summary>
+    public string? ErrorCode { get; }
+
+    public DomainValidationException(string message, string? errorCode = null) : base(message)
+    {
+        ErrorCode = errorCode;
+    }
+}
+
+/// <summary>ADR-011: illegal listing state transition — mapped to HTTP 409.</summary>
+public class InvalidStateTransitionException : Exception
+{
+    public InvalidStateTransitionException(string message) : base(message)
     {
     }
 }

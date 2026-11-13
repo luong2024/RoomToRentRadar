@@ -17,6 +17,9 @@ namespace RoomToRentRadar.Datastore.Sqlite
             services.AddSingleton<SqliteDbContext>();
             services.AddScoped<IUserRepository, SqliteUserRepository>();
             services.AddScoped<IAuditLogRepository, SqliteAuditLogRepository>();
+            services.AddScoped<IRoomRepository, SqliteRoomRepository>();
+            services.AddScoped<ICampusRepository, SqliteCampusRepository>();
+            services.AddScoped<IRoomSearchReadModel, SqliteRoomSearchReadModel>();
 
             return services;
         }
