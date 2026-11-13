@@ -12,6 +12,12 @@ public sealed class InMemoryCosmosContainer<T> : ICosmosContainer<T> where T : c
     private readonly ConcurrentDictionary<string, (string Json, string ETag)> _storage = new(StringComparer.Ordinal);
     private readonly object _syncRoot = new();
 
+    /// <summary>
+    /// Invoked after a document snapshot has been taken but before it is returned. This makes
+    /// concurrency tests able to deterministically arrange two readers with the same ETag.
+    /// </summary>
+    public Func<string, Task>? OnReadAsync { get; set; }
+
     public Task<T> CreateItemAsync(T item, string partitionKey, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -95,19 +101,28 @@ public sealed class InMemoryCosmosContainer<T> : ICosmosContainer<T> where T : c
         }
     }
 
-    public Task<T?> ReadItemAsync(string id, string partitionKey, CancellationToken cancellationToken = default)
+    public async Task<T?> ReadItemAsync(string id, string partitionKey, CancellationToken cancellationToken = default)
     {
+        T? snapshot;
         lock (_syncRoot)
         {
             if (_storage.TryGetValue(id, out var entry))
             {
-                var doc = JsonConvert.DeserializeObject<T>(entry.Json)!;
-                SetItemETag(doc, entry.ETag);
-                return Task.FromResult<T?>(doc);
+                snapshot = JsonConvert.DeserializeObject<T>(entry.Json)!;
+                SetItemETag(snapshot, entry.ETag);
             }
-
-            return Task.FromResult<T?>(null);
+            else
+            {
+                snapshot = null;
+            }
         }
+
+        if (OnReadAsync is not null)
+        {
+            await OnReadAsync(id);
+        }
+
+        return snapshot;
     }
 
     public Task DeleteItemAsync(string id, string partitionKey, CancellationToken cancellationToken = default)

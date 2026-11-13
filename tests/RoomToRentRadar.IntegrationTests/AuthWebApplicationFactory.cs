@@ -45,7 +45,11 @@ public sealed class AuthWebApplicationFactory : WebApplicationFactory<Program>
                 ["CosmosDb:DatabaseName"] = "RoomToRentRadarDb",
                 ["GoogleAuth:ClientId"] = "test-google-client-id.apps.googleusercontent.com",
                 ["RateLimiting:AuthPermitLimit"] = _authPermitLimit.ToString(),
-                ["RateLimiting:AuthWindowSeconds"] = "60"
+                ["RateLimiting:AuthWindowSeconds"] = "60",
+                ["KycStorage:AccountName"] = "devstoreaccount1",
+                ["KycStorage:AccountKey"] = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
+                ["KycStorage:ContainerName"] = "kyc",
+                ["KycStorage:AllowedHosts"] = "storage.roomtorentradar.vn,127.0.0.1,localhost,devstoreaccount1.blob.core.windows.net"
             });
         });
 
