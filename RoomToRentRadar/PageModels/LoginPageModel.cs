@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Client.Adapters.Abstractions;
 using RoomToRentRadar.DeviceAdapters;
 using RoomToRentRadar.Ports.Contracts.Requests.Auth;
+using RoomToRentRadar.Ports.Contracts.Responses.Auth;
 using RoomToRentRadar.Resources.Strings;
 
 namespace RoomToRentRadar.PageModels;
@@ -12,6 +13,7 @@ namespace RoomToRentRadar.PageModels;
 public partial class LoginPageModel : ObservableObject
 {
     private static readonly Regex EmailRegex = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex PhoneRegex = new(@"^(0|\+84)[0-9]{9}$", RegexOptions.Compiled);
 
     private readonly IAuthGateway _authGateway;
     private readonly ISessionStore _sessionStore;
@@ -216,43 +218,28 @@ public partial class LoginPageModel : ObservableObject
             HasGeneralError = false;
             GeneralError = string.Empty;
 
-            var idToken = await _googleAuthService.AuthenticateAndGetIdTokenAsync("Student");
+            var idToken = await _googleAuthService.AuthenticateAndGetIdTokenAsync();
             if (string.IsNullOrWhiteSpace(idToken))
             {
                 return;
             }
 
-            var request = new GoogleLoginRequest(
-                IdToken: idToken,
-                Role: "Student",
-                DeviceInfo: DeviceInfo.Current.Model);
+            var email = JwtPayloadHelper.ExtractEmail(idToken);
+            var isIctuStudent = JwtPayloadHelper.IsIctuStudentEmail(email);
 
-            var response = await _authGateway.LoginWithGoogleAsync(request);
-
-            if (response != null && !string.IsNullOrEmpty(response.AccessToken))
+            if (isIctuStudent)
             {
-                var saved = await _sessionStore.SaveSessionAsync(response);
-                if (!saved)
-                {
-                    GeneralError = AppResources.SessionStorageError;
-                    HasGeneralError = true;
-                    return;
-                }
+                var request = new GoogleLoginRequest(
+                    IdToken: idToken,
+                    Role: "Student",
+                    DeviceInfo: DeviceInfo.Current.Model);
 
-                try
-                {
-                    await Shell.Current.GoToAsync("//main");
-                }
-                catch (Exception)
-                {
-                    GeneralError = AppResources.GoogleNavError;
-                    HasGeneralError = true;
-                }
+                var response = await _authGateway.LoginWithGoogleAsync(request);
+                await HandleLoginResponseAsync(response);
             }
             else
             {
-                GeneralError = AppResources.GoogleAuthFailed;
-                HasGeneralError = true;
+                await HandleLandlordGoogleLoginAsync(idToken);
             }
         }
         catch (ApiException apiEx)
@@ -273,6 +260,102 @@ public partial class LoginPageModel : ObservableObject
         finally
         {
             IsBusy = false;
+        }
+    }
+
+    private async Task HandleLandlordGoogleLoginAsync(string idToken)
+    {
+        // 1. Attempt login assuming Landlord is already registered with a phone number
+        try
+        {
+            var initialReq = new GoogleLoginRequest(
+                IdToken: idToken,
+                Role: "Landlord",
+                PhoneNumber: null,
+                DeviceInfo: DeviceInfo.Current.Model);
+
+            var initialResponse = await _authGateway.LoginWithGoogleAsync(initialReq);
+            if (initialResponse != null && !string.IsNullOrEmpty(initialResponse.AccessToken))
+            {
+                await HandleLoginResponseAsync(initialResponse);
+                return;
+            }
+        }
+        catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.BadRequest &&
+                                      (ex.Message?.Contains("Phone", StringComparison.OrdinalIgnoreCase) == true ||
+                                       ex.ErrorCode?.Contains("Phone", StringComparison.OrdinalIgnoreCase) == true))
+        {
+            // Expected for new landlord registration where phone number is required
+        }
+
+        // 2. Prompt for Vietnamese phone number if new registration or phone missing
+        if (Shell.Current == null)
+        {
+            return;
+        }
+
+        var phoneInput = await Shell.Current.DisplayPromptAsync(
+            AppResources.PromptLandlordPhoneTitle,
+            AppResources.PromptLandlordPhoneMessage,
+            accept: AppResources.Confirm,
+            cancel: AppResources.Cancel,
+            placeholder: "0912345678",
+            maxLength: 12,
+            keyboard: Keyboard.Telephone);
+
+        if (phoneInput == null)
+        {
+            // User cancelled prompt
+            return;
+        }
+
+        var trimmedPhone = phoneInput.Trim();
+        if (string.IsNullOrWhiteSpace(trimmedPhone) || !PhoneRegex.IsMatch(trimmedPhone))
+        {
+            await Shell.Current.DisplayAlertAsync(
+                AppResources.PhoneNumberRequiredTitle,
+                AppResources.PhoneNumberRequiredMessage,
+                AppResources.Ok);
+            return;
+        }
+
+        // 3. Complete registration / login with phone number
+        var registeredReq = new GoogleLoginRequest(
+            IdToken: idToken,
+            Role: "Landlord",
+            PhoneNumber: trimmedPhone,
+            DeviceInfo: DeviceInfo.Current.Model);
+
+        var finalResponse = await _authGateway.LoginWithGoogleAsync(registeredReq);
+        await HandleLoginResponseAsync(finalResponse);
+    }
+
+    private async Task HandleLoginResponseAsync(AuthTokensDto? response)
+    {
+        if (response != null && !string.IsNullOrEmpty(response.AccessToken))
+        {
+            var saved = await _sessionStore.SaveSessionAsync(response);
+            if (!saved)
+            {
+                GeneralError = AppResources.SessionStorageError;
+                HasGeneralError = true;
+                return;
+            }
+
+            try
+            {
+                await Shell.Current.GoToAsync("//main");
+            }
+            catch (Exception)
+            {
+                GeneralError = AppResources.GoogleNavError;
+                HasGeneralError = true;
+            }
+        }
+        else
+        {
+            GeneralError = AppResources.GoogleAuthFailed;
+            HasGeneralError = true;
         }
     }
 

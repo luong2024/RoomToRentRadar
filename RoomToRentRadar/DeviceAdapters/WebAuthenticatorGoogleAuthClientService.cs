@@ -33,17 +33,16 @@ public sealed class WebAuthenticatorGoogleAuthClientService : IGoogleAuthClientS
 
         try
         {
-            var hdParam = string.Equals(roleHint, "Student", StringComparison.OrdinalIgnoreCase)
-                ? "&hd=ictu.edu.vn"
-                : string.Empty;
-
+            // Note: Do not pass 'hd=ictu.edu.vn' in the URL on Android because Chrome's internal
+            // account consistency returns HTTP 204 (No Content) if the domain account is not yet
+            // registered in Android system accounts. Domain enforcement is handled by backend (BR-AUTH-04).
             var authUrl = new Uri($"https://accounts.google.com/o/oauth2/v2/auth?" +
                                   $"client_id={Uri.EscapeDataString(_clientId)}" +
-                                  $"&response_type=id_token" +
+                                  $"&response_type={Uri.EscapeDataString("code id_token")}" +
                                   $"&scope=openid%20email%20profile" +
                                   $"&redirect_uri={Uri.EscapeDataString(_redirectUri)}" +
                                   $"&nonce={Guid.NewGuid():N}" +
-                                  hdParam);
+                                  $"&prompt=select_account");
 
             var callbackUrl = new Uri(_redirectUri);
 
