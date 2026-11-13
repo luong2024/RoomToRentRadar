@@ -45,6 +45,9 @@ public partial class LoginPageModel : ObservableObject
 
     public bool IsSsoVisible => true;
 
+    public string SignInWithGoogleText => AppResources.SignInWithGoogle;
+    public string OrSignInWithEmailText => AppResources.OrSignInWithEmail;
+
     public LoginPageModel(
         IAuthGateway authGateway,
         ISessionStore sessionStore,
@@ -53,6 +56,12 @@ public partial class LoginPageModel : ObservableObject
         _authGateway = authGateway ?? throw new ArgumentNullException(nameof(authGateway));
         _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
         _googleAuthService = googleAuthService ?? new GoogleAuthClientService();
+
+        LocalizedStrings.Instance.PropertyChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(SignInWithGoogleText));
+            OnPropertyChanged(nameof(OrSignInWithEmailText));
+        };
     }
 
     [RelayCommand]

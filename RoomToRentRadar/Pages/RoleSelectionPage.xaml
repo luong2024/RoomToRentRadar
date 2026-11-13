@@ -180,7 +180,7 @@
                                        ButtonHeight="48"
                                        HorizontalOptions="Fill" />
 
-                    <common:RadaButton Text="{Binding [RegisterWithEmailPassword], Source={x:Static loc:LocalizedStrings.Instance}}"
+                    <common:RadaButton Text="{Binding RegisterWithEmailPasswordText}"
                                        Variant="Primary"
                                        Command="{Binding ContinueCommand}"
                                        ButtonHeight="48"

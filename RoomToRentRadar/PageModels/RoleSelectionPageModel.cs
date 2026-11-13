@@ -31,6 +31,8 @@ public partial class RoleSelectionPageModel : ObservableObject
         ? AppResources.ContinueWithGoogleStudent
         : AppResources.ContinueWithGoogleLandlord;
 
+    public string RegisterWithEmailPasswordText => AppResources.RegisterWithEmailPassword;
+
     public RoleSelectionPageModel(
         IAuthGateway authGateway,
         ISessionStore sessionStore,
@@ -43,6 +45,7 @@ public partial class RoleSelectionPageModel : ObservableObject
         LocalizedStrings.Instance.PropertyChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(ContinueWithGoogleText));
+            OnPropertyChanged(nameof(RegisterWithEmailPasswordText));
         };
     }
 

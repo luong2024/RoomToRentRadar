@@ -91,7 +91,7 @@
                                        HorizontalOptions="Fill" />
 
                     <!-- Sign in with Google Button -->
-                    <common:RadaButton Text="{Binding [SignInWithGoogle], Source={x:Static loc:LocalizedStrings.Instance}}"
+                    <common:RadaButton Text="{Binding SignInWithGoogleText}"
                                        Variant="Secondary"
                                        IsLoading="{Binding IsBusy}"
                                        Command="{Binding LoginWithGoogleCommand}"
@@ -100,7 +100,7 @@
                     <!-- Divider -->
                     <Grid ColumnDefinitions="*, Auto, *" ColumnSpacing="12" Margin="0,4">
                         <BoxView Grid.Column="0" HeightRequest="1" VerticalOptions="Center" Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
-                        <Label Grid.Column="1" Text="{Binding [OrSignInWithEmail], Source={x:Static loc:LocalizedStrings.Instance}}" Style="{StaticResource TextCaption}" TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" VerticalTextAlignment="Center" />
+                        <Label Grid.Column="1" Text="{Binding OrSignInWithEmailText}" Style="{StaticResource TextCaption}" TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" VerticalTextAlignment="Center" />
                         <BoxView Grid.Column="2" HeightRequest="1" VerticalOptions="Center" Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
                     </Grid>
 
