@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -15,13 +15,16 @@ public partial class AuthViewModel : ObservableObject
 
     private readonly IAuthenticationPort _authenticationPort;
     private readonly IGoogleAuthAdapter _googleAuthAdapter;
+    private readonly IAuthenticationSessionService _sessionService;
 
     public AuthViewModel(
         IAuthenticationPort authenticationPort,
-        IGoogleAuthAdapter googleAuthAdapter)
+        IGoogleAuthAdapter googleAuthAdapter,
+        IAuthenticationSessionService sessionService)
     {
         _authenticationPort = authenticationPort;
         _googleAuthAdapter = googleAuthAdapter;
+        _sessionService = sessionService;
     }
 
     [ObservableProperty]
@@ -116,6 +119,8 @@ public partial class AuthViewModel : ObservableObject
 
     public Func<Task>? FlipToLoginHandler { get; set; }
 
+    public Func<AuthUser, Task>? OnAuthenticationSuccessHandler { get; set; }
+
     [RelayCommand]
     public void ToggleForm()
     {
@@ -195,6 +200,16 @@ public partial class AuthViewModel : ObservableObject
             if (result.IsSuccess)
             {
                 SetSuccess("Signed in successfully!");
+
+                if (!string.IsNullOrWhiteSpace(result.AccessToken) && result.User != null)
+                {
+                    await _sessionService.SaveSessionAsync(result.AccessToken, result.RefreshToken ?? string.Empty, result.User, cancellationToken);
+                }
+
+                if (OnAuthenticationSuccessHandler != null && result.User != null)
+                {
+                    await OnAuthenticationSuccessHandler.Invoke(result.User);
+                }
             }
             else
             {
@@ -277,6 +292,16 @@ public partial class AuthViewModel : ObservableObject
             if (result.IsSuccess)
             {
                 SetSuccess("Google sign-in successful!");
+
+                if (!string.IsNullOrWhiteSpace(result.AccessToken) && result.User != null)
+                {
+                    await _sessionService.SaveSessionAsync(result.AccessToken, result.RefreshToken ?? string.Empty, result.User, cancellationToken);
+                }
+
+                if (OnAuthenticationSuccessHandler != null && result.User != null)
+                {
+                    await OnAuthenticationSuccessHandler.Invoke(result.User);
+                }
             }
             else if (result.RequiresRoleSelection || !string.IsNullOrWhiteSpace(result.PendingGoogleIdToken))
             {
@@ -331,6 +356,16 @@ public partial class AuthViewModel : ObservableObject
                 IsRoleSelectionDialogOpen = false;
                 PendingGoogleIdToken = null;
                 SetSuccess("Account created and signed in with Google!");
+
+                if (!string.IsNullOrWhiteSpace(result.AccessToken) && result.User != null)
+                {
+                    await _sessionService.SaveSessionAsync(result.AccessToken, result.RefreshToken ?? string.Empty, result.User, cancellationToken);
+                }
+
+                if (OnAuthenticationSuccessHandler != null && result.User != null)
+                {
+                    await OnAuthenticationSuccessHandler.Invoke(result.User);
+                }
             }
             else
             {

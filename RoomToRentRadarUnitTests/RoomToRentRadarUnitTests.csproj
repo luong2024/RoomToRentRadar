@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -19,10 +19,14 @@
 
   <ItemGroup>
     <Compile Include="..\RoomToRentRadar\Core\Models\Authentication\AuthContracts.cs" Link="Linked\AuthContracts.cs" />
+    <Compile Include="..\RoomToRentRadar\Core\Interfaces\ISecureStorageService.cs" Link="Linked\ISecureStorageService.cs" />
     <Compile Include="..\RoomToRentRadar\Core\Interfaces\IAuthenticationPort.cs" Link="Linked\IAuthenticationPort.cs" />
+    <Compile Include="..\RoomToRentRadar\Core\Interfaces\IAuthenticationSessionService.cs" Link="Linked\IAuthenticationSessionService.cs" />
     <Compile Include="..\RoomToRentRadar\Core\Interfaces\IGoogleAuthAdapter.cs" Link="Linked\IGoogleAuthAdapter.cs" />
     <Compile Include="..\RoomToRentRadar\Features\Authentication\ViewModels\AuthViewModel.cs" Link="Linked\AuthViewModel.cs" />
     <Compile Include="..\RoomToRentRadar\Infrastructure\Adapters\HttpAuthAdapter.cs" Link="Linked\HttpAuthAdapter.cs" />
+    <Compile Include="..\RoomToRentRadar\Infrastructure\Services\AuthenticationSessionService.cs" Link="Linked\AuthenticationSessionService.cs" />
+    <Compile Include="..\RoomToRentRadar\Infrastructure\Api\AuthenticationHeaderHandler.cs" Link="Linked\AuthenticationHeaderHandler.cs" />
   </ItemGroup>
 
   <ItemGroup>

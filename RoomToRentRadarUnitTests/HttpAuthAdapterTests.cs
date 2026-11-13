@@ -139,6 +139,79 @@ public class HttpAuthAdapterTests
         Assert.That(result.ErrorMessage, Does.Contain("timed out").IgnoreCase);
     }
 
+    [Test]
+    public async Task RefreshTokenAsync_WhenSuccessful_ShouldReturnSuccessWithNewTokensAndUser()
+    {
+        var userId = Guid.NewGuid();
+        var handler = new StubHttpMessageHandler((_, _) =>
+        {
+            var json = $$"""
+                {
+                  "userId": "{{userId}}",
+                  "email": "student@example.com",
+                  "role": "STUDENT",
+                  "accessToken": "new-access-token",
+                  "refreshToken": "rotated-refresh-token"
+                }
+                """;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            });
+        });
+
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.com/") };
+        var adapter = new HttpAuthAdapter(client);
+
+        var result = await adapter.RefreshTokenAsync("old-refresh-token");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.AccessToken, Is.EqualTo("new-access-token"));
+        Assert.That(result.RefreshToken, Is.EqualTo("rotated-refresh-token"));
+        Assert.That(result.User?.Id, Is.EqualTo(userId));
+    }
+
+    [Test]
+    public async Task RefreshTokenAsync_WhenFails_ShouldReturnFailureMessage()
+    {
+        var handler = new StubHttpMessageHandler((_, _) =>
+        {
+            var problemJson = """
+                {
+                  "status": 401,
+                  "title": "Invalid Refresh Token",
+                  "detail": "Refresh token has expired."
+                }
+                """;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized)
+            {
+                Content = new StringContent(problemJson, Encoding.UTF8, "application/json")
+            });
+        });
+
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.com/") };
+        var adapter = new HttpAuthAdapter(client);
+
+        var result = await adapter.RefreshTokenAsync("expired-refresh-token");
+
+        Assert.That(result.IsSuccess, Is.False);
+        Assert.That(result.ErrorMessage, Is.EqualTo("Refresh token has expired."));
+    }
+
+    [Test]
+    public async Task LogoutAsync_WhenSuccessful_ShouldReturnTrue()
+    {
+        var handler = new StubHttpMessageHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent)));
+
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.com/") };
+        var adapter = new HttpAuthAdapter(client);
+
+        var result = await adapter.LogoutAsync("valid-token");
+
+        Assert.That(result, Is.True);
+    }
+
     private sealed class StubHttpMessageHandler(
         Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> handler) : HttpMessageHandler
     {

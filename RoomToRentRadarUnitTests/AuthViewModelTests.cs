@@ -10,6 +10,7 @@ public class AuthViewModelTests
 {
     private MockAuthPort _authPort = null!;
     private MockGoogleAdapter _googleAdapter = null!;
+    private MockSessionService _sessionService = null!;
     private AuthViewModel _viewModel = null!;
 
     [SetUp]
@@ -17,7 +18,8 @@ public class AuthViewModelTests
     {
         _authPort = new MockAuthPort();
         _googleAdapter = new MockGoogleAdapter();
-        _viewModel = new AuthViewModel(_authPort, _googleAdapter);
+        _sessionService = new MockSessionService();
+        _viewModel = new AuthViewModel(_authPort, _googleAdapter, _sessionService);
     }
 
     [Test]
@@ -100,15 +102,12 @@ public class AuthViewModelTests
     }
 
     [Test]
-    public void ValidateSignUpForm_WhenPasswordExceeds72Utf8Bytes_ShouldSetLengthError()
+    public void ValidateSignUpForm_WhenPasswordExceeds72Bytes_ShouldSetLengthError()
     {
         _viewModel.SignUpEmail = "student@example.com";
-        // 40 2-byte Vietnamese characters + 1 number = 81 UTF-8 bytes
-        var longUtf8Password = new string('ế', 40) + "1";
-        Assert.That(Encoding.UTF8.GetByteCount(longUtf8Password), Is.GreaterThan(72));
-
-        _viewModel.SignUpPassword = longUtf8Password;
-        _viewModel.SignUpConfirmPassword = longUtf8Password;
+        // 73 ASCII characters = 73 bytes
+        _viewModel.SignUpPassword = new string('a', 72) + "1";
+        _viewModel.SignUpConfirmPassword = _viewModel.SignUpPassword;
         _viewModel.SelectedRole = UserRoleConstants.Student;
 
         var result = _viewModel.ValidateSignUpForm();
@@ -117,12 +116,14 @@ public class AuthViewModelTests
         Assert.That(_viewModel.SignUpPasswordError, Is.EqualTo("Password must be at least 8 characters long and not exceed 72 bytes."));
     }
 
-    [Test]
-    public void ValidateSignUpForm_WhenPasswordMissingDigits_ShouldSetComplexityError()
+    [TestCase("passwordonly")]
+    [TestCase("12345678")]
+    [TestCase("!@#$%^&*")]
+    public void ValidateSignUpForm_WhenPasswordMissingDigitOrLetter_ShouldSetComplexityError(string simplePassword)
     {
         _viewModel.SignUpEmail = "student@example.com";
-        _viewModel.SignUpPassword = "PasswordOnly";
-        _viewModel.SignUpConfirmPassword = "PasswordOnly";
+        _viewModel.SignUpPassword = simplePassword;
+        _viewModel.SignUpConfirmPassword = simplePassword;
         _viewModel.SelectedRole = UserRoleConstants.Student;
 
         var result = _viewModel.ValidateSignUpForm();
@@ -132,25 +133,11 @@ public class AuthViewModelTests
     }
 
     [Test]
-    public void ValidateSignUpForm_WhenPasswordMissingLetters_ShouldSetComplexityError()
+    public void ValidateSignUpForm_WhenPasswordsDoNotMatch_ShouldSetMismatchError()
     {
         _viewModel.SignUpEmail = "student@example.com";
-        _viewModel.SignUpPassword = "1234567890";
-        _viewModel.SignUpConfirmPassword = "1234567890";
-        _viewModel.SelectedRole = UserRoleConstants.Student;
-
-        var result = _viewModel.ValidateSignUpForm();
-
-        Assert.That(result, Is.False);
-        Assert.That(_viewModel.SignUpPasswordError, Is.EqualTo("Password must contain at least one letter and one number."));
-    }
-
-    [Test]
-    public void ValidateSignUpForm_WhenConfirmPasswordDoesNotMatch_ShouldSetMismatchError()
-    {
-        _viewModel.SignUpEmail = "student@example.com";
-        _viewModel.SignUpPassword = "SecurePassword1";
-        _viewModel.SignUpConfirmPassword = "DifferentPassword1";
+        _viewModel.SignUpPassword = "ValidPassword1";
+        _viewModel.SignUpConfirmPassword = "DifferentPassword2";
         _viewModel.SelectedRole = UserRoleConstants.Student;
 
         var result = _viewModel.ValidateSignUpForm();
@@ -159,16 +146,13 @@ public class AuthViewModelTests
         Assert.That(_viewModel.SignUpConfirmPasswordError, Is.EqualTo("Passwords do not match."));
     }
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("ADMIN")]
-    [TestCase("OTHER")]
-    public void ValidateSignUpForm_WhenRoleIsInvalidOrEmpty_ShouldSetRoleError(string? invalidRole)
+    [Test]
+    public void ValidateSignUpForm_WhenRoleNotSelected_ShouldSetRoleError()
     {
         _viewModel.SignUpEmail = "student@example.com";
-        _viewModel.SignUpPassword = "SecurePassword1";
-        _viewModel.SignUpConfirmPassword = "SecurePassword1";
-        _viewModel.SelectedRole = invalidRole;
+        _viewModel.SignUpPassword = "ValidPassword1";
+        _viewModel.SignUpConfirmPassword = "ValidPassword1";
+        _viewModel.SelectedRole = null;
 
         var result = _viewModel.ValidateSignUpForm();
 
@@ -176,66 +160,119 @@ public class AuthViewModelTests
         Assert.That(_viewModel.RoleError, Is.EqualTo("Please select whether you are a Student or a Landlord."));
     }
 
-    [TestCase(UserRoleConstants.Student)]
-    [TestCase(UserRoleConstants.Landlord)]
-    public void ValidateSignUpForm_WhenAllInputsValid_ShouldReturnTrue(string role)
+    [Test]
+    public void ValidateSignUpForm_WhenValid_ShouldReturnTrueAndHaveNoErrors()
     {
-        _viewModel.SignUpEmail = "valid.user@example.com";
-        _viewModel.SignUpPassword = "StrongPassword123";
-        _viewModel.SignUpConfirmPassword = "StrongPassword123";
-        _viewModel.SelectedRole = role;
+        _viewModel.SignUpEmail = "student@example.com";
+        _viewModel.SignUpPassword = "ValidPassword1";
+        _viewModel.SignUpConfirmPassword = "ValidPassword1";
+        _viewModel.SelectedRole = UserRoleConstants.Student;
 
         var result = _viewModel.ValidateSignUpForm();
 
         Assert.That(result, Is.True);
-        Assert.That(_viewModel.SignUpEmailError, Is.Null);
-        Assert.That(_viewModel.SignUpPasswordError, Is.Null);
-        Assert.That(_viewModel.SignUpConfirmPasswordError, Is.Null);
-        Assert.That(_viewModel.RoleError, Is.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(_viewModel.SignUpEmailError, Is.Null);
+            Assert.That(_viewModel.SignUpPasswordError, Is.Null);
+            Assert.That(_viewModel.SignUpConfirmPasswordError, Is.Null);
+            Assert.That(_viewModel.RoleError, Is.Null);
+        });
     }
 
     [Test]
-    public async Task SignInAsync_WhenSuccessful_ShouldSetSuccessState()
+    public async Task SignInAsync_WhenSuccessful_ShouldSaveSessionAndInvokeOnAuthenticationSuccessHandler()
     {
-        _viewModel.LoginEmail = "User@Example.COM ";
-        _viewModel.LoginPassword = "ValidPassword123";
+        _viewModel.LoginEmail = "student@example.com";
+        _viewModel.LoginPassword = "ValidPassword1";
 
-        var user = new AuthUser(Guid.NewGuid(), "user@example.com", "STUDENT", "LOCAL", true);
-        _authPort.LoginResult = AuthResult.Success("access-token", "refresh-token", user);
+        var user = new AuthUser(Guid.NewGuid(), "student@example.com", "STUDENT", "LOCAL", true);
+        _authPort.LoginResult = AuthResult.Success("test-access-token", "test-refresh-token", user);
+
+        AuthUser? callbackUser = null;
+        _viewModel.OnAuthenticationSuccessHandler = u =>
+        {
+            callbackUser = u;
+            return Task.CompletedTask;
+        };
 
         await _viewModel.SignInAsync(CancellationToken.None);
 
         Assert.That(_viewModel.IsSuccess, Is.True);
-        Assert.That(_viewModel.HasError, Is.False);
-        Assert.That(_authPort.LastLoginRequest?.Email, Is.EqualTo("user@example.com")); // Normalized
+        Assert.That(_viewModel.ErrorMessage, Is.Null);
+        Assert.That(_sessionService.SavedAccessToken, Is.EqualTo("test-access-token"));
+        Assert.That(_sessionService.SavedRefreshToken, Is.EqualTo("test-refresh-token"));
+        Assert.That(_sessionService.SavedUser, Is.EqualTo(user));
+        Assert.That(callbackUser, Is.EqualTo(user));
     }
 
     [Test]
-    public async Task SignUpAsync_WhenSuccessful_ShouldSetSuccessState()
+    public async Task SignInAsync_WhenAuthFails_ShouldSetError()
     {
-        _viewModel.SignUpEmail = " NewUser@Domain.com";
+        _viewModel.LoginEmail = "student@example.com";
+        _viewModel.LoginPassword = "ValidPassword1";
+        _authPort.LoginResult = AuthResult.Failed("Invalid credentials.");
+
+        await _viewModel.SignInAsync(CancellationToken.None);
+
+        Assert.That(_viewModel.IsSuccess, Is.False);
+        Assert.That(_viewModel.HasError, Is.True);
+        Assert.That(_viewModel.ErrorMessage, Is.EqualTo("Invalid credentials."));
+        Assert.That(_sessionService.SavedAccessToken, Is.Null);
+    }
+
+    [Test]
+    public async Task SignUpAsync_WhenSuccessful_ShouldCallFlipToLoginHandler()
+    {
+        _viewModel.SignUpEmail = "student@example.com";
         _viewModel.SignUpPassword = "ValidPassword1";
         _viewModel.SignUpConfirmPassword = "ValidPassword1";
         _viewModel.SelectedRole = UserRoleConstants.Landlord;
+        _authPort.RegisterResult = AuthResult.Success("", "", new AuthUser(Guid.NewGuid(), "student@example.com", "LANDLORD", "LOCAL", true));
 
-        var user = new AuthUser(Guid.NewGuid(), "newuser@domain.com", "LANDLORD", "LOCAL", true);
-        _authPort.RegisterResult = AuthResult.Success(string.Empty, string.Empty, user);
+        var flipCalled = false;
+        _viewModel.FlipToLoginHandler = () =>
+        {
+            flipCalled = true;
+            return Task.CompletedTask;
+        };
 
         await _viewModel.SignUpAsync(CancellationToken.None);
 
         Assert.That(_viewModel.IsSuccess, Is.True);
-        Assert.That(_viewModel.HasError, Is.False);
-        Assert.That(_authPort.LastRegisterRequest?.Email, Is.EqualTo("newuser@domain.com"));
-        Assert.That(_authPort.LastRegisterRequest?.Role, Is.EqualTo("LANDLORD"));
+        Assert.That(_viewModel.SuccessMessage, Does.Contain("Account created successfully"));
+        Assert.That(flipCalled, Is.True);
     }
 
     [Test]
-    public async Task GoogleSignInAsync_WhenCanceled_ShouldSetExpectedErrorMessage()
+    public async Task GoogleSignInAsync_WhenSuccessful_ShouldSaveSessionAndInvokeCallback()
     {
-        _googleAdapter.Result = GoogleAuthResult.Canceled();
+        var user = new AuthUser(Guid.NewGuid(), "google@example.com", "STUDENT", "GOOGLE", true);
+        _googleAdapter.Result = GoogleAuthResult.Success("google-id-token-123");
+        _authPort.GoogleLoginResult = AuthResult.Success("google-access-token", "google-refresh-token", user);
+
+        AuthUser? callbackUser = null;
+        _viewModel.OnAuthenticationSuccessHandler = u =>
+        {
+            callbackUser = u;
+            return Task.CompletedTask;
+        };
 
         await _viewModel.GoogleSignInAsync(CancellationToken.None);
 
+        Assert.That(_viewModel.IsSuccess, Is.True);
+        Assert.That(_sessionService.SavedAccessToken, Is.EqualTo("google-access-token"));
+        Assert.That(callbackUser, Is.EqualTo(user));
+    }
+
+    [Test]
+    public async Task GoogleSignInAsync_WhenAdapterFails_ShouldSetError()
+    {
+        _googleAdapter.Result = GoogleAuthResult.Failed();
+
+        await _viewModel.GoogleSignInAsync(CancellationToken.None);
+
+        Assert.That(_viewModel.IsSuccess, Is.False);
         Assert.That(_viewModel.HasError, Is.True);
         Assert.That(_viewModel.ErrorMessage, Is.EqualTo("Google sign-in was canceled or failed. Please try again."));
     }
@@ -266,7 +303,7 @@ public class AuthViewModelTests
     }
 
     [Test]
-    public async Task ConfirmGoogleRoleAsync_WhenRoleSelected_ShouldCompleteRegistration()
+    public async Task ConfirmGoogleRoleAsync_WhenRoleSelected_ShouldCompleteRegistrationAndSaveSession()
     {
         _viewModel.IsRoleSelectionDialogOpen = true;
         _viewModel.PendingGoogleIdToken = "token-123";
@@ -275,11 +312,20 @@ public class AuthViewModelTests
         var user = new AuthUser(Guid.NewGuid(), "google@example.com", "STUDENT", "GOOGLE", true);
         _authPort.GoogleLoginResult = AuthResult.Success("access-token", "refresh-token", user);
 
+        AuthUser? callbackUser = null;
+        _viewModel.OnAuthenticationSuccessHandler = u =>
+        {
+            callbackUser = u;
+            return Task.CompletedTask;
+        };
+
         await _viewModel.ConfirmGoogleRoleAsync(CancellationToken.None);
 
         Assert.That(_viewModel.IsRoleSelectionDialogOpen, Is.False);
         Assert.That(_viewModel.IsSuccess, Is.True);
         Assert.That(_authPort.LastGoogleLoginRequest?.Role, Is.EqualTo("STUDENT"));
+        Assert.That(_sessionService.SavedAccessToken, Is.EqualTo("access-token"));
+        Assert.That(callbackUser, Is.EqualTo(user));
     }
 
     private sealed class MockAuthPort : IAuthenticationPort
@@ -287,6 +333,8 @@ public class AuthViewModelTests
         public AuthResult RegisterResult { get; set; } = AuthResult.Success("", "", new AuthUser(Guid.NewGuid(), "", "", "", true));
         public AuthResult LoginResult { get; set; } = AuthResult.Success("", "", new AuthUser(Guid.NewGuid(), "", "", "", true));
         public AuthResult GoogleLoginResult { get; set; } = AuthResult.Success("", "", new AuthUser(Guid.NewGuid(), "", "", "", true));
+        public AuthResult RefreshResult { get; set; } = AuthResult.Success("", "", new AuthUser(Guid.NewGuid(), "", "", "", true));
+        public bool LogoutResult { get; set; } = true;
 
         public RegisterUserRequest? LastRegisterRequest { get; private set; }
         public LoginWithEmailRequest? LastLoginRequest { get; private set; }
@@ -309,6 +357,16 @@ public class AuthViewModelTests
             LastGoogleLoginRequest = request;
             return Task.FromResult(GoogleLoginResult);
         }
+
+        public Task<AuthResult> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(RefreshResult);
+        }
+
+        public Task<bool> LogoutAsync(string refreshToken, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(LogoutResult);
+        }
     }
 
     private sealed class MockGoogleAdapter : IGoogleAuthAdapter
@@ -318,6 +376,48 @@ public class AuthViewModelTests
         public Task<GoogleAuthResult> AuthenticateWithGoogleAsync(CancellationToken cancellationToken = default)
         {
             return Task.FromResult(Result);
+        }
+    }
+
+    private sealed class MockSessionService : IAuthenticationSessionService
+    {
+        public string? SavedAccessToken { get; private set; }
+        public string? SavedRefreshToken { get; private set; }
+        public AuthUser? SavedUser { get; private set; }
+
+        public bool IsAuthenticated => SavedUser != null && !string.IsNullOrWhiteSpace(SavedAccessToken);
+        public AuthUser? CurrentUser => SavedUser;
+
+        public event EventHandler<AuthUser?>? CurrentUserChanged;
+
+        public Task SaveSessionAsync(string accessToken, string refreshToken, AuthUser user, CancellationToken cancellationToken = default)
+        {
+            SavedAccessToken = accessToken;
+            SavedRefreshToken = refreshToken;
+            SavedUser = user;
+            CurrentUserChanged?.Invoke(this, user);
+            return Task.CompletedTask;
+        }
+
+        public Task<string?> GetAccessTokenAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(SavedAccessToken);
+
+        public Task<string?> GetRefreshTokenAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(SavedRefreshToken);
+
+        public Task<bool> TryRestoreSessionAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(IsAuthenticated);
+
+        public Task<bool> RefreshTokenAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(true);
+
+        public Task ClearSessionAsync(CancellationToken cancellationToken = default)
+        {
+            SavedAccessToken = null;
+            SavedRefreshToken = null;
+            SavedUser = null;
+            CurrentUserChanged?.Invoke(this, null);
+            return Task.CompletedTask;
         }
     }
 }

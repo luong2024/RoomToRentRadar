@@ -26,6 +26,13 @@ public partial class AuthPage : ContentPage
                 await Shell.Current.GoToAsync("//home");
             }
         };
+        viewModel.OnAuthenticationSuccessHandler = async (user) =>
+        {
+            if (Shell.Current != null)
+            {
+                await Shell.Current.GoToAsync("//home");
+            }
+        };
         viewModel.FlipToLoginHandler = async () =>
         {
             await Task.Delay(700);
