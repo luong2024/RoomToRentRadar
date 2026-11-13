@@ -207,6 +207,9 @@ public sealed class SqliteDbContext : IDisposable
 
                 if (_settings.SeedDemoRooms)
                 {
+                    // BR-LST-06: search only shows rooms whose landlord is verified, so the demo
+                    // landlord must exist (and be verified) before the demo rooms are inserted.
+                    SeedDemoLandlordUserIfMissing(conn);
                     SeedRoomsIfEmpty(conn);
                 }
 
@@ -340,6 +343,34 @@ public sealed class SqliteDbContext : IDisposable
         }
 
         tx.Commit();
+    }
+
+    /// <summary>
+    /// BR-LST-06: the search read model joins <c>Users</c> on <c>IsVerified</c>, so demo rooms need a
+    /// verified landlord row. <c>INSERT OR IGNORE</c> keeps any real landlord that already owns the id.
+    /// </summary>
+    private static void SeedDemoLandlordUserIfMissing(SqliteConnection conn)
+    {
+        const string landlordId = "seed-landlord";
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = """
+            INSERT OR IGNORE INTO Users (
+                Id, Email, NormalizedEmail, FullName, PasswordHash, Role, AuthProvider,
+                SsoSubjectId, PhoneNumber, StudentCode, IsVerified, FailedLoginCount,
+                LockoutEndUtc, CreatedAtUtc, UpdatedAtUtc
+            ) VALUES (
+                @id, @email, @normalizedEmail, @fullName, NULL, 'Landlord', 'Local',
+                NULL, NULL, NULL, 1, 0,
+                NULL, @createdAtUtc, @createdAtUtc
+            );
+            """;
+        cmd.Parameters.AddWithValue("@id", landlordId);
+        cmd.Parameters.AddWithValue("@email", "seed-landlord@roomtorentradar.local");
+        cmd.Parameters.AddWithValue("@normalizedEmail", "seed-landlord@roomtorentradar.local");
+        cmd.Parameters.AddWithValue("@fullName", "Seed Landlord");
+        cmd.Parameters.AddWithValue("@createdAtUtc", "2026-11-01T08:00:00.0000000Z");
+        cmd.ExecuteNonQuery();
     }
 
     /// <summary>

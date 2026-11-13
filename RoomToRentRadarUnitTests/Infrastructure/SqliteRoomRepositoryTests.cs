@@ -355,6 +355,34 @@ public class SqliteRoomRepositoryTests
     }
 
     [Test]
+    public async Task SearchReadModel_ExcludesRoomsWhoseLandlordIsNotVerified()
+    {
+        using var dbContext = new SqliteDbContext(new SqliteSettings
+        {
+            ConnectionString = "Data Source=:memory:",
+            SeedDemoRooms = true
+        });
+        IRoomSearchReadModel readModel = new SqliteRoomSearchReadModel(dbContext);
+        var filter = new RoomSearchQueryFilter(null, null, null, null, null, null, null, null, null);
+
+        var before = await readModel.QueryCandidatesAsync(filter);
+        Assert.That(before, Is.Not.Empty, "Seed phải có landlord verified để phòng demo hiển thị.");
+
+        // Không dispose: với DB :memory: đây là connection keep-alive dùng chung của SqliteDbContext.
+        var connection = dbContext.CreateOpenConnection();
+        using (var command = connection.CreateCommand())
+        {
+            command.CommandText = "UPDATE Users SET IsVerified = 0 WHERE Id = 'seed-landlord';";
+            command.ExecuteNonQuery();
+        }
+
+        var after = await readModel.QueryCandidatesAsync(filter);
+
+        Assert.That(after, Is.Empty,
+            "BR-LST-06: landlord chưa verified thì mọi phòng của họ phải bị loại khỏi tìm kiếm.");
+    }
+
+    [Test]
     public void DependencyInjection_AddSqliteDatastore_RegistersRoomsAndCampusesPorts()
     {
         var services = new ServiceCollection();

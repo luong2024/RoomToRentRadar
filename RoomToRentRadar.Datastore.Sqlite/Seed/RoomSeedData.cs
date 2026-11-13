@@ -281,7 +281,7 @@ public static class RoomSeedData
             needsReReview: false,
             isSafetyVerified: isSafetyVerified,
             verifiedAtUtc: verifiedAtUtc,
-            verifiedByUserId: null, // no seed Users row exists yet → keep the FK dangling-free (ERD §4.4)
+            verifiedByUserId: null, // demo rooms are not verified by a specific admin account
             publishedAtUtc: publishedAtUtc);
     }
 }

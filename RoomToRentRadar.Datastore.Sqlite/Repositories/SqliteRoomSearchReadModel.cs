@@ -9,8 +9,9 @@ namespace RoomToRentRadar.Datastore.Sqlite.Repositories;
 
 /// <summary>
 /// CQRS read model of US04 search (plan §3.4C, M2, ADR-006): one parameterised SELECT that pushes
-/// <c>Status = 'Available'</c>, rent/area/room-type filters and the bounding-box prefilter down to
-/// the ERD indexes. Exact Haversine distance and sorting stay in the Application layer.
+/// <c>Status = 'Available'</c>, the BR-LST-06 landlord-verified rule (<c>Users.IsVerified</c>),
+/// rent/area/room-type filters and the bounding-box prefilter down to the ERD indexes. Exact
+/// Haversine distance and sorting stay in the Application layer.
 /// </summary>
 public sealed class SqliteRoomSearchReadModel : IRoomSearchReadModel
 {
@@ -29,20 +30,22 @@ public sealed class SqliteRoomSearchReadModel : IRoomSearchReadModel
         ArgumentNullException.ThrowIfNull(filter);
 
         var sql = new StringBuilder("""
-            SELECT Id, Title, MonthlyRentVnd, AreaM2, RoomType, Status,
-                   (VerifiedAtUtc IS NOT NULL) AS IsVerified,
+            SELECT r.Id, r.Title, r.MonthlyRentVnd, r.AreaM2, r.RoomType, r.Status,
+                   (r.VerifiedAtUtc IS NOT NULL) AS IsVerified,
                    NULL AS CoverThumbUrl,
-                   Latitude, Longitude, PublishedAtUtc
-            FROM Rooms
-            WHERE Status = 'Available'
-              AND (@MinRent IS NULL OR MonthlyRentVnd >= @MinRent)
-              AND (@MaxRent IS NULL OR MonthlyRentVnd <= @MaxRent)
-              AND (@MinArea IS NULL OR AreaM2 >= @MinArea)
-              AND (@MaxArea IS NULL OR AreaM2 <= @MaxArea)
-              AND (@MinLat IS NULL OR Latitude >= @MinLat)
-              AND (@MaxLat IS NULL OR Latitude <= @MaxLat)
-              AND (@MinLng IS NULL OR Longitude >= @MinLng)
-              AND (@MaxLng IS NULL OR Longitude <= @MaxLng)
+                   r.Latitude, r.Longitude, r.PublishedAtUtc
+            FROM Rooms r
+            INNER JOIN Users u ON u.Id = r.LandlordId
+            WHERE r.Status = 'Available'
+              AND u.IsVerified = 1
+              AND (@MinRent IS NULL OR r.MonthlyRentVnd >= @MinRent)
+              AND (@MaxRent IS NULL OR r.MonthlyRentVnd <= @MaxRent)
+              AND (@MinArea IS NULL OR r.AreaM2 >= @MinArea)
+              AND (@MaxArea IS NULL OR r.AreaM2 <= @MaxArea)
+              AND (@MinLat IS NULL OR r.Latitude >= @MinLat)
+              AND (@MaxLat IS NULL OR r.Latitude <= @MaxLat)
+              AND (@MinLng IS NULL OR r.Longitude >= @MinLng)
+              AND (@MaxLng IS NULL OR r.Longitude <= @MaxLng)
             """);
 
         var conn = _dbContext.CreateOpenConnection();
@@ -69,10 +72,10 @@ public sealed class SqliteRoomSearchReadModel : IRoomSearchReadModel
                     cmd.Parameters.AddWithValue(name, roomTypes[i].ToString());
                 }
 
-                sql.Append(CultureInfo.InvariantCulture, $"\n  AND RoomType IN ({string.Join(", ", placeholders)})");
+                sql.Append(CultureInfo.InvariantCulture, $"\n  AND r.RoomType IN ({string.Join(", ", placeholders)})");
             }
 
-            sql.Append("\nORDER BY PublishedAtUtc DESC, Id ASC;");
+            sql.Append("\nORDER BY r.PublishedAtUtc DESC, r.Id ASC;");
             cmd.CommandText = sql.ToString();
 
             var candidates = new List<RoomSearchCandidate>();
