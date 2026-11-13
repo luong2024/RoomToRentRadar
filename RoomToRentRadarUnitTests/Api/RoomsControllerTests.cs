@@ -199,12 +199,13 @@ public class RoomsControllerTests
     }
 
     [Test]
-    public void SearchRooms_DoesNotSwallowDomainValidationException()
+    public async Task SearchRooms_DoesNotSwallowDomainValidationException()
     {
         _useCase.ExecuteAsync(Arg.Any<RoomSearchRequest>(), Arg.Any<CancellationToken>())
             .Returns<Task<PagedResult<RoomCardDto>>>(_ => throw new DomainValidationException("Invalid filters.", "INVALID_SORT_OPTION"));
 
-        Assert.ThrowsAsync<DomainValidationException>(
-            async () => await _controller.SearchRooms(new RoomSearchRequest(), CancellationToken.None));
+        await Assert.ThatAsync(
+            async () => await _controller.SearchRooms(new RoomSearchRequest(), CancellationToken.None),
+            Throws.TypeOf<DomainValidationException>());
     }
 }

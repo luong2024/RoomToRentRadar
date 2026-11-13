@@ -227,7 +227,9 @@ public class SqliteRoomRepositoryTests
         fresh.Approve(DateTime.UtcNow);
         await repository.UpdateAsync(fresh);
 
-        Assert.ThrowsAsync<ConcurrencyConflictException>(async () => await repository.UpdateAsync(stale));
+        await Assert.ThatAsync(
+            async () => await repository.UpdateAsync(stale),
+            Throws.TypeOf<ConcurrencyConflictException>());
     }
 
     [Test]
@@ -280,7 +282,9 @@ public class SqliteRoomRepositoryTests
         using var dbContext = new SqliteDbContext(InMemorySettings);
         IRoomRepository repository = new SqliteRoomRepository(dbContext);
 
-        Assert.ThrowsAsync<ArgumentNullException>(async () => await repository.AddAsync(null!));
+        await Assert.ThatAsync(
+            async () => await repository.AddAsync(null!),
+            Throws.TypeOf<ArgumentNullException>());
     }
 
     [Test]
@@ -514,9 +518,10 @@ public class SqliteRoomRepositoryTests
         IRoomRepository repository = new SqliteRoomRepository(dbContext);
         await repository.AddAsync(NewRoom("room-dup"));
 
-        var ex = Assert.ThrowsAsync<DomainValidationException>(async () => await repository.AddAsync(NewRoom("room-dup")));
-
-        Assert.That(ex!.ErrorCode, Is.EqualTo("DUPLICATE_ROOM"));
+        await Assert.ThatAsync(
+            async () => await repository.AddAsync(NewRoom("room-dup")),
+            Throws.TypeOf<DomainValidationException>()
+                .With.Property("ErrorCode").EqualTo("DUPLICATE_ROOM"));
     }
 
     [Test]

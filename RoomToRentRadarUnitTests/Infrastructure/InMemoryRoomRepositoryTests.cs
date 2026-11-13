@@ -76,7 +76,9 @@ public class InMemoryRoomRepositoryTests
 
         stale.Approve(new DateTime(2026, 11, 13, 8, 0, 0, DateTimeKind.Utc));
 
-        Assert.ThrowsAsync<ConcurrencyConflictException>(async () => await repository.UpdateAsync(stale));
+        await Assert.ThatAsync(
+            async () => await repository.UpdateAsync(stale),
+            Throws.TypeOf<ConcurrencyConflictException>());
     }
 
     [Test]
@@ -84,7 +86,9 @@ public class InMemoryRoomRepositoryTests
     {
         var repository = new InMemoryRoomRepository();
 
-        Assert.ThrowsAsync<ConcurrencyConflictException>(async () => await repository.UpdateAsync(NewRoom("missing")));
+        await Assert.ThatAsync(
+            async () => await repository.UpdateAsync(NewRoom("missing")),
+            Throws.TypeOf<ConcurrencyConflictException>());
     }
 
     [Test]
@@ -92,10 +96,10 @@ public class InMemoryRoomRepositoryTests
     {
         var repository = new InMemoryRoomRepository(new[] { NewRoom("mem-dup") });
 
-        var duplicate = Assert.ThrowsAsync<DomainValidationException>(
-            async () => await repository.AddAsync(NewRoom("mem-dup")));
-
-        Assert.That(duplicate!.ErrorCode, Is.EqualTo("DUPLICATE_ROOM"));
+        await Assert.ThatAsync(
+            async () => await repository.AddAsync(NewRoom("mem-dup")),
+            Throws.TypeOf<DomainValidationException>()
+                .With.Property("ErrorCode").EqualTo("DUPLICATE_ROOM"));
     }
 
     [Test]
@@ -115,7 +119,9 @@ public class InMemoryRoomRepositoryTests
     {
         var repository = new InMemoryRoomRepository();
 
-        Assert.ThrowsAsync<ArgumentNullException>(async () => await repository.AddAsync(null!));
+        await Assert.ThatAsync(
+            async () => await repository.AddAsync(null!),
+            Throws.TypeOf<ArgumentNullException>());
     }
 
     private static Room NewRoom(string id) => Room.Reconstitute(

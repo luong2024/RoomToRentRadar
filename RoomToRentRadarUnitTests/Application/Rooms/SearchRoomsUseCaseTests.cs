@@ -93,14 +93,14 @@ public class SearchRoomsUseCaseTests
     [TestCase("DISTANCE")] // ruling 21: matching is case-sensitive after Trim
     [TestCase("")]
     [TestCase("   ")]
-    public void ExecuteAsync_UnknownSort_ThrowsDomainValidationExceptionWithInvalidSortOption(string sort)
+    public async Task ExecuteAsync_UnknownSort_ThrowsDomainValidationExceptionWithInvalidSortOption(string sort)
     {
         var request = new RoomSearchRequest(Sort: sort);
 
-        var exception = Assert.ThrowsAsync<DomainValidationException>(
-            async () => await _sut.ExecuteAsync(request));
-
-        Assert.That(exception!.ErrorCode, Is.EqualTo("INVALID_SORT_OPTION")); // BR-SRCH-02
+        await Assert.ThatAsync(
+            async () => await _sut.ExecuteAsync(request),
+            Throws.TypeOf<DomainValidationException>()
+                .With.Property("ErrorCode").EqualTo("INVALID_SORT_OPTION")); // BR-SRCH-02
     }
 
     [Test]
@@ -108,52 +108,57 @@ public class SearchRoomsUseCaseTests
     {
         var request = new RoomSearchRequest(Sort: "area_desc");
 
-        Assert.ThrowsAsync<DomainValidationException>(async () => await _sut.ExecuteAsync(request));
+        await Assert.ThatAsync(
+            async () => await _sut.ExecuteAsync(request),
+            Throws.TypeOf<DomainValidationException>());
 
         await _readModel.DidNotReceiveWithAnyArgs().QueryCandidatesAsync(default!);
         await _campusRepository.DidNotReceiveWithAnyArgs().GetDefaultCampusAsync();
     }
 
     [Test]
-    public void ExecuteAsync_MinRentGreaterThanMaxRent_ThrowsInvalidPriceRange()
+    public async Task ExecuteAsync_MinRentGreaterThanMaxRent_ThrowsInvalidPriceRange()
     {
         var request = new RoomSearchRequest(MinRentVnd: 3_000_000L, MaxRentVnd: 1_000_000L);
 
-        var exception = Assert.ThrowsAsync<DomainValidationException>(async () => await _sut.ExecuteAsync(request));
-
-        Assert.That(exception!.ErrorCode, Is.EqualTo("INVALID_PRICE_RANGE"));
+        await Assert.ThatAsync(
+            async () => await _sut.ExecuteAsync(request),
+            Throws.TypeOf<DomainValidationException>()
+                .With.Property("ErrorCode").EqualTo("INVALID_PRICE_RANGE"));
     }
 
     [Test]
-    public void ExecuteAsync_NegativeRent_Throws()
+    public async Task ExecuteAsync_NegativeRent_Throws()
     {
         var request = new RoomSearchRequest(MinRentVnd: -1);
 
-        Assert.ThrowsAsync<DomainValidationException>(async () => await _sut.ExecuteAsync(request));
+        await Assert.ThatAsync(
+            async () => await _sut.ExecuteAsync(request),
+            Throws.TypeOf<DomainValidationException>());
     }
 
     [Test]
-    public void ExecuteAsync_MinAreaGreaterThanMaxArea_ThrowsInvalidAreaRange()
+    public async Task ExecuteAsync_MinAreaGreaterThanMaxArea_ThrowsInvalidAreaRange()
     {
         var request = new RoomSearchRequest(MinAreaM2: 40, MaxAreaM2: 10);
 
-        var exception = Assert.ThrowsAsync<DomainValidationException>(async () => await _sut.ExecuteAsync(request));
-
-        Assert.That(exception!.ErrorCode, Is.EqualTo("INVALID_AREA_RANGE"));
+        await Assert.ThatAsync(
+            async () => await _sut.ExecuteAsync(request),
+            Throws.TypeOf<DomainValidationException>()
+                .With.Property("ErrorCode").EqualTo("INVALID_AREA_RANGE"));
     }
 
     [TestCase(double.NaN)]
     [TestCase(double.PositiveInfinity)]
     [TestCase(double.NegativeInfinity)]
-    public void ExecuteAsync_NonFiniteAreaFilter_Throws(double area)
+    public async Task ExecuteAsync_NonFiniteAreaFilter_Throws(double area)
     {
-        Assert.Multiple(() =>
-        {
-            Assert.ThrowsAsync<DomainValidationException>(
-                async () => await _sut.ExecuteAsync(new RoomSearchRequest(MaxAreaM2: area)));
-            Assert.ThrowsAsync<DomainValidationException>(
-                async () => await _sut.ExecuteAsync(new RoomSearchRequest(MinAreaM2: area)));
-        });
+        await Assert.ThatAsync(
+            async () => await _sut.ExecuteAsync(new RoomSearchRequest(MaxAreaM2: area)),
+            Throws.TypeOf<DomainValidationException>());
+        await Assert.ThatAsync(
+            async () => await _sut.ExecuteAsync(new RoomSearchRequest(MinAreaM2: area)),
+            Throws.TypeOf<DomainValidationException>());
     }
 
     [TestCase(0.0)]
@@ -161,26 +166,25 @@ public class SearchRoomsUseCaseTests
     [TestCase(50.1)]
     [TestCase(double.NaN)]
     [TestCase(double.PositiveInfinity)]
-    public void ExecuteAsync_MaxDistanceOutOfRange_Throws(double maxDistanceKm)
+    public async Task ExecuteAsync_MaxDistanceOutOfRange_Throws(double maxDistanceKm)
     {
-        Assert.ThrowsAsync<DomainValidationException>(
-            async () => await _sut.ExecuteAsync(new RoomSearchRequest(MaxDistanceKm: maxDistanceKm)));
+        await Assert.ThatAsync(
+            async () => await _sut.ExecuteAsync(new RoomSearchRequest(MaxDistanceKm: maxDistanceKm)),
+            Throws.TypeOf<DomainValidationException>());
     }
 
     // ----------------------------------------------------------------- campus (BR-CMP-01..03)
 
     [Test]
-    public void ExecuteAsync_UnknownCampusId_ThrowsCampusNotFound()
+    public async Task ExecuteAsync_UnknownCampusId_ThrowsCampusNotFound()
     {
         var request = new RoomSearchRequest(CampusId: "NOPE");
 
-        var exception = Assert.ThrowsAsync<DomainValidationException>(async () => await _sut.ExecuteAsync(request));
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(exception!.ErrorCode, Is.EqualTo("CAMPUS_NOT_FOUND"));
-            Assert.That(exception.Message, Does.Contain("NOPE"));
-        });
+        await Assert.ThatAsync(
+            async () => await _sut.ExecuteAsync(request),
+            Throws.TypeOf<DomainValidationException>()
+                .With.Property("ErrorCode").EqualTo("CAMPUS_NOT_FOUND")
+                .And.Property("Message").Contains("NOPE"));
     }
 
     [Test]
