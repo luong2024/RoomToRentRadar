@@ -12,7 +12,7 @@
     <Grid RowDefinitions="Auto, *">
         <!-- 1. Page Header -->
         <common:PageHeaderBar Grid.Row="0"
-                               Title="Create Account"
+                               Title="{Binding PageTitle}"
                                CanGoBack="True"
                                BackCommand="{Binding NavigateToLoginCommand}" />
 
@@ -45,6 +45,7 @@
                                 HeightRequest="32"
                                 Padding="8,0"
                                 Command="{Binding SwitchRoleCommand}"
+                                IsVisible="{Binding CanSwitchRole}"
                                 VerticalOptions="Center" />
                     </Grid>
                 </Border>
@@ -94,7 +95,8 @@
                                                Placeholder="student@ictu.edu.vn"
                                                Text="{Binding Email, Mode=TwoWay}"
                                                ErrorMessage="{Binding EmailError}"
-                                               Keyboard="Email" />
+                                               Keyboard="Email"
+                                               IsEnabled="{Binding IsEmailEditable}" />
 
                         <!-- Student Code Input (Visible only if Student, Optional per BR-AUTH-04) -->
                         <inputs:ValidatedEntry LabelText="Student ID (Optional)"
@@ -116,6 +118,13 @@
                                                Placeholder="e.g. An Binh Boarding House"
                                                Text="{Binding HouseName, Mode=TwoWay}"
                                                ErrorMessage="{Binding HouseNameError}"
+                                               IsVisible="{Binding IsLandlord}" />
+
+                        <!-- Boarding House Address Input (Required for Landlord) -->
+                        <inputs:ValidatedEntry LabelText="Boarding House Address *"
+                                               Placeholder="e.g. 123 Z115 Street, Quyet Thang, Thai Nguyen"
+                                               Text="{Binding HouseAddress, Mode=TwoWay}"
+                                               ErrorMessage="{Binding HouseAddressError}"
                                                IsVisible="{Binding IsLandlord}" />
 
                         <!-- Password Input (BR-AUTH-05: 8-128 chars, upper, lower, digit) -->
@@ -144,7 +153,7 @@
                         </HorizontalStackLayout>
 
                         <!-- Submit Button -->
-                        <common:RadaButton Text="Create Account"
+                        <common:RadaButton Text="{Binding SubmitButtonText}"
                                            Variant="Primary"
                                            IsLoading="{Binding IsBusy}"
                                            Command="{Binding RegisterCommand}"

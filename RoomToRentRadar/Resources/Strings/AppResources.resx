@@ -145,5 +145,35 @@
   <data name="HouseNamePlaceholder" xml:space="preserve">
     <value>e.g. An Binh Boarding House</value>
   </data>
+  <data name="HouseAddressLabel" xml:space="preserve">
+    <value>Boarding House Address *</value>
+  </data>
+  <data name="HouseAddressPlaceholder" xml:space="preserve">
+    <value>e.g. 123 Z115 Street, Quyet Thang, Thai Nguyen</value>
+  </data>
+  <data name="HouseAddressRequiredError" xml:space="preserve">
+    <value>Boarding house address is required for Landlord (5-250 characters).</value>
+  </data>
+  <data name="HouseAddressRequiredTitle" xml:space="preserve">
+    <value>House Address Required</value>
+  </data>
+  <data name="HouseAddressRequiredMessage" xml:space="preserve">
+    <value>Boarding house address must be between 5 and 250 characters.</value>
+  </data>
+  <data name="CompleteRegistration" xml:space="preserve">
+    <value>Complete Registration</value>
+  </data>
+  <data name="RegisterButtonText" xml:space="preserve">
+    <value>Create Account</value>
+  </data>
+  <data name="GoogleOnboardingTitle" xml:space="preserve">
+    <value>Complete Google Registration</value>
+  </data>
+  <data name="PromptLandlordHouseAddressTitle" xml:space="preserve">
+    <value>Boarding House Address</value>
+  </data>
+  <data name="PromptLandlordHouseAddressMessage" xml:space="preserve">
+    <value>Please enter your boarding house address to continue:</value>
+  </data>
 </root>
 

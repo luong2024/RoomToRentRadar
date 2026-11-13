@@ -27,6 +27,7 @@ public sealed class User
     public string? SsoSubjectId { get; private set; }
     public string? PhoneNumber { get; private set; }
     public string? HouseName { get; private set; }
+    public string? HouseAddress { get; private set; }
     public string? StudentCode { get; private set; }
     public bool IsVerified { get; private set; }
     public int FailedLoginCount { get; private set; }
@@ -47,6 +48,7 @@ public sealed class User
         string? ssoSubjectId,
         string? phoneNumber,
         string? houseName,
+        string? houseAddress,
         string? studentCode,
         bool isVerified,
         int failedLoginCount,
@@ -65,6 +67,7 @@ public sealed class User
         SsoSubjectId = ssoSubjectId;
         PhoneNumber = phoneNumber;
         HouseName = houseName;
+        HouseAddress = houseAddress;
         StudentCode = studentCode;
         IsVerified = isVerified;
         FailedLoginCount = failedLoginCount;
@@ -87,7 +90,8 @@ public sealed class User
         string? phoneNumber,
         string? studentCode,
         DateTime utcNow,
-        string? houseName = null)
+        string? houseName = null,
+        string? houseAddress = null)
     {
         if (!Enum.IsDefined(typeof(UserRole), role))
         {
@@ -114,6 +118,7 @@ public sealed class User
         var normalizedStudentCode = string.IsNullOrWhiteSpace(studentCode) ? null : studentCode.Trim().ToUpperInvariant();
 
         string? normalizedHouseName = null;
+        string? normalizedHouseAddress = null;
         if (role == UserRole.Landlord)
         {
             if (string.IsNullOrWhiteSpace(houseName))
@@ -125,6 +130,17 @@ public sealed class User
             if (normalizedHouseName.Length < 3 || normalizedHouseName.Length > 100)
             {
                 throw new DomainValidationException("House name must be between 3 and 100 characters.");
+            }
+
+            if (string.IsNullOrWhiteSpace(houseAddress))
+            {
+                throw new DomainValidationException("A boarding house address is required for Landlord registration.");
+            }
+
+            normalizedHouseAddress = houseAddress.Trim();
+            if (normalizedHouseAddress.Length < 5 || normalizedHouseAddress.Length > 250)
+            {
+                throw new DomainValidationException("House address must be between 5 and 250 characters.");
             }
         }
 
@@ -141,6 +157,7 @@ public sealed class User
             ssoSubjectId: null,
             phoneNumber: normalizedPhone,
             houseName: normalizedHouseName,
+            houseAddress: normalizedHouseAddress,
             studentCode: normalizedStudentCode,
             isVerified: isVerified,
             failedLoginCount: 0,
@@ -186,6 +203,7 @@ public sealed class User
             ssoSubjectId: ssoSubjectId.Trim(),
             phoneNumber: null,
             houseName: null,
+            houseAddress: null,
             studentCode: derivedStudentCode,
             isVerified: true,
             failedLoginCount: 0,
@@ -202,7 +220,8 @@ public sealed class User
         string? phoneNumber,
         DateTime utcNow,
         string? passwordHash = null,
-        string? houseName = null)
+        string? houseName = null,
+        string? houseAddress = null)
     {
         if (!Enum.IsDefined(typeof(UserRole), role))
         {
@@ -245,6 +264,7 @@ public sealed class User
                 ssoSubjectId: googleSubjectId.Trim(),
                 phoneNumber: null,
                 houseName: null,
+                houseAddress: null,
                 studentCode: derivedStudentCode,
                 isVerified: true,
                 failedLoginCount: 0,
@@ -267,6 +287,17 @@ public sealed class User
                 throw new DomainValidationException("House name must be between 3 and 100 characters.");
             }
 
+            if (string.IsNullOrWhiteSpace(houseAddress))
+            {
+                throw new HouseAddressRequiredException("House address is required for Landlord registration.");
+            }
+
+            var normalizedHouseAddress = houseAddress.Trim();
+            if (normalizedHouseAddress.Length < 5 || normalizedHouseAddress.Length > 250)
+            {
+                throw new DomainValidationException("House address must be between 5 and 250 characters.");
+            }
+
             return new User(
                 id: Guid.NewGuid().ToString("N"),
                 email: emailAddress,
@@ -277,6 +308,7 @@ public sealed class User
                 ssoSubjectId: googleSubjectId.Trim(),
                 phoneNumber: normalizedPhone,
                 houseName: normalizedHouseName,
+                houseAddress: normalizedHouseAddress,
                 studentCode: null,
                 isVerified: false, // Landlord requires Admin approval per BR-AUTH-03
                 failedLoginCount: 0,
@@ -303,7 +335,8 @@ public sealed class User
         DateTime updatedAtUtc,
         IEnumerable<RefreshTokenSession>? refreshTokens = null,
         string? concurrencyToken = null,
-        string? houseName = null)
+        string? houseName = null,
+        string? houseAddress = null)
     {
         return new User(
             id,
@@ -315,6 +348,7 @@ public sealed class User
             ssoSubjectId,
             phoneNumber,
             houseName,
+            houseAddress,
             studentCode,
             isVerified,
             failedLoginCount,
@@ -392,7 +426,8 @@ public sealed class User
         string? phoneNumber,
         DateTime utcNow,
         string? newPasswordHash = null,
-        string? houseName = null)
+        string? houseName = null,
+        string? houseAddress = null)
     {
         if (Role != UserRole.Student && Role != UserRole.Landlord)
         {
@@ -430,6 +465,16 @@ public sealed class User
                 throw new DomainValidationException("House name must be between 3 and 100 characters.");
             }
             HouseName = trimmed;
+        }
+
+        if (Role == UserRole.Landlord && string.IsNullOrWhiteSpace(HouseAddress) && !string.IsNullOrWhiteSpace(houseAddress))
+        {
+            var trimmedAddress = houseAddress.Trim();
+            if (trimmedAddress.Length < 5 || trimmedAddress.Length > 250)
+            {
+                throw new DomainValidationException("House address must be between 5 and 250 characters.");
+            }
+            HouseAddress = trimmedAddress;
         }
 
         UpdatedAtUtc = utcNow;

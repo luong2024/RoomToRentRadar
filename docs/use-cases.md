@@ -168,7 +168,7 @@ Each UC: **Actor · Story/AC · Preconditions · Main flow · Alternatives (A) �
 
 #### UC-20 Register
 - **Actor:** Guest · **Story:** US13 AC1, AC4
-- **Main:** SCR-AUTH-02: choose role *Student* / *Landlord* → email, password, full name, (phone and boarding house name required for landlord), (student code optional) → `registerUser` → tokens → home. Landlord sees banner "Your account is awaiting verification".
+- **Main:** SCR-AUTH-02: choose role *Student* / *Landlord* → email, password, full name, (phone, house name, and house address required for landlord), (student code optional) → `registerUser` → tokens → home. Landlord sees banner "Your account is awaiting verification".
 - **E1:** duplicate email `409`. **E2:** weak password / invalid phone `400` (message from server shown inline). **E3:** `Admin` role → `403`.
 - **Rules:** BR-AUTH-01..03, -05.
 
@@ -178,11 +178,12 @@ Each UC: **Actor · Story/AC · Preconditions · Main flow · Alternatives (A) �
 - **Rules:** BR-AUTH-05, -06.
 
 #### UC-22 Sign in with Google / ICTU SSO
-- **Main:** *Tiếp tục với Google / ICTU SSO* → system browser (WebAuthenticator) → id_token → `loginWithGoogle` → Student or Landlord account provisioned/linked. On initial registration, sets account password. On linking existing local account, verifies current password.
+- **Main:** *Tiếp tục với Google / ICTU SSO* → system browser (WebAuthenticator) → id_token → `loginWithGoogle` → Student or Landlord account provisioned/linked. On initial registration, navigates to SCR-AUTH-02 with pre-filled details to complete phone, house name, house address, and password. On linking existing local account, verifies current password.
 - **E1:** Student non-`@ictu.edu.vn` or missing `hd` → `400` "Student Google login requires an @ictu.edu.vn email address with verified hosted domain 'ictu.edu.vn'".
-- **E2:** Landlord missing phone → `400` `AUTH_PHONE_REQUIRED` → prompt phone.
-- **E2b:** Landlord missing boarding house name → `400` `AUTH_HOUSE_NAME_REQUIRED` → prompt house name.
-- **E3:** Missing password on initial register → `400` `AUTH_PASSWORD_REQUIRED` → prompt password.
+- **E2:** Landlord missing phone → `400` `AUTH_PHONE_REQUIRED`.
+- **E2b:** Landlord missing boarding house name → `400` `AUTH_HOUSE_NAME_REQUIRED`.
+- **E2c:** Landlord missing boarding house address → `400` `AUTH_HOUSE_ADDRESS_REQUIRED`.
+- **E3:** Missing password on initial register → `400` `AUTH_PASSWORD_REQUIRED`.
 - **E4:** Existing local account unconfirmed → `400` `AUTH_CURRENT_PASSWORD_REQUIRED` → prompt current password.
 - **Rules:** BR-AUTH-03, BR-AUTH-04.
 

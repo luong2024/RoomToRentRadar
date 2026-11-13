@@ -54,7 +54,8 @@ public sealed class RegisterUserUseCase : IRegisterUserUseCase
             phoneNumber: request.PhoneNumber,
             studentCode: request.StudentCode,
             utcNow: utcNow,
-            houseName: request.HouseName);
+            houseName: request.HouseName,
+            houseAddress: request.HouseAddress);
 
         var accessToken = _jwtTokenService.GenerateAccessToken(user, utcNow);
         var rawRefreshToken = _jwtTokenService.GenerateRawRefreshToken();

@@ -44,7 +44,8 @@ public class UserAggregateTests
             phoneNumber: "0987654321",
             studentCode: null,
             utcNow: FixedNow,
-            houseName: "Tro Co Hoa");
+            houseName: "Tro Co Hoa",
+            houseAddress: "So 12 ngo 34 Z115, TP Thai Nguyen");
 
         Assert.Multiple(() =>
         {
@@ -52,6 +53,7 @@ public class UserAggregateTests
             Assert.That(landlord.IsVerified, Is.False);
             Assert.That(landlord.PhoneNumber, Is.EqualTo("0987654321"));
             Assert.That(landlord.HouseName, Is.EqualTo("Tro Co Hoa"));
+            Assert.That(landlord.HouseAddress, Is.EqualTo("So 12 ngo 34 Z115, TP Thai Nguyen"));
             Assert.That(
                 () => landlord.EnsureCanPublishListing(),
                 Throws.TypeOf<LandlordNotApprovedException>());
@@ -125,6 +127,42 @@ public class UserAggregateTests
                 studentCode: null,
                 utcNow: FixedNow,
                 houseName: invalidHouseName),
+            Throws.TypeOf<DomainValidationException>());
+    }
+
+    [Test]
+    public void RegisterLocal_AsLandlordWithoutHouseAddress_ThrowsDomainValidationException()
+    {
+        Assert.That(
+            () => User.RegisterLocal(
+                email: "landlord@gmail.com",
+                passwordHash: "hashed-password",
+                fullName: "Landlord Without Address",
+                role: UserRole.Landlord,
+                phoneNumber: "0987654321",
+                studentCode: null,
+                utcNow: FixedNow,
+                houseName: "Tro Co Hoa",
+                houseAddress: null),
+            Throws.TypeOf<DomainValidationException>());
+    }
+
+    [TestCase("")]
+    [TestCase("   ")]
+    [TestCase("1234")]
+    public void RegisterLocal_AsLandlordWithInvalidHouseAddress_ThrowsDomainValidationException(string? invalidHouseAddress)
+    {
+        Assert.That(
+            () => User.RegisterLocal(
+                email: "landlord@gmail.com",
+                passwordHash: "hashed-password",
+                fullName: "Landlord Invalid Address",
+                role: UserRole.Landlord,
+                phoneNumber: "0987654321",
+                studentCode: null,
+                utcNow: FixedNow,
+                houseName: "Tro Co Hoa",
+                houseAddress: invalidHouseAddress),
             Throws.TypeOf<DomainValidationException>());
     }
 
@@ -307,7 +345,8 @@ public class UserAggregateTests
             role: UserRole.Landlord,
             phoneNumber: "0912345678",
             utcNow: FixedNow,
-            houseName: "Tro Co Hoa");
+            houseName: "Tro Co Hoa",
+            houseAddress: "So 12 ngo 34 Z115, TP Thai Nguyen");
 
         Assert.Multiple(() =>
         {
@@ -316,6 +355,7 @@ public class UserAggregateTests
             Assert.That(landlord.SsoSubjectId, Is.EqualTo("google-sub-67890"));
             Assert.That(landlord.PhoneNumber, Is.EqualTo("0912345678"));
             Assert.That(landlord.HouseName, Is.EqualTo("Tro Co Hoa"));
+            Assert.That(landlord.HouseAddress, Is.EqualTo("So 12 ngo 34 Z115, TP Thai Nguyen"));
             Assert.That(landlord.IsVerified, Is.False);
         });
     }
@@ -347,6 +387,20 @@ public class UserAggregateTests
     }
 
     [Test]
+    public void RegisterGoogle_AsLandlord_MissingHouseAddress_ThrowsValidationException()
+    {
+        Assert.Throws<HouseAddressRequiredException>(() => User.RegisterGoogle(
+            email: "landlord@gmail.com",
+            fullName: "Google Landlord",
+            googleSubjectId: "google-sub-67890",
+            role: UserRole.Landlord,
+            phoneNumber: "0912345678",
+            utcNow: FixedNow,
+            houseName: "Tro Co Hoa",
+            houseAddress: null));
+    }
+
+    [Test]
     public void LinkGoogle_ExistingUser_UpdatesSsoSubjectIdAndAuthProvider()
     {
         var user = User.RegisterLocal(
@@ -357,7 +411,8 @@ public class UserAggregateTests
             phoneNumber: "0987654321",
             studentCode: null,
             utcNow: FixedNow,
-            houseName: "Tro Co Hoa");
+            houseName: "Tro Co Hoa",
+            houseAddress: "So 12 ngo 34 Z115, TP Thai Nguyen");
 
         user.LinkGoogle("google-sub-999", null, FixedNow.AddMinutes(5));
 

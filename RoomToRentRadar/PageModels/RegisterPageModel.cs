@@ -4,10 +4,16 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Client.Adapters.Abstractions;
 using RoomToRentRadar.Ports.Contracts.Requests.Auth;
+using RoomToRentRadar.Ports.Contracts.Responses.Auth;
+using RoomToRentRadar.Resources.Strings;
 
 namespace RoomToRentRadar.PageModels;
 
 [QueryProperty(nameof(Role), "role")]
+[QueryProperty(nameof(Email), "email")]
+[QueryProperty(nameof(FullName), "fullName")]
+[QueryProperty(nameof(GoogleToken), "googleToken")]
+[QueryProperty(nameof(IsGoogleOnboardingString), "isGoogle")]
 public partial class RegisterPageModel : ObservableObject
 {
     private static readonly Regex EmailRegex = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -30,6 +36,24 @@ public partial class RegisterPageModel : ObservableObject
     public partial string RoleDisplayName { get; set; } = "Student";
 
     [ObservableProperty]
+    public partial string GoogleToken { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool IsGoogleOnboarding { get; set; } = false;
+
+    public string IsGoogleOnboardingString
+    {
+        get => IsGoogleOnboarding.ToString();
+        set => IsGoogleOnboarding = bool.TryParse(value, out var b) && b;
+    }
+
+    [ObservableProperty]
+    public partial bool IsEmailEditable { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool CanSwitchRole { get; set; } = true;
+
+    [ObservableProperty]
     public partial string FullName { get; set; } = string.Empty;
 
     [ObservableProperty]
@@ -45,10 +69,19 @@ public partial class RegisterPageModel : ObservableObject
     public partial string HouseName { get; set; } = string.Empty;
 
     [ObservableProperty]
+    public partial string HouseAddress { get; set; } = string.Empty;
+
+    [ObservableProperty]
     public partial string Password { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial string ConfirmPassword { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string PageTitle { get; set; } = "Create Account";
+
+    [ObservableProperty]
+    public partial string SubmitButtonText { get; set; } = "Create Account";
 
     [ObservableProperty]
     public partial bool IsAgreedToTerms { get; set; } = false;
@@ -67,6 +100,9 @@ public partial class RegisterPageModel : ObservableObject
 
     [ObservableProperty]
     public partial string HouseNameError { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string HouseAddressError { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial string PasswordError { get; set; } = string.Empty;
@@ -89,12 +125,32 @@ public partial class RegisterPageModel : ObservableObject
     {
         _authGateway = authGateway ?? throw new ArgumentNullException(nameof(authGateway));
         _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
+        PageTitle = AppResources.RegisterButtonText;
+        SubmitButtonText = AppResources.RegisterButtonText;
         UpdateRoleState();
     }
 
     partial void OnRoleChanged(string value)
     {
         UpdateRoleState();
+    }
+
+    partial void OnIsGoogleOnboardingChanged(bool value)
+    {
+        if (value)
+        {
+            IsEmailEditable = false;
+            CanSwitchRole = false;
+            PageTitle = AppResources.GoogleOnboardingTitle;
+            SubmitButtonText = AppResources.CompleteRegistration;
+        }
+        else
+        {
+            IsEmailEditable = true;
+            CanSwitchRole = true;
+            PageTitle = AppResources.RegisterButtonText;
+            SubmitButtonText = AppResources.RegisterButtonText;
+        }
     }
 
     private void UpdateRoleState()
@@ -168,6 +224,17 @@ public partial class RegisterPageModel : ObservableObject
                 HouseNameError = "Boarding house name must be between 3 and 100 characters.";
                 isValid = false;
             }
+
+            if (string.IsNullOrWhiteSpace(HouseAddress))
+            {
+                HouseAddressError = AppResources.HouseAddressRequiredError;
+                isValid = false;
+            }
+            else if (HouseAddress.Trim().Length < 5 || HouseAddress.Trim().Length > 250)
+            {
+                HouseAddressError = AppResources.HouseAddressRequiredError;
+                isValid = false;
+            }
         }
 
         // BR-AUTH-05: Password 8–128 chars with >= 1 upper, >= 1 lower, >= 1 digit
@@ -213,18 +280,38 @@ public partial class RegisterPageModel : ObservableObject
             var normalizedStudentCode = IsStudent && !string.IsNullOrWhiteSpace(StudentCode) ? StudentCode.Trim().ToUpperInvariant() : null;
             var normalizedPhone = !IsStudent && !string.IsNullOrWhiteSpace(PhoneNumber) ? PhoneNumber.Trim() : null;
             var normalizedHouseName = !IsStudent && !string.IsNullOrWhiteSpace(HouseName) ? HouseName.Trim() : null;
+            var normalizedHouseAddress = !IsStudent && !string.IsNullOrWhiteSpace(HouseAddress) ? HouseAddress.Trim() : null;
 
-            var request = new RegisterUserRequest(
-                Email: Email.Trim(),
-                Password: Password,
-                FullName: FullName.Trim(),
-                Role: IsStudent ? "Student" : "Landlord",
-                PhoneNumber: normalizedPhone,
-                StudentCode: normalizedStudentCode,
-                HouseName: normalizedHouseName
-            );
+            AuthTokensDto? response;
 
-            var response = await _authGateway.RegisterAsync(request);
+            if (IsGoogleOnboarding && !string.IsNullOrWhiteSpace(GoogleToken))
+            {
+                var googleRequest = new GoogleLoginRequest(
+                    IdToken: GoogleToken,
+                    Role: IsStudent ? "Student" : "Landlord",
+                    PhoneNumber: normalizedPhone,
+                    HouseName: normalizedHouseName,
+                    HouseAddress: normalizedHouseAddress,
+                    Password: Password,
+                    DeviceInfo: DeviceInfo.Current.Model);
+
+                response = await _authGateway.LoginWithGoogleAsync(googleRequest);
+            }
+            else
+            {
+                var request = new RegisterUserRequest(
+                    Email: Email.Trim(),
+                    Password: Password,
+                    FullName: FullName.Trim(),
+                    Role: IsStudent ? "Student" : "Landlord",
+                    PhoneNumber: normalizedPhone,
+                    StudentCode: normalizedStudentCode,
+                    HouseName: normalizedHouseName,
+                    HouseAddress: normalizedHouseAddress
+                );
+
+                response = await _authGateway.RegisterAsync(request);
+            }
 
             if (response != null && !string.IsNullOrEmpty(response.AccessToken))
             {
@@ -290,6 +377,7 @@ public partial class RegisterPageModel : ObservableObject
                 "INVALID_STUDENT_CODE" => "The provided student ID is invalid.",
                 "INVALID_PHONE_NUMBER" or "AUTH_PHONE_REQUIRED" => "Please enter a valid Vietnamese phone number.",
                 "AUTH_HOUSE_NAME_REQUIRED" or "INVALID_HOUSE_NAME" => "Please enter a valid boarding house name (3-100 characters).",
+                "AUTH_HOUSE_ADDRESS_REQUIRED" or "INVALID_HOUSE_ADDRESS" => "Please enter a valid boarding house address (5-250 characters).",
                 "INVALID_ROLE" => "Invalid user role selected.",
                 _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : "Registration failed. Please verify your details."
             };

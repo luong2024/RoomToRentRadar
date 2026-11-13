@@ -7,6 +7,7 @@ public record GoogleLoginRequest(
     string? DeviceInfo = null,
     string? Password = null,
     string? CurrentPassword = null,
-    string? HouseName = null
+    string? HouseName = null,
+    string? HouseAddress = null
 );
 

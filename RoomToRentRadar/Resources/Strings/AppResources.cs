@@ -46,5 +46,15 @@ public static class AppResources
     public static string HouseNameRequiredMessage => GetString(nameof(HouseNameRequiredMessage));
     public static string HouseNameLabel => GetString(nameof(HouseNameLabel));
     public static string HouseNamePlaceholder => GetString(nameof(HouseNamePlaceholder));
+    public static string HouseAddressLabel => GetString(nameof(HouseAddressLabel));
+    public static string HouseAddressPlaceholder => GetString(nameof(HouseAddressPlaceholder));
+    public static string HouseAddressRequiredError => GetString(nameof(HouseAddressRequiredError));
+    public static string HouseAddressRequiredTitle => GetString(nameof(HouseAddressRequiredTitle));
+    public static string HouseAddressRequiredMessage => GetString(nameof(HouseAddressRequiredMessage));
+    public static string CompleteRegistration => GetString(nameof(CompleteRegistration));
+    public static string RegisterButtonText => GetString(nameof(RegisterButtonText));
+    public static string GoogleOnboardingTitle => GetString(nameof(GoogleOnboardingTitle));
+    public static string PromptLandlordHouseAddressTitle => GetString(nameof(PromptLandlordHouseAddressTitle));
+    public static string PromptLandlordHouseAddressMessage => GetString(nameof(PromptLandlordHouseAddressMessage));
 }
 

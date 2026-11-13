@@ -29,6 +29,7 @@
                 <!-- Native Entry with Compiled Binding -->
                 <Entry Grid.Column="0"
                        x:Name="InnerEntry"
+                       IsEnabled="{Binding Source={x:Reference RootEntryView}, Path=IsEnabled}"
                        Text="{Binding Source={x:Reference RootEntryView}, Path=Text, Mode=TwoWay}"
                        Placeholder="{Binding Source={x:Reference RootEntryView}, Path=Placeholder}"
                        PlaceholderColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"

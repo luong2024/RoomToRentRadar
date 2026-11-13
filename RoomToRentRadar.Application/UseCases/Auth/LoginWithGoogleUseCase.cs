@@ -100,6 +100,13 @@ public sealed class LoginWithGoogleUseCase : ILoginWithGoogleUseCase
                 throw new HouseNameRequiredException();
             }
 
+            if (existingUser.Role == UserRole.Landlord &&
+                string.IsNullOrWhiteSpace(existingUser.HouseAddress) &&
+                string.IsNullOrWhiteSpace(request.HouseAddress))
+            {
+                throw new HouseAddressRequiredException();
+            }
+
             // Anti Pre-Hijacking: if account already exists with a password and is not yet linked to Google,
             // require current password confirmation on the first link
             if (!string.IsNullOrWhiteSpace(existingUser.PasswordHash) && string.IsNullOrWhiteSpace(existingUser.SsoSubjectId))
@@ -117,7 +124,12 @@ public sealed class LoginWithGoogleUseCase : ILoginWithGoogleUseCase
             }
 
             existingUser.EnsureNotLockedOut(utcNow);
-            existingUser.LinkGoogle(payload.SubjectId, request.PhoneNumber, utcNow, houseName: request.HouseName);
+            existingUser.LinkGoogle(
+                payload.SubjectId,
+                request.PhoneNumber,
+                utcNow,
+                houseName: request.HouseName,
+                houseAddress: request.HouseAddress);
             existingUser.RecordLoginSuccess(utcNow);
             user = existingUser;
         }
@@ -131,6 +143,11 @@ public sealed class LoginWithGoogleUseCase : ILoginWithGoogleUseCase
             if (role == UserRole.Landlord && string.IsNullOrWhiteSpace(request.HouseName))
             {
                 throw new HouseNameRequiredException();
+            }
+
+            if (role == UserRole.Landlord && string.IsNullOrWhiteSpace(request.HouseAddress))
+            {
+                throw new HouseAddressRequiredException();
             }
 
             // Dual login password creation on initial Google registration
@@ -150,7 +167,8 @@ public sealed class LoginWithGoogleUseCase : ILoginWithGoogleUseCase
                 phoneNumber: request.PhoneNumber,
                 utcNow: utcNow,
                 passwordHash: passwordHash,
-                houseName: request.HouseName);
+                houseName: request.HouseName,
+                houseAddress: request.HouseAddress);
             isNewUser = true;
         }
 

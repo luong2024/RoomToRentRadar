@@ -114,3 +114,11 @@ public class HouseNameRequiredException : Exception
     }
 }
 
+public class HouseAddressRequiredException : Exception
+{
+    public HouseAddressRequiredException(string message = "House address is required for Landlord registration.")
+        : base(message)
+    {
+    }
+}
+

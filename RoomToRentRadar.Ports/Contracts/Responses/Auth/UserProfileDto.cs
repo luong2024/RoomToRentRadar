@@ -10,6 +10,7 @@ public record UserProfileDto(
     string? StudentCode,
     bool IsVerified,
     DateTime CreatedAtUtc,
-    string? HouseName = null
+    string? HouseName = null,
+    string? HouseAddress = null
 );
 

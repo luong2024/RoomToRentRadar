@@ -193,9 +193,6 @@ public partial class LoginPageModel : ObservableObject
 
     private async Task ExecuteGoogleLoginWithChallengeHandlingAsync(string idToken, string role)
     {
-        string? phone = null;
-        string? houseName = null;
-        string? password = null;
         string? currentPassword = null;
 
         while (true)
@@ -203,11 +200,8 @@ public partial class LoginPageModel : ObservableObject
             var request = new GoogleLoginRequest(
                 IdToken: idToken,
                 Role: role,
-                PhoneNumber: phone,
                 DeviceInfo: DeviceInfo.Current.Model,
-                Password: password,
-                CurrentPassword: currentPassword,
-                HouseName: houseName);
+                CurrentPassword: currentPassword);
 
             try
             {
@@ -215,89 +209,24 @@ public partial class LoginPageModel : ObservableObject
                 await HandleLoginResponseAsync(response);
                 return;
             }
-            catch (ApiException apiEx) when (apiEx.ErrorCode == "AUTH_PHONE_REQUIRED" && Shell.Current != null)
+            catch (ApiException apiEx) when (
+                apiEx.ErrorCode is "AUTH_PASSWORD_REQUIRED" or "AUTH_PHONE_REQUIRED" or "AUTH_HOUSE_NAME_REQUIRED" or "AUTH_HOUSE_ADDRESS_REQUIRED")
             {
-                var phoneInput = await Shell.Current.DisplayPromptAsync(
-                    AppResources.PromptLandlordPhoneTitle,
-                    AppResources.PromptLandlordPhoneMessage,
-                    accept: AppResources.Confirm,
-                    cancel: AppResources.Cancel,
-                    placeholder: "0912345678",
-                    maxLength: 12,
-                    keyboard: Keyboard.Telephone);
+                // First-time Google registration: navigate to RegisterPage for unified onboarding (Phương án B)
+                var email = JwtPayloadHelper.ExtractEmail(idToken) ?? string.Empty;
+                var fullName = JwtPayloadHelper.ExtractFullName(idToken) ?? string.Empty;
 
-                if (string.IsNullOrWhiteSpace(phoneInput))
+                var queryParams = new Dictionary<string, object>
                 {
-                    return; // user cancelled prompt
-                }
+                    ["role"] = role,
+                    ["isGoogle"] = "true",
+                    ["googleToken"] = idToken,
+                    ["email"] = email,
+                    ["fullName"] = fullName
+                };
 
-                var trimmedPhone = phoneInput.Trim();
-                if (!PhoneRegex.IsMatch(trimmedPhone))
-                {
-                    await Shell.Current.DisplayAlertAsync(
-                        AppResources.PhoneNumberRequiredTitle,
-                        AppResources.PhoneNumberRequiredMessage,
-                        AppResources.Ok);
-                    return;
-                }
-
-                phone = trimmedPhone;
-            }
-            catch (ApiException apiEx) when (apiEx.ErrorCode == "AUTH_HOUSE_NAME_REQUIRED" && Shell.Current != null)
-            {
-                var houseNameInput = await Shell.Current.DisplayPromptAsync(
-                    AppResources.PromptLandlordHouseNameTitle,
-                    AppResources.PromptLandlordHouseNameMessage,
-                    accept: AppResources.Confirm,
-                    cancel: AppResources.Cancel,
-                    placeholder: AppResources.HouseNamePlaceholder,
-                    maxLength: 100,
-                    keyboard: Keyboard.Text);
-
-                if (string.IsNullOrWhiteSpace(houseNameInput))
-                {
-                    return; // user cancelled prompt
-                }
-
-                var trimmedHouse = houseNameInput.Trim();
-                if (trimmedHouse.Length < 3)
-                {
-                    await Shell.Current.DisplayAlertAsync(
-                        AppResources.HouseNameRequiredTitle,
-                        AppResources.HouseNameRequiredMessage,
-                        AppResources.Ok);
-                    return;
-                }
-
-                houseName = trimmedHouse;
-            }
-            catch (ApiException apiEx) when (apiEx.ErrorCode == "AUTH_PASSWORD_REQUIRED" && Shell.Current != null)
-            {
-                var passInput = await Shell.Current.DisplayPromptAsync(
-                    AppResources.PromptCreatePasswordTitle,
-                    AppResources.PromptCreatePasswordMessage,
-                    accept: AppResources.Confirm,
-                    cancel: AppResources.Cancel,
-                    placeholder: "••••••••",
-                    maxLength: 64,
-                    keyboard: Keyboard.Text);
-
-                if (string.IsNullOrWhiteSpace(passInput))
-                {
-                    return; // user cancelled prompt
-                }
-
-                var trimmedPass = passInput.Trim();
-                if (trimmedPass.Length < 8)
-                {
-                    await Shell.Current.DisplayAlertAsync(
-                        AppResources.PasswordRequiredTitle,
-                        AppResources.PasswordValidationRule,
-                        AppResources.Ok);
-                    return;
-                }
-
-                password = trimmedPass;
+                await Shell.Current.GoToAsync("register", queryParams);
+                return;
             }
             catch (ApiException apiEx) when (apiEx.ErrorCode == "AUTH_CURRENT_PASSWORD_REQUIRED" && Shell.Current != null)
             {

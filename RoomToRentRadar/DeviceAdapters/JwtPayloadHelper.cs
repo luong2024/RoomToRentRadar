@@ -51,6 +51,46 @@ public static class JwtPayloadHelper
         return null;
     }
 
+    public static string? ExtractFullName(string? idToken)
+    {
+        if (string.IsNullOrWhiteSpace(idToken))
+        {
+            return null;
+        }
+
+        var parts = idToken.Split('.');
+        if (parts.Length < 2)
+        {
+            return null;
+        }
+
+        try
+        {
+            var base64 = parts[1]
+                .Replace('-', '+')
+                .Replace('_', '/');
+
+            switch (base64.Length % 4)
+            {
+                case 2: base64 += "=="; break;
+                case 3: base64 += "="; break;
+            }
+
+            var jsonBytes = Convert.FromBase64String(base64);
+            using var doc = JsonDocument.Parse(jsonBytes);
+            if (doc.RootElement.TryGetProperty("name", out var nameProp) && nameProp.ValueKind == JsonValueKind.String)
+            {
+                return nameProp.GetString();
+            }
+        }
+        catch
+        {
+            // Ignore parsing errors, return null for graceful fallback
+        }
+
+        return null;
+    }
+
     public static bool IsIctuStudentEmail(string? email)
     {
         if (string.IsNullOrWhiteSpace(email))

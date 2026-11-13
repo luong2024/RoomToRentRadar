@@ -145,5 +145,35 @@
   <data name="HouseNamePlaceholder" xml:space="preserve">
     <value>Ví dụ: Nhà trọ An Bình</value>
   </data>
+  <data name="HouseAddressLabel" xml:space="preserve">
+    <value>Địa chỉ nhà trọ *</value>
+  </data>
+  <data name="HouseAddressPlaceholder" xml:space="preserve">
+    <value>VD: Số 123 đường Z115, Quyết Thắng, TP Thái Nguyên</value>
+  </data>
+  <data name="HouseAddressRequiredError" xml:space="preserve">
+    <value>Địa chỉ nhà trọ là bắt buộc đối với Chủ trọ (5-250 ký tự).</value>
+  </data>
+  <data name="HouseAddressRequiredTitle" xml:space="preserve">
+    <value>Yêu cầu địa chỉ nhà trọ</value>
+  </data>
+  <data name="HouseAddressRequiredMessage" xml:space="preserve">
+    <value>Địa chỉ nhà trọ phải có độ dài từ 5 đến 250 ký tự.</value>
+  </data>
+  <data name="CompleteRegistration" xml:space="preserve">
+    <value>Hoàn tất đăng ký</value>
+  </data>
+  <data name="RegisterButtonText" xml:space="preserve">
+    <value>Tạo tài khoản</value>
+  </data>
+  <data name="GoogleOnboardingTitle" xml:space="preserve">
+    <value>Hoàn tất đăng ký với Google</value>
+  </data>
+  <data name="PromptLandlordHouseAddressTitle" xml:space="preserve">
+    <value>Địa chỉ nhà trọ</value>
+  </data>
+  <data name="PromptLandlordHouseAddressMessage" xml:space="preserve">
+    <value>Vui lòng nhập địa chỉ nhà trọ của bạn để tiếp tục:</value>
+  </data>
 </root>
 

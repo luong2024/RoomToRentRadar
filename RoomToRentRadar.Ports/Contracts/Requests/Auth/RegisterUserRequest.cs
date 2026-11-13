@@ -7,6 +7,7 @@ public record RegisterUserRequest(
     string Role,
     string? PhoneNumber = null,
     string? StudentCode = null,
-    string? HouseName = null
+    string? HouseName = null,
+    string? HouseAddress = null
 );
 

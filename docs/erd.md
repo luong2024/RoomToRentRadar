@@ -131,6 +131,7 @@ erDiagram
 | SsoSubjectId | TEXT | | |
 | PhoneNumber | TEXT | | required for Landlord (BR-AUTH-03) |
 | HouseName | TEXT | | required for Landlord (BR-AUTH-03) |
+| HouseAddress | TEXT | | required for Landlord (BR-AUTH-03) |
 | StudentCode | TEXT | | |
 | IsVerified | INTEGER | NN | landlord approval (BR-AUTH-03) |
 | FailedLoginCount | INTEGER | NN | |

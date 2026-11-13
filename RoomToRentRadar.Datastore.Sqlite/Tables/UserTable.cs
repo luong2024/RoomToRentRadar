@@ -12,6 +12,7 @@ public sealed class UserTable
     public string? SsoSubjectId { get; set; }
     public string? PhoneNumber { get; set; }
     public string? HouseName { get; set; }
+    public string? HouseAddress { get; set; }
     public string? StudentCode { get; set; }
     public bool IsVerified { get; set; }
     public int FailedLoginCount { get; set; }

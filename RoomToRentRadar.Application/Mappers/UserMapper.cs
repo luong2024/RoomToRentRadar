@@ -19,6 +19,7 @@ public static class UserMapper
             StudentCode: user.StudentCode,
             IsVerified: user.IsVerified,
             CreatedAtUtc: user.CreatedAtUtc,
-            HouseName: user.HouseName);
+            HouseName: user.HouseName,
+            HouseAddress: user.HouseAddress);
     }
 }
