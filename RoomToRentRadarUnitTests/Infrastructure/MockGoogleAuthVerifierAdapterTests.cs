@@ -62,18 +62,16 @@ public class MockGoogleAuthVerifierAdapterTests
     [TestCase("")]
     [TestCase("   ")]
     [TestCase(null)]
-    public async Task VerifyIdTokenAsync_WithEmptyToken_ThrowsInvalidTokenException(string? token)
+    public void VerifyIdTokenAsync_WithEmptyToken_ThrowsInvalidTokenException(string? token)
     {
         var ex = Assert.ThrowsAsync<InvalidTokenException>(async () => await _sut.VerifyIdTokenAsync(token!));
-        await Task.CompletedTask;
         Assert.That(ex, Is.Not.Null);
     }
 
     [Test]
-    public async Task VerifyIdTokenAsync_WithMalformedMockFormat_ThrowsInvalidTokenException()
+    public void VerifyIdTokenAsync_WithMalformedMockFormat_ThrowsInvalidTokenException()
     {
         var ex = Assert.ThrowsAsync<InvalidTokenException>(async () => await _sut.VerifyIdTokenAsync("mock-google:onlyonepart"));
-        await Task.CompletedTask;
         Assert.That(ex, Is.Not.Null);
     }
 
@@ -125,7 +123,7 @@ public class MockGoogleAuthVerifierAdapterTests
     }
 
     [Test]
-    public async Task VerifyIdTokenAsync_WithUnverifiedEmailClaim_ThrowsInvalidTokenException()
+    public void VerifyIdTokenAsync_WithUnverifiedEmailClaim_ThrowsInvalidTokenException()
     {
         var testKeyBytes = Encoding.UTF8.GetBytes("a-very-secret-test-key-of-at-least-32-bytes!");
         var securityKey = new SymmetricSecurityKey(testKeyBytes);
@@ -162,12 +160,11 @@ public class MockGoogleAuthVerifierAdapterTests
         var verifier = new GoogleAuthVerifierAdapter(validationParams);
         var ex = Assert.ThrowsAsync<InvalidTokenException>(async () =>
             await verifier.VerifyIdTokenAsync(jwt));
-        await Task.CompletedTask;
         Assert.That(ex, Is.Not.Null);
     }
 
     [Test]
-    public async Task VerifyIdTokenAsync_WithTamperedSignature_ThrowsInvalidTokenException()
+    public void VerifyIdTokenAsync_WithTamperedSignature_ThrowsInvalidTokenException()
     {
         var testKeyBytes = Encoding.UTF8.GetBytes("a-very-secret-test-key-of-at-least-32-bytes!");
         var securityKey = new SymmetricSecurityKey(testKeyBytes);
