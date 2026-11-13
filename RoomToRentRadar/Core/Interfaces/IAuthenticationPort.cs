@@ -12,4 +12,8 @@ public interface IAuthenticationPort
     Task<AuthResult> LoginWithEmailAsync(LoginWithEmailRequest request, CancellationToken cancellationToken = default);
 
     Task<AuthResult> LoginWithGoogleAsync(LoginWithGoogleRequest request, CancellationToken cancellationToken = default);
+
+    Task<AuthResult> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default);
+
+    Task<bool> LogoutAsync(string refreshToken, CancellationToken cancellationToken = default);
 }

@@ -157,6 +157,61 @@ public class HttpAuthAdapter : IAuthenticationPort
         }
     }
 
+    public async Task<AuthResult> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var payload = new
+            {
+                refreshToken
+            };
+
+            var response = await _httpClient.PostAsJsonAsync("api/v1/auth/refresh", payload, cancellationToken);
+            if (response.IsSuccessStatusCode)
+            {
+                var authDto = await response.Content.ReadFromJsonAsync<BackendAuthSessionDto>(JsonOptions, cancellationToken);
+                return BuildSessionAuthResult(authDto, "REFRESH");
+            }
+
+            var (errorMessage, _) = await ParseErrorResponseAsync(response, cancellationToken);
+            return AuthResult.Failed(errorMessage);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (OperationCanceledException)
+        {
+            return AuthResult.Failed("Connection timed out. Please check that the backend server is running and reachable.");
+        }
+        catch (HttpRequestException)
+        {
+            return AuthResult.Failed("Unable to connect to authentication server. Please ensure the backend API is running.");
+        }
+        catch (Exception ex)
+        {
+            return AuthResult.Failed(ex.Message);
+        }
+    }
+
+    public async Task<bool> LogoutAsync(string refreshToken, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var payload = new
+            {
+                refreshToken
+            };
+
+            var response = await _httpClient.PostAsJsonAsync("api/v1/auth/logout", payload, cancellationToken);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private static AuthResult BuildSessionAuthResult(BackendAuthSessionDto? authDto, string provider)
     {
         if (authDto is null ||
