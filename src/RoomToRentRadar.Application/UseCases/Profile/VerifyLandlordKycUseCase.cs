@@ -8,11 +8,16 @@ namespace RoomToRentRadar.Application.UseCases.Profile;
 public sealed class VerifyLandlordKycUseCase : IVerifyLandlordKycUseCase
 {
     private readonly IUserProfileRepository _repository;
+    private readonly IKycDocumentStorageService? _kycStorage;
     private readonly TimeProvider _timeProvider;
 
-    public VerifyLandlordKycUseCase(IUserProfileRepository repository, TimeProvider? timeProvider = null)
+    public VerifyLandlordKycUseCase(
+        IUserProfileRepository repository,
+        IKycDocumentStorageService? kycStorage = null,
+        TimeProvider? timeProvider = null)
     {
-        _repository = repository;
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _kycStorage = kycStorage;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -28,6 +33,6 @@ public sealed class VerifyLandlordKycUseCase : IVerifyLandlordKycUseCase
             profile.RejectKyc(command.Reason ?? "Information did not match verification criteria.", now);
 
         await _repository.UpdateAsync(profile, cancellationToken);
-        return GetMyProfileUseCase.MapToDto(profile);
+        return await GetMyProfileUseCase.MapToDtoAsync(profile, _kycStorage, cancellationToken);
     }
 }

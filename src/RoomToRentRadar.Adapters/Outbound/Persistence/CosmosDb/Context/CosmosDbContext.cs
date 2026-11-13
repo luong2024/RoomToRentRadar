@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Options;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Configurations;
@@ -15,6 +16,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
     private readonly ICosmosContainer<RefreshTokenDocument> _refreshTokensContainer;
     private readonly ICosmosContainer<EmailIndexDocument> _emailIndexContainer;
     private readonly ICosmosContainer<ExternalLoginIndexDocument> _externalLoginIndexContainer;
+    private readonly ICosmosContainer<UserProfileDocument> _userProfilesContainer;
 
     public const string PartitionKeyPath = "/id";
     public const string UniqueTokenHashPath = "/tokenHash";
@@ -39,6 +41,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
             _refreshTokensContainer = new InMemoryCosmosContainer<RefreshTokenDocument>();
             _emailIndexContainer = new InMemoryCosmosContainer<EmailIndexDocument>();
             _externalLoginIndexContainer = new InMemoryCosmosContainer<ExternalLoginIndexDocument>();
+            _userProfilesContainer = new InMemoryCosmosContainer<UserProfileDocument>();
         }
         else
         {
@@ -73,11 +76,13 @@ public sealed class CosmosDbContext : ICosmosDbContext
             var refreshTokensCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.RefreshTokensContainerName);
             var emailIndexCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.EmailIndexContainerName);
             var externalLoginIndexCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.ExternalLoginIndexContainerName);
+            var userProfilesCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.UserProfilesContainerName);
 
             _usersContainer = new CosmosContainer<UserDocument>(usersCosmosContainer);
             _refreshTokensContainer = new CosmosContainer<RefreshTokenDocument>(refreshTokensCosmosContainer);
             _emailIndexContainer = new CosmosContainer<EmailIndexDocument>(emailIndexCosmosContainer);
             _externalLoginIndexContainer = new CosmosContainer<ExternalLoginIndexDocument>(externalLoginIndexCosmosContainer);
+            _userProfilesContainer = new CosmosContainer<UserProfileDocument>(userProfilesCosmosContainer);
         }
     }
 
@@ -88,6 +93,8 @@ public sealed class CosmosDbContext : ICosmosDbContext
     public ICosmosContainer<EmailIndexDocument> EmailIndex => _emailIndexContainer;
 
     public ICosmosContainer<ExternalLoginIndexDocument> ExternalLoginIndex => _externalLoginIndexContainer;
+
+    public ICosmosContainer<UserProfileDocument> UserProfiles => _userProfilesContainer;
 
     public static CosmosDbContext CreateInMemory()
     {
@@ -143,6 +150,54 @@ public sealed class CosmosDbContext : ICosmosDbContext
         await database.CreateContainerIfNotExistsAsync(
             externalLoginIndexContainerProperties,
             cancellationToken: cancellationToken);
+
+        var userProfilesContainerProperties = new ContainerProperties(_options.UserProfilesContainerName, PartitionKeyPath)
+        {
+            IndexingPolicy = new IndexingPolicy
+            {
+                CompositeIndexes =
+                {
+                    new Collection<CompositePath>
+                    {
+                        new CompositePath { Path = "/updatedAt", Order = CompositePathSortOrder.Descending },
+                        new CompositePath { Path = "/id", Order = CompositePathSortOrder.Ascending }
+                    }
+                }
+            }
+        };
+
+        var userProfilesResponse = await database.CreateContainerIfNotExistsAsync(
+            userProfilesContainerProperties,
+            cancellationToken: cancellationToken);
+
+        await EnsureUserProfileCompositeIndexesAsync(userProfilesResponse.Container, userProfilesResponse.Resource, cancellationToken);
+    }
+
+    private static async Task EnsureUserProfileCompositeIndexesAsync(
+        Container container,
+        ContainerProperties properties,
+        CancellationToken cancellationToken)
+    {
+        var indexingPolicy = properties.IndexingPolicy ?? new IndexingPolicy();
+        properties.IndexingPolicy = indexingPolicy;
+
+        var hasCompositeIndex = indexingPolicy.CompositeIndexes.Any(compositeList =>
+            compositeList.Count == 2 &&
+            compositeList[0].Path.Equals("/updatedAt", StringComparison.OrdinalIgnoreCase) &&
+            compositeList[0].Order == CompositePathSortOrder.Descending &&
+            compositeList[1].Path.Equals("/id", StringComparison.OrdinalIgnoreCase) &&
+            compositeList[1].Order == CompositePathSortOrder.Ascending);
+
+        if (!hasCompositeIndex)
+        {
+            indexingPolicy.CompositeIndexes.Add(new Collection<CompositePath>
+            {
+                new CompositePath { Path = "/updatedAt", Order = CompositePathSortOrder.Descending },
+                new CompositePath { Path = "/id", Order = CompositePathSortOrder.Ascending }
+            });
+
+            await container.ReplaceContainerAsync(properties, cancellationToken: cancellationToken);
+        }
     }
 
     public void Dispose()

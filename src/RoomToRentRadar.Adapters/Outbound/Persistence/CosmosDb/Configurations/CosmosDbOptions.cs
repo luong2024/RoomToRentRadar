@@ -18,5 +18,7 @@ public sealed class CosmosDbOptions
 
     public string ExternalLoginIndexContainerName { get; set; } = "ExternalLoginIndex";
 
+    public string UserProfilesContainerName { get; set; } = "UserProfiles";
+
     public string ConnectionMode { get; set; } = "Direct";
 }

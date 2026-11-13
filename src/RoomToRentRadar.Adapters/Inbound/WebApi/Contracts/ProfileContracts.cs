@@ -23,10 +23,19 @@ public sealed record UpdateLandlordProfileRequest(
     string? Address,
     string? CitizenIdNumber,
     DateOnly? CitizenIdIssueDate,
-    string? IdentityFrontPhotoUrl,
-    string? IdentityBackPhotoUrl,
+    string? IdentityFrontBlobName,
+    string? IdentityBackBlobName,
     string? BankName,
     string? BankAccountNumber,
     string? BankAccountHolder);
+
+public sealed record UpdateAdminProfileRequest(
+    string FullName,
+    string? PhoneNumber,
+    string StaffCode,
+    string Department,
+    string Title,
+    string? AvatarUrl = null,
+    string? Bio = null);
 
 public sealed record VerifyLandlordKycRequest(bool IsApproved, string? Reason);

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.ValueObjects;
@@ -39,10 +40,14 @@ public sealed class UserProfileDocument
     public AdminSubDocument? Admin { get; set; }
 
     [JsonPropertyName("createdAt")]
-    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     [JsonPropertyName("updatedAt")]
-    public DateTimeOffset UpdatedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    [JsonProperty("_etag", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonPropertyName("_etag")]
+    public string? ETag { get; set; }
 
     public static UserProfileDocument FromDomain(UserProfile entity) =>
         new()
@@ -71,8 +76,8 @@ public sealed class UserProfileDocument
                 Address = entity.Landlord.Address,
                 CitizenIdNumber = entity.Landlord.CitizenIdNumber,
                 CitizenIdIssueDate = entity.Landlord.CitizenIdIssueDate,
-                IdentityFrontPhotoUrl = entity.Landlord.IdentityFrontPhotoUrl,
-                IdentityBackPhotoUrl = entity.Landlord.IdentityBackPhotoUrl,
+                IdentityFrontBlobName = entity.Landlord.IdentityFrontBlobName,
+                IdentityBackBlobName = entity.Landlord.IdentityBackBlobName,
                 VerificationStatus = entity.Landlord.VerificationStatus.ToString(),
                 VerificationNotes = entity.Landlord.VerificationNotes,
                 VerifiedAt = entity.Landlord.VerifiedAt,
@@ -89,14 +94,16 @@ public sealed class UserProfileDocument
                 Title = entity.Admin.Title
             },
             CreatedAt = entity.CreatedAt,
-            UpdatedAt = entity.UpdatedAt
+            UpdatedAt = entity.UpdatedAt,
+            ETag = entity.Version
         };
 
     public UserProfile ToDomain()
     {
         var role = UserRoleExtensions.ParseRole(Role);
         var profile = UserProfile.CreateDefault(Guid.Parse(UserId), role, CreatedAt);
-        profile.UpdateBasicInfo(FullName, PhoneNumberValueObject.CreateOptional(PhoneNumber), AvatarUrl, Bio, UpdatedAt);
+        profile.SetVersion(ETag);
+        profile.RehydrateBasicInfo(FullName, PhoneNumberValueObject.CreateOptional(PhoneNumber), AvatarUrl, Bio, UpdatedAt);
 
         if (Tenant is not null && role == UserRole.Student)
         {
@@ -120,8 +127,8 @@ public sealed class UserProfileDocument
                 Landlord.Address,
                 Landlord.CitizenIdNumber,
                 Landlord.CitizenIdIssueDate,
-                Landlord.IdentityFrontPhotoUrl,
-                Landlord.IdentityBackPhotoUrl,
+                Landlord.IdentityFrontBlobName ?? Landlord.IdentityFrontPhotoUrl,
+                Landlord.IdentityBackBlobName ?? Landlord.IdentityBackPhotoUrl,
                 status,
                 Landlord.VerificationNotes,
                 Landlord.VerifiedAt,
@@ -159,7 +166,13 @@ public sealed class LandlordSubDocument
     public string? Address { get; set; }
     public string? CitizenIdNumber { get; set; }
     public DateOnly? CitizenIdIssueDate { get; set; }
+    [JsonPropertyName("identityFrontBlobName")]
+    public string? IdentityFrontBlobName { get; set; }
+    [JsonPropertyName("identityBackBlobName")]
+    public string? IdentityBackBlobName { get; set; }
+    [JsonPropertyName("identityFrontPhotoUrl")]
     public string? IdentityFrontPhotoUrl { get; set; }
+    [JsonPropertyName("identityBackPhotoUrl")]
     public string? IdentityBackPhotoUrl { get; set; }
     public string VerificationStatus { get; set; } = "Unverified";
     public string? VerificationNotes { get; set; }
@@ -173,7 +186,7 @@ public sealed class LandlordSubDocument
 
 public sealed class AdminSubDocument
 {
-    public string StaffCode { get; set; } = string.Empty;
-    public string Department { get; set; } = string.Empty;
-    public string Title { get; set; } = string.Empty;
+    public string? StaffCode { get; set; }
+    public string? Department { get; set; }
+    public string? Title { get; set; }
 }

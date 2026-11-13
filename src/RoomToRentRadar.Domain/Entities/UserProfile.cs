@@ -1,3 +1,4 @@
+using RoomToRentRadar.Domain.Common;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.Exceptions;
 using RoomToRentRadar.Domain.ValueObjects;
@@ -18,8 +19,14 @@ public sealed class UserProfile
     public AdminDetails? Admin { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
+    public string? Version { get; private set; }
 
     private UserProfile() { }
+
+    public void SetVersion(string? version)
+    {
+        Version = version;
+    }
 
     public static UserProfile CreateDefault(Guid userId, UserRole role, DateTimeOffset utcNow)
     {
@@ -38,14 +45,28 @@ public sealed class UserProfile
         else if (role == UserRole.Landlord)
             profile.Landlord = new LandlordDetails(null, null, null, null, null, null, KycVerificationStatus.Unverified, null, null, null, null, null);
         else if (role == UserRole.Admin)
-            profile.Admin = new AdminDetails("STAFF-01", "Administration", "System Admin");
+            profile.Admin = null; // Left unassigned until actual administrative staff data is provided
 
         return profile;
     }
 
     public void UpdateBasicInfo(string fullName, PhoneNumber? phone, string? avatarUrl, string? bio, DateTimeOffset utcNow)
     {
-        FullName = fullName?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(fullName?.Trim()))
+        {
+            throw new ProfileValidationException("Full name cannot be empty.");
+        }
+
+        FullName = fullName.Trim();
+        PhoneNumber = phone;
+        AvatarUrl = avatarUrl;
+        Bio = bio;
+        UpdatedAt = utcNow;
+    }
+
+    public void RehydrateBasicInfo(string fullName, PhoneNumber? phone, string? avatarUrl, string? bio, DateTimeOffset utcNow)
+    {
+        FullName = fullName ?? string.Empty;
         PhoneNumber = phone;
         AvatarUrl = avatarUrl;
         Bio = bio;
@@ -66,28 +87,56 @@ public sealed class UserProfile
         if (Role != UserRole.Landlord)
             throw new ProfileRoleMismatchException("Only users with role LANDLORD can update landlord details.");
 
-        Landlord = details ?? throw new ArgumentNullException(nameof(details));
+        ArgumentNullException.ThrowIfNull(details);
+
+        // Security invariant: If KYC identity documents changed on an already-verified profile,
+        // status cannot remain Verified without review.
+        if (Landlord is not null &&
+            Landlord.VerificationStatus == KycVerificationStatus.Verified &&
+            (Landlord.CitizenIdNumber != details.CitizenIdNumber ||
+             Landlord.CitizenIdIssueDate != details.CitizenIdIssueDate ||
+             Landlord.IdentityFrontBlobName != details.IdentityFrontBlobName ||
+             Landlord.IdentityBackBlobName != details.IdentityBackBlobName))
+        {
+            if (details.VerificationStatus == KycVerificationStatus.Verified)
+            {
+                throw new KycOperationInvalidException("Cannot modify KYC identity documents while retaining Verified status.");
+            }
+        }
+
+        Landlord = details;
         UpdatedAt = utcNow;
     }
 
     public void SubmitKycForVerification(
         string citizenIdNumber,
         DateOnly issueDate,
-        string frontPhotoUrl,
-        string backPhotoUrl,
+        string frontBlobName,
+        string backBlobName,
         DateTimeOffset utcNow)
     {
         if (Role != UserRole.Landlord || Landlord is null)
             throw new ProfileRoleMismatchException("Only landlords can submit KYC verification.");
 
+        if (string.IsNullOrWhiteSpace(citizenIdNumber))
+            throw new KycOperationInvalidException("Citizen ID number is required for KYC submission.");
+
+        var today = BusinessTime.ToBusinessDate(utcNow);
+        if (issueDate > today)
+            throw new KycOperationInvalidException("Citizen ID issue date cannot be in the future.");
+
+        if (string.IsNullOrWhiteSpace(frontBlobName) || string.IsNullOrWhiteSpace(backBlobName))
+            throw new KycOperationInvalidException("Both front and back identity photos are required for KYC submission.");
+
         Landlord = Landlord with
         {
-            CitizenIdNumber = citizenIdNumber,
+            CitizenIdNumber = citizenIdNumber.Trim(),
             CitizenIdIssueDate = issueDate,
-            IdentityFrontPhotoUrl = frontPhotoUrl,
-            IdentityBackPhotoUrl = backPhotoUrl,
+            IdentityFrontBlobName = frontBlobName.Trim(),
+            IdentityBackBlobName = backBlobName.Trim(),
             VerificationStatus = KycVerificationStatus.Pending,
-            VerificationNotes = "Pending review by administrator."
+            VerificationNotes = "Pending review by administrator.",
+            VerifiedAt = null
         };
         UpdatedAt = utcNow;
     }
@@ -96,6 +145,17 @@ public sealed class UserProfile
     {
         if (Role != UserRole.Landlord || Landlord is null)
             throw new ProfileRoleMismatchException("Only landlords have KYC records.");
+
+        if (Landlord.VerificationStatus != KycVerificationStatus.Pending)
+            throw new KycOperationInvalidException($"Cannot approve KYC verification for landlord in status '{Landlord.VerificationStatus}'. Landlord must be in 'Pending' status.");
+
+        if (string.IsNullOrWhiteSpace(Landlord.CitizenIdNumber) ||
+            !Landlord.CitizenIdIssueDate.HasValue ||
+            string.IsNullOrWhiteSpace(Landlord.IdentityFrontBlobName) ||
+            string.IsNullOrWhiteSpace(Landlord.IdentityBackBlobName))
+        {
+            throw new KycOperationInvalidException("Cannot approve KYC verification without complete documents (Citizen ID number, issue date, front photo, back photo).");
+        }
 
         Landlord = Landlord with
         {
@@ -110,6 +170,12 @@ public sealed class UserProfile
     {
         if (Role != UserRole.Landlord || Landlord is null)
             throw new ProfileRoleMismatchException("Only landlords have KYC records.");
+
+        if (Landlord.VerificationStatus != KycVerificationStatus.Pending)
+            throw new KycOperationInvalidException($"Cannot reject KYC verification for landlord in status '{Landlord.VerificationStatus}'. Landlord must be in 'Pending' status.");
+
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new KycOperationInvalidException("Rejection reason cannot be empty.");
 
         Landlord = Landlord with
         {

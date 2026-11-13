@@ -32,6 +32,24 @@ public interface IGetPublicProfileUseCase
     Task<PublicProfileDto> ExecuteAsync(Guid targetUserId, CancellationToken cancellationToken = default);
 }
 
+public interface IGetPendingLandlordsUseCase
+{
+    Task<IReadOnlyList<AdminLandlordKycDto>> ExecuteAsync(int skip = 0, int take = 20, CancellationToken cancellationToken = default);
+}
+
+public interface IGetLandlordKycDetailUseCase
+{
+    Task<AdminLandlordKycDto> ExecuteAsync(Guid targetUserId, CancellationToken cancellationToken = default);
+}
+
+public interface ICreateKycUploadUrlUseCase
+{
+    Task<KycUploadUrlResponse> ExecuteAsync(
+        Guid userId,
+        CreateKycUploadUrlRequest request,
+        CancellationToken cancellationToken = default);
+}
+
 public record UpdateTenantCommand(
     string FullName,
     string? PhoneNumber,
@@ -55,12 +73,12 @@ public record UpdateLandlordCommand(
     string? Address,
     string? CitizenIdNumber,
     DateOnly? CitizenIdIssueDate,
-    string? IdentityFrontPhotoUrl,
-    string? IdentityBackPhotoUrl,
+    string? IdentityFrontBlobName,
+    string? IdentityBackBlobName,
     string? BankName,
     string? BankAccountNumber,
     string? BankAccountHolder);
 
-public record UpdateAdminCommand(string FullName, string? PhoneNumber, string StaffCode, string Department, string Title);
+public record UpdateAdminCommand(string FullName, string? PhoneNumber, string StaffCode, string Department, string Title, string? AvatarUrl = null, string? Bio = null);
 
 public record VerifyLandlordKycCommand(Guid TargetUserId, bool IsApproved, string? Reason);
