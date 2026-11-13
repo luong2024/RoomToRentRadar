@@ -1,7 +1,10 @@
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using RoomToRentRadar.Adapters.Inbound.WebApi.Authentication;
 using RoomToRentRadar.Adapters.Inbound.WebApi.Authorization;
@@ -15,6 +18,7 @@ using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Context;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Repositories;
 using RoomToRentRadar.Application.Ports.Inbound;
 using RoomToRentRadar.Application.Ports.Outbound;
+using RoomToRentRadar.Application.UseCases;
 using RoomToRentRadar.Application.UseCases.Authentication;
 
 namespace RoomToRentRadar.Bootstrap.DependencyInjection;
@@ -26,6 +30,7 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddApplicationUseCases(this IServiceCollection services)
     {
+        services.AddScoped<IGetRoomDetailsUseCase, GetRoomDetailsUseCase>();
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<IRegisterUserUseCase, RegisterUserUseCase>();
         services.AddScoped<ILoginWithEmailUseCase, LoginWithEmailUseCase>();
@@ -36,7 +41,7 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddOutboundAdapters(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddOutboundAdapters(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment? environment = null)
     {
         services.AddSingleton<IValidateOptions<JwtOptions>, JwtOptionsValidator>();
         services

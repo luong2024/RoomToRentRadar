@@ -70,7 +70,38 @@ public class JwtTokenServiceTests
             Assert.That(identity.FindFirst(ClaimTypes.Role)?.Value, Is.EqualTo("LANDLORD"));
             Assert.That(identity.FindFirst(AuthClaimTypes.Role)?.Value, Is.EqualTo("LANDLORD"));
             Assert.That(identity.FindFirst(AuthClaimTypes.SecurityStamp)?.Value, Is.EqualTo(user.SecurityStamp));
+            Assert.That(identity.FindFirst("IsVerified")?.Value, Is.EqualTo("false"));
         });
+    }
+
+    [Test]
+    public async Task GenerateAccessToken_WhenUserIsVerified_ShouldIncludeIsVerifiedTrueClaim()
+    {
+        var user = User.RegisterLocalUser(
+            EmailAddress.Create("verified@ictu.edu.vn"),
+            "password-hash",
+            UserRole.Student,
+            FixedNow);
+        user.MarkAsVerified(FixedNow);
+
+        var generated = _tokenService.GenerateAccessToken(user, FixedNow);
+
+        var handler = new JsonWebTokenHandler { MapInboundClaims = false };
+        var validationResult = await handler.ValidateTokenAsync(
+            generated.Token,
+            new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.Secret)),
+                ValidateIssuer = true,
+                ValidIssuer = _jwtOptions.Issuer,
+                ValidateAudience = true,
+                ValidAudience = _jwtOptions.Audience,
+                ValidateLifetime = false
+            });
+
+        Assert.That(validationResult.IsValid, Is.True);
+        Assert.That(validationResult.ClaimsIdentity!.FindFirst("IsVerified")?.Value, Is.EqualTo("true"));
     }
 
     [Test]

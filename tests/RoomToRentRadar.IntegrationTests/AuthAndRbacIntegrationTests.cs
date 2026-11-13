@@ -20,9 +20,23 @@ public class AuthAndRbacIntegrationTests
     private AuthWebApplicationFactory _factory = null!;
     private HttpClient _client = null!;
 
+    [OneTimeSetUp]
+    public void OneTimeSetUp()
+    {
+        Environment.SetEnvironmentVariable("CosmosDb__AccountEndpoint", "https://localhost:8081");
+        Environment.SetEnvironmentVariable("CosmosDb__AuthKey", "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==");
+        Environment.SetEnvironmentVariable("CosmosDb__DatabaseName", "IntegrationTestDb");
+        Environment.SetEnvironmentVariable("CosmosDb__ContainerName", "Rooms");
+    }
+
     [SetUp]
     public void SetUp()
     {
+        Environment.SetEnvironmentVariable("CosmosDb__AccountEndpoint", "https://localhost:8081");
+        Environment.SetEnvironmentVariable("CosmosDb__AuthKey", "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==");
+        Environment.SetEnvironmentVariable("CosmosDb__DatabaseName", "IntegrationTestDb");
+        Environment.SetEnvironmentVariable("CosmosDb__ContainerName", "Rooms");
+
         _factory = new AuthWebApplicationFactory();
         _client = _factory.CreateClient();
     }
