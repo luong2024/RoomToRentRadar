@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using RoomToRentRadar.Domain.Aggregates;
+using RoomToRentRadar.Domain.Exceptions;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 
 namespace RoomToRentRadar.Infrastructure.Adapters.Mocks;
@@ -31,21 +32,38 @@ public sealed class InMemoryRoomRepository : IRoomRepository
     {
         ArgumentNullException.ThrowIfNull(room);
         ct.ThrowIfCancellationRequested();
-        _roomsById[room.Id] = Copy(room);
+
+        if (!_roomsById.TryAdd(room.Id, Copy(room)))
+        {
+            // LSP parity with SqliteRoomRepository (GUARDRAILS §1.6.3): a duplicate id is a validation error.
+            throw new DomainValidationException(
+                $"A room with Id '{room.Id}' already exists.",
+                "DUPLICATE_ROOM");
+        }
+
+        room.MarkPersisted();
         return Task.CompletedTask;
     }
 
     /// <summary>
-    /// Blind upsert of a test double: this adapter performs NO optimistic-concurrency check.
-    /// Ownership of `UPDATE … WHERE Id = @Id AND Version = @Version` (GUARDRAILS 1.5.2) belongs to
-    /// <c>SqliteRoomRepository</c> (Task 3).
+    /// Same optimistic-concurrency contract as <c>SqliteRoomRepository</c> (GUARDRAILS §1.5.2, §1.6.3):
+    /// the stored version must equal <see cref="Room.LoadedVersion"/>; otherwise — including an unknown
+    /// id — the operation fails with <see cref="ConcurrencyConflictException"/>.
     /// </summary>
     public Task UpdateAsync(Room room, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(room);
         ct.ThrowIfCancellationRequested();
 
+        if (!_roomsById.TryGetValue(room.Id, out var stored)
+            || stored.Version != room.LoadedVersion)
+        {
+            throw new ConcurrencyConflictException(
+                $"Optimistic concurrency conflict occurred updating room '{room.Id}' (expected version {room.LoadedVersion}).");
+        }
+
         _roomsById[room.Id] = Copy(room);
+        room.MarkPersisted();
         return Task.CompletedTask;
     }
 

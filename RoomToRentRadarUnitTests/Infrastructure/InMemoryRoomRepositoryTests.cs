@@ -1,5 +1,6 @@
 using RoomToRentRadar.Domain.Aggregates;
 using RoomToRentRadar.Domain.Enums;
+using RoomToRentRadar.Domain.Exceptions;
 using RoomToRentRadar.Infrastructure.Adapters.Mocks;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 
@@ -63,10 +64,9 @@ public class InMemoryRoomRepositoryTests
     }
 
     [Test]
-    public async Task UpdateAsync_WithStaleVersion_StillOverwrites_BecauseTestDoubleSkipsConcurrency()
+    public async Task UpdateAsync_WithStaleVersion_ThrowsConcurrencyConflictException()
     {
-        // Khoá hành vi thật của test double: không kiểm optimistic concurrency
-        // (SqliteRoomRepository mới chịu trách nhiệm này — Task 3).
+        // GUARDRAILS §1.6.3: InMemory phải hành xử như Sqlite, không được nuốt xung đột.
         var repository = new InMemoryRoomRepository(new[] { NewRoom("mem-5") });
         var stale = (await repository.GetByIdAsync("mem-5"))!;
         var current = (await repository.GetByIdAsync("mem-5"))!;
@@ -75,10 +75,27 @@ public class InMemoryRoomRepositoryTests
         await repository.UpdateAsync(current);
 
         stale.Approve(new DateTime(2026, 11, 13, 8, 0, 0, DateTimeKind.Utc));
-        await repository.UpdateAsync(stale);
 
-        var found = await repository.GetByIdAsync("mem-5");
-        Assert.That(found!.Version, Is.EqualTo(stale.Version));
+        Assert.ThrowsAsync<ConcurrencyConflictException>(async () => await repository.UpdateAsync(stale));
+    }
+
+    [Test]
+    public async Task UpdateAsync_UnknownId_ThrowsConcurrencyConflictException()
+    {
+        var repository = new InMemoryRoomRepository();
+
+        Assert.ThrowsAsync<ConcurrencyConflictException>(async () => await repository.UpdateAsync(NewRoom("missing")));
+    }
+
+    [Test]
+    public async Task AddAsync_DuplicateId_ThrowsDomainValidationExceptionWithDuplicateCode()
+    {
+        var repository = new InMemoryRoomRepository(new[] { NewRoom("mem-dup") });
+
+        var duplicate = Assert.ThrowsAsync<DomainValidationException>(
+            async () => await repository.AddAsync(NewRoom("mem-dup")));
+
+        Assert.That(duplicate!.ErrorCode, Is.EqualTo("DUPLICATE_ROOM"));
     }
 
     [Test]
