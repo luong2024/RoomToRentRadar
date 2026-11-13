@@ -72,6 +72,10 @@ GoogleService-Info.plist
 *.p12
 .env
 appsettings.*.local.json
+appsettings.local.json
+*.local.cs
+*.Local.cs
+MauiProgram.Local.cs
 
 # OS generated files
 .DS_Store

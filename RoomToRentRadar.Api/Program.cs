@@ -12,6 +12,30 @@ using RoomToRentRadar.Datastore.Sqlite.Configurations;
 using RoomToRentRadar.Infrastructure;
 using RoomToRentRadar.Infrastructure.Adapters.Security;
 
+// Load local .env file if exists (never committed to git)
+var envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
+if (!File.Exists(envPath))
+{
+    var parentEnv = Path.Combine(Directory.GetCurrentDirectory(), "..", ".env");
+    if (File.Exists(parentEnv)) envPath = parentEnv;
+}
+
+if (File.Exists(envPath))
+{
+    foreach (var line in File.ReadAllLines(envPath))
+    {
+        var trimmed = line.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith('#')) continue;
+        var separatorIdx = trimmed.IndexOf('=');
+        if (separatorIdx > 0)
+        {
+            var k = trimmed[..separatorIdx].Trim();
+            var v = trimmed[(separatorIdx + 1)..].Trim().Trim('"', '\'');
+            Environment.SetEnvironmentVariable(k, v);
+        }
+    }
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
@@ -41,7 +65,12 @@ else
     builder.Services.AddSqliteDatastore(sqliteSettings);
 }
 
-var useMockSso = builder.Configuration.GetValue("IctuSso:UseMockVerifier", defaultValue: false);
+var envMockSso = Environment.GetEnvironmentVariable("ICTU_SSO_USE_MOCK_VERIFIER")
+    ?? Environment.GetEnvironmentVariable("IctuSso__UseMockVerifier");
+var useMockSso = bool.TryParse(envMockSso, out var parsedMockSso)
+    ? parsedMockSso
+    : builder.Configuration.GetValue("IctuSso:UseMockVerifier", defaultValue: false);
+
 if (useMockSso && !builder.Environment.IsDevelopment())
 {
     throw new InvalidOperationException("CRITICAL: Mock SSO verifier is strictly prohibited outside the Development environment.");

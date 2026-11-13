@@ -1,48 +1,20 @@
-using Microsoft.Maui.Storage;
-
 namespace RoomToRentRadar.DeviceAdapters;
 
+/// <summary>
+/// Production Google authentication client service using WebAuthenticator.
+/// Authenticates the user with real Google OAuth and retrieves a cryptographically verifiable ID token.
+/// </summary>
 public sealed class GoogleAuthClientService : IGoogleAuthClientService
 {
-    private readonly WebAuthenticatorGoogleAuthClientService _realService;
-    private readonly MockGoogleAuthClientService _mockService;
+    private readonly WebAuthenticatorGoogleAuthClientService _webAuthenticatorService;
 
-    public GoogleAuthClientService(
-        WebAuthenticatorGoogleAuthClientService? realService = null,
-        MockGoogleAuthClientService? mockService = null)
+    public GoogleAuthClientService(WebAuthenticatorGoogleAuthClientService? webAuthenticatorService = null)
     {
-        _realService = realService ?? new WebAuthenticatorGoogleAuthClientService();
-        _mockService = mockService ?? new MockGoogleAuthClientService();
+        _webAuthenticatorService = webAuthenticatorService ?? new WebAuthenticatorGoogleAuthClientService();
     }
 
     public async Task<string?> AuthenticateAndGetIdTokenAsync(string? roleHint = null, CancellationToken ct = default)
     {
-        var useMock = Preferences.Default.Get("UseMockGoogleAuth",
-#if DEBUG
-            true
-#else
-            false
-#endif
-        );
-
-        if (useMock)
-        {
-            return await _mockService.AuthenticateAndGetIdTokenAsync(roleHint, ct);
-        }
-
-        try
-        {
-            var token = await _realService.AuthenticateAndGetIdTokenAsync(roleHint, ct);
-            return token;
-        }
-        catch (Exception)
-        {
-#if DEBUG
-            return await _mockService.AuthenticateAndGetIdTokenAsync(roleHint, ct);
-#else
-            throw;
-#endif
-        }
+        return await _webAuthenticatorService.AuthenticateAndGetIdTokenAsync(roleHint, ct);
     }
 }
-

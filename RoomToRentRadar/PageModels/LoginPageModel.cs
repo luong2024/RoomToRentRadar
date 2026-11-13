@@ -41,11 +41,7 @@ public partial class LoginPageModel : ObservableObject
     [ObservableProperty]
     public partial bool IsBusy { get; set; } = false;
 
-#if DEBUG
     public bool IsSsoVisible => true;
-#else
-    public bool IsSsoVisible => false;
-#endif
 
     public LoginPageModel(
         IAuthGateway authGateway,
@@ -147,16 +143,19 @@ public partial class LoginPageModel : ObservableObject
     {
         if (IsBusy) return;
 
-#if !DEBUG
-        return;
-#else
         try
         {
             IsBusy = true;
             HasGeneralError = false;
             GeneralError = string.Empty;
 
-            var ssoRequest = new IctuSsoLoginRequest("mock-ictu-sso-id-token", DeviceInfo.Current.Model);
+            var idToken = await _googleAuthService.AuthenticateAndGetIdTokenAsync("Student");
+            if (string.IsNullOrWhiteSpace(idToken))
+            {
+                return;
+            }
+
+            var ssoRequest = new IctuSsoLoginRequest(idToken, DeviceInfo.Current.Model);
             var response = await _authGateway.LoginWithIctuSsoAsync(ssoRequest);
 
             if (response != null && !string.IsNullOrEmpty(response.AccessToken))
@@ -164,7 +163,7 @@ public partial class LoginPageModel : ObservableObject
                 var saved = await _sessionStore.SaveSessionAsync(response);
                 if (!saved)
                 {
-                    GeneralError = "Unable to securely store your session on this device.";
+                    GeneralError = AppResources.SessionStorageError;
                     HasGeneralError = true;
                     return;
                 }
@@ -195,16 +194,15 @@ public partial class LoginPageModel : ObservableObject
             GeneralError = "Unable to connect to the authentication server. Please check your network.";
             HasGeneralError = true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            GeneralError = "An unexpected error occurred during ICTU SSO login.";
+            GeneralError = !string.IsNullOrWhiteSpace(ex.Message) ? ex.Message : "An unexpected error occurred during ICTU SSO login.";
             HasGeneralError = true;
         }
         finally
         {
             IsBusy = false;
         }
-#endif
     }
 
     [RelayCommand]
@@ -267,9 +265,9 @@ public partial class LoginPageModel : ObservableObject
             GeneralError = "Unable to connect to the authentication server. Please check your network.";
             HasGeneralError = true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            GeneralError = "An unexpected error occurred during Google login.";
+            GeneralError = !string.IsNullOrWhiteSpace(ex.Message) ? ex.Message : "An unexpected error occurred during Google login.";
             HasGeneralError = true;
         }
         finally
