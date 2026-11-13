@@ -127,5 +127,23 @@
   <data name="GoogleClientIdMissing" xml:space="preserve">
     <value>Google Client ID is not configured. Please check your client.env configuration.</value>
   </data>
+  <data name="PromptLandlordHouseNameTitle" xml:space="preserve">
+    <value>Boarding House Name</value>
+  </data>
+  <data name="PromptLandlordHouseNameMessage" xml:space="preserve">
+    <value>Please enter your boarding house name to continue:</value>
+  </data>
+  <data name="HouseNameRequiredTitle" xml:space="preserve">
+    <value>House Name Required</value>
+  </data>
+  <data name="HouseNameRequiredMessage" xml:space="preserve">
+    <value>Boarding house name must be between 3 and 100 characters.</value>
+  </data>
+  <data name="HouseNameLabel" xml:space="preserve">
+    <value>Boarding House Name *</value>
+  </data>
+  <data name="HouseNamePlaceholder" xml:space="preserve">
+    <value>e.g. An Binh Boarding House</value>
+  </data>
 </root>
 

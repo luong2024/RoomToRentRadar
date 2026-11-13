@@ -79,6 +79,7 @@ public sealed class SqliteDbContext : IDisposable
                         AuthProvider TEXT NOT NULL,
                         SsoSubjectId TEXT NULL,
                         PhoneNumber TEXT NULL,
+                        HouseName TEXT NULL,
                         StudentCode TEXT NULL,
                         IsVerified INTEGER NOT NULL,
                         FailedLoginCount INTEGER NOT NULL,

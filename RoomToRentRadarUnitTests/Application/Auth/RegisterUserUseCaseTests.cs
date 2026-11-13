@@ -80,7 +80,8 @@ public class RegisterUserUseCaseTests
             Password: "StrongPass123",
             FullName: "Tran Thi Chu Tro",
             Role: "Landlord",
-            PhoneNumber: "0987654321");
+            PhoneNumber: "0987654321",
+            HouseName: "Nha tro Co Hoa");
 
         var result = await _sut.ExecuteAsync(request);
 
@@ -89,11 +90,29 @@ public class RegisterUserUseCaseTests
             Assert.That(result.User.Role, Is.EqualTo("Landlord"));
             Assert.That(result.User.IsVerified, Is.False);
             Assert.That(result.User.PhoneNumber, Is.EqualTo("0987654321"));
+            Assert.That(result.User.HouseName, Is.EqualTo("Nha tro Co Hoa"));
         });
 
         await _userRepository.Received(1).AddAsync(
             Arg.Is<User>(u => u.Role == UserRole.Landlord && !u.IsVerified),
             Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public void ExecuteAsync_LandlordWithoutHouseName_ThrowsDomainValidationException()
+    {
+        _userRepository.ExistsByEmailAsync("landlord@gmail.com", Arg.Any<CancellationToken>()).Returns(false);
+
+        var request = new RegisterUserRequest(
+            Email: "landlord@gmail.com",
+            Password: "StrongPass123",
+            FullName: "Tran Thi Chu Tro",
+            Role: "Landlord",
+            PhoneNumber: "0987654321",
+            HouseName: null);
+
+        Assert.ThrowsAsync<DomainValidationException>(
+            async () => await _sut.ExecuteAsync(request));
     }
 
     [Test]

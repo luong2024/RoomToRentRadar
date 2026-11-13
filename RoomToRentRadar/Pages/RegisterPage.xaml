@@ -111,6 +111,13 @@
                                                Keyboard="Telephone"
                                                IsVisible="{Binding IsLandlord}" />
 
+                        <!-- Boarding House Name Input (Required for Landlord) -->
+                        <inputs:ValidatedEntry LabelText="Boarding House Name *"
+                                               Placeholder="e.g. An Binh Boarding House"
+                                               Text="{Binding HouseName, Mode=TwoWay}"
+                                               ErrorMessage="{Binding HouseNameError}"
+                                               IsVisible="{Binding IsLandlord}" />
+
                         <!-- Password Input (BR-AUTH-05: 8-128 chars, upper, lower, digit) -->
                         <inputs:ValidatedEntry LabelText="Password *"
                                                Placeholder="8–128 characters (upper, lower, digit)"

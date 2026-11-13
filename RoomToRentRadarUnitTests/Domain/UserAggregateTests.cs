@@ -43,13 +43,15 @@ public class UserAggregateTests
             role: UserRole.Landlord,
             phoneNumber: "0987654321",
             studentCode: null,
-            utcNow: FixedNow);
+            utcNow: FixedNow,
+            houseName: "Tro Co Hoa");
 
         Assert.Multiple(() =>
         {
             Assert.That(landlord.Role, Is.EqualTo(UserRole.Landlord));
             Assert.That(landlord.IsVerified, Is.False);
             Assert.That(landlord.PhoneNumber, Is.EqualTo("0987654321"));
+            Assert.That(landlord.HouseName, Is.EqualTo("Tro Co Hoa"));
             Assert.That(
                 () => landlord.EnsureCanPublishListing(),
                 Throws.TypeOf<LandlordNotApprovedException>());
@@ -87,7 +89,42 @@ public class UserAggregateTests
                 role: UserRole.Landlord,
                 phoneNumber: null,
                 studentCode: null,
-                utcNow: FixedNow),
+                utcNow: FixedNow,
+                houseName: "Tro Co Hoa"),
+            Throws.TypeOf<DomainValidationException>());
+    }
+
+    [Test]
+    public void RegisterLocal_AsLandlordWithoutHouseName_ThrowsDomainValidationException()
+    {
+        Assert.That(
+            () => User.RegisterLocal(
+                email: "landlord@gmail.com",
+                passwordHash: "hashed-password",
+                fullName: "Landlord Without House",
+                role: UserRole.Landlord,
+                phoneNumber: "0987654321",
+                studentCode: null,
+                utcNow: FixedNow,
+                houseName: null),
+            Throws.TypeOf<DomainValidationException>());
+    }
+
+    [TestCase("")]
+    [TestCase("   ")]
+    [TestCase("ab")]
+    public void RegisterLocal_AsLandlordWithInvalidHouseName_ThrowsDomainValidationException(string? invalidHouseName)
+    {
+        Assert.That(
+            () => User.RegisterLocal(
+                email: "landlord@gmail.com",
+                passwordHash: "hashed-password",
+                fullName: "Landlord Invalid House",
+                role: UserRole.Landlord,
+                phoneNumber: "0987654321",
+                studentCode: null,
+                utcNow: FixedNow,
+                houseName: invalidHouseName),
             Throws.TypeOf<DomainValidationException>());
     }
 
@@ -269,7 +306,8 @@ public class UserAggregateTests
             googleSubjectId: "google-sub-67890",
             role: UserRole.Landlord,
             phoneNumber: "0912345678",
-            utcNow: FixedNow);
+            utcNow: FixedNow,
+            houseName: "Tro Co Hoa");
 
         Assert.Multiple(() =>
         {
@@ -277,6 +315,7 @@ public class UserAggregateTests
             Assert.That(landlord.AuthProvider, Is.EqualTo(AuthProvider.Google));
             Assert.That(landlord.SsoSubjectId, Is.EqualTo("google-sub-67890"));
             Assert.That(landlord.PhoneNumber, Is.EqualTo("0912345678"));
+            Assert.That(landlord.HouseName, Is.EqualTo("Tro Co Hoa"));
             Assert.That(landlord.IsVerified, Is.False);
         });
     }
@@ -290,7 +329,21 @@ public class UserAggregateTests
             googleSubjectId: "google-sub-67890",
             role: UserRole.Landlord,
             phoneNumber: null,
-            utcNow: FixedNow));
+            utcNow: FixedNow,
+            houseName: "Tro Co Hoa"));
+    }
+
+    [Test]
+    public void RegisterGoogle_AsLandlord_MissingHouseName_ThrowsValidationException()
+    {
+        Assert.Throws<HouseNameRequiredException>(() => User.RegisterGoogle(
+            email: "landlord@gmail.com",
+            fullName: "Google Landlord",
+            googleSubjectId: "google-sub-67890",
+            role: UserRole.Landlord,
+            phoneNumber: "0912345678",
+            utcNow: FixedNow,
+            houseName: null));
     }
 
     [Test]
@@ -303,7 +356,8 @@ public class UserAggregateTests
             role: UserRole.Landlord,
             phoneNumber: "0987654321",
             studentCode: null,
-            utcNow: FixedNow);
+            utcNow: FixedNow,
+            houseName: "Tro Co Hoa");
 
         user.LinkGoogle("google-sub-999", null, FixedNow.AddMinutes(5));
 

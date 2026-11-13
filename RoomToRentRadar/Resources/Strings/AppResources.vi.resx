@@ -127,5 +127,23 @@
   <data name="GoogleClientIdMissing" xml:space="preserve">
     <value>Chưa cấu hình Google Client ID. Vui lòng kiểm tra cấu hình trong client.env.</value>
   </data>
+  <data name="PromptLandlordHouseNameTitle" xml:space="preserve">
+    <value>Tên nhà trọ</value>
+  </data>
+  <data name="PromptLandlordHouseNameMessage" xml:space="preserve">
+    <value>Vui lòng nhập tên nhà trọ của bạn để tiếp tục:</value>
+  </data>
+  <data name="HouseNameRequiredTitle" xml:space="preserve">
+    <value>Yêu cầu tên nhà trọ</value>
+  </data>
+  <data name="HouseNameRequiredMessage" xml:space="preserve">
+    <value>Tên nhà trọ phải có độ dài từ 3 đến 100 ký tự.</value>
+  </data>
+  <data name="HouseNameLabel" xml:space="preserve">
+    <value>Tên nhà trọ *</value>
+  </data>
+  <data name="HouseNamePlaceholder" xml:space="preserve">
+    <value>Ví dụ: Nhà trọ An Bình</value>
+  </data>
 </root>
 

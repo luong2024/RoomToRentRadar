@@ -157,6 +157,7 @@ public class LoginWithGoogleUseCaseTests
             IdToken: "valid-google-landlord-token",
             Role: "Landlord",
             PhoneNumber: "0912345678",
+            HouseName: "Tro Co Hoa",
             Password: "Password123!"));
 
         Assert.Multiple(() =>
@@ -166,6 +167,7 @@ public class LoginWithGoogleUseCaseTests
             Assert.That(result.User.Role, Is.EqualTo("Landlord"));
             Assert.That(result.User.AuthProvider, Is.EqualTo("Google"));
             Assert.That(result.User.PhoneNumber, Is.EqualTo("0912345678"));
+            Assert.That(result.User.HouseName, Is.EqualTo("Tro Co Hoa"));
             Assert.That(result.User.IsVerified, Is.False);
         });
 
@@ -197,6 +199,32 @@ public class LoginWithGoogleUseCaseTests
                 IdToken: "valid-google-landlord-token",
                 Role: "Landlord",
                 PhoneNumber: null,
+                HouseName: "Tro Co Hoa",
+                Password: "Password123!")));
+
+        Assert.That(ex, Is.Not.Null);
+    }
+
+    [Test]
+    public void ExecuteAsync_LandlordWithoutHouseName_ThrowsHouseNameRequiredException()
+    {
+        _googleVerifier.VerifyIdTokenAsync("valid-google-landlord-token", Arg.Any<CancellationToken>())
+            .Returns(new GoogleUserPayload(
+                Email: "landlord@gmail.com",
+                FullName: "Chu Tro Google",
+                SubjectId: "google-sub-landlord-1",
+                EmailVerified: true,
+                HostedDomain: null));
+
+        _userRepository.GetByEmailAsync("landlord@gmail.com", Arg.Any<CancellationToken>())
+            .Returns((User?)null);
+
+        var ex = Assert.ThrowsAsync<HouseNameRequiredException>(async () =>
+            await _sut.ExecuteAsync(new GoogleLoginRequest(
+                IdToken: "valid-google-landlord-token",
+                Role: "Landlord",
+                PhoneNumber: "0912345678",
+                HouseName: null,
                 Password: "Password123!")));
 
         Assert.That(ex, Is.Not.Null);
@@ -220,7 +248,8 @@ public class LoginWithGoogleUseCaseTests
             role: UserRole.Landlord,
             phoneNumber: "0987654321",
             studentCode: null,
-            utcNow: DateTime.UtcNow.AddDays(-1));
+            utcNow: DateTime.UtcNow.AddDays(-1),
+            houseName: "Tro Co Hoa");
 
         _userRepository.GetByEmailAsync("existing@gmail.com", Arg.Any<CancellationToken>())
             .Returns(existingUser);
@@ -249,7 +278,8 @@ public class LoginWithGoogleUseCaseTests
             role: UserRole.Landlord,
             phoneNumber: "0987654321",
             studentCode: null,
-            utcNow: DateTime.UtcNow.AddDays(-1));
+            utcNow: DateTime.UtcNow.AddDays(-1),
+            houseName: "Tro Co Hoa");
 
         _userRepository.GetByEmailAsync("existing@gmail.com", Arg.Any<CancellationToken>())
             .Returns(existingUser);
@@ -280,7 +310,8 @@ public class LoginWithGoogleUseCaseTests
             role: UserRole.Landlord,
             phoneNumber: "0987654321",
             studentCode: null,
-            utcNow: DateTime.UtcNow.AddDays(-1));
+            utcNow: DateTime.UtcNow.AddDays(-1),
+            houseName: "Tro Co Hoa");
 
         _userRepository.GetByEmailAsync("existing@gmail.com", Arg.Any<CancellationToken>())
             .Returns(existingUser);
@@ -364,7 +395,8 @@ public class LoginWithGoogleUseCaseTests
             role: UserRole.Landlord,
             phoneNumber: "0912345678",
             studentCode: null,
-            utcNow: DateTime.UtcNow.AddDays(-10));
+            utcNow: DateTime.UtcNow.AddDays(-10),
+            houseName: "Tro Chu Tro");
 
         _userRepository.GetByEmailAsync("chutro@ictu.edu.vn", Arg.Any<CancellationToken>())
             .Returns(landlordUser);

@@ -106,3 +106,11 @@ public class CurrentPasswordRequiredException : Exception
     }
 }
 
+public class HouseNameRequiredException : Exception
+{
+    public HouseNameRequiredException(string message = "House name is required for Landlord registration.")
+        : base(message)
+    {
+    }
+}
+

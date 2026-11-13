@@ -194,6 +194,7 @@ public partial class LoginPageModel : ObservableObject
     private async Task ExecuteGoogleLoginWithChallengeHandlingAsync(string idToken, string role)
     {
         string? phone = null;
+        string? houseName = null;
         string? password = null;
         string? currentPassword = null;
 
@@ -205,7 +206,8 @@ public partial class LoginPageModel : ObservableObject
                 PhoneNumber: phone,
                 DeviceInfo: DeviceInfo.Current.Model,
                 Password: password,
-                CurrentPassword: currentPassword);
+                CurrentPassword: currentPassword,
+                HouseName: houseName);
 
             try
             {
@@ -240,6 +242,34 @@ public partial class LoginPageModel : ObservableObject
                 }
 
                 phone = trimmedPhone;
+            }
+            catch (ApiException apiEx) when (apiEx.ErrorCode == "AUTH_HOUSE_NAME_REQUIRED" && Shell.Current != null)
+            {
+                var houseNameInput = await Shell.Current.DisplayPromptAsync(
+                    AppResources.PromptLandlordHouseNameTitle,
+                    AppResources.PromptLandlordHouseNameMessage,
+                    accept: AppResources.Confirm,
+                    cancel: AppResources.Cancel,
+                    placeholder: AppResources.HouseNamePlaceholder,
+                    maxLength: 100,
+                    keyboard: Keyboard.Text);
+
+                if (string.IsNullOrWhiteSpace(houseNameInput))
+                {
+                    return; // user cancelled prompt
+                }
+
+                var trimmedHouse = houseNameInput.Trim();
+                if (trimmedHouse.Length < 3)
+                {
+                    await Shell.Current.DisplayAlertAsync(
+                        AppResources.HouseNameRequiredTitle,
+                        AppResources.HouseNameRequiredMessage,
+                        AppResources.Ok);
+                    return;
+                }
+
+                houseName = trimmedHouse;
             }
             catch (ApiException apiEx) when (apiEx.ErrorCode == "AUTH_PASSWORD_REQUIRED" && Shell.Current != null)
             {

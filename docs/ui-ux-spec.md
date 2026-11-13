@@ -164,10 +164,10 @@ Format: **Purpose · Primary action · Content · States/edge cases · API · St
 Retired 2026-11-12: there is no onboarding step; campus selection lives in SCR-ACC-02 (§2.3). The ID is not reused.
 
 ### SCR-AUTH-01 Sign in
-Primary: *Sign in*. Content: email, password (show/hide), *Continue with Google / ICTU SSO* (accent, touch target >= 48dp), *Forgot password?* (post-MVP: hidden), link *Create account*. States: inline field errors; `ACCOUNT_LOCKED` shows unlock time. API: `loginUser`, `loginWithGoogle`. US13.
+Primary: *Sign in*. Content: email, password (show/hide), *Continue with Google / ICTU SSO* (accent, touch target >= 48dp), *Forgot password?* (post-MVP: hidden), link *Create account*. States: inline field errors; `ACCOUNT_LOCKED` shows unlock time. API: `loginUser`, `loginWithGoogle` (onboarding challenges: phone, house name, password creation). US13.
 
 ### SCR-AUTH-02 Register
-Step 1 role cards: *I am a student* / *I am a landlord*. Step 2 form (phone required for landlord, password rules shown live). Landlord success → banner "Your account is awaiting verification (usually within 24 h)". API: `registerUser`. US13.
+Step 1 role cards: *I am a student* / *I am a landlord*. Step 2 form (phone and boarding house name required for landlord, password rules shown live). Landlord success → banner "Your account is awaiting verification (usually within 24 h)". API: `registerUser`. US13.
 
 ### SCR-HOME-01 Explore (list)
 ```

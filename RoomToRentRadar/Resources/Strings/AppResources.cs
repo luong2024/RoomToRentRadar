@@ -40,5 +40,11 @@ public static class AppResources
     public static string PasswordRequiredTitle => GetString(nameof(PasswordRequiredTitle));
     public static string PasswordValidationRule => GetString(nameof(PasswordValidationRule));
     public static string GoogleClientIdMissing => GetString(nameof(GoogleClientIdMissing));
+    public static string PromptLandlordHouseNameTitle => GetString(nameof(PromptLandlordHouseNameTitle));
+    public static string PromptLandlordHouseNameMessage => GetString(nameof(PromptLandlordHouseNameMessage));
+    public static string HouseNameRequiredTitle => GetString(nameof(HouseNameRequiredTitle));
+    public static string HouseNameRequiredMessage => GetString(nameof(HouseNameRequiredMessage));
+    public static string HouseNameLabel => GetString(nameof(HouseNameLabel));
+    public static string HouseNamePlaceholder => GetString(nameof(HouseNamePlaceholder));
 }
 

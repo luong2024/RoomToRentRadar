@@ -71,6 +71,12 @@ public sealed class AuthExceptionHandlingMiddleware
                 errorCode = "AUTH_PHONE_REQUIRED";
                 return true;
 
+            case HouseNameRequiredException:
+                statusCode = StatusCodes.Status400BadRequest;
+                title = "House Name Required";
+                errorCode = "AUTH_HOUSE_NAME_REQUIRED";
+                return true;
+
             case PasswordRequiredException:
                 statusCode = StatusCodes.Status400BadRequest;
                 title = "Password Required";

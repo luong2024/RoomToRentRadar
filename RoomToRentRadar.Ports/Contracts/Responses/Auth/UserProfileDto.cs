@@ -9,6 +9,7 @@ public record UserProfileDto(
     string? PhoneNumber,
     string? StudentCode,
     bool IsVerified,
-    DateTime CreatedAtUtc
+    DateTime CreatedAtUtc,
+    string? HouseName = null
 );
 

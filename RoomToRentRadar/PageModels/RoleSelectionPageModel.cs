@@ -112,6 +112,7 @@ public partial class RoleSelectionPageModel : ObservableObject
 
             string? password = null;
             string? currentPassword = null;
+            string? houseName = null;
 
             while (true)
             {
@@ -121,7 +122,8 @@ public partial class RoleSelectionPageModel : ObservableObject
                     PhoneNumber: phoneNumber,
                     DeviceInfo: DeviceInfo.Current.Model,
                     Password: password,
-                    CurrentPassword: currentPassword);
+                    CurrentPassword: currentPassword,
+                    HouseName: houseName);
 
                 try
                 {
@@ -150,6 +152,20 @@ public partial class RoleSelectionPageModel : ObservableObject
 
                     if (string.IsNullOrWhiteSpace(phoneInput)) return;
                     phoneNumber = phoneInput.Trim();
+                }
+                catch (ApiException apiEx) when (apiEx.ErrorCode == "AUTH_HOUSE_NAME_REQUIRED" && Shell.Current != null)
+                {
+                    var houseNameInput = await Shell.Current.DisplayPromptAsync(
+                        AppResources.PromptLandlordHouseNameTitle,
+                        AppResources.PromptLandlordHouseNameMessage,
+                        accept: AppResources.Confirm,
+                        cancel: AppResources.Cancel,
+                        placeholder: AppResources.HouseNamePlaceholder,
+                        maxLength: 100,
+                        keyboard: Keyboard.Text);
+
+                    if (string.IsNullOrWhiteSpace(houseNameInput)) return;
+                    houseName = houseNameInput.Trim();
                 }
                 catch (ApiException apiEx) when (apiEx.ErrorCode == "AUTH_PASSWORD_REQUIRED" && Shell.Current != null)
                 {

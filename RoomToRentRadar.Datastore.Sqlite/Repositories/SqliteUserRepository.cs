@@ -101,11 +101,11 @@ public sealed class SqliteUserRepository : IUserRepository
                 cmd.CommandText = """
                     INSERT INTO Users (
                         Id, Email, NormalizedEmail, FullName, PasswordHash, Role, AuthProvider,
-                        SsoSubjectId, PhoneNumber, StudentCode, IsVerified, FailedLoginCount,
+                        SsoSubjectId, PhoneNumber, HouseName, StudentCode, IsVerified, FailedLoginCount,
                         LockoutEndUtc, CreatedAtUtc, UpdatedAtUtc
                     ) VALUES (
                         @id, @email, @normalizedEmail, @fullName, @passwordHash, @role, @authProvider,
-                        @ssoSubjectId, @phoneNumber, @studentCode, @isVerified, @failedLoginCount,
+                        @ssoSubjectId, @phoneNumber, @houseName, @studentCode, @isVerified, @failedLoginCount,
                         @lockoutEndUtc, @createdAtUtc, @updatedAtUtc
                     );
                     """;
@@ -148,6 +148,7 @@ public sealed class SqliteUserRepository : IUserRepository
                         AuthProvider = @authProvider,
                         SsoSubjectId = @ssoSubjectId,
                         PhoneNumber = @phoneNumber,
+                        HouseName = @houseName,
                         StudentCode = @studentCode,
                         IsVerified = @isVerified,
                         FailedLoginCount = @failedLoginCount,
@@ -169,6 +170,7 @@ public sealed class SqliteUserRepository : IUserRepository
                         AuthProvider = @authProvider,
                         SsoSubjectId = @ssoSubjectId,
                         PhoneNumber = @phoneNumber,
+                        HouseName = @houseName,
                         StudentCode = @studentCode,
                         IsVerified = @isVerified,
                         FailedLoginCount = @failedLoginCount,
@@ -206,7 +208,7 @@ public sealed class SqliteUserRepository : IUserRepository
         cmd.CommandText = $"""
             SELECT Id, Email, FullName, PasswordHash, Role, AuthProvider, SsoSubjectId,
                    PhoneNumber, StudentCode, IsVerified, FailedLoginCount, LockoutEndUtc,
-                   CreatedAtUtc, UpdatedAtUtc
+                   CreatedAtUtc, UpdatedAtUtc, HouseName
             FROM Users
             {whereClause}
             LIMIT 1;
@@ -234,6 +236,7 @@ public sealed class SqliteUserRepository : IUserRepository
         var createdAtUtc = ParseUtc(reader.GetString(12));
         var rawUpdatedAt = reader.GetString(13);
         var updatedAtUtc = ParseUtc(rawUpdatedAt);
+        var houseName = reader.IsDBNull(14) ? null : reader.GetString(14);
         await reader.CloseAsync();
 
         var tokens = await ReadRefreshTokensAsync(conn, id, ct);
@@ -254,7 +257,8 @@ public sealed class SqliteUserRepository : IUserRepository
             createdAtUtc: createdAtUtc,
             updatedAtUtc: updatedAtUtc,
             refreshTokens: tokens,
-            concurrencyToken: rawUpdatedAt);
+            concurrencyToken: rawUpdatedAt,
+            houseName: houseName);
     }
 
     private static async Task<List<RefreshTokenSession>> ReadRefreshTokensAsync(
@@ -336,6 +340,7 @@ public sealed class SqliteUserRepository : IUserRepository
         cmd.Parameters.AddWithValue("@authProvider", user.AuthProvider.ToString());
         cmd.Parameters.AddWithValue("@ssoSubjectId", (object?)user.SsoSubjectId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@phoneNumber", (object?)user.PhoneNumber ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@houseName", (object?)user.HouseName ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@studentCode", (object?)user.StudentCode ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@isVerified", user.IsVerified ? 1 : 0);
         cmd.Parameters.AddWithValue("@failedLoginCount", user.FailedLoginCount);

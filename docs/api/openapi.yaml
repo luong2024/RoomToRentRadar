@@ -1317,6 +1317,7 @@ components:
         fullName: { type: string, minLength: 1, maxLength: 100 }
         role: { $ref: '#/components/schemas/PublicRole' }
         phoneNumber: { type: [string, 'null'], pattern: '^(0|\+84)[0-9]{9}$', description: Required for Landlord }
+        houseName: { type: [string, 'null'], minLength: 3, maxLength: 100, description: Required for Landlord }
         studentCode: { type: [string, 'null'], maxLength: 20 }
     LoginRequest:
       type: object
@@ -1337,6 +1338,7 @@ components:
         idToken: { type: string }
         role: { $ref: '#/components/schemas/PublicRole' }
         phoneNumber: { type: [string, 'null'] }
+        houseName: { type: [string, 'null'], description: Required for Landlord upon initial registration }
         deviceInfo: { type: [string, 'null'] }
         password: { type: [string, 'null'], description: 'Required for initial Google registration to enable dual login' }
         currentPassword: { type: [string, 'null'], description: 'Required when linking an existing local account to Google' }
@@ -1360,6 +1362,7 @@ components:
         role: { $ref: '#/components/schemas/UserRole' }
         authProvider: { $ref: '#/components/schemas/AuthProvider' }
         phoneNumber: { type: [string, 'null'] }
+        houseName: { type: [string, 'null'] }
         studentCode: { type: [string, 'null'] }
         isVerified: { type: boolean }
         createdAtUtc: { type: string, format: date-time }

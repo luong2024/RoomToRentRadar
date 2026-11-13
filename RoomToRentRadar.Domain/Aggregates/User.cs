@@ -26,6 +26,7 @@ public sealed class User
     public AuthProvider AuthProvider { get; private set; }
     public string? SsoSubjectId { get; private set; }
     public string? PhoneNumber { get; private set; }
+    public string? HouseName { get; private set; }
     public string? StudentCode { get; private set; }
     public bool IsVerified { get; private set; }
     public int FailedLoginCount { get; private set; }
@@ -45,6 +46,7 @@ public sealed class User
         AuthProvider authProvider,
         string? ssoSubjectId,
         string? phoneNumber,
+        string? houseName,
         string? studentCode,
         bool isVerified,
         int failedLoginCount,
@@ -62,6 +64,7 @@ public sealed class User
         AuthProvider = authProvider;
         SsoSubjectId = ssoSubjectId;
         PhoneNumber = phoneNumber;
+        HouseName = houseName;
         StudentCode = studentCode;
         IsVerified = isVerified;
         FailedLoginCount = failedLoginCount;
@@ -83,7 +86,8 @@ public sealed class User
         UserRole role,
         string? phoneNumber,
         string? studentCode,
-        DateTime utcNow)
+        DateTime utcNow,
+        string? houseName = null)
     {
         if (!Enum.IsDefined(typeof(UserRole), role))
         {
@@ -109,6 +113,21 @@ public sealed class User
         var normalizedPhone = NormalizeAndValidatePhone(phoneNumber, required: role == UserRole.Landlord);
         var normalizedStudentCode = string.IsNullOrWhiteSpace(studentCode) ? null : studentCode.Trim().ToUpperInvariant();
 
+        string? normalizedHouseName = null;
+        if (role == UserRole.Landlord)
+        {
+            if (string.IsNullOrWhiteSpace(houseName))
+            {
+                throw new DomainValidationException("A boarding house name is required for Landlord registration.");
+            }
+
+            normalizedHouseName = houseName.Trim();
+            if (normalizedHouseName.Length < 3 || normalizedHouseName.Length > 100)
+            {
+                throw new DomainValidationException("House name must be between 3 and 100 characters.");
+            }
+        }
+
         // Student is verified immediately; Landlord requires Admin approval before publishing rooms.
         var isVerified = role == UserRole.Student;
 
@@ -121,6 +140,7 @@ public sealed class User
             authProvider: AuthProvider.Local,
             ssoSubjectId: null,
             phoneNumber: normalizedPhone,
+            houseName: normalizedHouseName,
             studentCode: normalizedStudentCode,
             isVerified: isVerified,
             failedLoginCount: 0,
@@ -165,6 +185,7 @@ public sealed class User
             authProvider: AuthProvider.IctuSso,
             ssoSubjectId: ssoSubjectId.Trim(),
             phoneNumber: null,
+            houseName: null,
             studentCode: derivedStudentCode,
             isVerified: true,
             failedLoginCount: 0,
@@ -180,7 +201,8 @@ public sealed class User
         UserRole role,
         string? phoneNumber,
         DateTime utcNow,
-        string? passwordHash = null)
+        string? passwordHash = null,
+        string? houseName = null)
     {
         if (!Enum.IsDefined(typeof(UserRole), role))
         {
@@ -222,6 +244,7 @@ public sealed class User
                 authProvider: AuthProvider.Google,
                 ssoSubjectId: googleSubjectId.Trim(),
                 phoneNumber: null,
+                houseName: null,
                 studentCode: derivedStudentCode,
                 isVerified: true,
                 failedLoginCount: 0,
@@ -233,6 +256,17 @@ public sealed class User
         {
             var normalizedPhone = NormalizeAndValidatePhone(phoneNumber, required: true);
 
+            if (string.IsNullOrWhiteSpace(houseName))
+            {
+                throw new HouseNameRequiredException("House name is required for Landlord registration.");
+            }
+
+            var normalizedHouseName = houseName.Trim();
+            if (normalizedHouseName.Length < 3 || normalizedHouseName.Length > 100)
+            {
+                throw new DomainValidationException("House name must be between 3 and 100 characters.");
+            }
+
             return new User(
                 id: Guid.NewGuid().ToString("N"),
                 email: emailAddress,
@@ -242,6 +276,7 @@ public sealed class User
                 authProvider: AuthProvider.Google,
                 ssoSubjectId: googleSubjectId.Trim(),
                 phoneNumber: normalizedPhone,
+                houseName: normalizedHouseName,
                 studentCode: null,
                 isVerified: false, // Landlord requires Admin approval per BR-AUTH-03
                 failedLoginCount: 0,
@@ -267,7 +302,8 @@ public sealed class User
         DateTime createdAtUtc,
         DateTime updatedAtUtc,
         IEnumerable<RefreshTokenSession>? refreshTokens = null,
-        string? concurrencyToken = null)
+        string? concurrencyToken = null,
+        string? houseName = null)
     {
         return new User(
             id,
@@ -278,6 +314,7 @@ public sealed class User
             authProvider,
             ssoSubjectId,
             phoneNumber,
+            houseName,
             studentCode,
             isVerified,
             failedLoginCount,
@@ -350,7 +387,12 @@ public sealed class User
         UpdatedAtUtc = utcNow;
     }
 
-    public void LinkGoogle(string googleSubjectId, string? phoneNumber, DateTime utcNow, string? newPasswordHash = null)
+    public void LinkGoogle(
+        string googleSubjectId,
+        string? phoneNumber,
+        DateTime utcNow,
+        string? newPasswordHash = null,
+        string? houseName = null)
     {
         if (Role != UserRole.Student && Role != UserRole.Landlord)
         {
@@ -378,6 +420,16 @@ public sealed class User
         if (Role == UserRole.Landlord && string.IsNullOrWhiteSpace(PhoneNumber) && !string.IsNullOrWhiteSpace(phoneNumber))
         {
             PhoneNumber = NormalizeAndValidatePhone(phoneNumber, required: true);
+        }
+
+        if (Role == UserRole.Landlord && string.IsNullOrWhiteSpace(HouseName) && !string.IsNullOrWhiteSpace(houseName))
+        {
+            var trimmed = houseName.Trim();
+            if (trimmed.Length < 3 || trimmed.Length > 100)
+            {
+                throw new DomainValidationException("House name must be between 3 and 100 characters.");
+            }
+            HouseName = trimmed;
         }
 
         UpdatedAtUtc = utcNow;

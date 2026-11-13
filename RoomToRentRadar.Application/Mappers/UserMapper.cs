@@ -18,6 +18,7 @@ public static class UserMapper
             PhoneNumber: user.PhoneNumber,
             StudentCode: user.StudentCode,
             IsVerified: user.IsVerified,
-            CreatedAtUtc: user.CreatedAtUtc);
+            CreatedAtUtc: user.CreatedAtUtc,
+            HouseName: user.HouseName);
     }
 }

@@ -130,6 +130,7 @@ erDiagram
 | AuthProvider | TEXT | NN | `Local`·`IctuSso`·`Google` |
 | SsoSubjectId | TEXT | | |
 | PhoneNumber | TEXT | | required for Landlord (BR-AUTH-03) |
+| HouseName | TEXT | | required for Landlord (BR-AUTH-03) |
 | StudentCode | TEXT | | |
 | IsVerified | INTEGER | NN | landlord approval (BR-AUTH-03) |
 | FailedLoginCount | INTEGER | NN | |

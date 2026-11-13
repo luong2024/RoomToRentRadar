@@ -42,6 +42,9 @@ public partial class RegisterPageModel : ObservableObject
     public partial string PhoneNumber { get; set; } = string.Empty;
 
     [ObservableProperty]
+    public partial string HouseName { get; set; } = string.Empty;
+
+    [ObservableProperty]
     public partial string Password { get; set; } = string.Empty;
 
     [ObservableProperty]
@@ -61,6 +64,9 @@ public partial class RegisterPageModel : ObservableObject
 
     [ObservableProperty]
     public partial string PhoneNumberError { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string HouseNameError { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial string PasswordError { get; set; } = string.Empty;
@@ -114,6 +120,7 @@ public partial class RegisterPageModel : ObservableObject
         EmailError = string.Empty;
         StudentCodeError = string.Empty;
         PhoneNumberError = string.Empty;
+        HouseNameError = string.Empty;
         PasswordError = string.Empty;
         ConfirmPasswordError = string.Empty;
         GeneralError = string.Empty;
@@ -148,6 +155,17 @@ public partial class RegisterPageModel : ObservableObject
             else if (!PhoneRegex.IsMatch(PhoneNumber.Trim()))
             {
                 PhoneNumberError = "Please enter a valid Vietnamese phone number (e.g. 0912345678 or +84912345678).";
+                isValid = false;
+            }
+
+            if (string.IsNullOrWhiteSpace(HouseName))
+            {
+                HouseNameError = "Boarding house name is required for landlords.";
+                isValid = false;
+            }
+            else if (HouseName.Trim().Length < 3 || HouseName.Trim().Length > 100)
+            {
+                HouseNameError = "Boarding house name must be between 3 and 100 characters.";
                 isValid = false;
             }
         }
@@ -194,6 +212,7 @@ public partial class RegisterPageModel : ObservableObject
             IsBusy = true;
             var normalizedStudentCode = IsStudent && !string.IsNullOrWhiteSpace(StudentCode) ? StudentCode.Trim().ToUpperInvariant() : null;
             var normalizedPhone = !IsStudent && !string.IsNullOrWhiteSpace(PhoneNumber) ? PhoneNumber.Trim() : null;
+            var normalizedHouseName = !IsStudent && !string.IsNullOrWhiteSpace(HouseName) ? HouseName.Trim() : null;
 
             var request = new RegisterUserRequest(
                 Email: Email.Trim(),
@@ -201,7 +220,8 @@ public partial class RegisterPageModel : ObservableObject
                 FullName: FullName.Trim(),
                 Role: IsStudent ? "Student" : "Landlord",
                 PhoneNumber: normalizedPhone,
-                StudentCode: normalizedStudentCode
+                StudentCode: normalizedStudentCode,
+                HouseName: normalizedHouseName
             );
 
             var response = await _authGateway.RegisterAsync(request);
@@ -268,7 +288,8 @@ public partial class RegisterPageModel : ObservableObject
                 "EMAIL_TAKEN" or "USER_EMAIL_EXISTS" or "AUTH_EMAIL_EXISTS"
                     => "This email address is already in use. Please sign in.",
                 "INVALID_STUDENT_CODE" => "The provided student ID is invalid.",
-                "INVALID_PHONE_NUMBER" => "Please enter a valid Vietnamese phone number.",
+                "INVALID_PHONE_NUMBER" or "AUTH_PHONE_REQUIRED" => "Please enter a valid Vietnamese phone number.",
+                "AUTH_HOUSE_NAME_REQUIRED" or "INVALID_HOUSE_NAME" => "Please enter a valid boarding house name (3-100 characters).",
                 "INVALID_ROLE" => "Invalid user role selected.",
                 _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : "Registration failed. Please verify your details."
             };
