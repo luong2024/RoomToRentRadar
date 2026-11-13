@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RoomToRentRadar
 {
@@ -11,7 +11,7 @@ namespace RoomToRentRadar
 
         protected override Window CreateWindow(IActivationState? activationState)
         {
-            return new Window(new AppShell());
+            return new MainWindow(new AppShell());
         }
     }
 }

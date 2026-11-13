@@ -1,100 +1,256 @@
-name: CI - .NET MAUI Pipeline
+name: RoomToRentRadar CI
 
 on:
   push:
     branches:
-      - main
-      - develop
-      - 'feature/**'
-      - 'bugfix/**'
-      - 'group-*'
+      - group-4
   pull_request:
     branches:
-      - main
-      - develop
+      - group-4
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.ref_name != 'main' && !startsWith(github.ref_name, 'group-')) }}
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
-  # ==========================================
-  # JOB 1: RESTORE AND RUN AUTOMATED TESTS
-  # ==========================================
-  test:
-    name: Run Automated Tests
+  backend-tests:
+    name: Backend API Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      ASPNETCORE_ENVIRONMENT: Testing
+      CosmosDb__DatabaseName: RoomToRentRadarTestDb
 
     steps:
-      - name: Checkout repository
+      - name: Checkout source code
         uses: actions/checkout@v4
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
-          dotnet-quality: 'preview'
+          global-json-file: global.json
 
       - name: Cache NuGet packages
         uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-tests-${{ hashFiles('**/*.csproj') }}
+          key: ${{ runner.os }}-nuget-backend-${{ hashFiles('src/**/*.csproj', 'tests/**/*.csproj', 'global.json') }}
           restore-keys: |
-            ${{ runner.os }}-nuget-tests-
+            ${{ runner.os }}-nuget-backend-
 
-      - name: Restore .NET MAUI Workloads
+      - name: Restore Backend API and test projects
         run: |
-          dotnet workload restore RoomToRentRadar/RoomToRentRadar.csproj
+          dotnet restore src/RoomToRentRadar.Bootstrap/RoomToRentRadar.Bootstrap.csproj
+          dotnet restore tests/RoomToRentRadar.Domain.Tests/RoomToRentRadar.Domain.Tests.csproj
+          dotnet restore tests/RoomToRentRadar.Application.Tests/RoomToRentRadar.Application.Tests.csproj
+          dotnet restore tests/RoomToRentRadar.Adapters.Tests/RoomToRentRadar.Adapters.Tests.csproj
+          dotnet restore tests/RoomToRentRadar.IntegrationTests/RoomToRentRadar.IntegrationTests.csproj
 
-      - name: Restore Test Projects
+      - name: Build Backend API and test projects (Release)
+        run: |
+          dotnet build src/RoomToRentRadar.Bootstrap/RoomToRentRadar.Bootstrap.csproj --configuration Release --no-restore
+          dotnet build tests/RoomToRentRadar.Domain.Tests/RoomToRentRadar.Domain.Tests.csproj --configuration Release --no-restore
+          dotnet build tests/RoomToRentRadar.Application.Tests/RoomToRentRadar.Application.Tests.csproj --configuration Release --no-restore
+          dotnet build tests/RoomToRentRadar.Adapters.Tests/RoomToRentRadar.Adapters.Tests.csproj --configuration Release --no-restore
+          dotnet build tests/RoomToRentRadar.IntegrationTests/RoomToRentRadar.IntegrationTests.csproj --configuration Release --no-restore
+
+      - name: Run Backend Unit Tests
+        run: |
+          dotnet test tests/RoomToRentRadar.Domain.Tests/RoomToRentRadar.Domain.Tests.csproj \
+            --configuration Release \
+            --no-build \
+            --logger "trx;LogFileName=backend-domain-tests.trx" \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults/Backend
+
+          dotnet test tests/RoomToRentRadar.Application.Tests/RoomToRentRadar.Application.Tests.csproj \
+            --configuration Release \
+            --no-build \
+            --logger "trx;LogFileName=backend-application-tests.trx" \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults/Backend
+
+          dotnet test tests/RoomToRentRadar.Adapters.Tests/RoomToRentRadar.Adapters.Tests.csproj \
+            --configuration Release \
+            --no-build \
+            --logger "trx;LogFileName=backend-adapters-tests.trx" \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults/Backend
+
+      - name: Run Backend Integration Tests
+        run: |
+          dotnet test tests/RoomToRentRadar.IntegrationTests/RoomToRentRadar.IntegrationTests.csproj \
+            --configuration Release \
+            --no-build \
+            --logger "trx;LogFileName=backend-integration-tests.trx" \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults/Backend
+
+      - name: Verify Backend test results and coverage
+        id: check-results
+        if: always()
+        run: |
+          set -euo pipefail
+
+          if [ ! -d "./TestResults/Backend" ] || [ -z "$(ls -A ./TestResults/Backend 2>/dev/null)" ]; then
+            echo "has_results=false" >> "$GITHUB_OUTPUT"
+            echo "::error::No Backend test results directory or files generated."
+            exit 1
+          fi
+
+          echo "has_results=true" >> "$GITHUB_OUTPUT"
+
+          EXPECTED_TRX=(
+            "./TestResults/Backend/backend-domain-tests.trx"
+            "./TestResults/Backend/backend-application-tests.trx"
+            "./TestResults/Backend/backend-adapters-tests.trx"
+            "./TestResults/Backend/backend-integration-tests.trx"
+          )
+
+          for TRX in "${EXPECTED_TRX[@]}"; do
+            if [ ! -s "$TRX" ]; then
+              echo "::error::Missing or empty expected TRX file: $TRX"
+              exit 1
+            fi
+            EXECUTED=$(grep -oP '<Counters[^>]*\bexecuted="\K[0-9]+' "$TRX" | head -n 1 || echo "0")
+            if [ "${EXECUTED:-0}" -le 0 ]; then
+              echo "::error::Zero executed tests recorded in $TRX"
+              exit 1
+            fi
+            echo "Verified $TRX (executed=$EXECUTED)"
+          done
+
+          COVERAGE_COUNT=$(find "./TestResults/Backend" -name "coverage.cobertura.xml" -size +0c | wc -l)
+          if [ "$COVERAGE_COUNT" -lt 4 ]; then
+            echo "::error::Expected at least 4 non-empty coverage.cobertura.xml files in ./TestResults/Backend, found $COVERAGE_COUNT."
+            exit 1
+          fi
+
+      - name: Upload Backend Test Results Artifact
+        if: always() && steps.check-results.outputs.has_results == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Backend-TestResults-${{ github.run_number }}
+          path: ./TestResults/Backend
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 7
+
+  maui-client-tests:
+    name: MAUI Client Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-maui-tests-${{ hashFiles('RoomToRentRadar/**/*.csproj', 'RoomToRentRadarUnitTests/**/*.csproj', 'RoomToRentRadarUIAppiumTests/**/*.csproj', 'global.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-maui-tests-
+
+      - name: Restore MAUI Client test projects
         run: |
           dotnet restore RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj
           dotnet restore RoomToRentRadarUIAppiumTests/RoomToRentRadarUIAppiumTests.csproj
 
-      - name: Execute Unit Tests
+      - name: Build MAUI Client test projects (Release)
+        run: |
+          dotnet build RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj --configuration Release --no-restore
+          dotnet build RoomToRentRadarUIAppiumTests/RoomToRentRadarUIAppiumTests.csproj --configuration Release --no-restore
+
+      - name: Run MAUI Client Unit Tests
         run: |
           dotnet test RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj \
             --configuration Release \
-            --no-restore \
-            --logger "trx;LogFileName=unit-tests.trx" \
+            --no-build \
+            --logger "trx;LogFileName=maui-unit-tests.trx" \
             --collect:"XPlat Code Coverage" \
-            --results-directory ./TestResults
+            --results-directory ./TestResults/MauiClient
 
-      - name: Execute UI Appium Tests
-        run: |
           dotnet test RoomToRentRadarUIAppiumTests/RoomToRentRadarUIAppiumTests.csproj \
             --configuration Release \
-            --no-restore \
-            --logger "trx;LogFileName=ui-appium-tests.trx" \
+            --no-build \
+            --logger "trx;LogFileName=maui-ui-appium-tests.trx" \
             --collect:"XPlat Code Coverage" \
-            --results-directory ./TestResults
+            --results-directory ./TestResults/MauiClient
 
-      - name: Upload Test Results Artifact
-        uses: actions/upload-artifact@v4
+      - name: Verify MAUI Client test results and coverage
+        id: check-results
         if: always()
+        run: |
+          set -euo pipefail
+
+          if [ ! -d "./TestResults/MauiClient" ] || [ -z "$(ls -A ./TestResults/MauiClient 2>/dev/null)" ]; then
+            echo "has_results=false" >> "$GITHUB_OUTPUT"
+            echo "::error::No MAUI Client test results directory or files generated."
+            exit 1
+          fi
+
+          echo "has_results=true" >> "$GITHUB_OUTPUT"
+
+          EXPECTED_TRX=(
+            "./TestResults/MauiClient/maui-unit-tests.trx"
+            "./TestResults/MauiClient/maui-ui-appium-tests.trx"
+          )
+
+          for TRX in "${EXPECTED_TRX[@]}"; do
+            if [ ! -s "$TRX" ]; then
+              echo "::error::Missing or empty expected TRX file: $TRX"
+              exit 1
+            fi
+            EXECUTED=$(grep -oP '<Counters[^>]*\bexecuted="\K[0-9]+' "$TRX" | head -n 1 || echo "0")
+            if [ "${EXECUTED:-0}" -le 0 ]; then
+              echo "::error::Zero executed tests recorded in $TRX"
+              exit 1
+            fi
+            echo "Verified $TRX (executed=$EXECUTED)"
+          done
+
+          COVERAGE_COUNT=$(find "./TestResults/MauiClient" -name "coverage.cobertura.xml" -size +0c | wc -l)
+          if [ "$COVERAGE_COUNT" -lt 2 ]; then
+            echo "::error::Expected at least 2 non-empty coverage.cobertura.xml files in ./TestResults/MauiClient, found $COVERAGE_COUNT."
+            exit 1
+          fi
+
+      - name: Upload MAUI Client Test Results Artifact
+        if: always() && steps.check-results.outputs.has_results == 'true'
+        uses: actions/upload-artifact@v4
         with:
-          name: TestResults-${{ github.run_number }}
-          path: ./TestResults
-          if-no-files-found: ignore
+          name: MauiClient-TestResults-${{ github.run_number }}
+          path: ./TestResults/MauiClient
+          if-no-files-found: error
+          overwrite: true
           retention-days: 7
 
-  # ==========================================
-  # JOB 2: BUILD ANDROID APK
-  # ==========================================
   build-android:
-    name: Build MAUI Android APK
-    needs: test
+    name: Build Android Release APK
+    needs:
+      - backend-tests
+      - maui-client-tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
-      - name: Checkout repository
+      - name: Checkout source code
         uses: actions/checkout@v4
 
       - name: Setup Java 21 (JDK)
@@ -106,63 +262,155 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
-          dotnet-quality: 'preview'
+          global-json-file: global.json
 
       - name: Cache NuGet packages
         uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-maui-${{ hashFiles('RoomToRentRadar/RoomToRentRadar.csproj') }}
+          key: ${{ runner.os }}-nuget-maui-android-${{ hashFiles('RoomToRentRadar/**/*.csproj', 'global.json') }}
           restore-keys: |
-            ${{ runner.os }}-nuget-maui-
+            ${{ runner.os }}-nuget-maui-android-
 
       - name: Install .NET MAUI Android Workload
         run: |
-          dotnet workload install maui-android maui-tizen
+          dotnet workload install maui-android
 
-      - name: Restore MAUI Dependencies
+      - name: Restore MAUI Android project
         run: |
-          dotnet restore RoomToRentRadar/RoomToRentRadar.csproj
+          dotnet restore RoomToRentRadar/RoomToRentRadar.csproj -p:TargetFrameworks=net10.0-android
 
-      - name: Build MAUI Android Application (Release)
+      - name: Build MAUI Android Release APK
         run: |
           dotnet build RoomToRentRadar/RoomToRentRadar.csproj \
             --configuration Release \
             --framework net10.0-android \
             --no-restore \
+            -p:TargetFrameworks=net10.0-android \
             -p:AndroidPackageFormat=apk
 
-      - name: Locate & Verify Android APK Artifact
-        id: locate-apk
+      - name: Verify Android Release APK
+        id: verify-apk
         run: |
-          echo "Inspecting output directory for APK files..."
+          set -euo pipefail
           OUTPUT_DIR="RoomToRentRadar/bin/Release/net10.0-android"
           if [ ! -d "$OUTPUT_DIR" ]; then
-            echo "::error::Output directory $OUTPUT_DIR does not exist!"
+            echo "::error::Android build output directory '$OUTPUT_DIR' does not exist."
             exit 1
           fi
 
-          APK_FILE=$(find "$OUTPUT_DIR" -maxdepth 2 -name "*Signed.apk" | head -n 1)
+          APK_FILE=$(find "$OUTPUT_DIR" -maxdepth 2 -name "*-Signed.apk" | head -n 1)
           if [ -z "$APK_FILE" ]; then
             APK_FILE=$(find "$OUTPUT_DIR" -maxdepth 2 -name "*.apk" | head -n 1)
           fi
 
-          if [ -z "$APK_FILE" ] || [ ! -f "$APK_FILE" ]; then
-            echo "::error::No APK artifact found in $OUTPUT_DIR!"
+          if [ -z "$APK_FILE" ] || [ ! -s "$APK_FILE" ]; then
+            echo "::error::No non-empty Release APK file found in '$OUTPUT_DIR'."
             ls -la "$OUTPUT_DIR"
             exit 1
           fi
 
-          echo "Found Android APK: $APK_FILE"
-          APK_SIZE=$(stat -c%s "$APK_FILE" 2>/dev/null || stat -f%z "$APK_FILE" 2>/dev/null)
-          echo "APK size: $APK_SIZE bytes"
-          echo "apk_path=$APK_FILE" >> $GITHUB_OUTPUT
+          if ! unzip -t "$APK_FILE" >/dev/null 2>&1; then
+            echo "::error::APK file '$APK_FILE' failed ZIP archive integrity check."
+            exit 1
+          fi
 
-      - name: Upload Android Testing APK Artifact
+          APK_SIZE=$(stat -c%s "$APK_FILE" 2>/dev/null || stat -f%z "$APK_FILE" 2>/dev/null)
+          echo "Verified Android Release APK: $APK_FILE ($APK_SIZE bytes)"
+          echo "apk_exists=true" >> "$GITHUB_OUTPUT"
+          echo "apk_path=$APK_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Android Release APK Artifact
+        if: success() && steps.verify-apk.outputs.apk_exists == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: RoomToRentRadar-Android-CI-Build.${{ github.run_number }}-${{ github.sha }}
-          path: ${{ steps.locate-apk.outputs.apk_path }}
+          name: RoomToRentRadar-Android-${{ github.run_number }}-${{ github.sha }}
+          path: ${{ steps.verify-apk.outputs.apk_path }}
           if-no-files-found: error
+          overwrite: true
           retention-days: 14
+
+  nuget-security-check:
+    name: NuGet Dependency Security Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-audit-${{ hashFiles('**/*.csproj', 'global.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-audit-
+
+      - name: Install .NET MAUI Android Workload for MAUI package graph
+        run: |
+          dotnet workload install maui-android
+
+      - name: Restore and audit NuGet dependencies
+        run: |
+          set -euo pipefail
+
+          PROJECTS=(
+            "src/RoomToRentRadar.Domain/RoomToRentRadar.Domain.csproj"
+            "src/RoomToRentRadar.Application/RoomToRentRadar.Application.csproj"
+            "src/RoomToRentRadar.Adapters/RoomToRentRadar.Adapters.csproj"
+            "src/RoomToRentRadar.Bootstrap/RoomToRentRadar.Bootstrap.csproj"
+            "tests/RoomToRentRadar.Domain.Tests/RoomToRentRadar.Domain.Tests.csproj"
+            "tests/RoomToRentRadar.Application.Tests/RoomToRentRadar.Application.Tests.csproj"
+            "tests/RoomToRentRadar.Adapters.Tests/RoomToRentRadar.Adapters.Tests.csproj"
+            "tests/RoomToRentRadar.IntegrationTests/RoomToRentRadar.IntegrationTests.csproj"
+            "RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj"
+            "RoomToRentRadarUIAppiumTests/RoomToRentRadarUIAppiumTests.csproj"
+            "RoomToRentRadar/RoomToRentRadar.csproj"
+          )
+
+          VULNERABILITY_FOUND=0
+
+          for PROJECT in "${PROJECTS[@]}"; do
+            echo "=================================================================="
+            echo "Auditing project: $PROJECT"
+            echo "=================================================================="
+
+            if [ "$PROJECT" = "RoomToRentRadar/RoomToRentRadar.csproj" ]; then
+              dotnet restore "$PROJECT" \
+                -p:TargetFrameworks=net10.0-android \
+                -p:NuGetAudit=true \
+                -p:NuGetAuditMode=all \
+                -p:NuGetAuditLevel=low \
+                -p:WarningsAsErrors="NU1901%3BNU1902%3BNU1903%3BNU1904"
+              REPORT=$(dotnet list "$PROJECT" package --vulnerable --include-transitive --framework net10.0-android --no-restore)
+              JSON_REPORT=$(dotnet list "$PROJECT" package --vulnerable --include-transitive --framework net10.0-android --format json --no-restore)
+            else
+              dotnet restore "$PROJECT" \
+                -p:NuGetAudit=true \
+                -p:NuGetAuditMode=all \
+                -p:NuGetAuditLevel=low \
+                -p:WarningsAsErrors="NU1901%3BNU1902%3BNU1903%3BNU1904"
+              REPORT=$(dotnet list "$PROJECT" package --vulnerable --include-transitive --no-restore)
+              JSON_REPORT=$(dotnet list "$PROJECT" package --vulnerable --include-transitive --format json --no-restore)
+            fi
+
+            echo "$REPORT"
+
+            if echo "$REPORT" | grep -q "has the following vulnerable packages" || echo "$JSON_REPORT" | grep -q '"vulnerabilities"'; then
+              echo "::error file=$PROJECT::NuGet vulnerability detected in $PROJECT"
+              VULNERABILITY_FOUND=1
+            fi
+          done
+
+          if [ "$VULNERABILITY_FOUND" -ne 0 ]; then
+            echo "::error::One or more projects contain vulnerable NuGet packages. Review the audit report above."
+            exit 1
+          fi
+
+          echo "All projects passed NuGet dependency vulnerability audit with 0 known vulnerabilities."
