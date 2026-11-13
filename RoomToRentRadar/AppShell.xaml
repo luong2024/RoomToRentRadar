@@ -6,6 +6,7 @@
     xmlns:f="clr-namespace:Fonts"
     xmlns:homeViews="clr-namespace:RoomToRentRadar.Features.Home.Views"
     xmlns:roomViews="clr-namespace:RoomToRentRadar.Features.RoomListings.Views"
+    xmlns:roomDetailViews="clr-namespace:RoomToRentRadar.Features.RoomDetails.Views"
     Title="RoomToRentRadar"
     FlyoutBackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource DesktopRailBackgroundDark}}"
     FlyoutVerticalScrollMode="{OnPlatform WinUI=Disabled, Default=Auto}"

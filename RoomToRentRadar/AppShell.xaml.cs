@@ -11,7 +11,8 @@ namespace RoomToRentRadar
         public AppShell()
         {
             InitializeComponent();
-            Routing.RegisterRoute(AppRoutes.RoomDetails, typeof(RoomDetailsPage));
+            Routing.RegisterRoute(AppRoutes.RoomDetails, typeof(Features.RoomDetails.Views.RoomDetailPage));
+            Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(Features.RoomDetails.Views.RoomDetailPage));
         }
 
         public void UpdateDesktopPaneCompactState(bool isCompact)
