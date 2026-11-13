@@ -11,7 +11,7 @@ namespace RoomToRentRadar.Datastore.Sqlite.Repositories;
 /// <summary>
 /// SQLite storage of the <see cref="Room"/> aggregate root against the ERD §4.4 <c>Rooms</c> table
 /// (ADR-002). Enums are stored as TEXT, date-times as ISO-8601 round-trip ("O") strings and
-/// <c>ConcurrencyToken</c> as <c>Version.ToString()</c> (ruling #20).
+/// <c>ConcurrencyToken</c> as <c>Version.ToString()</c> (ERD §1: derived, never stored).
 /// </summary>
 public sealed class SqliteRoomRepository : IRoomRepository
 {
@@ -20,7 +20,7 @@ public sealed class SqliteRoomRepository : IRoomRepository
         MaxOccupants, Furnishing, AvailableFrom, AddressLine, Ward, District, Latitude, Longitude,
         ElectricityPriceVndPerKwh, WaterPriceVnd, WaterPriceUnit, InternetFeeVnd, ParkingFeeVnd,
         OtherFeesNote, Status, StatusReason, NeedsReReview, IsSafetyVerified, VerifiedAtUtc,
-        VerifiedByUserId, PublishedAtUtc, LastUpdatedAtUtc, CreatedAtUtc, Version, ConcurrencyToken
+        VerifiedByUserId, PublishedAtUtc, LastUpdatedAtUtc, CreatedAtUtc, Version
         """;
 
     private readonly SqliteDbContext _dbContext;
@@ -70,13 +70,13 @@ public sealed class SqliteRoomRepository : IRoomRepository
                     MaxOccupants, Furnishing, AvailableFrom, AddressLine, Ward, District, Latitude, Longitude,
                     ElectricityPriceVndPerKwh, WaterPriceVnd, WaterPriceUnit, InternetFeeVnd, ParkingFeeVnd,
                     OtherFeesNote, Status, StatusReason, NeedsReReview, IsSafetyVerified, VerifiedAtUtc,
-                    VerifiedByUserId, PublishedAtUtc, LastUpdatedAtUtc, CreatedAtUtc, Version, ConcurrencyToken
+                    VerifiedByUserId, PublishedAtUtc, LastUpdatedAtUtc, CreatedAtUtc, Version
                 ) VALUES (
                     @id, @landlordId, @title, @description, @roomType, @monthlyRentVnd, @depositVnd, @areaM2,
                     @maxOccupants, @furnishing, @availableFrom, @addressLine, @ward, @district, @latitude, @longitude,
                     @electricityPriceVndPerKwh, @waterPriceVnd, @waterPriceUnit, @internetFeeVnd, @parkingFeeVnd,
                     @otherFeesNote, @status, @statusReason, @needsReReview, @isSafetyVerified, @verifiedAtUtc,
-                    @verifiedByUserId, @publishedAtUtc, @lastUpdatedAtUtc, @createdAtUtc, @version, @concurrencyToken
+                    @verifiedByUserId, @publishedAtUtc, @lastUpdatedAtUtc, @createdAtUtc, @version
                 );
                 """;
             BindRoomParameters(cmd, room);
@@ -147,8 +147,7 @@ public sealed class SqliteRoomRepository : IRoomRepository
                     PublishedAtUtc = @publishedAtUtc,
                     LastUpdatedAtUtc = @lastUpdatedAtUtc,
                     -- CreatedAtUtc is immutable: bound on INSERT only, never overwritten here.
-                    Version = @version,
-                    ConcurrencyToken = @concurrencyToken
+                    Version = @version
                 WHERE Id = @id AND Version = @expectedVersion;
                 """;
             BindRoomParameters(cmd, room);
@@ -187,7 +186,7 @@ public sealed class SqliteRoomRepository : IRoomRepository
             createdAtUtc: ParseUtc(reader.GetString(30)),
             lastUpdatedAtUtc: ParseUtc(reader.GetString(29)),
             version: reader.GetInt32(31),
-            concurrencyToken: reader.GetString(32),
+            concurrencyToken: reader.GetInt32(31).ToString(CultureInfo.InvariantCulture),
             description: GetNullableString(reader, 3),
             maxOccupants: reader.IsDBNull(8) ? null : reader.GetInt32(8),
             furnishing: GetNullableString(reader, 9),
@@ -246,7 +245,6 @@ public sealed class SqliteRoomRepository : IRoomRepository
         cmd.Parameters.AddWithValue("@lastUpdatedAtUtc", room.LastUpdatedAtUtc.ToString("O", CultureInfo.InvariantCulture));
         cmd.Parameters.AddWithValue("@createdAtUtc", room.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture));
         cmd.Parameters.AddWithValue("@version", room.Version);
-        cmd.Parameters.AddWithValue("@concurrencyToken", room.ConcurrencyToken);
     }
 
     private static TEnum ParseEnum<TEnum>(string value)

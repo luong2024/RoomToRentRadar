@@ -18,7 +18,7 @@ public sealed class SqliteDbContext : IDisposable
         "MaxOccupants", "Furnishing", "AvailableFrom", "AddressLine", "Ward", "District", "Latitude", "Longitude",
         "ElectricityPriceVndPerKwh", "WaterPriceVnd", "WaterPriceUnit", "InternetFeeVnd", "ParkingFeeVnd",
         "OtherFeesNote", "Status", "StatusReason", "NeedsReReview", "IsSafetyVerified", "VerifiedAtUtc",
-        "VerifiedByUserId", "PublishedAtUtc", "LastUpdatedAtUtc", "CreatedAtUtc", "Version", "ConcurrencyToken"
+        "VerifiedByUserId", "PublishedAtUtc", "LastUpdatedAtUtc", "CreatedAtUtc", "Version"
     ];
 
     private readonly SqliteSettings _settings;
@@ -145,7 +145,8 @@ public sealed class SqliteDbContext : IDisposable
                             SortOrder INTEGER NOT NULL DEFAULT 0
                         );
 
-                        -- ERD §4.4: full Rooms table (33 columns) + ConcurrencyToken (ruling #20).
+                        -- ERD §4.4: full Rooms table (33 columns). ConcurrencyToken is derived from
+                        -- Version (ERD §1), never stored as a second source of truth.
                         CREATE TABLE IF NOT EXISTS Rooms (
                             Id TEXT PRIMARY KEY NOT NULL,
                             LandlordId TEXT NOT NULL,
@@ -178,8 +179,7 @@ public sealed class SqliteDbContext : IDisposable
                             PublishedAtUtc TEXT NULL,
                             LastUpdatedAtUtc TEXT NOT NULL,
                             CreatedAtUtc TEXT NOT NULL,
-                            Version INTEGER NOT NULL DEFAULT 1,
-                            ConcurrencyToken TEXT NOT NULL
+                            Version INTEGER NOT NULL DEFAULT 1
                         );
 
                         CREATE INDEX IF NOT EXISTS IX_Users_NormalizedEmail ON Users(NormalizedEmail);
@@ -200,6 +200,10 @@ public sealed class SqliteDbContext : IDisposable
 
                 // Campuses is reference data: always seeded, in every environment (H4 / ADR-002).
                 SeedCampuses(conn);
+
+                // ERD §1: ConcurrencyToken = Version.ToString(), so the column is redundant on
+                // databases created by older builds; drop it rather than keeping two sources of truth.
+                DropLegacyConcurrencyTokenColumnIfPresent(conn);
 
                 if (_settings.SeedDemoRooms)
                 {
@@ -268,6 +272,38 @@ public sealed class SqliteDbContext : IDisposable
     }
 
     /// <summary>
+    /// ERD §1: the concurrency token is <c>Version.ToString()</c>, so a stored
+    /// <c>ConcurrencyToken</c> column (written by older builds) is redundant and blocks INSERTs that
+    /// no longer bind it. Drop it only when present, so fresh databases are untouched.
+    /// </summary>
+    private static void DropLegacyConcurrencyTokenColumnIfPresent(SqliteConnection conn)
+    {
+        var hasColumn = false;
+        using (var tableInfo = conn.CreateCommand())
+        {
+            tableInfo.CommandText = "PRAGMA table_info(Rooms);";
+            using var reader = tableInfo.ExecuteReader();
+            while (reader.Read())
+            {
+                if (string.Equals(reader.GetString(1), "ConcurrencyToken", StringComparison.OrdinalIgnoreCase))
+                {
+                    hasColumn = true;
+                    break;
+                }
+            }
+        }
+
+        if (!hasColumn)
+        {
+            return;
+        }
+
+        using var alter = conn.CreateCommand();
+        alter.CommandText = "ALTER TABLE Rooms DROP COLUMN ConcurrencyToken;";
+        alter.ExecuteNonQuery();
+    }
+
+    /// <summary>
     /// BR-CMP-01: inserts the eight campuses with <c>INSERT OR IGNORE</c>, so existing rows (and any
     /// manual coordinate correction) are left untouched and exactly one row stays default.
     /// </summary>
@@ -332,13 +368,13 @@ public sealed class SqliteDbContext : IDisposable
                     MaxOccupants, Furnishing, AvailableFrom, AddressLine, Ward, District, Latitude, Longitude,
                     ElectricityPriceVndPerKwh, WaterPriceVnd, WaterPriceUnit, InternetFeeVnd, ParkingFeeVnd,
                     OtherFeesNote, Status, StatusReason, NeedsReReview, IsSafetyVerified, VerifiedAtUtc,
-                    VerifiedByUserId, PublishedAtUtc, LastUpdatedAtUtc, CreatedAtUtc, Version, ConcurrencyToken
+                    VerifiedByUserId, PublishedAtUtc, LastUpdatedAtUtc, CreatedAtUtc, Version
                 ) VALUES (
                     @id, @landlordId, @title, @description, @roomType, @monthlyRentVnd, @depositVnd, @areaM2,
                     @maxOccupants, @furnishing, @availableFrom, @addressLine, @ward, @district, @latitude, @longitude,
                     @electricityPriceVndPerKwh, @waterPriceVnd, @waterPriceUnit, @internetFeeVnd, @parkingFeeVnd,
                     @otherFeesNote, @status, @statusReason, @needsReReview, @isSafetyVerified, @verifiedAtUtc,
-                    @verifiedByUserId, @publishedAtUtc, @lastUpdatedAtUtc, @createdAtUtc, @version, @concurrencyToken
+                    @verifiedByUserId, @publishedAtUtc, @lastUpdatedAtUtc, @createdAtUtc, @version
                 );
                 """;
 
@@ -348,7 +384,7 @@ public sealed class SqliteDbContext : IDisposable
                 "@maxOccupants", "@furnishing", "@availableFrom", "@addressLine", "@ward", "@district", "@latitude", "@longitude",
                 "@electricityPriceVndPerKwh", "@waterPriceVnd", "@waterPriceUnit", "@internetFeeVnd", "@parkingFeeVnd",
                 "@otherFeesNote", "@status", "@statusReason", "@needsReReview", "@isSafetyVerified", "@verifiedAtUtc",
-                "@verifiedByUserId", "@publishedAtUtc", "@lastUpdatedAtUtc", "@createdAtUtc", "@version", "@concurrencyToken"
+                "@verifiedByUserId", "@publishedAtUtc", "@lastUpdatedAtUtc", "@createdAtUtc", "@version"
             }.Select(name =>
             {
                 var parameter = cmd.CreateParameter();
@@ -397,7 +433,6 @@ public sealed class SqliteDbContext : IDisposable
                 parameters[29].Value = room.LastUpdatedAtUtc.ToString("O", CultureInfo.InvariantCulture);
                 parameters[30].Value = room.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture);
                 parameters[31].Value = room.Version;
-                parameters[32].Value = room.ConcurrencyToken;
                 cmd.ExecuteNonQuery();
             }
         }

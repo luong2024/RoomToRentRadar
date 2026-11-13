@@ -68,6 +68,57 @@ public class SqliteRoomRepositoryTests
             "OtherFeesNote", "Status", "StatusReason", "NeedsReReview", "IsSafetyVerified", "VerifiedAtUtc",
             "VerifiedByUserId", "PublishedAtUtc", "LastUpdatedAtUtc", "CreatedAtUtc", "Version"
         }));
+
+        Assert.That(columns, Is.Not.Contain("ConcurrencyToken"),
+            "ConcurrencyToken là Version.ToString() (ERD §1) — không được lưu thành cột riêng.");
+    }
+
+    [Test]
+    public void Schema_DropsLegacyConcurrencyTokenColumn_WrittenByOlderBuilds()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"rtrr-legacy-{Guid.NewGuid():N}.db");
+        try
+        {
+            var settings = new SqliteSettings { ConnectionString = $"Data Source={path}" };
+            using (var first = new SqliteDbContext(settings))
+            {
+                first.CreateOpenConnection().Dispose();
+            }
+
+            using (var raw = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={path}"))
+            {
+                raw.Open();
+                using var alter = raw.CreateCommand();
+                alter.CommandText = "ALTER TABLE Rooms ADD COLUMN ConcurrencyToken TEXT NOT NULL DEFAULT '';";
+                alter.ExecuteNonQuery();
+            }
+
+            using var second = new SqliteDbContext(settings);
+            using var connection = second.CreateOpenConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = "PRAGMA table_info(Rooms);";
+
+            var columns = new List<string>();
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                columns.Add(reader.GetString(1));
+            }
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(columns, Is.Not.Contain("ConcurrencyToken"), "Cột thừa phải bị bỏ khi mở DB cũ.");
+                Assert.That(columns, Does.Contain("Version"), "Dữ liệu Rooms phải giữ nguyên, không bị đổi tên bảng.");
+            });
+        }
+        finally
+        {
+            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
     }
 
     [Test]
