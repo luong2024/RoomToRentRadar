@@ -135,6 +135,30 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                 inactiveEx.Message,
                 null),
 
+            ProfileNotFoundException notFoundEx => (
+                StatusCodes.Status404NotFound,
+                "Profile Not Found",
+                notFoundEx.Message,
+                null),
+
+            ProfileRoleMismatchException roleMismatchEx => (
+                StatusCodes.Status403Forbidden,
+                "Profile Role Mismatch",
+                roleMismatchEx.Message,
+                null),
+
+            ProfileDomainException profileDomainEx => (
+                StatusCodes.Status400BadRequest,
+                "Profile Validation Error",
+                profileDomainEx.Message,
+                null),
+
+            RateLimitExceededException rateLimitEx => (
+                StatusCodes.Status429TooManyRequests,
+                "Rate Limit Exceeded",
+                rateLimitEx.Message,
+                null),
+
             _ => (
                 StatusCodes.Status500InternalServerError,
                 "Internal Server Error",

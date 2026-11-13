@@ -4,6 +4,7 @@ using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Documents;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.ValueObjects;
+using ListingRoomStatus = RoomToRentRadar.Domain.Enums.RoomStatus;
 
 public static class CosmosMappingExtensions
 {
@@ -17,7 +18,7 @@ public static class CosmosMappingExtensions
             areaSquareMeters: doc.AreaSquareMeters,
             address: doc.Address,
             location: new GeoLocation(doc.Latitude, doc.Longitude),
-            status: (RoomStatus)doc.Status,
+            status: (ListingRoomStatus)doc.Status,
             verificationStatus: (VerificationStatus)doc.VerificationStatus,
             campusId: doc.CampusId,
             thumbnailUrl: doc.ThumbnailUrl,

@@ -176,6 +176,7 @@ public sealed class CosmosUserRepository : IUserRepository
             doc.CreatedAt,
             doc.UpdatedAt,
             doc.LastLoginAt,
-            logins);
+            logins,
+            doc.IsVerified);
     }
 }

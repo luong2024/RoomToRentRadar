@@ -22,6 +22,8 @@ public sealed class User
 
     public bool IsActive { get; private set; }
 
+    public bool IsVerified { get; private set; }
+
     public string SecurityStamp { get; private set; } = string.Empty;
 
     public DateTimeOffset CreatedAt { get; private set; }
@@ -134,6 +136,13 @@ public sealed class User
 
     public bool HasLocalPassword => !string.IsNullOrWhiteSpace(PasswordHash);
 
+    public void MarkAsVerified(DateTimeOffset utcNow)
+    {
+        EnsureActive();
+        IsVerified = true;
+        UpdatedAt = utcNow;
+    }
+
     public void EnsureActive()
     {
         if (!IsActive)
@@ -226,7 +235,8 @@ public sealed class User
         DateTimeOffset createdAt,
         DateTimeOffset updatedAt,
         DateTimeOffset? lastLoginAt,
-        IEnumerable<UserExternalLogin>? externalLogins = null)
+        IEnumerable<UserExternalLogin>? externalLogins = null,
+        bool isVerified = false)
     {
         var user = new User
         {
@@ -238,7 +248,8 @@ public sealed class User
             SecurityStamp = securityStamp,
             CreatedAt = createdAt,
             UpdatedAt = updatedAt,
-            LastLoginAt = lastLoginAt
+            LastLoginAt = lastLoginAt,
+            IsVerified = isVerified
         };
 
         if (externalLogins is not null)

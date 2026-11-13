@@ -8,6 +8,7 @@ using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Mappings;
 using RoomToRentRadar.Application.Ports.Outbound;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
+using ListingRoomStatus = RoomToRentRadar.Domain.Enums.RoomStatus;
 
 public sealed class CosmosRoomListingRepository : IRoomListingRepository
 {
@@ -26,7 +27,7 @@ public sealed class CosmosRoomListingRepository : IRoomListingRepository
         var queryDefinition = new QueryDefinition(
             "SELECT * FROM c WHERE c.campusId = @campusId AND c.status = @status AND c.verificationStatus = @verificationStatus")
             .WithParameter("@campusId", campusId)
-            .WithParameter("@status", (int)RoomStatus.Available)
+            .WithParameter("@status", (int)ListingRoomStatus.Available)
             .WithParameter("@verificationStatus", (int)VerificationStatus.Verified);
 
         var queryOptions = new QueryRequestOptions

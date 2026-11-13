@@ -2,6 +2,7 @@ namespace RoomToRentRadar.Domain.Entities;
 
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.ValueObjects;
+using ListingRoomStatus = RoomToRentRadar.Domain.Enums.RoomStatus;
 
 /// <summary>
 /// Represents a rental room listing in the system.
@@ -15,7 +16,7 @@ public sealed class RoomListing
     public double AreaSquareMeters { get; private set; }
     public string Address { get; private set; }
     public GeoLocation Location { get; private set; }
-    public RoomStatus Status { get; private set; }
+    public ListingRoomStatus Status { get; private set; }
     public VerificationStatus VerificationStatus { get; private set; }
     public string CampusId { get; private set; }
     public string? ThumbnailUrl { get; private set; }
@@ -24,7 +25,7 @@ public sealed class RoomListing
     /// <summary>
     /// Business rule (AC4): Only listings with status Available and Verified are displayed to students.
     /// </summary>
-    public bool IsDisplayable => Status == RoomStatus.Available && VerificationStatus == VerificationStatus.Verified;
+    public bool IsDisplayable => Status == ListingRoomStatus.Available && VerificationStatus == VerificationStatus.Verified;
 
     public RoomListing(
         string id,
@@ -34,7 +35,7 @@ public sealed class RoomListing
         double areaSquareMeters,
         string address,
         GeoLocation location,
-        RoomStatus status,
+        ListingRoomStatus status,
         VerificationStatus verificationStatus,
         string campusId,
         string? thumbnailUrl = null,
@@ -64,7 +65,7 @@ public sealed class RoomListing
         CreatedAtUtc = createdAtUtc ?? DateTime.UtcNow;
     }
 
-    public void UpdateStatus(RoomStatus newStatus)
+    public void UpdateStatus(ListingRoomStatus newStatus)
     {
         Status = newStatus;
     }

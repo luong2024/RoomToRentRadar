@@ -9,6 +9,7 @@ using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.ValueObjects;
 using Microsoft.Extensions.Caching.Memory;
+using ListingRoomStatus = RoomToRentRadar.Domain.Enums.RoomStatus;
 
 [TestFixture]
 public class RoomListingsPerformanceAndComplianceTests
@@ -55,7 +56,7 @@ public class RoomListingsPerformanceAndComplianceTests
                 18.0 + (i % 15),
                 $"Địa chỉ phòng {i}, TP. Thái Nguyên",
                 new GeoLocation(21.5852 + offsetLat, 105.8074 + offsetLon),
-                RoomStatus.Available,
+                ListingRoomStatus.Available,
                 VerificationStatus.Verified,
                 "campus-ictu",
                 thumbnailUrl: $"https://img.roomradar.vn/{i}.jpg");
@@ -74,7 +75,7 @@ public class RoomListingsPerformanceAndComplianceTests
                 20,
                 "Address",
                 new GeoLocation(21.5852, 105.8074),
-                RoomStatus.Occupied,
+                ListingRoomStatus.Occupied,
                 VerificationStatus.Verified,
                 "campus-ictu"));
 
@@ -86,7 +87,7 @@ public class RoomListingsPerformanceAndComplianceTests
                 20,
                 "Address",
                 new GeoLocation(21.5852, 105.8074),
-                RoomStatus.Available,
+                ListingRoomStatus.Available,
                 VerificationStatus.Unverified,
                 "campus-ictu"));
         }
@@ -137,7 +138,7 @@ public class RoomListingsPerformanceAndComplianceTests
 
         public Task<IReadOnlyList<RoomListing>> GetAvailableVerifiedRoomsByCampusAsync(string campusId, CancellationToken cancellationToken = default)
         {
-            var result = _rooms.Where(r => r.CampusId == campusId && r.Status == RoomStatus.Available && r.VerificationStatus == VerificationStatus.Verified).ToList();
+            var result = _rooms.Where(r => r.CampusId == campusId && r.Status == ListingRoomStatus.Available && r.VerificationStatus == VerificationStatus.Verified).ToList();
             return Task.FromResult<IReadOnlyList<RoomListing>>(result);
         }
 

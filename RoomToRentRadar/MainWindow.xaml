@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Window
+    x:Class="RoomToRentRadar.MainWindow"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:f="clr-namespace:Fonts"
+    Title="RoomToRentRadar">
+
+    <Window.TitleBar>
+        <TitleBar
+            Title="RoomToRentRadar"
+            BackgroundColor="{AppThemeBinding Light={StaticResource TitleBarBackground}, Dark={StaticResource TitleBarBackgroundDark}}"
+            ForegroundColor="{AppThemeBinding Light={StaticResource TitleBarForeground}, Dark={StaticResource TitleBarForegroundDark}}"
+            HeightRequest="48">
+            <TitleBar.Icon>
+                <FontImageSource
+                    FontFamily="{x:Static f:FluentUI.FontFamily}"
+                    Glyph="{x:Static f:FluentUI.building_home_24_regular}"
+                    Size="20"
+                    Color="{AppThemeBinding Light={StaticResource TitleBarAccentIcon}, Dark={StaticResource TitleBarAccentIconDark}}" />
+            </TitleBar.Icon>
+
+            <TitleBar.Content>
+                <Border
+                    Padding="12,0"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource TitleBarSearchBackground}, Dark={StaticResource TitleBarSearchBackgroundDark}}"
+                    HeightRequest="34"
+                    HorizontalOptions="Center"
+                    MaximumWidthRequest="400"
+                    Stroke="{AppThemeBinding Light={StaticResource TitleBarSearchBorder}, Dark={StaticResource TitleBarSearchBorderDark}}"
+                    StrokeShape="RoundRectangle 10"
+                    StrokeThickness="1"
+                    VerticalOptions="Center"
+                    WidthRequest="{OnIdiom Phone=220, Tablet=320, Desktop=380}">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                        <Label
+                            Grid.Column="0"
+                            FontFamily="{x:Static f:FluentUI.FontFamily}"
+                            FontSize="16"
+                            Text="{x:Static f:FluentUI.search_20_regular}"
+                            TextColor="{AppThemeBinding Light={StaticResource TitleBarPlaceholder}, Dark={StaticResource TitleBarPlaceholderDark}}"
+                            VerticalOptions="Center" />
+
+                        <Entry
+                            x:Name="TitleBarSearchEntry"
+                            Grid.Column="1"
+                            Margin="0"
+                            BackgroundColor="Transparent"
+                            ClearButtonVisibility="Never"
+                            Completed="OnSearchCompleted"
+                            FontSize="13"
+                            HeightRequest="30"
+                            MinimumHeightRequest="28"
+                            Placeholder="Tìm phòng trọ quanh ICTU..."
+                            PlaceholderColor="{AppThemeBinding Light={StaticResource TitleBarPlaceholder}, Dark={StaticResource TitleBarPlaceholderDark}}"
+                            ReturnType="Search"
+                            StyleId="BorderlessEntry"
+                            TextChanged="OnSearchTextChanged"
+                            TextColor="{AppThemeBinding Light={StaticResource TitleBarForeground}, Dark={StaticResource TitleBarForegroundDark}}"
+                            VerticalOptions="Center"
+                            VerticalTextAlignment="Center" />
+
+                        <Border
+                            x:Name="ClearSearchButton"
+                            Grid.Column="2"
+                            Padding="4"
+                            BackgroundColor="Transparent"
+                            IsVisible="False"
+                            StrokeThickness="0"
+                            VerticalOptions="Center">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnClearSearchTapped" />
+                            </Border.GestureRecognizers>
+                            <Label
+                                FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                FontSize="12"
+                                Text="{x:Static f:FluentUI.dismiss_16_regular}"
+                                TextColor="{AppThemeBinding Light={StaticResource TitleBarPlaceholder}, Dark={StaticResource TitleBarPlaceholderDark}}"
+                                VerticalOptions="Center" />
+                        </Border>
+                    </Grid>
+                </Border>
+            </TitleBar.Content>
+        </TitleBar>
+    </Window.TitleBar>
+
+</Window>

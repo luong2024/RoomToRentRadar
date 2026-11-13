@@ -7,6 +7,7 @@ using RoomToRentRadar.Application.UseCases.RoomListings;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.ValueObjects;
+using ListingRoomStatus = RoomToRentRadar.Domain.Enums.RoomStatus;
 
 [TestFixture]
 public class GetRoomListingsUseCaseTests
@@ -97,11 +98,11 @@ public class GetRoomListingsUseCaseTests
     public async Task ExecuteAsync_AC1_ShouldSortByDistanceAscendingByDefault()
     {
         // Near room (~0.1 km)
-        var nearRoom = CreateListing("room-near", new GeoLocation(21.5860, 105.8074), RoomStatus.Available, VerificationStatus.Verified);
+        var nearRoom = CreateListing("room-near", new GeoLocation(21.5860, 105.8074), ListingRoomStatus.Available, VerificationStatus.Verified);
         // Far room (~10 km)
-        var farRoom = CreateListing("room-far", new GeoLocation(21.6800, 105.8074), RoomStatus.Available, VerificationStatus.Verified);
+        var farRoom = CreateListing("room-far", new GeoLocation(21.6800, 105.8074), ListingRoomStatus.Available, VerificationStatus.Verified);
         // Mid room (~2 km)
-        var midRoom = CreateListing("room-mid", new GeoLocation(21.6000, 105.8074), RoomStatus.Available, VerificationStatus.Verified);
+        var midRoom = CreateListing("room-mid", new GeoLocation(21.6000, 105.8074), ListingRoomStatus.Available, VerificationStatus.Verified);
 
         await _roomRepository.AddAsync(farRoom);
         await _roomRepository.AddAsync(nearRoom);
@@ -124,10 +125,10 @@ public class GetRoomListingsUseCaseTests
     [Test]
     public async Task ExecuteAsync_AC4_ShouldFilterOutUnverifiedOrUnavailableListings()
     {
-        var validRoom = CreateListing("room-valid", new GeoLocation(21.5860, 105.8074), RoomStatus.Available, VerificationStatus.Verified);
-        var occupiedRoom = CreateListing("room-occupied", new GeoLocation(21.5860, 105.8074), RoomStatus.Occupied, VerificationStatus.Verified);
-        var unverifiedRoom = CreateListing("room-unverified", new GeoLocation(21.5860, 105.8074), RoomStatus.Available, VerificationStatus.Unverified);
-        var pendingRoom = CreateListing("room-pending", new GeoLocation(21.5860, 105.8074), RoomStatus.Available, VerificationStatus.Pending);
+        var validRoom = CreateListing("room-valid", new GeoLocation(21.5860, 105.8074), ListingRoomStatus.Available, VerificationStatus.Verified);
+        var occupiedRoom = CreateListing("room-occupied", new GeoLocation(21.5860, 105.8074), ListingRoomStatus.Occupied, VerificationStatus.Verified);
+        var unverifiedRoom = CreateListing("room-unverified", new GeoLocation(21.5860, 105.8074), ListingRoomStatus.Available, VerificationStatus.Unverified);
+        var pendingRoom = CreateListing("room-pending", new GeoLocation(21.5860, 105.8074), ListingRoomStatus.Available, VerificationStatus.Pending);
 
         await _roomRepository.AddAsync(validRoom);
         await _roomRepository.AddAsync(occupiedRoom);
@@ -150,7 +151,7 @@ public class GetRoomListingsUseCaseTests
     {
         for (var i = 1; i <= 25; i++)
         {
-            var room = CreateListing($"room-{i:D2}", new GeoLocation(21.5852 + (i * 0.001), 105.8074), RoomStatus.Available, VerificationStatus.Verified);
+            var room = CreateListing($"room-{i:D2}", new GeoLocation(21.5852 + (i * 0.001), 105.8074), ListingRoomStatus.Available, VerificationStatus.Verified);
             await _roomRepository.AddAsync(room);
         }
 
@@ -173,7 +174,7 @@ public class GetRoomListingsUseCaseTests
         });
     }
 
-    private static RoomListing CreateListing(string id, GeoLocation location, RoomStatus status, VerificationStatus verification)
+    private static RoomListing CreateListing(string id, GeoLocation location, ListingRoomStatus status, VerificationStatus verification)
     {
         return new RoomListing(
             id,
@@ -196,7 +197,7 @@ public class GetRoomListingsUseCaseTests
         public Task<IReadOnlyList<RoomListing>> GetAvailableVerifiedRoomsByCampusAsync(string campusId, CancellationToken cancellationToken = default)
         {
             GetCallCount++;
-            var results = _items.Where(r => r.CampusId == campusId && r.Status == RoomStatus.Available && r.VerificationStatus == VerificationStatus.Verified).ToList();
+            var results = _items.Where(r => r.CampusId == campusId && r.Status == ListingRoomStatus.Available && r.VerificationStatus == VerificationStatus.Verified).ToList();
             return Task.FromResult<IReadOnlyList<RoomListing>>(results);
         }
 

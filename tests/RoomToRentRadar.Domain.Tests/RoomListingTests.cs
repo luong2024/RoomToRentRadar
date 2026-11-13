@@ -3,6 +3,7 @@ namespace RoomToRentRadar.Domain.Tests;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.ValueObjects;
+using ListingRoomStatus = RoomToRentRadar.Domain.Enums.RoomStatus;
 
 [TestFixture]
 public class RoomListingTests
@@ -10,19 +11,19 @@ public class RoomListingTests
     [Test]
     public void IsDisplayable_WhenAvailableAndVerified_ShouldReturnTrue()
     {
-        var listing = CreateListing(RoomStatus.Available, VerificationStatus.Verified);
+        var listing = CreateListing(ListingRoomStatus.Available, VerificationStatus.Verified);
 
         Assert.That(listing.IsDisplayable, Is.True);
     }
 
-    [TestCase(RoomStatus.Occupied, VerificationStatus.Verified)]
-    [TestCase(RoomStatus.Reserved, VerificationStatus.Verified)]
-    [TestCase(RoomStatus.Hidden, VerificationStatus.Verified)]
-    [TestCase(RoomStatus.Available, VerificationStatus.Unverified)]
-    [TestCase(RoomStatus.Available, VerificationStatus.Pending)]
-    [TestCase(RoomStatus.Available, VerificationStatus.Rejected)]
-    [TestCase(RoomStatus.Occupied, VerificationStatus.Unverified)]
-    public void IsDisplayable_WhenNotAvailableOrNotVerified_ShouldReturnFalse(RoomStatus status, VerificationStatus verification)
+    [TestCase(ListingRoomStatus.Occupied, VerificationStatus.Verified)]
+    [TestCase(ListingRoomStatus.Reserved, VerificationStatus.Verified)]
+    [TestCase(ListingRoomStatus.Hidden, VerificationStatus.Verified)]
+    [TestCase(ListingRoomStatus.Available, VerificationStatus.Unverified)]
+    [TestCase(ListingRoomStatus.Available, VerificationStatus.Pending)]
+    [TestCase(ListingRoomStatus.Available, VerificationStatus.Rejected)]
+    [TestCase(ListingRoomStatus.Occupied, VerificationStatus.Unverified)]
+    public void IsDisplayable_WhenNotAvailableOrNotVerified_ShouldReturnFalse(ListingRoomStatus status, VerificationStatus verification)
     {
         var listing = CreateListing(status, verification);
 
@@ -42,12 +43,12 @@ public class RoomListingTests
                 area,
                 "123 Street",
                 new GeoLocation(21.0, 105.0),
-                RoomStatus.Available,
+                ListingRoomStatus.Available,
                 VerificationStatus.Verified,
                 "campus-1"));
     }
 
-    private static RoomListing CreateListing(RoomStatus status, VerificationStatus verification)
+    private static RoomListing CreateListing(ListingRoomStatus status, VerificationStatus verification)
     {
         return new RoomListing(
             "room-1",
