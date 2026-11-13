@@ -175,5 +175,38 @@
   <data name="PromptLandlordHouseAddressMessage" xml:space="preserve">
     <value>Please enter your boarding house address to continue:</value>
   </data>
+  <data name="InvalidCredentials" xml:space="preserve">
+    <value>Invalid email or password.</value>
+  </data>
+  <data name="AccountLocked" xml:space="preserve">
+    <value>Your account is temporarily locked due to multiple failed login attempts. Please try again after 15 minutes.</value>
+  </data>
+  <data name="AccountDisabled" xml:space="preserve">
+    <value>This account has been deactivated. Please contact support.</value>
+  </data>
+  <data name="LandlordPendingApproval" xml:space="preserve">
+    <value>Your landlord account is pending administrative verification.</value>
+  </data>
+  <data name="AccountLockedOrSuspended" xml:space="preserve">
+    <value>Your account is locked or suspended.</value>
+  </data>
+  <data name="SignInFailedDefault" xml:space="preserve">
+    <value>Sign in failed. Please check your credentials.</value>
+  </data>
+  <data name="EmailAlreadyInUse" xml:space="preserve">
+    <value>This email address is already in use. Please sign in.</value>
+  </data>
+  <data name="InvalidStudentCode" xml:space="preserve">
+    <value>The provided student ID is invalid.</value>
+  </data>
+  <data name="InvalidRoleSelected" xml:space="preserve">
+    <value>Invalid user role selected.</value>
+  </data>
+  <data name="RegistrationFailedDefault" xml:space="preserve">
+    <value>Registration failed. Please verify your details.</value>
+  </data>
+  <data name="RegistrationCheckInfo" xml:space="preserve">
+    <value>Please check the submitted registration information.</value>
+  </data>
 </root>
 

@@ -175,5 +175,38 @@
   <data name="PromptLandlordHouseAddressMessage" xml:space="preserve">
     <value>Vui lòng nhập địa chỉ nhà trọ của bạn để tiếp tục:</value>
   </data>
+  <data name="InvalidCredentials" xml:space="preserve">
+    <value>Email hoặc mật khẩu không đúng.</value>
+  </data>
+  <data name="AccountLocked" xml:space="preserve">
+    <value>Tài khoản tạm thời bị khoá do đăng nhập sai nhiều lần. Vui lòng thử lại sau 15 phút.</value>
+  </data>
+  <data name="AccountDisabled" xml:space="preserve">
+    <value>Tài khoản này đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.</value>
+  </data>
+  <data name="LandlordPendingApproval" xml:space="preserve">
+    <value>Tài khoản chủ trọ đang chờ quản trị viên phê duyệt.</value>
+  </data>
+  <data name="AccountLockedOrSuspended" xml:space="preserve">
+    <value>Tài khoản của bạn đã bị khóa hoặc tạm ngưng.</value>
+  </data>
+  <data name="SignInFailedDefault" xml:space="preserve">
+    <value>Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.</value>
+  </data>
+  <data name="EmailAlreadyInUse" xml:space="preserve">
+    <value>Email này đã được sử dụng. Vui lòng đăng nhập.</value>
+  </data>
+  <data name="InvalidStudentCode" xml:space="preserve">
+    <value>Mã sinh viên không hợp lệ.</value>
+  </data>
+  <data name="InvalidRoleSelected" xml:space="preserve">
+    <value>Vai trò người dùng không hợp lệ.</value>
+  </data>
+  <data name="RegistrationFailedDefault" xml:space="preserve">
+    <value>Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.</value>
+  </data>
+  <data name="RegistrationCheckInfo" xml:space="preserve">
+    <value>Vui lòng kiểm tra lại thông tin đăng ký đã nhập.</value>
+  </data>
 </root>
 

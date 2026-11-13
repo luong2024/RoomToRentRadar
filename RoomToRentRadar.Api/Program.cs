@@ -15,9 +15,12 @@ using RoomToRentRadar.Infrastructure.Adapters.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Load local .env file only in Development (never committed to git)
+// Load local overrides and .env file only in Development (never committed to git)
 if (builder.Environment.IsDevelopment())
 {
+    builder.Configuration.AddJsonFile("appsettings.local.json", optional: true, reloadOnChange: true);
+    builder.Configuration.AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.local.json", optional: true, reloadOnChange: true);
+
     var envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
     if (!File.Exists(envPath))
     {

@@ -373,21 +373,21 @@ public partial class RegisterPageModel : ObservableObject
             return errorCode switch
             {
                 "EMAIL_TAKEN" or "USER_EMAIL_EXISTS" or "AUTH_EMAIL_EXISTS"
-                    => "This email address is already in use. Please sign in.",
-                "INVALID_STUDENT_CODE" => "The provided student ID is invalid.",
-                "INVALID_PHONE_NUMBER" or "AUTH_PHONE_REQUIRED" => "Please enter a valid Vietnamese phone number.",
-                "AUTH_HOUSE_NAME_REQUIRED" or "INVALID_HOUSE_NAME" => "Please enter a valid boarding house name (3-100 characters).",
-                "AUTH_HOUSE_ADDRESS_REQUIRED" or "INVALID_HOUSE_ADDRESS" => "Please enter a valid boarding house address (5-250 characters).",
-                "INVALID_ROLE" => "Invalid user role selected.",
-                _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : "Registration failed. Please verify your details."
+                    => AppResources.EmailAlreadyInUse,
+                "INVALID_STUDENT_CODE" => AppResources.InvalidStudentCode,
+                "INVALID_PHONE_NUMBER" or "AUTH_PHONE_REQUIRED" => AppResources.PhoneNumberRequiredMessage,
+                "AUTH_HOUSE_NAME_REQUIRED" or "INVALID_HOUSE_NAME" => AppResources.HouseNameRequiredMessage,
+                "AUTH_HOUSE_ADDRESS_REQUIRED" or "INVALID_HOUSE_ADDRESS" => AppResources.HouseAddressRequiredMessage,
+                "INVALID_ROLE" => AppResources.InvalidRoleSelected,
+                _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : AppResources.RegistrationFailedDefault
             };
         }
 
         return statusCode switch
         {
-            HttpStatusCode.Conflict => "This email address is already in use. Please sign in.",
-            HttpStatusCode.BadRequest => "Please check the submitted registration information.",
-            _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : "Registration failed. Please verify your details."
+            HttpStatusCode.Conflict => AppResources.EmailAlreadyInUse,
+            HttpStatusCode.BadRequest => AppResources.RegistrationCheckInfo,
+            _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : AppResources.RegistrationFailedDefault
         };
     }
 }

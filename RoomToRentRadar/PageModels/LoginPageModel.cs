@@ -303,29 +303,29 @@ public partial class LoginPageModel : ObservableObject
             return errorCode switch
             {
                 "INVALID_CREDENTIALS" or "AUTH_INVALID_CREDENTIALS" or "USER_NOT_FOUND" or "AUTH_USER_NOT_FOUND"
-                    => "Invalid email or password.",
+                    => AppResources.InvalidCredentials,
                 "ACCOUNT_LOCKED" or "AUTH_ACCOUNT_LOCKED"
-                    => "Your account is temporarily locked due to multiple failed login attempts. Please try again after 15 minutes.",
+                    => AppResources.AccountLocked,
                 "USER_DISABLED"
-                    => "This account has been deactivated. Please contact support.",
+                    => AppResources.AccountDisabled,
                 "LANDLORD_NOT_APPROVED" or "AUTH_LANDLORD_NOT_APPROVED"
-                    => "Your landlord account is pending administrative verification.",
+                    => AppResources.LandlordPendingApproval,
                 "AUTH_PHONE_REQUIRED" or "PHONE_REQUIRED"
                     => AppResources.PhoneNumberRequiredMessage,
                 "AUTH_PASSWORD_REQUIRED" or "PASSWORD_REQUIRED"
                     => AppResources.PasswordValidationRule,
                 "AUTH_CURRENT_PASSWORD_REQUIRED"
                     => AppResources.PromptCurrentPasswordMessage,
-                _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : "Sign in failed. Please check your credentials."
+                _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : AppResources.SignInFailedDefault
             };
         }
 
         return statusCode switch
         {
-            HttpStatusCode.Unauthorized => "Invalid email or password.",
-            HttpStatusCode.Forbidden => "Your account is locked or suspended.",
-            HttpStatusCode.NotFound => "Invalid email or password.",
-            _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : "Sign in failed. Please check your credentials."
+            HttpStatusCode.Unauthorized => AppResources.InvalidCredentials,
+            HttpStatusCode.Forbidden => AppResources.AccountLockedOrSuspended,
+            HttpStatusCode.NotFound => AppResources.InvalidCredentials,
+            _ => !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : AppResources.SignInFailedDefault
         };
     }
 }

@@ -56,5 +56,16 @@ public static class AppResources
     public static string GoogleOnboardingTitle => GetString(nameof(GoogleOnboardingTitle));
     public static string PromptLandlordHouseAddressTitle => GetString(nameof(PromptLandlordHouseAddressTitle));
     public static string PromptLandlordHouseAddressMessage => GetString(nameof(PromptLandlordHouseAddressMessage));
+    public static string InvalidCredentials => GetString(nameof(InvalidCredentials));
+    public static string AccountLocked => GetString(nameof(AccountLocked));
+    public static string AccountDisabled => GetString(nameof(AccountDisabled));
+    public static string LandlordPendingApproval => GetString(nameof(LandlordPendingApproval));
+    public static string AccountLockedOrSuspended => GetString(nameof(AccountLockedOrSuspended));
+    public static string SignInFailedDefault => GetString(nameof(SignInFailedDefault));
+    public static string EmailAlreadyInUse => GetString(nameof(EmailAlreadyInUse));
+    public static string InvalidStudentCode => GetString(nameof(InvalidStudentCode));
+    public static string InvalidRoleSelected => GetString(nameof(InvalidRoleSelected));
+    public static string RegistrationFailedDefault => GetString(nameof(RegistrationFailedDefault));
+    public static string RegistrationCheckInfo => GetString(nameof(RegistrationCheckInfo));
 }
 
