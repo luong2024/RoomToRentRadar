@@ -28,8 +28,8 @@ public partial class RoleSelectionPageModel : ObservableObject
     public partial bool IsBusy { get; set; } = false;
 
     public string ContinueWithGoogleText => SelectedRole == "Student"
-        ? "Continue with Google (Student)"
-        : "Continue with Google (Landlord)";
+        ? AppResources.ContinueWithGoogleStudent
+        : AppResources.ContinueWithGoogleLandlord;
 
     public RoleSelectionPageModel(
         IAuthGateway authGateway,
@@ -39,6 +39,11 @@ public partial class RoleSelectionPageModel : ObservableObject
         _authGateway = authGateway ?? throw new ArgumentNullException(nameof(authGateway));
         _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
         _googleAuthService = googleAuthService ?? new GoogleAuthClientService();
+
+        LocalizedStrings.Instance.PropertyChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(ContinueWithGoogleText));
+        };
     }
 
     [RelayCommand]

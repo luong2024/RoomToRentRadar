@@ -97,5 +97,14 @@
   <data name="GoogleAuthFailed" xml:space="preserve">
     <value>Authentication with Google failed. Please try again.</value>
   </data>
+  <data name="ContinueWithGoogleStudent" xml:space="preserve">
+    <value>Continue with Google (Student)</value>
+  </data>
+  <data name="ContinueWithGoogleLandlord" xml:space="preserve">
+    <value>Continue with Google (Landlord)</value>
+  </data>
+  <data name="OrSignInWithEmail" xml:space="preserve">
+    <value>or sign in with Email</value>
+  </data>
 </root>
 

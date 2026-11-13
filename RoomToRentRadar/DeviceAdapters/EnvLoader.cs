@@ -33,15 +33,11 @@ public static class EnvLoader
             }
 
             // 2. Try bundled app package asset (Android / iOS)
-            // "env.txt" is bundled by AAPT2 (AAPT2 skips files starting with a dot)
+            // Only load client-specific configuration asset (client.env)
             string? assetName = null;
-            if (FileSystem.AppPackageFileExistsAsync("env.txt").GetAwaiter().GetResult())
+            if (FileSystem.AppPackageFileExistsAsync("client.env").GetAwaiter().GetResult())
             {
-                assetName = "env.txt";
-            }
-            else if (FileSystem.AppPackageFileExistsAsync(".env").GetAwaiter().GetResult())
-            {
-                assetName = ".env";
+                assetName = "client.env";
             }
 
             if (assetName != null)

@@ -97,5 +97,14 @@
   <data name="GoogleAuthFailed" xml:space="preserve">
     <value>Xác thực với Google thất bại. Vui lòng thử lại.</value>
   </data>
+  <data name="ContinueWithGoogleStudent" xml:space="preserve">
+    <value>Tiếp tục với Google (Sinh viên)</value>
+  </data>
+  <data name="ContinueWithGoogleLandlord" xml:space="preserve">
+    <value>Tiếp tục với Google (Chủ trọ)</value>
+  </data>
+  <data name="OrSignInWithEmail" xml:space="preserve">
+    <value>hoặc đăng nhập bằng Email</value>
+  </data>
 </root>
 

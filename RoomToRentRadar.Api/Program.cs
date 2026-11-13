@@ -76,8 +76,12 @@ if (useMockSso && !builder.Environment.IsDevelopment())
     throw new InvalidOperationException("CRITICAL: Mock SSO verifier is strictly prohibited outside the Development environment.");
 }
 
+var googleClientId = builder.Configuration["Google:ClientId"]
+    ?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID")
+    ?? Environment.GetEnvironmentVariable("Google__ClientId");
+
 builder.Services.AddApplicationServices();
-builder.Services.AddInfrastructure(jwtSettings, useMockSsoVerifier: useMockSso);
+builder.Services.AddInfrastructure(jwtSettings, useMockSsoVerifier: useMockSso, googleClientId: googleClientId);
 
 var signingKeyBytes = Encoding.UTF8.GetBytes(jwtSettings.SigningKey);
 builder.Services

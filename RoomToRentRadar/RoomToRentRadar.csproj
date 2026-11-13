@@ -62,7 +62,7 @@
 
 		<!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
-		<MauiAsset Include="..\.env" LogicalName="env.txt" Condition="Exists('..\.env')" />
+		<MauiAsset Include="client.env" LogicalName="client.env" Condition="Exists('client.env')" />
 	</ItemGroup>
 
 	<ItemGroup>

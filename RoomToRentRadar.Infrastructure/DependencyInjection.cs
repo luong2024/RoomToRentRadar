@@ -12,12 +12,18 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         JwtSettings? jwtSettings = null,
-        bool useMockSsoVerifier = false)
+        bool useMockSsoVerifier = false,
+        string? googleClientId = null)
     {
         if (jwtSettings != null)
         {
             services.AddSingleton(jwtSettings);
             services.AddSingleton<IJwtTokenServicePort, JwtTokenServiceAdapter>();
+        }
+
+        if (!string.IsNullOrWhiteSpace(googleClientId))
+        {
+            Environment.SetEnvironmentVariable("GOOGLE_CLIENT_ID", googleClientId);
         }
 
         services.AddSingleton<IPasswordHasherPort, Pbkdf2PasswordHasherAdapter>();

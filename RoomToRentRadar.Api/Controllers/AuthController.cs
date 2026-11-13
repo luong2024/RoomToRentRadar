@@ -87,6 +87,7 @@ public sealed class AuthController : ControllerBase
     [ProducesResponseType(typeof(AuthTokensDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<AuthTokensDto>> GoogleLogin(
         [FromBody] GoogleLoginRequest request,
         CancellationToken ct)

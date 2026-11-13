@@ -206,5 +206,116 @@ public class MockGoogleAuthVerifierAdapterTests
         await Task.CompletedTask;
         Assert.That(ex, Is.Not.Null);
     }
+
+    [Test]
+    public async Task VerifyIdTokenAsync_WithMismatchedAudience_ThrowsInvalidTokenException()
+    {
+        var testKeyBytes = Encoding.UTF8.GetBytes("a-very-secret-test-key-of-at-least-32-bytes!");
+        var securityKey = new SymmetricSecurityKey(testKeyBytes);
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var descriptor = new SecurityTokenDescriptor
+        {
+            Issuer = "https://accounts.google.com",
+            Audience = "unrelated-foreign-app-id",
+            Subject = new ClaimsIdentity(
+            [
+                new Claim("sub", "google-12345"),
+                new Claim("email", "student@ictu.edu.vn"),
+                new Claim("email_verified", "true")
+            ]),
+            Expires = DateTime.UtcNow.AddHours(1),
+            SigningCredentials = credentials
+        };
+
+        var jwt = tokenHandler.CreateEncodedJwt(descriptor);
+
+        var validationParams = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = "https://accounts.google.com",
+            ValidateAudience = true,
+            ValidAudience = "roomtorentradar-client-id",
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = securityKey,
+            ClockSkew = TimeSpan.Zero
+        };
+
+        var verifier = new GoogleAuthVerifierAdapter(validationParams);
+        var ex = Assert.ThrowsAsync<InvalidTokenException>(async () =>
+            await verifier.VerifyIdTokenAsync(jwt));
+        await Task.CompletedTask;
+        Assert.That(ex, Is.Not.Null);
+    }
+
+    [Test]
+    public async Task VerifyIdTokenAsync_WithMatchingAudience_Succeeds()
+    {
+        var testKeyBytes = Encoding.UTF8.GetBytes("a-very-secret-test-key-of-at-least-32-bytes!");
+        var securityKey = new SymmetricSecurityKey(testKeyBytes);
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var descriptor = new SecurityTokenDescriptor
+        {
+            Issuer = "https://accounts.google.com",
+            Audience = "roomtorentradar-client-id",
+            Subject = new ClaimsIdentity(
+            [
+                new Claim("sub", "google-12345"),
+                new Claim("email", "student@ictu.edu.vn"),
+                new Claim("email_verified", "true"),
+                new Claim("name", "Student Google")
+            ]),
+            Expires = DateTime.UtcNow.AddHours(1),
+            SigningCredentials = credentials
+        };
+
+        var jwt = tokenHandler.CreateEncodedJwt(descriptor);
+
+        var validationParams = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = "https://accounts.google.com",
+            ValidateAudience = true,
+            ValidAudience = "roomtorentradar-client-id",
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = securityKey,
+            ClockSkew = TimeSpan.Zero
+        };
+
+        var verifier = new GoogleAuthVerifierAdapter(validationParams);
+        var payload = await verifier.VerifyIdTokenAsync(jwt);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(payload.Email, Is.EqualTo("student@ictu.edu.vn"));
+            Assert.That(payload.FullName, Is.EqualTo("Student Google"));
+            Assert.That(payload.SubjectId, Is.EqualTo("google-12345"));
+        });
+    }
+
+    [Test]
+    public void VerifyIdTokenAsync_WithoutConfiguredAudienceInProductionMode_ThrowsInvalidOperationException()
+    {
+        var oldEnv = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID");
+        try
+        {
+            Environment.SetEnvironmentVariable("GOOGLE_CLIENT_ID", null);
+            var verifier = new GoogleAuthVerifierAdapter(customValidationParameters: null, audience: null);
+
+            var ex = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+                await verifier.VerifyIdTokenAsync("header.payload.signature"));
+
+            Assert.That(ex!.Message, Does.Contain("Google Client ID (Audience) must be configured"));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("GOOGLE_CLIENT_ID", oldEnv);
+        }
+    }
 }
 

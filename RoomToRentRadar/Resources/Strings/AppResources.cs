@@ -30,5 +30,8 @@ public static class AppResources
     public static string SessionStorageError => GetString(nameof(SessionStorageError));
     public static string GoogleNavError => GetString(nameof(GoogleNavError));
     public static string GoogleAuthFailed => GetString(nameof(GoogleAuthFailed));
+    public static string ContinueWithGoogleStudent => GetString(nameof(ContinueWithGoogleStudent));
+    public static string ContinueWithGoogleLandlord => GetString(nameof(ContinueWithGoogleLandlord));
+    public static string OrSignInWithEmail => GetString(nameof(OrSignInWithEmail));
 }
 

@@ -71,6 +71,8 @@ GoogleService-Info.plist
 *.pfx
 *.p12
 .env
+client.env
+*.env
 appsettings.*.local.json
 appsettings.local.json
 *.local.cs

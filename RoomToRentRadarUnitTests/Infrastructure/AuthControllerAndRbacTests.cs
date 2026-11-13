@@ -111,6 +111,17 @@ public class AuthControllerAndRbacTests
     }
 
     [Test]
+    public void GoogleLogin_DeclaresProducesResponseType403Forbidden()
+    {
+        var methodInfo = typeof(AuthController).GetMethod(nameof(AuthController.GoogleLogin));
+        var responseTypeAttrs = methodInfo?.GetCustomAttributes<ProducesResponseTypeAttribute>()
+            ?? Enumerable.Empty<ProducesResponseTypeAttribute>();
+
+        var forbiddenAttr = responseTypeAttrs.FirstOrDefault(a => a.StatusCode == StatusCodes.Status403Forbidden);
+        Assert.That(forbiddenAttr, Is.Not.Null, "GoogleLogin must declare [ProducesResponseType(StatusCodes.Status403Forbidden)] for contract alignment.");
+    }
+
+    [Test]
     public async Task ApproveLandlord_RequiresAdminPolicyAttribute_AndDelegatesWithAdminUserId()
     {
         var methodInfo = typeof(AuthController).GetMethod(nameof(AuthController.ApproveLandlord));

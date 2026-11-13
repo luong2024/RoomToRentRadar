@@ -33,7 +33,9 @@ public sealed class GoogleAuthVerifierAdapter : IGoogleAuthVerifierPort
     {
         _customValidationParameters = customValidationParameters;
         _httpClient = httpClient ?? new HttpClient();
-        _audience = audience;
+        _audience = audience
+            ?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID")
+            ?? Environment.GetEnvironmentVariable("Google__ClientId");
     }
 
     public static void ResetKeyCache()
@@ -69,6 +71,11 @@ public sealed class GoogleAuthVerifierAdapter : IGoogleAuthVerifierPort
         }
         else
         {
+            if (string.IsNullOrWhiteSpace(_audience))
+            {
+                throw new InvalidOperationException("Google Client ID (Audience) must be configured for GoogleAuthVerifierAdapter.");
+            }
+
             var signingKeys = await GetGoogleSigningKeysAsync(ct);
             validationParams = new TokenValidationParameters
             {
@@ -76,7 +83,7 @@ public sealed class GoogleAuthVerifierAdapter : IGoogleAuthVerifierPort
                 IssuerSigningKeys = signingKeys,
                 ValidateIssuer = true,
                 ValidIssuers = AllowedIssuers,
-                ValidateAudience = !string.IsNullOrWhiteSpace(_audience),
+                ValidateAudience = true,
                 ValidAudience = _audience,
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.FromMinutes(2)
