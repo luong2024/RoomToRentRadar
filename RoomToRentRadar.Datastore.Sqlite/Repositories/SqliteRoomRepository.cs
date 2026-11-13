@@ -93,6 +93,8 @@ public sealed class SqliteRoomRepository : IRoomRepository
                     $"A room with Id '{room.Id}' already exists.",
                     "DUPLICATE_ROOM");
             }
+
+            room.MarkPersisted();
         }
         finally
         {
@@ -101,15 +103,16 @@ public sealed class SqliteRoomRepository : IRoomRepository
     }
 
     /// <summary>
-    /// Optimistic concurrency (GUARDRAILS 1.5.2): the domain increments <c>Version</c> on every state
-    /// change, so the persisted row must still hold <c>room.Version - 1</c>. A row with no matching
-    /// version means someone else wrote first → <see cref="ConcurrencyConflictException"/>.
+    /// Optimistic concurrency (GUARDRAILS 1.5.2): the row must still hold the version this instance
+    /// was loaded with (<see cref="Room.LoadedVersion"/>). Using <c>Version - 1</c> would break as
+    /// soon as a caller performs more than one transition between load and save. Zero rows updated
+    /// means someone else wrote first → <see cref="ConcurrencyConflictException"/>.
     /// </summary>
     public async Task UpdateAsync(Room room, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(room);
 
-        var expectedVersion = room.Version > 1 ? room.Version - 1 : room.Version;
+        var expectedVersion = room.LoadedVersion;
 
         var conn = _dbContext.CreateOpenConnection();
         try
@@ -159,6 +162,8 @@ public sealed class SqliteRoomRepository : IRoomRepository
                 throw new ConcurrencyConflictException(
                     $"Optimistic concurrency conflict occurred updating room '{room.Id}' (expected version {expectedVersion}).");
             }
+
+            room.MarkPersisted();
         }
         finally
         {

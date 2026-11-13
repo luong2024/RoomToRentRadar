@@ -53,6 +53,12 @@ public sealed class Room
     public int Version { get; private set; }
     public string ConcurrencyToken { get; private set; }
 
+    /// <summary>
+    /// Version read from storage when this instance was loaded (GUARDRAILS §1.5.2). <c>UpdateAsync</c>
+    /// must match THIS value, not <c>Version - 1</c>: several transitions may happen between load and save.
+    /// </summary>
+    public int LoadedVersion { get; private set; }
+
     private Room(
         string id,
         string landlordId,
@@ -120,6 +126,7 @@ public sealed class Room
         LastUpdatedAtUtc = AsUtc(lastUpdatedAtUtc)!.Value;
         CreatedAtUtc = AsUtc(createdAtUtc)!.Value;
         Version = version;
+        LoadedVersion = version;
         ConcurrencyToken = concurrencyToken;
     }
 
@@ -399,6 +406,15 @@ public sealed class Room
     }
 
     // ----------------------------------------------------------------- helpers
+
+    /// <summary>
+    /// Called by the repository after a successful INSERT/UPDATE so the next save compares against
+    /// the version that is now in storage.
+    /// </summary>
+    public void MarkPersisted()
+    {
+        LoadedVersion = Version;
+    }
 
     private void Touch()
     {

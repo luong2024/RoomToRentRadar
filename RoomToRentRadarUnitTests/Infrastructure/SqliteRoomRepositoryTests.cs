@@ -231,6 +231,41 @@ public class SqliteRoomRepositoryTests
     }
 
     [Test]
+    public async Task UpdateAsync_AfterMultipleTransitions_PersistsFinalStateWithoutFalseConflict()
+    {
+        using var dbContext = new SqliteDbContext(InMemorySettings);
+        IRoomRepository repository = new SqliteRoomRepository(dbContext);
+        await repository.AddAsync(NewRoom("room-multi"));
+
+        var loaded = (await repository.GetByIdAsync("room-multi"))!;
+        loaded.Approve(DateTime.UtcNow);
+        loaded.MarkRented();
+
+        await repository.UpdateAsync(loaded);
+
+        var stored = await repository.GetByIdAsync("room-multi");
+        Assert.Multiple(() =>
+        {
+            Assert.That(stored!.Status, Is.EqualTo(ListingStatus.Rented));
+            Assert.That(stored.Version, Is.EqualTo(3), "1 lần load + 2 transition → version 3");
+        });
+    }
+
+    [Test]
+    public async Task UpdateAsync_WithoutStateChange_DoesNotConflict()
+    {
+        using var dbContext = new SqliteDbContext(InMemorySettings);
+        IRoomRepository repository = new SqliteRoomRepository(dbContext);
+        await repository.AddAsync(NewRoom("room-noop"));
+
+        var loaded = (await repository.GetByIdAsync("room-noop"))!;
+        await repository.UpdateAsync(loaded);
+
+        var stored = await repository.GetByIdAsync("room-noop");
+        Assert.That(stored!.Version, Is.EqualTo(1));
+    }
+
+    [Test]
     public async Task GetByIdAsync_UnknownId_ReturnsNull()
     {
         using var dbContext = new SqliteDbContext(InMemorySettings);
