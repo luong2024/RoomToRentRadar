@@ -43,7 +43,13 @@ public sealed class RoomTypesModelBinder : IModelBinder
 
             foreach (var part in rawValue.Split(Separators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
-                if (!Enum.TryParse<RoomType>(part, ignoreCase: true, out var roomType)
+                // Enum.TryParse accepts numeric strings ("1"), which would silently map to a room
+                // type; GUARDRAILS §1.5.1 whitelisting accepts enum NAMES only.
+                var isNumeric = int.TryParse(part, System.Globalization.NumberStyles.Integer,
+                    System.Globalization.CultureInfo.InvariantCulture, out _);
+
+                if (isNumeric
+                    || !Enum.TryParse<RoomType>(part, ignoreCase: true, out var roomType)
                     || !Enum.IsDefined(roomType))
                 {
                     bindingContext.ModelState.TryAddModelError(

@@ -8,7 +8,6 @@ namespace RoomToRentRadarUnitTests.Api;
 /// <summary>
 /// US04 / T04.1 — <c>operationId: searchRooms</c> qua pipeline HTTP thật
 /// (<see cref="WebApplicationFactory{TEntryPoint}"/>), kiểm hợp đồng OpenAPI và mã lỗi ADR-012.
-/// RED ở Task 1: use case là stub, seed/schema/cấu hình JSON enum thuộc Task 2–4.
 /// Mỗi test tạo factory riêng để cô lập SQLite in-memory.
 /// </summary>
 [TestFixture]
@@ -134,6 +133,45 @@ public class RoomsEndpointIntegrationTests
             Assert.That(body.RootElement.TryGetProperty("errors", out var errors), Is.True, "ADR-012: phải có errors{{}}");
             Assert.That(errors.ValueKind, Is.EqualTo(JsonValueKind.Object));
         });
+    }
+
+    [Test]
+    public async Task GetRooms_CombinedFilters_AreAppliedEndToEnd()
+    {
+        // US04 AC2: price + area + distance + room type must compose down to SQL, then exact Haversine.
+        var response = await _client.GetAsync(
+            "/api/rooms?minRentVnd=1000000&maxRentVnd=2500000&minAreaM2=15&maxAreaM2=25" +
+            "&maxDistanceKm=3&roomTypes=BoardingRoom");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var ids = body.RootElement.GetProperty("items").EnumerateArray()
+            .Select(item => item.GetProperty("id").GetString())
+            .ToList();
+
+        Assert.That(ids, Is.EquivalentTo(new[] { "seed-z115", "seed-thao-nguyen" }));
+    }
+
+    [Test]
+    public async Task GetRooms_NumericRoomType_IsRejected()
+    {
+        // GUARDRAILS §1.5.1: whitelisting accepts enum NAMES only — "1" used to bind to BoardingRoom.
+        var response = await _client.GetAsync("/api/rooms?roomTypes=1");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+    }
+
+    [Test]
+    public async Task GetRooms_EmptySortValue_IsRejectedInsteadOfDefaulting()
+    {
+        // Ruling 21: absent `sort` = default; present-but-empty `sort=` = invalid input.
+        var response = await _client.GetAsync("/api/rooms?sort=");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.That(body.RootElement.GetProperty("errorCode").GetString(), Is.EqualTo("INVALID_SORT_OPTION"));
     }
 
     [Test]

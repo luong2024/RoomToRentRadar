@@ -10,7 +10,6 @@ namespace RoomToRentRadarUnitTests.Api;
 
 /// <summary>
 /// ADR-012: lỗi nghiệp vụ trả <c>application/problem+json</c> kèm <c>errorCode</c> ổn định.
-/// RED ở Task 1 cho việc map <see cref="InvalidStateTransitionException"/> → 409 (ADR-011).
 /// </summary>
 [TestFixture]
 public class SearchErrorContractTests

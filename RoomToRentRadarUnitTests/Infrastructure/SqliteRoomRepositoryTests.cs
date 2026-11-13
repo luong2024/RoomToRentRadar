@@ -12,9 +12,6 @@ namespace RoomToRentRadarUnitTests.Infrastructure;
 
 /// <summary>
 /// M2 / M3 / ADR-002: SQLite schema, seed and repositories for <c>Rooms</c> and <c>Campuses</c>.
-/// RED ở Task 1 — Task 3 (Giai đoạn 3) cung cấp <c>SqliteCampusRepository</c>,
-/// <c>SqliteRoomSearchReadModel</c> và thay stub <see cref="NotImplementedException"/> của
-/// <c>SqliteRoomRepository</c>; fixture này phải xanh mà không sửa test.
 /// </summary>
 [TestFixture]
 public class SqliteRoomRepositoryTests

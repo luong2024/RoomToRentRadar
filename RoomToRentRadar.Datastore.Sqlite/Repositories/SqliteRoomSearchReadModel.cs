@@ -10,8 +10,8 @@ namespace RoomToRentRadar.Datastore.Sqlite.Repositories;
 /// <summary>
 /// CQRS read model of US04 search (plan §3.4C, M2, ADR-006): one parameterised SELECT that pushes
 /// <c>Status = 'Available'</c>, the BR-LST-06 landlord-verified rule (<c>Users.IsVerified</c>),
-/// rent/area/room-type filters and the bounding-box prefilter down to the ERD indexes. Exact
-/// Haversine distance and sorting stay in the Application layer.
+/// rent/area/room-type filters and the bounding-box prefilter down to SQL. Exact Haversine distance
+/// and ordering stay in the Application layer, so the query deliberately has no ORDER BY.
 /// </summary>
 public sealed class SqliteRoomSearchReadModel : IRoomSearchReadModel
 {
@@ -75,7 +75,6 @@ public sealed class SqliteRoomSearchReadModel : IRoomSearchReadModel
                 sql.Append(CultureInfo.InvariantCulture, $"\n  AND r.RoomType IN ({string.Join(", ", placeholders)})");
             }
 
-            sql.Append("\nORDER BY r.PublishedAtUtc DESC, r.Id ASC;");
             cmd.CommandText = sql.ToString();
 
             var candidates = new List<RoomSearchCandidate>();

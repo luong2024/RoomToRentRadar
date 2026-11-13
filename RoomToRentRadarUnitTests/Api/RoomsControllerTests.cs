@@ -12,8 +12,7 @@ using RoomToRentRadar.Ports.Inbound.UseCases.Rooms;
 namespace RoomToRentRadarUnitTests.Api;
 
 /// <summary>
-/// T04.1 / US04: <c>operationId: searchRooms</c>. RED ở Task 1 cho phần chuyển <c>[AllowAnonymous]</c>
-/// từ class xuống action (LOW của review); Task 4 (Giai đoạn 4) làm xanh.
+/// T04.1 / US04: <c>operationId: searchRooms</c> — binding, clamping and response shape.
 /// </summary>
 [TestFixture]
 public class RoomsControllerTests

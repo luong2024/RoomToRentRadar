@@ -11,8 +11,6 @@ namespace RoomToRentRadarUnitTests.Application.Rooms;
 
 /// <summary>
 /// UC-05 (Search and Filter Listings) / <c>operationId: searchRooms</c> / BR-SRCH-01..06, BR-CMP-01..03.
-/// RED ở Task 1: <see cref="SearchRoomsUseCase"/> chỉ có stub ném <see cref="NotImplementedException"/>;
-/// Task 2 (Giai đoạn 2) làm xanh toàn bộ fixture này mà không cần sửa test.
 /// </summary>
 [TestFixture]
 public class SearchRoomsUseCaseTests
