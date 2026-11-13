@@ -1,12 +1,13 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using RoomToRentRadar.Api.Authorization;
+using RoomToRentRadar.Api.Binders;
 using RoomToRentRadar.Api.Middlewares;
 using RoomToRentRadar.Application;
-using RoomToRentRadar.Datastore.CosmosDb;
-using RoomToRentRadar.Datastore.CosmosDb.Configurations;
 using RoomToRentRadar.Datastore.Sqlite;
 using RoomToRentRadar.Datastore.Sqlite.Configurations;
 using RoomToRentRadar.Infrastructure;
@@ -14,8 +15,49 @@ using RoomToRentRadar.Infrastructure.Adapters.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+    {
+        // US04: ?roomTypes=MiniApartment,WholeHouse (OpenAPI style: form, explode: false).
+        options.ModelBinderProviders.Insert(0, new RoomTypesModelBinderProvider());
+    })
+    .AddJsonOptions(options =>
+    {
+        // ADR-012: enums are serialized as strings ("Available", "MiniApartment"); numbers are still accepted on input.
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 builder.Services.AddEndpointsApiExplorer();
+
+// ADR-012 / system-architecture §7.2: framework-generated 400s (model binding) must use the same
+// problem+json shape as domain validation errors, with a stable errorCode and an `errors` map.
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var errors = context.ModelState
+            .Where(entry => entry.Value is { Errors.Count: > 0 })
+            .ToDictionary(
+                entry => entry.Key,
+                entry => entry.Value!.Errors
+                    .Select(error => string.IsNullOrWhiteSpace(error.ErrorMessage)
+                        ? "Invalid value."
+                        : error.ErrorMessage)
+                    .ToArray());
+
+        var problem = new ValidationProblemDetails(errors)
+        {
+            Status = StatusCodes.Status400BadRequest,
+            Title = "Validation Error",
+            Detail = "One or more validation errors occurred.",
+            Instance = context.HttpContext.Request.Path
+        };
+        problem.Extensions["errorCode"] = "VALIDATION_FAILED";
+
+        return new BadRequestObjectResult(problem)
+        {
+            ContentTypes = { "application/problem+json" }
+        };
+    };
+});
 
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new JwtSettings();
 if (string.IsNullOrWhiteSpace(jwtSettings.SigningKey))
@@ -29,17 +71,11 @@ if (string.IsNullOrWhiteSpace(jwtSettings.SigningKey))
     jwtSettings.SigningKey = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
 }
 
-var databaseProvider = builder.Configuration["DatabaseProvider"] ?? "Sqlite";
-if (string.Equals(databaseProvider, "CosmosDb", StringComparison.OrdinalIgnoreCase))
-{
-    var cosmosSettings = builder.Configuration.GetSection(CosmosDbSettings.SectionName).Get<CosmosDbSettings>() ?? new CosmosDbSettings();
-    builder.Services.AddCosmosDatastore(cosmosSettings);
-}
-else
-{
-    var sqliteSettings = builder.Configuration.GetSection(SqliteSettings.SectionName).Get<SqliteSettings>() ?? new SqliteSettings();
-    builder.Services.AddSqliteDatastore(sqliteSettings);
-}
+// ADR-002: SQLite is the only datastore (the CosmosDb provider is frozen).
+var sqliteSettings = builder.Configuration.GetSection(SqliteSettings.SectionName).Get<SqliteSettings>() ?? new SqliteSettings();
+sqliteSettings.SeedDemoRooms = builder.Configuration.GetValue<bool?>("Sqlite:SeedDemoRooms")
+    ?? builder.Environment.IsDevelopment(); // H4: demo seed only for local development
+builder.Services.AddSqliteDatastore(sqliteSettings);
 
 var useMockSso = builder.Configuration.GetValue("IctuSso:UseMockVerifier", defaultValue: false);
 if (useMockSso && !builder.Environment.IsDevelopment())
@@ -84,3 +120,6 @@ app.MapControllers();
 app.MapGet("/api/health", () => Results.Ok(new { Status = "Healthy", Service = "RoomToRentRadar.Api" }));
 
 app.Run();
+
+// Cho phép test project (WebApplicationFactory<Program>) tham chiếu entry point của API.
+public partial class Program { }

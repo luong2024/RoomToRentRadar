@@ -38,6 +38,10 @@ public static class DependencyInjection
         services.AddSingleton<InMemoryAuditLogRepository>();
         services.TryAddScoped<IAuditLogRepository>(sp => sp.GetRequiredService<InMemoryAuditLogRepository>());
 
+        // No IRoomRepository fallback: SQLite is the only datastore (ADR-002).
+        // InMemoryRoomRepository still lives in this (production) assembly but is deliberately NOT
+        // registered here; only tests construct it directly.
+
         return services;
     }
 }
