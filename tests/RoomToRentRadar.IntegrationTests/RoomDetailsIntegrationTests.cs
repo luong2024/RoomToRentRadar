@@ -10,6 +10,7 @@ using RoomToRentRadar.Application.Ports.Outbound;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.ValueObjects;
+using RoomDetailsStatus = RoomToRentRadar.Domain.Entities.RoomStatus;
 
 namespace RoomToRentRadar.IntegrationTests;
 
@@ -55,7 +56,7 @@ public class RoomDetailsIntegrationTests
             Area = 25,
             Address = "Số 123 Đường Z115, Thái Nguyên",
             LandlordPhone = "0987654321",
-            Status = RoomStatus.Available,
+            Status = RoomDetailsStatus.Available,
             IsVerified = true,
             RoomType = "Khép kín"
         };
@@ -89,7 +90,7 @@ public class RoomDetailsIntegrationTests
             Area = 20,
             Address = "Ngõ 45 Quang Trung, Thái Nguyên",
             LandlordPhone = "0912345678",
-            Status = RoomStatus.Available,
+            Status = RoomDetailsStatus.Available,
             IsVerified = true
         };
         _factory.RoomRepository.Upsert(room);
@@ -133,7 +134,7 @@ public class RoomDetailsIntegrationTests
             Area = 30,
             Address = "Số 88 Tân Thịnh, Thái Nguyên",
             LandlordPhone = "0988776655",
-            Status = RoomStatus.Available,
+            Status = RoomDetailsStatus.Available,
             IsVerified = true
         };
         _factory.RoomRepository.Upsert(room);
@@ -177,7 +178,7 @@ public class RoomDetailsIntegrationTests
             Area = 22,
             Address = "Số 10 Ga Thái Nguyên",
             LandlordPhone = "0933221100",
-            Status = RoomStatus.Rented,
+            Status = RoomDetailsStatus.Rented,
             IsVerified = true
         };
         _factory.RoomRepository.Upsert(unavailableRoom);
@@ -190,7 +191,7 @@ public class RoomDetailsIntegrationTests
             Price = 2100000m,
             Area = 20,
             Address = "Số 12 Ga Thái Nguyên",
-            Status = RoomStatus.Available,
+            Status = RoomDetailsStatus.Available,
             IsVerified = true
         };
         var similarRoom2 = new Room
@@ -200,7 +201,7 @@ public class RoomDetailsIntegrationTests
             Price = 1900000m,
             Area = 23,
             Address = "Số 14 Ga Thái Nguyên",
-            Status = RoomStatus.Available,
+            Status = RoomDetailsStatus.Available,
             IsVerified = true
         };
         var similarRoomOutOfArea = new Room
@@ -210,7 +211,7 @@ public class RoomDetailsIntegrationTests
             Price = 2000000m,
             Area = 40,
             Address = "Số 16 Ga Thái Nguyên",
-            Status = RoomStatus.Available,
+            Status = RoomDetailsStatus.Available,
             IsVerified = true
         };
         _factory.RoomRepository.Upsert(similarRoom1);

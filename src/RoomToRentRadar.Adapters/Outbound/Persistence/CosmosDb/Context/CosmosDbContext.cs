@@ -11,6 +11,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
     private readonly CosmosClient? _cosmosClient;
     private readonly CosmosDbOptions _options;
     private readonly bool _isInMemory;
+    private readonly bool _ownsCosmosClient;
 
     private readonly ICosmosContainer<UserDocument> _usersContainer;
     private readonly ICosmosContainer<RefreshTokenDocument> _refreshTokensContainer;
@@ -22,11 +23,16 @@ public sealed class CosmosDbContext : ICosmosDbContext
     public const string UniqueTokenHashPath = "/tokenHash";
 
     public CosmosDbContext(IOptions<CosmosDbOptions> options)
-        : this(options.Value)
+        : this(options.Value, null)
     {
     }
 
     public CosmosDbContext(CosmosDbOptions options)
+        : this(options, null)
+    {
+    }
+
+    public CosmosDbContext(CosmosDbOptions options, CosmosClient? sharedCosmosClient)
     {
         ArgumentNullException.ThrowIfNull(options);
         _options = options;
@@ -71,11 +77,21 @@ public sealed class CosmosDbContext : ICosmosDbContext
                 clientOptions.ConnectionMode = ConnectionMode.Gateway;
             }
 
+            if (options.IsEmulator)
+            {
+                clientOptions.ConnectionMode = ConnectionMode.Gateway;
+                clientOptions.HttpClientFactory = () => new HttpClient(new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                });
+            }
+
             var authKey = !string.IsNullOrWhiteSpace(options.AuthKey)
                 ? options.AuthKey
                 : options.AuthKeyOrResourceToken;
 
-            _cosmosClient = new CosmosClient(options.AccountEndpoint, authKey, clientOptions);
+            _cosmosClient = sharedCosmosClient ?? new CosmosClient(options.AccountEndpoint, authKey, clientOptions);
+            _ownsCosmosClient = sharedCosmosClient is null;
             var usersCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.UsersContainerName);
             var refreshTokensCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.RefreshTokensContainerName);
             var emailIndexCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.EmailIndexContainerName);
@@ -123,7 +139,10 @@ public sealed class CosmosDbContext : ICosmosDbContext
         var database = databaseResponse.Database;
 
         var roomsContainerName = string.IsNullOrWhiteSpace(_options.ContainerName) ? "Rooms" : _options.ContainerName;
-        await database.CreateContainerIfNotExistsAsync(roomsContainerName, PartitionKeyPath, cancellationToken: cancellationToken);
+        await database.CreateContainerIfNotExistsAsync(roomsContainerName, "/campusId", cancellationToken: cancellationToken);
+
+        var roomDetailsContainerName = string.IsNullOrWhiteSpace(_options.RoomDetailsContainerName) ? "RoomDetails" : _options.RoomDetailsContainerName;
+        await database.CreateContainerIfNotExistsAsync(roomDetailsContainerName, PartitionKeyPath, cancellationToken: cancellationToken);
 
         var usersContainerProperties = new ContainerProperties(_options.UsersContainerName, PartitionKeyPath);
 
@@ -209,6 +228,9 @@ public sealed class CosmosDbContext : ICosmosDbContext
 
     public void Dispose()
     {
-        _cosmosClient?.Dispose();
+        if (_ownsCosmosClient)
+        {
+            _cosmosClient?.Dispose();
+        }
     }
 }

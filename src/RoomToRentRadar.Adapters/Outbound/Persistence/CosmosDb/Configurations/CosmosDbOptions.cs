@@ -14,6 +14,10 @@ public sealed class CosmosDbOptions
 
     public string ContainerName { get; set; } = "Rooms";
 
+    public string RoomDetailsContainerName { get; set; } = "RoomDetails";
+
+    public string CampusesContainerName { get; set; } = "Campuses";
+
     public string UsersContainerName { get; set; } = "Users";
 
     public string RefreshTokensContainerName { get; set; } = "RefreshTokens";
@@ -25,4 +29,6 @@ public sealed class CosmosDbOptions
     public string UserProfilesContainerName { get; set; } = "UserProfiles";
 
     public string ConnectionMode { get; set; } = "Direct";
+
+    public bool IsEmulator { get; set; }
 }
