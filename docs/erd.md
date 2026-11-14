@@ -393,7 +393,30 @@ Preferences (`Preferences` API, not SQLite): `SelectedCampusId` (guest), `AppLan
 
 | Item | Current | Target |
 |---|---|---|
-| `Users` table | no `SelectedCampusId`, no `Version` | add both (migration 002). |
-| Schema creation | `CREATE TABLE IF NOT EXISTS` inside `SqliteDbContext` | versioned migration scripts + `PRAGMA user_version`. |
+| `Users` table | no `SelectedCampusId`, no `Version` | add both (migration 0002, T00.7). |
+| Schema creation | versioned migration files `Datastore.Sqlite/Migrations/NNNN_name.sql` + `SqliteMigrator` + `PRAGMA user_version` (T00.6, done) | each feature adds its own numbered file; `SqliteDbContext` is no longer edited for schema changes. |
 | `Room` | not on develop2; PR #6 and PR #16 define **two incompatible** `Domain/Entities/Room.cs` | single `Domain/Aggregates/Room.cs` per §4.4 (both PRs must align before merge). |
 | Cosmos DB documents | `Datastore.CosmosDb` project | frozen; not extended ([ADR-002](adr/adr-002-sqlite-single-datastore.md)). |
+
+### 6.1 Reserved migration numbers
+
+| No. | File | Content | Task | Owner |
+|---|---|---|---|---|
+| 0001 | `0001_baseline.sql` | `Users`, `UserRefreshTokens`, `AuditLogs`, `Campuses`, `Rooms` + indexes | T00.6 | Thinh |
+| 0002 | `0002_users_delta.sql` | `Users.SelectedCampusId`, `PreferredLanguage`, `Version` | T00.7 | Thinh |
+| 0003 | `0003_room_children.sql` | `RoomAmenities`, `RoomSafetyFeatures`, `HouseRuleVersions` | T00.9 | Duyen |
+| 0004 | `0004_room_photos.sql` | `RoomPhotos` | T03.1 | Hieu |
+| 0005 | `0005_favourites.sql` | `Favourites` | T06.1 | — |
+| 0006 | `0006_saved_searches.sql` | `SavedSearches` + `SavedSearchAlertLogs` | T07.1 | — |
+| 0007 | `0007_devices_notifications.sql` | `DeviceRegistrations` + `Notifications` | T07.2 | — |
+| 0008 | `0008_listing_reports.sql` | `ListingReports` | T12.1 | — |
+| 0009 | `0009_travel_time_cache.sql` | `TravelTimeEstimates` | T09.1 | — |
+| 0010 | `0010_chat.sql` | `Conversations`, `ConversationParticipants`, `Messages` | T14.x | — |
+
+Rules:
+
+- A new migration takes the next free number and is added to this table in the same PR.
+- Migrations must be merged in numeric order; otherwise a database already at a higher version skips the lower number.
+- Files are embedded resources named `NNNN_snake_case.sql` and are applied in one transaction each, which then sets `PRAGMA user_version`.
+- Never edit an applied migration — add a new one.
+- After pulling T00.6 each developer deletes the local `roomtorentradar.db` once (old databases have `user_version` 0 and are rejected with a clear message).
