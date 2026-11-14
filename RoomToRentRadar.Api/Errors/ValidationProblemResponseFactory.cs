@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 
 namespace RoomToRentRadar.Api.Errors;
@@ -8,15 +9,33 @@ public static class ValidationProblemResponseFactory
 {
     public static IActionResult Create(ActionContext context)
     {
-        var errors = context.ModelState
-            .Where(entry => entry.Value is { Errors.Count: > 0 })
-            .ToDictionary(
-                entry => entry.Key,
-                entry => entry.Value!.Errors
-                    .Select(error => string.IsNullOrWhiteSpace(error.ErrorMessage)
-                        ? "Invalid value."
-                        : error.ErrorMessage)
-                    .ToArray());
+        // ADR-012 / system-architecture 7.2: errors{} keys are camelCase to match the JSON the client sends and receives.
+        var mergedErrors = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        foreach (var entry in context.ModelState)
+        {
+            if (entry.Value is not { Errors.Count: > 0 })
+            {
+                continue;
+            }
+
+            var key = ToCamelCasePath(entry.Key);
+            var messages = entry.Value!.Errors
+                .Select(error => string.IsNullOrWhiteSpace(error.ErrorMessage)
+                    ? "Invalid value."
+                    : error.ErrorMessage)
+                .ToList();
+
+            if (mergedErrors.TryGetValue(key, out var existingMessages))
+            {
+                existingMessages.AddRange(messages);
+            }
+            else
+            {
+                mergedErrors.Add(key, messages);
+            }
+        }
+
+        var errors = mergedErrors.ToDictionary(pair => pair.Key, pair => pair.Value.ToArray());
 
         var problem = new ValidationProblemDetails(errors)
         {
@@ -31,5 +50,30 @@ public static class ValidationProblemResponseFactory
         {
             ContentTypes = { "application/problem+json" }
         };
+    }
+
+    private static string ToCamelCasePath(string key)
+    {
+        if (string.IsNullOrEmpty(key))
+        {
+            return key ?? string.Empty;
+        }
+
+        var segments = key.Split('.');
+        for (var i = 0; i < segments.Length; i++)
+        {
+            var segment = segments[i];
+            var bracketIndex = segment.IndexOf('[');
+            var namePart = bracketIndex < 0 ? segment : segment[..bracketIndex];
+            var suffix = bracketIndex < 0 ? "" : segment[bracketIndex..];
+            if (namePart.Length > 0 && namePart != "$")
+            {
+                namePart = JsonNamingPolicy.CamelCase.ConvertName(namePart);
+            }
+
+            segments[i] = namePart + suffix;
+        }
+
+        return string.Join(".", segments);
     }
 }
