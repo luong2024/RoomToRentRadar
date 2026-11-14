@@ -71,41 +71,84 @@ public class SqliteRoomRepositoryTests
     }
 
     [Test]
-    public void Schema_DropsLegacyConcurrencyTokenColumn_WrittenByOlderBuilds()
+    public void CreateOpenConnection_FileDatabaseAndInMemoryDatabase_HaveForeignKeysEnabled()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"rtrr-legacy-{Guid.NewGuid():N}.db");
+        var path = Path.Combine(Path.GetTempPath(), $"rtrr-fk-{Guid.NewGuid():N}.db");
+        try
+        {
+            using (var fileContext = new SqliteDbContext(new SqliteSettings { ConnectionString = $"Data Source={path}" }))
+            using (var fileConnection = fileContext.CreateOpenConnection())
+            {
+                Assert.That(ReadScalar(fileConnection, "PRAGMA foreign_keys;"), Is.EqualTo(1),
+                    "File database phải bật khoá ngoại.");
+            }
+
+            using (var memoryContext = new SqliteDbContext(InMemorySettings))
+            using (var memoryConnection = memoryContext.CreateOpenConnection())
+            {
+                Assert.That(ReadScalar(memoryConnection, "PRAGMA foreign_keys;"), Is.EqualTo(1),
+                    "In-memory database phải bật khoá ngoại.");
+            }
+        }
+        finally
+        {
+            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Test]
+    public void InsertRefreshToken_ForMissingUser_FailsWithForeignKeyViolation()
+    {
+        using var dbContext = new SqliteDbContext(InMemorySettings);
+        using var connection = dbContext.CreateOpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO UserRefreshTokens (TokenHash, UserId, JwtId, CreatedAtUtc, ExpiresAtUtc)
+            VALUES (@tokenHash, @userId, @jwtId, @createdAtUtc, @expiresAtUtc);
+            """;
+        command.Parameters.AddWithValue("@tokenHash", "orphan-token-hash");
+        command.Parameters.AddWithValue("@userId", "user-khong-ton-tai");
+        command.Parameters.AddWithValue("@jwtId", "jti-orphan");
+        command.Parameters.AddWithValue("@createdAtUtc", "2026-11-15T08:00:00.0000000Z");
+        command.Parameters.AddWithValue("@expiresAtUtc", "2026-11-22T08:00:00.0000000Z");
+
+        var exception = Assert.ThrowsAsync<Microsoft.Data.Sqlite.SqliteException>(
+            async () => await command.ExecuteNonQueryAsync());
+
+        Assert.That(exception!.SqliteErrorCode, Is.EqualTo(19),
+            "SQLITE_CONSTRAINT: refresh token phải tham chiếu một Users row tồn tại.");
+    }
+
+    [Test]
+    public void CreateOpenConnection_SecondContextOnSameFile_RunsNoMigrationAndKeepsSeed()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"rtrr-reopen-{Guid.NewGuid():N}.db");
         try
         {
             var settings = new SqliteSettings { ConnectionString = $"Data Source={path}" };
-            using (var first = new SqliteDbContext(settings))
-            {
-                first.CreateOpenConnection().Dispose();
-            }
 
-            using (var raw = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={path}"))
+            using (var first = new SqliteDbContext(settings))
+            using (var firstConnection = first.CreateOpenConnection())
             {
-                raw.Open();
-                using var alter = raw.CreateCommand();
-                alter.CommandText = "ALTER TABLE Rooms ADD COLUMN ConcurrencyToken TEXT NOT NULL DEFAULT '';";
-                alter.ExecuteNonQuery();
+                Assert.Multiple(() =>
+                {
+                    Assert.That(ReadScalar(firstConnection, "PRAGMA user_version;"), Is.EqualTo(1));
+                    Assert.That(ReadScalar(firstConnection, "SELECT COUNT(1) FROM Campuses;"), Is.EqualTo(8));
+                });
             }
 
             using var second = new SqliteDbContext(settings);
-            using var connection = second.CreateOpenConnection();
-            using var command = connection.CreateCommand();
-            command.CommandText = "PRAGMA table_info(Rooms);";
-
-            var columns = new List<string>();
-            using var reader = command.ExecuteReader();
-            while (reader.Read())
-            {
-                columns.Add(reader.GetString(1));
-            }
-
+            using var secondConnection = second.CreateOpenConnection();
             Assert.Multiple(() =>
             {
-                Assert.That(columns, Is.Not.Contain("ConcurrencyToken"), "Cột thừa phải bị bỏ khi mở DB cũ.");
-                Assert.That(columns, Does.Contain("Version"), "Dữ liệu Rooms phải giữ nguyên, không bị đổi tên bảng.");
+                Assert.That(ReadScalar(secondConnection, "PRAGMA user_version;"), Is.EqualTo(1),
+                    "Mở lại file không được chạy lại migration.");
+                Assert.That(ReadScalar(secondConnection, "SELECT COUNT(1) FROM Campuses;"), Is.EqualTo(8),
+                    "Seed Campuses phải giữ nguyên khi mở lại file.");
             });
         }
         finally
@@ -528,6 +571,13 @@ public class SqliteRoomRepositoryTests
         ICampusRepository repository = new SqliteCampusRepository(dbContext);
 
         Assert.That(await repository.GetByIdAsync("KHONG-TON-TAI"), Is.Null);
+    }
+
+    private static long ReadScalar(Microsoft.Data.Sqlite.SqliteConnection connection, string sql)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        return Convert.ToInt64(command.ExecuteScalar());
     }
 
     private static Room NewRoom(string id) => Room.Reconstitute(
