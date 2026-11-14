@@ -5,8 +5,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services
     .AddApplicationUseCases()
-    .AddOutboundAdapters(builder.Configuration)
-    .AddInboundAdapters(builder.Configuration);
+    .AddOutboundAdapters(builder.Configuration, builder.Environment)
+    .AddRoomDetailServices(builder.Configuration, builder.Environment)
+    .AddInboundAdapters(builder.Configuration)
+    .AddProfileFeature();
 
 var app = builder.Build();
 

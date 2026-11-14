@@ -20,7 +20,7 @@ namespace RoomToRentRadar
 
         protected override Window CreateWindow(IActivationState? activationState)
         {
-            return new Window(new AppShell());
+            return new MainWindow(new AppShell());
         }
 
         protected override async void OnStart()

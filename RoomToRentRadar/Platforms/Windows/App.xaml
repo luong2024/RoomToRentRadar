@@ -1,8 +1,52 @@
-﻿<maui:MauiWinUIApplication
+<maui:MauiWinUIApplication
     x:Class="RoomToRentRadar.WinUI.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:maui="using:Microsoft.Maui"
     xmlns:local="using:RoomToRentRadar.WinUI">
+
+    <maui:MauiWinUIApplication.Resources>
+        <ResourceDictionary>
+            <CornerRadius x:Key="ControlCornerRadius">10</CornerRadius>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <CornerRadius x:Key="NavigationViewContentGridCornerRadius">12,12,0,0</CornerRadius>
+                    <Thickness x:Key="NavigationViewContentGridBorderThickness">1</Thickness>
+                    <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="#E2E8F0" />
+                    <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="#F1F5F9" />
+                    <SolidColorBrush x:Key="NavigationViewExpandedPaneBackground" Color="#F1F5F9" />
+                    <SolidColorBrush x:Key="NavigationViewSelectionIndicatorForeground" Color="#2563EB" />
+                    <SolidColorBrush x:Key="NavigationViewItemBackgroundSelected" Color="#EFF6FF" />
+                    <SolidColorBrush x:Key="NavigationViewItemBackgroundSelectedPointerOver" Color="#DBEAFE" />
+                    <SolidColorBrush x:Key="NavigationViewItemBackgroundPointerOver" Color="#E2E8F0" />
+                    <SolidColorBrush x:Key="NavigationViewItemForegroundSelected" Color="#1D4ED8" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Default">
+                    <CornerRadius x:Key="NavigationViewContentGridCornerRadius">12,12,0,0</CornerRadius>
+                    <Thickness x:Key="NavigationViewContentGridBorderThickness">1</Thickness>
+                    <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="#E2E8F0" />
+                    <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="#F1F5F9" />
+                    <SolidColorBrush x:Key="NavigationViewExpandedPaneBackground" Color="#F1F5F9" />
+                    <SolidColorBrush x:Key="NavigationViewSelectionIndicatorForeground" Color="#2563EB" />
+                    <SolidColorBrush x:Key="NavigationViewItemBackgroundSelected" Color="#EFF6FF" />
+                    <SolidColorBrush x:Key="NavigationViewItemBackgroundSelectedPointerOver" Color="#DBEAFE" />
+                    <SolidColorBrush x:Key="NavigationViewItemBackgroundPointerOver" Color="#E2E8F0" />
+                    <SolidColorBrush x:Key="NavigationViewItemForegroundSelected" Color="#1D4ED8" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <CornerRadius x:Key="NavigationViewContentGridCornerRadius">12,12,0,0</CornerRadius>
+                    <Thickness x:Key="NavigationViewContentGridBorderThickness">1</Thickness>
+                    <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="#334155" />
+                    <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="#1E293B" />
+                    <SolidColorBrush x:Key="NavigationViewExpandedPaneBackground" Color="#1E293B" />
+                    <SolidColorBrush x:Key="NavigationViewSelectionIndicatorForeground" Color="#60A5FA" />
+                    <SolidColorBrush x:Key="NavigationViewItemBackgroundSelected" Color="#1E3A8A" />
+                    <SolidColorBrush x:Key="NavigationViewItemBackgroundSelectedPointerOver" Color="#1D4ED8" />
+                    <SolidColorBrush x:Key="NavigationViewItemBackgroundPointerOver" Color="#334155" />
+                    <SolidColorBrush x:Key="NavigationViewItemForegroundSelected" Color="#F8FAFC" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </maui:MauiWinUIApplication.Resources>
 
 </maui:MauiWinUIApplication>

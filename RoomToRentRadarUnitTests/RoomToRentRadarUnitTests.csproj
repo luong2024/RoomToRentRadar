@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Authentication / US13 linked components -->
     <Compile Include="..\RoomToRentRadar\Core\Models\Authentication\AuthContracts.cs" Link="Linked\AuthContracts.cs" />
     <Compile Include="..\RoomToRentRadar\Core\Interfaces\ISecureStorageService.cs" Link="Linked\ISecureStorageService.cs" />
     <Compile Include="..\RoomToRentRadar\Core\Interfaces\IAuthenticationPort.cs" Link="Linked\IAuthenticationPort.cs" />
@@ -27,6 +28,16 @@
     <Compile Include="..\RoomToRentRadar\Infrastructure\Adapters\HttpAuthAdapter.cs" Link="Linked\HttpAuthAdapter.cs" />
     <Compile Include="..\RoomToRentRadar\Infrastructure\Services\AuthenticationSessionService.cs" Link="Linked\AuthenticationSessionService.cs" />
     <Compile Include="..\RoomToRentRadar\Infrastructure\Api\AuthenticationHeaderHandler.cs" Link="Linked\AuthenticationHeaderHandler.cs" />
+
+    <!-- Room Listings / Core / US01 / Group 4 linked components -->
+    <Compile Include="..\RoomToRentRadar\Core\Constants\AppRoutes.cs" Link="Linked\Core\Constants\AppRoutes.cs" />
+    <Compile Include="..\RoomToRentRadar\Core\Interfaces\IErrorHandler.cs" Link="Linked\Core\Interfaces\IErrorHandler.cs" />
+    <Compile Include="..\RoomToRentRadar\Infrastructure\Api\IApiClient.cs" Link="Linked\Infrastructure\Api\IApiClient.cs" />
+    <Compile Include="..\RoomToRentRadar\Infrastructure\Api\ApiSettings.cs" Link="Linked\Infrastructure\Api\ApiSettings.cs" />
+    <Compile Include="..\RoomToRentRadar\Features\Home\ViewModels\HomeViewModel.cs" Link="Linked\Features\Home\ViewModels\HomeViewModel.cs" />
+    <Compile Include="..\RoomToRentRadar\Features\RoomListings\Models\*.cs" LinkBase="Linked\Features\RoomListings\Models" />
+    <Compile Include="..\RoomToRentRadar\Features\RoomListings\Services\*.cs" LinkBase="Linked\Features\RoomListings\Services" />
+    <Compile Include="..\RoomToRentRadar\Features\RoomListings\ViewModels\*.cs" LinkBase="Linked\Features\RoomListings\ViewModels" />
   </ItemGroup>
 
   <ItemGroup>
