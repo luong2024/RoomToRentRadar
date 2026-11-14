@@ -12,6 +12,11 @@ public sealed class User
     public static readonly TimeSpan DefaultLockoutDuration = TimeSpan.FromMinutes(15);
     public const int MaxStoredRefreshTokens = 10;
 
+    // BR-CMP-02 / BR-I18N-02: defaults mirror migration 0002 (Users.SelectedCampusId / PreferredLanguage).
+    public const string DefaultSelectedCampusId = "ICTU";
+    public const string DefaultPreferredLanguage = "en";
+    public static readonly IReadOnlyList<string> SupportedLanguages = new[] { "en", "vi" };
+
     private static readonly Regex VietnamPhoneRegex = new(
         @"^(0|\+84)[0-9]{9}$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -32,6 +37,12 @@ public sealed class User
     public DateTime? LockoutEndUtc { get; private set; }
     public DateTime CreatedAtUtc { get; private set; }
     public DateTime UpdatedAtUtc { get; private set; }
+    // BR-CMP-02: campus the user searches around; defaults to ICTU.
+    public string SelectedCampusId { get; private set; }
+    // BR-I18N-02: preferred UI language, restricted to SupportedLanguages.
+    public string PreferredLanguage { get; private set; }
+    // GUARDRAILS 1.5.2: optimistic concurrency version, starts at 1.
+    public int Version { get; private set; }
     public string? ConcurrencyToken { get; private set; }
 
     public IReadOnlyList<RefreshTokenSession> RefreshTokens => _refreshTokens.AsReadOnly();
@@ -51,9 +62,30 @@ public sealed class User
         DateTime? lockoutEndUtc,
         DateTime createdAtUtc,
         DateTime updatedAtUtc,
+        string selectedCampusId,
+        string preferredLanguage,
+        int version,
         IEnumerable<RefreshTokenSession>? refreshTokens = null,
         string? concurrencyToken = null)
     {
+        // BR-CMP-02
+        if (string.IsNullOrWhiteSpace(selectedCampusId))
+        {
+            throw new DomainValidationException("Selected campus is required.");
+        }
+
+        // BR-I18N-02: ordinal, case-sensitive match ('EN', 'Vi', 'fr' are rejected).
+        if (preferredLanguage is null || !SupportedLanguages.Contains(preferredLanguage, StringComparer.Ordinal))
+        {
+            throw new DomainValidationException($"Preferred language '{preferredLanguage}' is not supported. Supported values: en, vi.");
+        }
+
+        // GUARDRAILS 1.5.2
+        if (version < 1)
+        {
+            throw new DomainValidationException("Version must be greater than or equal to 1.");
+        }
+
         Id = id;
         Email = email;
         FullName = fullName;
@@ -68,6 +100,9 @@ public sealed class User
         LockoutEndUtc = lockoutEndUtc;
         CreatedAtUtc = createdAtUtc;
         UpdatedAtUtc = updatedAtUtc;
+        SelectedCampusId = selectedCampusId;
+        PreferredLanguage = preferredLanguage;
+        Version = version;
         ConcurrencyToken = concurrencyToken;
 
         if (refreshTokens != null)
@@ -126,7 +161,10 @@ public sealed class User
             failedLoginCount: 0,
             lockoutEndUtc: null,
             createdAtUtc: utcNow,
-            updatedAtUtc: utcNow);
+            updatedAtUtc: utcNow,
+            selectedCampusId: DefaultSelectedCampusId,
+            preferredLanguage: DefaultPreferredLanguage,
+            version: 1);
     }
 
     public static User RegisterIctuSso(
@@ -170,7 +208,10 @@ public sealed class User
             failedLoginCount: 0,
             lockoutEndUtc: null,
             createdAtUtc: utcNow,
-            updatedAtUtc: utcNow);
+            updatedAtUtc: utcNow,
+            selectedCampusId: DefaultSelectedCampusId,
+            preferredLanguage: DefaultPreferredLanguage,
+            version: 1);
     }
 
     public static User Reconstitute(
@@ -189,7 +230,10 @@ public sealed class User
         DateTime createdAtUtc,
         DateTime updatedAtUtc,
         IEnumerable<RefreshTokenSession>? refreshTokens = null,
-        string? concurrencyToken = null)
+        string? concurrencyToken = null,
+        string selectedCampusId = DefaultSelectedCampusId,
+        string preferredLanguage = DefaultPreferredLanguage,
+        int version = 1)
     {
         return new User(
             id,
@@ -206,8 +250,11 @@ public sealed class User
             lockoutEndUtc,
             createdAtUtc,
             updatedAtUtc,
-            refreshTokens,
-            concurrencyToken);
+            selectedCampusId: selectedCampusId,
+            preferredLanguage: preferredLanguage,
+            version: version,
+            refreshTokens: refreshTokens,
+            concurrencyToken: concurrencyToken);
     }
 
     public void SetConcurrencyToken(string? token)

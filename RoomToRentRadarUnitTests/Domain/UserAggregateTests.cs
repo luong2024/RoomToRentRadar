@@ -1,3 +1,4 @@
+using RoomToRentRadar.Datastore.Sqlite.Seed;
 using RoomToRentRadar.Domain.Aggregates;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
@@ -222,6 +223,186 @@ public class UserAggregateTests
             jwtId: "valid-jti",
             createdAtUtc: FixedNow,
             expiresAtUtc: FixedNow.AddMinutes(-5)));
+    }
+
+    [Test]
+    public void RegisterLocal_NewUser_HasDefaultCampusLanguageAndVersionOne()
+    {
+        var user = User.RegisterLocal(
+            email: "student@ictu.edu.vn",
+            passwordHash: "hashed-password",
+            fullName: "Nguyen Van A",
+            role: UserRole.Student,
+            phoneNumber: null,
+            studentCode: "DTC01",
+            utcNow: FixedNow);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(user.SelectedCampusId, Is.EqualTo("ICTU"));
+            Assert.That(user.PreferredLanguage, Is.EqualTo("en"));
+            Assert.That(user.Version, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void RegisterIctuSso_NewUser_HasDefaults()
+    {
+        var user = User.RegisterIctuSso("dtc225180@ictu.edu.vn", "Nguyen Van A", "sso-subject-1", null, FixedNow);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(user.SelectedCampusId, Is.EqualTo("ICTU"));
+            Assert.That(user.PreferredLanguage, Is.EqualTo("en"));
+            Assert.That(user.Version, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void Reconstitute_WithoutNewArguments_UsesDefaults()
+    {
+        var user = ReconstituteWithoutNewArguments();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(user.SelectedCampusId, Is.EqualTo("ICTU"));
+            Assert.That(user.PreferredLanguage, Is.EqualTo("en"));
+            Assert.That(user.Version, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void Reconstitute_WithExplicitValues_RoundTrips()
+    {
+        var user = ReconstituteUser("TNUS", "vi", 7);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(user.SelectedCampusId, Is.EqualTo("TNUS"));
+            Assert.That(user.PreferredLanguage, Is.EqualTo("vi"));
+            Assert.That(user.Version, Is.EqualTo(7));
+        });
+    }
+
+    [TestCase("fr")]
+    [TestCase("EN")]
+    [TestCase("Vi")]
+    [TestCase("")]
+    [TestCase(" ")]
+    [TestCase(null)]
+    public void Reconstitute_UnsupportedLanguage_ThrowsDomainValidationException(string? language)
+    {
+        var ex = Assert.Throws<DomainValidationException>(() => ReconstituteUser(preferredLanguage: language!));
+
+        Assert.That(ex!.Message, Does.Contain("not supported"));
+    }
+
+    [TestCase("")]
+    [TestCase(" ")]
+    [TestCase(null)]
+    public void Reconstitute_BlankCampus_ThrowsDomainValidationException(string? campusId)
+    {
+        var ex = Assert.Throws<DomainValidationException>(() => ReconstituteUser(selectedCampusId: campusId!));
+
+        Assert.That(ex!.Message, Does.Contain("Selected campus is required."));
+    }
+
+    [TestCase(0)]
+    [TestCase(-1)]
+    public void Reconstitute_VersionBelowOne_ThrowsDomainValidationException(int version)
+    {
+        var ex = Assert.Throws<DomainValidationException>(() => ReconstituteUser(version: version));
+
+        Assert.That(ex!.Message, Does.Contain("Version must be"));
+    }
+
+    [Test]
+    public void SupportedLanguages_ContainsExactlyEnAndVi()
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(User.SupportedLanguages, Is.EquivalentTo(new[] { "en", "vi" }));
+            Assert.That(User.SupportedLanguages, Does.Contain(User.DefaultPreferredLanguage));
+        });
+    }
+
+    [Test]
+    public void DefaultSelectedCampusId_MatchesCampusSeedDefault()
+    {
+        Assert.That(User.DefaultSelectedCampusId, Is.EqualTo(CampusSeedData.DefaultCampusId));
+    }
+
+    [Test]
+    public void Reconstitute_WithoutNewArguments_DoesNotChangeConcurrencyToken()
+    {
+        var withoutToken = ReconstituteWithoutNewArguments();
+
+        var withToken = User.Reconstitute(
+            id: "u1",
+            email: "student@ictu.edu.vn",
+            fullName: "Nguyen Van A",
+            passwordHash: "hash",
+            role: UserRole.Student,
+            authProvider: AuthProvider.Local,
+            ssoSubjectId: null,
+            phoneNumber: null,
+            studentCode: null,
+            isVerified: true,
+            failedLoginCount: 0,
+            lockoutEndUtc: null,
+            createdAtUtc: FixedNow,
+            updatedAtUtc: FixedNow,
+            concurrencyToken: "etag-1");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(withoutToken.ConcurrencyToken, Is.Null);
+            Assert.That(withToken.ConcurrencyToken, Is.EqualTo("etag-1"));
+        });
+    }
+
+    private static User ReconstituteUser(
+        string selectedCampusId = "ICTU",
+        string preferredLanguage = "en",
+        int version = 1)
+    {
+        return User.Reconstitute(
+            id: "u1",
+            email: "student@ictu.edu.vn",
+            fullName: "Nguyen Van A",
+            passwordHash: "hash",
+            role: UserRole.Student,
+            authProvider: AuthProvider.Local,
+            ssoSubjectId: null,
+            phoneNumber: null,
+            studentCode: null,
+            isVerified: true,
+            failedLoginCount: 0,
+            lockoutEndUtc: null,
+            createdAtUtc: FixedNow,
+            updatedAtUtc: FixedNow,
+            selectedCampusId: selectedCampusId,
+            preferredLanguage: preferredLanguage,
+            version: version);
+    }
+
+    private static User ReconstituteWithoutNewArguments()
+    {
+        return User.Reconstitute(
+            id: "u1",
+            email: "student@ictu.edu.vn",
+            fullName: "Nguyen Van A",
+            passwordHash: "hash",
+            role: UserRole.Student,
+            authProvider: AuthProvider.Local,
+            ssoSubjectId: null,
+            phoneNumber: null,
+            studentCode: null,
+            isVerified: true,
+            failedLoginCount: 0,
+            lockoutEndUtc: null,
+            createdAtUtc: FixedNow,
+            updatedAtUtc: FixedNow);
     }
 }
 
