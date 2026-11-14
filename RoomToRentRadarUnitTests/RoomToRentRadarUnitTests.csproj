@@ -18,6 +18,18 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Authentication / US13 linked components -->
+    <Compile Include="..\RoomToRentRadar\Core\Models\Authentication\AuthContracts.cs" Link="Linked\AuthContracts.cs" />
+    <Compile Include="..\RoomToRentRadar\Core\Interfaces\ISecureStorageService.cs" Link="Linked\ISecureStorageService.cs" />
+    <Compile Include="..\RoomToRentRadar\Core\Interfaces\IAuthenticationPort.cs" Link="Linked\IAuthenticationPort.cs" />
+    <Compile Include="..\RoomToRentRadar\Core\Interfaces\IAuthenticationSessionService.cs" Link="Linked\IAuthenticationSessionService.cs" />
+    <Compile Include="..\RoomToRentRadar\Core\Interfaces\IGoogleAuthAdapter.cs" Link="Linked\IGoogleAuthAdapter.cs" />
+    <Compile Include="..\RoomToRentRadar\Features\Authentication\ViewModels\AuthViewModel.cs" Link="Linked\AuthViewModel.cs" />
+    <Compile Include="..\RoomToRentRadar\Infrastructure\Adapters\HttpAuthAdapter.cs" Link="Linked\HttpAuthAdapter.cs" />
+    <Compile Include="..\RoomToRentRadar\Infrastructure\Services\AuthenticationSessionService.cs" Link="Linked\AuthenticationSessionService.cs" />
+    <Compile Include="..\RoomToRentRadar\Infrastructure\Api\AuthenticationHeaderHandler.cs" Link="Linked\AuthenticationHeaderHandler.cs" />
+
+    <!-- Room Listings / Core / US01 / Group 4 linked components -->
     <Compile Include="..\RoomToRentRadar\Core\Constants\AppRoutes.cs" Link="Linked\Core\Constants\AppRoutes.cs" />
     <Compile Include="..\RoomToRentRadar\Core\Interfaces\IErrorHandler.cs" Link="Linked\Core\Interfaces\IErrorHandler.cs" />
     <Compile Include="..\RoomToRentRadar\Infrastructure\Api\IApiClient.cs" Link="Linked\Infrastructure\Api\IApiClient.cs" />
