@@ -8,19 +8,6 @@ namespace RoomToRentRadar.Datastore.Sqlite.Context;
 
 public sealed class SqliteDbContext : IDisposable
 {
-    /// <summary>
-    /// Columns that must exist on <c>Rooms</c> for the ERD §4.4 schema. A pre-Task-3 database
-    /// (Phase 0 schema) lacks several of them; see <see cref="MigrateLegacyRoomsIfNeeded"/>.
-    /// </summary>
-    private static readonly string[] RequiredRoomColumns =
-    [
-        "Id", "LandlordId", "Title", "Description", "RoomType", "MonthlyRentVnd", "DepositVnd", "AreaM2",
-        "MaxOccupants", "Furnishing", "AvailableFrom", "AddressLine", "Ward", "District", "Latitude", "Longitude",
-        "ElectricityPriceVndPerKwh", "WaterPriceVnd", "WaterPriceUnit", "InternetFeeVnd", "ParkingFeeVnd",
-        "OtherFeesNote", "Status", "StatusReason", "NeedsReReview", "IsSafetyVerified", "VerifiedAtUtc",
-        "VerifiedByUserId", "PublishedAtUtc", "LastUpdatedAtUtc", "CreatedAtUtc", "Version"
-    ];
-
     private readonly SqliteSettings _settings;
     private readonly SqliteConnection? _keepAliveInMemoryConnection;
     private bool _schemaInitialized;
@@ -41,6 +28,7 @@ public sealed class SqliteDbContext : IDisposable
         {
             _keepAliveInMemoryConnection = new SqliteConnection(settings.ConnectionString);
             _keepAliveInMemoryConnection.Open();
+            EnableForeignKeys(_keepAliveInMemoryConnection);
         }
     }
 
@@ -55,6 +43,7 @@ public sealed class SqliteDbContext : IDisposable
 
         var connection = new SqliteConnection(_settings.ConnectionString);
         connection.Open();
+        EnableForeignKeys(connection);
         return connection;
     }
 
@@ -78,132 +67,16 @@ public sealed class SqliteDbContext : IDisposable
             if (conn != _keepAliveInMemoryConnection)
             {
                 conn.Open();
+                // PRAGMA foreign_keys is a no-op inside a transaction, so it must precede Migrate.
+                EnableForeignKeys(conn);
             }
 
             try
             {
-                MigrateLegacyRoomsIfNeeded(conn);
-
-                using (var cmd = conn.CreateCommand())
-                {
-                    cmd.CommandText = """
-                        CREATE TABLE IF NOT EXISTS Users (
-                            Id TEXT PRIMARY KEY NOT NULL,
-                            Email TEXT NOT NULL,
-                            NormalizedEmail TEXT NOT NULL UNIQUE,
-                            FullName TEXT NOT NULL,
-                            PasswordHash TEXT NULL,
-                            Role TEXT NOT NULL,
-                            AuthProvider TEXT NOT NULL,
-                            SsoSubjectId TEXT NULL,
-                            PhoneNumber TEXT NULL,
-                            StudentCode TEXT NULL,
-                            IsVerified INTEGER NOT NULL,
-                            FailedLoginCount INTEGER NOT NULL,
-                            LockoutEndUtc TEXT NULL,
-                            CreatedAtUtc TEXT NOT NULL,
-                            UpdatedAtUtc TEXT NOT NULL
-                        );
-
-                        CREATE TABLE IF NOT EXISTS UserRefreshTokens (
-                            TokenHash TEXT PRIMARY KEY NOT NULL,
-                            UserId TEXT NOT NULL,
-                            JwtId TEXT NOT NULL,
-                            CreatedAtUtc TEXT NOT NULL,
-                            ExpiresAtUtc TEXT NOT NULL,
-                            RevokedAtUtc TEXT NULL,
-                            ReplacedByTokenHash TEXT NULL,
-                            FOREIGN KEY (UserId) REFERENCES Users(Id) ON DELETE CASCADE
-                        );
-
-                        CREATE TABLE IF NOT EXISTS AuditLogs (
-                            Id TEXT PRIMARY KEY NOT NULL,
-                            UserId TEXT NULL,
-                            UserEmail TEXT NULL,
-                            Role TEXT NOT NULL,
-                            Action TEXT NOT NULL,
-                            EntityType TEXT NOT NULL,
-                            EntityId TEXT NULL,
-                            DetailsJson TEXT NULL,
-                            IpAddress TEXT NULL,
-                            UserAgent TEXT NULL,
-                            StatusCode INTEGER NULL,
-                            DurationMs INTEGER NULL,
-                            IsSuccess INTEGER NOT NULL,
-                            ErrorMessage TEXT NULL,
-                            TimestampUtc TEXT NOT NULL
-                        );
-
-                        -- ERD §4.1: campus reference data (seeded in CampusSeedData, BR-CMP-01..03).
-                        CREATE TABLE IF NOT EXISTS Campuses (
-                            Id TEXT PRIMARY KEY NOT NULL,
-                            Name TEXT NOT NULL,
-                            ShortName TEXT NOT NULL,
-                            Latitude REAL NOT NULL,
-                            Longitude REAL NOT NULL,
-                            IsDefault INTEGER NOT NULL DEFAULT 0,
-                            SortOrder INTEGER NOT NULL DEFAULT 0
-                        );
-
-                        -- ERD §4.4: full Rooms table (33 columns). ConcurrencyToken is derived from
-                        -- Version (ERD §1), never stored as a second source of truth.
-                        CREATE TABLE IF NOT EXISTS Rooms (
-                            Id TEXT PRIMARY KEY NOT NULL,
-                            LandlordId TEXT NOT NULL,
-                            Title TEXT NOT NULL,
-                            Description TEXT NULL,
-                            RoomType TEXT NOT NULL,
-                            MonthlyRentVnd INTEGER NOT NULL,
-                            DepositVnd INTEGER NOT NULL,
-                            AreaM2 REAL NOT NULL,
-                            MaxOccupants INTEGER NULL,
-                            Furnishing TEXT NULL,
-                            AvailableFrom TEXT NULL,
-                            AddressLine TEXT NOT NULL,
-                            Ward TEXT NOT NULL,
-                            District TEXT NOT NULL,
-                            Latitude REAL NOT NULL,
-                            Longitude REAL NOT NULL,
-                            ElectricityPriceVndPerKwh INTEGER NULL,
-                            WaterPriceVnd INTEGER NULL,
-                            WaterPriceUnit TEXT NULL,
-                            InternetFeeVnd INTEGER NULL,
-                            ParkingFeeVnd INTEGER NULL,
-                            OtherFeesNote TEXT NULL,
-                            Status TEXT NOT NULL,
-                            StatusReason TEXT NULL,
-                            NeedsReReview INTEGER NOT NULL DEFAULT 0,
-                            IsSafetyVerified INTEGER NOT NULL DEFAULT 0,
-                            VerifiedAtUtc TEXT NULL,
-                            VerifiedByUserId TEXT NULL,
-                            PublishedAtUtc TEXT NULL,
-                            LastUpdatedAtUtc TEXT NOT NULL,
-                            CreatedAtUtc TEXT NOT NULL,
-                            Version INTEGER NOT NULL DEFAULT 1
-                        );
-
-                        CREATE INDEX IF NOT EXISTS IX_Users_NormalizedEmail ON Users(NormalizedEmail);
-                        CREATE INDEX IF NOT EXISTS IX_UserRefreshTokens_UserId ON UserRefreshTokens(UserId);
-                        CREATE INDEX IF NOT EXISTS IX_AuditLogs_TimestampUtc ON AuditLogs(TimestampUtc DESC);
-                        CREATE INDEX IF NOT EXISTS IX_AuditLogs_UserId ON AuditLogs(UserId);
-                        CREATE INDEX IF NOT EXISTS IX_AuditLogs_Action ON AuditLogs(Action);
-
-                        -- ERD §4.4 indexes (ADR-006 bounding-box prefilter + search/sort).
-                        CREATE INDEX IF NOT EXISTS IX_Rooms_Status_Lat_Lng ON Rooms(Status, Latitude, Longitude);
-                        CREATE INDEX IF NOT EXISTS IX_Rooms_Status_Rent ON Rooms(Status, MonthlyRentVnd);
-                        CREATE INDEX IF NOT EXISTS IX_Rooms_LandlordId ON Rooms(LandlordId);
-                        CREATE INDEX IF NOT EXISTS IX_Rooms_Status_PublishedAtUtc ON Rooms(Status, PublishedAtUtc);
-                        CREATE INDEX IF NOT EXISTS IX_Rooms_NeedsReReview ON Rooms(NeedsReReview) WHERE NeedsReReview = 1;
-                        """;
-                    cmd.ExecuteNonQuery();
-                }
+                SqliteMigrator.Migrate(conn);
 
                 // Campuses is reference data: always seeded, in every environment (H4 / ADR-002).
                 SeedCampuses(conn);
-
-                // ERD §1: ConcurrencyToken = Version.ToString(), so the column is redundant on
-                // databases created by older builds; drop it rather than keeping two sources of truth.
-                DropLegacyConcurrencyTokenColumnIfPresent(conn);
 
                 if (_settings.SeedDemoRooms)
                 {
@@ -225,85 +98,11 @@ public sealed class SqliteDbContext : IDisposable
         }
     }
 
-    /// <summary>
-    /// Ruling #10: <c>CREATE TABLE IF NOT EXISTS</c> never upgrades an existing table, so a database
-    /// written by an older build keeps its truncated <c>Rooms</c> schema. If the table exists but is
-    /// missing ERD §4.4 columns, rename it to <c>Rooms_Legacy</c> (data preserved, never dropped) so
-    /// the new schema can be created.
-    /// </summary>
-    private static void MigrateLegacyRoomsIfNeeded(SqliteConnection conn)
-    {
-        HashSet<string> existingColumns;
-        using (var tableInfo = conn.CreateCommand())
-        {
-            tableInfo.CommandText = "PRAGMA table_info(Rooms);";
-            existingColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            using var reader = tableInfo.ExecuteReader();
-            while (reader.Read())
-            {
-                existingColumns.Add(reader.GetString(1));
-            }
-        }
-
-        // Empty set → table does not exist yet, nothing to migrate.
-        if (existingColumns.Count == 0 || RequiredRoomColumns.All(existingColumns.Contains))
-        {
-            return;
-        }
-
-        var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture);
-        var legacyTable = $"Rooms_Legacy_{timestamp}";
-
-        // Never overwrite an earlier legacy copy (e.g. two migrations in the same second).
-        var suffix = 1;
-        while (TableExists(conn, legacyTable))
-        {
-            legacyTable = $"Rooms_Legacy_{timestamp}_{suffix++}";
-        }
-
-        using var rename = conn.CreateCommand();
-        rename.CommandText = $"ALTER TABLE Rooms RENAME TO \"{legacyTable}\";";
-        rename.ExecuteNonQuery();
-    }
-
-    private static bool TableExists(SqliteConnection conn, string tableName)
+    private static void EnableForeignKeys(SqliteConnection conn)
     {
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT COUNT(1) FROM sqlite_master WHERE type = 'table' AND name = @name;";
-        cmd.Parameters.AddWithValue("@name", tableName);
-        return Convert.ToInt64(cmd.ExecuteScalar(), CultureInfo.InvariantCulture) > 0;
-    }
-
-    /// <summary>
-    /// ERD §1: the concurrency token is <c>Version.ToString()</c>, so a stored
-    /// <c>ConcurrencyToken</c> column (written by older builds) is redundant and blocks INSERTs that
-    /// no longer bind it. Drop it only when present, so fresh databases are untouched.
-    /// </summary>
-    private static void DropLegacyConcurrencyTokenColumnIfPresent(SqliteConnection conn)
-    {
-        var hasColumn = false;
-        using (var tableInfo = conn.CreateCommand())
-        {
-            tableInfo.CommandText = "PRAGMA table_info(Rooms);";
-            using var reader = tableInfo.ExecuteReader();
-            while (reader.Read())
-            {
-                if (string.Equals(reader.GetString(1), "ConcurrencyToken", StringComparison.OrdinalIgnoreCase))
-                {
-                    hasColumn = true;
-                    break;
-                }
-            }
-        }
-
-        if (!hasColumn)
-        {
-            return;
-        }
-
-        using var alter = conn.CreateCommand();
-        alter.CommandText = "ALTER TABLE Rooms DROP COLUMN ConcurrencyToken;";
-        alter.ExecuteNonQuery();
+        cmd.CommandText = "PRAGMA foreign_keys = ON;";
+        cmd.ExecuteNonQuery();
     }
 
     /// <summary>
