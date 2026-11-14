@@ -136,7 +136,7 @@ public class SqliteRoomRepositoryTests
             {
                 Assert.Multiple(() =>
                 {
-                    Assert.That(ReadScalar(firstConnection, "PRAGMA user_version;"), Is.EqualTo(1));
+                    Assert.That(ReadScalar(firstConnection, "PRAGMA user_version;"), Is.EqualTo(SqliteMigrator.LoadEmbedded().Max(script => script.Version)));
                     Assert.That(ReadScalar(firstConnection, "SELECT COUNT(1) FROM Campuses;"), Is.EqualTo(8));
                 });
             }
@@ -145,7 +145,7 @@ public class SqliteRoomRepositoryTests
             using var secondConnection = second.CreateOpenConnection();
             Assert.Multiple(() =>
             {
-                Assert.That(ReadScalar(secondConnection, "PRAGMA user_version;"), Is.EqualTo(1),
+                Assert.That(ReadScalar(secondConnection, "PRAGMA user_version;"), Is.EqualTo(SqliteMigrator.LoadEmbedded().Max(script => script.Version)),
                     "Mở lại file không được chạy lại migration.");
                 Assert.That(ReadScalar(secondConnection, "SELECT COUNT(1) FROM Campuses;"), Is.EqualTo(8),
                     "Seed Campuses phải giữ nguyên khi mở lại file.");

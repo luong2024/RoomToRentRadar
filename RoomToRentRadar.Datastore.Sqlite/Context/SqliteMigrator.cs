@@ -7,6 +7,8 @@ namespace RoomToRentRadar.Datastore.Sqlite.Context;
 /// <summary>
 /// T00.6: applies embedded SQL migrations in ascending version order, tracking progress in
 /// <c>PRAGMA user_version</c>. Each script runs in its own transaction.
+/// T00.7: each script runs with foreign keys switched off (the previous state is restored in a
+/// finally block) and <c>foreign_key_check</c> must be empty before the transaction commits.
 /// </summary>
 public static class SqliteMigrator
 {
@@ -93,6 +95,38 @@ public static class SqliteMigrator
 
     private static void ApplyScript(SqliteConnection connection, MigrationScript script)
     {
+        bool foreignKeysWereOn;
+        using (var command = connection.CreateCommand())
+        {
+            command.CommandText = "PRAGMA foreign_keys;";
+            foreignKeysWereOn = Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture) != 0;
+        }
+
+        // T00.7: PRAGMA foreign_keys is a no-op inside a transaction, so it is switched before BeginTransaction.
+        if (foreignKeysWereOn)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = "PRAGMA foreign_keys = OFF;";
+            command.ExecuteNonQuery();
+        }
+
+        try
+        {
+            ApplyScriptInTransaction(connection, script);
+        }
+        finally
+        {
+            if (foreignKeysWereOn)
+            {
+                using var command = connection.CreateCommand();
+                command.CommandText = "PRAGMA foreign_keys = ON;";
+                command.ExecuteNonQuery();
+            }
+        }
+    }
+
+    private static void ApplyScriptInTransaction(SqliteConnection connection, MigrationScript script)
+    {
         using var transaction = connection.BeginTransaction();
         try
         {
@@ -101,6 +135,20 @@ public static class SqliteMigrator
                 command.Transaction = transaction;
                 command.CommandText = script.Sql;
                 command.ExecuteNonQuery();
+            }
+
+            // foreign_key_check must be empty before commit (SQLite recommended schema-change procedure).
+            long violations;
+            using (var command = connection.CreateCommand())
+            {
+                command.Transaction = transaction;
+                command.CommandText = "SELECT COUNT(1) FROM pragma_foreign_key_check;";
+                violations = Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture);
+            }
+
+            if (violations > 0)
+            {
+                throw new InvalidOperationException($"foreign_key_check found {violations} violation(s)");
             }
 
             using (var command = connection.CreateCommand())

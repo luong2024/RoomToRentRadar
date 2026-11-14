@@ -44,7 +44,7 @@ public class SqliteMigratorTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(applied, Is.EqualTo(new[] { 1 }));
+            Assert.That(applied, Is.EqualTo(new[] { 1, 2 }));
             Assert.That(ReadNames(connection, "table"), Is.EquivalentTo(BaselineTableNames));
             Assert.That(ReadNames(connection, "index"), Is.EquivalentTo(BaselineIndexNames));
 
@@ -53,7 +53,7 @@ public class SqliteMigratorTests
             Assert.That(columns, Is.EquivalentTo(RoomColumnNames));
             Assert.That(columns, Does.Not.Contain("ConcurrencyToken"),
                 "ConcurrencyToken là Version.ToString() (ERD §1) — không được lưu thành cột riêng.");
-            Assert.That(ReadUserVersion(connection), Is.EqualTo(1));
+            Assert.That(ReadUserVersion(connection), Is.EqualTo(LatestVersion));
         });
     }
 
@@ -68,7 +68,7 @@ public class SqliteMigratorTests
         Assert.Multiple(() =>
         {
             Assert.That(applied, Is.Empty);
-            Assert.That(ReadUserVersion(connection), Is.EqualTo(1));
+            Assert.That(ReadUserVersion(connection), Is.EqualTo(LatestVersion));
         });
     }
 
@@ -77,8 +77,9 @@ public class SqliteMigratorTests
     {
         using var connection = OpenMemoryConnection();
         SqliteMigrator.Migrate(connection);
+        var nextVersion = LatestVersion + 1;
         var scripts = SqliteMigrator.LoadEmbedded()
-            .Append(new SqliteMigrator.MigrationScript(2, "Migrations/0002_fake.sql",
+            .Append(new SqliteMigrator.MigrationScript(nextVersion, $"Migrations/{nextVersion:D4}_fake.sql",
                 "CREATE TABLE FakeTwo (Id TEXT PRIMARY KEY NOT NULL);"))
             .ToList();
 
@@ -86,9 +87,9 @@ public class SqliteMigratorTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(applied, Is.EqualTo(new[] { 2 }));
+            Assert.That(applied, Is.EqualTo(new[] { nextVersion }));
             Assert.That(ReadNames(connection, "table"), Does.Contain("FakeTwo"));
-            Assert.That(ReadUserVersion(connection), Is.EqualTo(2));
+            Assert.That(ReadUserVersion(connection), Is.EqualTo(nextVersion));
         });
     }
 
@@ -122,8 +123,9 @@ public class SqliteMigratorTests
     {
         using var connection = OpenMemoryConnection();
         SqliteMigrator.Migrate(connection);
+        var nextVersion = LatestVersion + 1;
         var scripts = SqliteMigrator.LoadEmbedded()
-            .Append(new SqliteMigrator.MigrationScript(2, "Migrations/0002_broken.sql",
+            .Append(new SqliteMigrator.MigrationScript(nextVersion, $"Migrations/{nextVersion:D4}_broken.sql",
                 "CREATE TABLE ShouldNotExist (Id TEXT PRIMARY KEY NOT NULL); INSERT INTO MissingTable (Id) VALUES ('x');"))
             .ToList();
 
@@ -131,8 +133,8 @@ public class SqliteMigratorTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(exception!.Message, Does.Contain("0002"));
-            Assert.That(ReadUserVersion(connection), Is.EqualTo(1));
+            Assert.That(exception!.Message, Does.Contain(nextVersion.ToString("D4", CultureInfo.InvariantCulture)));
+            Assert.That(ReadUserVersion(connection), Is.EqualTo(LatestVersion));
             Assert.That(ReadNames(connection, "table"), Does.Not.Contain("ShouldNotExist"));
         });
     }
@@ -192,6 +194,155 @@ public class SqliteMigratorTests
         });
     }
 
+    [Test]
+    public void Migrate_ExistingUsersAndRefreshTokens_PreservedWithDefaultsApplied()
+    {
+        using var connection = OpenMemoryConnection();
+        MigrateToVersionOne(connection);
+        InsertIctuCampus(connection);
+        InsertVersionOneUser(connection, "user-old");
+        Execute(connection, """
+            INSERT INTO UserRefreshTokens (TokenHash, UserId, JwtId, CreatedAtUtc, ExpiresAtUtc)
+            VALUES ('hash-old', 'user-old', 'jti-old', '2026-11-15T08:00:00.0000000Z', '2026-11-22T08:00:00.0000000Z');
+            """);
+        Assert.That(ReadScalarLong(connection, "PRAGMA foreign_keys;"), Is.EqualTo(1));
+
+        var applied = SqliteMigrator.Migrate(connection);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(applied, Is.EqualTo(new[] { 2 }));
+            Assert.That(ReadScalarLong(connection, "SELECT COUNT(1) FROM Users;"), Is.EqualTo(1));
+            Assert.That(ReadScalarLong(connection, "SELECT COUNT(1) FROM UserRefreshTokens;"), Is.EqualTo(1));
+            Assert.That(ReadScalarText(connection, "SELECT SelectedCampusId FROM Users WHERE Id = 'user-old';"), Is.EqualTo("ICTU"));
+            Assert.That(ReadScalarText(connection, "SELECT PreferredLanguage FROM Users WHERE Id = 'user-old';"), Is.EqualTo("en"));
+            Assert.That(ReadScalarLong(connection, "SELECT Version FROM Users WHERE Id = 'user-old';"), Is.EqualTo(1));
+            Assert.That(ReadUserVersion(connection), Is.EqualTo(2));
+        });
+    }
+
+    [Test]
+    public void Migrate_UsersDelta_EnforcesCheckForeignKeyAndNotNull()
+    {
+        using var connection = OpenMemoryConnection();
+        SqliteMigrator.Migrate(connection);
+        InsertIctuCampus(connection);
+        InsertVersionOneUser(connection, "user-delta");
+
+        var check = Assert.Throws<SqliteException>(
+            () => Execute(connection, "UPDATE Users SET PreferredLanguage = 'fr' WHERE Id = 'user-delta';"));
+        Assert.That(check!.SqliteExtendedErrorCode, Is.EqualTo(275), "CHECK constraint on PreferredLanguage.");
+
+        var foreignKey = Assert.Throws<SqliteException>(
+            () => Execute(connection, "UPDATE Users SET SelectedCampusId = 'NOPE' WHERE Id = 'user-delta';"));
+        Assert.That(foreignKey!.SqliteExtendedErrorCode, Is.EqualTo(787), "FK constraint on SelectedCampusId.");
+
+        var campusNotNull = Assert.Throws<SqliteException>(
+            () => Execute(connection, "UPDATE Users SET SelectedCampusId = NULL WHERE Id = 'user-delta';"));
+        Assert.That(campusNotNull!.SqliteExtendedErrorCode, Is.EqualTo(1299), "NOT NULL constraint on SelectedCampusId.");
+
+        var versionNotNull = Assert.Throws<SqliteException>(
+            () => Execute(connection, "UPDATE Users SET Version = NULL WHERE Id = 'user-delta';"));
+        Assert.That(versionNotNull!.SqliteExtendedErrorCode, Is.EqualTo(1299), "NOT NULL constraint on Version.");
+    }
+
+    [Test]
+    public void Migrate_UsersDelta_InsertWithoutNewColumns_GetsDefaults()
+    {
+        using var connection = OpenMemoryConnection();
+        SqliteMigrator.Migrate(connection);
+        InsertIctuCampus(connection);
+
+        InsertVersionOneUser(connection, "user-defaults");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ReadScalarText(connection, "SELECT SelectedCampusId FROM Users WHERE Id = 'user-defaults';"), Is.EqualTo("ICTU"));
+            Assert.That(ReadScalarText(connection, "SELECT PreferredLanguage FROM Users WHERE Id = 'user-defaults';"), Is.EqualTo("en"));
+            Assert.That(ReadScalarLong(connection, "SELECT Version FROM Users WHERE Id = 'user-defaults';"), Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void Migrate_ForeignKeysOnBeforeMigration_AreOnAfterwards()
+    {
+        using var connection = OpenMemoryConnection();
+        Assert.That(ReadScalarLong(connection, "PRAGMA foreign_keys;"), Is.EqualTo(1));
+
+        SqliteMigrator.Migrate(connection);
+
+        Assert.That(ReadScalarLong(connection, "PRAGMA foreign_keys;"), Is.EqualTo(1));
+    }
+
+    [Test]
+    public void Migrate_ForeignKeysOffBeforeMigration_StayOffAfterwards()
+    {
+        using var connection = OpenMemoryConnection();
+        Execute(connection, "PRAGMA foreign_keys = OFF;");
+        Assert.That(ReadScalarLong(connection, "PRAGMA foreign_keys;"), Is.EqualTo(0));
+
+        SqliteMigrator.Migrate(connection);
+
+        Assert.That(ReadScalarLong(connection, "PRAGMA foreign_keys;"), Is.EqualTo(0));
+    }
+
+    [Test]
+    public void Migrate_ScriptLeavesForeignKeyViolation_RollsBackAndKeepsVersion()
+    {
+        using var connection = OpenMemoryConnection();
+        MigrateToVersionOne(connection);
+        var nextVersion = LatestVersion + 1;
+        var scripts = SqliteMigrator.LoadEmbedded()
+            .Append(new SqliteMigrator.MigrationScript(nextVersion, $"Migrations/{nextVersion:D4}_orphan.sql",
+                "CREATE TABLE Parent (Id TEXT PRIMARY KEY NOT NULL); CREATE TABLE Child (Id TEXT PRIMARY KEY NOT NULL, ParentId TEXT NOT NULL REFERENCES Parent(Id)); INSERT INTO Child (Id, ParentId) VALUES ('c1', 'missing');"))
+            .ToList();
+
+        var exception = Assert.Throws<InvalidOperationException>(() => SqliteMigrator.Migrate(connection, scripts));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception!.Message, Does.Contain("foreign_key_check"));
+            Assert.That(ReadUserVersion(connection), Is.EqualTo(LatestVersion));
+            Assert.That(ReadNames(connection, "table"), Does.Not.Contain("Parent"));
+            Assert.That(ReadNames(connection, "table"), Does.Not.Contain("Child"));
+            Assert.That(ReadScalarLong(connection, "PRAGMA foreign_keys;"), Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void Migrate_UsersExistButCampusesEmpty_RollsBackWithForeignKeyMessage()
+    {
+        using var connection = OpenMemoryConnection();
+        MigrateToVersionOne(connection);
+        InsertVersionOneUser(connection, "user-no-campus");
+
+        var exception = Assert.Throws<InvalidOperationException>(() => SqliteMigrator.Migrate(connection));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception!.Message, Does.Contain("0002"));
+            Assert.That(exception.Message, Does.Contain("foreign_key_check"));
+            Assert.That(ReadUserVersion(connection), Is.EqualTo(1));
+            Assert.That(ReadScalarLong(connection, "SELECT COUNT(1) FROM pragma_table_info('Users') WHERE name = 'SelectedCampusId';"), Is.EqualTo(0));
+        });
+    }
+
+    [Test]
+    public void Migrate_FailingScript_StillRestoresForeignKeys()
+    {
+        using var connection = OpenMemoryConnection();
+        Assert.That(ReadScalarLong(connection, "PRAGMA foreign_keys;"), Is.EqualTo(1));
+        var nextVersion = LatestVersion + 1;
+        var scripts = SqliteMigrator.LoadEmbedded()
+            .Append(new SqliteMigrator.MigrationScript(nextVersion, $"Migrations/{nextVersion:D4}_broken_fk.sql",
+                "INSERT INTO MissingTable (Id) VALUES ('x');"))
+            .ToList();
+
+        Assert.Throws<InvalidOperationException>(() => SqliteMigrator.Migrate(connection, scripts));
+
+        Assert.That(ReadScalarLong(connection, "PRAGMA foreign_keys;"), Is.EqualTo(1));
+    }
+
     private static SqliteConnection OpenMemoryConnection()
     {
         var connection = new SqliteConnection("Data Source=:memory:");
@@ -242,5 +393,43 @@ public class SqliteMigratorTests
         }
 
         return columns;
+    }
+
+    private static int LatestVersion => SqliteMigrator.LoadEmbedded().Max(script => script.Version);
+
+    private static void MigrateToVersionOne(SqliteConnection connection) =>
+        SqliteMigrator.Migrate(connection, SqliteMigrator.LoadEmbedded().Where(script => script.Version <= 1).ToList());
+
+    private static long ReadScalarLong(SqliteConnection connection, string sql)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        return Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture);
+    }
+
+    private static string ReadScalarText(SqliteConnection connection, string sql)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        return (string)command.ExecuteScalar()!;
+    }
+
+    private static void InsertIctuCampus(SqliteConnection connection) =>
+        Execute(connection, """
+            INSERT INTO Campuses (Id, Name, ShortName, Latitude, Longitude, IsDefault, SortOrder)
+            VALUES ('ICTU', 'Trường Đại học Công nghệ Thông tin và Truyền thông', 'ICTU', 21.5851, 105.8066, 1, 1);
+            """);
+
+    private static void InsertVersionOneUser(SqliteConnection connection, string id)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO Users (Id, Email, NormalizedEmail, FullName, Role, AuthProvider, IsVerified, FailedLoginCount, CreatedAtUtc, UpdatedAtUtc)
+            VALUES (@id, @email, @normalizedEmail, 'Test User', 'Student', 'Local', 0, 0, '2026-11-15T08:00:00.0000000Z', '2026-11-15T08:00:00.0000000Z');
+            """;
+        command.Parameters.AddWithValue("@id", id);
+        command.Parameters.AddWithValue("@email", id + "@example.com");
+        command.Parameters.AddWithValue("@normalizedEmail", id.ToUpperInvariant() + "@EXAMPLE.COM");
+        command.ExecuteNonQuery();
     }
 }
