@@ -1323,7 +1323,7 @@ components:
         refreshToken: { type: string }
     UserProfileDto:
       type: object
-      required: [id, email, fullName, role, authProvider, isVerified, createdAtUtc]
+      required: [id, email, fullName, role, authProvider, isVerified, createdAtUtc, selectedCampusId, preferredLanguage]
       properties:
         id: { type: string }
         email: { type: string }
@@ -1334,8 +1334,8 @@ components:
         studentCode: { type: [string, 'null'] }
         isVerified: { type: boolean }
         createdAtUtc: { type: string, format: date-time }
-        selectedCampusId: { type: string, description: 'PLANNED addition (BR-CMP-02) — shared DTO change requires approval' }
-        preferredLanguage: { $ref: '#/components/schemas/AppLanguage', description: 'PLANNED addition (US15, BR-I18N-02)' }
+        selectedCampusId: { type: string, description: 'Campus id as returned by listCampuses; defaults to ICTU (BR-CMP-02)' }
+        preferredLanguage: { $ref: '#/components/schemas/AppLanguage', description: 'UI language en or vi; defaults to en (US15, BR-I18N-02)' }
     AuthTokensDto:
       type: object
       required: [accessToken, refreshToken, accessTokenExpiresAtUtc, refreshTokenExpiresAtUtc, user]

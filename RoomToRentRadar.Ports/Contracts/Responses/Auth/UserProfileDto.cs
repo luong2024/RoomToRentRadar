@@ -1,3 +1,5 @@
+using RoomToRentRadar.Domain.Aggregates;
+
 namespace RoomToRentRadar.Ports.Contracts.Responses.Auth;
 
 public record UserProfileDto(
@@ -9,6 +11,9 @@ public record UserProfileDto(
     string? PhoneNumber,
     string? StudentCode,
     bool IsVerified,
-    DateTime CreatedAtUtc
+    DateTime CreatedAtUtc,
+    // BR-CMP-02 / BR-I18N-02: defaults keep legacy callers and cached profile JSON working.
+    string SelectedCampusId = User.DefaultSelectedCampusId,
+    string PreferredLanguage = User.DefaultPreferredLanguage
 );
 
