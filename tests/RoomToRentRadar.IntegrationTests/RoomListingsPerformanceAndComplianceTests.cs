@@ -569,9 +569,32 @@ public class CosmosRoomListingPerformanceIntegrationTests
             return;
         }
 
-        // Query Page 1 and Page 2 (pageSize: 10) on distance sort across the boundary
+        const string boundaryCampusId = "campus-identical-boundary";
+        var expectedIds = new HashSet<string>();
+
+        // Explicitly seed 25 rooms with identical coordinates into Cosmos DB across page boundaries
+        for (var i = 1; i <= 25; i++)
+        {
+            var id = $"room-identical-{i:D3}";
+            expectedIds.Add(id);
+            var room = new RoomListing(
+                id,
+                $"Phòng cùng tọa độ #{i}",
+                "Cùng tọa độ",
+                new Money(2000000),
+                22.0,
+                "Địa chỉ chung",
+                _campusLocation, // Exact identical coordinates!
+                ListingRoomStatus.Available,
+                VerificationStatus.Verified,
+                boundaryCampusId);
+
+            await _repository.AddAsync(room);
+        }
+
+        // Query Page 1, Page 2, Page 3 (pageSize: 10) on distance sort across the boundary
         var page1 = await _repository.GetAvailableVerifiedRoomsByCampusAsync(
-            CampusId,
+            boundaryCampusId,
             _campusLocation,
             page: 1,
             pageSize: 10,
@@ -579,9 +602,17 @@ public class CosmosRoomListingPerformanceIntegrationTests
             descending: false);
 
         var page2 = await _repository.GetAvailableVerifiedRoomsByCampusAsync(
-            CampusId,
+            boundaryCampusId,
             _campusLocation,
             page: 2,
+            pageSize: 10,
+            sortBy: "distance",
+            descending: false);
+
+        var page3 = await _repository.GetAvailableVerifiedRoomsByCampusAsync(
+            boundaryCampusId,
+            _campusLocation,
+            page: 3,
             pageSize: 10,
             sortBy: "distance",
             descending: false);
@@ -590,12 +621,20 @@ public class CosmosRoomListingPerformanceIntegrationTests
         {
             Assert.That(page1.Items, Has.Count.EqualTo(10));
             Assert.That(page2.Items, Has.Count.EqualTo(10));
+            Assert.That(page3.Items, Has.Count.EqualTo(5));
 
             var p1Ids = page1.Items.Select(x => x.Id).ToHashSet();
             var p2Ids = page2.Items.Select(x => x.Id).ToHashSet();
+            var p3Ids = page3.Items.Select(x => x.Id).ToHashSet();
 
-            // Consecutive pages must not overlap across the page boundary
-            Assert.That(p1Ids.Overlaps(p2Ids), Is.False, "Consecutive pages must not produce overlapping items across page boundary");
+            // 1. Zero duplicates across consecutive pages across boundary
+            Assert.That(p1Ids.Overlaps(p2Ids), Is.False, "Page 1 and Page 2 must not have overlapping items");
+            Assert.That(p2Ids.Overlaps(p3Ids), Is.False, "Page 2 and Page 3 must not have overlapping items");
+            Assert.That(p1Ids.Overlaps(p3Ids), Is.False, "Page 1 and Page 3 must not have overlapping items");
+
+            // 2. Full set reconciliation: 100% of seeded items are present, zero omitted!
+            var actualAllIds = p1Ids.Union(p2Ids).Union(p3Ids).ToHashSet();
+            Assert.That(actualAllIds, Is.EqualTo(expectedIds), "Sequential pagination across identical coordinates must recover 100% of seeded items without omissions or duplicates");
         });
     }
 }
