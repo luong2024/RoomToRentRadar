@@ -25,17 +25,3 @@ namespace RoomToRentRadar.Datastore.Sqlite
         }
     }
 }
-
-namespace RoomToRentRadar.Datastore
-{
-    using RoomToRentRadar.Datastore.Sqlite;
-    using RoomToRentRadar.Datastore.Sqlite.Configurations;
-
-    public static class SqliteDatastoreCompatibilityExtensions
-    {
-        public static IServiceCollection AddDatastore(
-            this IServiceCollection services,
-            SqliteSettings? settings = null) =>
-            services.AddSqliteDatastore(settings);
-    }
-}
