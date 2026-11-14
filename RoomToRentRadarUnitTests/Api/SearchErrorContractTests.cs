@@ -2,7 +2,7 @@ using System.Reflection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RoomToRentRadar.Api.Controllers;
-using RoomToRentRadar.Api.Middlewares;
+using RoomToRentRadar.Api.Errors;
 using RoomToRentRadar.Domain.Exceptions;
 using RoomToRentRadar.Ports.Contracts.Requests.Rooms;
 
@@ -35,64 +35,54 @@ public class SearchErrorContractTests
     [Test]
     public void Middleware_MapsDomainValidationExceptionTo400WithErrorCode()
     {
-        var mapped = AuthExceptionHandlingMiddleware.TryMapException(
-            new DomainValidationException("Invalid sort option.", "INVALID_SORT_OPTION"),
-            out var statusCode,
-            out _);
+        var mapping = ExceptionProblemMap.Resolve(
+            new DomainValidationException("Invalid sort option.", "INVALID_SORT_OPTION"));
 
         Assert.Multiple(() =>
         {
-            Assert.That(mapped, Is.True);
-            Assert.That(statusCode, Is.EqualTo(400));
+            Assert.That(mapping, Is.Not.Null);
+            Assert.That(mapping!.Status, Is.EqualTo(400));
+            Assert.That(mapping.ErrorCode, Is.EqualTo("INVALID_SORT_OPTION"));
         });
     }
 
     [Test]
     public void Middleware_MapsDomainValidationWithoutCodeToValidationFailed()
     {
-        var mapped = AuthExceptionHandlingMiddleware.TryMapException(
-            new DomainValidationException("missing"),
-            out var statusCode,
-            out _,
-            out var errorCode);
+        var mapping = ExceptionProblemMap.Resolve(new DomainValidationException("missing"));
 
         Assert.Multiple(() =>
         {
-            Assert.That(mapped, Is.True);
-            Assert.That(statusCode, Is.EqualTo(400));
-            Assert.That(errorCode, Is.EqualTo("VALIDATION_FAILED"), "system-architecture §7.2");
+            Assert.That(mapping, Is.Not.Null);
+            Assert.That(mapping!.Status, Is.EqualTo(400));
+            Assert.That(mapping.ErrorCode, Is.EqualTo("VALIDATION_FAILED"), "system-architecture §7.2");
         });
     }
 
     [Test]
     public void Middleware_MapsInvalidStateTransitionToInvalidStateTransitionCode()
     {
-        var mapped = AuthExceptionHandlingMiddleware.TryMapException(
-            new InvalidStateTransitionException("Cannot Approve: listing is 'Rejected'."),
-            out var statusCode,
-            out _,
-            out var errorCode);
+        var mapping = ExceptionProblemMap.Resolve(
+            new InvalidStateTransitionException("Cannot Approve: listing is 'Rejected'."));
 
         Assert.Multiple(() =>
         {
-            Assert.That(mapped, Is.True);
-            Assert.That(statusCode, Is.EqualTo(409));
-            Assert.That(errorCode, Is.EqualTo("INVALID_STATE_TRANSITION"), "system-architecture §7.2");
+            Assert.That(mapping, Is.Not.Null);
+            Assert.That(mapping!.Status, Is.EqualTo(409));
+            Assert.That(mapping.ErrorCode, Is.EqualTo("INVALID_STATE_TRANSITION"), "system-architecture §7.2");
         });
     }
 
     [Test]
     public void Middleware_MapsInvalidStateTransitionTo409()
     {
-        var mapped = AuthExceptionHandlingMiddleware.TryMapException(
-            new InvalidStateTransitionException("Cannot Approve: listing is 'Rejected'."),
-            out var statusCode,
-            out _);
+        var mapping = ExceptionProblemMap.Resolve(
+            new InvalidStateTransitionException("Cannot Approve: listing is 'Rejected'."));
 
         Assert.Multiple(() =>
         {
-            Assert.That(mapped, Is.True, "ADR-011 yêu cầu 409 chứ không phải 500");
-            Assert.That(statusCode, Is.EqualTo(409));
+            Assert.That(mapping, Is.Not.Null, "ADR-011 yêu cầu 409 chứ không phải 500");
+            Assert.That(mapping!.Status, Is.EqualTo(409));
         });
     }
 

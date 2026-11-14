@@ -91,7 +91,7 @@ builder.Services.AddAuthorization(AuthorizationPolicies.ConfigurePolicies);
 // ===== 6. Request pipeline =====
 var app = builder.Build();
 
-app.UseMiddleware<AuthExceptionHandlingMiddleware>();
+app.UseMiddleware<ProblemDetailsMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<AuditLoggingMiddleware>();
