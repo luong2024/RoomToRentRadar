@@ -63,6 +63,30 @@ public class GetRoomListingsUseCaseTests
         Assert.ThrowsAsync<ValidationException>(() => _useCase.ExecuteAsync(query));
     }
 
+    [TestCase("invalid")]
+    [TestCase("name")]
+    [TestCase("created_at")]
+    [TestCase("123")]
+    public void ExecuteAsync_WhenSortByIsInvalid_ShouldThrowValidationException(string sortBy)
+    {
+        var query = new GetRoomListingsQuery("campus-ictu", SortBy: sortBy);
+
+        var ex = Assert.ThrowsAsync<ValidationException>(() => _useCase.ExecuteAsync(query));
+        Assert.That(ex!.Errors.ContainsKey("SortBy"), Is.True);
+    }
+
+    [TestCase("invalid")]
+    [TestCase("descending")]
+    [TestCase("ascending")]
+    [TestCase("up")]
+    public void ExecuteAsync_WhenSortOrderIsInvalid_ShouldThrowValidationException(string sortOrder)
+    {
+        var query = new GetRoomListingsQuery("campus-ictu", SortOrder: sortOrder);
+
+        var ex = Assert.ThrowsAsync<ValidationException>(() => _useCase.ExecuteAsync(query));
+        Assert.That(ex!.Errors.ContainsKey("SortOrder"), Is.True);
+    }
+
     [Test]
     public void ExecuteAsync_WhenCampusNotFound_ShouldThrowCampusNotFoundException()
     {
@@ -174,6 +198,48 @@ public class GetRoomListingsUseCaseTests
         });
     }
 
+    [Test]
+    public async Task ExecuteAsync_SortByPriceAndArea_ShouldSortCorrectly()
+    {
+        var cheapSmall = new RoomListing("r1", "Cheap Small", "Desc", new Money(1000000), 15.0, "Addr", new GeoLocation(21.5852, 105.8074), ListingRoomStatus.Available, VerificationStatus.Verified, "campus-ictu");
+        var expensiveBig = new RoomListing("r2", "Expensive Big", "Desc", new Money(3000000), 35.0, "Addr", new GeoLocation(21.5852, 105.8074), ListingRoomStatus.Available, VerificationStatus.Verified, "campus-ictu");
+
+        await _roomRepository.AddAsync(expensiveBig);
+        await _roomRepository.AddAsync(cheapSmall);
+
+        var priceAsc = await _useCase.ExecuteAsync(new GetRoomListingsQuery("campus-ictu", SortBy: "price", SortOrder: "asc"));
+        Assert.That(priceAsc.Items[0].Id, Is.EqualTo("r1"));
+
+        var priceDesc = await _useCase.ExecuteAsync(new GetRoomListingsQuery("campus-ictu", SortBy: "price", SortOrder: "desc"));
+        Assert.That(priceDesc.Items[0].Id, Is.EqualTo("r2"));
+
+        var areaAsc = await _useCase.ExecuteAsync(new GetRoomListingsQuery("campus-ictu", SortBy: "area", SortOrder: "asc"));
+        Assert.That(areaAsc.Items[0].Id, Is.EqualTo("r1"));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WhenValuesEqual_TieBreakerEnsuresStablePaginationOrder()
+    {
+        // 3 rooms with the exact same price
+        var roomA = new RoomListing("room-A", "Room A", "Desc", new Money(2000000), 20.0, "Addr", new GeoLocation(21.5852, 105.8074), ListingRoomStatus.Available, VerificationStatus.Verified, "campus-ictu");
+        var roomB = new RoomListing("room-B", "Room B", "Desc", new Money(2000000), 20.0, "Addr", new GeoLocation(21.5852, 105.8074), ListingRoomStatus.Available, VerificationStatus.Verified, "campus-ictu");
+        var roomC = new RoomListing("room-C", "Room C", "Desc", new Money(2000000), 20.0, "Addr", new GeoLocation(21.5852, 105.8074), ListingRoomStatus.Available, VerificationStatus.Verified, "campus-ictu");
+
+        await _roomRepository.AddAsync(roomC);
+        await _roomRepository.AddAsync(roomA);
+        await _roomRepository.AddAsync(roomB);
+
+        var result = await _useCase.ExecuteAsync(new GetRoomListingsQuery("campus-ictu", SortBy: "price", SortOrder: "asc"));
+
+        // Tie-breaker by Id guarantees deterministic ascending order: room-A, room-B, room-C
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Items[0].Id, Is.EqualTo("room-A"));
+            Assert.That(result.Items[1].Id, Is.EqualTo("room-B"));
+            Assert.That(result.Items[2].Id, Is.EqualTo("room-C"));
+        });
+    }
+
     private static RoomListing CreateListing(string id, GeoLocation location, ListingRoomStatus status, VerificationStatus verification)
     {
         return new RoomListing(
@@ -200,9 +266,9 @@ public class GetRoomListingsUseCaseTests
             var results = _items.Where(r => r.CampusId == campusId && r.Status == ListingRoomStatus.Available && r.VerificationStatus == VerificationStatus.Verified);
             results = sortBy switch
             {
-                "price" => descending ? results.OrderByDescending(r => r.MonthlyRent.Amount) : results.OrderBy(r => r.MonthlyRent.Amount),
-                "area" => descending ? results.OrderByDescending(r => r.AreaSquareMeters) : results.OrderBy(r => r.AreaSquareMeters),
-                _ => descending ? results.OrderByDescending(r => r.Location.DistanceToKm(campusLocation)) : results.OrderBy(r => r.Location.DistanceToKm(campusLocation))
+                "price" => descending ? results.OrderByDescending(r => r.MonthlyRent.Amount).ThenBy(r => r.Id) : results.OrderBy(r => r.MonthlyRent.Amount).ThenBy(r => r.Id),
+                "area" => descending ? results.OrderByDescending(r => r.AreaSquareMeters).ThenBy(r => r.Id) : results.OrderBy(r => r.AreaSquareMeters).ThenBy(r => r.Id),
+                _ => descending ? results.OrderByDescending(r => r.Location.DistanceToKm(campusLocation)).ThenBy(r => r.Id) : results.OrderBy(r => r.Location.DistanceToKm(campusLocation)).ThenBy(r => r.Id)
             };
             var materialized = results.ToList();
             return Task.FromResult(new PagedResult<RoomListing>(materialized.Skip((page - 1) * pageSize).Take(pageSize).ToList(), page, pageSize, materialized.Count));

@@ -13,6 +13,19 @@ public sealed class GetRoomListingsUseCase : IGetRoomListingsUseCase
 {
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(10);
 
+    private static readonly HashSet<string> AllowedSortBy = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "distance",
+        "price",
+        "area"
+    };
+
+    private static readonly HashSet<string> AllowedSortOrder = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "asc",
+        "desc"
+    };
+
     private readonly IRoomListingRepository _roomListingRepository;
     private readonly ICampusRepository _campusRepository;
     private readonly ICacheService _cacheService;
@@ -101,6 +114,16 @@ public sealed class GetRoomListingsUseCase : IGetRoomListingsUseCase
         if (query.PageSize is < 1 or > 100)
         {
             throw new ValidationException("PageSize", "Page size must be between 1 and 100.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.SortBy) && !AllowedSortBy.Contains(query.SortBy.Trim()))
+        {
+            throw new ValidationException("SortBy", "SortBy must be one of: distance, price, area.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.SortOrder) && !AllowedSortOrder.Contains(query.SortOrder.Trim()))
+        {
+            throw new ValidationException("SortOrder", "SortOrder must be either 'asc' or 'desc'.");
         }
     }
 }

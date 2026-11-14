@@ -44,12 +44,20 @@ public sealed class CosmosDbInitializer
             var partitionKeyPath = roomsContainerResponse.Resource.PartitionKeyPath;
             if (!string.Equals(partitionKeyPath, "/campusId", StringComparison.Ordinal))
             {
-                throw new InvalidOperationException(
-                    $"Cosmos container '{_settings.ContainerName}' must use partition key '/campusId', " +
-                    $"but it currently uses '{partitionKeyPath}'. Create a new container and migrate its data; Cosmos DB cannot change a container's partition key.");
+                _logger.LogWarning(
+                    "Cosmos container '{ContainerName}' currently has partition key '{PartitionKeyPath}', but '/campusId' is required. " +
+                    "Cosmos DB cannot modify the partition key in-place. Initiating automated data migration...",
+                    _settings.ContainerName,
+                    partitionKeyPath);
+
+                roomsContainerResponse = await MigrateContainerToCampusIdPartitionAsync(
+                    database,
+                    roomsContainerResponse.Container,
+                    _settings.ContainerName,
+                    cancellationToken);
             }
 
-            await EnsureSpatialIndexAsync(roomsContainerResponse.Container, roomsContainerResponse.Resource, cancellationToken);
+            await EnsureSpatialAndCompositeIndexesAsync(roomsContainerResponse.Container, roomsContainerResponse.Resource, cancellationToken);
 
             await SeedInitialDataAsync(campusesContainerResponse.Container, roomsContainerResponse.Container, cancellationToken);
 
@@ -62,15 +70,112 @@ public sealed class CosmosDbInitializer
         }
     }
 
-    private static async Task EnsureSpatialIndexAsync(Container container, ContainerProperties properties, CancellationToken cancellationToken)
+    private async Task<ContainerResponse> MigrateContainerToCampusIdPartitionAsync(
+        Database database,
+        Container oldContainer,
+        string containerName,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogWarning("Beginning automated migration of container '{ContainerName}' to partition key '/campusId'...", containerName);
+
+        var existingDocs = new List<Newtonsoft.Json.Linq.JObject>();
+        try
+        {
+            using var feedIterator = oldContainer.GetItemQueryIterator<Newtonsoft.Json.Linq.JObject>(new QueryDefinition("SELECT * FROM c"));
+            while (feedIterator.HasMoreResults)
+            {
+                var feedResponse = await feedIterator.ReadNextAsync(cancellationToken);
+                existingDocs.AddRange(feedResponse);
+            }
+            _logger.LogInformation("Read {Count} existing documents from old container '{ContainerName}' for migration.", existingDocs.Count, containerName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to read documents from old container '{ContainerName}' before migration.", containerName);
+            throw;
+        }
+
+        _logger.LogInformation("Deleting container '{ContainerName}' with legacy partition key...", containerName);
+        await oldContainer.DeleteContainerAsync(cancellationToken: cancellationToken);
+
+        _logger.LogInformation("Recreating container '{ContainerName}' with partition key '/campusId'...", containerName);
+        var containerProperties = new ContainerProperties(containerName, "/campusId");
+        var newContainerResponse = await database.CreateContainerAsync(containerProperties, cancellationToken: cancellationToken);
+
+        if (existingDocs.Count > 0)
+        {
+            _logger.LogInformation("Restoring {Count} migrated documents into container '{ContainerName}'...", existingDocs.Count, containerName);
+            foreach (var doc in existingDocs)
+            {
+                var campusId = doc["campusId"]?.ToString();
+                if (string.IsNullOrWhiteSpace(campusId))
+                {
+                    campusId = "campus-ictu";
+                    doc["campusId"] = campusId;
+                }
+
+                await newContainerResponse.Container.UpsertItemAsync(doc, new PartitionKey(campusId), cancellationToken: cancellationToken);
+            }
+            _logger.LogInformation("Successfully restored all {Count} documents into container '{ContainerName}'.", existingDocs.Count, containerName);
+        }
+
+        return newContainerResponse;
+    }
+
+    private static async Task EnsureSpatialAndCompositeIndexesAsync(Container container, ContainerProperties properties, CancellationToken cancellationToken)
     {
         var indexingPolicy = properties.IndexingPolicy ?? new IndexingPolicy();
         properties.IndexingPolicy = indexingPolicy;
+        var modified = false;
+
         if (!indexingPolicy.SpatialIndexes.Any(index => index.Path.Equals("/location/*", StringComparison.Ordinal)))
         {
             indexingPolicy.SpatialIndexes.Add(new SpatialPath { Path = "/location/*" });
+            modified = true;
+        }
+
+        if (!HasCompositeIndex(indexingPolicy, "/monthlyRentAmount", "/id"))
+        {
+            indexingPolicy.CompositeIndexes.Add(new System.Collections.ObjectModel.Collection<CompositePath>
+            {
+                new() { Path = "/monthlyRentAmount", Order = CompositePathSortOrder.Ascending },
+                new() { Path = "/id", Order = CompositePathSortOrder.Ascending }
+            });
+            indexingPolicy.CompositeIndexes.Add(new System.Collections.ObjectModel.Collection<CompositePath>
+            {
+                new() { Path = "/monthlyRentAmount", Order = CompositePathSortOrder.Descending },
+                new() { Path = "/id", Order = CompositePathSortOrder.Descending }
+            });
+            modified = true;
+        }
+
+        if (!HasCompositeIndex(indexingPolicy, "/areaSquareMeters", "/id"))
+        {
+            indexingPolicy.CompositeIndexes.Add(new System.Collections.ObjectModel.Collection<CompositePath>
+            {
+                new() { Path = "/areaSquareMeters", Order = CompositePathSortOrder.Ascending },
+                new() { Path = "/id", Order = CompositePathSortOrder.Ascending }
+            });
+            indexingPolicy.CompositeIndexes.Add(new System.Collections.ObjectModel.Collection<CompositePath>
+            {
+                new() { Path = "/areaSquareMeters", Order = CompositePathSortOrder.Descending },
+                new() { Path = "/id", Order = CompositePathSortOrder.Descending }
+            });
+            modified = true;
+        }
+
+        if (modified)
+        {
             await container.ReplaceContainerAsync(properties, cancellationToken: cancellationToken);
         }
+    }
+
+    private static bool HasCompositeIndex(IndexingPolicy policy, string path1, string path2)
+    {
+        return policy.CompositeIndexes.Any(ci =>
+            ci.Count >= 2 &&
+            ci[0].Path.Equals(path1, StringComparison.Ordinal) &&
+            ci[1].Path.Equals(path2, StringComparison.Ordinal));
     }
 
     private async Task SeedInitialDataAsync(Container campusesContainer, Container roomsContainer, CancellationToken cancellationToken)

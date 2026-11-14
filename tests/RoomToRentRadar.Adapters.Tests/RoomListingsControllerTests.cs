@@ -64,6 +64,34 @@ public class RoomListingsControllerTests
     }
 
     [Test]
+    public async Task GetRoomsAsync_WhenSortByIsInvalid_ShouldReturnBadRequest()
+    {
+        _useCase.ExceptionToThrow = new ValidationException("SortBy", "SortBy must be one of: distance, price, area.");
+
+        var query = new GetRoomListingsQuery("campus-ictu", SortBy: "invalid");
+        var actionResult = await _controller.GetRoomsAsync(query, CancellationToken.None);
+
+        Assert.That(actionResult, Is.InstanceOf<BadRequestObjectResult>());
+        var badRequest = (BadRequestObjectResult)actionResult;
+        var details = (ValidationProblemDetails)badRequest.Value!;
+        Assert.That(details.Errors.ContainsKey("SortBy"), Is.True);
+    }
+
+    [Test]
+    public async Task GetRoomsAsync_WhenSortOrderIsInvalid_ShouldReturnBadRequest()
+    {
+        _useCase.ExceptionToThrow = new ValidationException("SortOrder", "SortOrder must be either 'asc' or 'desc'.");
+
+        var query = new GetRoomListingsQuery("campus-ictu", SortOrder: "descending");
+        var actionResult = await _controller.GetRoomsAsync(query, CancellationToken.None);
+
+        Assert.That(actionResult, Is.InstanceOf<BadRequestObjectResult>());
+        var badRequest = (BadRequestObjectResult)actionResult;
+        var details = (ValidationProblemDetails)badRequest.Value!;
+        Assert.That(details.Errors.ContainsKey("SortOrder"), Is.True);
+    }
+
+    [Test]
     public async Task GetRoomsAsync_WhenCampusNotFound_ShouldReturnNotFoundProblemDetails()
     {
         _useCase.ExceptionToThrow = new CampusNotFoundException("unknown-campus");

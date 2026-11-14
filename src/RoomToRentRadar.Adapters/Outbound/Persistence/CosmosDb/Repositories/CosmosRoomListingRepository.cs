@@ -17,6 +17,12 @@ public sealed class CosmosRoomListingRepository : IRoomListingRepository
 {
     private readonly Container _container;
 
+    /// <summary>
+    /// Cumulative Request Charge (RU) consumed by the most recent query operation.
+    /// Useful for telemetry, diagnostics, and performance integration testing.
+    /// </summary>
+    public double LastRequestCharge { get; private set; }
+
     public CosmosRoomListingRepository(CosmosClient cosmosClient, IOptions<CosmosDbOptions> options)
     {
         var settings = options.Value;
@@ -32,6 +38,7 @@ public sealed class CosmosRoomListingRepository : IRoomListingRepository
         bool descending,
         CancellationToken cancellationToken = default)
     {
+        var totalRu = 0.0;
         var filter = "c.campusId = @campusId AND c.status = @status AND c.verificationStatus = @verificationStatus";
         var countDefinition = new QueryDefinition($"SELECT VALUE COUNT(1) FROM c WHERE {filter}")
             .WithParameter("@campusId", campusId)
@@ -45,24 +52,27 @@ public sealed class CosmosRoomListingRepository : IRoomListingRepository
         if (countIterator.HasMoreResults)
         {
             var countPage = await countIterator.ReadNextAsync(cancellationToken);
+            totalRu += countPage.RequestCharge;
             totalCount = countPage.FirstOrDefault();
         }
 
-        var orderBy = sortBy switch
-        {
-            "price" => "c.monthlyRentAmount",
-            "area" => "c.areaSquareMeters",
-            _ => "ST_DISTANCE(c.location, @campusLocation)"
-        };
         var direction = descending ? "DESC" : "ASC";
+        // Stable pagination: include c.id as a tie-breaker for deterministic pagination across pages
+        var (orderByClause, requiresLocationParam) = sortBy switch
+        {
+            "price" => ($"ORDER BY c.monthlyRentAmount {direction}, c.id {direction}", false),
+            "area" => ($"ORDER BY c.areaSquareMeters {direction}, c.id {direction}", false),
+            _ => ($"ORDER BY ST_DISTANCE(c.location, @campusLocation) {direction}", true)
+        };
+
         var queryDefinition = new QueryDefinition(
-            $"SELECT * FROM c WHERE {filter} ORDER BY {orderBy} {direction} OFFSET @offset LIMIT @limit")
+            $"SELECT * FROM c WHERE {filter} {orderByClause} OFFSET @offset LIMIT @limit")
             .WithParameter("@campusId", campusId)
             .WithParameter("@status", (int)ListingRoomStatus.Available)
             .WithParameter("@verificationStatus", (int)VerificationStatus.Verified)
             .WithParameter("@offset", (page - 1) * pageSize)
             .WithParameter("@limit", pageSize);
-        if (sortBy is not "price" and not "area")
+        if (requiresLocationParam)
         {
             queryDefinition = queryDefinition.WithParameter("@campusLocation", new Point(campusLocation.Longitude, campusLocation.Latitude));
         }
@@ -78,12 +88,14 @@ public sealed class CosmosRoomListingRepository : IRoomListingRepository
         while (iterator.HasMoreResults)
         {
             var response = await iterator.ReadNextAsync(cancellationToken);
+            totalRu += response.RequestCharge;
             foreach (var doc in response)
             {
                 results.Add(doc.ToDomain());
             }
         }
 
+        LastRequestCharge = totalRu;
         return new PagedResult<RoomListing>(results, page, pageSize, totalCount);
     }
 
