@@ -27,31 +27,6 @@
     </ContentPage.Resources>
 
     <Grid>
-        <!-- Decorative background blobs (InputTransparent so they never block touch) -->
-        <BoxView
-            InputTransparent="True"
-            HorizontalOptions="Start"
-            VerticalOptions="End"
-            WidthRequest="260"
-            HeightRequest="260"
-            CornerRadius="130"
-            TranslationX="-90"
-            TranslationY="90"
-            Opacity="0.10"
-            Color="#3B82F6" />
-
-        <BoxView
-            InputTransparent="True"
-            HorizontalOptions="End"
-            VerticalOptions="Start"
-            WidthRequest="240"
-            HeightRequest="240"
-            CornerRadius="120"
-            TranslationX="80"
-            TranslationY="-80"
-            Opacity="0.08"
-            Color="#38BDF8" />
-
         <ScrollView
             Padding="{OnIdiom Phone='16,12', Default='32,24'}"
             VerticalOptions="Fill">
@@ -67,18 +42,18 @@
                     <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
                         <Border
                             StrokeThickness="0"
-                            BackgroundColor="#2563EB"
-                            WidthRequest="28"
-                            HeightRequest="28"
+                            BackgroundColor="Transparent"
+                            WidthRequest="32"
+                            HeightRequest="32"
                             Padding="0">
                             <Border.StrokeShape>
                                 <RoundRectangle CornerRadius="8" />
                             </Border.StrokeShape>
-                            <Label
-                                Text="🏠"
-                                FontSize="14"
-                                HorizontalTextAlignment="Center"
-                                VerticalTextAlignment="Center" />
+                            <Image
+                                Source="app_brand_logo.png"
+                                Aspect="AspectFit"
+                                HorizontalOptions="Center"
+                                VerticalOptions="Center" />
                         </Border>
                         <Label
                             Text="RoomToRentRadar"
