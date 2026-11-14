@@ -50,7 +50,7 @@ public partial class AuthPage : ContentPage
     {
         base.OnDisappearing();
         MainAuthCard.AbortAnimation(CardFlipAnimationName);
-        StopAllFocusAnimations();
+        UnfocusAllInputs();
     }
 
     private async void OnToggleCardClicked(object? sender, EventArgs e)
@@ -72,7 +72,7 @@ public partial class AuthPage : ContentPage
 
         _isFlipping = true;
         MainAuthCard.AbortAnimation(CardFlipAnimationName);
-        StopAllFocusAnimations();
+        UnfocusAllInputs();
 
         var startAngle = vm.IsSignUpView ? 180.0 : 0.0;
         var endAngle = vm.IsSignUpView ? 0.0 : 180.0;
@@ -233,6 +233,16 @@ public partial class AuthPage : ContentPage
         border.StrokeThickness = 1.0;
         border.Stroke = new SolidColorBrush(_defaultBorderColor);
         border.BackgroundColor = _defaultBackground;
+    }
+
+    private void UnfocusAllInputs()
+    {
+        LoginEmailEntry.Unfocus();
+        LoginPasswordEntry.Unfocus();
+        SignUpEmailEntry.Unfocus();
+        SignUpPasswordEntry.Unfocus();
+        SignUpConfirmPasswordEntry.Unfocus();
+        StopAllFocusAnimations();
     }
 
     private void StopAllFocusAnimations()

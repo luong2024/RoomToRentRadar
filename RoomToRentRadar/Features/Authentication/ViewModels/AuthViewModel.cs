@@ -125,6 +125,7 @@ public partial class AuthViewModel : ObservableObject
     public void ToggleForm()
     {
         ClearErrors();
+        ClearAllFormFields();
         IsSignUpView = !IsSignUpView;
     }
 
@@ -248,6 +249,10 @@ public partial class AuthViewModel : ObservableObject
             if (result.IsSuccess)
             {
                 SetSuccess("Account created successfully! You can now sign in.");
+
+                // Auto-clear all form inputs on both Login and Register after successful account creation
+                ClearAllFormFields();
+
                 if (FlipToLoginHandler != null)
                 {
                     await FlipToLoginHandler.Invoke();
@@ -255,6 +260,7 @@ public partial class AuthViewModel : ObservableObject
             }
             else
             {
+                // On failure: Retain inputs on Register form so user can correct them without retyping
                 SetError(result.ErrorMessage ?? "Account creation failed.");
             }
         }
@@ -482,6 +488,34 @@ public partial class AuthViewModel : ObservableObject
         }
 
         return isValid;
+    }
+
+    public void ClearLoginFields()
+    {
+        LoginEmail = string.Empty;
+        LoginPassword = string.Empty;
+        LoginEmailError = null;
+        LoginPasswordError = null;
+        IsPasswordHidden = true;
+    }
+
+    public void ClearSignUpFields()
+    {
+        SignUpEmail = string.Empty;
+        SignUpPassword = string.Empty;
+        SignUpConfirmPassword = string.Empty;
+        SelectedRole = null;
+        SignUpEmailError = null;
+        SignUpPasswordError = null;
+        SignUpConfirmPasswordError = null;
+        RoleError = null;
+        IsConfirmPasswordHidden = true;
+    }
+
+    public void ClearAllFormFields()
+    {
+        ClearLoginFields();
+        ClearSignUpFields();
     }
 
     public void ClearStatus()

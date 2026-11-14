@@ -23,16 +23,18 @@ public class AuthViewModelTests
     }
 
     [Test]
-    public void ToggleForm_ShouldSwitchViewAndClearErrors()
+    public void ToggleForm_ShouldSwitchViewAndClearErrorsAndInputs()
     {
         _viewModel.IsSignUpView = false;
-        _viewModel.LoginEmail = "";
+        _viewModel.LoginEmail = "wrong@example.com";
+        _viewModel.LoginPassword = "WrongPassword123";
         _viewModel.ValidateLoginForm();
-        Assert.That(_viewModel.LoginEmailError, Is.Not.Null);
 
         _viewModel.ToggleForm();
 
         Assert.That(_viewModel.IsSignUpView, Is.True);
+        Assert.That(_viewModel.LoginEmail, Is.Empty);
+        Assert.That(_viewModel.LoginPassword, Is.Empty);
         Assert.That(_viewModel.LoginEmailError, Is.Null);
     }
 
@@ -222,8 +224,13 @@ public class AuthViewModelTests
     }
 
     [Test]
-    public async Task SignUpAsync_WhenSuccessful_ShouldCallFlipToLoginHandler()
+    public async Task SignUpAsync_WhenSuccessful_ShouldClearAllFormFieldsAndCallFlipToLoginHandler()
     {
+        // Simulate previous failed login input left on the form
+        _viewModel.LoginEmail = "failedlogin@example.com";
+        _viewModel.LoginPassword = "OldPassword123";
+
+        // Fill sign up form
         _viewModel.SignUpEmail = "student@example.com";
         _viewModel.SignUpPassword = "ValidPassword1";
         _viewModel.SignUpConfirmPassword = "ValidPassword1";
@@ -242,6 +249,44 @@ public class AuthViewModelTests
         Assert.That(_viewModel.IsSuccess, Is.True);
         Assert.That(_viewModel.SuccessMessage, Does.Contain("Account created successfully"));
         Assert.That(flipCalled, Is.True);
+
+        // Verification: Both Login and Register form inputs are completely wiped
+        Assert.That(_viewModel.LoginEmail, Is.Empty);
+        Assert.That(_viewModel.LoginPassword, Is.Empty);
+        Assert.That(_viewModel.SignUpEmail, Is.Empty);
+        Assert.That(_viewModel.SignUpPassword, Is.Empty);
+        Assert.That(_viewModel.SignUpConfirmPassword, Is.Empty);
+        Assert.That(_viewModel.SelectedRole, Is.Null);
+    }
+
+    [Test]
+    public async Task SignUpAsync_WhenFailed_ShouldRetainSignUpInputsAndNotCallFlip()
+    {
+        _viewModel.SignUpEmail = "existing@example.com";
+        _viewModel.SignUpPassword = "ValidPassword1";
+        _viewModel.SignUpConfirmPassword = "ValidPassword1";
+        _viewModel.SelectedRole = UserRoleConstants.Student;
+        _authPort.RegisterResult = AuthResult.Failed("Email is already registered.");
+
+        var flipCalled = false;
+        _viewModel.FlipToLoginHandler = () =>
+        {
+            flipCalled = true;
+            return Task.CompletedTask;
+        };
+
+        await _viewModel.SignUpAsync(CancellationToken.None);
+
+        Assert.That(_viewModel.IsSuccess, Is.False);
+        Assert.That(_viewModel.HasError, Is.True);
+        Assert.That(_viewModel.ErrorMessage, Is.EqualTo("Email is already registered."));
+        Assert.That(flipCalled, Is.False);
+
+        // Inputs must be preserved on failure so user can edit them
+        Assert.That(_viewModel.SignUpEmail, Is.EqualTo("existing@example.com"));
+        Assert.That(_viewModel.SignUpPassword, Is.EqualTo("ValidPassword1"));
+        Assert.That(_viewModel.SignUpConfirmPassword, Is.EqualTo("ValidPassword1"));
+        Assert.That(_viewModel.SelectedRole, Is.EqualTo(UserRoleConstants.Student));
     }
 
     [Test]
