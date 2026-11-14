@@ -136,10 +136,16 @@ public class RoomListingsPerformanceAndComplianceTests
     {
         private readonly List<RoomListing> _rooms = [];
 
-        public Task<IReadOnlyList<RoomListing>> GetAvailableVerifiedRoomsByCampusAsync(string campusId, CancellationToken cancellationToken = default)
+        public Task<PagedResult<RoomListing>> GetAvailableVerifiedRoomsByCampusAsync(string campusId, GeoLocation campusLocation, int page, int pageSize, string sortBy, bool descending, CancellationToken cancellationToken = default)
         {
             var result = _rooms.Where(r => r.CampusId == campusId && r.Status == ListingRoomStatus.Available && r.VerificationStatus == VerificationStatus.Verified).ToList();
-            return Task.FromResult<IReadOnlyList<RoomListing>>(result);
+            var ordered = sortBy switch
+            {
+                "price" => descending ? result.OrderByDescending(r => r.MonthlyRent.Amount) : result.OrderBy(r => r.MonthlyRent.Amount),
+                "area" => descending ? result.OrderByDescending(r => r.AreaSquareMeters) : result.OrderBy(r => r.AreaSquareMeters),
+                _ => descending ? result.OrderByDescending(r => r.Location.DistanceToKm(campusLocation)) : result.OrderBy(r => r.Location.DistanceToKm(campusLocation))
+            };
+            return Task.FromResult(new PagedResult<RoomListing>(ordered.Skip((page - 1) * pageSize).Take(pageSize).ToList(), page, pageSize, result.Count));
         }
 
         public Task AddAsync(RoomListing roomListing, CancellationToken cancellationToken = default)

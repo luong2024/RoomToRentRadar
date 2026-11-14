@@ -9,12 +9,12 @@ using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Documents;
 public sealed class CosmosDbInitializer
 {
     private readonly CosmosClient _cosmosClient;
-    private readonly CosmosDbSettings _settings;
+    private readonly CosmosDbOptions _settings;
     private readonly ILogger<CosmosDbInitializer> _logger;
 
     public CosmosDbInitializer(
         CosmosClient cosmosClient,
-        IOptions<CosmosDbSettings> options,
+        IOptions<CosmosDbOptions> options,
         ILogger<CosmosDbInitializer> logger)
     {
         _cosmosClient = cosmosClient;
@@ -36,10 +36,20 @@ public sealed class CosmosDbInitializer
                 new ContainerProperties(_settings.CampusesContainerName, "/id"),
                 cancellationToken: cancellationToken);
 
-            _logger.LogInformation("Creating container '{RoomsContainerName}' (/campusId)...", _settings.RoomsContainerName);
+            _logger.LogInformation("Creating container '{RoomsContainerName}' (/campusId)...", _settings.ContainerName);
             var roomsContainerResponse = await database.CreateContainerIfNotExistsAsync(
-                new ContainerProperties(_settings.RoomsContainerName, "/campusId"),
+                new ContainerProperties(_settings.ContainerName, "/campusId"),
                 cancellationToken: cancellationToken);
+
+            var partitionKeyPath = roomsContainerResponse.Resource.PartitionKeyPath;
+            if (!string.Equals(partitionKeyPath, "/campusId", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Cosmos container '{_settings.ContainerName}' must use partition key '/campusId', " +
+                    $"but it currently uses '{partitionKeyPath}'. Create a new container and migrate its data; Cosmos DB cannot change a container's partition key.");
+            }
+
+            await EnsureSpatialIndexAsync(roomsContainerResponse.Container, roomsContainerResponse.Resource, cancellationToken);
 
             await SeedInitialDataAsync(campusesContainerResponse.Container, roomsContainerResponse.Container, cancellationToken);
 
@@ -49,6 +59,17 @@ public sealed class CosmosDbInitializer
         {
             _logger.LogError(ex, "Failed to initialize Cosmos DB.");
             throw;
+        }
+    }
+
+    private static async Task EnsureSpatialIndexAsync(Container container, ContainerProperties properties, CancellationToken cancellationToken)
+    {
+        var indexingPolicy = properties.IndexingPolicy ?? new IndexingPolicy();
+        properties.IndexingPolicy = indexingPolicy;
+        if (!indexingPolicy.SpatialIndexes.Any(index => index.Path.Equals("/location/*", StringComparison.Ordinal)))
+        {
+            indexingPolicy.SpatialIndexes.Add(new SpatialPath { Path = "/location/*" });
+            await container.ReplaceContainerAsync(properties, cancellationToken: cancellationToken);
         }
     }
 
@@ -107,6 +128,7 @@ public sealed class CosmosDbInitializer
                     Address = "Số 15 ngõ 89 đường Z115, Quyết Thắng, TP. Thái Nguyên",
                     Latitude = 21.5865,
                     Longitude = 105.8080,
+                    Location = new Microsoft.Azure.Cosmos.Spatial.Point(105.8080, 21.5865),
                     Status = 0, // Available
                     VerificationStatus = 2, // Verified
                     ThumbnailUrl = "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267",
@@ -124,6 +146,7 @@ public sealed class CosmosDbInitializer
                     Address = "Đường Tân Thịnh, đối diện cổng phụ ICTU",
                     Latitude = 21.5840,
                     Longitude = 105.8060,
+                    Location = new Microsoft.Azure.Cosmos.Spatial.Point(105.8060, 21.5840),
                     Status = 0, // Available
                     VerificationStatus = 2, // Verified
                     ThumbnailUrl = "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688",
@@ -141,6 +164,7 @@ public sealed class CosmosDbInitializer
                     Address = "Tổ 4, P. Thịnh Đán, TP. Thái Nguyên",
                     Latitude = 21.5790,
                     Longitude = 105.8020,
+                    Location = new Microsoft.Azure.Cosmos.Spatial.Point(105.8020, 21.5790),
                     Status = 0, // Available
                     VerificationStatus = 2, // Verified
                     ThumbnailUrl = "https://images.unsplash.com/photo-1493809842364-78817add7ffb",
@@ -158,6 +182,7 @@ public sealed class CosmosDbInitializer
                     Address = "Khu tập thể Z115, TP. Thái Nguyên",
                     Latitude = 21.5890,
                     Longitude = 105.8110,
+                    Location = new Microsoft.Azure.Cosmos.Spatial.Point(105.8110, 21.5890),
                     Status = 0, // Available
                     VerificationStatus = 2, // Verified
                     ThumbnailUrl = "https://images.unsplash.com/photo-1598928506311-c55ded91a20c",
@@ -175,6 +200,7 @@ public sealed class CosmosDbInitializer
                     Address = "Đường Z115, TP. Thái Nguyên",
                     Latitude = 21.5855,
                     Longitude = 105.8075,
+                    Location = new Microsoft.Azure.Cosmos.Spatial.Point(105.8075, 21.5855),
                     Status = 1, // Occupied -> Must NOT be returned
                     VerificationStatus = 2, // Verified
                     ThumbnailUrl = null,
@@ -192,6 +218,7 @@ public sealed class CosmosDbInitializer
                     Address = "Đường Z115, TP. Thái Nguyên",
                     Latitude = 21.5855,
                     Longitude = 105.8075,
+                    Location = new Microsoft.Azure.Cosmos.Spatial.Point(105.8075, 21.5855),
                     Status = 0, // Available
                     VerificationStatus = 0, // Unverified -> Must NOT be returned
                     ThumbnailUrl = null,

@@ -51,10 +51,17 @@ public sealed class GetRoomListingsUseCase : IGetRoomListingsUseCase
         }
 
         // AC4: Only listings with status Available and Verified
-        var listings = await _roomListingRepository.GetAvailableVerifiedRoomsByCampusAsync(query.CampusId, cancellationToken);
+        var listingsPage = await _roomListingRepository.GetAvailableVerifiedRoomsByCampusAsync(
+            query.CampusId,
+            campus.Location,
+            query.Page,
+            query.PageSize,
+            normalizedSortBy,
+            normalizedSortOrder == "desc",
+            cancellationToken);
 
         // Enforce domain rule filter in application layer for verification
-        var eligibleListings = listings.Where(l => l.IsDisplayable).ToList();
+        var eligibleListings = listingsPage.Items.Where(l => l.IsDisplayable).ToList();
 
         // AC1 & AC2: Map each card with title, monthly rent, area, distance to campus, verification badge
         var dtos = eligibleListings.Select(listing => new RoomListingDto(
@@ -70,24 +77,8 @@ public sealed class GetRoomListingsUseCase : IGetRoomListingsUseCase
             CampusId: listing.CampusId));
 
         // AC1: Sort by distance from the selected campus by default
-        var isDescending = normalizedSortOrder == "desc";
-        var sorted = normalizedSortBy switch
-        {
-            "price" => isDescending ? dtos.OrderByDescending(r => r.MonthlyRent) : dtos.OrderBy(r => r.MonthlyRent),
-            "area" => isDescending ? dtos.OrderByDescending(r => r.AreaSquareMeters) : dtos.OrderBy(r => r.AreaSquareMeters),
-            _ => isDescending ? dtos.OrderByDescending(r => r.DistanceToCampusKm) : dtos.OrderBy(r => r.DistanceToCampusKm)
-        };
-
-        var allSortedList = sorted.ToList();
-        var totalCount = allSortedList.Count;
-
-        // Pagination
-        var pagedItems = allSortedList
-            .Skip((query.Page - 1) * query.PageSize)
-            .Take(query.PageSize)
-            .ToList();
-
-        var result = new PagedResult<RoomListingDto>(pagedItems, query.Page, query.PageSize, totalCount);
+        var pageItems = dtos.ToList();
+        var result = new PagedResult<RoomListingDto>(pageItems, query.Page, query.PageSize, listingsPage.TotalCount);
 
         // Store in cache
         await _cacheService.SetAsync(cacheKey, result, CacheTtl, cancellationToken);

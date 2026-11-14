@@ -57,11 +57,13 @@ public static class ServiceCollectionExtensions
             .AddOptions<GoogleAuthOptions>()
             .Bind(configuration.GetSection(GoogleAuthOptions.SectionName));
 
-        services
-            .AddOptions<CosmosDbOptions>()
-            .Bind(configuration.GetSection(CosmosDbOptions.SectionName));
-
-        services.AddSingleton<ICosmosDbContext, CosmosDbContext>();
+        services.AddSingleton<ICosmosDbContext>(sp =>
+        {
+            var cosmosOptions = sp.GetRequiredService<IOptions<CosmosDbOptions>>().Value;
+            return string.Equals(cosmosOptions.AccountEndpoint, "in-memory", StringComparison.OrdinalIgnoreCase)
+                ? new CosmosDbContext(cosmosOptions)
+                : new CosmosDbContext(cosmosOptions, sp.GetRequiredService<Microsoft.Azure.Cosmos.CosmosClient>());
+        });
         services.AddScoped<CosmosUnitOfWork>();
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<CosmosUnitOfWork>());
         services.AddScoped<IUserRepository, CosmosUserRepository>();

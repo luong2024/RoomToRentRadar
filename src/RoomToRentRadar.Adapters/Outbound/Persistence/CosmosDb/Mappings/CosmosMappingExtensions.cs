@@ -39,6 +39,7 @@ public static class CosmosMappingExtensions
             Address = entity.Address,
             Latitude = entity.Location.Latitude,
             Longitude = entity.Location.Longitude,
+            Location = new Microsoft.Azure.Cosmos.Spatial.Point(entity.Location.Longitude, entity.Location.Latitude),
             Status = (int)entity.Status,
             VerificationStatus = (int)entity.VerificationStatus,
             ThumbnailUrl = entity.ThumbnailUrl,

@@ -1,6 +1,7 @@
 namespace RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Documents;
 
 using Newtonsoft.Json;
+using Microsoft.Azure.Cosmos.Spatial;
 
 public sealed class RoomListingDocument
 {
@@ -33,6 +34,9 @@ public sealed class RoomListingDocument
 
     [JsonProperty("longitude")]
     public double Longitude { get; set; }
+
+    [JsonProperty("location")]
+    public Point Location { get; set; } = new(0, 0);
 
     [JsonProperty("status")]
     public int Status { get; set; }

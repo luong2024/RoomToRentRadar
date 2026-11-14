@@ -15,34 +15,34 @@ public static class CosmosServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.Configure<CosmosDbSettings>(configuration.GetSection(CosmosDbSettings.SectionName));
+        services.Configure<CosmosDbOptions>(configuration.GetSection(CosmosDbOptions.SectionName));
 
         services.AddSingleton(sp =>
         {
-            var settings = sp.GetRequiredService<IOptions<CosmosDbSettings>>().Value;
+            var settings = sp.GetRequiredService<IOptions<CosmosDbOptions>>().Value;
+            var authKey = !string.IsNullOrWhiteSpace(settings.AuthKey)
+                ? settings.AuthKey
+                : settings.AuthKeyOrResourceToken;
+            if (string.IsNullOrWhiteSpace(settings.AccountEndpoint) || string.IsNullOrWhiteSpace(authKey))
+            {
+                throw new InvalidOperationException("CosmosDb:AccountEndpoint and CosmosDb:AuthKey (or AuthKeyOrResourceToken) are required.");
+            }
 
-            CosmosClientOptions options;
+            var options = new CosmosClientOptions
+            {
+                ConnectionMode = string.Equals(settings.ConnectionMode, "Gateway", StringComparison.OrdinalIgnoreCase)
+                    ? ConnectionMode.Gateway
+                    : ConnectionMode.Direct
+            };
             if (settings.IsEmulator)
             {
-                options = new CosmosClientOptions
+                options.HttpClientFactory = () => new HttpClient(new HttpClientHandler
                 {
-                    HttpClientFactory = () =>
-                    {
-                        var httpMessageHandler = new HttpClientHandler
-                        {
-                            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-                        };
-                        return new HttpClient(httpMessageHandler);
-                    },
-                    ConnectionMode = ConnectionMode.Gateway
-                };
-            }
-            else
-            {
-                options = new CosmosClientOptions();
+                    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                });
             }
 
-            return new CosmosClient(settings.AccountEndpoint, settings.AccountKey, options);
+            return new CosmosClient(settings.AccountEndpoint, authKey, options);
         });
 
         services.AddScoped<IRoomListingRepository, CosmosRoomListingRepository>();

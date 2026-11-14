@@ -12,7 +12,7 @@ public sealed class CosmosCampusRepository : ICampusRepository
 {
     private readonly Container _container;
 
-    public CosmosCampusRepository(CosmosClient cosmosClient, IOptions<CosmosDbSettings> options)
+    public CosmosCampusRepository(CosmosClient cosmosClient, IOptions<CosmosDbOptions> options)
     {
         var settings = options.Value;
         _container = cosmosClient.GetContainer(settings.DatabaseName, settings.CampusesContainerName);
