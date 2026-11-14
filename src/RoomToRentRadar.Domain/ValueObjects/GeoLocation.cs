@@ -24,9 +24,19 @@ public readonly record struct GeoLocation
     }
 
     /// <summary>
-    /// Calculates distance in kilometers to another location using the Haversine formula.
+    /// Calculates distance in kilometers to another location using the Haversine formula,
+    /// rounded to 2 decimal places for user-facing display.
     /// </summary>
     public double DistanceToKm(GeoLocation other)
+    {
+        return Math.Round(ExactDistanceToKm(other), 2);
+    }
+
+    /// <summary>
+    /// Calculates high-precision unrounded distance in kilometers to another location
+    /// to avoid premature rounding collisions during distance comparison and sorting.
+    /// </summary>
+    public double ExactDistanceToKm(GeoLocation other)
     {
         var dLat = DegreesToRadians(other.Latitude - Latitude);
         var dLon = DegreesToRadians(other.Longitude - Longitude);
@@ -39,7 +49,7 @@ public readonly record struct GeoLocation
 
         var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
 
-        return Math.Round(EarthRadiusKm * c, 2);
+        return EarthRadiusKm * c;
     }
 
     private static double DegreesToRadians(double degrees) => degrees * Math.PI / 180.0;

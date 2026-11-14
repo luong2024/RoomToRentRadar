@@ -314,7 +314,7 @@ public class GetRoomListingsUseCaseTests
             {
                 "price" => descending ? results.OrderByDescending(r => r.MonthlyRent.Amount).ThenBy(r => r.Id) : results.OrderBy(r => r.MonthlyRent.Amount).ThenBy(r => r.Id),
                 "area" => descending ? results.OrderByDescending(r => r.AreaSquareMeters).ThenBy(r => r.Id) : results.OrderBy(r => r.AreaSquareMeters).ThenBy(r => r.Id),
-                _ => descending ? results.OrderByDescending(r => r.Location.DistanceToKm(campusLocation)).ThenBy(r => r.Id) : results.OrderBy(r => r.Location.DistanceToKm(campusLocation)).ThenBy(r => r.Id)
+                _ => descending ? results.OrderByDescending(r => r.Location.ExactDistanceToKm(campusLocation)).ThenBy(r => r.Id) : results.OrderBy(r => r.Location.ExactDistanceToKm(campusLocation)).ThenBy(r => r.Id)
             };
             var materialized = results.ToList();
             return Task.FromResult(new PagedResult<RoomListing>(materialized.Skip((page - 1) * pageSize).Take(pageSize).ToList(), page, pageSize, materialized.Count));

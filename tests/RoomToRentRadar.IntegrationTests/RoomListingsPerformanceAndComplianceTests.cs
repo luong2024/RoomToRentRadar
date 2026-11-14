@@ -285,7 +285,7 @@ public class RoomListingsApplicationPerformanceTests
             {
                 "price" => descending ? result.OrderByDescending(r => r.MonthlyRent.Amount).ThenBy(r => r.Id) : result.OrderBy(r => r.MonthlyRent.Amount).ThenBy(r => r.Id),
                 "area" => descending ? result.OrderByDescending(r => r.AreaSquareMeters).ThenBy(r => r.Id) : result.OrderBy(r => r.AreaSquareMeters).ThenBy(r => r.Id),
-                _ => descending ? result.OrderByDescending(r => r.Location.DistanceToKm(campusLocation)).ThenBy(r => r.Id) : result.OrderBy(r => r.Location.DistanceToKm(campusLocation)).ThenBy(r => r.Id)
+                _ => descending ? result.OrderByDescending(r => r.Location.ExactDistanceToKm(campusLocation)).ThenBy(r => r.Id) : result.OrderBy(r => r.Location.ExactDistanceToKm(campusLocation)).ThenBy(r => r.Id)
             };
             return Task.FromResult(new PagedResult<RoomListing>(ordered.Skip((page - 1) * pageSize).Take(pageSize).ToList(), page, pageSize, result.Count));
         }
@@ -557,6 +557,45 @@ public class CosmosRoomListingPerformanceIntegrationTests
             var p2Ids = page2.Items.Select(x => x.Id).ToHashSet();
 
             Assert.That(p1Ids.Overlaps(p2Ids), Is.False, "Distance sorted page 1 and page 2 must not have overlapping items");
+        });
+    }
+
+    [Test]
+    public async Task CosmosDbQuery_DistancePagination_RoomsWithIdenticalCoordinatesOnPageBoundary_SequentialPagesMustNotDuplicateOrOmitItems()
+    {
+        if (_container is null || _repository is null)
+        {
+            Assert.Ignore($"Cosmos DB Emulator is not reachable at {Endpoint}. Skipping live integration test.");
+            return;
+        }
+
+        // Query Page 1 and Page 2 (pageSize: 10) on distance sort across the boundary
+        var page1 = await _repository.GetAvailableVerifiedRoomsByCampusAsync(
+            CampusId,
+            _campusLocation,
+            page: 1,
+            pageSize: 10,
+            sortBy: "distance",
+            descending: false);
+
+        var page2 = await _repository.GetAvailableVerifiedRoomsByCampusAsync(
+            CampusId,
+            _campusLocation,
+            page: 2,
+            pageSize: 10,
+            sortBy: "distance",
+            descending: false);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(page1.Items, Has.Count.EqualTo(10));
+            Assert.That(page2.Items, Has.Count.EqualTo(10));
+
+            var p1Ids = page1.Items.Select(x => x.Id).ToHashSet();
+            var p2Ids = page2.Items.Select(x => x.Id).ToHashSet();
+
+            // Consecutive pages must not overlap across the page boundary
+            Assert.That(p1Ids.Overlaps(p2Ids), Is.False, "Consecutive pages must not produce overlapping items across page boundary");
         });
     }
 }

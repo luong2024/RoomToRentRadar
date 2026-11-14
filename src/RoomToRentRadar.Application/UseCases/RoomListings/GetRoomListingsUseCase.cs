@@ -79,19 +79,32 @@ public sealed class GetRoomListingsUseCase : IGetRoomListingsUseCase, IRoomListi
         var eligibleListings = listingsPage.Items.Where(l => l.IsDisplayable).ToList();
 
         // AC1 & AC2: Map each card with title, monthly rent, area, distance to campus, verification badge
-        var dtos = eligibleListings.Select(listing => new RoomListingDto(
-            Id: listing.Id,
-            Title: listing.Title,
-            MonthlyRent: listing.MonthlyRent.Amount,
-            Currency: listing.MonthlyRent.Currency,
-            AreaSquareMeters: listing.AreaSquareMeters,
-            DistanceToCampusKm: listing.Location.DistanceToKm(campus.Location),
-            IsVerified: listing.VerificationStatus == VerificationStatus.Verified,
-            Address: listing.Address,
-            ThumbnailUrl: listing.ThumbnailUrl,
-            CampusId: listing.CampusId));
+        var itemsWithDistance = eligibleListings.Select(listing =>
+        {
+            var exactDistance = listing.Location.ExactDistanceToKm(campus.Location);
+            var dto = new RoomListingDto(
+                Id: listing.Id,
+                Title: listing.Title,
+                MonthlyRent: listing.MonthlyRent.Amount,
+                Currency: listing.MonthlyRent.Currency,
+                AreaSquareMeters: listing.AreaSquareMeters,
+                DistanceToCampusKm: Math.Round(exactDistance, 2),
+                IsVerified: listing.VerificationStatus == VerificationStatus.Verified,
+                Address: listing.Address,
+                ThumbnailUrl: listing.ThumbnailUrl,
+                CampusId: listing.CampusId);
+            return (Dto: dto, ExactDistance: exactDistance);
+        }).ToList();
 
-        var pageItems = dtos.ToList();
+        // Secondary deterministic tie-breaker for distance sort at application layer:
+        // Cosmos DB SQL Engine forbids combining ST_DISTANCE with other fields in ORDER BY.
+        // Using high-precision unrounded distance avoids premature rounding collisions,
+        // and stably orders equal-distance items by Id.
+        var pageItems = normalizedSortBy == "distance"
+            ? (normalizedSortOrder == "desc"
+                ? itemsWithDistance.OrderByDescending(x => x.ExactDistance).ThenBy(x => x.Dto.Id).Select(x => x.Dto).ToList()
+                : itemsWithDistance.OrderBy(x => x.ExactDistance).ThenBy(x => x.Dto.Id).Select(x => x.Dto).ToList())
+            : itemsWithDistance.Select(x => x.Dto).ToList();
 
         var result = new PagedResult<RoomListingDto>(pageItems, query.Page, query.PageSize, listingsPage.TotalCount);
 
