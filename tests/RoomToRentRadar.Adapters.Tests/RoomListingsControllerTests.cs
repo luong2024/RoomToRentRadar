@@ -118,10 +118,5 @@ public class RoomListingsControllerTests
 
             return Task.FromResult(ResultToReturn ?? new PagedResult<RoomListingDto>([], 1, 20, 0));
         }
-
-        public Task InvalidateCacheAsync(string campusId, CancellationToken cancellationToken = default)
-        {
-            return Task.CompletedTask;
-        }
     }
 }

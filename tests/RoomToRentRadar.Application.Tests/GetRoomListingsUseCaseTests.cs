@@ -136,8 +136,8 @@ public class GetRoomListingsUseCaseTests
         var result2 = await _useCase.ExecuteAsync(query);
         Assert.That(_roomRepository.GetCallCount, Is.EqualTo(1));
 
-        // Invalidate cache for this campus
-        await _useCase.InvalidateCacheAsync("campus-ictu");
+        // Invalidate cache for this campus via IRoomListingCacheInvalidator
+        await _useCase.InvalidateCampusAsync("campus-ictu");
 
         // Third call must fetch fresh data from repository
         var result3 = await _useCase.ExecuteAsync(query);

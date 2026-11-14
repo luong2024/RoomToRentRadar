@@ -10,11 +10,4 @@ public interface IGetRoomListingsUseCase
     Task<PagedResult<RoomListingDto>> ExecuteAsync(
         GetRoomListingsQuery query,
         CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Invalidates cached listing pages for a specific campus when rooms are added, modified, or re-verified.
-    /// </summary>
-    Task InvalidateCacheAsync(
-        string campusId,
-        CancellationToken cancellationToken = default);
 }

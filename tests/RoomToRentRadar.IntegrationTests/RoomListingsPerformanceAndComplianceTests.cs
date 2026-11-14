@@ -188,6 +188,92 @@ public class RoomListingsApplicationPerformanceTests
         });
     }
 
+    [Test]
+    public async Task DistancePagination_WhenRoomsHaveExactSameCoordinates_ConsecutivePagesMustNotDuplicateOrOmitItems()
+    {
+        // 30 rooms located at exact identical coordinates (e.g. apartment building next to campus)
+        var sharedLocation = new GeoLocation(21.5852, 105.8074);
+        for (var i = 1; i <= 30; i++)
+        {
+            var room = new RoomListing(
+                $"apt-room-{i:D3}",
+                $"Phòng căn hộ #{i}",
+                "Cùng tòa nhà",
+                new Money(2000000),
+                25.0,
+                "Tòa nhà A",
+                sharedLocation,
+                ListingRoomStatus.Available,
+                VerificationStatus.Verified,
+                "campus-ictu");
+
+            await _repository.AddAsync(room);
+        }
+
+        var page1 = await _useCase.ExecuteAsync(new GetRoomListingsQuery("campus-ictu", Page: 1, PageSize: 10, SortBy: "distance"));
+        var page2 = await _useCase.ExecuteAsync(new GetRoomListingsQuery("campus-ictu", Page: 2, PageSize: 10, SortBy: "distance"));
+        var page3 = await _useCase.ExecuteAsync(new GetRoomListingsQuery("campus-ictu", Page: 3, PageSize: 10, SortBy: "distance"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(page1.Items, Has.Count.EqualTo(10));
+            Assert.That(page2.Items, Has.Count.EqualTo(10));
+            Assert.That(page3.Items, Has.Count.EqualTo(10));
+
+            var p1Ids = page1.Items.Select(x => x.Id).ToHashSet();
+            var p2Ids = page2.Items.Select(x => x.Id).ToHashSet();
+            var p3Ids = page3.Items.Select(x => x.Id).ToHashSet();
+
+            Assert.That(p1Ids.Overlaps(p2Ids), Is.False, "Page 1 and Page 2 must not overlap even when distance is identical");
+            Assert.That(p2Ids.Overlaps(p3Ids), Is.False, "Page 2 and Page 3 must not overlap even when distance is identical");
+            Assert.That(p1Ids.Overlaps(p3Ids), Is.False, "Page 1 and Page 3 must not overlap even when distance is identical");
+
+            var allIds = p1Ids.Union(p2Ids).Union(p3Ids).ToHashSet();
+            Assert.That(allIds, Has.Count.EqualTo(30), "All 30 rooms must be uniquely accounted for across 3 pages");
+        });
+    }
+
+    [Test]
+    public async Task DistancePagination_RoomsNearPageBoundary_ShouldMaintainStrictPaginationContinuity()
+    {
+        // 25 rooms with varying distances spanning page boundary between page 1 and page 2 (pageSize = 10)
+        for (var i = 1; i <= 25; i++)
+        {
+            var offset = i * 0.0005;
+            var room = new RoomListing(
+                $"boundary-room-{i:D3}",
+                $"Boundary Room #{i}",
+                "Mô tả",
+                new Money(1800000),
+                20.0,
+                "Địa chỉ",
+                new GeoLocation(21.5852 + offset, 105.8074 + offset),
+                ListingRoomStatus.Available,
+                VerificationStatus.Verified,
+                "campus-ictu");
+
+            await _repository.AddAsync(room);
+        }
+
+        var page1 = await _useCase.ExecuteAsync(new GetRoomListingsQuery("campus-ictu", Page: 1, PageSize: 10, SortBy: "distance"));
+        var page2 = await _useCase.ExecuteAsync(new GetRoomListingsQuery("campus-ictu", Page: 2, PageSize: 10, SortBy: "distance"));
+        var page3 = await _useCase.ExecuteAsync(new GetRoomListingsQuery("campus-ictu", Page: 3, PageSize: 10, SortBy: "distance"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(page1.Items, Has.Count.EqualTo(10));
+            Assert.That(page2.Items, Has.Count.EqualTo(10));
+            Assert.That(page3.Items, Has.Count.EqualTo(5));
+
+            var item10 = page1.Items.Last();
+            var item11 = page2.Items.First();
+
+            Assert.That(item10.DistanceToCampusKm, Is.LessThanOrEqualTo(item11.DistanceToCampusKm),
+                "Last item of Page 1 must be closer or equal to first item of Page 2");
+            Assert.That(item10.Id, Is.Not.EqualTo(item11.Id), "Boundary items across pages must not have duplicate IDs");
+        });
+    }
+
     private sealed class FakeRoomListingRepository : IRoomListingRepository
     {
         private readonly List<RoomListing> _rooms = [];
@@ -434,6 +520,43 @@ public class CosmosRoomListingPerformanceIntegrationTests
             // Total distinct items across 3 pages should be exactly 30 (zero duplicates or omitted items)
             var unionCount = page1Ids.Union(page2Ids).Union(page3Ids).Count();
             Assert.That(unionCount, Is.EqualTo(30), "Pagination must yield completely distinct non-overlapping items across consecutive pages");
+        });
+    }
+
+    [Test]
+    public async Task CosmosDbQuery_DistancePagination_SequentialPagesMustYieldDistinctItems()
+    {
+        if (_container is null || _repository is null)
+        {
+            Assert.Ignore($"Cosmos DB Emulator is not reachable at {Endpoint}. Skipping live integration test.");
+            return;
+        }
+
+        var page1 = await _repository.GetAvailableVerifiedRoomsByCampusAsync(
+            CampusId,
+            _campusLocation,
+            page: 1,
+            pageSize: 10,
+            sortBy: "distance",
+            descending: false);
+
+        var page2 = await _repository.GetAvailableVerifiedRoomsByCampusAsync(
+            CampusId,
+            _campusLocation,
+            page: 2,
+            pageSize: 10,
+            sortBy: "distance",
+            descending: false);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(page1.Items, Has.Count.EqualTo(10));
+            Assert.That(page2.Items, Has.Count.EqualTo(10));
+
+            var p1Ids = page1.Items.Select(x => x.Id).ToHashSet();
+            var p2Ids = page2.Items.Select(x => x.Id).ToHashSet();
+
+            Assert.That(p1Ids.Overlaps(p2Ids), Is.False, "Distance sorted page 1 and page 2 must not have overlapping items");
         });
     }
 }

@@ -93,16 +93,6 @@ public sealed class GetRoomListingsUseCase : IGetRoomListingsUseCase, IRoomListi
 
         var pageItems = dtos.ToList();
 
-        // Secondary deterministic tie-breaker for distance sort at application layer:
-        // Cosmos DB SQL forbids combining ST_DISTANCE with other fields in ORDER BY.
-        // Therefore, any duplicate distance items within a page are stably ordered by Id here.
-        if (normalizedSortBy == "distance")
-        {
-            pageItems = normalizedSortOrder == "desc"
-                ? pageItems.OrderByDescending(d => d.DistanceToCampusKm).ThenBy(d => d.Id).ToList()
-                : pageItems.OrderBy(d => d.DistanceToCampusKm).ThenBy(d => d.Id).ToList();
-        }
-
         var result = new PagedResult<RoomListingDto>(pageItems, query.Page, query.PageSize, listingsPage.TotalCount);
 
         // Store in cache
@@ -113,14 +103,9 @@ public sealed class GetRoomListingsUseCase : IGetRoomListingsUseCase, IRoomListi
 
     /// <summary>
     /// Implements IRoomListingCacheInvalidator for outbound cache invalidation from write use cases.
-    /// </summary>
-    public Task InvalidateCampusAsync(string campusId, CancellationToken cancellationToken = default)
-        => InvalidateCacheAsync(campusId, cancellationToken);
-
-    /// <summary>
     /// Instantly invalidates all cached listing pages for a given campus by incrementing its version counter.
     /// </summary>
-    public async Task InvalidateCacheAsync(string campusId, CancellationToken cancellationToken = default)
+    public async Task InvalidateCampusAsync(string campusId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(campusId))
         {
