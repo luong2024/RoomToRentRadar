@@ -139,9 +139,6 @@ public sealed class CosmosDbContext : ICosmosDbContext
 
         var database = databaseResponse.Database;
 
-        var roomsContainerName = string.IsNullOrWhiteSpace(_options.ContainerName) ? "Rooms" : _options.ContainerName;
-        await database.CreateContainerIfNotExistsAsync(roomsContainerName, PartitionKeyPath, cancellationToken: cancellationToken);
-
         var usersContainerProperties = new ContainerProperties(_options.UsersContainerName, PartitionKeyPath);
 
         await database.CreateContainerIfNotExistsAsync(
@@ -196,7 +193,8 @@ public sealed class CosmosDbContext : ICosmosDbContext
 
         await EnsureUserProfileCompositeIndexesAsync(userProfilesResponse.Container, userProfilesResponse.Resource, cancellationToken);
 
-        var roomsContainerProperties = new ContainerProperties(_options.RoomsContainerName, PartitionKeyPath);
+        var roomsContainerName = string.IsNullOrWhiteSpace(_options.RoomsContainerName) ? "Rooms" : _options.RoomsContainerName;
+        var roomsContainerProperties = new ContainerProperties(roomsContainerName, PartitionKeyPath);
         roomsContainerProperties.IndexingPolicy.SpatialIndexes.Add(new SpatialPath
         {
             Path = "/location/*",
@@ -208,9 +206,49 @@ public sealed class CosmosDbContext : ICosmosDbContext
             SpatialTypes = { SpatialType.Point }
         });
 
-        await database.CreateContainerIfNotExistsAsync(
+        var roomsResponse = await database.CreateContainerIfNotExistsAsync(
             roomsContainerProperties,
             cancellationToken: cancellationToken);
+
+        await EnsureRoomsSpatialIndexesAsync(roomsResponse.Container, roomsResponse.Resource, cancellationToken);
+    }
+
+    private static async Task EnsureRoomsSpatialIndexesAsync(
+        Container container,
+        ContainerProperties properties,
+        CancellationToken cancellationToken)
+    {
+        var indexingPolicy = properties.IndexingPolicy ?? new IndexingPolicy();
+        properties.IndexingPolicy = indexingPolicy;
+
+        var requiredPaths = new[] { "/location/*", "/Location/*" };
+        var modified = false;
+
+        foreach (var path in requiredPaths)
+        {
+            var existing = indexingPolicy.SpatialIndexes.FirstOrDefault(sp =>
+                string.Equals(sp.Path, path, StringComparison.Ordinal));
+
+            if (existing is null)
+            {
+                indexingPolicy.SpatialIndexes.Add(new SpatialPath
+                {
+                    Path = path,
+                    SpatialTypes = { SpatialType.Point }
+                });
+                modified = true;
+            }
+            else if (!existing.SpatialTypes.Contains(SpatialType.Point))
+            {
+                existing.SpatialTypes.Add(SpatialType.Point);
+                modified = true;
+            }
+        }
+
+        if (modified)
+        {
+            await container.ReplaceContainerAsync(properties, cancellationToken: cancellationToken);
+        }
     }
 
     private static async Task EnsureUserProfileCompositeIndexesAsync(

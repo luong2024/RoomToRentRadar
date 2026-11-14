@@ -19,8 +19,9 @@ public class CosmosRoomRepository : IRoomRepository
     public async Task<Room> CreateAsync(Room room, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(room);
-        var response = await _container.CreateItemAsync(room, new PartitionKey(room.Id), cancellationToken: cancellationToken);
-        return response.Resource;
+        var document = RoomDocument.FromDomain(room);
+        var response = await _container.CreateItemAsync(document, new PartitionKey(document.Id), cancellationToken: cancellationToken);
+        return response.Resource.ToDomain();
     }
 
     public async Task<Room?> GetByIdAsync(string id, CancellationToken cancellationToken = default)

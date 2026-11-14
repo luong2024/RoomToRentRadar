@@ -365,4 +365,52 @@ public class CosmosRoomRepositoryTests
         Assert.That(page2Items.Count, Is.EqualTo(1));
         Assert.That(page1Items[0].Id, Is.Not.EqualTo(page2Items[0].Id));
     }
+
+    [Test]
+    public async Task SearchAsync_AfterCreateAsyncWithCoordinates_ShouldFindRoomWithinGpsRadius()
+    {
+        if (_repository is null) Assert.Ignore("Cosmos DB repository is not initialized.");
+
+        var testId = Guid.NewGuid().ToString("N")[..8];
+        var uniqueKeyword = $"created-gps-{testId}";
+
+        var room = new Room
+        {
+            Id = $"room-created-{testId}",
+            Title = $"Phòng tạo mới qua CreateAsync {uniqueKeyword}",
+            Description = "Kiểm tra GPS radius search sau khi CreateAsync",
+            Price = 2000000m,
+            Area = 25.0,
+            RoomType = "Khép kín",
+            Address = "Đường Hoàng Văn Thụ, Thái Nguyên",
+            Latitude = 21.5860,
+            Longitude = 105.8080,
+            Status = RoomStatus.Available,
+            IsVerified = true
+        };
+
+        // Act - Lưu phòng qua CreateAsync (phải serialize qua RoomDocument và lưu GeoJSON Location)
+        var createdRoom = await _repository!.CreateAsync(room);
+        Assert.That(createdRoom, Is.Not.Null);
+        Assert.That(createdRoom.Id, Is.EqualTo(room.Id));
+
+        // Search với toạ độ gần đó (tâm 21.5852, 105.8073, bán kính 2km)
+        var query = new SearchRoomsQuery(
+            latitude: 21.5852,
+            longitude: 105.8073,
+            radiusInKm: 2.0,
+            keyword: uniqueKeyword);
+
+        var (items, totalCount) = await _repository.SearchAsync(query);
+
+        // Assert - Room được tạo bởi CreateAsync phải được tìm thấy qua GPS radius search
+        Assert.Multiple(() =>
+        {
+            Assert.That(totalCount, Is.EqualTo(1));
+            Assert.That(items.Count, Is.EqualTo(1));
+            Assert.That(items[0].Id, Is.EqualTo(room.Id));
+            Assert.That(items[0].Latitude, Is.EqualTo(room.Latitude));
+            Assert.That(items[0].Longitude, Is.EqualTo(room.Longitude));
+        });
+    }
 }
