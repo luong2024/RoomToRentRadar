@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using RoomToRentRadar.Application.DTOs;
@@ -12,10 +13,42 @@ namespace RoomToRentRadar.Adapters.Inbound.WebApi.Controllers;
 public class RoomsController : ControllerBase
 {
     private readonly IGetRoomDetailsUseCase _getRoomDetailsUseCase;
+    private readonly ISearchRoomsUseCase _searchRoomsUseCase;
 
-    public RoomsController(IGetRoomDetailsUseCase getRoomDetailsUseCase)
+    public RoomsController(
+        IGetRoomDetailsUseCase getRoomDetailsUseCase,
+        ISearchRoomsUseCase searchRoomsUseCase)
     {
         _getRoomDetailsUseCase = getRoomDetailsUseCase ?? throw new ArgumentNullException(nameof(getRoomDetailsUseCase));
+        _searchRoomsUseCase = searchRoomsUseCase ?? throw new ArgumentNullException(nameof(searchRoomsUseCase));
+    }
+
+    /// <summary>
+    /// Tìm kiếm danh sách phòng trọ theo các tiêu chí lọc (giá, diện tích, loại phòng, từ khóa, bán kính/khoảng cách).
+    /// </summary>
+    /// <param name="query">Các tham số lọc và phân trang</param>
+    /// <param name="cancellationToken">Token huỷ thao tác</param>
+    /// <returns>Kết quả tìm kiếm bao gồm danh sách phòng, tổng số lượng, số trang và các bộ lọc đang kích hoạt</returns>
+    [HttpGet]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(SearchRoomsResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Search([FromQuery] SearchRoomsQuery query, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _searchRoomsUseCase.ExecuteAsync(query, cancellationToken);
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Yêu cầu không hợp lệ",
+                Detail = ex.Message
+            });
+        }
     }
 
     /// <summary>
