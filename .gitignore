@@ -64,6 +64,8 @@ launchSettings.json.user
 *.db3
 *.sqlite
 *.sqlite3
+# Re-include the Datastore.Sqlite project folder: *.sqlite matches its name case-insensitively on Windows.
+!RoomToRentRadar.Datastore.Sqlite/
 google-services.json
 GoogleService-Info.plist
 *.keystore
