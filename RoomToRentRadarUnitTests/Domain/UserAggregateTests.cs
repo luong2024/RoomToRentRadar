@@ -356,15 +356,89 @@ public class UserAggregateTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(withoutToken.ConcurrencyToken, Is.Null);
+            Assert.That(withoutToken.ConcurrencyToken, Is.EqualTo("1"));
             Assert.That(withToken.ConcurrencyToken, Is.EqualTo("etag-1"));
         });
+    }
+
+    [Test]
+    public void ConcurrencyToken_DerivedFromVersion_WhenNoExplicitToken()
+    {
+        var reconstituted = ReconstituteUser(version: 7);
+        var registered = User.RegisterLocal(
+            email: "student@ictu.edu.vn",
+            passwordHash: "hash",
+            fullName: "Nguyen Van A",
+            role: UserRole.Student,
+            phoneNumber: null,
+            studentCode: "DTC01",
+            utcNow: FixedNow);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(reconstituted.ConcurrencyToken, Is.EqualTo("7"));
+            Assert.That(registered.ConcurrencyToken, Is.EqualTo("1"));
+        });
+    }
+
+    [Test]
+    public void MarkPersisted_AdvancesVersionAndToken()
+    {
+        var user = ReconstituteUser();
+
+        user.MarkPersisted();
+        Assert.Multiple(() =>
+        {
+            Assert.That(user.Version, Is.EqualTo(2));
+            Assert.That(user.ConcurrencyToken, Is.EqualTo("2"));
+        });
+
+        user.MarkPersisted();
+        Assert.Multiple(() =>
+        {
+            Assert.That(user.Version, Is.EqualTo(3));
+            Assert.That(user.ConcurrencyToken, Is.EqualTo("3"));
+        });
+    }
+
+    [Test]
+    public void MarkPersisted_AfterExplicitToken_ReturnsToVersionDerivedToken()
+    {
+        var user = ReconstituteUser(version: 4, concurrencyToken: "etag-9");
+        Assert.That(user.ConcurrencyToken, Is.EqualTo("etag-9"));
+
+        user.MarkPersisted();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(user.Version, Is.EqualTo(5));
+            Assert.That(user.ConcurrencyToken, Is.EqualTo("5"));
+        });
+    }
+
+    [Test]
+    public void Reconstitute_WithExplicitToken_KeepsToken_ForCosmosAdapter()
+    {
+        var user = ReconstituteUser(concurrencyToken: "etag-1");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(user.ConcurrencyToken, Is.EqualTo("etag-1"));
+            Assert.That(user.Version, Is.EqualTo(1));
+        });
+
+        user.SetConcurrencyToken("etag-2");
+        Assert.That(user.ConcurrencyToken, Is.EqualTo("etag-2"));
+
+        user.SetConcurrencyToken(null);
+        Assert.That(user.ConcurrencyToken, Is.EqualTo(user.Version.ToString()));
     }
 
     private static User ReconstituteUser(
         string selectedCampusId = "ICTU",
         string preferredLanguage = "en",
-        int version = 1)
+        int version = 1,
+        string? concurrencyToken = null)
     {
         return User.Reconstitute(
             id: "u1",
@@ -381,6 +455,7 @@ public class UserAggregateTests
             lockoutEndUtc: null,
             createdAtUtc: FixedNow,
             updatedAtUtc: FixedNow,
+            concurrencyToken: concurrencyToken,
             selectedCampusId: selectedCampusId,
             preferredLanguage: preferredLanguage,
             version: version);

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
@@ -43,7 +44,9 @@ public sealed class User
     public string PreferredLanguage { get; private set; }
     // GUARDRAILS 1.5.2: optimistic concurrency version, starts at 1.
     public int Version { get; private set; }
-    public string? ConcurrencyToken { get; private set; }
+    private string? _explicitConcurrencyToken;
+    // ERD section 1: token = Version.ToString(); an explicit token only exists for the frozen CosmosDb adapter (ADR-002).
+    public string ConcurrencyToken => _explicitConcurrencyToken ?? Version.ToString(CultureInfo.InvariantCulture);
 
     public IReadOnlyList<RefreshTokenSession> RefreshTokens => _refreshTokens.AsReadOnly();
 
@@ -103,7 +106,7 @@ public sealed class User
         SelectedCampusId = selectedCampusId;
         PreferredLanguage = preferredLanguage;
         Version = version;
-        ConcurrencyToken = concurrencyToken;
+        _explicitConcurrencyToken = string.IsNullOrWhiteSpace(concurrencyToken) ? null : concurrencyToken;
 
         if (refreshTokens != null)
         {
@@ -257,9 +260,17 @@ public sealed class User
             concurrencyToken: concurrencyToken);
     }
 
+    // Kept only for the frozen CosmosDb adapter (ADR-002) which stores an ETag; SQLite and in-memory adapters do not use it.
     public void SetConcurrencyToken(string? token)
     {
-        ConcurrencyToken = token;
+        _explicitConcurrencyToken = string.IsNullOrWhiteSpace(token) ? null : token;
+    }
+
+    // GUARDRAILS 1.5.2: repository calls this after a successful UPDATE that wrote Version = expected + 1; unlike Room.MarkPersisted the aggregate does not bump Version on mutation, the repository SQL does.
+    public void MarkPersisted()
+    {
+        Version++;
+        _explicitConcurrencyToken = null;
     }
 
     public bool IsLockedOut(DateTime utcNow) =>
