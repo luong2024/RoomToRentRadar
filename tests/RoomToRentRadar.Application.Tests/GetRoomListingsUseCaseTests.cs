@@ -47,6 +47,8 @@ public class GetRoomListingsUseCaseTests
 
     [TestCase(0)]
     [TestCase(-1)]
+    [TestCase(100001)]
+    [TestCase(int.MaxValue)]
     public void ExecuteAsync_WhenPageIsInvalid_ShouldThrowValidationException(int page)
     {
         var query = new GetRoomListingsQuery("campus-ictu", Page: page);

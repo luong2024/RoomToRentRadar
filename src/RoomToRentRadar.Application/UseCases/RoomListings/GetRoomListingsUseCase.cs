@@ -9,7 +9,7 @@ using RoomToRentRadar.Domain.Enums;
 /// <summary>
 /// Implements the use case for browsing verified rental rooms near a campus (US01).
 /// </summary>
-public sealed class GetRoomListingsUseCase : IGetRoomListingsUseCase
+public sealed class GetRoomListingsUseCase : IGetRoomListingsUseCase, IRoomListingCacheInvalidator
 {
     // Reduced TTL from 10 minutes to 2 minutes for faster convergence with real-time updates
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(2);
@@ -112,6 +112,12 @@ public sealed class GetRoomListingsUseCase : IGetRoomListingsUseCase
     }
 
     /// <summary>
+    /// Implements IRoomListingCacheInvalidator for outbound cache invalidation from write use cases.
+    /// </summary>
+    public Task InvalidateCampusAsync(string campusId, CancellationToken cancellationToken = default)
+        => InvalidateCacheAsync(campusId, cancellationToken);
+
+    /// <summary>
     /// Instantly invalidates all cached listing pages for a given campus by incrementing its version counter.
     /// </summary>
     public async Task InvalidateCacheAsync(string campusId, CancellationToken cancellationToken = default)
@@ -146,9 +152,10 @@ public sealed class GetRoomListingsUseCase : IGetRoomListingsUseCase
             throw new ValidationException("CampusId", "Campus ID is required.");
         }
 
-        if (query.Page < 1)
+        // Bound page range to prevent integer overflow and runaway OFFSET calculations
+        if (query.Page is < 1 or > 100000)
         {
-            throw new ValidationException("Page", "Page number must be at least 1.");
+            throw new ValidationException("Page", "Page number must be between 1 and 100,000.");
         }
 
         if (query.PageSize is < 1 or > 100)

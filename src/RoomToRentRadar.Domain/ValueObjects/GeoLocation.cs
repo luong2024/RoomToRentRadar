@@ -14,7 +14,7 @@ public readonly record struct GeoLocation
 
     public GeoLocation(double latitude, double longitude)
     {
-        if (latitude is < -90.0 or > 90.0 || longitude is < -180.0 or > 180.0)
+        if (!double.IsFinite(latitude) || !double.IsFinite(longitude) || latitude is < -90.0 or > 90.0 || longitude is < -180.0 or > 180.0)
         {
             throw new InvalidLocationException(latitude, longitude);
         }

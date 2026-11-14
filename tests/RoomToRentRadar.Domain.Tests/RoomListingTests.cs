@@ -32,6 +32,9 @@ public class RoomListingTests
 
     [TestCase(0)]
     [TestCase(-10)]
+    [TestCase(double.NaN)]
+    [TestCase(double.PositiveInfinity)]
+    [TestCase(double.NegativeInfinity)]
     public void Constructor_WithInvalidArea_ShouldThrowArgumentOutOfRangeException(double area)
     {
         Assert.Throws<ArgumentOutOfRangeException>(() =>

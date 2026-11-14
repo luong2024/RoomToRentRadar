@@ -22,6 +22,10 @@ public class GeoLocationTests
     [TestCase(90.1, 100)]
     [TestCase(20, -180.1)]
     [TestCase(20, 180.1)]
+    [TestCase(double.NaN, 100)]
+    [TestCase(20, double.NaN)]
+    [TestCase(double.PositiveInfinity, 100)]
+    [TestCase(20, double.NegativeInfinity)]
     public void Constructor_WithInvalidCoordinates_ShouldThrowInvalidLocationException(double lat, double lon)
     {
         Assert.Throws<InvalidLocationException>(() => new GeoLocation(lat, lon));

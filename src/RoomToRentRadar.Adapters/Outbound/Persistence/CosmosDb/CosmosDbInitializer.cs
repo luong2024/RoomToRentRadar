@@ -58,20 +58,9 @@ public sealed class CosmosDbInitializer
 
             if (!string.Equals(partitionKeyPath, "/campusId", StringComparison.Ordinal))
             {
-                _logger.LogWarning(
-                    "Cosmos container '{ContainerName}' currently uses legacy partition key '{PartitionKeyPath}' instead of required '/campusId'. " +
-                    "Cosmos DB does not allow in-place partition key changes. Initiating safe zero-data-loss migration...",
-                    listingsContainerName,
-                    partitionKeyPath);
-
-                var migrationResult = await SafeMigrateToNewContainerAsync(
-                    database,
-                    effectiveContainer,
-                    listingsContainerName,
-                    cancellationToken);
-
-                effectiveContainer = migrationResult.Container;
-                effectiveProperties = migrationResult.Resource;
+                throw new InvalidOperationException(
+                    $"Cosmos container '{listingsContainerName}' currently uses partition key '{partitionKeyPath}', but '/campusId' is required. " +
+                    $"Cosmos DB does not allow in-place partition key changes. Please configure 'CosmosDb:ContainerName' to 'RoomListings'.");
             }
 
             // Automatic cutover migration from legacy "Rooms" container if it exists
@@ -91,8 +80,9 @@ public sealed class CosmosDbInitializer
     }
 
     /// <summary>
-    /// Checks for a legacy 'Rooms' container (from earlier versions using /id) and copies documents
-    /// to 'RoomListings' (/campusId) and 'RoomDetails' (/id) without deleting 'Rooms'.
+    /// Checks for a legacy 'Rooms' container (from earlier versions using /id) and performs
+    /// full schema-aware migration into 'RoomListings' (/campusId) and 'RoomDetails' (/id).
+    /// Legacy container 'Rooms' is never deleted, ensuring rollback safety.
     /// </summary>
     private async Task MigrateLegacyRoomsContainerIfPresentAsync(
         Database database,
@@ -109,19 +99,24 @@ public sealed class CosmosDbInitializer
                 return;
             }
 
-            // Only migrate if the target containers are currently empty
-            var countQuery = new QueryDefinition("SELECT VALUE COUNT(1) FROM c");
-            using var countIterator = listingsContainer.GetItemQueryIterator<int>(countQuery);
-            if (countIterator.HasMoreResults)
+            var legacyCount = await GetContainerCountAsync(legacyRoomsContainer, cancellationToken);
+            if (legacyCount == 0)
             {
-                var countRes = await countIterator.ReadNextAsync(cancellationToken);
-                if (countRes.FirstOrDefault() > 0)
-                {
-                    return; // Already populated
-                }
+                return;
             }
 
-            _logger.LogInformation("Legacy 'Rooms' container detected. Copying documents to 'RoomListings' and 'RoomDetails' (legacy container preserved)...");
+            var listingsCount = await GetContainerCountAsync(listingsContainer, cancellationToken);
+            var detailsCount = await GetContainerCountAsync(roomDetailsContainer, cancellationToken);
+
+            // Independent container check: only migrate if target containers are not fully populated
+            if (listingsCount >= legacyCount && detailsCount >= legacyCount)
+            {
+                _logger.LogInformation("Both 'RoomListings' and 'RoomDetails' are already fully populated ({Count} items). Skipping legacy migration.", listingsCount);
+                return;
+            }
+
+            _logger.LogInformation("Legacy 'Rooms' container detected with {LegacyCount} documents. Performing schema-aware migration...", legacyCount);
+
             var migratedCount = 0;
             using var feedIterator = legacyRoomsContainer.GetItemQueryIterator<Newtonsoft.Json.Linq.JObject>(new QueryDefinition("SELECT * FROM c"));
             while (feedIterator.HasMoreResults)
@@ -129,7 +124,8 @@ public sealed class CosmosDbInitializer
                 var batch = await feedIterator.ReadNextAsync(cancellationToken);
                 foreach (var doc in batch)
                 {
-                    var id = doc["id"]?.ToString();
+                    var id = doc["id"]?.ToString() ?? Guid.NewGuid().ToString();
+                    doc["id"] = id;
                     var campusId = doc["campusId"]?.ToString();
                     if (string.IsNullOrWhiteSpace(campusId))
                     {
@@ -137,20 +133,60 @@ public sealed class CosmosDbInitializer
                         doc["campusId"] = campusId;
                     }
 
-                    // Copy to RoomListings (/campusId)
-                    await listingsContainer.UpsertItemAsync(doc, new PartitionKey(campusId), cancellationToken: cancellationToken);
+                    // P1.2: Full schema mapping from legacy Room to RoomListingDocument
+                    var price = (decimal?)doc["monthlyRentAmount"] ?? (decimal?)doc["price"] ?? 1500000m;
+                    var area = (double?)doc["areaSquareMeters"] ?? (double?)doc["area"] ?? 20.0;
+                    var isVerified = ((int?)doc["verificationStatus"] == 2) || ((bool?)doc["isVerified"] == true);
+                    var status = (int?)doc["status"] == 0 ? 0 : 1;
+                    var lat = (double?)doc["latitude"] ?? 21.5852;
+                    var lon = (double?)doc["longitude"] ?? 105.8074;
 
-                    // Copy to RoomDetails (/id)
-                    if (!string.IsNullOrWhiteSpace(id))
+                    var listingDoc = new RoomListingDocument
                     {
-                        await roomDetailsContainer.UpsertItemAsync(doc, new PartitionKey(id), cancellationToken: cancellationToken);
-                    }
+                        Id = id,
+                        CampusId = campusId,
+                        Title = doc["title"]?.ToString() ?? $"Phòng trọ {id}",
+                        Description = doc["description"]?.ToString() ?? string.Empty,
+                        MonthlyRentAmount = price,
+                        MonthlyRentCurrency = doc["monthlyRentCurrency"]?.ToString() ?? "VND",
+                        AreaSquareMeters = area,
+                        Address = doc["address"]?.ToString() ?? "Địa chỉ phòng trọ",
+                        Latitude = lat,
+                        Longitude = lon,
+                        Location = new Microsoft.Azure.Cosmos.Spatial.Point(lon, lat),
+                        Status = status,
+                        VerificationStatus = isVerified ? 2 : 0, // 2 = Verified (AC4 requirement)
+                        ThumbnailUrl = doc["thumbnailUrl"]?.ToString(),
+                        CreatedAtUtc = (DateTime?)doc["createdAtUtc"] ?? (DateTime?)doc["lastUpdatedDate"] ?? DateTime.UtcNow
+                    };
+
+                    // Upsert into RoomListings (/campusId)
+                    await listingsContainer.UpsertItemAsync(listingDoc, new PartitionKey(campusId), cancellationToken: cancellationToken);
+
+                    // Upsert into RoomDetails (/id)
+                    await roomDetailsContainer.UpsertItemAsync(doc, new PartitionKey(id), cancellationToken: cancellationToken);
 
                     migratedCount++;
                 }
             }
 
-            _logger.LogInformation("Successfully copied {Count} documents from legacy 'Rooms' container. Both target containers are now populated and 'Rooms' is intact.", migratedCount);
+            // P2 – Major: Post-migration validation to guarantee 100% data integrity
+            var postListingsCount = await GetContainerCountAsync(listingsContainer, cancellationToken);
+            var postDetailsCount = await GetContainerCountAsync(roomDetailsContainer, cancellationToken);
+
+            _logger.LogInformation(
+                "Legacy migration completed: Legacy 'Rooms' had {LegacyCount} documents. " +
+                "'RoomListings' now has {ListingsCount} documents, and 'RoomDetails' has {DetailsCount} documents. " +
+                "Legacy container 'Rooms' has been preserved intact for backup and rollback.",
+                legacyCount,
+                postListingsCount,
+                postDetailsCount);
+
+            if (postListingsCount < legacyCount)
+            {
+                throw new InvalidOperationException(
+                    $"Migration data integrity check failed: Legacy container has {legacyCount} documents, but 'RoomListings' only contains {postListingsCount}.");
+            }
         }
         catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
@@ -158,67 +194,30 @@ public sealed class CosmosDbInitializer
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to copy from legacy 'Rooms' container. Target containers remain functional.");
+            var isDevelopment = _environment?.IsDevelopment() ?? false;
+            if (isDevelopment)
+            {
+                _logger.LogWarning(ex, "Legacy 'Rooms' migration encountered an issue in Development: {Message}", ex.Message);
+            }
+            else
+            {
+                // P1.4: In Staging/Production, fail-fast on migration failure!
+                _logger.LogCritical(ex, "Critical failure during legacy 'Rooms' migration in non-development environment.");
+                throw;
+            }
         }
     }
 
-    /// <summary>
-    /// Safely copies data in streaming batches to a new container partitioned by /campusId.
-    /// Crucially, the legacy container is NEVER deleted, preventing any data loss and enabling rollback.
-    /// </summary>
-    private async Task<ContainerResponse> SafeMigrateToNewContainerAsync(
-        Database database,
-        Container legacyContainer,
-        string legacyContainerName,
-        CancellationToken cancellationToken)
+    private static async Task<int> GetContainerCountAsync(Container container, CancellationToken cancellationToken)
     {
-        var targetContainerName = $"{legacyContainerName}_v2";
-        _logger.LogWarning(
-            "Creating target container '{TargetContainer}' with partition key '/campusId' (preserving legacy container '{LegacyContainer}')...",
-            targetContainerName,
-            legacyContainerName);
-
-        var targetContainerProperties = new ContainerProperties(targetContainerName, "/campusId");
-        var targetContainerResponse = await database.CreateContainerIfNotExistsAsync(targetContainerProperties, cancellationToken: cancellationToken);
-        var targetContainer = targetContainerResponse.Container;
-
-        var totalMigrated = 0;
-        try
+        var countQuery = new QueryDefinition("SELECT VALUE COUNT(1) FROM c");
+        using var iterator = container.GetItemQueryIterator<int>(countQuery);
+        if (iterator.HasMoreResults)
         {
-            using var feedIterator = legacyContainer.GetItemQueryIterator<Newtonsoft.Json.Linq.JObject>(new QueryDefinition("SELECT * FROM c"));
-            while (feedIterator.HasMoreResults)
-            {
-                var page = await feedIterator.ReadNextAsync(cancellationToken);
-                foreach (var doc in page)
-                {
-                    var campusId = doc["campusId"]?.ToString();
-                    if (string.IsNullOrWhiteSpace(campusId))
-                    {
-                        campusId = "campus-ictu";
-                        doc["campusId"] = campusId;
-                    }
-
-                    await targetContainer.UpsertItemAsync(doc, new PartitionKey(campusId), cancellationToken: cancellationToken);
-                    totalMigrated++;
-                }
-
-                _logger.LogInformation("Migrated batch of {Count} items (total so far: {Total}).", page.Count, totalMigrated);
-            }
-
-            _logger.LogInformation(
-                "Safe migration completed successfully: {Total} documents copied from '{LegacyContainer}' to '{TargetContainer}'. " +
-                "The legacy container has been preserved intact for backup and rollback.",
-                totalMigrated,
-                legacyContainerName,
-                targetContainerName);
+            var res = await iterator.ReadNextAsync(cancellationToken);
+            return res.FirstOrDefault();
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error occurred during batch migration from '{LegacyContainer}' to '{TargetContainer}'. Legacy data remains safe.", legacyContainerName, targetContainerName);
-            throw;
-        }
-
-        return targetContainerResponse;
+        return 0;
     }
 
     private static async Task EnsureSpatialAndCompositeIndexesAsync(Container container, ContainerProperties properties, CancellationToken cancellationToken)

@@ -31,7 +31,9 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddApplicationUseCases(this IServiceCollection services)
     {
-        services.AddScoped<IGetRoomListingsUseCase, GetRoomListingsUseCase>();
+        services.AddScoped<GetRoomListingsUseCase>();
+        services.AddScoped<IGetRoomListingsUseCase>(sp => sp.GetRequiredService<GetRoomListingsUseCase>());
+        services.AddScoped<IRoomListingCacheInvalidator>(sp => sp.GetRequiredService<GetRoomListingsUseCase>());
         services.AddScoped<IGetRoomDetailsUseCase, GetRoomDetailsUseCase>();
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<IRegisterUserUseCase, RegisterUserUseCase>();

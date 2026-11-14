@@ -46,9 +46,9 @@ public sealed class RoomListing
         ArgumentException.ThrowIfNullOrWhiteSpace(address);
         ArgumentException.ThrowIfNullOrWhiteSpace(campusId);
 
-        if (areaSquareMeters <= 0)
+        if (!double.IsFinite(areaSquareMeters) || areaSquareMeters <= 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(areaSquareMeters), "Area must be greater than zero.");
+            throw new ArgumentOutOfRangeException(nameof(areaSquareMeters), "Area must be a finite number greater than zero.");
         }
 
         Id = id;

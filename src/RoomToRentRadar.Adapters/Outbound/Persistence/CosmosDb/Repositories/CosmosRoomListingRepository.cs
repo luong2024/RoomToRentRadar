@@ -71,12 +71,13 @@ public sealed class CosmosRoomListingRepository : IRoomListingRepository
             _ => ($"ORDER BY ST_DISTANCE(c.location, @campusLocation) {direction}", true)
         };
 
+        var offset = checked((long)(page - 1) * pageSize);
         var queryDefinition = new QueryDefinition(
             $"SELECT * FROM c WHERE {filter} {orderByClause} OFFSET @offset LIMIT @limit")
             .WithParameter("@campusId", campusId)
             .WithParameter("@status", (int)ListingRoomStatus.Available)
             .WithParameter("@verificationStatus", (int)VerificationStatus.Verified)
-            .WithParameter("@offset", (page - 1) * pageSize)
+            .WithParameter("@offset", offset)
             .WithParameter("@limit", pageSize);
         if (requiresLocationParam)
         {
