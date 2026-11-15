@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -118,20 +120,55 @@ public sealed class RoomsController : ControllerBase
             return NotFound(notFoundProblem);
         }
 
-        // ADR-004 & ADR-012: Concurrency & caching ETag
-        var etag = $"\"{result.Id}_{result.LastUpdatedAtUtc.Ticks}\"";
+        // ADR-012 §6 & OpenAPI getRoomDetail:
+        // Cache ETag is weak (W/"<hash>"), computed from the caller's serialized response body,
+        // accompanied by Cache-Control: private, no-cache and Vary: Authorization.
+        var jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
+        var hash = Convert.ToHexString(SHA256.HashData(jsonBytes)).ToLowerInvariant();
+        var etag = $"W/\"{hash}\"";
+
+        Response?.Headers?.TryAdd("Cache-Control", "private, no-cache");
+        Response?.Headers?.TryAdd("Vary", "Authorization");
+        Response?.Headers?.TryAdd("ETag", etag);
+
         if (Request?.Headers != null && Request.Headers.TryGetValue("If-None-Match", out var ifNoneMatchHeader))
         {
-            var clientEtag = ifNoneMatchHeader.ToString().Trim();
-            if (string.Equals(clientEtag, etag, StringComparison.Ordinal) ||
-                clientEtag == "*")
+            if (MatchesIfNoneMatch(ifNoneMatchHeader.ToString(), hash))
             {
                 return StatusCode(StatusCodes.Status304NotModified);
             }
         }
 
-        Response?.Headers?.TryAdd("ETag", etag);
         return Ok(result);
+    }
+
+    private static bool MatchesIfNoneMatch(string? ifNoneMatchHeader, string currentHash)
+    {
+        if (string.IsNullOrWhiteSpace(ifNoneMatchHeader))
+        {
+            return false;
+        }
+
+        var trimmed = ifNoneMatchHeader.Trim();
+        if (trimmed == "*")
+        {
+            return true;
+        }
+
+        var tags = trimmed.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var tag in tags)
+        {
+            var unquoted = tag.StartsWith("W/", StringComparison.OrdinalIgnoreCase)
+                ? tag[2..].Trim('\"')
+                : tag.Trim('\"');
+
+            if (string.Equals(unquoted, currentHash, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

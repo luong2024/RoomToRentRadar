@@ -217,7 +217,12 @@ public class RoomDetailEndpointIntegrationTests
         Assert.That(initialResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var etag = initialResponse.Headers.ETag;
-        Assert.That(etag, Is.Not.Null, "Response must include an ETag header per ADR-004");
+        Assert.That(etag, Is.Not.Null, "Response must include an ETag header per ADR-004 / ADR-012");
+        Assert.That(etag!.IsWeak, Is.True, "ETag must be weak (W/...) per ADR-012 §6");
+
+        // Assert Cache-Control and Vary per ADR-012 §6
+        Assert.That(initialResponse.Headers.CacheControl?.ToString(), Does.Contain("private"));
+        Assert.That(initialResponse.Headers.Vary, Does.Contain("Authorization"));
 
         // Act 2: GET with If-None-Match
         using var conditionalRequest = new HttpRequestMessage(HttpMethod.Get, "/api/rooms/room-ictu-001");
@@ -227,7 +232,64 @@ public class RoomDetailEndpointIntegrationTests
 
         // Assert 2
         Assert.That(conditionalResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotModified),
-            "Server must return 304 Not Modified when ETag matches per ADR-004");
+            "Server must return 304 Not Modified when ETag matches per ADR-004 / ADR-012");
+    }
+
+    [Test]
+    public async Task GetRoomById_ETag_GuestVsAuthenticated_HaveDifferentETags_AndAuthRevalidationReturns200()
+    {
+        // Act 1: Guest gets ETag (phone masked)
+        var guestResponse = await _client.GetAsync("/api/rooms/room-ictu-001");
+        Assert.That(guestResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var guestEtag = guestResponse.Headers.ETag;
+        Assert.That(guestEtag, Is.Not.Null);
+
+        // Act 2: Authenticated user sends request with guest's ETag in If-None-Match
+        using var authRequest = new HttpRequestMessage(HttpMethod.Get, "/api/rooms/room-ictu-001");
+        authRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", GenerateJwt("student-001"));
+        authRequest.Headers.IfNoneMatch.Add(guestEtag!);
+
+        var authResponse = await _client.SendAsync(authRequest);
+
+        // Assert 2 (ADR-012 §6: Caller-dependent body must NOT return 304 for authenticated caller holding guest ETag)
+        Assert.That(authResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK),
+            "Signed-in user must receive 200 OK with unmasked phone, not 304 with cached guest body");
+
+        var authEtag = authResponse.Headers.ETag;
+        Assert.That(authEtag, Is.Not.Null);
+        Assert.That(authEtag!.Tag, Is.Not.EqualTo(guestEtag!.Tag), "Guest and Authenticated ETags must differ");
+
+        var authContent = await authResponse.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(authContent);
+        var landlord = doc.RootElement.GetProperty("landlord");
+        Assert.That(landlord.GetProperty("phoneNumber").GetString(), Is.EqualTo("0988123456"));
+    }
+
+    [Test]
+    public async Task GetRoomById_ETag_DifferentCampus_HaveDifferentETags_AndDoesNotReturn304()
+    {
+        var ictuResponse = await _client.GetAsync("/api/rooms/room-ictu-001");
+        var etagIctu = ictuResponse.Headers.ETag;
+
+        using var tnusRequest = new HttpRequestMessage(HttpMethod.Get, "/api/rooms/room-ictu-001?campusId=TNUS");
+        tnusRequest.Headers.IfNoneMatch.Add(etagIctu!);
+
+        var tnusResponse = await _client.SendAsync(tnusRequest);
+        Assert.That(tnusResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK),
+            "Different campusId changes distanceKm, so ETag must differ and return 200");
+
+        var etagTnus = tnusResponse.Headers.ETag;
+        Assert.That(etagTnus!.Tag, Is.Not.EqualTo(etagIctu!.Tag));
+    }
+
+    [Test]
+    public async Task GetRoomById_ETag_SupportsWildcardAndUnquotedInIfNoneMatch()
+    {
+        // Wildcard *
+        using var wildcardRequest = new HttpRequestMessage(HttpMethod.Get, "/api/rooms/room-ictu-001");
+        wildcardRequest.Headers.TryAddWithoutValidation("If-None-Match", "*");
+        var wildcardResponse = await _client.SendAsync(wildcardRequest);
+        Assert.That(wildcardResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotModified));
     }
 
     [Test]
