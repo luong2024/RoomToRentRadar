@@ -393,7 +393,7 @@ Preferences (`Preferences` API, not SQLite): `SelectedCampusId` (guest), `AppLan
 
 | Item | Current | Target |
 |---|---|---|
-| `Users` table | no `SelectedCampusId`, no `Version` | add both (migration 0002, T00.7). |
+| `Users` table | migration 0002 adds `SelectedCampusId`, `PreferredLanguage`, `Version` (T00.7, done) | persisted by `SqliteUserRepository`; `Version` drives optimistic concurrency; exposed in `UserProfileDto`. |
 | Schema creation | versioned migration files `Datastore.Sqlite/Migrations/NNNN_name.sql` + `SqliteMigrator` + `PRAGMA user_version` (T00.6, done) | each feature adds its own numbered file; `SqliteDbContext` is no longer edited for schema changes. |
 | `Room` | not on develop2; PR #6 and PR #16 define **two incompatible** `Domain/Entities/Room.cs` | single `Domain/Aggregates/Room.cs` per §4.4 (both PRs must align before merge). |
 | Cosmos DB documents | `Datastore.CosmosDb` project | frozen; not extended ([ADR-002](adr/adr-002-sqlite-single-datastore.md)). |
@@ -420,3 +420,4 @@ Rules:
 - Files are embedded resources named `NNNN_snake_case.sql` and are applied in one transaction each, which then sets `PRAGMA user_version`.
 - Never edit an applied migration — add a new one.
 - After pulling T00.6 each developer deletes the local `roomtorentradar.db` once (old databases have `user_version` 0 and are rejected with a clear message).
+- Every migration runs with `foreign_keys` OFF (set before its transaction opens) and `PRAGMA foreign_key_check` must return no rows before the transaction commits; `foreign_keys` is restored afterwards.

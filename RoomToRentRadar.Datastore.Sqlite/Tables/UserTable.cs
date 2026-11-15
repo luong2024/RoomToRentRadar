@@ -1,3 +1,5 @@
+using RoomToRentRadar.Domain.Aggregates;
+
 namespace RoomToRentRadar.Datastore.Sqlite.Tables;
 
 public sealed class UserTable
@@ -17,5 +19,8 @@ public sealed class UserTable
     public DateTime? LockoutEndUtc { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime UpdatedAtUtc { get; set; }
+    public string SelectedCampusId { get; set; } = User.DefaultSelectedCampusId;
+    public string PreferredLanguage { get; set; } = User.DefaultPreferredLanguage;
+    public int Version { get; set; } = 1;
 }
 

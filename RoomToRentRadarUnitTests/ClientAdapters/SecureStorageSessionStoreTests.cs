@@ -108,6 +108,44 @@ public class SecureStorageSessionStoreTests
     }
 
     [Test]
+    public async Task GetCachedUserProfileAsync_LegacyJsonWithoutNewFields_UsesDefaults()
+    {
+        // Arrange
+        var userJson = "{\"Id\":\"u-42\",\"Email\":\"landlord@ictu.edu.vn\",\"FullName\":\"Test Owner\",\"Role\":\"Landlord\",\"AuthProvider\":\"Local\",\"IsVerified\":true,\"CreatedAtUtc\":\"2026-11-12T00:00:00Z\"}";
+        _secureStorage.GetAsync(SecureStorageSessionStore.KeyUserProfile).Returns(userJson);
+
+        // Act
+        var profile = await _sut.GetCachedUserProfileAsync();
+
+        // Assert
+        Assert.That(profile, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(profile!.SelectedCampusId, Is.EqualTo("ICTU"));
+            Assert.That(profile.PreferredLanguage, Is.EqualTo("en"));
+        });
+    }
+
+    [Test]
+    public async Task GetCachedUserProfileAsync_JsonWithNewFields_ReadsStoredValues()
+    {
+        // Arrange
+        var userJson = "{\"Id\":\"u-42\",\"Email\":\"landlord@ictu.edu.vn\",\"FullName\":\"Test Owner\",\"Role\":\"Landlord\",\"AuthProvider\":\"Local\",\"IsVerified\":true,\"CreatedAtUtc\":\"2026-11-12T00:00:00Z\",\"SelectedCampusId\":\"TNUS\",\"PreferredLanguage\":\"vi\"}";
+        _secureStorage.GetAsync(SecureStorageSessionStore.KeyUserProfile).Returns(userJson);
+
+        // Act
+        var profile = await _sut.GetCachedUserProfileAsync();
+
+        // Assert
+        Assert.That(profile, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(profile!.SelectedCampusId, Is.EqualTo("TNUS"));
+            Assert.That(profile.PreferredLanguage, Is.EqualTo("vi"));
+        });
+    }
+
+    [Test]
     public async Task ClearSessionAsync_ClearsMemoryAndCallsRemoveOnStorage()
     {
         // Arrange

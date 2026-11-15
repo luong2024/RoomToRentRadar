@@ -18,6 +18,8 @@ public static class UserMapper
             PhoneNumber: user.PhoneNumber,
             StudentCode: user.StudentCode,
             IsVerified: user.IsVerified,
-            CreatedAtUtc: user.CreatedAtUtc);
+            CreatedAtUtc: user.CreatedAtUtc,
+            SelectedCampusId: user.SelectedCampusId,
+            PreferredLanguage: user.PreferredLanguage);
     }
 }
