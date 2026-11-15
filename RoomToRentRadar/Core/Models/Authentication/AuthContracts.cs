@@ -29,6 +29,21 @@ public sealed record AuthUser(
     string Provider,
     bool IsActive);
 
+/// <summary>
+/// Categorizes the exact nature of an authentication failure to distinguish between
+/// permanent credential rejection and temporary network/infrastructure faults.
+/// </summary>
+public enum AuthFailureType
+{
+    None = 0,
+    InvalidCredentials,
+    RefreshTokenExpiredOrRevoked,
+    NetworkError,
+    Timeout,
+    ServerError,
+    Unknown
+}
+
 public sealed record AuthResult(
     bool IsSuccess,
     string? AccessToken = null,
@@ -36,13 +51,33 @@ public sealed record AuthResult(
     AuthUser? User = null,
     string? ErrorMessage = null,
     bool RequiresRoleSelection = false,
-    string? PendingGoogleIdToken = null)
+    string? PendingGoogleIdToken = null,
+    AuthFailureType FailureType = AuthFailureType.None)
 {
+    /// <summary>
+    /// Indicates whether the failure is transient (e.g. network disconnection, timeout, server 5xx error)
+    /// where credentials remain potentially valid and session data should NOT be purged.
+    /// </summary>
+    public bool IsTransientError =>
+        FailureType is AuthFailureType.NetworkError or AuthFailureType.Timeout or AuthFailureType.ServerError;
+
     public static AuthResult Success(string accessToken, string refreshToken, AuthUser user) =>
         new(true, AccessToken: accessToken, RefreshToken: refreshToken, User: user);
 
-    public static AuthResult Failed(string errorMessage) =>
-        new(false, ErrorMessage: errorMessage);
+    public static AuthResult Failed(string errorMessage, AuthFailureType failureType = AuthFailureType.InvalidCredentials) =>
+        new(false, ErrorMessage: errorMessage, FailureType: failureType);
+
+    public static AuthResult NetworkFailure(string errorMessage) =>
+        new(false, ErrorMessage: errorMessage, FailureType: AuthFailureType.NetworkError);
+
+    public static AuthResult TimeoutFailure(string errorMessage) =>
+        new(false, ErrorMessage: errorMessage, FailureType: AuthFailureType.Timeout);
+
+    public static AuthResult ServerFailure(string errorMessage) =>
+        new(false, ErrorMessage: errorMessage, FailureType: AuthFailureType.ServerError);
+
+    public static AuthResult InvalidToken(string errorMessage) =>
+        new(false, ErrorMessage: errorMessage, FailureType: AuthFailureType.RefreshTokenExpiredOrRevoked);
 
     public static AuthResult NeedRoleSelection(string googleIdToken) =>
         new(false, RequiresRoleSelection: true, PendingGoogleIdToken: googleIdToken);
