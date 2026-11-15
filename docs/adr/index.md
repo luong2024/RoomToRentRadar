@@ -1,5 +1,11 @@
 # Architecture Decision Records (ADR)
 
+<!--
+CONTEXT NOTE (2026-11-12): ADR-005, -006, -007, -009, -010, -012 and -013 were revised IN PLACE on 2026-11-11/12 (review fixes and course-scope cut of external
+services) instead of being superseded, because none of those decisions had been implemented yet. From now on follow the rule below:
+a changed decision = a new ADR that supersedes the old one.
+-->
+
 An ADR records **one** significant decision: context, options considered, the decision and its consequences. ADRs are immutable once `Accepted`; to change a decision write a new ADR that `Supersedes` the old one and mark the old one `Superseded by ADR-xxx`.
 
 > **For AI agents:** treat `Accepted` ADRs as hard constraints. If a task seems to require violating one, stop and ask the user instead of working around it. New technology/package choices require a new ADR (and the NuGet approval step in `.agents/GUARDRAILS.md` §2).
@@ -20,4 +26,4 @@ File naming: `adr-<NNN>-<kebab-case-title>.md` (the number is a permanent ID, no
 | [ADR-010](adr-010-push-notifications-and-alerts.md) | Firebase Cloud Messaging + in-process alert matcher | Accepted | 2026-11-11 |
 | [ADR-011](adr-011-listing-moderation-state-machine.md) | Listing lifecycle state machine and two-level verification | Accepted | 2026-11-11 |
 | [ADR-012](adr-012-api-contract-and-error-model.md) | Design-first OpenAPI, ProblemDetails + errorCode, offset paging, ETag concurrency | Accepted | 2026-11-11 |
-| [ADR-013](adr-013-hosting-and-environments.md) | Environments, hosting and target platforms | Accepted | 2026-11-11 |
+| [ADR-013](adr-013-hosting-and-environments.md) | Environments and demo setup — course scope (laptop + Dev Tunnels, no public hosting) | Accepted (revised) | 2026-11-12 |

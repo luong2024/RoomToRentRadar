@@ -20,7 +20,7 @@ Students browse on unstable 4G. US01 AC3 requires the list in ≤ 3 s; NFR-07 re
 - Cache file `roomtorentradar-cache.db3` (schema in ERD §5), accessed only through `ICacheStore` in `Client.Adapters/Caching`.
 - **Cache-then-network** for: first page of room queries, room detail (with `ETag`/`If-None-Match` → `304`), favourites, campuses (7 days), conversations/messages. UI shows cached data immediately, then replaces it when the network answer arrives (PageModel exposes `IsRefreshing`, `IsOffline`).
 - **Network-only** for: search results beyond page 1, compare, travel time (server caches it), admin queues, all mutations.
-- **Offline queue** (`PendingOperations`) only for idempotent mutations: favourite add/remove and chat send (`clientMessageId`). Replayed on connectivity change. Other mutations require network and show "Cần kết nối mạng".
+- **Offline queue** (`PendingOperations`) only for idempotent mutations: favourite add/remove and chat send (`clientMessageId`). Replayed on connectivity change. Other mutations require network and show "Connection required".
 - Images use MAUI `UriImageSource` caching (`CacheValidity` 7 days) — thumbnails are small (≤ 60 KB).
 - Tokens are **never** stored in the cache DB (SecureStorage only, ADR-005). Cache is wiped on sign-out.
 

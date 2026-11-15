@@ -82,7 +82,7 @@ public class HttpAuthGatewayTests
             title = "Unauthorized",
             status = 401,
             detail = "Email hoặc mật khẩu không chính xác.",
-            errorCode = "AUTH_INVALID_CREDENTIALS"
+            errorCode = "INVALID_CREDENTIALS"
         };
 
         var handler = new MockHttpMessageHandler(req =>
@@ -104,7 +104,7 @@ public class HttpAuthGatewayTests
 
         Assert.That(ex, Is.Not.Null);
         Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
-        Assert.That(ex.ErrorCode, Is.EqualTo("AUTH_INVALID_CREDENTIALS"));
+        Assert.That(ex.ErrorCode, Is.EqualTo("INVALID_CREDENTIALS"));
         Assert.That(ex.Message, Is.EqualTo("Email hoặc mật khẩu không chính xác."));
     }
 
@@ -112,7 +112,7 @@ public class HttpAuthGatewayTests
     public async Task LoginAsync_ProblemDetailsWithExtensionsErrorCode_ParsesErrorCodeCorrectly()
     {
         // Arrange
-        var rawJson = "{\"type\":\"https://tools.ietf.org/html/rfc9110#section-15.5.2\",\"title\":\"Authentication Failed\",\"status\":401,\"detail\":\"Invalid email or password.\",\"instance\":\"/api/auth/login\",\"extensions\":{\"errorCode\":\"AUTH_INVALID_CREDENTIALS\"}}";
+        var rawJson = "{\"type\":\"https://tools.ietf.org/html/rfc9110#section-15.5.2\",\"title\":\"Authentication Failed\",\"status\":401,\"detail\":\"Invalid email or password.\",\"instance\":\"/api/auth/login\",\"extensions\":{\"errorCode\":\"INVALID_CREDENTIALS\"}}";
 
         var handler = new MockHttpMessageHandler(req =>
         {
@@ -132,7 +132,7 @@ public class HttpAuthGatewayTests
         await Task.CompletedTask;
 
         Assert.That(ex, Is.Not.Null);
-        Assert.That(ex!.ErrorCode, Is.EqualTo("AUTH_INVALID_CREDENTIALS"));
+        Assert.That(ex!.ErrorCode, Is.EqualTo("INVALID_CREDENTIALS"));
         Assert.That(ex.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
@@ -195,7 +195,7 @@ public class HttpAuthGatewayTests
             title = "Conflict",
             status = 409,
             detail = "Email này đã được sử dụng.",
-            errorCode = "USER_EMAIL_EXISTS"
+            errorCode = "EMAIL_TAKEN"
         };
 
         var handler = new MockHttpMessageHandler(req =>
@@ -223,7 +223,7 @@ public class HttpAuthGatewayTests
 
         Assert.That(ex, Is.Not.Null);
         Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
-        Assert.That(ex.ErrorCode, Is.EqualTo("USER_EMAIL_EXISTS"));
+        Assert.That(ex.ErrorCode, Is.EqualTo("EMAIL_TAKEN"));
     }
 
     [Test]

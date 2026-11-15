@@ -68,19 +68,16 @@ public sealed class InMemoryUserRepository : IUserRepository
         ct.ThrowIfCancellationRequested();
         lock (_writeLock)
         {
-            if (_usersById.TryGetValue(user.Id, out var existing))
+            // GUARDRAILS 1.5.2: same version-based optimistic concurrency as SqliteUserRepository.
+            if (!_usersById.TryGetValue(user.Id, out var existing) || existing.Version != user.Version)
             {
-                if (!string.IsNullOrWhiteSpace(user.ConcurrencyToken) &&
-                    !string.IsNullOrWhiteSpace(existing.ConcurrencyToken) &&
-                    user.ConcurrencyToken != existing.ConcurrencyToken)
-                {
-                    throw new ConcurrencyConflictException($"Optimistic concurrency conflict occurred updating user '{user.Id}'.");
-                }
+                throw new ConcurrencyConflictException($"Optimistic concurrency conflict occurred updating user '{user.Id}'.");
             }
 
-            var nextToken = Guid.NewGuid().ToString("N");
-            user.SetConcurrencyToken(nextToken);
-            _usersById[user.Id] = Clone(user);
+            var toStore = Clone(user);
+            toStore.MarkPersisted();
+            _usersById[user.Id] = toStore;
+            user.MarkPersisted();
         }
 
         return Task.CompletedTask;
@@ -112,6 +109,8 @@ public sealed class InMemoryUserRepository : IUserRepository
             createdAtUtc: source.CreatedAtUtc,
             updatedAtUtc: source.UpdatedAtUtc,
             refreshTokens: clonedTokens,
-            concurrencyToken: source.ConcurrencyToken);
+            selectedCampusId: source.SelectedCampusId,
+            preferredLanguage: source.PreferredLanguage,
+            version: source.Version);
     }
 }

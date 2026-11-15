@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
 using RoomToRentRadar.Api.Authorization;
 using RoomToRentRadar.Api.Controllers;
 using RoomToRentRadar.Api.Middlewares;
@@ -166,21 +167,22 @@ public class AuthControllerAndRbacTests
         });
     }
 
-    [TestCase(typeof(DomainValidationException), StatusCodes.Status400BadRequest)]
-    [TestCase(typeof(InvalidCredentialsException), StatusCodes.Status401Unauthorized)]
-    [TestCase(typeof(InvalidTokenException), StatusCodes.Status401Unauthorized)]
-    [TestCase(typeof(AccountLockedException), StatusCodes.Status403Forbidden)]
-    [TestCase(typeof(ForbiddenRoleException), StatusCodes.Status403Forbidden)]
-    [TestCase(typeof(LandlordNotApprovedException), StatusCodes.Status403Forbidden)]
-    [TestCase(typeof(UserNotFoundException), StatusCodes.Status404NotFound)]
-    [TestCase(typeof(DuplicateEmailException), StatusCodes.Status409Conflict)]
-    [TestCase(typeof(ConcurrencyConflictException), StatusCodes.Status409Conflict)]
-    public async Task AuthExceptionHandlingMiddleware_MapsDomainExceptionsToExpectedProblemDetails(
+    [TestCase(typeof(DomainValidationException), StatusCodes.Status400BadRequest, "VALIDATION_FAILED")]
+    [TestCase(typeof(InvalidCredentialsException), StatusCodes.Status401Unauthorized, "INVALID_CREDENTIALS")]
+    [TestCase(typeof(InvalidTokenException), StatusCodes.Status401Unauthorized, "INVALID_TOKEN")]
+    [TestCase(typeof(AccountLockedException), StatusCodes.Status403Forbidden, "ACCOUNT_LOCKED")]
+    [TestCase(typeof(ForbiddenRoleException), StatusCodes.Status403Forbidden, "FORBIDDEN_ROLE")]
+    [TestCase(typeof(LandlordNotApprovedException), StatusCodes.Status403Forbidden, "LANDLORD_NOT_APPROVED")]
+    [TestCase(typeof(UserNotFoundException), StatusCodes.Status404NotFound, "NOT_FOUND")]
+    [TestCase(typeof(DuplicateEmailException), StatusCodes.Status409Conflict, "EMAIL_TAKEN")]
+    [TestCase(typeof(ConcurrencyConflictException), StatusCodes.Status409Conflict, "CONCURRENCY_CONFLICT")]
+    public async Task ProblemDetailsMiddleware_MapsDomainExceptionsToExpectedProblemDetails(
         Type exceptionType,
-        int expectedStatusCode)
+        int expectedStatusCode,
+        string expectedErrorCode)
     {
         var exception = CreateExceptionInstance(exceptionType);
-        var middleware = new AuthExceptionHandlingMiddleware(_ => throw exception);
+        var middleware = new ProblemDetailsMiddleware(_ => throw exception, NullLogger<ProblemDetailsMiddleware>.Instance);
 
         var httpContext = new DefaultHttpContext();
         httpContext.Request.Path = "/api/auth/login";
@@ -189,14 +191,16 @@ public class AuthControllerAndRbacTests
         await middleware.InvokeAsync(httpContext);
 
         httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
-        var problem = await JsonSerializer.DeserializeAsync<ProblemDetails>(httpContext.Response.Body);
+        using var document = await JsonDocument.ParseAsync(httpContext.Response.Body);
+        var root = document.RootElement;
 
         Assert.Multiple(() =>
         {
             Assert.That(httpContext.Response.StatusCode, Is.EqualTo(expectedStatusCode));
-            Assert.That(problem, Is.Not.Null);
-            Assert.That(problem!.Status, Is.EqualTo(expectedStatusCode));
-            Assert.That(problem.Detail, Is.Not.Null.And.Not.Empty);
+            Assert.That(httpContext.Response.ContentType, Is.EqualTo("application/problem+json"));
+            Assert.That(root.GetProperty("status").GetInt32(), Is.EqualTo(expectedStatusCode));
+            Assert.That(root.GetProperty("detail").GetString(), Is.Not.Null.And.Not.Empty);
+            Assert.That(root.GetProperty("errorCode").GetString(), Is.EqualTo(expectedErrorCode));
         });
     }
 
@@ -239,6 +243,13 @@ public class AuthControllerAndRbacTests
         if (exceptionType == typeof(AccountLockedException))
         {
             return new AccountLockedException(DateTime.UtcNow.AddMinutes(15));
+        }
+
+        if (exceptionType == typeof(DomainValidationException))
+        {
+            // DomainValidationException was widened with an optional errorCode (ADR-012), so it no
+            // longer exposes a single-string constructor for reflection.
+            return new DomainValidationException("Test error detail");
         }
 
         return (Exception)Activator.CreateInstance(exceptionType, "Test error detail")!;

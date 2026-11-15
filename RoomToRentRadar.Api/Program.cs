@@ -1,61 +1,69 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using RoomToRentRadar.Api.Authorization;
+using RoomToRentRadar.Api.Binders;
+using RoomToRentRadar.Api.Errors;
 using RoomToRentRadar.Api.Middlewares;
 using RoomToRentRadar.Api.Security;
 using RoomToRentRadar.Application;
-using RoomToRentRadar.Datastore.CosmosDb;
-using RoomToRentRadar.Datastore.CosmosDb.Configurations;
 using RoomToRentRadar.Datastore.Sqlite;
 using RoomToRentRadar.Datastore.Sqlite.Configurations;
 using RoomToRentRadar.Infrastructure;
 using RoomToRentRadar.Infrastructure.Adapters.Security;
 using RoomToRentRadar.Ports.Outbound.ExternalServices;
-using RoomToRentRadar.Ports.Outbound.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers()
+// ===== 1. Controllers & JSON =====
+builder.Services.AddControllers(options =>
+    {
+        // US04: ?roomTypes=MiniApartment,WholeHouse (OpenAPI style: form, explode: false).
+        options.ModelBinderProviders.Insert(0, new RoomTypesModelBinderProvider());
+    })
     .AddJsonOptions(options =>
     {
-        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
-    })
-    .ConfigureApiBehaviorOptions(options =>
-    {
-        options.InvalidModelStateResponseFactory = context =>
-        {
-            var problemDetails = new ValidationProblemDetails(context.ModelState)
-            {
-                Status = StatusCodes.Status400BadRequest,
-                Title = "One or more validation errors occurred."
-            };
-            problemDetails.Extensions["errorCode"] = "VALIDATION_FAILED";
-            return new BadRequestObjectResult(problemDetails);
-        };
+        // ADR-012: enums are serialized as strings ("Available", "MiniApartment"); numbers are still accepted on input.
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserContextPort, HttpContextUserContextAdapter>();
 
+// ADR-012 / system-architecture §7.2: framework-generated 400s (model binding) must use the same
+// problem+json shape as domain validation errors, with a stable errorCode and an `errors` map.
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = ValidationProblemResponseFactory.Create;
+    // MVC-produced 4xx (e.g. 415, bare 404) must go through the status-code pages path to get a stable errorCode.
+    options.SuppressMapClientErrors = true;
+});
+
+// ===== 2. Datastore =====
+// ADR-002: SQLite is the only datastore (the CosmosDb provider is frozen).
+var sqliteSettings = builder.Configuration.GetSection(SqliteSettings.SectionName).Get<SqliteSettings>() ?? new SqliteSettings();
+sqliteSettings.SeedDemoRooms = builder.Configuration.GetValue<bool?>("Sqlite:SeedDemoRooms")
+    ?? builder.Environment.IsDevelopment(); // H4: demo seed only for local development
+builder.Services.AddSqliteDatastore(sqliteSettings);
+
+// ===== 3. Application =====
+builder.Services.AddApplicationServices();
+
+// ===== 4. Infrastructure =====
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new JwtSettings();
 if (string.IsNullOrWhiteSpace(jwtSettings.SigningKey))
 {
+    // Cảnh báo nhưng không crash khi chạy dev; production bắt buộc phải có key thật
     if (!builder.Environment.IsDevelopment())
     {
-        throw new InvalidOperationException("CRITICAL: JWT SigningKey must be configured in Production/Staging environments.");
+        throw new InvalidOperationException("CRITICAL: Jwt:SigningKey must be explicitly configured in production.");
     }
 
-    Console.WriteLine("DEVELOPMENT WARNING: No JWT SigningKey was configured. Generating ephemeral in-memory signing key.");
     jwtSettings.SigningKey = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
 }
-
-// ADR-002: Cosmos frozen, SQLite only for datastore
-var sqliteSettings = builder.Configuration.GetSection(SqliteSettings.SectionName).Get<SqliteSettings>() ?? new SqliteSettings();
-builder.Services.AddSqliteDatastore(sqliteSettings);
 
 var useMockSso = builder.Configuration.GetValue("IctuSso:UseMockVerifier", defaultValue: false);
 if (useMockSso && !builder.Environment.IsDevelopment())
@@ -63,42 +71,41 @@ if (useMockSso && !builder.Environment.IsDevelopment())
     throw new InvalidOperationException("CRITICAL: Mock SSO verifier is strictly prohibited outside the Development environment.");
 }
 
-builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructure(jwtSettings, useMockSsoVerifier: useMockSso);
 
+// ===== 5. Authentication & authorization =====
 var signingKeyBytes = Encoding.UTF8.GetBytes(jwtSettings.SigningKey);
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = true,
-            ValidIssuer = jwtSettings.Issuer,
-            ValidateAudience = true,
-            ValidAudience = jwtSettings.Audience,
-            ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(signingKeyBytes),
-            NameClaimType = "sub",
-            RoleClaimType = "role",
-            ClockSkew = TimeSpan.Zero
+            ValidateIssuer = !string.IsNullOrWhiteSpace(jwtSettings.Issuer),
+            ValidIssuer = jwtSettings.Issuer,
+            ValidateAudience = !string.IsNullOrWhiteSpace(jwtSettings.Audience),
+            ValidAudience = jwtSettings.Audience,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(1)
         };
     });
 
 builder.Services.AddAuthorization(AuthorizationPolicies.ConfigurePolicies);
 
+// ===== 6. Request pipeline =====
 var app = builder.Build();
 
-app.UseMiddleware<AuthExceptionHandlingMiddleware>();
+app.UseMiddleware<ProblemDetailsMiddleware>();
+// 401/403/404/415 produced without a body (auth challenge, unknown route, unsupported media type) become problem+json with a stable errorCode.
+app.UseStatusCodePages(StatusCodeProblemPages.WriteAsync);
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<AuditLoggingMiddleware>();
-
 app.MapControllers();
-app.MapGet("/api/health", () => Results.Ok(new { Status = "Healthy", Service = "RoomToRentRadar.Api" }));
 
 app.Run();
 
+// Cho phép test project (WebApplicationFactory<Program>) tham chiếu entry point của API.
 public partial class Program { }

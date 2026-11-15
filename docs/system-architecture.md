@@ -1,5 +1,10 @@
 # System Architecture — RoomToRentRadar
 
+<!--
+CONTEXT NOTE (2026-11-12): §3 describes the TARGET solution; §10 lists what exists today. Client.Adapters already exists
+(PR #22: Abstractions, Http, Session, Mocks); Caching/ and Realtime/ are still to be added. Localization design: §7.6.
+-->
+
 | Field | Value |
 |---|---|
 | Status | Draft v1.0 — 2026-11-11 |
@@ -34,6 +39,7 @@ flowchart LR
 | API | ASP.NET Core 10 controllers, JWT bearer, SignalR hub, BackgroundServices | Business use cases, auth/RBAC, moderation, search, alerts, chat, media serving. |
 | Database | SQLite file (`roomtorentradar.db`, WAL) | All server data ([erd.md](erd.md)). |
 | Media store | Local disk folder behind `IPhotoStoragePort` | Photo originals and renditions ([ADR-008](adr/adr-008-media-storage-and-360-viewer.md)). |
+| Demo hosting | Team laptop + Microsoft Dev Tunnels (HTTPS for physical phones) | No public server in course scope; Docker/Caddy/VM is a documented upgrade path only ([ADR-013](adr/adr-013-hosting-and-environments.md)). |
 
 ## 3. Solution structure (target)
 
@@ -84,7 +90,7 @@ RoomToRentRadar.slnx
 │   │   ├── Middlewares/  ProblemDetails (errorCode), AuditLogging
 │   │   ├── Authorization/ policies, ClaimsPrincipal extensions
 │   │   └── Program.cs
-│   ├── RoomToRentRadar.Client.Adapters/     net10.0 · NEW (ADR-003)
+│   ├── RoomToRentRadar.Client.Adapters/     net10.0 · exists since PR #22 (Abstractions, Http, Session, Mocks) — add Caching/, Realtime/ (ADR-003)
 │   │   ├── Abstractions/  I*Gateway, ISessionStore, ICacheStore, IConnectivity, IPushTokenProvider
 │   │   ├── Http/          Http*Gateway, AuthTokenHandler, ApiJsonContext (source-gen), ApiOptions
 │   │   ├── Caching/       SqliteCacheStore, Cached*Gateway decorators, PendingOperationQueue
@@ -152,7 +158,7 @@ builder.Services.AddTransientWithShellRoute<RoomDetailPage, RoomDetailPageModel>
 | Feature | API | Used by |
 |---|---|---|
 | Secure token storage | `SecureStorage` | ADR-005 |
-| Preferences (guest campus, onboarding) | `Preferences` | BR-CMP-02 |
+| Preferences (guest campus, app language, seen house rules) | `Preferences` | BR-CMP-02, BR-I18N-02 |
 | Connectivity | `Connectivity.ConnectivityChanged` | ADR-004 |
 | Dialer / Zalo | `PhoneDialer`, `Launcher.OpenAsync("https://zalo.me/…")` | UC-16 |
 | Share image | `VisualElement.CaptureAsync()` + `Share.RequestAsync(ShareFileRequest)` | US10 AC3 |
@@ -212,20 +218,26 @@ RoomsController.Search(query) → ISearchRoomsUseCase.ExecuteAsync(RoomSearchReq
 - PII: phone only to signed-in users (BR-AUTH-07); logs never contain tokens/passwords.
 
 ### 7.2 Error model
-`application/problem+json` with `errorCode` — [ADR-012](adr/adr-012-api-contract-and-error-model.md). Framework-generated errors must use the same shape: configure `ApiBehaviorOptions.InvalidModelStateResponseFactory` (model-binding 400 → `VALIDATION_FAILED` + `errors`), the rate limiter's `OnRejected` (429 → `RATE_LIMITED`) and `UseStatusCodePages` for bare 401/403/404. Until the global middleware exists, the current Auth endpoints return ProblemDetails **without** `errorCode`; the client must fall back to the HTTP status. Domain exceptions → HTTP:
+`application/problem+json` with `errorCode` — [ADR-012](adr/adr-012-api-contract-and-error-model.md). Every error response uses this shape. `ProblemDetailsMiddleware` catches all exceptions and maps them through one table (`ExceptionProblemMap`, rows below, first matching row wins). Framework-generated errors are covered by `ApiBehaviorOptions.InvalidModelStateResponseFactory` (model-binding 400 → `VALIDATION_FAILED` + `errors`, keys in camelCase) and `UseStatusCodePages` (bare 401/403/404/415 → `UNAUTHORIZED` / `FORBIDDEN` / `NOT_FOUND` / `UNSUPPORTED_MEDIA_TYPE`; the `WWW-Authenticate` header is kept). Other bare status codes such as 405 are not covered. The rate limiter's `OnRejected` (429 → `RATE_LIMITED`) is added by its own task. Unhandled exceptions return 500 `INTERNAL_ERROR` with a fixed `detail`: no stack trace and no exception message is ever sent (the stack goes to the log only). Domain exceptions → HTTP:
 
 | Exception | Status | errorCode (examples) |
 |---|---|---|
-| `DomainValidationException` | 400 | `VALIDATION_FAILED` |
+| `DomainValidationException` with `ErrorCode` `DUPLICATE_ROOM` | 409 | `DUPLICATE_ROOM` |
+| `DomainValidationException` (other) | 400 | `VALIDATION_FAILED`, or its own code: `INVALID_SORT_OPTION`, `INVALID_PRICE_RANGE`, `INVALID_AREA_RANGE`, `INVALID_DISTANCE_RANGE`, `CAMPUS_NOT_FOUND` |
 | `InvalidCredentialsException`, `InvalidTokenException` | 401 | `INVALID_CREDENTIALS`, `INVALID_TOKEN` |
 | `AccountLockedException` | 403 | `ACCOUNT_LOCKED` |
 | `ForbiddenRoleException`, `LandlordNotApprovedException` | 403 | `FORBIDDEN_ROLE`, `LANDLORD_NOT_APPROVED` |
-| `EntityNotFoundException`, `UserNotFoundException` | 404 | `ROOM_NOT_FOUND`, `CONVERSATION_NOT_FOUND` |
-| `DuplicateEmailException`, `ConcurrencyConflictException`, `InvalidStateTransitionException`, `LimitExceededException` | 409 | `EMAIL_TAKEN`, `CONCURRENCY_CONFLICT`, `INVALID_STATE_TRANSITION`, `LISTING_NOT_AVAILABLE`, `ALREADY_REPORTED`, `LIMIT_EXCEEDED` |
+| `UserNotFoundException` | 404 | `NOT_FOUND` (generic on purpose, anti-IDOR) |
+| `EntityNotFoundException` | 404 | its own code, e.g. `ROOM_NOT_FOUND` |
+| `DuplicateEmailException`, `ConcurrencyConflictException`, `InvalidStateTransitionException`, `LimitExceededException` | 409 | `EMAIL_TAKEN`, `CONCURRENCY_CONFLICT`, `INVALID_STATE_TRANSITION`, `LIMIT_EXCEEDED`; the last two accept their own code, e.g. `LISTING_NOT_AVAILABLE`, `ALREADY_REPORTED` |
+| any other exception | 500 | `INTERNAL_ERROR` |
+| bare 401 / 403 / 404 / 415 (status code pages) | 401 / 403 / 404 / 415 | `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `UNSUPPORTED_MEDIA_TYPE` |
 | precondition failures | 412 / 428 | `ETAG_MISMATCH`, `IF_MATCH_REQUIRED` |
 | `FileTooLargeException` (> 10 MB, BR-MED-02) | 413 | `FILE_TOO_LARGE` |
 | `UnsupportedMediaTypeException` (not JPEG/PNG by magic bytes) | 415 | `UNSUPPORTED_MEDIA_TYPE` |
 | rate limiter | 429 | `RATE_LIMITED` |
+
+Rows for 412/428, 413, exception-based 415 and 429 are added by T00.11, the upload task and the rate limiter task; until then no code path produces them.
 
 ### 7.3 Concurrency & idempotency
 `Version` columns + `If-Match` ([ADR-012](adr/adr-012-api-contract-and-error-model.md)); idempotent PUT/DELETE for favourites and devices; `clientMessageId` for chat; `(SavedSearchId, RoomId)` for alerts.
@@ -245,11 +257,16 @@ RoomsController.Search(query) → ISearchRoomsUseCase.ExecuteAsync(RoomSearchReq
 | `Admin:SeedAccounts` | seeded admin e-mails | empty |
 | Client `ApiOptions:BaseUrl` | per build/environment | emulator `http://10.0.2.2:5000` |
 
+### 7.6 Localization (US15)
+- **Client:** `Resources/Strings/AppResources.resx` (en-US, neutral/fallback) + `AppResources.vi.resx`. A singleton `LocalizedStrings` (indexer `this[string key]`, implements `INotifyPropertyChanged`) wraps `AppResources.ResourceManager`; XAML binds `{Binding [Key], Source={x:Static loc:LocalizedStrings.Instance}}`. `ILanguageService.SetLanguage(code)` sets `CultureInfo.CurrentUICulture`/`CurrentCulture` (+ `DefaultThread*`), saves `AppLanguage` in `Preferences`, raises `PropertyChanged(string.Empty)` so open pages re-render, and (signed in) calls the profile gateway (`updateMyProfile`). PageModels format money/dates with the current culture via shared converters — never `ToString("N0")` with a fixed culture.
+- **Server:** only text the server itself generates is localized — push and inbox notifications. Templates per language live in the Application layer (`Resources/NotificationTexts.resx` + `.vi.resx`, plain .NET, no ASP.NET dependency) and are chosen from `Users.PreferredLanguage` (BR-I18N-04). API errors stay English `ProblemDetails` + `errorCode`; the client translates `errorCode`.
+- **Reference data:** enums and catalog codes (room types, amenities, safety features, statuses) are sent as codes; the client maps code → label from `.resx`. Campus names are proper nouns and are not translated.
+
 ## 8. Performance budget & tactics
 
 | Target | Tactic |
 |---|---|
-| List ≤ 3 s (NFR-01) | cache-then-network; `RoomCardDto` ~0.5 KB × 20; thumbs ≤ 60 KB; compiled bindings; server read cache 30 s |
+| List ≤ 3 s (NFR-01) | cache-then-network; `RoomCardDto` ~0.5 KB × 20; thumbs ≤ 60 KB; compiled bindings; server read cache 30 s of **caller-independent** card data only — `isFavourite` and other per-user fields are merged per request, never cached across users |
 | Filter ≤ 2 s (NFR-02) | 300 ms debounce; count-only query for live count in filter sheet; indexed bbox query + in-memory exact filter |
 | Map ≤ 2 s | `RoomCardDto` (~0.5 KB, includes lat/lng) max 200 ≈ 100 KB compressed-friendly; pin preview needs no extra request |
 | Detail instant feel | navigate with card data → render header immediately → fetch detail with `If-None-Match` |
@@ -272,9 +289,9 @@ RoomsController.Search(query) → ISearchRoomsUseCase.ExecuteAsync(RoomSearchReq
 ## 10. Migration from current state (develop2 @ 8524ad8)
 
 1. Replace MAUI template (`Data/`, `Models/`, template Pages/PageModels, `GlobalUsings` entries) with the shell in §5.2.
-2. Create `RoomToRentRadar.Client.Adapters`; change MAUI project references (ADR-003) — requires csproj/slnx approval.
+2. ~~Create `RoomToRentRadar.Client.Adapters`~~ (done in PR #22 with the Auth gateway); remaining: `AuthTokenHandler`, cache store, other gateways, and the architecture test on MAUI references.
 3. Add `*.db` to `.gitignore`, untrack `RoomToRentRadar.Api/roomtorentradar.db`.
 4. Introduce migration runner + `Users.SelectedCampusId`, `Users.Version`.
-5. Generalise `AuthExceptionHandlingMiddleware` → `ProblemDetailsMiddleware` with `errorCode`.
+5. ~~Generalise `AuthExceptionHandlingMiddleware` → `ProblemDetailsMiddleware` with `errorCode`.~~ (done in T00.5)
 6. **PR #16 (US04) is the foundation for `Room`** (team decision 2026-11-11): it is aligned to [erd.md](erd.md) §4.4 and merged first; PR #6 (US02) and PR #13 (US03) then rebase onto it and keep only their own use cases/endpoints.
 7. ~~Update `AGENTS.md` project map~~ (done — moved to repo root, 2026-11-11). Still to do: GUARDRAILS wording (Datastore split, client gateways, SQLite only).

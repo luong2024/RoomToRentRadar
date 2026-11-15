@@ -1,12 +1,12 @@
 namespace RoomToRentRadar.Domain.Exceptions;
 
-/// <summary>
-/// Thrown when an illegal state transition is attempted on a listing per ADR-011 and BR-LST-04.
-/// Maps to HTTP 409 Conflict.
-/// </summary>
+/// <summary>ADR-011: illegal listing state transition - mapped to HTTP 409.</summary>
 public class InvalidStateTransitionException : Exception
 {
-    public InvalidStateTransitionException(string message) : base(message)
+    public string? ErrorCode { get; }
+
+    public InvalidStateTransitionException(string message, string? errorCode = null) : base(message)
     {
+        ErrorCode = errorCode;
     }
 }

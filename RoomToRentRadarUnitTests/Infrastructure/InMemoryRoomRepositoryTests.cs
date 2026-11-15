@@ -1,137 +1,144 @@
-#pragma warning disable CS0618
 using RoomToRentRadar.Domain.Aggregates;
 using RoomToRentRadar.Domain.Enums;
+using RoomToRentRadar.Domain.Exceptions;
 using RoomToRentRadar.Infrastructure.Adapters.Mocks;
+using RoomToRentRadar.Ports.Outbound.Repositories;
 
 namespace RoomToRentRadarUnitTests.Infrastructure;
 
+/// <summary>
+/// M1: <see cref="InMemoryRoomRepository"/> là adapter chỉ dùng trong test — không seed demo,
+/// nhận dữ liệu qua constructor và trả bản sao để store không bị sửa qua alias.
+/// </summary>
 [TestFixture]
 public class InMemoryRoomRepositoryTests
 {
-    private InMemoryRoomRepository _sut = null!;
-
-    [SetUp]
-    public void SetUp()
+    [Test]
+    public async Task NewRepository_WithoutSeed_IsEmpty()
     {
-        _sut = new InMemoryRoomRepository();
+        IRoomRepository repository = new InMemoryRoomRepository();
+
+        Assert.That(await repository.GetByIdAsync("any-id"), Is.Null);
     }
 
     [Test]
-    public async Task GetByIdAsync_WhenIdExists_ReturnsMatchingRoom()
+    public async Task Constructor_WithSeed_ExposesSeededRooms()
     {
-        var room = await _sut.GetByIdAsync("room-ictu-001");
+        var room = NewRoom("mem-1");
 
-        Assert.That(room, Is.Not.Null);
-        Assert.That(room!.Id, Is.EqualTo("room-ictu-001"));
-        Assert.That(room.Title, Does.Contain("cổng chính ICTU"));
-    }
+        var repository = new InMemoryRoomRepository(new[] { room });
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("   ")]
-    [TestCase("non-existent-id")]
-    public async Task GetByIdAsync_WhenIdInvalidOrNotFound_ReturnsNull(string? id)
-    {
-        var room = await _sut.GetByIdAsync(id!);
-        Assert.That(room, Is.Null);
-    }
-
-    [Test]
-    public async Task GetSimilarRoomsAsync_ExcludesSelf_AndOnlyReturnsAvailableRooms()
-    {
-        // Arrange: Add a rented room and an unavailable room
-        var targetRoom = await _sut.GetByIdAsync("room-ictu-001");
-        Assert.That(targetRoom, Is.Not.Null);
-
-        var rentedRoom = new Room(
-            id: "room-rented-test",
-            title: "Phòng đã thuê",
-            description: "Mô tả",
-            monthlyRent: targetRoom!.MonthlyRent,
-            depositAmount: 1000000m,
-            areaSquareMeters: targetRoom.AreaSquareMeters,
-            roomType: "Khép kín",
-            status: ListingStatus.Rented,
-            distanceToCampusKm: targetRoom.DistanceToCampusKm
-        );
-        _sut.AddOrUpdate(rentedRoom);
-
-        // Act
-        var results = await _sut.GetSimilarRoomsAsync(
-            excludeRoomId: "room-ictu-001",
-            targetPrice: targetRoom.MonthlyRent,
-            targetArea: targetRoom.AreaSquareMeters,
-            targetDistanceKm: targetRoom.DistanceToCampusKm,
-            limit: 10
-        );
-
-        // Assert
-        Assert.That(results, Is.Not.Empty);
-        Assert.That(results.Any(r => r.Id == "room-ictu-001"), Is.False, "Must exclude the target room itself.");
-        Assert.That(results.Any(r => r.Id == "room-rented-test"), Is.False, "Must exclude rented/unavailable rooms.");
-        Assert.That(results.All(r => r.IsAvailable), Is.True, "All returned similar rooms must be Available.");
-    }
-
-    [Test]
-    public async Task GetSimilarRoomsAsync_PrioritizesNearestDistanceFirst()
-    {
-        // Arrange
-        var roomNear = new Room(
-            id: "room-near",
-            title: "Phòng gần trường",
-            description: "0.3km",
-            monthlyRent: 2000000m,
-            depositAmount: 1000000m,
-            areaSquareMeters: 25.0,
-            roomType: "Khép kín",
-            status: ListingStatus.Available,
-            distanceToCampusKm: 0.3
-        );
-        var roomFar = new Room(
-            id: "room-far",
-            title: "Phòng xa trường",
-            description: "2.5km",
-            monthlyRent: 1800000m, // Price is closer to target 1800000 than roomNear, but distance is far
-            depositAmount: 1000000m,
-            areaSquareMeters: 25.0,
-            roomType: "Khép kín",
-            status: ListingStatus.Available,
-            distanceToCampusKm: 2.5
-        );
-        _sut.AddOrUpdate(roomNear);
-        _sut.AddOrUpdate(roomFar);
-
-        // Act - target distance 0.2km
-        var results = await _sut.GetSimilarRoomsAsync(
-            excludeRoomId: "some-id",
-            targetPrice: 1800000m,
-            targetArea: 25.0,
-            targetDistanceKm: 0.2,
-            limit: 2
-        );
-
-        // Assert: roomNear (|0.3 - 0.2| = 0.1) must precede roomFar (|2.5 - 0.2| = 2.3)
-        var nearIndex = results.ToList().FindIndex(r => r.Id == "room-near");
-        var farIndex = results.ToList().FindIndex(r => r.Id == "room-far");
-
-        Assert.That(nearIndex, Is.GreaterThanOrEqualTo(0));
-        if (farIndex >= 0)
+        var found = await repository.GetByIdAsync("mem-1");
+        Assert.Multiple(() =>
         {
-            Assert.That(nearIndex, Is.LessThan(farIndex), "Rooms closer in distance to campus must be ranked higher.");
-        }
+            Assert.That(found, Is.Not.Null);
+            Assert.That(found!.Id, Is.EqualTo("mem-1"));
+            Assert.That(found.Title, Is.EqualTo(room.Title));
+            Assert.That(found.Status, Is.EqualTo(ListingStatus.PendingReview));
+        });
     }
 
     [Test]
-    public async Task GetSimilarRoomsAsync_RespectsSpecifiedLimit()
+    public async Task AddAsync_ThenGetByIdAsync_ReturnsRoom()
     {
-        var results = await _sut.GetSimilarRoomsAsync(
-            excludeRoomId: "room-ictu-001",
-            targetPrice: 1800000m,
-            targetArea: 25.0,
-            targetDistanceKm: 0.2,
-            limit: 1
-        );
+        var repository = new InMemoryRoomRepository();
+        var room = NewRoom("mem-2");
 
-        Assert.That(results, Has.Count.EqualTo(1));
+        await repository.AddAsync(room);
+
+        var found = await repository.GetByIdAsync("mem-2");
+        Assert.That(found?.Title, Is.EqualTo(room.Title));
     }
+
+    [Test]
+    public async Task UpdateAsync_ReplacesStoredRoom()
+    {
+        var repository = new InMemoryRoomRepository(new[] { NewRoom("mem-3") });
+        var room = (await repository.GetByIdAsync("mem-3"))!;
+
+        room.Approve(new DateTime(2026, 11, 12, 8, 0, 0, DateTimeKind.Utc));
+        await repository.UpdateAsync(room);
+
+        var found = await repository.GetByIdAsync("mem-3");
+        Assert.That(found!.Status, Is.EqualTo(ListingStatus.Available));
+    }
+
+    [Test]
+    public async Task UpdateAsync_WithStaleVersion_ThrowsConcurrencyConflictException()
+    {
+        // GUARDRAILS §1.6.3: InMemory phải hành xử như Sqlite, không được nuốt xung đột.
+        var repository = new InMemoryRoomRepository(new[] { NewRoom("mem-5") });
+        var stale = (await repository.GetByIdAsync("mem-5"))!;
+        var current = (await repository.GetByIdAsync("mem-5"))!;
+
+        current.Approve(new DateTime(2026, 11, 12, 8, 0, 0, DateTimeKind.Utc));
+        await repository.UpdateAsync(current);
+
+        stale.Approve(new DateTime(2026, 11, 13, 8, 0, 0, DateTimeKind.Utc));
+
+        await Assert.ThatAsync(
+            async () => await repository.UpdateAsync(stale),
+            Throws.TypeOf<ConcurrencyConflictException>());
+    }
+
+    [Test]
+    public async Task UpdateAsync_UnknownId_ThrowsConcurrencyConflictException()
+    {
+        var repository = new InMemoryRoomRepository();
+
+        await Assert.ThatAsync(
+            async () => await repository.UpdateAsync(NewRoom("missing")),
+            Throws.TypeOf<ConcurrencyConflictException>());
+    }
+
+    [Test]
+    public async Task AddAsync_DuplicateId_ThrowsDomainValidationExceptionWithDuplicateCode()
+    {
+        var repository = new InMemoryRoomRepository(new[] { NewRoom("mem-dup") });
+
+        await Assert.ThatAsync(
+            async () => await repository.AddAsync(NewRoom("mem-dup")),
+            Throws.TypeOf<DomainValidationException>()
+                .With.Property("ErrorCode").EqualTo("DUPLICATE_ROOM"));
+    }
+
+    [Test]
+    public async Task GetByIdAsync_ReturnsCopy_SoCallersCannotMutateTheStore()
+    {
+        var repository = new InMemoryRoomRepository(new[] { NewRoom("mem-4") });
+
+        var first = (await repository.GetByIdAsync("mem-4"))!;
+        first.Approve(new DateTime(2026, 11, 12, 8, 0, 0, DateTimeKind.Utc));
+        var second = await repository.GetByIdAsync("mem-4");
+
+        Assert.That(second!.Status, Is.EqualTo(ListingStatus.PendingReview));
+    }
+
+    [Test]
+    public async Task AddAsync_NullRoom_ThrowsArgumentNullException()
+    {
+        var repository = new InMemoryRoomRepository();
+
+        await Assert.ThatAsync(
+            async () => await repository.AddAsync(null!),
+            Throws.TypeOf<ArgumentNullException>());
+    }
+
+    private static Room NewRoom(string id) => Room.Reconstitute(
+        id: id,
+        landlordId: "landlord-1",
+        title: "Phòng mới trong bộ nhớ",
+        roomType: RoomType.BoardingRoom,
+        monthlyRentVnd: 1_800_000L,
+        depositVnd: 0L,
+        areaM2: 20.0,
+        addressLine: "Tân Thịnh",
+        ward: "Tân Thịnh",
+        district: "TP. Thái Nguyên",
+        latitude: 21.5851,
+        longitude: 105.8066,
+        status: ListingStatus.PendingReview,
+        createdAtUtc: new DateTime(2026, 11, 2, 9, 0, 0, DateTimeKind.Utc),
+        lastUpdatedAtUtc: new DateTime(2026, 11, 2, 9, 0, 0, DateTimeKind.Utc),
+        version: 1);
 }

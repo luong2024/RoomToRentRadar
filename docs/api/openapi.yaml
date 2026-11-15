@@ -1,3 +1,6 @@
+# CONTEXT NOTE (2026-11-12): implemented today = auth endpoints (AuthController) + getAuditLogs only.
+# Every other operation, and every field whose description says "PLANNED", is the target contract that code must follow.
+# Changing a shared DTO/operation needs team approval and must be done here in the same PR as the code (AGENTS.md §5, §8).
 openapi: 3.1.0
 info:
   title: RoomToRentRadar API
@@ -189,7 +192,7 @@ paths:
     patch:
       tags: [Profile]
       operationId: updateMyProfile
-      summary: Update own profile incl. selected campus (BR-CMP-02, UC-24) — planned
+      summary: Update own profile incl. selected campus and language (BR-CMP-02, BR-I18N-02, UC-24, UC-25) — planned
       security: [ { bearerAuth: [] } ]
       requestBody:
         required: true
@@ -307,6 +310,8 @@ paths:
         Visible for Available, Rented and Unpublished listings (status shown, US02 AC3).
         PendingReview/Rejected/Suspended are 404 for everyone except the owner and Admin (BR-LST-04a).
         `landlord.phoneNumber` and `landlord.zaloUrl` are null for anonymous callers.
+        Caching: weak ETag = hash of this caller's response body, `Cache-Control: private, no-cache`,
+        `Vary: Authorization` (ADR-012 §6) — never a version-only ETag, because the body differs per caller.
       security: [ {}, { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/RoomId'
@@ -1169,7 +1174,7 @@ components:
 
   responses:
     BadRequest:
-      description: Validation failed (errorCode VALIDATION_FAILED or specific)
+      description: Validation failed (errorCode VALIDATION_FAILED or a specific code; model-binding errors also carry `errors`)
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/ProblemDetails' }
@@ -1223,7 +1228,7 @@ components:
     # ------------------------------------------------ common
     ProblemDetails:
       type: object
-      description: RFC 9457 problem details with project extensions (ADR-012)
+      description: RFC 9457 problem details with project extensions (ADR-012). Every error response uses this shape, including bare 401, 403, 404 and 415 (errorCode UNAUTHORIZED, FORBIDDEN, NOT_FOUND, UNSUPPORTED_MEDIA_TYPE) and unhandled exceptions (500 INTERNAL_ERROR, no stack trace).
       required: [title, status, errorCode]
       properties:
         type: { type: string }
@@ -1233,11 +1238,11 @@ components:
         instance: { type: string }
         errorCode:
           type: string
-          description: Stable machine code mapped to Vietnamese text by the client (ui-ux-spec §6)
-          examples: [VALIDATION_FAILED, INVALID_CREDENTIALS, INVALID_TOKEN, ACCOUNT_LOCKED, FORBIDDEN_ROLE, LANDLORD_NOT_APPROVED, EMAIL_TAKEN, ROOM_NOT_FOUND, LISTING_NOT_AVAILABLE, INVALID_STATE_TRANSITION, ALREADY_REPORTED, LIMIT_EXCEEDED, CONCURRENCY_CONFLICT, ETAG_MISMATCH, IF_MATCH_REQUIRED, FILE_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, RATE_LIMITED]
+          description: Stable machine code mapped to localized text by the client (en-US / vi-VN, US15, ui-ux-spec §6)
+          examples: [VALIDATION_FAILED, INVALID_SORT_OPTION, INVALID_PRICE_RANGE, INVALID_AREA_RANGE, INVALID_DISTANCE_RANGE, CAMPUS_NOT_FOUND, DUPLICATE_ROOM, INVALID_CREDENTIALS, INVALID_TOKEN, ACCOUNT_LOCKED, FORBIDDEN_ROLE, LANDLORD_NOT_APPROVED, EMAIL_TAKEN, ROOM_NOT_FOUND, LISTING_NOT_AVAILABLE, INVALID_STATE_TRANSITION, ALREADY_REPORTED, LIMIT_EXCEEDED, CONCURRENCY_CONFLICT, ETAG_MISMATCH, IF_MATCH_REQUIRED, FILE_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, RATE_LIMITED, NOT_FOUND, FORBIDDEN, UNAUTHORIZED, INTERNAL_ERROR]
         errors:
           type: object
-          description: Field-level validation messages
+          description: Field-level validation messages. Keys are camelCase JSON field paths (for example minRentVnd or address.street).
           additionalProperties:
             type: array
             items: { type: string }
@@ -1318,7 +1323,7 @@ components:
         refreshToken: { type: string }
     UserProfileDto:
       type: object
-      required: [id, email, fullName, role, authProvider, isVerified, createdAtUtc]
+      required: [id, email, fullName, role, authProvider, isVerified, createdAtUtc, selectedCampusId, preferredLanguage]
       properties:
         id: { type: string }
         email: { type: string }
@@ -1329,7 +1334,8 @@ components:
         studentCode: { type: [string, 'null'] }
         isVerified: { type: boolean }
         createdAtUtc: { type: string, format: date-time }
-        selectedCampusId: { type: string, description: 'PLANNED addition (BR-CMP-02) — shared DTO change requires approval' }
+        selectedCampusId: { type: string, description: 'Campus id as returned by listCampuses; defaults to ICTU (BR-CMP-02)' }
+        preferredLanguage: { $ref: '#/components/schemas/AppLanguage', description: 'UI language en or vi; defaults to en (US15, BR-I18N-02)' }
     AuthTokensDto:
       type: object
       required: [accessToken, refreshToken, accessTokenExpiresAtUtc, refreshTokenExpiresAtUtc, user]
@@ -1346,6 +1352,11 @@ components:
         fullName: { type: string, minLength: 1, maxLength: 100 }
         phoneNumber: { type: [string, 'null'], pattern: '^(0|\+84)[0-9]{9}$' }
         selectedCampusId: { type: string }
+        preferredLanguage: { $ref: '#/components/schemas/AppLanguage' }
+    AppLanguage:
+      type: string
+      enum: [en, vi]
+      description: UI language (BR-I18N-01). Default `en`.
 
     # ------------------------------------------------ campus
     CampusDto:

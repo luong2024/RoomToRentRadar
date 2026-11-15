@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<IGetCurrentUserProfileUseCase, GetCurrentUserProfileUseCase>();
         services.AddScoped<IApproveLandlordUseCase, ApproveLandlordUseCase>();
         services.AddScoped<IGetAuditLogsUseCase, GetAuditLogsUseCase>();
+        services.AddScoped<ISearchRoomsUseCase, SearchRoomsUseCase>();
         services.AddScoped<IGetRoomDetailUseCase, GetRoomDetailUseCase>();
         services.AddScoped<IGetSimilarRoomsUseCase, GetSimilarRoomsUseCase>();
 

@@ -18,23 +18,10 @@ namespace RoomToRentRadar.Datastore.Sqlite
             services.AddScoped<IUserRepository, SqliteUserRepository>();
             services.AddScoped<IAuditLogRepository, SqliteAuditLogRepository>();
             services.AddScoped<IRoomRepository, SqliteRoomRepository>();
-            services.AddScoped<IRoomSearchReadModel, SqliteRoomRepository>();
+            services.AddScoped<ICampusRepository, SqliteCampusRepository>();
+            services.AddScoped<IRoomSearchReadModel, SqliteRoomSearchReadModel>();
 
             return services;
         }
-    }
-}
-
-namespace RoomToRentRadar.Datastore
-{
-    using RoomToRentRadar.Datastore.Sqlite;
-    using RoomToRentRadar.Datastore.Sqlite.Configurations;
-
-    public static class SqliteDatastoreCompatibilityExtensions
-    {
-        public static IServiceCollection AddDatastore(
-            this IServiceCollection services,
-            SqliteSettings? settings = null) =>
-            services.AddSqliteDatastore(settings);
     }
 }

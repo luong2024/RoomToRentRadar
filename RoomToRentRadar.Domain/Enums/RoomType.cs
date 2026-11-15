@@ -1,12 +1,10 @@
 namespace RoomToRentRadar.Domain.Enums;
 
-/// <summary>
-/// Room types supported by RoomToRentRadar per docs/erd.md §4.4 and docs/api/openapi.yaml.
-/// </summary>
+/// <summary>Room types allowed by <c>docs/erd.md</c> §4.4 and <c>docs/api/openapi.yaml</c>.</summary>
 public enum RoomType
 {
-    BoardingRoom = 0,
-    MiniApartment = 1,
-    WholeHouse = 2,
-    Dormitory = 3
+    BoardingRoom = 1,
+    MiniApartment = 2,
+    WholeHouse = 3,
+    Dormitory = 4
 }

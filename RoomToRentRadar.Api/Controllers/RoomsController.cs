@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using RoomToRentRadar.Ports.Contracts.Common;
+using RoomToRentRadar.Ports.Contracts.Requests.Rooms;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadar.Ports.Inbound.UseCases.Rooms;
 
@@ -10,15 +13,64 @@ namespace RoomToRentRadar.Api.Controllers;
 [Route("api/[controller]")]
 public sealed class RoomsController : ControllerBase
 {
-    private readonly IGetRoomDetailUseCase _getRoomDetailUseCase;
+    private readonly ISearchRoomsUseCase? _searchRoomsUseCase;
+    private readonly IGetRoomDetailUseCase? _getRoomDetailUseCase;
     private readonly IGetSimilarRoomsUseCase? _getSimilarRoomsUseCase;
+
+    [ActivatorUtilitiesConstructor]
+    public RoomsController(
+        ISearchRoomsUseCase searchRoomsUseCase,
+        IGetRoomDetailUseCase? getRoomDetailUseCase = null,
+        IGetSimilarRoomsUseCase? getSimilarRoomsUseCase = null)
+    {
+        ArgumentNullException.ThrowIfNull(searchRoomsUseCase);
+        _searchRoomsUseCase = searchRoomsUseCase;
+        _getRoomDetailUseCase = getRoomDetailUseCase;
+        _getSimilarRoomsUseCase = getSimilarRoomsUseCase;
+    }
 
     public RoomsController(
         IGetRoomDetailUseCase getRoomDetailUseCase,
         IGetSimilarRoomsUseCase? getSimilarRoomsUseCase = null)
     {
-        _getRoomDetailUseCase = getRoomDetailUseCase ?? throw new ArgumentNullException(nameof(getRoomDetailUseCase));
+        ArgumentNullException.ThrowIfNull(getRoomDetailUseCase);
+        _searchRoomsUseCase = null;
+        _getRoomDetailUseCase = getRoomDetailUseCase;
         _getSimilarRoomsUseCase = getSimilarRoomsUseCase;
+    }
+
+    // [AllowAnonymous] đặt trên action thay vì class: mọi action ghi sau này vẫn mặc định yêu cầu xác thực.
+    [HttpGet]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(PagedResult<RoomCardDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<PagedResult<RoomCardDto>>> SearchRooms(
+        [FromQuery] RoomSearchRequest request,
+        CancellationToken ct)
+    {
+        if (_searchRoomsUseCase == null)
+        {
+            return StatusCode(StatusCodes.Status501NotImplemented);
+        }
+
+        var clampedPageSize = Math.Clamp(request.PageSize, 1, RoomSearchRequest.MaxPageSize);
+        var safePage = Math.Max(request.PageNumber, 1);
+        var safeRequest = request with { PageNumber = safePage, PageSize = clampedPageSize };
+
+        // Model binding turns `?sort=` into null; restore "present but empty" so the use case can
+        // reject it (ruling 21) instead of silently applying the default sort. The HttpContext is
+        // absent when the action is unit-tested directly; HTTP behaviour is covered by the
+        // integration tests.
+        var httpRequest = ControllerContext?.HttpContext?.Request;
+        if (safeRequest.Sort is null
+            && httpRequest is not null
+            && httpRequest.Query.ContainsKey("sort"))
+        {
+            safeRequest = safeRequest with { Sort = string.Empty };
+        }
+
+        var result = await _searchRoomsUseCase.ExecuteAsync(safeRequest, ct);
+        return Ok(result);
     }
 
     /// <summary>
@@ -48,6 +100,11 @@ public sealed class RoomsController : ControllerBase
             return BadRequest(invalidProblem);
         }
 
+        if (_getRoomDetailUseCase == null)
+        {
+            return StatusCode(StatusCodes.Status501NotImplemented);
+        }
+
         var result = await _getRoomDetailUseCase.ExecuteAsync(id, ct, campusId);
         if (result == null)
         {
@@ -73,32 +130,24 @@ public sealed class RoomsController : ControllerBase
             }
         }
 
-        if (Response?.Headers != null)
-        {
-            Response.Headers["ETag"] = etag;
-        }
-
+        Response?.Headers?.TryAdd("ETag", etag);
         return Ok(result);
     }
 
     /// <summary>
     /// getSimilarRooms: Returns up to 5 similar available rooms nearby per docs/api/openapi.yaml and BR-LST-10.
     /// </summary>
-    [HttpGet("{roomId}/similar")]
+    [HttpGet("{id}/similar")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(IReadOnlyList<RoomCardDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetSimilarRooms(
-        string roomId,
+        string id,
         CancellationToken ct = default,
         [FromQuery] string? campusId = null)
     {
-        if (_getSimilarRoomsUseCase == null)
-        {
-            return StatusCode(StatusCodes.Status501NotImplemented);
-        }
-        if (string.IsNullOrWhiteSpace(roomId))
+        if (string.IsNullOrWhiteSpace(id))
         {
             var invalidProblem = new ProblemDetails
             {
@@ -110,21 +159,25 @@ public sealed class RoomsController : ControllerBase
             return BadRequest(invalidProblem);
         }
 
-        // Verify that target room exists and is viewable
-        var targetRoom = await _getRoomDetailUseCase.ExecuteAsync(roomId, ct);
+        if (_getRoomDetailUseCase == null || _getSimilarRoomsUseCase == null)
+        {
+            return StatusCode(StatusCodes.Status501NotImplemented);
+        }
+
+        var targetRoom = await _getRoomDetailUseCase.ExecuteAsync(id, ct, campusId);
         if (targetRoom == null)
         {
             var notFoundProblem = new ProblemDetails
             {
                 Title = "Room not found",
-                Detail = $"Room listing with ID '{roomId}' was not found.",
+                Detail = $"Room listing with ID '{id}' was not found.",
                 Status = StatusCodes.Status404NotFound
             };
             notFoundProblem.Extensions["errorCode"] = "ROOM_NOT_FOUND";
             return NotFound(notFoundProblem);
         }
 
-        var similarRooms = await _getSimilarRoomsUseCase.ExecuteAsync(roomId, campusId, ct);
+        var similarRooms = await _getSimilarRoomsUseCase.ExecuteAsync(id, campusId, ct);
         return Ok(similarRooms);
     }
 }

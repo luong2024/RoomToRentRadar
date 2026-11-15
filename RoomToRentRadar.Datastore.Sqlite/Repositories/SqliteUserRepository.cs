@@ -102,11 +102,11 @@ public sealed class SqliteUserRepository : IUserRepository
                     INSERT INTO Users (
                         Id, Email, NormalizedEmail, FullName, PasswordHash, Role, AuthProvider,
                         SsoSubjectId, PhoneNumber, StudentCode, IsVerified, FailedLoginCount,
-                        LockoutEndUtc, CreatedAtUtc, UpdatedAtUtc
+                        LockoutEndUtc, CreatedAtUtc, UpdatedAtUtc, SelectedCampusId, PreferredLanguage, Version
                     ) VALUES (
                         @id, @email, @normalizedEmail, @fullName, @passwordHash, @role, @authProvider,
                         @ssoSubjectId, @phoneNumber, @studentCode, @isVerified, @failedLoginCount,
-                        @lockoutEndUtc, @createdAtUtc, @updatedAtUtc
+                        @lockoutEndUtc, @createdAtUtc, @updatedAtUtc, @selectedCampusId, @preferredLanguage, @version
                     );
                     """;
                 BindUserParameters(cmd, user);
@@ -115,7 +115,7 @@ public sealed class SqliteUserRepository : IUserRepository
                 await ReplaceRefreshTokensAsync(conn, tx, user, ct);
                 await tx.CommitAsync(ct);
             }
-            catch (SqliteException ex) when (ex.SqliteErrorCode == 19)
+            catch (SqliteException ex) when (IsDuplicateEmailViolation(ex))
             {
                 await tx.RollbackAsync(ct);
                 throw new DuplicateEmailException(user.Email.Value);
@@ -127,6 +127,12 @@ public sealed class SqliteUserRepository : IUserRepository
         }
     }
 
+    // SQLITE_CONSTRAINT_UNIQUE = 2067 on Users.NormalizedEmail. FK (787), CHECK (275), NOT NULL (1299), PK (1555) and anything else must propagate as SqliteException.
+    private static bool IsDuplicateEmailViolation(SqliteException ex) =>
+        ex.SqliteErrorCode == 19
+        && ex.SqliteExtendedErrorCode == 2067
+        && ex.Message.Contains("Users.NormalizedEmail", StringComparison.Ordinal);
+
     public async Task UpdateAsync(User user, CancellationToken ct = default)
     {
         var conn = _dbContext.CreateOpenConnection();
@@ -135,52 +141,32 @@ public sealed class SqliteUserRepository : IUserRepository
             await using var tx = conn.BeginTransaction();
             await using var cmd = conn.CreateCommand();
             cmd.Transaction = tx;
-
-            if (!string.IsNullOrWhiteSpace(user.ConcurrencyToken))
-            {
-                cmd.CommandText = """
-                    UPDATE Users SET
-                        Email = @email,
-                        NormalizedEmail = @normalizedEmail,
-                        FullName = @fullName,
-                        PasswordHash = @passwordHash,
-                        Role = @role,
-                        AuthProvider = @authProvider,
-                        SsoSubjectId = @ssoSubjectId,
-                        PhoneNumber = @phoneNumber,
-                        StudentCode = @studentCode,
-                        IsVerified = @isVerified,
-                        FailedLoginCount = @failedLoginCount,
-                        LockoutEndUtc = @lockoutEndUtc,
-                        UpdatedAtUtc = @updatedAtUtc
-                    WHERE Id = @id AND UpdatedAtUtc = @expectedUpdatedAt;
-                    """;
-                cmd.Parameters.AddWithValue("@expectedUpdatedAt", user.ConcurrencyToken);
-            }
-            else
-            {
-                cmd.CommandText = """
-                    UPDATE Users SET
-                        Email = @email,
-                        NormalizedEmail = @normalizedEmail,
-                        FullName = @fullName,
-                        PasswordHash = @passwordHash,
-                        Role = @role,
-                        AuthProvider = @authProvider,
-                        SsoSubjectId = @ssoSubjectId,
-                        PhoneNumber = @phoneNumber,
-                        StudentCode = @studentCode,
-                        IsVerified = @isVerified,
-                        FailedLoginCount = @failedLoginCount,
-                        LockoutEndUtc = @lockoutEndUtc,
-                        UpdatedAtUtc = @updatedAtUtc
-                    WHERE Id = @id;
-                    """;
-            }
-
+            // GUARDRAILS 1.5.2: optimistic concurrency on Version; the SQL bumps it, the aggregate does not.
+            cmd.CommandText = """
+                UPDATE Users SET
+                    Email = @email,
+                    NormalizedEmail = @normalizedEmail,
+                    FullName = @fullName,
+                    PasswordHash = @passwordHash,
+                    Role = @role,
+                    AuthProvider = @authProvider,
+                    SsoSubjectId = @ssoSubjectId,
+                    PhoneNumber = @phoneNumber,
+                    StudentCode = @studentCode,
+                    IsVerified = @isVerified,
+                    FailedLoginCount = @failedLoginCount,
+                    LockoutEndUtc = @lockoutEndUtc,
+                    SelectedCampusId = @selectedCampusId,
+                    PreferredLanguage = @preferredLanguage,
+                    Version = @expectedVersion + 1,
+                    UpdatedAtUtc = @updatedAtUtc
+                WHERE Id = @id AND Version = @expectedVersion;
+                """;
             BindUserParameters(cmd, user);
+            cmd.Parameters.AddWithValue("@expectedVersion", user.Version);
+
             var rowsAffected = await cmd.ExecuteNonQueryAsync(ct);
-            if (rowsAffected == 0 && !string.IsNullOrWhiteSpace(user.ConcurrencyToken))
+            if (rowsAffected == 0)
             {
                 await tx.RollbackAsync(ct);
                 throw new ConcurrencyConflictException($"Optimistic concurrency conflict occurred updating user '{user.Id}'.");
@@ -188,7 +174,7 @@ public sealed class SqliteUserRepository : IUserRepository
 
             await ReplaceRefreshTokensAsync(conn, tx, user, ct);
             await tx.CommitAsync(ct);
-            user.SetConcurrencyToken(user.UpdatedAtUtc.ToString("O"));
+            user.MarkPersisted();
         }
         finally
         {
@@ -206,7 +192,7 @@ public sealed class SqliteUserRepository : IUserRepository
         cmd.CommandText = $"""
             SELECT Id, Email, FullName, PasswordHash, Role, AuthProvider, SsoSubjectId,
                    PhoneNumber, StudentCode, IsVerified, FailedLoginCount, LockoutEndUtc,
-                   CreatedAtUtc, UpdatedAtUtc
+                   CreatedAtUtc, UpdatedAtUtc, SelectedCampusId, PreferredLanguage, Version
             FROM Users
             {whereClause}
             LIMIT 1;
@@ -232,8 +218,10 @@ public sealed class SqliteUserRepository : IUserRepository
         var failedLoginCount = reader.GetInt32(10);
         var lockoutEndUtc = reader.IsDBNull(11) ? (DateTime?)null : ParseUtc(reader.GetString(11));
         var createdAtUtc = ParseUtc(reader.GetString(12));
-        var rawUpdatedAt = reader.GetString(13);
-        var updatedAtUtc = ParseUtc(rawUpdatedAt);
+        var updatedAtUtc = ParseUtc(reader.GetString(13));
+        var selectedCampusId = reader.GetString(14);
+        var preferredLanguage = reader.GetString(15);
+        var version = reader.GetInt32(16);
         await reader.CloseAsync();
 
         var tokens = await ReadRefreshTokensAsync(conn, id, ct);
@@ -254,7 +242,9 @@ public sealed class SqliteUserRepository : IUserRepository
             createdAtUtc: createdAtUtc,
             updatedAtUtc: updatedAtUtc,
             refreshTokens: tokens,
-            concurrencyToken: rawUpdatedAt);
+            selectedCampusId: selectedCampusId,
+            preferredLanguage: preferredLanguage,
+            version: version);
     }
 
     private static async Task<List<RefreshTokenSession>> ReadRefreshTokensAsync(
@@ -344,6 +334,9 @@ public sealed class SqliteUserRepository : IUserRepository
             : DBNull.Value);
         cmd.Parameters.AddWithValue("@createdAtUtc", user.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture));
         cmd.Parameters.AddWithValue("@updatedAtUtc", user.UpdatedAtUtc.ToString("O", CultureInfo.InvariantCulture));
+        cmd.Parameters.AddWithValue("@selectedCampusId", user.SelectedCampusId);
+        cmd.Parameters.AddWithValue("@preferredLanguage", user.PreferredLanguage);
+        cmd.Parameters.AddWithValue("@version", user.Version);
     }
 
     private static DateTime ParseUtc(string iso8601) =>

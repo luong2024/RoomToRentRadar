@@ -34,7 +34,7 @@ Every Agent and Subagent operating within this project MUST strictly comply with
 
 ### 1.4. Modern .NET MAUI Standards (from davidortinau/maui-skills)
 - **Zero Obsolete APIs:** Deprecated Xamarin.Forms APIs (e.g., `MessagingCenter`, `RelativeLayout`) are strictly banned in .NET 10.
-- **Zero Emoji as Icons:** Unicode emojis/pictographs (e.g., `📍`, `🔍`, `📊`, `🏠`, `⚠️`, `⚙`, `✓`, `✕`) are STRICTLY FORBIDDEN as icons. All iconography MUST use **Fluent System Icons** glyphs (`Fonts.FluentUI`, `FontFamily="FluentUI"`) or SVG assets from `Resources/Images/` (`docs/ui-ux-spec.md` §3.4, `AGENTS.md` §6, `.agents/rules/ui-iconography.md`).
+- **Zero Emoji as Icons:** Unicode emojis/pictographs (e.g., `📍`, `🔍`, `📊`, `🏠`, `⚠️`, `⚙`, `✓`, `✕`) are STRICTLY FORBIDDEN as icons. All iconography MUST use **Fluent System Icons** glyphs (`Fonts.FluentUI`, `FontFamily="FluentUI"`) or SVG assets from `Resources/Images/` (`docs/ui-ux-spec.md` §3.4, `AGENTS.md` §6).
 - **Compiled Bindings:** Every `DataTemplate` in a `CollectionView` / `ListView` MUST specify `x:DataType`.
 - **Android Emulator Networking:** API calls from the Android Emulator to localhost services MUST use IP `10.0.2.2`, never `localhost`.
 

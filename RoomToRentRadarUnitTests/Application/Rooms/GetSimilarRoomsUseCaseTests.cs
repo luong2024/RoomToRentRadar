@@ -28,7 +28,7 @@ public class GetSimilarRoomsUseCaseTests
         // Arrange
         var targetRoom = Room.Create(
             title: "Phòng trọ target",
-            description: "Mô tả",
+            description: "Mô tả phòng",
             price: 1800000m,
             area: 25.0,
             address: "Z115",
@@ -41,27 +41,21 @@ public class GetSimilarRoomsUseCaseTests
 
         _roomRepository.GetByIdAsync(targetRoom.Id, Arg.Any<CancellationToken>()).Returns(targetRoom);
 
-        var expectedCards = new List<RoomCardDto>
+        var candidates = new List<RoomSearchCandidate>
         {
-            new("sim-1", "Phòng 1", 1750000m, 24.0, RoomType.BoardingRoom, 0.3, true, ListingStatus.Available, 21.58, 105.80),
-            new("sim-2", "Phòng 2", 1900000m, 26.0, RoomType.BoardingRoom, 0.5, true, ListingStatus.Available, 21.59, 105.81)
+            new("sim-1", "Phòng 1", 1750000L, 24.0, RoomType.BoardingRoom, ListingStatus.Available, true, null, 21.5876, 105.8081, null),
+            new("sim-2", "Phòng 2", 1900000L, 26.0, RoomType.BoardingRoom, ListingStatus.Available, true, null, 21.5877, 105.8082, null)
         };
 
-        _searchReadModel.GetSimilarRoomsAsync(
-            targetRoom.Id,
-            targetRoom.MonthlyRentVnd,
-            targetRoom.Latitude,
-            targetRoom.Longitude,
-            targetRoom.RoomType,
-            5,
-            Arg.Any<CancellationToken>())
-            .Returns(expectedCards);
+        _searchReadModel.QueryCandidatesAsync(Arg.Any<RoomSearchQueryFilter>(), Arg.Any<CancellationToken>())
+            .Returns(candidates);
 
         // Act
         var result = await _sut.ExecuteAsync(targetRoom.Id);
 
         // Assert
-        Assert.That(result, Is.EqualTo(expectedCards));
+        Assert.That(result, Has.Count.EqualTo(2));
+        Assert.That(result.Select(r => r.Id), Is.EquivalentTo(new[] { "sim-1", "sim-2" }));
     }
 
     [Test]
@@ -75,7 +69,7 @@ public class GetSimilarRoomsUseCaseTests
 
         // Assert
         Assert.That(result, Is.Empty);
-        await _searchReadModel.DidNotReceiveWithAnyArgs().GetSimilarRoomsAsync(default!, default, default, default, default, default, default);
+        await _searchReadModel.DidNotReceiveWithAnyArgs().QueryCandidatesAsync(default!, default);
     }
 
     [Test]
@@ -83,15 +77,18 @@ public class GetSimilarRoomsUseCaseTests
     {
         // Arrange (BR-LST-04a: PendingReview must not disclose similar rooms)
         var pendingRoom = Room.Create(
+            landlordId: "landlord-1",
             title: "Phòng chờ duyệt",
-            description: "Mô tả",
-            price: 1800000m,
-            area: 25.0,
-            address: "Z115",
+            roomType: RoomType.BoardingRoom,
+            monthlyRentVnd: 1800000L,
+            depositVnd: 0L,
+            areaM2: 25.0,
+            addressLine: "Z115",
+            ward: "Tân Thịnh",
+            district: "TP. Thái Nguyên",
             latitude: 21.5875,
             longitude: 105.8080,
-            landlordId: "landlord-1",
-            initialStatus: ListingStatus.PendingReview
+            description: "Chưa duyệt"
         );
 
         _roomRepository.GetByIdAsync(pendingRoom.Id, Arg.Any<CancellationToken>()).Returns(pendingRoom);

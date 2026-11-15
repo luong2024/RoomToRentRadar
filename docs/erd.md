@@ -1,5 +1,11 @@
 # Entity-Relationship Design (ERD) — RoomToRentRadar
 
+<!--
+CONTEXT NOTE (2026-11-12): tables that exist in code today = Users, UserRefreshTokens, AuditLogs (RoomToRentRadar.Datastore.Sqlite/Tables).
+All other tables and every column marked **new** are the target design, still to be migrated. Users gets 3 new columns:
+SelectedCampusId, PreferredLanguage, Version. Changing a table here is a contract change: ask the team first (AGENTS.md §8).
+-->
+
 | Field | Value |
 |---|---|
 | Status | Draft v1.0 — 2026-11-11 |
@@ -112,7 +118,7 @@ erDiagram
 | `TUMP` | Trường Đại học Y Dược | 21.58827 | 105.82712 | 0 | 7 |
 | `TNUT` | Trường Đại học Kỹ thuật Công nghiệp | 21.54954 | 105.84350 | 0 | 8 |
 
-### 4.2 `Users` *(exists — migration adds 2 columns)*
+### 4.2 `Users` *(exists — migration adds 3 columns)*
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
 | Id | TEXT | PK | |
@@ -129,6 +135,7 @@ erDiagram
 | FailedLoginCount | INTEGER | NN | |
 | LockoutEndUtc | TEXT | | |
 | **SelectedCampusId** | TEXT | FK→Campuses.Id, NN, default `'ICTU'` | **new** — BR-CMP-02 |
+| **PreferredLanguage** | TEXT | NN, default `'en'`, CHECK IN (`'en'`,`'vi'`) | **new** — BR-I18N-02/04 (language of push and inbox text) |
 | CreatedAtUtc | TEXT | NN | |
 | UpdatedAtUtc | TEXT | NN | |
 | **Version** | INTEGER | NN, default 1 | **new** — replaces the unused `ConcurrencyToken` gap in SQLite (GUARDRAILS 1.5.2) |
@@ -174,7 +181,7 @@ erDiagram
 
 Indexes: `IX_Rooms_Status_Lat_Lng (Status, Latitude, Longitude)` (bounding-box prefilter), `IX_Rooms_Status_Rent (Status, MonthlyRentVnd)`, `IX_Rooms_LandlordId`, `IX_Rooms_Status_PublishedAtUtc`, `IX_Rooms_NeedsReReview` (partial `WHERE NeedsReReview = 1`).
 
-Derived (never stored): `DistanceKm` (per campus, BR-CMP-03), `SafetyScore` = count of `RoomSafetyFeatures` with `IsConfirmed = 1` when `IsSafetyVerified = 1`, otherwise count of declared features shown as "Chưa xác minh" (BR-LST-08), `CoverPhoto` = first photo by `SortOrder`.
+Derived (never stored): `DistanceKm` (per campus, BR-CMP-03), `SafetyScore` = count of `RoomSafetyFeatures` with `IsConfirmed = 1` when `IsSafetyVerified = 1`, otherwise count of declared features shown as "Not verified" (BR-LST-08), `CoverPhoto` = first photo by `SortOrder`.
 
 ### 4.5 `RoomAmenities`
 | Column | Type | Constraints |
@@ -292,7 +299,7 @@ IX `(SavedSearchId, LocalDate, WasPushed)`.
 | Id | TEXT | PK | |
 | UserId | TEXT | FK→Users ON DELETE CASCADE, NN | |
 | Type | TEXT | NN | `NewListingMatch`·`ListingApproved`·`ListingRejected`·`ListingSuspended`·`LandlordApproved`·`ReportResolved`·`NewMessage` |
-| Title | TEXT | NN | Vietnamese |
+| Title | TEXT | NN | rendered in the recipient's `PreferredLanguage` at creation (BR-I18N-04) |
 | Body | TEXT | NN | |
 | TargetType | TEXT | | `Room`·`Conversation`·`SavedSearch` |
 | TargetId | TEXT | | deep-link target |
@@ -380,13 +387,37 @@ Separate file `roomtorentradar-cache.db3` in `FileSystem.AppDataDirectory`; sche
 | `CachedConversations` / `CachedMessages` | `Id` | last 50 messages per conversation | 30 days |
 | `ListingDrafts` | `DraftId` | landlord wizard draft JSON (UC-30 A1) | 30 days |
 
-Preferences (`Preferences` API, not SQLite): `SelectedCampusId` (guest), `HasCompletedOnboarding`, `SeenHouseRules:<roomId>`, `InstallationId`.
+Preferences (`Preferences` API, not SQLite): `SelectedCampusId` (guest), `AppLanguage` (`en`/`vi`, BR-I18N-02), `SeenHouseRules:<roomId>`, `InstallationId`.
 
 ## 6. Delta vs current code (develop2 @ 8524ad8)
 
 | Item | Current | Target |
 |---|---|---|
-| `Users` table | no `SelectedCampusId`, no `Version` | add both (migration 002). |
-| Schema creation | `CREATE TABLE IF NOT EXISTS` inside `SqliteDbContext` | versioned migration scripts + `PRAGMA user_version`. |
+| `Users` table | migration 0002 adds `SelectedCampusId`, `PreferredLanguage`, `Version` (T00.7, done) | persisted by `SqliteUserRepository`; `Version` drives optimistic concurrency; exposed in `UserProfileDto`. |
+| Schema creation | versioned migration files `Datastore.Sqlite/Migrations/NNNN_name.sql` + `SqliteMigrator` + `PRAGMA user_version` (T00.6, done) | each feature adds its own numbered file; `SqliteDbContext` is no longer edited for schema changes. |
 | `Room` | not on develop2; PR #6 and PR #16 define **two incompatible** `Domain/Entities/Room.cs` | single `Domain/Aggregates/Room.cs` per §4.4 (both PRs must align before merge). |
 | Cosmos DB documents | `Datastore.CosmosDb` project | frozen; not extended ([ADR-002](adr/adr-002-sqlite-single-datastore.md)). |
+
+### 6.1 Reserved migration numbers
+
+| No. | File | Content | Task | Owner |
+|---|---|---|---|---|
+| 0001 | `0001_baseline.sql` | `Users`, `UserRefreshTokens`, `AuditLogs`, `Campuses`, `Rooms` + indexes | T00.6 | Thinh |
+| 0002 | `0002_users_delta.sql` | `Users.SelectedCampusId`, `PreferredLanguage`, `Version` | T00.7 | Thinh |
+| 0003 | `0003_room_children.sql` | `RoomAmenities`, `RoomSafetyFeatures`, `HouseRuleVersions` | T00.9 | Duyen |
+| 0004 | `0004_room_photos.sql` | `RoomPhotos` | T03.1 | Hieu |
+| 0005 | `0005_favourites.sql` | `Favourites` | T06.1 | — |
+| 0006 | `0006_saved_searches.sql` | `SavedSearches` + `SavedSearchAlertLogs` | T07.1 | — |
+| 0007 | `0007_devices_notifications.sql` | `DeviceRegistrations` + `Notifications` | T07.2 | — |
+| 0008 | `0008_listing_reports.sql` | `ListingReports` | T12.1 | — |
+| 0009 | `0009_travel_time_cache.sql` | `TravelTimeEstimates` | T09.1 | — |
+| 0010 | `0010_chat.sql` | `Conversations`, `ConversationParticipants`, `Messages` | T14.x | — |
+
+Rules:
+
+- A new migration takes the next free number and is added to this table in the same PR.
+- Migrations must be merged in numeric order; otherwise a database already at a higher version skips the lower number.
+- Files are embedded resources named `NNNN_snake_case.sql` and are applied in one transaction each, which then sets `PRAGMA user_version`.
+- Never edit an applied migration — add a new one.
+- After pulling T00.6 each developer deletes the local `roomtorentradar.db` once (old databases have `user_version` 0 and are rejected with a clear message).
+- Every migration runs with `foreign_keys` OFF (set before its transaction opens) and `PRAGMA foreign_key_check` must return no rows before the transaction commits; `foreign_keys` is restored afterwards.
