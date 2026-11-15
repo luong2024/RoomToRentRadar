@@ -24,4 +24,6 @@ public class Room
     public List<string> HouseRules { get; set; } = [];
     public string LandlordPhone { get; set; } = string.Empty;
     public DateTime LastUpdatedDate { get; set; } = DateTime.UtcNow;
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
 }

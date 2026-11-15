@@ -18,6 +18,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
     private readonly ICosmosContainer<EmailIndexDocument> _emailIndexContainer;
     private readonly ICosmosContainer<ExternalLoginIndexDocument> _externalLoginIndexContainer;
     private readonly ICosmosContainer<UserProfileDocument> _userProfilesContainer;
+    private readonly Container? _roomsCosmosContainer;
 
     public const string PartitionKeyPath = "/id";
     public const string UniqueTokenHashPath = "/tokenHash";
@@ -48,6 +49,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
             _emailIndexContainer = new InMemoryCosmosContainer<EmailIndexDocument>();
             _externalLoginIndexContainer = new InMemoryCosmosContainer<ExternalLoginIndexDocument>();
             _userProfilesContainer = new InMemoryCosmosContainer<UserProfileDocument>();
+            _roomsCosmosContainer = null;
         }
         else
         {
@@ -72,7 +74,9 @@ public sealed class CosmosDbContext : ICosmosDbContext
                 }
             };
 
-            if (string.Equals(options.ConnectionMode, "Gateway", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(options.ConnectionMode, "Gateway", StringComparison.OrdinalIgnoreCase) ||
+                options.AccountEndpoint.Contains("localhost", StringComparison.OrdinalIgnoreCase) ||
+                options.AccountEndpoint.Contains("127.0.0.1", StringComparison.OrdinalIgnoreCase))
             {
                 clientOptions.ConnectionMode = ConnectionMode.Gateway;
             }
@@ -96,6 +100,13 @@ public sealed class CosmosDbContext : ICosmosDbContext
                     ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
                 });
             }
+            else if (options.DisableTlsValidation)
+            {
+                clientOptions.HttpClientFactory = () => new HttpClient(new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                });
+            }
 
             var authKey = !string.IsNullOrWhiteSpace(options.AuthKey)
                 ? options.AuthKey
@@ -108,6 +119,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
             var emailIndexCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.EmailIndexContainerName);
             var externalLoginIndexCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.ExternalLoginIndexContainerName);
             var userProfilesCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.UserProfilesContainerName);
+            _roomsCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.RoomsContainerName);
 
             _usersContainer = new CosmosContainer<UserDocument>(usersCosmosContainer);
             _refreshTokensContainer = new CosmosContainer<RefreshTokenDocument>(refreshTokensCosmosContainer);
@@ -126,6 +138,10 @@ public sealed class CosmosDbContext : ICosmosDbContext
     public ICosmosContainer<ExternalLoginIndexDocument> ExternalLoginIndex => _externalLoginIndexContainer;
 
     public ICosmosContainer<UserProfileDocument> UserProfiles => _userProfilesContainer;
+
+    public Container? RoomsContainer => _roomsCosmosContainer;
+
+    public CosmosClient? Client => _cosmosClient;
 
     public static CosmosDbContext CreateInMemory()
     {
@@ -149,12 +165,11 @@ public sealed class CosmosDbContext : ICosmosDbContext
 
         var database = databaseResponse.Database;
 
-        var roomsContainerName = string.IsNullOrWhiteSpace(_options.ContainerName) ? "RoomListings" : _options.ContainerName;
-        await database.CreateContainerIfNotExistsAsync(roomsContainerName, "/campusId", cancellationToken: cancellationToken);
+        var listingsContainerName = string.IsNullOrWhiteSpace(_options.ContainerName) ? "RoomListings" : _options.ContainerName;
+        await database.CreateContainerIfNotExistsAsync(listingsContainerName, "/campusId", cancellationToken: cancellationToken);
 
         var roomDetailsContainerName = string.IsNullOrWhiteSpace(_options.RoomDetailsContainerName) ? "RoomDetails" : _options.RoomDetailsContainerName;
         await database.CreateContainerIfNotExistsAsync(roomDetailsContainerName, PartitionKeyPath, cancellationToken: cancellationToken);
-
         var usersContainerProperties = new ContainerProperties(_options.UsersContainerName, PartitionKeyPath);
 
         await database.CreateContainerIfNotExistsAsync(
@@ -208,6 +223,63 @@ public sealed class CosmosDbContext : ICosmosDbContext
             cancellationToken: cancellationToken);
 
         await EnsureUserProfileCompositeIndexesAsync(userProfilesResponse.Container, userProfilesResponse.Resource, cancellationToken);
+
+        var roomsContainerName = string.IsNullOrWhiteSpace(_options.RoomsContainerName) ? "Rooms" : _options.RoomsContainerName;
+        var roomsContainerProperties = new ContainerProperties(roomsContainerName, PartitionKeyPath);
+        roomsContainerProperties.IndexingPolicy.SpatialIndexes.Add(new SpatialPath
+        {
+            Path = "/location/*",
+            SpatialTypes = { SpatialType.Point }
+        });
+        roomsContainerProperties.IndexingPolicy.SpatialIndexes.Add(new SpatialPath
+        {
+            Path = "/Location/*",
+            SpatialTypes = { SpatialType.Point }
+        });
+
+        var roomsResponse = await database.CreateContainerIfNotExistsAsync(
+            roomsContainerProperties,
+            cancellationToken: cancellationToken);
+
+        await EnsureRoomsSpatialIndexesAsync(roomsResponse.Container, roomsResponse.Resource, cancellationToken);
+    }
+
+    private static async Task EnsureRoomsSpatialIndexesAsync(
+        Container container,
+        ContainerProperties properties,
+        CancellationToken cancellationToken)
+    {
+        var indexingPolicy = properties.IndexingPolicy ?? new IndexingPolicy();
+        properties.IndexingPolicy = indexingPolicy;
+
+        var requiredPaths = new[] { "/location/*", "/Location/*" };
+        var modified = false;
+
+        foreach (var path in requiredPaths)
+        {
+            var existing = indexingPolicy.SpatialIndexes.FirstOrDefault(sp =>
+                string.Equals(sp.Path, path, StringComparison.Ordinal));
+
+            if (existing is null)
+            {
+                indexingPolicy.SpatialIndexes.Add(new SpatialPath
+                {
+                    Path = path,
+                    SpatialTypes = { SpatialType.Point }
+                });
+                modified = true;
+            }
+            else if (!existing.SpatialTypes.Contains(SpatialType.Point))
+            {
+                existing.SpatialTypes.Add(SpatialType.Point);
+                modified = true;
+            }
+        }
+
+        if (modified)
+        {
+            await container.ReplaceContainerAsync(properties, cancellationToken: cancellationToken);
+        }
     }
 
     private static async Task EnsureUserProfileCompositeIndexesAsync(

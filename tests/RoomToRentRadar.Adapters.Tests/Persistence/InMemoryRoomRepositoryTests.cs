@@ -1,4 +1,5 @@
 using RoomToRentRadar.Adapters.Outbound.Persistence.InMemory;
+using RoomToRentRadar.Application.DTOs;
 using RoomToRentRadar.Domain.Entities;
 
 namespace RoomToRentRadar.Adapters.Tests.Persistence;
@@ -163,5 +164,72 @@ public class InMemoryRoomRepositoryTests
         var results = await _repository.GetSimilarRoomsAsync("target", price: 2000000m, area: 25.0);
 
         Assert.That(results.Count, Is.EqualTo(5));
+    }
+
+    [Test]
+    public async Task SearchAsync_WhenKeywordHasWhitespace_ShouldTrimAndFindMatchingRooms()
+    {
+        var matchingRoom = new Room
+        {
+            Id = "room-keyword-match",
+            Title = "Phòng trọ cao cấp gần trường",
+            Price = 2500000m,
+            Area = 28.0,
+            Status = RoomStatus.Available,
+            IsVerified = true
+        };
+        var nonMatchingRoom = new Room
+        {
+            Id = "room-keyword-non-match",
+            Title = "Nhà nguyên căn",
+            Price = 5000000m,
+            Area = 50.0,
+            Status = RoomStatus.Available,
+            IsVerified = true
+        };
+
+        _repository.Upsert(matchingRoom);
+        _repository.Upsert(nonMatchingRoom);
+
+        var query = new SearchRoomsQuery(keyword: "   cao cấp   ");
+
+        var (items, totalCount) = await _repository.SearchAsync(query);
+
+        Assert.That(totalCount, Is.EqualTo(1));
+        Assert.That(items, Has.Count.EqualTo(1));
+        Assert.That(items[0].Id, Is.EqualTo(matchingRoom.Id));
+    }
+
+    [Test]
+    public async Task SearchAsync_WhenKeywordIsWhitespaceOnly_ShouldNotFilterByKeyword()
+    {
+        var room1 = new Room
+        {
+            Id = "room-1",
+            Title = "Phòng 1",
+            Price = 2000000m,
+            Area = 25.0,
+            Status = RoomStatus.Available,
+            IsVerified = true
+        };
+        var room2 = new Room
+        {
+            Id = "room-2",
+            Title = "Phòng 2",
+            Price = 3000000m,
+            Area = 30.0,
+            Status = RoomStatus.Available,
+            IsVerified = true
+        };
+
+        _repository.Upsert(room1);
+        _repository.Upsert(room2);
+
+        var query = new SearchRoomsQuery(keyword: "   ");
+
+        var (items, totalCount) = await _repository.SearchAsync(query);
+
+        Assert.That(totalCount, Is.EqualTo(2));
+        Assert.That(items, Has.Count.EqualTo(2));
     }
 }

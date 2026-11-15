@@ -6,13 +6,15 @@ public sealed class CosmosDbOptions
 
     public string AccountEndpoint { get; set; } = string.Empty;
 
-    public string? AuthKey { get; set; }
+    public string? AuthKey
+    {
+        get => AuthKeyOrResourceToken;
+        set => AuthKeyOrResourceToken = value;
+    }
 
     public string? AuthKeyOrResourceToken { get; set; }
 
     public string DatabaseName { get; set; } = "RoomToRentRadarDb";
-
-    public string ContainerName { get; set; } = "RoomListings";
 
     public string RoomDetailsContainerName { get; set; } = "RoomDetails";
 
@@ -28,9 +30,33 @@ public sealed class CosmosDbOptions
 
     public string UserProfilesContainerName { get; set; } = "UserProfiles";
 
+    private string _roomsContainerName = "Rooms";
+    private string? _containerName;
+
+    public string RoomsContainerName
+    {
+        get => _roomsContainerName;
+        set => _roomsContainerName = value;
+    }
+
+    public string ContainerName
+    {
+        get => _containerName ?? (_roomsContainerName != "Rooms" ? _roomsContainerName : "RoomListings");
+        set
+        {
+            _containerName = value;
+            if (_roomsContainerName == "Rooms" && value != "RoomListings")
+            {
+                _roomsContainerName = value;
+            }
+        }
+    }
+
     public string ConnectionMode { get; set; } = "Direct";
 
     public bool IsEmulator { get; set; }
+
+    public bool DisableTlsValidation { get; set; } = false;
 
     /// <summary>
     /// Whether to automatically seed initial sample room data during startup.
