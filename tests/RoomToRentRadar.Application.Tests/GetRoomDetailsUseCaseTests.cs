@@ -138,5 +138,12 @@ public class GetRoomDetailsUseCaseTests
                 .ToList();
             return Task.FromResult<IReadOnlyList<Room>>(results);
         }
+
+        public Task<(IReadOnlyList<Room> Items, int TotalCount)> SearchAsync(
+            RoomToRentRadar.Application.DTOs.SearchRoomsQuery query,
+            CancellationToken ct = default)
+        {
+            return Task.FromResult<(IReadOnlyList<Room> Items, int TotalCount)>((_rooms.AsReadOnly(), _rooms.Count));
+        }
     }
 }
