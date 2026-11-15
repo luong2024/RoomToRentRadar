@@ -7,5 +7,5 @@ namespace RoomToRentRadar.Ports.Inbound.UseCases.Rooms;
 /// </summary>
 public interface IGetSimilarRoomsUseCase
 {
-    Task<IReadOnlyList<RoomCardDto>> ExecuteAsync(string roomId, string? campusId = null, CancellationToken ct = default);
+    Task<IReadOnlyList<RoomCardDto>?> ExecuteAsync(string roomId, string? campusId = null, CancellationToken ct = default);
 }

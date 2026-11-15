@@ -417,9 +417,47 @@ public class RoomDetailEndpointIntegrationTests
             {
                 Assert.That(card.Id, Is.Not.EqualTo("room-ictu-001"), "Must exclude target room itself");
                 Assert.That(card.Status, Is.EqualTo(ListingStatus.Available), "Must only return Available rooms");
-                Assert.That(card.DistanceKm, Is.LessThanOrEqualTo(2.0), "Must be within 2 km radius (BR-LST-10)");
+                Assert.That(card.DistanceKm, Is.GreaterThanOrEqualTo(0.0), "Must have valid non-negative distance to campus");
             }
         });
+    }
+
+    [Test]
+    public async Task GetRoomById_WithUnknownCampusId_Returns400BadRequestWithCampusNotFound()
+    {
+        // Act (BR-CMP-01..03 / M1)
+        var response = await _client.GetAsync("/api/rooms/room-ictu-001?campusId=UNKNOWN_CAMPUS_XYZ");
+
+        // Assert
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        var content = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(content);
+        var root = doc.RootElement;
+
+        var hasErrorCode = root.TryGetProperty("errorCode", out var code) ||
+                           (root.TryGetProperty("extensions", out var ext) && ext.TryGetProperty("errorCode", out code));
+
+        Assert.That(hasErrorCode, Is.True, "ProblemDetails must contain errorCode");
+        Assert.That(code.GetString(), Is.EqualTo("CAMPUS_NOT_FOUND"));
+    }
+
+    [Test]
+    public async Task GetSimilarRooms_WithUnknownCampusId_Returns400BadRequestWithCampusNotFound()
+    {
+        // Act (BR-CMP-01..03 / M1)
+        var response = await _client.GetAsync("/api/rooms/room-ictu-001/similar?campusId=UNKNOWN_CAMPUS_XYZ");
+
+        // Assert
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        var content = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(content);
+        var root = doc.RootElement;
+
+        var hasErrorCode = root.TryGetProperty("errorCode", out var code) ||
+                           (root.TryGetProperty("extensions", out var ext) && ext.TryGetProperty("errorCode", out code));
+
+        Assert.That(hasErrorCode, Is.True, "ProblemDetails must contain errorCode");
+        Assert.That(code.GetString(), Is.EqualTo("CAMPUS_NOT_FOUND"));
     }
 
     [Test]

@@ -294,9 +294,6 @@ public class RoomsControllerTests
     [Test]
     public async Task GetSimilarRooms_WhenRoomExists_Returns200OkWithSimilarRooms()
     {
-        var targetRoom = CreateSampleDetailDto("room-001");
-        _getRoomDetailUseCase.ExecuteAsync("room-001", Arg.Any<CancellationToken>(), null).Returns(targetRoom);
-
         var similarCards = new List<RoomCardDto>
         {
             new("sim-1", "Phòng 1", 1500000L, 20.0, RoomType.BoardingRoom, 0.5, true, ListingStatus.Available, null, 21.58, 105.80, null, false)
@@ -313,7 +310,7 @@ public class RoomsControllerTests
     [Test]
     public async Task GetSimilarRooms_WhenTargetRoomNotFound_Returns404NotFound()
     {
-        _getRoomDetailUseCase.ExecuteAsync("room-not-found", Arg.Any<CancellationToken>(), null).Returns((RoomDetailDto?)null);
+        _getSimilarRoomsUseCase.ExecuteAsync("room-not-found", null, Arg.Any<CancellationToken>()).Returns((IReadOnlyList<RoomCardDto>?)null);
 
         var result = await _controller.GetSimilarRooms("room-not-found", CancellationToken.None);
 

@@ -1,7 +1,10 @@
 using NSubstitute;
 using RoomToRentRadar.Application.UseCases.Rooms;
 using RoomToRentRadar.Domain.Aggregates;
+using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
+using RoomToRentRadar.Domain.Exceptions;
+using RoomToRentRadar.Ports.Contracts.Common;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadar.Ports.Outbound.ExternalServices;
 using RoomToRentRadar.Ports.Outbound.Repositories;
@@ -12,6 +15,7 @@ namespace RoomToRentRadarUnitTests.Application.Rooms;
 public class GetRoomDetailUseCaseTests
 {
     private IRoomRepository _roomRepository = null!;
+    private ICampusRepository _campusRepository = null!;
     private ICurrentUserContextPort _currentUserContext = null!;
     private GetRoomDetailUseCase _sut = null!;
 
@@ -19,8 +23,14 @@ public class GetRoomDetailUseCaseTests
     public void SetUp()
     {
         _roomRepository = Substitute.For<IRoomRepository>();
+        _campusRepository = Substitute.For<ICampusRepository>();
         _currentUserContext = Substitute.For<ICurrentUserContextPort>();
-        _sut = new GetRoomDetailUseCase(_roomRepository, _currentUserContext);
+
+        var defaultCampus = new Campus("ICTU", "Trường Đại học Công nghệ Thông tin và Truyền thông", "ICTU", 21.5851, 105.8066, true, 1);
+        _campusRepository.GetDefaultCampusAsync(Arg.Any<CancellationToken>()).Returns(defaultCampus);
+        _campusRepository.GetByIdAsync("ICTU", Arg.Any<CancellationToken>()).Returns(defaultCampus);
+
+        _sut = new GetRoomDetailUseCase(_roomRepository, _campusRepository, _currentUserContext);
     }
 
     private static Room CreateSampleRoom(
@@ -219,29 +229,25 @@ public class GetRoomDetailUseCaseTests
     }
 
     [Test]
-    public async Task ExecuteAsync_WithUnknownCampusId_FallsBackToICTU()
+    public void ExecuteAsync_WithUnknownCampusId_ThrowsDomainValidationExceptionWithCampusNotFound()
     {
-        // Arrange (M1 fix: unknown campusId falls back to ICTU coordinates)
-        var sampleRoom = CreateSampleRoom();
-        _roomRepository.GetByIdAsync("room-001", Arg.Any<CancellationToken>()).Returns(sampleRoom);
+        // Arrange (M1: unknown campusId throws DomainValidationException with CAMPUS_NOT_FOUND)
+        _campusRepository.GetByIdAsync("UNKNOWN_CAMPUS_XYZ", Arg.Any<CancellationToken>()).Returns((Campus?)null);
 
-        // Act
-        var resultWithUnknown = await _sut.ExecuteAsync("room-001", campusId: "UNKNOWN_CAMPUS_XYZ");
-        var resultWithIctu = await _sut.ExecuteAsync("room-001", campusId: "ICTU");
-
-        // Assert
-        Assert.That(resultWithUnknown, Is.Not.Null);
-        Assert.That(resultWithIctu, Is.Not.Null);
-        Assert.That(resultWithUnknown!.DistanceKm, Is.EqualTo(resultWithIctu!.DistanceKm),
-            "Unknown campus must fall back to ICTU default coordinates.");
+        // Act & Assert
+        var ex = Assert.ThrowsAsync<DomainValidationException>(() => _sut.ExecuteAsync("room-001", campusId: "UNKNOWN_CAMPUS_XYZ"));
+        Assert.That(ex!.ErrorCode, Is.EqualTo(ProblemCodes.CampusNotFound));
     }
 
     [Test]
     public async Task ExecuteAsync_WithKnownCampusId_UsesCorrectCoordinates()
     {
-        // Arrange (M1 fix: valid campusId uses that campus's coordinates)
+        // Arrange (M1: valid campusId uses that campus's coordinates)
         var sampleRoom = CreateSampleRoom();
         _roomRepository.GetByIdAsync("room-001", Arg.Any<CancellationToken>()).Returns(sampleRoom);
+
+        var tnusCampus = new Campus("TNUS", "Trường Đại học Khoa học", "TNUS", 21.58870, 105.80979, false, 2);
+        _campusRepository.GetByIdAsync("TNUS", Arg.Any<CancellationToken>()).Returns(tnusCampus);
 
         // Act
         var resultIctu = await _sut.ExecuteAsync("room-001", campusId: "ICTU");

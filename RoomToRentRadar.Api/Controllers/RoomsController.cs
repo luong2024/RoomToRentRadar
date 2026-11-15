@@ -196,13 +196,13 @@ public sealed class RoomsController : ControllerBase
             return BadRequest(invalidProblem);
         }
 
-        if (_getRoomDetailUseCase == null || _getSimilarRoomsUseCase == null)
+        if (_getSimilarRoomsUseCase == null)
         {
             return StatusCode(StatusCodes.Status501NotImplemented);
         }
 
-        var targetRoom = await _getRoomDetailUseCase.ExecuteAsync(id, ct, campusId);
-        if (targetRoom == null)
+        var similarRooms = await _getSimilarRoomsUseCase.ExecuteAsync(id, campusId, ct);
+        if (similarRooms == null)
         {
             var notFoundProblem = new ProblemDetails
             {
@@ -214,7 +214,6 @@ public sealed class RoomsController : ControllerBase
             return NotFound(notFoundProblem);
         }
 
-        var similarRooms = await _getSimilarRoomsUseCase.ExecuteAsync(id, campusId, ct);
         return Ok(similarRooms);
     }
 }
