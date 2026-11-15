@@ -55,7 +55,7 @@ public sealed class GetRoomDetailUseCase : IGetRoomDetailUseCase
         }
 
         // BR-LST-04a: PendingReview, Rejected, Suspended return 404 to public callers
-        if (!room.IsPubliclyVisible)
+        if (!room.IsDetailViewable)
         {
             return null;
         }

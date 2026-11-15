@@ -167,7 +167,7 @@ public sealed class SqliteDbContext : IDisposable
         cmd.Parameters.AddWithValue("@id", landlordId);
         cmd.Parameters.AddWithValue("@email", "seed-landlord@roomtorentradar.local");
         cmd.Parameters.AddWithValue("@normalizedEmail", "seed-landlord@roomtorentradar.local");
-        cmd.Parameters.AddWithValue("@fullName", "Cô Lan");
+        cmd.Parameters.AddWithValue("@fullName", "Seed Landlord");
         cmd.Parameters.AddWithValue("@phoneNumber", "0988123456");
         cmd.Parameters.AddWithValue("@createdAtUtc", "2026-11-01T08:00:00.0000000Z");
         cmd.ExecuteNonQuery();

@@ -46,7 +46,7 @@ public sealed class GetSimilarRoomsUseCase : IGetSimilarRoomsUseCase
 
         var trimmedId = roomId.Trim();
         var targetRoom = await _roomRepository.GetByIdAsync(trimmedId, ct).ConfigureAwait(false);
-        if (targetRoom == null || !targetRoom.IsPubliclyVisible)
+        if (targetRoom == null || !targetRoom.IsDetailViewable)
         {
             return null;
         }

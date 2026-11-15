@@ -95,6 +95,8 @@ public sealed class Room
         Status == ListingStatus.Rented ||
         Status == ListingStatus.Unpublished;
 
+    public bool IsDetailViewable => IsPubliclyVisible;
+
     private Room(
         string id,
         string landlordId,
