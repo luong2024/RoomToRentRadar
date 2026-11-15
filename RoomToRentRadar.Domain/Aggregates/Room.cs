@@ -66,6 +66,8 @@ public sealed class Room
     public IReadOnlyList<string> HouseRules { get; private set; } = Array.Empty<string>();
     public string LandlordName { get; private set; } = string.Empty;
     public string LandlordPhoneNumber { get; private set; } = string.Empty;
+    public bool LandlordIsVerified { get; private set; }
+    public DateTime? LandlordMemberSinceUtc { get; private set; }
     public double DistanceToCampusKm { get; private set; }
 
     // Compatibility & Convenience Accessors
@@ -503,7 +505,7 @@ public sealed class Room
         return room;
     }
 
-    public void SetLandlordContact(string? name, string? phoneNumber)
+    public void SetLandlordContact(string? name, string? phoneNumber, bool isVerified = false, DateTime? memberSinceUtc = null)
     {
         if (!string.IsNullOrWhiteSpace(name))
         {
@@ -513,6 +515,12 @@ public sealed class Room
         if (!string.IsNullOrWhiteSpace(phoneNumber))
         {
             LandlordPhoneNumber = phoneNumber.Trim();
+        }
+
+        LandlordIsVerified = isVerified;
+        if (memberSinceUtc.HasValue)
+        {
+            LandlordMemberSinceUtc = memberSinceUtc.Value;
         }
     }
 

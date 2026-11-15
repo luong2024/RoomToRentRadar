@@ -37,20 +37,48 @@ public static class RoomMapper
     {
         ArgumentNullException.ThrowIfNull(room);
 
-        var elec = (room.ElectricityPriceVndPerKwh ?? 3500m) * 100m;
-        var water = (room.WaterPriceVnd ?? 25000m) * 4m;
-        var internet = room.InternetFeeVnd ?? 100000m;
-        var parking = room.ParkingFeeVnd ?? 0m;
-        var estimatedMonthlyTotalVnd = (long)(room.MonthlyRentVnd + elec + water + internet + parking);
+        // BR-LST-03: estimated monthly total = rent + 100 kWh × electricity price + water (4 m³ × price, or 1 × per-person price, or 0 if included) + internet + parking
+        long totalEstimate = (long)room.MonthlyRentVnd;
+        if (room.ElectricityPriceVndPerKwh.HasValue)
+        {
+            totalEstimate += 100L * room.ElectricityPriceVndPerKwh.Value;
+        }
+
+        if (room.WaterPriceVnd.HasValue)
+        {
+            var unit = room.WaterPriceUnit?.Trim();
+            if (string.Equals(unit, "PerPerson", StringComparison.OrdinalIgnoreCase))
+            {
+                totalEstimate += 1L * room.WaterPriceVnd.Value;
+            }
+            else if (string.Equals(unit, "Included", StringComparison.OrdinalIgnoreCase))
+            {
+                totalEstimate += 0L;
+            }
+            else // PerCubicMeter or default per BR-LST-03: 4 m³
+            {
+                totalEstimate += 4L * room.WaterPriceVnd.Value;
+            }
+        }
+
+        if (room.InternetFeeVnd.HasValue)
+        {
+            totalEstimate += room.InternetFeeVnd.Value;
+        }
+
+        if (room.ParkingFeeVnd.HasValue)
+        {
+            totalEstimate += room.ParkingFeeVnd.Value;
+        }
 
         var utilities = new UtilitiesView(
             ElectricityPriceVndPerKwh: room.ElectricityPriceVndPerKwh,
             WaterPriceVnd: room.WaterPriceVnd,
-            WaterPriceUnit: room.WaterPriceUnit ?? "PerCubicMeter",
+            WaterPriceUnit: room.WaterPriceUnit,
             InternetFeeVnd: room.InternetFeeVnd,
             ParkingFeeVnd: room.ParkingFeeVnd,
             OtherFeesNote: room.OtherFeesNote,
-            EstimatedMonthlyTotalVnd: estimatedMonthlyTotalVnd
+            EstimatedMonthlyTotalVnd: totalEstimate
         );
 
         var amenities = (room.Amenities ?? Array.Empty<string>())
@@ -84,16 +112,16 @@ public static class RoomMapper
 
         var landlord = new LandlordContactDto(
             Id: !string.IsNullOrWhiteSpace(room.LandlordId) ? room.LandlordId : "landlord-default",
-            DisplayName: !string.IsNullOrWhiteSpace(room.LandlordName) ? room.LandlordName : "Chủ phòng trọ",
-            IsVerified: room.IsVerified,
-            MemberSinceUtc: room.CreatedAtUtc,
+            DisplayName: !string.IsNullOrWhiteSpace(room.LandlordName) ? room.LandlordName : room.LandlordId,
+            IsVerified: room.LandlordIsVerified,
+            MemberSinceUtc: room.LandlordMemberSinceUtc ?? room.CreatedAtUtc,
             PhoneNumber: landlordPhoneNumber,
             ZaloUrl: !string.IsNullOrWhiteSpace(landlordPhoneNumber) ? $"https://zalo.me/{landlordPhoneNumber}" : null
         );
 
         var address = new AddressDto(
             AddressLine: !string.IsNullOrWhiteSpace(room.AddressLine) ? room.AddressLine : room.FullAddress,
-            Ward: !string.IsNullOrWhiteSpace(room.Ward) ? room.Ward : "Quyết Thắng",
+            Ward: room.Ward,
             District: !string.IsNullOrWhiteSpace(room.District) ? room.District : "TP. Thái Nguyên"
         );
 
@@ -102,19 +130,26 @@ public static class RoomMapper
             Longitude: room.Longitude
         );
 
+        // BR-LST-08: Safety score computed from verified criteria; empty array if none confirmed
+        var safetyFeatures = Array.Empty<string>();
         var safety = new SafetyDto(
-            Score: room.IsSafetyVerified ? 4 : 2,
+            Score: safetyFeatures.Length,
             IsVerified: room.IsSafetyVerified,
-            Features: new[] { "Cctv", "SecureEntrance" }
+            Features: safetyFeatures
         );
 
-        var houseRules = new HouseRulesDto(
-            VersionNumber: 1,
-            UpdatedAtUtc: room.LastUpdatedAtUtc,
-            GuestPolicy: "Allowed",
-            CookingPolicy: "Allowed",
-            ParkingAvailable: true
-        );
+        HouseRulesDto? houseRules = null;
+        if (room.HouseRules != null && room.HouseRules.Count > 0)
+        {
+            houseRules = new HouseRulesDto(
+                VersionNumber: 1,
+                UpdatedAtUtc: room.LastUpdatedAtUtc,
+                GuestPolicy: "Allowed",
+                CookingPolicy: "Allowed",
+                ParkingAvailable: true,
+                GuestPolicyNote: string.Join("; ", room.HouseRules)
+            );
+        }
 
         return new RoomDetailDto(
             Id: room.Id,

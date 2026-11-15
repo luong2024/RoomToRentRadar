@@ -45,7 +45,7 @@ public sealed class SqliteRoomRepository : IRoomRepository
                        r.ElectricityPriceVndPerKwh, r.WaterPriceVnd, r.WaterPriceUnit, r.InternetFeeVnd, r.ParkingFeeVnd,
                        r.OtherFeesNote, r.Status, r.StatusReason, r.NeedsReReview, r.IsSafetyVerified, r.VerifiedAtUtc,
                        r.VerifiedByUserId, r.PublishedAtUtc, r.LastUpdatedAtUtc, r.CreatedAtUtc, r.Version,
-                       u.FullName, u.PhoneNumber
+                       u.FullName, u.PhoneNumber, u.IsVerified, u.CreatedAtUtc
                 FROM Rooms r
                 LEFT JOIN Users u ON u.Id = r.LandlordId
                 WHERE r.Id = @id LIMIT 1;
@@ -245,7 +245,9 @@ public sealed class SqliteRoomRepository : IRoomRepository
 
         var landlordName = reader.FieldCount > 32 && !reader.IsDBNull(32) ? reader.GetString(32) : null;
         var landlordPhone = reader.FieldCount > 33 && !reader.IsDBNull(33) ? reader.GetString(33) : null;
-        room.SetLandlordContact(landlordName, landlordPhone);
+        var landlordIsVerified = reader.FieldCount > 34 && !reader.IsDBNull(34) && reader.GetInt64(34) != 0;
+        var landlordMemberSince = reader.FieldCount > 35 && !reader.IsDBNull(35) ? ParseUtc(reader.GetString(35)) : (DateTime?)null;
+        room.SetLandlordContact(landlordName, landlordPhone, landlordIsVerified, landlordMemberSince);
 
         return room;
     }
