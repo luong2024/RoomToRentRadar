@@ -211,13 +211,15 @@ public class AuthenticationSessionService : IAuthenticationSessionService
                 return true;
             }
 
-            await ClearSessionAsync(cancellationToken);
+            // If refresh failed because the token was expired or revoked, RefreshTokenAsync
+            // already called ClearSessionAsync() and wiped SecureStorage.
+            // If refresh failed due to a transient error (e.g. offline, timeout, server error),
+            // we intentionally preserve the session in SecureStorage for later retry.
             return false;
         }
         catch
         {
-            // Error reading secure storage or unexpected exception
-            await ClearSessionAsync(cancellationToken);
+            // Error reading secure storage or unexpected exception - do not clear storage on transient exceptions
             return false;
         }
     }
@@ -244,8 +246,13 @@ public class AuthenticationSessionService : IAuthenticationSessionService
                 return true;
             }
 
-            // Refresh failed (e.g. token expired, revoked, invalid)
-            await ClearSessionAsync(cancellationToken);
+            // Only clear session when the refresh token is confirmed expired or revoked.
+            // For transient errors (offline network, timeout, server 5xx), keep existing session intact.
+            if (result.FailureType == AuthFailureType.RefreshTokenExpiredOrRevoked)
+            {
+                await ClearSessionAsync(cancellationToken);
+            }
+
             return false;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -254,7 +261,7 @@ public class AuthenticationSessionService : IAuthenticationSessionService
         }
         catch
         {
-            await ClearSessionAsync(cancellationToken);
+            // Do not wipe session on unexpected exception during transport/refresh
             return false;
         }
         finally
