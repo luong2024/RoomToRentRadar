@@ -37,17 +37,18 @@ public class ValidationProblemResponseFactoryTests
     }
 
     [Test]
-    public void Create_InvalidModelState_KeepsErrorKeysAsIs()
+    public void Create_InvalidModelState_ConvertsErrorKeysToCamelCase()
     {
+        // T00.5 / ADR-012: the old expectation (keys kept as-is) was replaced by the camelCase requirement.
         var modelState = new ModelStateDictionary();
-        modelState.AddModelError("minRentVnd", "Rent must be a positive amount.");
+        modelState.AddModelError("MinRentVnd", "Rent must be a positive amount.");
         modelState.AddModelError("Address.Street", "Street is required.");
         var context = CreateContext(modelState);
 
         var result = ValidationProblemResponseFactory.Create(context);
 
         var problem = (ValidationProblemDetails)((BadRequestObjectResult)result).Value!;
-        Assert.That(problem.Errors.Keys, Is.EquivalentTo(new[] { "minRentVnd", "Address.Street" }));
+        Assert.That(problem.Errors.Keys, Is.EquivalentTo(new[] { "minRentVnd", "address.street" }));
     }
 
     [Test]
@@ -91,6 +92,105 @@ public class ValidationProblemResponseFactoryTests
         Assert.That(result, Is.InstanceOf<BadRequestObjectResult>());
         var problem = (ValidationProblemDetails)((BadRequestObjectResult)result).Value!;
         Assert.That(problem.Errors, Is.Empty);
+    }
+
+    [Test]
+    public void Create_PascalCaseKeys_AreConvertedToCamelCase()
+    {
+        var modelState = new ModelStateDictionary();
+        modelState.AddModelError("MinRentVnd", "Rent must be a positive amount.");
+        modelState.AddModelError("RoomTypes", "Room type is invalid.");
+        var context = CreateContext(modelState);
+
+        var result = ValidationProblemResponseFactory.Create(context);
+
+        var problem = (ValidationProblemDetails)((BadRequestObjectResult)result).Value!;
+        Assert.That(problem.Errors.Keys, Is.EquivalentTo(new[] { "minRentVnd", "roomTypes" }));
+    }
+
+    [Test]
+    public void Create_NestedPath_ConvertsEachSegment()
+    {
+        var modelState = new ModelStateDictionary();
+        modelState.AddModelError("Address.Street", "Street is required.");
+        modelState.AddModelError("Owner.Contact.PhoneNumber", "Phone number is invalid.");
+        var context = CreateContext(modelState);
+
+        var result = ValidationProblemResponseFactory.Create(context);
+
+        var problem = (ValidationProblemDetails)((BadRequestObjectResult)result).Value!;
+        Assert.That(problem.Errors.Keys, Is.EquivalentTo(new[] { "address.street", "owner.contact.phoneNumber" }));
+    }
+
+    [Test]
+    public void Create_JsonPathKeys_KeepDollarPrefix()
+    {
+        var modelState = new ModelStateDictionary();
+        modelState.AddModelError("$", "Body is invalid.");
+        modelState.AddModelError("$.MinRent", "Rent must be a positive amount.");
+        var context = CreateContext(modelState);
+
+        var result = ValidationProblemResponseFactory.Create(context);
+
+        var problem = (ValidationProblemDetails)((BadRequestObjectResult)result).Value!;
+        Assert.That(problem.Errors.Keys, Is.EquivalentTo(new[] { "$", "$.minRent" }));
+    }
+
+    [Test]
+    public void Create_IndexedKeys_KeepIndex()
+    {
+        var modelState = new ModelStateDictionary();
+        modelState.AddModelError("Items[0].Name", "Name is required.");
+        var context = CreateContext(modelState);
+
+        var result = ValidationProblemResponseFactory.Create(context);
+
+        var problem = (ValidationProblemDetails)((BadRequestObjectResult)result).Value!;
+        Assert.That(problem.Errors.Keys, Is.EquivalentTo(new[] { "items[0].name" }));
+    }
+
+    [Test]
+    public void Create_KeysCollidingAfterCamelCase_AreMergedNotThrown()
+    {
+        var modelState = new ModelStateDictionary();
+        modelState.AddModelError("Name", "A");
+        modelState.AddModelError("NAME", "B");
+        var context = CreateContext(modelState);
+
+        var result = ValidationProblemResponseFactory.Create(context);
+
+        var problem = (ValidationProblemDetails)((BadRequestObjectResult)result).Value!;
+        Assert.Multiple(() =>
+        {
+            Assert.That(problem.Errors.Keys, Is.EquivalentTo(new[] { "name" }));
+            Assert.That(problem.Errors["name"], Is.EquivalentTo(new[] { "A", "B" }));
+        });
+    }
+
+    [Test]
+    public void Create_EmptyKey_IsKept()
+    {
+        var modelState = new ModelStateDictionary();
+        modelState.AddModelError(string.Empty, "Body is invalid.");
+        var context = CreateContext(modelState);
+
+        var result = ValidationProblemResponseFactory.Create(context);
+
+        var problem = (ValidationProblemDetails)((BadRequestObjectResult)result).Value!;
+        Assert.That(problem.Errors.ContainsKey(string.Empty), Is.True);
+    }
+
+    [Test]
+    public void Create_AlreadyCamelCaseKey_IsUnchanged()
+    {
+        var modelState = new ModelStateDictionary();
+        modelState.AddModelError("request", "Body is invalid.");
+        var context = CreateContext(modelState);
+
+        var result = ValidationProblemResponseFactory.Create(context);
+
+        var problem = (ValidationProblemDetails)((BadRequestObjectResult)result).Value!;
+        Assert.That(problem.Errors.Keys, Is.EquivalentTo(new[] { "request" }));
     }
 
     private static ActionContext CreateContext(ModelStateDictionary modelState, string path = "/api/rooms")

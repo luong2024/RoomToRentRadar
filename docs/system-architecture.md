@@ -218,20 +218,26 @@ RoomsController.Search(query) → ISearchRoomsUseCase.ExecuteAsync(RoomSearchReq
 - PII: phone only to signed-in users (BR-AUTH-07); logs never contain tokens/passwords.
 
 ### 7.2 Error model
-`application/problem+json` with `errorCode` — [ADR-012](adr/adr-012-api-contract-and-error-model.md). Framework-generated errors must use the same shape: configure `ApiBehaviorOptions.InvalidModelStateResponseFactory` (model-binding 400 → `VALIDATION_FAILED` + `errors`), the rate limiter's `OnRejected` (429 → `RATE_LIMITED`) and `UseStatusCodePages` for bare 401/403/404. Until the global middleware exists, the current Auth endpoints return ProblemDetails **without** `errorCode`; the client must fall back to the HTTP status. Domain exceptions → HTTP:
+`application/problem+json` with `errorCode` — [ADR-012](adr/adr-012-api-contract-and-error-model.md). Every error response uses this shape. `ProblemDetailsMiddleware` catches all exceptions and maps them through one table (`ExceptionProblemMap`, rows below, first matching row wins). Framework-generated errors are covered by `ApiBehaviorOptions.InvalidModelStateResponseFactory` (model-binding 400 → `VALIDATION_FAILED` + `errors`, keys in camelCase) and `UseStatusCodePages` (bare 401/403/404/415 → `UNAUTHORIZED` / `FORBIDDEN` / `NOT_FOUND` / `UNSUPPORTED_MEDIA_TYPE`; the `WWW-Authenticate` header is kept). Other bare status codes such as 405 are not covered. The rate limiter's `OnRejected` (429 → `RATE_LIMITED`) is added by its own task. Unhandled exceptions return 500 `INTERNAL_ERROR` with a fixed `detail`: no stack trace and no exception message is ever sent (the stack goes to the log only). Domain exceptions → HTTP:
 
 | Exception | Status | errorCode (examples) |
 |---|---|---|
-| `DomainValidationException` | 400 | `VALIDATION_FAILED` |
+| `DomainValidationException` with `ErrorCode` `DUPLICATE_ROOM` | 409 | `DUPLICATE_ROOM` |
+| `DomainValidationException` (other) | 400 | `VALIDATION_FAILED`, or its own code: `INVALID_SORT_OPTION`, `INVALID_PRICE_RANGE`, `INVALID_AREA_RANGE`, `INVALID_DISTANCE_RANGE`, `CAMPUS_NOT_FOUND` |
 | `InvalidCredentialsException`, `InvalidTokenException` | 401 | `INVALID_CREDENTIALS`, `INVALID_TOKEN` |
 | `AccountLockedException` | 403 | `ACCOUNT_LOCKED` |
 | `ForbiddenRoleException`, `LandlordNotApprovedException` | 403 | `FORBIDDEN_ROLE`, `LANDLORD_NOT_APPROVED` |
-| `EntityNotFoundException`, `UserNotFoundException` | 404 | `ROOM_NOT_FOUND`, `CONVERSATION_NOT_FOUND` |
-| `DuplicateEmailException`, `ConcurrencyConflictException`, `InvalidStateTransitionException`, `LimitExceededException` | 409 | `EMAIL_TAKEN`, `CONCURRENCY_CONFLICT`, `INVALID_STATE_TRANSITION`, `LISTING_NOT_AVAILABLE`, `ALREADY_REPORTED`, `LIMIT_EXCEEDED` |
+| `UserNotFoundException` | 404 | `NOT_FOUND` (generic on purpose, anti-IDOR) |
+| `EntityNotFoundException` | 404 | its own code, e.g. `ROOM_NOT_FOUND` |
+| `DuplicateEmailException`, `ConcurrencyConflictException`, `InvalidStateTransitionException`, `LimitExceededException` | 409 | `EMAIL_TAKEN`, `CONCURRENCY_CONFLICT`, `INVALID_STATE_TRANSITION`, `LIMIT_EXCEEDED`; the last two accept their own code, e.g. `LISTING_NOT_AVAILABLE`, `ALREADY_REPORTED` |
+| any other exception | 500 | `INTERNAL_ERROR` |
+| bare 401 / 403 / 404 / 415 (status code pages) | 401 / 403 / 404 / 415 | `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `UNSUPPORTED_MEDIA_TYPE` |
 | precondition failures | 412 / 428 | `ETAG_MISMATCH`, `IF_MATCH_REQUIRED` |
 | `FileTooLargeException` (> 10 MB, BR-MED-02) | 413 | `FILE_TOO_LARGE` |
 | `UnsupportedMediaTypeException` (not JPEG/PNG by magic bytes) | 415 | `UNSUPPORTED_MEDIA_TYPE` |
 | rate limiter | 429 | `RATE_LIMITED` |
+
+Rows for 412/428, 413, exception-based 415 and 429 are added by T00.11, the upload task and the rate limiter task; until then no code path produces them.
 
 ### 7.3 Concurrency & idempotency
 `Version` columns + `If-Match` ([ADR-012](adr/adr-012-api-contract-and-error-model.md)); idempotent PUT/DELETE for favourites and devices; `clientMessageId` for chat; `(SavedSearchId, RoomId)` for alerts.
@@ -286,6 +292,6 @@ RoomsController.Search(query) → ISearchRoomsUseCase.ExecuteAsync(RoomSearchReq
 2. ~~Create `RoomToRentRadar.Client.Adapters`~~ (done in PR #22 with the Auth gateway); remaining: `AuthTokenHandler`, cache store, other gateways, and the architecture test on MAUI references.
 3. Add `*.db` to `.gitignore`, untrack `RoomToRentRadar.Api/roomtorentradar.db`.
 4. Introduce migration runner + `Users.SelectedCampusId`, `Users.Version`.
-5. Generalise `AuthExceptionHandlingMiddleware` → `ProblemDetailsMiddleware` with `errorCode`.
+5. ~~Generalise `AuthExceptionHandlingMiddleware` → `ProblemDetailsMiddleware` with `errorCode`.~~ (done in T00.5)
 6. **PR #16 (US04) is the foundation for `Room`** (team decision 2026-11-11): it is aligned to [erd.md](erd.md) §4.4 and merged first; PR #6 (US02) and PR #13 (US03) then rebase onto it and keep only their own use cases/endpoints.
 7. ~~Update `AGENTS.md` project map~~ (done — moved to repo root, 2026-11-11). Still to do: GUARDRAILS wording (Datastore split, client gateways, SQLite only).

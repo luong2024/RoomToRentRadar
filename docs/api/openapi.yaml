@@ -1228,7 +1228,7 @@ components:
     # ------------------------------------------------ common
     ProblemDetails:
       type: object
-      description: RFC 9457 problem details with project extensions (ADR-012)
+      description: RFC 9457 problem details with project extensions (ADR-012). Every error response uses this shape, including bare 401, 403, 404 and 415 (errorCode UNAUTHORIZED, FORBIDDEN, NOT_FOUND, UNSUPPORTED_MEDIA_TYPE) and unhandled exceptions (500 INTERNAL_ERROR, no stack trace).
       required: [title, status, errorCode]
       properties:
         type: { type: string }
@@ -1239,10 +1239,10 @@ components:
         errorCode:
           type: string
           description: Stable machine code mapped to localized text by the client (en-US / vi-VN, US15, ui-ux-spec §6)
-          examples: [VALIDATION_FAILED, INVALID_SORT_OPTION, INVALID_PRICE_RANGE, INVALID_AREA_RANGE, INVALID_DISTANCE_RANGE, CAMPUS_NOT_FOUND, DUPLICATE_ROOM, INVALID_CREDENTIALS, INVALID_TOKEN, ACCOUNT_LOCKED, FORBIDDEN_ROLE, LANDLORD_NOT_APPROVED, EMAIL_TAKEN, ROOM_NOT_FOUND, LISTING_NOT_AVAILABLE, INVALID_STATE_TRANSITION, ALREADY_REPORTED, LIMIT_EXCEEDED, CONCURRENCY_CONFLICT, ETAG_MISMATCH, IF_MATCH_REQUIRED, FILE_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, RATE_LIMITED]
+          examples: [VALIDATION_FAILED, INVALID_SORT_OPTION, INVALID_PRICE_RANGE, INVALID_AREA_RANGE, INVALID_DISTANCE_RANGE, CAMPUS_NOT_FOUND, DUPLICATE_ROOM, INVALID_CREDENTIALS, INVALID_TOKEN, ACCOUNT_LOCKED, FORBIDDEN_ROLE, LANDLORD_NOT_APPROVED, EMAIL_TAKEN, ROOM_NOT_FOUND, LISTING_NOT_AVAILABLE, INVALID_STATE_TRANSITION, ALREADY_REPORTED, LIMIT_EXCEEDED, CONCURRENCY_CONFLICT, ETAG_MISMATCH, IF_MATCH_REQUIRED, FILE_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE, RATE_LIMITED, NOT_FOUND, FORBIDDEN, UNAUTHORIZED, INTERNAL_ERROR]
         errors:
           type: object
-          description: Field-level validation messages
+          description: Field-level validation messages. Keys are camelCase JSON field paths (for example minRentVnd or address.street).
           additionalProperties:
             type: array
             items: { type: string }

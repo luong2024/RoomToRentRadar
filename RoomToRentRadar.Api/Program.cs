@@ -31,7 +31,12 @@ builder.Services.AddEndpointsApiExplorer();
 
 // ADR-012 / system-architecture §7.2: framework-generated 400s (model binding) must use the same
 // problem+json shape as domain validation errors, with a stable errorCode and an `errors` map.
-builder.Services.Configure<ApiBehaviorOptions>(options => options.InvalidModelStateResponseFactory = ValidationProblemResponseFactory.Create);
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = ValidationProblemResponseFactory.Create;
+    // MVC-produced 4xx (e.g. 415, bare 404) must go through the status-code pages path to get a stable errorCode.
+    options.SuppressMapClientErrors = true;
+});
 
 // ===== 2. Datastore =====
 // ADR-002: SQLite is the only datastore (the CosmosDb provider is frozen).
@@ -91,7 +96,9 @@ builder.Services.AddAuthorization(AuthorizationPolicies.ConfigurePolicies);
 // ===== 6. Request pipeline =====
 var app = builder.Build();
 
-app.UseMiddleware<AuthExceptionHandlingMiddleware>();
+app.UseMiddleware<ProblemDetailsMiddleware>();
+// 401/403/404/415 produced without a body (auth challenge, unknown route, unsupported media type) become problem+json with a stable errorCode.
+app.UseStatusCodePages(StatusCodeProblemPages.WriteAsync);
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<AuditLoggingMiddleware>();
