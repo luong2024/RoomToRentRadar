@@ -4,7 +4,6 @@ using RoomToRentRadar.Infrastructure.Adapters.Mocks;
 using RoomToRentRadar.Infrastructure.Adapters.Security;
 using RoomToRentRadar.Ports.Outbound.ExternalServices;
 using RoomToRentRadar.Ports.Outbound.Repositories;
-using RoomToRentRadar.Ports.Outbound.Security;
 
 namespace RoomToRentRadar.Infrastructure;
 

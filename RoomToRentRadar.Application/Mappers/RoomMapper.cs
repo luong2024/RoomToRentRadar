@@ -184,14 +184,4 @@ public static class RoomMapper
         ListingStatus.Suspended => "Unavailable",
         _ => "Unavailable"
     };
-
-    [Obsolete("Use ListingStatus overload")]
-    public static string MapRoomStatus(RoomStatus status) => status switch
-    {
-        RoomStatus.Available => "Available",
-        RoomStatus.Unavailable => "Unavailable",
-        RoomStatus.Rented => "Rented",
-        RoomStatus.PendingVerification => "PendingVerification",
-        _ => "Unavailable"
-    };
 }

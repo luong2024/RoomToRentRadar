@@ -130,10 +130,38 @@ public class RoomDetailEndpointIntegrationTests
             longitude: 105.8070
         );
 
+        var rejectedRoom = new Room(
+            id: "room-rejected-01",
+            title: "Phòng bị từ chối",
+            description: "Bị từ chối duyệt",
+            monthlyRent: 1500000m,
+            depositAmount: 500000m,
+            areaSquareMeters: 20.0,
+            roomType: "BoardingRoom",
+            status: ListingStatus.Rejected,
+            latitude: 21.5860,
+            longitude: 105.8070
+        );
+
+        var suspendedRoom = new Room(
+            id: "room-suspended-01",
+            title: "Phòng bị đình chỉ",
+            description: "Bị đình chỉ vi phạm",
+            monthlyRent: 1500000m,
+            depositAmount: 500000m,
+            areaSquareMeters: 20.0,
+            roomType: "BoardingRoom",
+            status: ListingStatus.Suspended,
+            latitude: 21.5860,
+            longitude: 105.8070
+        );
+
         await repo.AddAsync(testRoom);
         await repo.AddAsync(unpublishedRoom);
         await repo.AddAsync(rentedRoom);
         await repo.AddAsync(pendingRoom);
+        await repo.AddAsync(rejectedRoom);
+        await repo.AddAsync(suspendedRoom);
     }
 
     [OneTimeTearDown]
@@ -355,11 +383,13 @@ public class RoomDetailEndpointIntegrationTests
         Assert.That(code.GetString(), Is.EqualTo("ROOM_NOT_FOUND"));
     }
 
-    [Test]
-    public async Task GetRoomById_PendingVerificationRoom_Returns404NotFound()
+    [TestCase("room-pending-01")]
+    [TestCase("room-rejected-01")]
+    [TestCase("room-suspended-01")]
+    public async Task GetRoomById_HiddenStatusRooms_Returns404NotFound(string roomId)
     {
-        // Act (BR-LST-04a: Draft / Pending review rooms are hidden from public)
-        var response = await _client.GetAsync("/api/rooms/room-pending-01");
+        // Act (BR-LST-04a: Draft / Pending review / Rejected / Suspended rooms are hidden from public)
+        var response = await _client.GetAsync($"/api/rooms/{roomId}");
 
         // Assert
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
@@ -372,6 +402,18 @@ public class RoomDetailEndpointIntegrationTests
 
         Assert.That(hasErrorCode, Is.True, "ProblemDetails must contain errorCode");
         Assert.That(code.GetString(), Is.EqualTo("ROOM_NOT_FOUND"));
+    }
+
+    [TestCase("room-pending-01")]
+    [TestCase("room-rejected-01")]
+    [TestCase("room-suspended-01")]
+    public async Task GetSimilarRooms_HiddenStatusRooms_Returns404NotFound(string roomId)
+    {
+        // Act (BR-LST-04a: Similar rooms endpoint must also return 404 for hidden status target rooms)
+        var response = await _client.GetAsync($"/api/rooms/{roomId}/similar");
+
+        // Assert
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]

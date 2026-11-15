@@ -21,16 +21,6 @@ public class RoomMapperTests
         Assert.That(mapped, Is.EqualTo(expectedString));
     }
 
-    [TestCase(RoomStatus.Available, "Available")]
-    [TestCase(RoomStatus.Unavailable, "Unavailable")]
-    [TestCase(RoomStatus.Rented, "Rented")]
-    [TestCase(RoomStatus.PendingVerification, "PendingVerification")]
-    public void MapRoomStatus_MapsEnumValuesToExplicitStableStrings(RoomStatus status, string expectedString)
-    {
-        var mapped = RoomMapper.MapRoomStatus(status);
-        Assert.That(mapped, Is.EqualTo(expectedString));
-    }
-
     [Test]
     public void ToCardDto_MapsPropertiesAccurately()
     {
