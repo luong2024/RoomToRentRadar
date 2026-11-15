@@ -171,18 +171,101 @@ public class AuthenticationSessionServiceTests
     }
 
     [Test]
-    public async Task RefreshTokenAsync_WhenBackendReturnsFailed_ShouldClearSession()
+    public async Task RefreshTokenAsync_WhenTokenIsExpiredOrRevoked_ShouldClearSession()
     {
         var user = new AuthUser(Guid.NewGuid(), "student@example.com", "STUDENT", "LOCAL", true);
         await _service.SaveSessionAsync("token", "revoked-refresh", user);
 
-        _authPort.RefreshResult = AuthResult.Failed("Refresh token expired or revoked.");
+        _authPort.RefreshResult = AuthResult.InvalidToken("Refresh token expired or revoked.");
 
         var refreshed = await _service.RefreshTokenAsync();
 
         Assert.That(refreshed, Is.False);
         Assert.That(_service.IsAuthenticated, Is.False);
         Assert.That(await _storage.GetAsync(AuthenticationSessionService.AccessTokenKey), Is.Null);
+        Assert.That(await _storage.GetAsync(AuthenticationSessionService.RefreshTokenKey), Is.Null);
+        Assert.That(await _storage.GetAsync(AuthenticationSessionService.UserDataKey), Is.Null);
+    }
+
+    [Test]
+    public async Task RefreshTokenAsync_WhenNetworkFails_ShouldKeepStoredTokensAndUserData()
+    {
+        var user = new AuthUser(Guid.NewGuid(), "student@example.com", "STUDENT", "LOCAL", true);
+        await _service.SaveSessionAsync("current-access", "keep-this-refresh", user);
+
+        _authPort.RefreshResult = AuthResult.NetworkFailure("Unable to connect to authentication server.");
+
+        var refreshed = await _service.RefreshTokenAsync();
+
+        Assert.That(refreshed, Is.False);
+        Assert.That(await _storage.GetAsync(AuthenticationSessionService.RefreshTokenKey), Is.EqualTo("keep-this-refresh"));
+        Assert.That(await _storage.GetAsync(AuthenticationSessionService.UserDataKey), Is.Not.Null);
+    }
+
+    [Test]
+    public async Task RefreshTokenAsync_WhenTimeout_ShouldKeepStoredTokensAndUserData()
+    {
+        var user = new AuthUser(Guid.NewGuid(), "student@example.com", "STUDENT", "LOCAL", true);
+        await _service.SaveSessionAsync("current-access", "keep-this-refresh", user);
+
+        _authPort.RefreshResult = AuthResult.TimeoutFailure("Connection timed out.");
+
+        var refreshed = await _service.RefreshTokenAsync();
+
+        Assert.That(refreshed, Is.False);
+        Assert.That(await _storage.GetAsync(AuthenticationSessionService.RefreshTokenKey), Is.EqualTo("keep-this-refresh"));
+        Assert.That(await _storage.GetAsync(AuthenticationSessionService.UserDataKey), Is.Not.Null);
+    }
+
+    [Test]
+    public async Task RefreshTokenAsync_WhenServer500Error_ShouldKeepStoredTokensAndUserData()
+    {
+        var user = new AuthUser(Guid.NewGuid(), "student@example.com", "STUDENT", "LOCAL", true);
+        await _service.SaveSessionAsync("current-access", "keep-this-refresh", user);
+
+        _authPort.RefreshResult = AuthResult.ServerFailure("Internal server error.");
+
+        var refreshed = await _service.RefreshTokenAsync();
+
+        Assert.That(refreshed, Is.False);
+        Assert.That(await _storage.GetAsync(AuthenticationSessionService.RefreshTokenKey), Is.EqualTo("keep-this-refresh"));
+        Assert.That(await _storage.GetAsync(AuthenticationSessionService.UserDataKey), Is.Not.Null);
+    }
+
+    [Test]
+    public async Task TryRestoreSessionAsync_WhenAccessTokenExpiredAndNetworkFails_ShouldPreserveStoredSession()
+    {
+        var expiredJwt = CreateTestJwt(DateTimeOffset.UtcNow.AddMinutes(-10));
+        var user = new AuthUser(Guid.NewGuid(), "offline@example.com", "STUDENT", "LOCAL", true);
+        await _storage.SetAsync(AuthenticationSessionService.AccessTokenKey, expiredJwt);
+        await _storage.SetAsync(AuthenticationSessionService.RefreshTokenKey, "offline-refresh-token");
+        await _storage.SetAsync(AuthenticationSessionService.UserDataKey, JsonSerializer.Serialize(user));
+
+        _authPort.RefreshResult = AuthResult.NetworkFailure("Offline / no internet connection.");
+
+        var restored = await _service.TryRestoreSessionAsync();
+
+        Assert.That(restored, Is.False);
+        Assert.That(await _storage.GetAsync(AuthenticationSessionService.RefreshTokenKey), Is.EqualTo("offline-refresh-token"));
+        Assert.That(await _storage.GetAsync(AuthenticationSessionService.UserDataKey), Is.Not.Null);
+    }
+
+    [Test]
+    public async Task TryRestoreSessionAsync_WhenAccessTokenExpiredAndTokenRevoked_ShouldClearStoredSession()
+    {
+        var expiredJwt = CreateTestJwt(DateTimeOffset.UtcNow.AddMinutes(-10));
+        var user = new AuthUser(Guid.NewGuid(), "revoked@example.com", "STUDENT", "LOCAL", true);
+        await _storage.SetAsync(AuthenticationSessionService.AccessTokenKey, expiredJwt);
+        await _storage.SetAsync(AuthenticationSessionService.RefreshTokenKey, "revoked-refresh-token");
+        await _storage.SetAsync(AuthenticationSessionService.UserDataKey, JsonSerializer.Serialize(user));
+
+        _authPort.RefreshResult = AuthResult.InvalidToken("invalid_grant: refresh token revoked");
+
+        var restored = await _service.TryRestoreSessionAsync();
+
+        Assert.That(restored, Is.False);
+        Assert.That(await _storage.GetAsync(AuthenticationSessionService.RefreshTokenKey), Is.Null);
+        Assert.That(await _storage.GetAsync(AuthenticationSessionService.UserDataKey), Is.Null);
     }
 
     private static string CreateTestJwt(DateTimeOffset expiresAt)

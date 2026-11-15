@@ -196,6 +196,87 @@ public class HttpAuthAdapterTests
 
         Assert.That(result.IsSuccess, Is.False);
         Assert.That(result.ErrorMessage, Is.EqualTo("Refresh token has expired."));
+        Assert.That(result.FailureType, Is.EqualTo(AuthFailureType.RefreshTokenExpiredOrRevoked));
+        Assert.That(result.IsTransientError, Is.False);
+    }
+
+    [Test]
+    public async Task RefreshTokenAsync_WhenBadRequest400_ShouldReturnRefreshTokenExpiredOrRevoked()
+    {
+        var handler = new StubHttpMessageHandler((_, _) =>
+        {
+            var problemJson = """
+                {
+                  "status": 400,
+                  "title": "Bad Request",
+                  "detail": "invalid_grant: The refresh token has already been rotated or revoked."
+                }
+                """;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
+            {
+                Content = new StringContent(problemJson, Encoding.UTF8, "application/json")
+            });
+        });
+
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.com/") };
+        var adapter = new HttpAuthAdapter(client);
+
+        var result = await adapter.RefreshTokenAsync("revoked-token");
+
+        Assert.That(result.IsSuccess, Is.False);
+        Assert.That(result.FailureType, Is.EqualTo(AuthFailureType.RefreshTokenExpiredOrRevoked));
+        Assert.That(result.IsTransientError, Is.False);
+    }
+
+    [Test]
+    public async Task RefreshTokenAsync_WhenNetworkFails_ShouldReturnNetworkFailure()
+    {
+        var handler = new StubHttpMessageHandler((_, _) =>
+            throw new HttpRequestException("Failed to connect to backend"));
+
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.com/") };
+        var adapter = new HttpAuthAdapter(client);
+
+        var result = await adapter.RefreshTokenAsync("some-token");
+
+        Assert.That(result.IsSuccess, Is.False);
+        Assert.That(result.FailureType, Is.EqualTo(AuthFailureType.NetworkError));
+        Assert.That(result.IsTransientError, Is.True);
+    }
+
+    [Test]
+    public async Task RefreshTokenAsync_WhenTimeoutOccurs_ShouldReturnTimeoutFailure()
+    {
+        var handler = new StubHttpMessageHandler((_, _) =>
+            throw new TaskCanceledException("The request was canceled due to HttpClient.Timeout."));
+
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.com/") };
+        var adapter = new HttpAuthAdapter(client);
+
+        var result = await adapter.RefreshTokenAsync("some-token", CancellationToken.None);
+
+        Assert.That(result.IsSuccess, Is.False);
+        Assert.That(result.FailureType, Is.EqualTo(AuthFailureType.Timeout));
+        Assert.That(result.IsTransientError, Is.True);
+    }
+
+    [Test]
+    public async Task RefreshTokenAsync_WhenServer500Error_ShouldReturnServerFailure()
+    {
+        var handler = new StubHttpMessageHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError)
+            {
+                Content = new StringContent("Server Error", Encoding.UTF8, "text/plain")
+            }));
+
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.com/") };
+        var adapter = new HttpAuthAdapter(client);
+
+        var result = await adapter.RefreshTokenAsync("some-token");
+
+        Assert.That(result.IsSuccess, Is.False);
+        Assert.That(result.FailureType, Is.EqualTo(AuthFailureType.ServerError));
+        Assert.That(result.IsTransientError, Is.True);
     }
 
     [Test]
