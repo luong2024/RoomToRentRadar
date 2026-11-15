@@ -56,6 +56,11 @@ public class HttpAuthAdapter : IAuthenticationPort
             }
 
             var (errorMessage, _) = await ParseErrorResponseAsync(response, cancellationToken);
+            if ((int)response.StatusCode >= 500)
+            {
+                return AuthResult.ServerFailure(errorMessage);
+            }
+
             return AuthResult.Failed(errorMessage);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -64,15 +69,15 @@ public class HttpAuthAdapter : IAuthenticationPort
         }
         catch (OperationCanceledException)
         {
-            return AuthResult.Failed("Connection timed out. Please check that the backend server is running and reachable.");
+            return AuthResult.TimeoutFailure("Connection timed out. Please check that the backend server is running and reachable.");
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException ex)
         {
-            return AuthResult.Failed("Unable to connect to authentication server. Please ensure the backend API is running.");
+            return AuthResult.NetworkFailure($"Unable to connect to authentication server. Please ensure the backend API is running. ({ex.Message})");
         }
         catch (Exception ex)
         {
-            return AuthResult.Failed(ex.Message);
+            return AuthResult.Failed(ex.Message, AuthFailureType.Unknown);
         }
     }
 
@@ -94,7 +99,12 @@ public class HttpAuthAdapter : IAuthenticationPort
             }
 
             var (errorMessage, _) = await ParseErrorResponseAsync(response, cancellationToken);
-            return AuthResult.Failed(errorMessage);
+            if ((int)response.StatusCode >= 500)
+            {
+                return AuthResult.ServerFailure(errorMessage);
+            }
+
+            return AuthResult.Failed(errorMessage, AuthFailureType.InvalidCredentials);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -102,15 +112,15 @@ public class HttpAuthAdapter : IAuthenticationPort
         }
         catch (OperationCanceledException)
         {
-            return AuthResult.Failed("Connection timed out. Please check that the backend server is running and reachable.");
+            return AuthResult.TimeoutFailure("Connection timed out. Please check that the backend server is running and reachable.");
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException ex)
         {
-            return AuthResult.Failed("Unable to connect to authentication server. Please ensure the backend API is running.");
+            return AuthResult.NetworkFailure($"Unable to connect to authentication server. Please ensure the backend API is running. ({ex.Message})");
         }
         catch (Exception ex)
         {
-            return AuthResult.Failed(ex.Message);
+            return AuthResult.Failed(ex.Message, AuthFailureType.Unknown);
         }
     }
 
@@ -137,7 +147,12 @@ public class HttpAuthAdapter : IAuthenticationPort
                 return AuthResult.NeedRoleSelection(request.IdToken);
             }
 
-            return AuthResult.Failed(errorDetail);
+            if ((int)response.StatusCode >= 500)
+            {
+                return AuthResult.ServerFailure(errorDetail);
+            }
+
+            return AuthResult.Failed(errorDetail, AuthFailureType.InvalidCredentials);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -145,15 +160,15 @@ public class HttpAuthAdapter : IAuthenticationPort
         }
         catch (OperationCanceledException)
         {
-            return AuthResult.Failed("Connection timed out. Please check that the backend server is running and reachable.");
+            return AuthResult.TimeoutFailure("Connection timed out. Please check that the backend server is running and reachable.");
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException ex)
         {
-            return AuthResult.Failed("Unable to connect to authentication server. Please ensure the backend API is running.");
+            return AuthResult.NetworkFailure($"Unable to connect to authentication server. Please ensure the backend API is running. ({ex.Message})");
         }
         catch (Exception ex)
         {
-            return AuthResult.Failed(ex.Message);
+            return AuthResult.Failed(ex.Message, AuthFailureType.Unknown);
         }
     }
 
@@ -174,7 +189,18 @@ public class HttpAuthAdapter : IAuthenticationPort
             }
 
             var (errorMessage, _) = await ParseErrorResponseAsync(response, cancellationToken);
-            return AuthResult.Failed(errorMessage);
+
+            if ((int)response.StatusCode >= 500)
+            {
+                return AuthResult.ServerFailure(errorMessage);
+            }
+
+            if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden or HttpStatusCode.BadRequest)
+            {
+                return AuthResult.InvalidToken(errorMessage);
+            }
+
+            return AuthResult.Failed(errorMessage, AuthFailureType.Unknown);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -182,15 +208,15 @@ public class HttpAuthAdapter : IAuthenticationPort
         }
         catch (OperationCanceledException)
         {
-            return AuthResult.Failed("Connection timed out. Please check that the backend server is running and reachable.");
+            return AuthResult.TimeoutFailure("Connection timed out. Please check that the backend server is running and reachable.");
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException ex)
         {
-            return AuthResult.Failed("Unable to connect to authentication server. Please ensure the backend API is running.");
+            return AuthResult.NetworkFailure($"Unable to connect to authentication server. Please ensure the backend API is running. ({ex.Message})");
         }
         catch (Exception ex)
         {
-            return AuthResult.Failed(ex.Message);
+            return AuthResult.Failed(ex.Message, AuthFailureType.Unknown);
         }
     }
 
