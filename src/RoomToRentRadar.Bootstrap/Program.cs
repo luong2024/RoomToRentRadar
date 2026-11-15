@@ -37,32 +37,27 @@ await using (var scope = app.Services.CreateAsyncScope())
             await initializer.InitializeAsync();
         }
     }
-    catch (CosmosException ex)
+    catch (Exception ex) when (app.Environment.IsDevelopment() && IsCosmosEmulatorConnectionException(ex))
     {
-        if (app.Environment.IsDevelopment())
-        {
-            app.Logger.LogWarning(ex, "Could not initialize Cosmos DB at startup in Development. Ensure Cosmos Emulator is running if working locally.");
-        }
-        else
-        {
-            app.Logger.LogCritical(ex, "Cosmos DB initialization failed in non-development environment ({EnvironmentName}). Failing fast.", app.Environment.EnvironmentName);
-            throw;
-        }
+        app.Logger.LogWarning(ex, "Could not connect to Cosmos DB Emulator at startup in Development. Ensure Cosmos Emulator is running if working with real database.");
     }
     catch (Exception ex)
     {
-        if (app.Environment.IsDevelopment())
-        {
-            app.Logger.LogWarning(ex, "Cosmos DB initialization encountered an exception at startup in Development: {Message}", ex.Message);
-        }
-        else
-        {
-            app.Logger.LogCritical(ex, "Cosmos DB initialization encountered a critical failure in non-development environment ({EnvironmentName}). Failing fast: {Message}", app.Environment.EnvironmentName, ex.Message);
-            throw;
-        }
+        app.Logger.LogCritical(ex, "Cosmos DB initialization encountered a critical failure in {EnvironmentName}. Failing fast: {Message}", app.Environment.EnvironmentName, ex.Message);
+        throw;
     }
 }
 
 await app.RunAsync();
+
+static bool IsCosmosEmulatorConnectionException(Exception ex)
+{
+    return ex is HttpRequestException ||
+           ex is System.Net.Sockets.SocketException ||
+           ex.InnerException is HttpRequestException ||
+           ex.InnerException is System.Net.Sockets.SocketException ||
+           (ex is CosmosException ce && (ce.StatusCode == 0 || (int)ce.StatusCode >= 500)) ||
+           ex.Message.Contains("Connection refused", StringComparison.OrdinalIgnoreCase);
+}
 
 public partial class Program;

@@ -103,130 +103,147 @@ public sealed class CosmosDbInitializer
                 return;
             }
 
-            // Read all legacy documents
-            var legacyDocs = new List<Newtonsoft.Json.Linq.JObject>();
-            using (var feedIterator = legacyRoomsContainer.GetItemQueryIterator<Newtonsoft.Json.Linq.JObject>(new QueryDefinition("SELECT * FROM c")))
+            // Optimization: check if migration was already marked as completed in metadata
+            const string migrationStatusDocId = "__migration_legacy_rooms_status";
+            try
             {
-                while (feedIterator.HasMoreResults)
+                var statusDocResponse = await roomDetailsContainer.ReadItemAsync<Newtonsoft.Json.Linq.JObject>(
+                    migrationStatusDocId,
+                    new PartitionKey(migrationStatusDocId),
+                    cancellationToken: cancellationToken);
+
+                if (string.Equals(statusDocResponse.Resource?["status"]?.ToString(), "Completed", StringComparison.OrdinalIgnoreCase))
                 {
-                    var batch = await feedIterator.ReadNextAsync(cancellationToken);
-                    legacyDocs.AddRange(batch);
+                    _logger.LogInformation("Legacy 'Rooms' migration already marked as completed in metadata. Skipping migration check.");
+                    return;
                 }
             }
-
-            if (legacyDocs.Count == 0)
+            catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
-                _logger.LogInformation("Legacy 'Rooms' container is empty. Skipping legacy migration.");
-                return;
+                // Not yet marked as completed, proceed with batch migration
             }
-
-            _logger.LogInformation("Legacy 'Rooms' container detected with {LegacyCount} documents. Validating and reconciling migration state by ID...", legacyDocs.Count);
 
             // Fetch existing IDs from target containers to support idempotent resume without duplicate writes
             var existingDetailIds = await GetExistingDocumentIdsAsync(roomDetailsContainer, cancellationToken);
             var existingListingIds = await GetExistingDocumentIdsAsync(listingsContainer, cancellationToken);
 
+            var totalLegacyCount = 0;
             var migratedDetailsCount = 0;
             var migratedListingsCount = 0;
             var skippedListingsList = new List<(string Id, string Reason)>();
+            var allProcessedLegacyIds = new HashSet<string>(StringComparer.Ordinal);
             var eligibleListingIds = new HashSet<string>(StringComparer.Ordinal);
 
-            foreach (var doc in legacyDocs)
+            // Stream batch-by-batch from legacy container instead of loading all documents into RAM at once
+            using (var feedIterator = legacyRoomsContainer.GetItemQueryIterator<Newtonsoft.Json.Linq.JObject>(new QueryDefinition("SELECT * FROM c")))
             {
-                var id = doc["id"]?.ToString();
-                if (string.IsNullOrWhiteSpace(id))
+                while (feedIterator.HasMoreResults)
                 {
-                    _logger.LogError("Legacy record missing mandatory 'id' field: {Doc}", doc.ToString(Newtonsoft.Json.Formatting.None));
-                    continue;
-                }
-
-                // 1. All legacy records are preserved in RoomDetails (/id) to ensure ZERO data loss
-                if (!existingDetailIds.Contains(id))
-                {
-                    await roomDetailsContainer.UpsertItemAsync(doc, new PartitionKey(id), cancellationToken: cancellationToken);
-                    existingDetailIds.Add(id);
-                    migratedDetailsCount++;
-                }
-
-                // 2. Strict validation for RoomListings (/campusId) without inventing fake business data
-                var validationReasons = new List<string>();
-
-                var campusId = doc["campusId"]?.ToString();
-                if (string.IsNullOrWhiteSpace(campusId))
-                {
-                    validationReasons.Add("Missing mandatory campusId");
-                }
-
-                var price = (decimal?)doc["monthlyRentAmount"] ?? (decimal?)doc["price"];
-                if (price is null or <= 0m)
-                {
-                    validationReasons.Add("Missing or non-positive price/monthlyRentAmount");
-                }
-
-                var area = (double?)doc["areaSquareMeters"] ?? (double?)doc["area"];
-                if (area is null or <= 0.0 || !double.IsFinite(area.Value))
-                {
-                    validationReasons.Add("Missing or invalid areaSquareMeters/area");
-                }
-
-                var lat = (double?)doc["latitude"];
-                var lon = (double?)doc["longitude"];
-                if (lat is null || lon is null ||
-                    !double.IsFinite(lat.Value) || !double.IsFinite(lon.Value) ||
-                    lat.Value is < -90.0 or > 90.0 || lon.Value is < -180.0 or > 180.0)
-                {
-                    validationReasons.Add("Missing or invalid coordinates (latitude/longitude)");
-                }
-
-                // If any mandatory listing field is missing/invalid, DO NOT fabricate fake data.
-                // Exclude it from RoomListings and log clearly.
-                if (validationReasons.Count > 0)
-                {
-                    var reasonSummary = string.Join("; ", validationReasons);
-                    skippedListingsList.Add((id, reasonSummary));
-                    _logger.LogWarning("Legacy room '{RoomId}' is ineligible for 'RoomListings' due to: {Reasons}. Preserved in 'RoomDetails' only.", id, reasonSummary);
-                    continue;
-                }
-
-                eligibleListingIds.Add(id);
-
-                // Map to RoomListingDocument and upsert to RoomListings (/campusId)
-                if (!existingListingIds.Contains(id))
-                {
-                    var isVerified = ((int?)doc["verificationStatus"] == 2) || ((bool?)doc["isVerified"] == true);
-                    var status = (int?)doc["status"] == 0 ? 0 : 1;
-
-                    var listingDoc = new RoomListingDocument
+                    var batch = await feedIterator.ReadNextAsync(cancellationToken);
+                    foreach (var doc in batch)
                     {
-                        Id = id,
-                        CampusId = campusId!,
-                        Title = doc["title"]?.ToString() ?? $"Phòng trọ {id}",
-                        Description = doc["description"]?.ToString() ?? string.Empty,
-                        MonthlyRentAmount = price!.Value,
-                        MonthlyRentCurrency = doc["monthlyRentCurrency"]?.ToString() ?? "VND",
-                        AreaSquareMeters = area!.Value,
-                        Address = doc["address"]?.ToString() ?? string.Empty,
-                        Latitude = lat!.Value,
-                        Longitude = lon!.Value,
-                        Location = new Microsoft.Azure.Cosmos.Spatial.Point(lon.Value, lat.Value),
-                        Status = status,
-                        VerificationStatus = isVerified ? 2 : 0, // 2 = Verified (AC4 requirement)
-                        ThumbnailUrl = doc["thumbnailUrl"]?.ToString(),
-                        CreatedAtUtc = (DateTime?)doc["createdAtUtc"] ?? (DateTime?)doc["lastUpdatedDate"] ?? DateTime.UtcNow
-                    };
+                        var id = doc["id"]?.ToString();
+                        if (string.IsNullOrWhiteSpace(id))
+                        {
+                            _logger.LogError("Legacy record missing mandatory 'id' field: {Doc}", doc.ToString(Newtonsoft.Json.Formatting.None));
+                            continue;
+                        }
 
-                    await listingsContainer.UpsertItemAsync(listingDoc, new PartitionKey(campusId!), cancellationToken: cancellationToken);
-                    existingListingIds.Add(id);
-                    migratedListingsCount++;
+                        totalLegacyCount++;
+                        allProcessedLegacyIds.Add(id);
+
+                        // 1. All legacy records are preserved in RoomDetails (/id) to ensure ZERO data loss
+                        if (!existingDetailIds.Contains(id))
+                        {
+                            await roomDetailsContainer.UpsertItemAsync(doc, new PartitionKey(id), cancellationToken: cancellationToken);
+                            existingDetailIds.Add(id);
+                            migratedDetailsCount++;
+                        }
+
+                        // 2. Strict validation for RoomListings (/campusId) without inventing fake business data
+                        var validationReasons = new List<string>();
+
+                        var campusId = doc["campusId"]?.ToString();
+                        if (string.IsNullOrWhiteSpace(campusId))
+                        {
+                            validationReasons.Add("Missing mandatory campusId");
+                        }
+
+                        var price = (decimal?)doc["monthlyRentAmount"] ?? (decimal?)doc["price"];
+                        if (price is null or <= 0m)
+                        {
+                            validationReasons.Add("Missing or non-positive price/monthlyRentAmount");
+                        }
+
+                        var area = (double?)doc["areaSquareMeters"] ?? (double?)doc["area"];
+                        if (area is null or <= 0.0 || !double.IsFinite(area.Value))
+                        {
+                            validationReasons.Add("Missing or invalid areaSquareMeters/area");
+                        }
+
+                        var lat = (double?)doc["latitude"];
+                        var lon = (double?)doc["longitude"];
+                        if (lat is null || lon is null ||
+                            !double.IsFinite(lat.Value) || !double.IsFinite(lon.Value) ||
+                            lat.Value is < -90.0 or > 90.0 || lon.Value is < -180.0 or > 180.0)
+                        {
+                            validationReasons.Add("Missing or invalid coordinates (latitude/longitude)");
+                        }
+
+                        // If any mandatory listing field is missing/invalid, DO NOT fabricate fake data.
+                        // Exclude it from RoomListings and log clearly.
+                        if (validationReasons.Count > 0)
+                        {
+                            var reasonSummary = string.Join("; ", validationReasons);
+                            skippedListingsList.Add((id, reasonSummary));
+                            _logger.LogWarning("Legacy room '{RoomId}' is ineligible for 'RoomListings' due to: {Reasons}. Preserved in 'RoomDetails' only.", id, reasonSummary);
+                            continue;
+                        }
+
+                        eligibleListingIds.Add(id);
+
+                        // Map to RoomListingDocument and upsert to RoomListings (/campusId)
+                        if (!existingListingIds.Contains(id))
+                        {
+                            var isVerified = ((int?)doc["verificationStatus"] == 2) || ((bool?)doc["isVerified"] == true);
+                            var status = (int?)doc["status"] == 0 ? 0 : 1;
+
+                            var listingDoc = new RoomListingDocument
+                            {
+                                Id = id,
+                                CampusId = campusId!,
+                                Title = doc["title"]?.ToString() ?? $"Phòng trọ {id}",
+                                Description = doc["description"]?.ToString() ?? string.Empty,
+                                MonthlyRentAmount = price!.Value,
+                                MonthlyRentCurrency = doc["monthlyRentCurrency"]?.ToString() ?? "VND",
+                                AreaSquareMeters = area!.Value,
+                                Address = doc["address"]?.ToString() ?? string.Empty,
+                                Latitude = lat!.Value,
+                                Longitude = lon!.Value,
+                                Location = new Microsoft.Azure.Cosmos.Spatial.Point(lon.Value, lat.Value),
+                                Status = status,
+                                VerificationStatus = isVerified ? 2 : 0, // 2 = Verified (AC4 requirement)
+                                ThumbnailUrl = doc["thumbnailUrl"]?.ToString(),
+                                CreatedAtUtc = (DateTime?)doc["createdAtUtc"] ?? (DateTime?)doc["lastUpdatedDate"] ?? DateTime.UtcNow
+                            };
+
+                            await listingsContainer.UpsertItemAsync(listingDoc, new PartitionKey(campusId!), cancellationToken: cancellationToken);
+                            existingListingIds.Add(id);
+                            migratedListingsCount++;
+                        }
+                    }
                 }
             }
 
-            // 3. ID-based reconciliation check across both containers
-            foreach (var doc in legacyDocs)
+            if (totalLegacyCount == 0)
             {
-                var id = doc["id"]?.ToString();
-                if (string.IsNullOrWhiteSpace(id)) continue;
+                _logger.LogInformation("Legacy 'Rooms' container is empty. Skipping legacy migration.");
+                return;
+            }
 
+            // 3. ID-based reconciliation check across both containers
+            foreach (var id in allProcessedLegacyIds)
+            {
                 if (!existingDetailIds.Contains(id))
                 {
                     throw new InvalidOperationException(
@@ -240,13 +257,26 @@ public sealed class CosmosDbInitializer
                 }
             }
 
+            // 4. Mark migration as Completed in metadata to avoid re-scanning on future startups
+            var statusDoc = new Newtonsoft.Json.Linq.JObject
+            {
+                ["id"] = migrationStatusDocId,
+                ["status"] = "Completed",
+                ["migratedAtUtc"] = DateTime.UtcNow,
+                ["totalLegacyProcessed"] = totalLegacyCount,
+                ["detailsCount"] = existingDetailIds.Count,
+                ["listingsCount"] = eligibleListingIds.Count,
+                ["skippedCount"] = skippedListingsList.Count
+            };
+            await roomDetailsContainer.UpsertItemAsync(statusDoc, new PartitionKey(migrationStatusDocId), cancellationToken: cancellationToken);
+
             _logger.LogInformation(
                 "Legacy migration completed successfully. " +
                 "Total legacy: {TotalLegacy}, " +
                 "Preserved in RoomDetails: {DetailsCount} ({NewDetails} newly written), " +
                 "Migrated to RoomListings: {ListingsCount} ({NewListings} newly written), " +
                 "Ineligible for RoomListings (missing fields): {IneligibleCount}.",
-                legacyDocs.Count,
+                totalLegacyCount,
                 existingDetailIds.Count,
                 migratedDetailsCount,
                 eligibleListingIds.Count,

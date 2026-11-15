@@ -75,6 +75,11 @@ public class CosmosLegacyMigrationTests
         _mockLegacyContainer.Setup(c => c.ReadContainerAsync(It.IsAny<ContainerRequestOptions>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(mockLegacyPropsResponse.Object);
 
+        // Default: migration status document not yet completed (404 NotFound)
+        _mockRoomDetailsContainer
+            .Setup(c => c.ReadItemAsync<JObject>("__migration_legacy_rooms_status", It.IsAny<PartitionKey>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new CosmosException("Not found", System.Net.HttpStatusCode.NotFound, 0, "1", 0));
+
         // Default empty existing IDs in target containers
         SetupQueryIds(_mockRoomDetailsContainer, []);
         SetupQueryIds(_mockListingsContainer, []);
@@ -115,11 +120,16 @@ public class CosmosLegacyMigrationTests
         await initializer.InitializeAsync();
 
         // Verification: preserved in RoomDetails, but excluded from RoomListings
+        var capturedRooms = capturedDetails.Where(d => d["id"]?.ToString() != "__migration_legacy_rooms_status").ToList();
+        var statusDoc = capturedDetails.FirstOrDefault(d => d["id"]?.ToString() == "__migration_legacy_rooms_status");
+
         Assert.Multiple(() =>
         {
-            Assert.That(capturedDetails, Has.Count.EqualTo(1));
-            Assert.That(capturedDetails[0]["id"]?.ToString(), Is.EqualTo("legacy-no-coord-1"));
+            Assert.That(capturedRooms, Has.Count.EqualTo(1));
+            Assert.That(capturedRooms[0]["id"]?.ToString(), Is.EqualTo("legacy-no-coord-1"));
             Assert.That(capturedListings, Is.Empty, "Ineligible legacy record without coordinates must NOT be added to RoomListings");
+            Assert.That(statusDoc, Is.Not.Null, "Migration completion status document must be recorded");
+            Assert.That(statusDoc!["status"]?.ToString(), Is.EqualTo("Completed"));
         });
     }
 
@@ -158,10 +168,11 @@ public class CosmosLegacyMigrationTests
 
         await initializer.InitializeAsync();
 
+        var capturedRooms = capturedDetails.Where(d => d["id"]?.ToString() != "__migration_legacy_rooms_status").ToList();
         Assert.Multiple(() =>
         {
-            Assert.That(capturedDetails, Has.Count.EqualTo(1));
-            Assert.That(capturedDetails[0]["id"]?.ToString(), Is.EqualTo("legacy-no-campus-2"));
+            Assert.That(capturedRooms, Has.Count.EqualTo(1));
+            Assert.That(capturedRooms[0]["id"]?.ToString(), Is.EqualTo("legacy-no-campus-2"));
             Assert.That(capturedListings, Is.Empty, "Ineligible legacy record without campusId must NOT be fabricated into RoomListings");
         });
     }
@@ -202,9 +213,10 @@ public class CosmosLegacyMigrationTests
 
         await initializer.InitializeAsync();
 
+        var capturedRooms = capturedDetails.Where(d => d["id"]?.ToString() != "__migration_legacy_rooms_status").ToList();
         Assert.Multiple(() =>
         {
-            Assert.That(capturedDetails, Has.Count.EqualTo(1));
+            Assert.That(capturedRooms, Has.Count.EqualTo(1));
             Assert.That(capturedListings, Has.Count.EqualTo(1));
 
             var listing = capturedListings[0];
@@ -244,9 +256,36 @@ public class CosmosLegacyMigrationTests
 
         await initializer.InitializeAsync();
 
-        // Neither container should be written to again
-        _mockRoomDetailsContainer.Verify(c => c.UpsertItemAsync(It.IsAny<JObject>(), It.IsAny<PartitionKey?>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()), Times.Never);
+        // Neither container should be written to again for legacy document
+        _mockRoomDetailsContainer.Verify(c => c.UpsertItemAsync(It.Is<JObject>(d => d["id"] != null && d["id"]!.ToString() == "existing-room-200"), It.IsAny<PartitionKey?>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()), Times.Never);
         _mockListingsContainer.Verify(c => c.UpsertItemAsync(It.IsAny<RoomListingDocument>(), It.IsAny<PartitionKey?>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Test]
+    public async Task InitializeAsync_WhenMigrationAlreadyCompletedInMetadata_ShouldSkipMigrationImmediatelyWithoutQueryingLegacy()
+    {
+        var completedMetadata = new JObject
+        {
+            ["id"] = "__migration_legacy_rooms_status",
+            ["status"] = "Completed"
+        };
+        var mockResponse = new Mock<ItemResponse<JObject>>();
+        mockResponse.Setup(r => r.Resource).Returns(completedMetadata);
+
+        _mockRoomDetailsContainer
+            .Setup(c => c.ReadItemAsync<JObject>("__migration_legacy_rooms_status", It.IsAny<PartitionKey>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(mockResponse.Object);
+
+        var initializer = new CosmosDbInitializer(
+            _mockClient.Object,
+            Options.Create(_options),
+            NullLogger<CosmosDbInitializer>.Instance);
+
+        await initializer.InitializeAsync();
+
+        // Must not query legacy container or target containers at all
+        _mockLegacyContainer.Verify(c => c.GetItemQueryIterator<JObject>(It.IsAny<QueryDefinition>(), null, null), Times.Never);
+        _mockRoomDetailsContainer.Verify(c => c.UpsertItemAsync(It.IsAny<JObject>(), It.IsAny<PartitionKey?>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private void SetupLegacyDocuments(List<JObject> documents)
