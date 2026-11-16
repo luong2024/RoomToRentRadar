@@ -70,21 +70,12 @@ public sealed class Room
     public DateTime? LandlordMemberSinceUtc { get; private set; }
     public double DistanceToCampusKm { get; private set; }
 
-    // Compatibility & Convenience Accessors
-    public decimal Price => MonthlyRentVnd;
-    public decimal MonthlyRent => MonthlyRentVnd;
-    public decimal DepositAmount => DepositVnd;
-    public double Area => AreaM2;
-    public double AreaSquareMeters => AreaM2;
-    public string Address => AddressLine;
-    public DateTime LastUpdatedAt => LastUpdatedAtUtc;
     public string FullAddress => string.IsNullOrWhiteSpace(Ward)
         ? AddressLine
         : $"{AddressLine}, {Ward}, {District}".Trim(',', ' ');
 
     public bool IsAvailable => Status == ListingStatus.Available;
     public bool IsVerified => IsSafetyVerified || VerifiedAtUtc.HasValue;
-    public bool IsPendingVerification => Status == ListingStatus.PendingReview;
 
     /// <summary>
     /// BR-LST-04a: Available, Rented, and Unpublished listings are viewable on detail page.
@@ -170,6 +161,7 @@ public sealed class Room
 
     /// <summary>
     /// Parameterized constructor supporting fixtures and existing detail API tests.
+    /// Invariants are strictly enforced per BR-LST-01 and GUARDRAILS §1.5.3 (M3).
     /// </summary>
     public Room(
         string id,
@@ -204,41 +196,6 @@ public sealed class Room
             throw new DomainValidationException("Room ID cannot be empty.");
         }
 
-        if (string.IsNullOrWhiteSpace(title))
-        {
-            throw new DomainValidationException("Room title cannot be empty.");
-        }
-
-        if (monthlyRent <= 0)
-        {
-            throw new DomainValidationException("Monthly rent must be greater than zero.");
-        }
-
-        if (depositAmount < 0)
-        {
-            throw new DomainValidationException("Deposit amount cannot be negative.");
-        }
-
-        if (areaSquareMeters <= 0)
-        {
-            throw new DomainValidationException("Area square meters must be greater than zero.");
-        }
-
-        if (latitude < -90.0 || latitude > 90.0)
-        {
-            throw new DomainValidationException("Latitude must be between -90 and 90.");
-        }
-
-        if (longitude < -180.0 || longitude > 180.0)
-        {
-            throw new DomainValidationException("Longitude must be between -180 and 180.");
-        }
-
-        if (!Enum.IsDefined(typeof(ListingStatus), status))
-        {
-            throw new DomainValidationException($"Invalid listing status: {(int)status}.");
-        }
-
         Id = id.Trim();
         Title = title?.Trim() ?? string.Empty;
         Description = description?.Trim() ?? string.Empty;
@@ -260,7 +217,7 @@ public sealed class Room
         LastUpdatedAtUtc = lastUpdatedAt ?? DateTime.UtcNow;
         CreatedAtUtc = lastUpdatedAt ?? DateTime.UtcNow;
         Version = version > 0 ? version : 1;
-        ConcurrencyToken = string.IsNullOrWhiteSpace(concurrencyToken) ? Version.ToString() : concurrencyToken.Trim();
+        ConcurrencyToken = string.IsNullOrWhiteSpace(concurrencyToken) ? ConcurrencyTokenFor(Version) : concurrencyToken.Trim();
         LoadedVersion = Version;
 
         if (roomTypeEnum.HasValue)
@@ -283,6 +240,8 @@ public sealed class Room
         LandlordName = landlordName?.Trim() ?? string.Empty;
         LandlordPhoneNumber = landlordPhoneNumber?.Trim() ?? string.Empty;
         DistanceToCampusKm = distanceToCampusKm;
+
+        EnsureInvariants();
     }
 
     /// <summary>
@@ -665,7 +624,7 @@ public sealed class Room
         Touch();
     }
 
-    public void SetConcurrencyToken(string token)
+    internal void SetConcurrencyToken(string token)
     {
         if (string.IsNullOrWhiteSpace(token))
         {
@@ -749,6 +708,11 @@ public sealed class Room
         if (!Enum.IsDefined(RoomType))
         {
             throw new DomainValidationException($"Room type '{(int)RoomType}' is not a recognized room type.");
+        }
+
+        if (!Enum.IsDefined(Status))
+        {
+            throw new DomainValidationException($"Invalid listing status: {(int)Status}.");
         }
 
         if (MonthlyRentVnd < MonthlyRentMinVnd || MonthlyRentVnd > MonthlyRentMaxVnd)

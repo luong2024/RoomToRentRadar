@@ -72,8 +72,8 @@ public class RoomEntityTests
         {
             Assert.That(room.Id, Is.EqualTo("room-1"));
             Assert.That(room.Title, Is.EqualTo("Phòng trọ Sinh viên Z115"));
-            Assert.That(room.Price, Is.EqualTo(1_500_000m));
-            Assert.That(room.Area, Is.EqualTo(18.0));
+            Assert.That(room.MonthlyRentVnd, Is.EqualTo(1_500_000L));
+            Assert.That(room.AreaM2, Is.EqualTo(18.0));
             Assert.That(room.Latitude, Is.EqualTo(21.5875));
             Assert.That(room.Longitude, Is.EqualTo(105.8080));
             Assert.That(room.Status, Is.EqualTo(ListingStatus.Rented));
@@ -90,7 +90,7 @@ public class RoomEntityTests
     {
         var ex = Assert.Throws<DomainValidationException>(() => new Room(
             id: invalidId!,
-            title: "Phòng trọ",
+            title: "Phòng trọ sinh viên Z115",
             description: "Mô tả",
             monthlyRent: 1500000m,
             depositAmount: 500000m,
@@ -105,7 +105,8 @@ public class RoomEntityTests
     [TestCase(null)]
     [TestCase("")]
     [TestCase("   ")]
-    public void Constructor_WhenTitleIsNullOrWhitespace_ThrowsDomainValidationException(string? invalidTitle)
+    [TestCase("Ngắn")]
+    public void Constructor_WhenTitleIsNullOrWhitespaceOrInvalidLength_ThrowsDomainValidationException(string? invalidTitle)
     {
         var ex = Assert.Throws<DomainValidationException>(() => new Room(
             id: "room-001",
@@ -118,42 +119,45 @@ public class RoomEntityTests
             landlordId: "landlord-1"
         ));
 
-        Assert.That(ex!.Message, Does.Contain("Room title cannot be empty"));
+        Assert.That(ex!.Message, Does.Contain("Room title"));
     }
 
     [TestCase(0)]
     [TestCase(-100000)]
-    public void Constructor_WhenMonthlyRentZeroOrNegative_ThrowsDomainValidationException(decimal invalidRent)
+    [TestCase(50000)]
+    [TestCase(60000000)]
+    public void Constructor_WhenMonthlyRentOutOfRange_ThrowsDomainValidationException(decimal invalidRent)
     {
         var ex = Assert.Throws<DomainValidationException>(() => new Room(
             id: "room-001",
-            title: "Phòng trọ",
+            title: "Phòng trọ sinh viên Z115",
             description: "Mô tả",
             monthlyRent: invalidRent,
-            depositAmount: 500000m,
+            depositAmount: 0m,
             areaSquareMeters: 20.0,
             roomType: "BoardingRoom",
             landlordId: "landlord-1"
         ));
 
-        Assert.That(ex!.Message, Does.Contain("Monthly rent must be greater than zero"));
+        Assert.That(ex!.Message, Does.Contain("Monthly rent"));
     }
 
-    [Test]
-    public void Constructor_WhenDepositAmountNegative_ThrowsDomainValidationException()
+    [TestCase(-100)]
+    [TestCase(5000000)]
+    public void Constructor_WhenDepositAmountOutOfRange_ThrowsDomainValidationException(decimal invalidDeposit)
     {
         var ex = Assert.Throws<DomainValidationException>(() => new Room(
             id: "room-001",
-            title: "Phòng trọ",
+            title: "Phòng trọ sinh viên Z115",
             description: "Mô tả",
             monthlyRent: 1500000m,
-            depositAmount: -100m,
+            depositAmount: invalidDeposit,
             areaSquareMeters: 20.0,
             roomType: "BoardingRoom",
             landlordId: "landlord-1"
         ));
 
-        Assert.That(ex!.Message, Does.Contain("Deposit amount cannot be negative"));
+        Assert.That(ex!.Message, Does.Contain("Deposit"));
     }
 
     [Test]
@@ -170,16 +174,18 @@ public class RoomEntityTests
             landlordId: "landlord-1"
         );
 
-        Assert.That(room.DepositAmount, Is.EqualTo(0m));
+        Assert.That(room.DepositVnd, Is.EqualTo(0L));
     }
 
     [TestCase(0)]
     [TestCase(-5.5)]
-    public void Constructor_WhenAreaSquareMetersZeroOrNegative_ThrowsDomainValidationException(double invalidArea)
+    [TestCase(4.0)]
+    [TestCase(205.0)]
+    public void Constructor_WhenAreaSquareMetersOutOfRange_ThrowsDomainValidationException(double invalidArea)
     {
         var ex = Assert.Throws<DomainValidationException>(() => new Room(
             id: "room-001",
-            title: "Phòng trọ",
+            title: "Phòng trọ sinh viên Z115",
             description: "Mô tả",
             monthlyRent: 1500000m,
             depositAmount: 500000m,
@@ -188,7 +194,34 @@ public class RoomEntityTests
             landlordId: "landlord-1"
         ));
 
-        Assert.That(ex!.Message, Does.Contain("Area square meters must be greater than zero"));
+        Assert.That(ex!.Message, Does.Contain("Room area"));
+    }
+
+    [Test]
+    public void Constructor_WhenAreaIsNaNOrInfinity_ThrowsDomainValidationException()
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.Throws<DomainValidationException>(() => new Room(
+                id: "room-001",
+                title: "Phòng trọ sinh viên Z115",
+                description: "Mô tả",
+                monthlyRent: 1500000m,
+                depositAmount: 500000m,
+                areaSquareMeters: double.NaN,
+                landlordId: "landlord-1"
+            ));
+
+            Assert.Throws<DomainValidationException>(() => new Room(
+                id: "room-001",
+                title: "Phòng trọ sinh viên Z115",
+                description: "Mô tả",
+                monthlyRent: 1500000m,
+                depositAmount: 500000m,
+                areaSquareMeters: double.PositiveInfinity,
+                landlordId: "landlord-1"
+            ));
+        });
     }
 
     [Test]
@@ -196,7 +229,7 @@ public class RoomEntityTests
     {
         Assert.Throws<DomainValidationException>(() => new Room(
             id: "room-001",
-            title: "Phòng trọ",
+            title: "Phòng trọ sinh viên Z115",
             description: "Mô tả",
             monthlyRent: 1500000m,
             depositAmount: 500000m,
@@ -211,7 +244,7 @@ public class RoomEntityTests
     {
         Assert.Throws<DomainValidationException>(() => new Room(
             id: "room-001",
-            title: "Phòng trọ",
+            title: "Phòng trọ sinh viên Z115",
             description: "Mô tả",
             monthlyRent: 1500000m,
             depositAmount: 500000m,
@@ -228,7 +261,7 @@ public class RoomEntityTests
 
         var ex = Assert.Throws<DomainValidationException>(() => new Room(
             id: "room-001",
-            title: "Phòng trọ",
+            title: "Phòng trọ sinh viên Z115",
             description: "Mô tả",
             monthlyRent: 1500000m,
             depositAmount: 500000m,
@@ -238,7 +271,7 @@ public class RoomEntityTests
             landlordId: "landlord-1"
         ));
 
-        Assert.That(ex!.Message, Does.Contain("Invalid listing status"));
+        Assert.That(ex!.Message, Does.Contain("listing status"));
     }
 
     [Test]
