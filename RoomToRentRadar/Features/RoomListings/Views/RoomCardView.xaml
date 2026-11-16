@@ -79,7 +79,7 @@
                                 <Label
                                     FontAttributes="Bold"
                                     FontSize="12"
-                                    Text="Đã xác thực"
+                                    Text="Verified"
                                     TextColor="{AppThemeBinding Light={StaticResource VerifiedBadgeText}, Dark={StaticResource VerifiedBadgeTextDark}}"
                                     VerticalOptions="Center" />
                             </HorizontalStackLayout>
@@ -135,7 +135,7 @@
                             <Label
                                 FontAttributes="Bold"
                                 FontSize="11.5"
-                                Text="Còn trống"
+                                Text="Available"
                                 TextColor="{AppThemeBinding Light={StaticResource AccentTeal}, Dark={StaticResource AccentTealDark}}"
                                 VerticalOptions="Center" />
                         </Border>
@@ -235,7 +235,7 @@
                             <Label
                                 FontAttributes="Bold"
                                 FontSize="12"
-                                Text="Xem chi tiết"
+                                Text="View details"
                                 TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
                                 VerticalOptions="Center" />
                             <Label

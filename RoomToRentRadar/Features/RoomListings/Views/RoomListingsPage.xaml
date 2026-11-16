@@ -45,7 +45,7 @@
                         <Label
                             FontAttributes="Bold"
                             FontSize="22"
-                            Text="Phòng trọ quanh ICTU"
+                            Text="Rooms near ICTU"
                             TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
                         <Label
                             FontSize="13"
@@ -70,7 +70,7 @@
                             <Label
                                 FontAttributes="Bold"
                                 FontSize="12"
-                                Text="Thái Nguyên"
+                                Text="Thai Nguyen"
                                 TextColor="{AppThemeBinding Light={StaticResource AccentHighlightPillText}, Dark={StaticResource AccentHighlightPillTextDark}}"
                                 VerticalOptions="Center" />
                         </HorizontalStackLayout>
@@ -109,7 +109,7 @@
                                 StyleId="BorderlessEntry"
                                 BackgroundColor="Transparent"
                                 FontSize="13.5"
-                                Placeholder="Tìm theo tên phòng, đường (Z115, Quyết Thắng) hoặc tiện ích..."
+                                Placeholder="Search by room name, street (Z115, Quyet Thang), or amenities..."
                                 PlaceholderColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
                                 ReturnCommand="{Binding ApplySearchCommand}"
                                 ReturnCommandParameter="{Binding SearchQuery}"
@@ -152,7 +152,7 @@
                                 <Label
                                     FontAttributes="Bold"
                                     FontSize="12"
-                                    Text="Tìm"
+                                    Text="Search"
                                     TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PageBackgroundDark}}"
                                     VerticalOptions="Center" />
                             </Border>
@@ -172,7 +172,7 @@
                                 Margin="0,0,2,0"
                                 FontAttributes="Bold"
                                 FontSize="12.5"
-                                Text="Sắp xếp:"
+                                Text="Sort by:"
                                 TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
                                 VerticalOptions="Center" />
 
@@ -223,7 +223,7 @@
                                 </BindableLayout.ItemTemplate>
                             </HorizontalStackLayout>
 
-                            <!-- Price Dropdown Selector ("Giá v") -->
+                            <!-- Price dropdown selector -->
                             <Border
                                 x:Name="PriceDropdownButton"
                                 Padding="14,9"
@@ -321,7 +321,7 @@
                         <Label
                             FontAttributes="Bold"
                             FontSize="12"
-                            Text="{Binding SearchQuery, StringFormat='Đang lọc: {0}'}"
+                            Text="{Binding SearchQuery, StringFormat='Filtering: {0}'}"
                             TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
                             VerticalOptions="Center" />
                         <Label
@@ -413,7 +413,7 @@
                                 FontAttributes="Bold"
                                 FontSize="14"
                                 HorizontalOptions="Center"
-                                Text="Tải lại danh sách"
+                                Text="Reload listings"
                                 TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PageBackgroundDark}}" />
                         </VerticalStackLayout>
                     </ContentView>
@@ -433,7 +433,7 @@
                                 IsRunning="{Binding IsLoadingMore}" />
                             <Label
                                 FontSize="13"
-                                Text="Đang tải thêm phòng..."
+                                Text="Loading more rooms..."
                                 TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
                                 VerticalOptions="Center" />
                         </HorizontalStackLayout>

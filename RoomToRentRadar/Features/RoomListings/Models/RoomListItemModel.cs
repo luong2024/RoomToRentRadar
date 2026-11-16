@@ -7,7 +7,7 @@ namespace RoomToRentRadar.Features.RoomListings.Models;
 /// </summary>
 public sealed class RoomListItemModel
 {
-    private static readonly CultureInfo ViCulture = new("vi-VN");
+    private static readonly CultureInfo EnCulture = new("en-US");
 
     public required string Id { get; init; }
 
@@ -19,7 +19,7 @@ public sealed class RoomListItemModel
 
     public required string Address { get; init; }
 
-    public string District { get; init; } = "TP. Thái Nguyên";
+    public string District { get; init; } = "Thai Nguyen City";
 
     public double DistanceToCampusKm { get; init; }
 
@@ -33,19 +33,19 @@ public sealed class RoomListItemModel
 
     public IReadOnlyList<string> Amenities { get; init; } = [];
 
-    public string FormattedPrice => string.Format(ViCulture, "{0:N0} đ/tháng", Price);
+    public string FormattedPrice => string.Format(EnCulture, "₫{0:N0}/month", Price);
 
-    public string FormattedArea => string.Format(ViCulture, "{0:0.#} m²", AreaSqm);
+    public string FormattedArea => string.Format(EnCulture, "{0:0.#} m²", AreaSqm);
 
-    public string FormattedDistance => string.Format(ViCulture, "{0:0.0} km tới ICTU", DistanceToCampusKm);
+    public string FormattedDistance => string.Format(EnCulture, "{0:0.0} km to ICTU", DistanceToCampusKm);
 
     public string PrimaryAmenitiesText =>
         Amenities.Count > 0
             ? string.Join(" • ", Amenities.Take(3))
-            : "Tiện nghi cơ bản";
+            : "Basic amenities";
 
     public IReadOnlyList<string> PreviewAmenities =>
         Amenities.Count > 0
             ? Amenities.Take(3).ToList()
-            : ["Tiện nghi cơ bản"];
+            : ["Basic amenities"];
 }

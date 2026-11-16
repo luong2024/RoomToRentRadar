@@ -37,9 +37,9 @@ public sealed partial class RoomSortOptionItem : ObservableObject
 
     public static IReadOnlyList<RoomSortOptionItem> CreateDefaults() =>
     [
-        new(RoomSortOption.Newest, "Mới nhất", "newest", isSelected: true),
-        new(RoomSortOption.PriceAsc, "Giá: Thấp đến Cao", "price_asc"),
-        new(RoomSortOption.PriceDesc, "Giá: Cao đến Thấp", "price_desc"),
-        new(RoomSortOption.DistanceAsc, "Gần ICTU", "distance_asc")
+        new(RoomSortOption.Newest, "Newest", "newest", isSelected: true),
+        new(RoomSortOption.PriceAsc, "Price: Low to High", "price_asc"),
+        new(RoomSortOption.PriceDesc, "Price: High to Low", "price_desc"),
+        new(RoomSortOption.DistanceAsc, "Nearest to ICTU", "distance_asc")
     ];
 }

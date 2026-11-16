@@ -58,7 +58,7 @@ public partial class RoomListingsViewModel : ObservableObject
     public int PageSize { get; init; } = DefaultPageSize;
 
     [ObservableProperty]
-    public partial string Title { get; set; } = "Khám phá phòng trọ";
+    public partial string Title { get; set; } = "Explore Rooms";
 
     [ObservableProperty]
     public partial RoomSortOptionItem SelectedSortOptionItem { get; set; }
@@ -82,7 +82,7 @@ public partial class RoomListingsViewModel : ObservableObject
     public partial int TotalCount { get; set; }
 
     [ObservableProperty]
-    public partial string EmptyStateMessage { get; set; } = "Chưa có phòng trọ nào phù hợp.";
+    public partial string EmptyStateMessage { get; set; } = "No matching rooms found yet.";
 
     [ObservableProperty]
     public partial string SearchQuery { get; set; } = string.Empty;
@@ -94,16 +94,16 @@ public partial class RoomListingsViewModel : ObservableObject
         SelectedSortOptionItem.Option is RoomSortOption.PriceAsc or RoomSortOption.PriceDesc;
 
     public string PriceSortLabel =>
-        IsPriceSortSelected ? SelectedSortOptionItem.DisplayName : "Giá";
+        IsPriceSortSelected ? SelectedSortOptionItem.DisplayName : "Price";
 
     public bool HasSearchQuery => !string.IsNullOrWhiteSpace(SearchQuery);
 
     public string ResultSummaryText =>
         HasSearchQuery
-            ? $"Tìm thấy {TotalCount} phòng cho \"{SearchQuery.Trim()}\""
+            ? $"Found {TotalCount} rooms for \"{SearchQuery.Trim()}\""
             : TotalCount > 0
-                ? $"Tìm thấy {TotalCount} phòng quanh ICTU"
-                : "Đang cập nhật danh sách phòng quanh ICTU";
+                ? $"Found {TotalCount} rooms near ICTU"
+                : "Updating room listings near ICTU";
 
     partial void OnSearchQueryChanged(string value)
     {
@@ -295,7 +295,7 @@ public partial class RoomListingsViewModel : ObservableObject
             return;
         }
 
-        var targetRoute = $"{AppRoutes.RoomDetails}?id={Uri.EscapeDataString(room.Id)}";
+        var targetRoute = $"{AppRoutes.RoomDetail}?id={Uri.EscapeDataString(room.Id)}";
 
         try
         {
@@ -372,7 +372,7 @@ public partial class RoomListingsViewModel : ObservableObject
             TotalCount = response.TotalCount;
             HasMoreItems = response.Items.Count >= PageSize && Rooms.Count < response.TotalCount;
             EmptyStateMessage = Rooms.Count == 0
-                ? "Không tìm thấy phòng trọ nào phù hợp."
+                ? "No rooms match your search."
                 : string.Empty;
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -383,7 +383,7 @@ public partial class RoomListingsViewModel : ObservableObject
         {
             if (Rooms.Count == 0)
             {
-                EmptyStateMessage = "Không thể tải danh sách phòng. Vui lòng thử lại.";
+                EmptyStateMessage = "Unable to load room listings. Please try again.";
             }
 
             _errorHandler.HandleError(ex);
