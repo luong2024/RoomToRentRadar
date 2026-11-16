@@ -3,9 +3,12 @@ using RoomToRentRadar.Client.Adapters.Http;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Ports.Contracts.Requests.Notifications;
 using RoomToRentRadar.Ports.Contracts.Requests.Profile;
+using RoomToRentRadar.Ports.Contracts.Requests.Reports;
 using RoomToRentRadar.Ports.Contracts.Requests.Rooms;
+using RoomToRentRadar.Ports.Contracts.Responses.Admin;
 using RoomToRentRadar.Ports.Contracts.Responses.Campuses;
 using RoomToRentRadar.Ports.Contracts.Responses.Chat;
+using RoomToRentRadar.Ports.Contracts.Responses.Listings;
 using RoomToRentRadar.Ports.Contracts.Responses.Notifications;
 using RoomToRentRadar.Ports.Contracts.Responses.Photos;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
@@ -434,6 +437,155 @@ public class ContractsJsonTests
             Assert.That(androidDocument.RootElement.TryGetProperty("platform", out var platform), Is.True);
             Assert.That(platform.GetString(), Is.EqualTo("Android"));
             Assert.That(iosDocument.RootElement.GetProperty("platform").GetString(), Is.EqualTo("iOS"));
+        });
+    }
+
+    [Test]
+    public void PagedMyListings_CountsByStatus_Dictionary()
+    {
+        const string json = """
+        {
+          "items": [
+            { "id": "seed-z115", "title": "Student room Z115", "status": "Available", "statusReason": null, "needsReReview": false, "isVerified": true, "coverThumbUrl": null, "monthlyRentVnd": 1500000, "lastUpdatedAtUtc": "2026-01-02T00:00:00Z", "createdAtUtc": "2026-01-01T00:00:00Z" },
+            { "id": "seed-thao-nguyen", "title": "Thao Nguyen guest house", "status": "PendingReview", "statusReason": "Awaiting moderation", "needsReReview": true, "isVerified": false, "coverThumbUrl": "https://cdn.example/t.jpg", "monthlyRentVnd": 1200000, "lastUpdatedAtUtc": "2026-01-03T00:00:00Z", "createdAtUtc": "2026-01-01T00:00:00Z" }
+          ],
+          "totalCount": 6,
+          "pageNumber": 1,
+          "pageSize": 20,
+          "countsByStatus": { "Available": 3, "PendingReview": 1, "Rented": 2 }
+        }
+        """;
+
+        var page = JsonSerializer.Deserialize<PagedMyListings>(json, ApiResponseReader.JsonOptions);
+
+        Assert.That(page, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(page!.CountsByStatus[ListingStatus.Available], Is.EqualTo(3));
+            Assert.That(page.CountsByStatus[ListingStatus.PendingReview], Is.EqualTo(1));
+            Assert.That(page.CountsByStatus[ListingStatus.Rented], Is.EqualTo(2));
+            Assert.That(page.CountsByStatus.Count, Is.EqualTo(3));
+            Assert.That(page.Items.Count, Is.EqualTo(2));
+            Assert.That(page.Items[0].Status, Is.EqualTo(ListingStatus.Available));
+            Assert.That(page.Items[0].MonthlyRentVnd, Is.EqualTo(1500000L));
+            Assert.That(page.Items[1].Status, Is.EqualTo(ListingStatus.PendingReview));
+            Assert.That(page.Items[1].NeedsReReview, Is.True);
+            Assert.That(page.Items[1].StatusReason, Is.EqualTo("Awaiting moderation"));
+            Assert.That(page.TotalCount, Is.EqualTo(6));
+            Assert.That(page.PageNumber, Is.EqualTo(1));
+            Assert.That(page.PageSize, Is.EqualTo(20));
+            Assert.That(page.TotalPages, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void ModerationRoomDto_InheritsListingFields_PlusLandlord()
+    {
+        const string json = """
+        {
+          "id": "seed-z115",
+          "status": "PendingReview",
+          "statusReason": null,
+          "needsReReview": false,
+          "isVerified": false,
+          "isSafetyVerified": false,
+          "version": 1,
+          "listing": {
+            "title": "Student room Z115",
+            "description": "Near the campus gate",
+            "roomType": "BoardingRoom",
+            "monthlyRentVnd": 1500000,
+            "depositVnd": 1500000,
+            "areaM2": 20.5,
+            "maxOccupants": 2,
+            "furnishing": "Full",
+            "availableFrom": "2026-01-15",
+            "address": { "addressLine": "12 Z115", "ward": "Ward 1", "district": "District 1" },
+            "location": { "latitude": 21.5851, "longitude": 105.8066 },
+            "utilities": { "electricityPriceVndPerKwh": 3500, "waterPriceVnd": 25000, "waterPriceUnit": "PerCubicMeter", "internetFeeVnd": 100000, "parkingFeeVnd": 50000, "otherFeesNote": null },
+            "amenities": ["Wifi", "AirConditioner"],
+            "safetyFeatures": ["Cctv"],
+            "photoIds": ["p1", "p2", "p3"],
+            "houseRules": null
+          },
+          "photos": [
+            { "id": "p1", "kind": "Standard", "thumbUrl": "https://cdn.example/t.jpg", "mediumUrl": "https://cdn.example/m.jpg", "originalUrl": "https://cdn.example/o.jpg", "width": 800, "height": 600, "sortOrder": 0 }
+          ],
+          "houseRules": null,
+          "publishedAtUtc": null,
+          "lastUpdatedAtUtc": "2026-01-02T00:00:00Z",
+          "createdAtUtc": "2026-01-01T00:00:00Z",
+          "landlord": { "id": "u1", "fullName": "Landlord A", "email": "landlord@example.com", "phoneNumber": "0912345678", "isVerified": true }
+        }
+        """;
+
+        var dto = JsonSerializer.Deserialize<ModerationRoomDto>(json, ApiResponseReader.JsonOptions);
+
+        Assert.That(dto, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(dto, Is.InstanceOf<MyListingDetailDto>(), "ModerationRoomDto extends MyListingDetailDto (allOf).");
+            Assert.That(dto!.Id, Is.EqualTo("seed-z115"));
+            Assert.That(dto.Status, Is.EqualTo(ListingStatus.PendingReview));
+            Assert.That(dto.Version, Is.EqualTo(1L));
+            Assert.That(dto.IsSafetyVerified, Is.False);
+            Assert.That(dto.Listing.Title, Is.EqualTo("Student room Z115"));
+            Assert.That(dto.Listing.RoomType, Is.EqualTo(RoomType.BoardingRoom));
+            Assert.That(dto.Listing.MonthlyRentVnd, Is.EqualTo(1500000L));
+            Assert.That(dto.Listing.PhotoIds, Is.EqualTo(new[] { "p1", "p2", "p3" }));
+            Assert.That(dto.Listing.HouseRules, Is.Null);
+            Assert.That(dto.Photos[0].Kind, Is.EqualTo(PhotoKind.Standard));
+            Assert.That(dto.HouseRules, Is.Null);
+            Assert.That(dto.PublishedAtUtc, Is.Null);
+            Assert.That(dto.Landlord.Id, Is.EqualTo("u1"));
+            Assert.That(dto.Landlord.FullName, Is.EqualTo("Landlord A"));
+            Assert.That(dto.Landlord.Email, Is.EqualTo("landlord@example.com"));
+            Assert.That(dto.Landlord.PhoneNumber, Is.EqualTo("0912345678"));
+            Assert.That(dto.Landlord.IsVerified, Is.True);
+        });
+    }
+
+    [Test]
+    public void CreateReportRequest_Serializes_ReasonString()
+    {
+        var scam = new CreateReportRequest(Reason: ReportReason.Scam, Note: null);
+        var other = new CreateReportRequest(Reason: ReportReason.Other, Note: "The photos do not match the room.");
+
+        var scamJson = JsonSerializer.Serialize(scam, ApiResponseReader.JsonOptions);
+        var otherJson = JsonSerializer.Serialize(other, ApiResponseReader.JsonOptions);
+        using var scamDocument = JsonDocument.Parse(scamJson);
+        using var otherDocument = JsonDocument.Parse(otherJson);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(scamDocument.RootElement.TryGetProperty("reason", out var reason), Is.True);
+            Assert.That(reason.GetString(), Is.EqualTo("Scam"));
+            Assert.That(scamDocument.RootElement.GetProperty("note").ValueKind, Is.EqualTo(JsonValueKind.Null));
+            Assert.That(otherDocument.RootElement.GetProperty("reason").GetString(), Is.EqualTo("Other"));
+            Assert.That(otherDocument.RootElement.GetProperty("note").GetString(), Is.EqualTo("The photos do not match the room."));
+            Assert.That(scamDocument.RootElement.TryGetProperty("Reason", out _), Is.False, "Properties must serialize camelCase, not PascalCase.");
+        });
+    }
+
+    [Test]
+    public void ResolveReportRequest_Resolution_Serializes()
+    {
+        var actionTaken = new ResolveReportRequest(Resolution: ReportResolution.ActionTaken, Note: "Listing suspended after review.", SuspendListing: true);
+        var dismissed = new ResolveReportRequest(Resolution: ReportResolution.Dismissed, Note: "No violation found.", SuspendListing: false);
+
+        var actionJson = JsonSerializer.Serialize(actionTaken, ApiResponseReader.JsonOptions);
+        var dismissedJson = JsonSerializer.Serialize(dismissed, ApiResponseReader.JsonOptions);
+        using var actionDocument = JsonDocument.Parse(actionJson);
+        using var dismissedDocument = JsonDocument.Parse(dismissedJson);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(actionDocument.RootElement.TryGetProperty("resolution", out var resolution), Is.True);
+            Assert.That(resolution.GetString(), Is.EqualTo("ActionTaken"));
+            Assert.That(actionDocument.RootElement.GetProperty("suspendListing").GetBoolean(), Is.True);
+            Assert.That(actionDocument.RootElement.GetProperty("note").GetString(), Is.EqualTo("Listing suspended after review."));
+            Assert.That(dismissedDocument.RootElement.GetProperty("resolution").GetString(), Is.EqualTo("Dismissed"));
+            Assert.That(dismissedDocument.RootElement.GetProperty("suspendListing").GetBoolean(), Is.False);
         });
     }
 }

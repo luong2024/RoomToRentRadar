@@ -1,5 +1,7 @@
 using System.Reflection;
 using System.Text.RegularExpressions;
+using RoomToRentRadar.Ports.Contracts.Requests.Listings;
+using RoomToRentRadar.Ports.Contracts.Responses.Listings;
 using RoomToRentRadar.Ports.Contracts.Responses.Notifications;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadarUnitTests.ClientAdapters.Support;
@@ -86,6 +88,42 @@ public class ContractsOpenApiSyncTests
             "PagedNotifications constructor parameters (camelCase) must equal the PagedNotifications schema properties minus computed paging members.");
     }
 
+    [Test]
+    public void PagedMyListings_ConstructorParameters_MatchOpenApiSchema()
+    {
+        // Paged* records are excluded from the generic scan. PagedMyListings adds countsByStatus, so its constructor
+        // is checked explicitly against PageMeta plus the inline properties (minus computed paging members).
+        var block = SchemaBlock("PagedMyListings");
+        var inline = Regex.Matches(block, @"^            (?<name>[A-Za-z_][A-Za-z0-9_]*):", RegexOptions.Multiline)
+            .Select(m => m.Groups["name"].Value);
+        var expected = SchemaProperties("PageMeta")
+            .Concat(inline)
+            .Where(name => name is not ("totalPages" or "hasPreviousPage" or "hasNextPage"))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        var constructor = typeof(PagedMyListings).GetConstructors()
+            .OrderByDescending(c => c.GetParameters().Length)
+            .First();
+        var actual = constructor.GetParameters().Select(p => ToCamelCase(p.Name!)).ToArray();
+
+        Assert.That(actual, Is.EquivalentTo(expected),
+            "PagedMyListings constructor parameters (camelCase) must equal the PagedMyListings schema properties minus computed paging members.");
+    }
+
+    [Test]
+    public void UpsertListingRequest_HasNoServerControlledFields()
+    {
+        // GUARDRAILS 1.5.1: the create/update payload must never carry server-controlled fields.
+        var forbidden = new[] { "Status", "IsVerified", "LandlordId", "CreatedAt", "UpdatedAt", "Version" };
+        var offenders = typeof(UpsertListingRequest).GetProperties()
+            .Select(p => p.Name)
+            .Where(name => forbidden.Any(f => name.Contains(f, StringComparison.OrdinalIgnoreCase)))
+            .ToArray();
+
+        Assert.That(offenders, Is.Empty,
+            "UpsertListingRequest must not expose server-controlled fields (Status/IsVerified/LandlordId/CreatedAt/UpdatedAt/Version).");
+    }
+
     private static bool IsExcluded(string name) =>
         ExcludedRecordNames.Contains(name) || name.StartsWith("Paged", StringComparison.Ordinal);
 
@@ -113,6 +151,14 @@ public class ContractsOpenApiSyncTests
             merged.AddRange(Regex.Matches(block, @"^            (?<name>[A-Za-z_][A-Za-z0-9_]*):", RegexOptions.Multiline)
                 .Select(m => m.Groups["name"].Value));
             return merged.Distinct(StringComparer.Ordinal).ToArray();
+        }
+
+        // A pure $ref alias (UpdateHouseRulesRequest -> HouseRulesFields) has no inline properties block;
+        // resolve the referenced schema so the alias is checked against the same properties.
+        var alias = Regex.Match(block, @"^      \$ref: '#/components/schemas/(?<name>[A-Za-z0-9_]+)'\s*$", RegexOptions.Multiline);
+        if (alias.Success)
+        {
+            return SchemaProperties(alias.Groups["name"].Value);
         }
 
         return OpenApiSpec.SchemaPropertyNames(schemaName);
