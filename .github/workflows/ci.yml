@@ -167,6 +167,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-maui-tests-
 
+      - name: Install .NET MAUI Android Workload
+        run: |
+          dotnet workload install maui-android
+
       - name: Restore MAUI Client test projects
         run: |
           dotnet restore RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj
