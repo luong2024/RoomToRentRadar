@@ -27,6 +27,12 @@ public partial class HomeViewModel : ObservableObject
     public partial string QuickSearchText { get; set; } = string.Empty;
 
     [RelayCommand]
+    public async Task NavigateToAuthAsync()
+    {
+        await NavigateToRouteAsync("//auth/login");
+    }
+
+    [RelayCommand]
     public async Task ExploreRoomsAsync()
     {
         await QuickFilterAsync(QuickSearchText);

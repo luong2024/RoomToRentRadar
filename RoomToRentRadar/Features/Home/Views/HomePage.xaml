@@ -31,30 +31,48 @@
                 </Border.Shadow>
 
                 <VerticalStackLayout Spacing="18">
-                    <!-- Brand Pill -->
-                    <Border
-                        Padding="12,6"
-                        BackgroundColor="{StaticResource HeroOverlayGlass}"
-                        HorizontalOptions="Start"
-                        StrokeShape="RoundRectangle 20"
-                        StrokeThickness="0">
-                        <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
-                            <Border
-                                BackgroundColor="{StaticResource AccentHighlight}"
-                                HeightRequest="8"
-                                Stroke="{StaticResource White}"
-                                StrokeShape="RoundRectangle 4"
-                                StrokeThickness="1.5"
-                                VerticalOptions="Center"
-                                WidthRequest="8" />
-                            <Label
-                                FontAttributes="Bold"
-                                FontSize="12"
-                                Text="CỔNG THÔNG TIN PHÒNG TRỌ SINH VIÊN ICTU"
-                                TextColor="{StaticResource White}"
-                                VerticalOptions="Center" />
-                        </HorizontalStackLayout>
-                    </Border>
+                    <!-- Brand Pill and Auth CTA Header -->
+                    <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                        <!-- Brand Pill -->
+                        <Border
+                            Grid.Column="0"
+                            Padding="12,6"
+                            BackgroundColor="{StaticResource HeroOverlayGlass}"
+                            HorizontalOptions="Start"
+                            StrokeShape="RoundRectangle 20"
+                            StrokeThickness="0">
+                            <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                                <Border
+                                    BackgroundColor="{StaticResource AccentHighlight}"
+                                    HeightRequest="8"
+                                    Stroke="{StaticResource White}"
+                                    StrokeShape="RoundRectangle 4"
+                                    StrokeThickness="1.5"
+                                    VerticalOptions="Center"
+                                    WidthRequest="8" />
+                                <Label
+                                    FontAttributes="Bold"
+                                    FontSize="12"
+                                    Text="CỔNG THÔNG TIN PHÒNG TRỌ SINH VIÊN ICTU"
+                                    TextColor="{StaticResource White}"
+                                    VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                        </Border>
+
+                        <!-- Go to Sign In / Sign Up Button -->
+                        <Button
+                            Grid.Column="1"
+                            Text="Go to Sign In / Sign Up"
+                            Command="{Binding NavigateToAuthCommand}"
+                            BackgroundColor="{StaticResource HeroOverlayGlass}"
+                            TextColor="{StaticResource White}"
+                            CornerRadius="20"
+                            FontSize="12"
+                            FontFamily="OpenSansSemibold"
+                            HeightRequest="36"
+                            Padding="14,4"
+                            VerticalOptions="Center" />
+                    </Grid>
 
                     <!-- Welcome Heading -->
                     <Label
