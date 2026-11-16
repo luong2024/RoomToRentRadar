@@ -1,3 +1,4 @@
+using System.Globalization;
 using RoomToRentRadar.Domain.Aggregates;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
@@ -170,18 +171,12 @@ public static class RoomMapper
             Photos: photos,
             Landlord: landlord,
             LastUpdatedAtUtc: room.LastUpdatedAtUtc,
-            HouseRules: houseRules
+            HouseRules: houseRules,
+            MaxOccupants: room.MaxOccupants,
+            Furnishing: room.Furnishing,
+            AvailableFrom: room.AvailableFrom?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            IsFavourite: false,
+            PublishedAtUtc: room.PublishedAtUtc
         );
     }
-
-    public static string MapRoomStatus(ListingStatus status) => status switch
-    {
-        ListingStatus.Available => "Available",
-        ListingStatus.Rented => "Rented",
-        ListingStatus.Unpublished => "Unavailable",
-        ListingStatus.PendingReview => "PendingVerification",
-        ListingStatus.Rejected => "Unavailable",
-        ListingStatus.Suspended => "Unavailable",
-        _ => "Unavailable"
-    };
 }

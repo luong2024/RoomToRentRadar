@@ -9,18 +9,6 @@ namespace RoomToRentRadarUnitTests.Application.Rooms;
 [TestFixture]
 public class RoomMapperTests
 {
-    [TestCase(ListingStatus.Available, "Available")]
-    [TestCase(ListingStatus.Rented, "Rented")]
-    [TestCase(ListingStatus.Unpublished, "Unavailable")]
-    [TestCase(ListingStatus.PendingReview, "PendingVerification")]
-    [TestCase(ListingStatus.Rejected, "Unavailable")]
-    [TestCase(ListingStatus.Suspended, "Unavailable")]
-    public void MapRoomStatus_MapsListingStatusValuesToExplicitStableStrings(ListingStatus status, string expectedString)
-    {
-        var mapped = RoomMapper.MapRoomStatus(status);
-        Assert.That(mapped, Is.EqualTo(expectedString));
-    }
-
     [Test]
     public void ToCardDto_MapsPropertiesAccurately()
     {
@@ -89,6 +77,8 @@ public class RoomMapperTests
         Assert.That(detail.Utilities.EstimatedMonthlyTotalVnd, Is.GreaterThan(0));
         Assert.That(detail.Photos, Has.Count.EqualTo(2)); // Standard + Panorama
         Assert.That(detail.HouseRules, Is.Not.Null);
+        Assert.That(detail.IsFavourite, Is.False);
+        Assert.That(detail.PublishedAtUtc, Is.Not.Null);
     }
 
     [Test]

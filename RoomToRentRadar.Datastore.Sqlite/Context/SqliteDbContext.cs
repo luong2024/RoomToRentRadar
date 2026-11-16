@@ -174,8 +174,8 @@ public sealed class SqliteDbContext : IDisposable
     }
 
     /// <summary>
-    /// Chèn dữ liệu mẫu 8 phòng khi bảng Rooms còn rỗng (chỉ một lần, chỉ khi SeedDemoRooms bật).
-    /// Chạy trong transaction, trong cùng lock khởi tạo schema.
+    /// Seeds 8 sample demo rooms when the Rooms table is empty (runs once, only when SeedDemoRooms is enabled).
+    /// Executes within a transaction under the schema initialization lock.
     /// </summary>
     private static void SeedRoomsIfEmpty(SqliteConnection conn)
     {
