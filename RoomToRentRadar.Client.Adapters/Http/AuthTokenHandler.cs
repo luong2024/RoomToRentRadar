@@ -7,10 +7,25 @@ namespace RoomToRentRadar.Client.Adapters.Http;
 /// <summary>
 /// Attaches the session Bearer token and, on 401, refreshes once through the shared
 /// <see cref="TokenRefreshCoordinator"/> then replays the request with the new token.
-/// Auth endpoints (except /api/auth/me) and requests with a caller-set Authorization header bypass it.
+/// Only the anonymous auth endpoints (login, register, refresh, sso/ictu, google — exact path,
+/// case-insensitive, query string ignored) and requests with a caller-set Authorization header
+/// bypass it. Every other path, including authenticated /api/auth/* endpoints such as
+/// /api/auth/me, /api/auth/revoke and /api/auth/admin/landlords/{userId}/approve, gets the token
+/// and the 401-refresh flow.
 /// </summary>
 public sealed class AuthTokenHandler : DelegatingHandler
 {
+    // A 401 on these endpoints (e.g. INVALID_CREDENTIALS on login) must not trigger refresh,
+    // and the coordinator's own refresh call must not recurse through this handler.
+    private static readonly HashSet<string> AnonymousAuthPaths = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "/api/auth/login",
+        "/api/auth/register",
+        "/api/auth/refresh",
+        "/api/auth/sso/ictu",
+        "/api/auth/google"
+    };
+
     private readonly ISessionStore _sessionStore;
     private readonly TokenRefreshCoordinator _refreshCoordinator;
 
@@ -75,8 +90,13 @@ public sealed class AuthTokenHandler : DelegatingHandler
 
         var uri = request.RequestUri;
         var path = uri is null ? string.Empty : uri.IsAbsoluteUri ? uri.AbsolutePath : uri.OriginalString;
-        return path.StartsWith("/api/auth/", StringComparison.OrdinalIgnoreCase)
-            && !path.Equals("/api/auth/me", StringComparison.OrdinalIgnoreCase);
+        var queryIndex = path.IndexOf('?');
+        if (queryIndex >= 0)
+        {
+            path = path[..queryIndex];
+        }
+
+        return AnonymousAuthPaths.Contains(path);
     }
 
     private static HttpRequestMessage CloneRequest(HttpRequestMessage original, byte[]? body, string? newAccessToken)

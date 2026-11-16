@@ -352,8 +352,8 @@ public class AuthTokenHandlerTests
     [TestCase("/api/auth/sso/ictu")]
     [TestCase("/api/auth/google")]
     [TestCase("/api/auth/refresh")]
-    [TestCase("/api/auth/revoke")]
-    public async Task Send_AuthEndpoints_BypassBearerAndRefresh(string path)
+    [TestCase("/API/AUTH/LOGIN")]
+    public async Task Send_AnonymousAuthEndpoints_BypassBearerAndRefresh(string path)
     {
         var harness = new Harness(_ => Unauthorized());
         await harness.Store.SaveSessionAsync(Tokens("a1", "r1"));
@@ -363,6 +363,65 @@ public class AuthTokenHandlerTests
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         Assert.That(harness.Stub.Requests.Single().Authorization, Is.Null);
         Assert.That(harness.Stub.Requests, Has.Count.EqualTo(1));
+        Assert.That(harness.SessionExpiredRaised, Is.EqualTo(0));
+    }
+
+    [TestCase("/api/auth/login?returnUrl=explore")]
+    [TestCase("/api/auth/register?source=mobile")]
+    [TestCase("/api/auth/refresh?retry=1")]
+    [TestCase("/api/auth/sso/ictu?code=abc")]
+    [TestCase("/api/auth/google?code=abc")]
+    public async Task Send_AnonymousAuthPathWithQueryString_StillBypassesBearerAndRefresh(string path)
+    {
+        var harness = new Harness(_ => Unauthorized());
+        await harness.Store.SaveSessionAsync(Tokens("a1", "r1"));
+
+        var response = await harness.Client.PostAsync(path, new StringContent("{}", Encoding.UTF8, "application/json"));
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That(harness.Stub.Requests.Single().Authorization, Is.Null);
+        Assert.That(harness.Stub.Requests, Has.Count.EqualTo(1));
+        Assert.That(harness.SessionExpiredRaised, Is.EqualTo(0));
+    }
+
+    [TestCase("/api/auth/me")]
+    [TestCase("/api/auth/revoke")]
+    [TestCase("/api/auth/admin/landlords/abc/approve")]
+    public async Task Send_AuthenticatedAuthEndpoints_AttachBearerAndRefreshOnceOn401(string path)
+    {
+        var harness = new Harness(req => req.RequestUri!.AbsolutePath == RefreshPath
+            ? TokensOk("a2", "r2")
+            : HasBearer(req, "a2") ? Ok() : Unauthorized());
+        await harness.Store.SaveSessionAsync(Tokens("a1", "r1"));
+
+        var response = await harness.Client.GetAsync(path);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(harness.Stub.CountForPath(RefreshPath), Is.EqualTo(1));
+        var sends = harness.Stub.RequestsForPath(path);
+        Assert.That(sends.Count, Is.EqualTo(2));
+        Assert.That(sends[0].Authorization, Is.EqualTo("Bearer a1"));
+        Assert.That(sends[1].Authorization, Is.EqualTo("Bearer a2"));
+        Assert.That(harness.SessionExpiredRaised, Is.EqualTo(0));
+    }
+
+    [TestCase("/api/auth/login-history")]
+    [TestCase("/api/auth/google/callback")]
+    public async Task Send_PathMerelyStartingLikeAnonymousPath_IsNotBypassed(string path)
+    {
+        var harness = new Harness(req => req.RequestUri!.AbsolutePath == RefreshPath
+            ? TokensOk("a2", "r2")
+            : HasBearer(req, "a2") ? Ok() : Unauthorized());
+        await harness.Store.SaveSessionAsync(Tokens("a1", "r1"));
+
+        var response = await harness.Client.GetAsync(path);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(harness.Stub.CountForPath(RefreshPath), Is.EqualTo(1));
+        var sends = harness.Stub.RequestsForPath(path);
+        Assert.That(sends.Count, Is.EqualTo(2));
+        Assert.That(sends[0].Authorization, Is.EqualTo("Bearer a1"));
+        Assert.That(sends[1].Authorization, Is.EqualTo("Bearer a2"));
         Assert.That(harness.SessionExpiredRaised, Is.EqualTo(0));
     }
 
