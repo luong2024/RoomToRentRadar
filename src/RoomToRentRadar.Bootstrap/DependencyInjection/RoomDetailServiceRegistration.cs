@@ -1,9 +1,7 @@
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Configurations;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Context;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Repositories;
@@ -18,8 +16,7 @@ public static class RoomDetailServiceRegistration
 {
     public static IServiceCollection AddRoomDetailServices(
         this IServiceCollection services,
-        IConfiguration configuration,
-        IWebHostEnvironment environment)
+        IConfiguration configuration)
     {
         var cosmosOptions = configuration.GetSection(CosmosDbOptions.SectionName).Get<CosmosDbOptions>() ?? new CosmosDbOptions();
         var endpoint = !string.IsNullOrWhiteSpace(cosmosOptions.AccountEndpoint)
@@ -55,14 +52,5 @@ public static class RoomDetailServiceRegistration
         services.TryAddScoped<ISearchRoomsUseCase, SearchRoomsUseCase>();
 
         return services;
-    }
-
-    public static IServiceCollection AddRoomDetailServices(
-        this IServiceCollection services,
-        IWebHostEnvironment environment)
-    {
-        var serviceProvider = services.BuildServiceProvider();
-        var configuration = serviceProvider.GetRequiredService<IConfiguration>();
-        return services.AddRoomDetailServices(configuration, environment);
     }
 }

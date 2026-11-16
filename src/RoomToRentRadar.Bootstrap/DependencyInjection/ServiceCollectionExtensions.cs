@@ -9,17 +9,18 @@ using Microsoft.Extensions.Options;
 using RoomToRentRadar.Adapters.Inbound.WebApi.Authentication;
 using RoomToRentRadar.Adapters.Inbound.WebApi.Authorization;
 using RoomToRentRadar.Adapters.Inbound.WebApi.Controllers;
+using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb;
 using RoomToRentRadar.Adapters.Inbound.WebApi.Middleware;
 using RoomToRentRadar.Adapters.Inbound.WebApi.RateLimiting;
 using RoomToRentRadar.Adapters.Outbound.Authentication;
-using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Configurations;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Context;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Repositories;
-using RoomToRentRadar.Application.Ports.Inbound;
 using RoomToRentRadar.Application.Ports.Outbound;
 using RoomToRentRadar.Application.UseCases;
 using RoomToRentRadar.Application.UseCases.Authentication;
+using RoomToRentRadar.Application.Ports.Inbound;
+using RoomToRentRadar.Application.UseCases.RoomListings;
 
 namespace RoomToRentRadar.Bootstrap.DependencyInjection;
 
@@ -30,6 +31,9 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddApplicationUseCases(this IServiceCollection services)
     {
+        services.AddScoped<GetRoomListingsUseCase>();
+        services.AddScoped<IGetRoomListingsUseCase>(sp => sp.GetRequiredService<GetRoomListingsUseCase>());
+        services.AddScoped<IRoomListingCacheInvalidator>(sp => sp.GetRequiredService<GetRoomListingsUseCase>());
         services.AddScoped<IGetRoomDetailsUseCase, GetRoomDetailsUseCase>();
         services.AddScoped<ISearchRoomsUseCase, SearchRoomsUseCase>();
         services.AddSingleton(TimeProvider.System);
@@ -44,6 +48,8 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddOutboundAdapters(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment? environment = null)
     {
+        services.AddCachingAdapters();
+        services.AddCosmosDbPersistence(configuration);
         services.AddSingleton<IValidateOptions<JwtOptions>, JwtOptionsValidator>();
         services
             .AddOptions<JwtOptions>()
@@ -54,11 +60,13 @@ public static class ServiceCollectionExtensions
             .AddOptions<GoogleAuthOptions>()
             .Bind(configuration.GetSection(GoogleAuthOptions.SectionName));
 
-        services
-            .AddOptions<CosmosDbOptions>()
-            .Bind(configuration.GetSection(CosmosDbOptions.SectionName));
-
-        services.AddSingleton<ICosmosDbContext, CosmosDbContext>();
+        services.AddSingleton<ICosmosDbContext>(sp =>
+        {
+            var cosmosOptions = sp.GetRequiredService<IOptions<CosmosDbOptions>>().Value;
+            return string.Equals(cosmosOptions.AccountEndpoint, "in-memory", StringComparison.OrdinalIgnoreCase)
+                ? new CosmosDbContext(cosmosOptions)
+                : new CosmosDbContext(cosmosOptions, sp.GetRequiredService<Microsoft.Azure.Cosmos.CosmosClient>());
+        });
         services.AddScoped<CosmosUnitOfWork>();
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<CosmosUnitOfWork>());
         services.AddScoped<IUserRepository, CosmosUserRepository>();
@@ -66,7 +74,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
         services.AddSingleton<IGoogleIdentityVerifier, GoogleIdentityVerifier>();
         services.AddSingleton<ITokenService, JwtTokenService>();
-
         return services;
     }
 

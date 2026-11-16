@@ -11,6 +11,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
     private readonly CosmosClient? _cosmosClient;
     private readonly CosmosDbOptions _options;
     private readonly bool _isInMemory;
+    private readonly bool _ownsCosmosClient;
 
     private readonly ICosmosContainer<UserDocument> _usersContainer;
     private readonly ICosmosContainer<RefreshTokenDocument> _refreshTokensContainer;
@@ -23,11 +24,16 @@ public sealed class CosmosDbContext : ICosmosDbContext
     public const string UniqueTokenHashPath = "/tokenHash";
 
     public CosmosDbContext(IOptions<CosmosDbOptions> options)
-        : this(options.Value)
+        : this(options.Value, null)
     {
     }
 
     public CosmosDbContext(CosmosDbOptions options)
+        : this(options, null)
+    {
+    }
+
+    public CosmosDbContext(CosmosDbOptions options, CosmosClient? sharedCosmosClient)
     {
         ArgumentNullException.ThrowIfNull(options);
         _options = options;
@@ -75,7 +81,26 @@ public sealed class CosmosDbContext : ICosmosDbContext
                 clientOptions.ConnectionMode = ConnectionMode.Gateway;
             }
 
-            if (options.DisableTlsValidation)
+            if (options.IsEmulator)
+            {
+                var isLocalEndpoint = Uri.TryCreate(options.AccountEndpoint, UriKind.Absolute, out var endpointUri) &&
+                                      (endpointUri.IsLoopback ||
+                                       string.Equals(endpointUri.Host, "localhost", StringComparison.OrdinalIgnoreCase));
+
+                if (!isLocalEndpoint)
+                {
+                    throw new InvalidOperationException(
+                        $"Cosmos DB 'IsEmulator' configuration is strictly allowed only for local loopback endpoints (e.g., localhost). " +
+                        $"Configured endpoint '{options.AccountEndpoint}' is not a local endpoint, and TLS certificate bypass has been blocked.");
+                }
+
+                clientOptions.ConnectionMode = ConnectionMode.Gateway;
+                clientOptions.HttpClientFactory = () => new HttpClient(new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                });
+            }
+            else if (options.DisableTlsValidation)
             {
                 clientOptions.HttpClientFactory = () => new HttpClient(new HttpClientHandler
                 {
@@ -87,7 +112,8 @@ public sealed class CosmosDbContext : ICosmosDbContext
                 ? options.AuthKey
                 : options.AuthKeyOrResourceToken;
 
-            _cosmosClient = new CosmosClient(options.AccountEndpoint, authKey, clientOptions);
+            _cosmosClient = sharedCosmosClient ?? new CosmosClient(options.AccountEndpoint, authKey, clientOptions);
+            _ownsCosmosClient = sharedCosmosClient is null;
             var usersCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.UsersContainerName);
             var refreshTokensCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.RefreshTokensContainerName);
             var emailIndexCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.EmailIndexContainerName);
@@ -139,6 +165,11 @@ public sealed class CosmosDbContext : ICosmosDbContext
 
         var database = databaseResponse.Database;
 
+        var listingsContainerName = string.IsNullOrWhiteSpace(_options.ContainerName) ? "RoomListings" : _options.ContainerName;
+        await database.CreateContainerIfNotExistsAsync(listingsContainerName, "/campusId", cancellationToken: cancellationToken);
+
+        var roomDetailsContainerName = string.IsNullOrWhiteSpace(_options.RoomDetailsContainerName) ? "RoomDetails" : _options.RoomDetailsContainerName;
+        await database.CreateContainerIfNotExistsAsync(roomDetailsContainerName, PartitionKeyPath, cancellationToken: cancellationToken);
         var usersContainerProperties = new ContainerProperties(_options.UsersContainerName, PartitionKeyPath);
 
         await database.CreateContainerIfNotExistsAsync(
@@ -280,6 +311,9 @@ public sealed class CosmosDbContext : ICosmosDbContext
 
     public void Dispose()
     {
-        _cosmosClient?.Dispose();
+        if (_ownsCosmosClient)
+        {
+            _cosmosClient?.Dispose();
+        }
     }
 }
