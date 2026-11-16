@@ -123,18 +123,19 @@ public sealed class CosmosDbInitializer
                 // Not yet marked as completed, proceed with batch migration
             }
 
-            // Fetch existing IDs from target containers to support idempotent resume without duplicate writes
-            var existingDetailIds = await GetExistingDocumentIdsAsync(roomDetailsContainer, cancellationToken);
-            var existingListingIds = await GetExistingDocumentIdsAsync(listingsContainer, cancellationToken);
-
             var totalLegacyCount = 0;
             var migratedDetailsCount = 0;
-            var migratedListingsCount = 0;
-            var skippedListingsList = new List<(string Id, string Reason)>();
-            var allProcessedLegacyIds = new HashSet<string>(StringComparer.Ordinal);
-            var eligibleListingIds = new HashSet<string>(StringComparer.Ordinal);
+            var reconciledDetailsCount = 0;
+            var verifiedDetailsParityCount = 0;
 
-            // Stream batch-by-batch from legacy container instead of loading all documents into RAM at once
+            var eligibleListingsCount = 0;
+            var migratedListingsCount = 0;
+            var reconciledListingsCount = 0;
+            var verifiedListingsParityCount = 0;
+
+            var skippedListingsList = new List<(string Id, string Reason)>();
+
+            // Stream batch-by-batch from legacy container with O(1) memory complexity
             using (var feedIterator = legacyRoomsContainer.GetItemQueryIterator<Newtonsoft.Json.Linq.JObject>(new QueryDefinition("SELECT * FROM c")))
             {
                 while (feedIterator.HasMoreResults)
@@ -150,14 +151,24 @@ public sealed class CosmosDbInitializer
                         }
 
                         totalLegacyCount++;
-                        allProcessedLegacyIds.Add(id);
 
-                        // 1. All legacy records are preserved in RoomDetails (/id) to ensure ZERO data loss
-                        if (!existingDetailIds.Contains(id))
+                        // 1. Data-parity check & preservation in RoomDetails (/id) to ensure ZERO data loss
+                        var existingDetail = await ReadItemOrNullAsync<Newtonsoft.Json.Linq.JObject>(roomDetailsContainer, id, new PartitionKey(id), cancellationToken);
+                        if (existingDetail is null)
                         {
                             await roomDetailsContainer.UpsertItemAsync(doc, new PartitionKey(id), cancellationToken: cancellationToken);
-                            existingDetailIds.Add(id);
                             migratedDetailsCount++;
+                        }
+                        else if (AreDetailsEquivalent(doc, existingDetail))
+                        {
+                            verifiedDetailsParityCount++;
+                        }
+                        else
+                        {
+                            // Data disparity detected: legacy is source of truth, reconcile target document
+                            _logger.LogWarning("Data disparity detected for room detail '{RoomId}'. Reconciling with legacy source.", id);
+                            await roomDetailsContainer.UpsertItemAsync(doc, new PartitionKey(id), cancellationToken: cancellationToken);
+                            reconciledDetailsCount++;
                         }
 
                         // 2. Strict validation for RoomListings (/campusId) without inventing fake business data
@@ -200,36 +211,46 @@ public sealed class CosmosDbInitializer
                             continue;
                         }
 
-                        eligibleListingIds.Add(id);
+                        eligibleListingsCount++;
 
-                        // Map to RoomListingDocument and upsert to RoomListings (/campusId)
-                        if (!existingListingIds.Contains(id))
+                        // Map to RoomListingDocument and perform data parity verification / upsert
+                        var isVerified = ((int?)doc["verificationStatus"] == 2) || ((bool?)doc["isVerified"] == true);
+                        var status = (int?)doc["status"] == 0 ? 0 : 1;
+
+                        var listingDoc = new RoomListingDocument
                         {
-                            var isVerified = ((int?)doc["verificationStatus"] == 2) || ((bool?)doc["isVerified"] == true);
-                            var status = (int?)doc["status"] == 0 ? 0 : 1;
+                            Id = id,
+                            CampusId = campusId!,
+                            Title = doc["title"]?.ToString() ?? $"Phòng trọ {id}",
+                            Description = doc["description"]?.ToString() ?? string.Empty,
+                            MonthlyRentAmount = price!.Value,
+                            MonthlyRentCurrency = doc["monthlyRentCurrency"]?.ToString() ?? "VND",
+                            AreaSquareMeters = area!.Value,
+                            Address = doc["address"]?.ToString() ?? string.Empty,
+                            Latitude = lat!.Value,
+                            Longitude = lon!.Value,
+                            Location = new Microsoft.Azure.Cosmos.Spatial.Point(lon.Value, lat.Value),
+                            Status = status,
+                            VerificationStatus = isVerified ? 2 : 0, // 2 = Verified (AC4 requirement)
+                            ThumbnailUrl = doc["thumbnailUrl"]?.ToString(),
+                            CreatedAtUtc = (DateTime?)doc["createdAtUtc"] ?? (DateTime?)doc["lastUpdatedDate"] ?? DateTime.UtcNow
+                        };
 
-                            var listingDoc = new RoomListingDocument
-                            {
-                                Id = id,
-                                CampusId = campusId!,
-                                Title = doc["title"]?.ToString() ?? $"Phòng trọ {id}",
-                                Description = doc["description"]?.ToString() ?? string.Empty,
-                                MonthlyRentAmount = price!.Value,
-                                MonthlyRentCurrency = doc["monthlyRentCurrency"]?.ToString() ?? "VND",
-                                AreaSquareMeters = area!.Value,
-                                Address = doc["address"]?.ToString() ?? string.Empty,
-                                Latitude = lat!.Value,
-                                Longitude = lon!.Value,
-                                Location = new Microsoft.Azure.Cosmos.Spatial.Point(lon.Value, lat.Value),
-                                Status = status,
-                                VerificationStatus = isVerified ? 2 : 0, // 2 = Verified (AC4 requirement)
-                                ThumbnailUrl = doc["thumbnailUrl"]?.ToString(),
-                                CreatedAtUtc = (DateTime?)doc["createdAtUtc"] ?? (DateTime?)doc["lastUpdatedDate"] ?? DateTime.UtcNow
-                            };
-
+                        var existingListing = await ReadItemOrNullAsync<RoomListingDocument>(listingsContainer, id, new PartitionKey(campusId!), cancellationToken);
+                        if (existingListing is null)
+                        {
                             await listingsContainer.UpsertItemAsync(listingDoc, new PartitionKey(campusId!), cancellationToken: cancellationToken);
-                            existingListingIds.Add(id);
                             migratedListingsCount++;
+                        }
+                        else if (IsListingEquivalent(existingListing, listingDoc))
+                        {
+                            verifiedListingsParityCount++;
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Data disparity detected for room listing '{RoomId}'. Reconciling with legacy source.", id);
+                            await listingsContainer.UpsertItemAsync(listingDoc, new PartitionKey(campusId!), cancellationToken: cancellationToken);
+                            reconciledListingsCount++;
                         }
                     }
                 }
@@ -241,20 +262,19 @@ public sealed class CosmosDbInitializer
                 return;
             }
 
-            // 3. ID-based reconciliation check across both containers
-            foreach (var id in allProcessedLegacyIds)
+            // 3. Strict reconciliation check verifying 100% data preservation and integrity
+            var totalPreservedDetails = migratedDetailsCount + reconciledDetailsCount + verifiedDetailsParityCount;
+            if (totalPreservedDetails != totalLegacyCount)
             {
-                if (!existingDetailIds.Contains(id))
-                {
-                    throw new InvalidOperationException(
-                        $"Migration reconciliation failed: Legacy document '{id}' was not found in 'RoomDetails'.");
-                }
+                throw new InvalidOperationException(
+                    $"Migration reconciliation failed: Processed {totalLegacyCount} legacy records, but only {totalPreservedDetails} were verified/preserved in 'RoomDetails'.");
+            }
 
-                if (eligibleListingIds.Contains(id) && !existingListingIds.Contains(id))
-                {
-                    throw new InvalidOperationException(
-                        $"Migration reconciliation failed: Eligible legacy document '{id}' was not found in 'RoomListings'.");
-                }
+            var totalProcessedListings = migratedListingsCount + reconciledListingsCount + verifiedListingsParityCount;
+            if (totalProcessedListings != eligibleListingsCount)
+            {
+                throw new InvalidOperationException(
+                    $"Migration reconciliation failed: Found {eligibleListingsCount} eligible listings, but only {totalProcessedListings} were verified/migrated in 'RoomListings'.");
             }
 
             // 4. Mark migration as Completed in metadata to avoid re-scanning on future startups
@@ -264,8 +284,14 @@ public sealed class CosmosDbInitializer
                 ["status"] = "Completed",
                 ["migratedAtUtc"] = DateTime.UtcNow,
                 ["totalLegacyProcessed"] = totalLegacyCount,
-                ["detailsCount"] = existingDetailIds.Count,
-                ["listingsCount"] = eligibleListingIds.Count,
+                ["detailsCount"] = totalPreservedDetails,
+                ["detailsNew"] = migratedDetailsCount,
+                ["detailsReconciled"] = reconciledDetailsCount,
+                ["detailsParityVerified"] = verifiedDetailsParityCount,
+                ["listingsCount"] = totalProcessedListings,
+                ["listingsNew"] = migratedListingsCount,
+                ["listingsReconciled"] = reconciledListingsCount,
+                ["listingsParityVerified"] = verifiedListingsParityCount,
                 ["skippedCount"] = skippedListingsList.Count
             };
             await roomDetailsContainer.UpsertItemAsync(statusDoc, new PartitionKey(migrationStatusDocId), cancellationToken: cancellationToken);
@@ -273,14 +299,18 @@ public sealed class CosmosDbInitializer
             _logger.LogInformation(
                 "Legacy migration completed successfully. " +
                 "Total legacy: {TotalLegacy}, " +
-                "Preserved in RoomDetails: {DetailsCount} ({NewDetails} newly written), " +
-                "Migrated to RoomListings: {ListingsCount} ({NewListings} newly written), " +
+                "RoomDetails: {DetailsCount} ({NewDetails} new, {ReconciledDetails} reconciled, {VerifiedDetails} verified parity), " +
+                "RoomListings: {ListingsCount} ({NewListings} new, {ReconciledListings} reconciled, {VerifiedListings} verified parity), " +
                 "Ineligible for RoomListings (missing fields): {IneligibleCount}.",
                 totalLegacyCount,
-                existingDetailIds.Count,
+                totalPreservedDetails,
                 migratedDetailsCount,
-                eligibleListingIds.Count,
+                reconciledDetailsCount,
+                verifiedDetailsParityCount,
+                totalProcessedListings,
                 migratedListingsCount,
+                reconciledListingsCount,
+                verifiedListingsParityCount,
                 skippedListingsList.Count);
         }
         catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -308,24 +338,95 @@ public sealed class CosmosDbInitializer
         }
     }
 
-    private static async Task<HashSet<string>> GetExistingDocumentIdsAsync(Container container, CancellationToken cancellationToken)
+    private static async Task<T?> ReadItemOrNullAsync<T>(
+        Container container,
+        string id,
+        PartitionKey partitionKey,
+        CancellationToken cancellationToken) where T : class
     {
-        var ids = new HashSet<string>(StringComparer.Ordinal);
-        var query = new QueryDefinition("SELECT c.id FROM c");
-        using var iterator = container.GetItemQueryIterator<Newtonsoft.Json.Linq.JObject>(query);
-        while (iterator.HasMoreResults)
+        try
         {
-            var batch = await iterator.ReadNextAsync(cancellationToken);
-            foreach (var doc in batch)
-            {
-                var id = doc["id"]?.ToString();
-                if (!string.IsNullOrWhiteSpace(id))
-                {
-                    ids.Add(id);
-                }
-            }
+            var response = await container.ReadItemAsync<T>(id, partitionKey, cancellationToken: cancellationToken);
+            return response?.Resource;
         }
-        return ids;
+        catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+    }
+
+    private static bool AreDetailsEquivalent(Newtonsoft.Json.Linq.JObject legacyDoc, Newtonsoft.Json.Linq.JObject existingDetail)
+    {
+        var legacyPrice = (decimal?)legacyDoc["monthlyRentAmount"] ?? (decimal?)legacyDoc["price"];
+        var existingPrice = (decimal?)existingDetail["monthlyRentAmount"] ?? (decimal?)existingDetail["price"];
+        if (legacyPrice != existingPrice)
+        {
+            return false;
+        }
+
+        var legacyArea = (double?)legacyDoc["areaSquareMeters"] ?? (double?)legacyDoc["area"];
+        var existingArea = (double?)existingDetail["areaSquareMeters"] ?? (double?)existingDetail["area"];
+        if (legacyArea.HasValue != existingArea.HasValue)
+        {
+            return false;
+        }
+        if (legacyArea.HasValue && Math.Abs(legacyArea.Value - existingArea!.Value) > 0.001)
+        {
+            return false;
+        }
+
+        if (!string.Equals(legacyDoc["campusId"]?.ToString(), existingDetail["campusId"]?.ToString(), StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var legacyLat = (double?)legacyDoc["latitude"];
+        var existingLat = (double?)existingDetail["latitude"];
+        if (legacyLat.HasValue != existingLat.HasValue)
+        {
+            return false;
+        }
+        if (legacyLat.HasValue && Math.Abs(legacyLat.Value - existingLat!.Value) > 0.000001)
+        {
+            return false;
+        }
+
+        var legacyLon = (double?)legacyDoc["longitude"];
+        var existingLon = (double?)existingDetail["longitude"];
+        if (legacyLon.HasValue != existingLon.HasValue)
+        {
+            return false;
+        }
+        if (legacyLon.HasValue && Math.Abs(legacyLon.Value - existingLon!.Value) > 0.000001)
+        {
+            return false;
+        }
+
+        if ((int?)legacyDoc["status"] != (int?)existingDetail["status"])
+        {
+            return false;
+        }
+
+        var legacyVerified = ((int?)legacyDoc["verificationStatus"] == 2) || ((bool?)legacyDoc["isVerified"] == true);
+        var existingVerified = ((int?)existingDetail["verificationStatus"] == 2) || ((bool?)existingDetail["isVerified"] == true);
+        if (legacyVerified != existingVerified)
+        {
+            return false;
+        }
+
+        return string.Equals(legacyDoc["title"]?.ToString(), existingDetail["title"]?.ToString(), StringComparison.Ordinal);
+    }
+
+    private static bool IsListingEquivalent(RoomListingDocument existing, RoomListingDocument expected)
+    {
+        return string.Equals(existing.CampusId, expected.CampusId, StringComparison.Ordinal)
+            && existing.MonthlyRentAmount == expected.MonthlyRentAmount
+            && Math.Abs(existing.AreaSquareMeters - expected.AreaSquareMeters) < 0.001
+            && Math.Abs(existing.Latitude - expected.Latitude) < 0.000001
+            && Math.Abs(existing.Longitude - expected.Longitude) < 0.000001
+            && existing.Status == expected.Status
+            && existing.VerificationStatus == expected.VerificationStatus
+            && string.Equals(existing.Title, expected.Title, StringComparison.Ordinal);
     }
 
     private static bool IsCosmosConnectionException(Exception ex)

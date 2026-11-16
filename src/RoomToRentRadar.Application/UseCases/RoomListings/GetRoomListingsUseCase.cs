@@ -114,9 +114,12 @@ public sealed class GetRoomListingsUseCase : IGetRoomListingsUseCase, IRoomListi
         return result;
     }
 
+    private static long _invalidationSequence;
+
     /// <summary>
     /// Implements IRoomListingCacheInvalidator for outbound cache invalidation from write use cases.
-    /// Instantly invalidates all cached listing pages for a given campus by incrementing its version counter.
+    /// Instantly and atomically invalidates all cached listing pages for a given campus using a strictly
+    /// monotonic timestamp token, completely eliminating read-modify-write lost-update race conditions.
     /// </summary>
     public async Task InvalidateCampusAsync(string campusId, CancellationToken cancellationToken = default)
     {
@@ -126,9 +129,8 @@ public sealed class GetRoomListingsUseCase : IGetRoomListingsUseCase, IRoomListi
         }
 
         var versionKey = $"rooms:campus:{campusId}:version";
-        var currentVersionStr = await _cacheService.GetAsync<string>(versionKey, cancellationToken);
-        var nextVersion = int.TryParse(currentVersionStr, out var v) ? v + 1 : 2;
-        await _cacheService.SetAsync(versionKey, nextVersion.ToString(), TimeSpan.FromDays(7), cancellationToken);
+        var newVersion = $"{DateTimeOffset.UtcNow.Ticks}_{Interlocked.Increment(ref _invalidationSequence)}";
+        await _cacheService.SetAsync(versionKey, newVersion, TimeSpan.FromDays(7), cancellationToken);
     }
 
     private async Task<string> GetCampusCacheVersionAsync(string campusId, CancellationToken cancellationToken)

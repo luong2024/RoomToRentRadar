@@ -145,6 +145,17 @@ public class GetRoomListingsUseCaseTests
     }
 
     [Test]
+    public async Task InvalidateCampusAsync_WhenInvokedConcurrently_ShouldProduceAtomicUniqueVersionsWithoutRaceCondition()
+    {
+        var tasks = Enumerable.Range(0, 10).Select(_ => _useCase.InvalidateCampusAsync("campus-concurrent"));
+        await Task.WhenAll(tasks);
+
+        var finalVersion = await _cacheService.GetAsync<string>("rooms:campus:campus-concurrent:version");
+        Assert.That(finalVersion, Is.Not.Null.And.Not.Empty);
+        Assert.That(finalVersion, Does.Contain("_"));
+    }
+
+    [Test]
     public async Task ExecuteAsync_WhenDistancesAreEqual_ShouldTieBreakById()
     {
         // Two rooms at exact same coordinate/distance

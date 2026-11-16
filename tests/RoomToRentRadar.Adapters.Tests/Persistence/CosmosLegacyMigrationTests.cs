@@ -80,9 +80,14 @@ public class CosmosLegacyMigrationTests
             .Setup(c => c.ReadItemAsync<JObject>("__migration_legacy_rooms_status", It.IsAny<PartitionKey>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new CosmosException("Not found", System.Net.HttpStatusCode.NotFound, 0, "1", 0));
 
-        // Default empty existing IDs in target containers
-        SetupQueryIds(_mockRoomDetailsContainer, []);
-        SetupQueryIds(_mockListingsContainer, []);
+        // Default: point reads return 404 NotFound
+        _mockRoomDetailsContainer
+            .Setup(c => c.ReadItemAsync<JObject>(It.IsAny<string>(), It.IsAny<PartitionKey>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new CosmosException("Not found", System.Net.HttpStatusCode.NotFound, 0, "1", 0));
+
+        _mockListingsContainer
+            .Setup(c => c.ReadItemAsync<RoomListingDocument>(It.IsAny<string>(), It.IsAny<PartitionKey>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new CosmosException("Not found", System.Net.HttpStatusCode.NotFound, 0, "1", 0));
     }
 
     [Test]
@@ -245,9 +250,20 @@ public class CosmosLegacyMigrationTests
 
         SetupLegacyDocuments([legacyDoc]);
 
-        // Target containers already contain this ID
-        SetupQueryIds(_mockRoomDetailsContainer, ["existing-room-200"]);
-        SetupQueryIds(_mockListingsContainer, ["existing-room-200"]);
+        // Target containers already contain matching document (data parity verified)
+        SetupExistingDetail(_mockRoomDetailsContainer, "existing-room-200", legacyDoc);
+        SetupExistingListing(_mockListingsContainer, "existing-room-200", "campus-ictu", new RoomListingDocument
+        {
+            Id = "existing-room-200",
+            CampusId = "campus-ictu",
+            Title = "Phòng trọ existing-room-200",
+            MonthlyRentAmount = 2000000m,
+            AreaSquareMeters = 20.0,
+            Latitude = 21.5852,
+            Longitude = 105.8074,
+            Status = 1,
+            VerificationStatus = 0
+        });
 
         var initializer = new CosmosDbInitializer(
             _mockClient.Object,
@@ -256,9 +272,74 @@ public class CosmosLegacyMigrationTests
 
         await initializer.InitializeAsync();
 
-        // Neither container should be written to again for legacy document
+        // Neither container should be written to again for legacy document with identical data
         _mockRoomDetailsContainer.Verify(c => c.UpsertItemAsync(It.Is<JObject>(d => d["id"] != null && d["id"]!.ToString() == "existing-room-200"), It.IsAny<PartitionKey?>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()), Times.Never);
-        _mockListingsContainer.Verify(c => c.UpsertItemAsync(It.IsAny<RoomListingDocument>(), It.IsAny<PartitionKey?>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()), Times.Never);
+        _mockListingsContainer.Verify(c => c.UpsertItemAsync(It.Is<RoomListingDocument>(d => d.Id == "existing-room-200"), It.IsAny<PartitionKey?>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Test]
+    public async Task InitializeAsync_WhenAlreadyMigrated_WithDataDiscrepancy_ShouldReconcileAndUpdateTargetContainers()
+    {
+        var legacyDoc = new JObject
+        {
+            ["id"] = "discrepant-room-300",
+            ["campusId"] = "campus-ictu",
+            ["price"] = 2500000m, // Source of truth has 2.5m
+            ["area"] = 25.0,
+            ["latitude"] = 21.5852,
+            ["longitude"] = 105.8074
+        };
+
+        SetupLegacyDocuments([legacyDoc]);
+
+        // Target containers contain stale data (e.g. price was 1.8m)
+        var staleDetailDoc = new JObject
+        {
+            ["id"] = "discrepant-room-300",
+            ["campusId"] = "campus-ictu",
+            ["price"] = 1800000m,
+            ["area"] = 25.0,
+            ["latitude"] = 21.5852,
+            ["longitude"] = 105.8074
+        };
+        SetupExistingDetail(_mockRoomDetailsContainer, "discrepant-room-300", staleDetailDoc);
+
+        var staleListingDoc = new RoomListingDocument
+        {
+            Id = "discrepant-room-300",
+            CampusId = "campus-ictu",
+            Title = "Phòng trọ discrepant-room-300",
+            MonthlyRentAmount = 1800000m, // Stale price
+            AreaSquareMeters = 25.0,
+            Latitude = 21.5852,
+            Longitude = 105.8074,
+            Status = 1,
+            VerificationStatus = 0
+        };
+        SetupExistingListing(_mockListingsContainer, "discrepant-room-300", "campus-ictu", staleListingDoc);
+
+        var capturedDetails = new List<JObject>();
+        _mockRoomDetailsContainer
+            .Setup(c => c.UpsertItemAsync(It.IsAny<JObject>(), It.IsAny<PartitionKey?>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .Callback<JObject, PartitionKey?, ItemRequestOptions, CancellationToken>((doc, pk, opt, ct) => capturedDetails.Add(doc))
+            .ReturnsAsync(new Mock<ItemResponse<JObject>>().Object);
+
+        var capturedListings = new List<RoomListingDocument>();
+        _mockListingsContainer
+            .Setup(c => c.UpsertItemAsync(It.IsAny<RoomListingDocument>(), It.IsAny<PartitionKey?>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .Callback<RoomListingDocument, PartitionKey?, ItemRequestOptions, CancellationToken>((doc, pk, opt, ct) => capturedListings.Add(doc))
+            .ReturnsAsync(new Mock<ItemResponse<RoomListingDocument>>().Object);
+
+        var initializer = new CosmosDbInitializer(
+            _mockClient.Object,
+            Options.Create(_options),
+            NullLogger<CosmosDbInitializer>.Instance);
+
+        await initializer.InitializeAsync();
+
+        // Both containers MUST be updated to reconcile the data discrepancy
+        _mockRoomDetailsContainer.Verify(c => c.UpsertItemAsync(It.Is<JObject>(d => d["id"] != null && d["id"]!.ToString() == "discrepant-room-300"), It.IsAny<PartitionKey?>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()), Times.Once);
+        _mockListingsContainer.Verify(c => c.UpsertItemAsync(It.Is<RoomListingDocument>(d => d.Id == "discrepant-room-300" && d.MonthlyRentAmount == 2500000m), It.IsAny<PartitionKey?>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
@@ -286,6 +367,24 @@ public class CosmosLegacyMigrationTests
         // Must not query legacy container or target containers at all
         _mockLegacyContainer.Verify(c => c.GetItemQueryIterator<JObject>(It.IsAny<QueryDefinition>(), null, null), Times.Never);
         _mockRoomDetailsContainer.Verify(c => c.UpsertItemAsync(It.IsAny<JObject>(), It.IsAny<PartitionKey?>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private static void SetupExistingDetail(Mock<Container> containerMock, string id, JObject document)
+    {
+        var mockResponse = new Mock<ItemResponse<JObject>>();
+        mockResponse.Setup(r => r.Resource).Returns(document);
+        containerMock
+            .Setup(c => c.ReadItemAsync<JObject>(id, new PartitionKey(id), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(mockResponse.Object);
+    }
+
+    private static void SetupExistingListing(Mock<Container> containerMock, string id, string campusId, RoomListingDocument document)
+    {
+        var mockResponse = new Mock<ItemResponse<RoomListingDocument>>();
+        mockResponse.Setup(r => r.Resource).Returns(document);
+        containerMock
+            .Setup(c => c.ReadItemAsync<RoomListingDocument>(id, new PartitionKey(campusId), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(mockResponse.Object);
     }
 
     private void SetupLegacyDocuments(List<JObject> documents)
