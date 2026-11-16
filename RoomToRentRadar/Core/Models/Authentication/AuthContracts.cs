@@ -41,6 +41,8 @@ public enum AuthFailureType
     NetworkError,
     Timeout,
     ServerError,
+    BadRequest,
+    Forbidden,
     Unknown
 }
 
@@ -78,6 +80,12 @@ public sealed record AuthResult(
 
     public static AuthResult InvalidToken(string errorMessage) =>
         new(false, ErrorMessage: errorMessage, FailureType: AuthFailureType.RefreshTokenExpiredOrRevoked);
+
+    public static AuthResult BadRequest(string errorMessage) =>
+        new(false, ErrorMessage: errorMessage, FailureType: AuthFailureType.BadRequest);
+
+    public static AuthResult Forbidden(string errorMessage) =>
+        new(false, ErrorMessage: errorMessage, FailureType: AuthFailureType.Forbidden);
 
     public static AuthResult NeedRoleSelection(string googleIdToken) =>
         new(false, RequiresRoleSelection: true, PendingGoogleIdToken: googleIdToken);

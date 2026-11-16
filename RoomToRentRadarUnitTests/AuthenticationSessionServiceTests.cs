@@ -233,6 +233,36 @@ public class AuthenticationSessionServiceTests
     }
 
     [Test]
+    public async Task RefreshTokenAsync_WhenBadRequestValidation_ShouldKeepStoredTokensAndUserData()
+    {
+        var user = new AuthUser(Guid.NewGuid(), "student@example.com", "STUDENT", "LOCAL", true);
+        await _service.SaveSessionAsync("current-access", "keep-this-refresh", user);
+
+        _authPort.RefreshResult = AuthResult.BadRequest("Validation Failed: Refresh token is required.");
+
+        var refreshed = await _service.RefreshTokenAsync();
+
+        Assert.That(refreshed, Is.False);
+        Assert.That(await _storage.GetAsync(AuthenticationSessionService.RefreshTokenKey), Is.EqualTo("keep-this-refresh"));
+        Assert.That(await _storage.GetAsync(AuthenticationSessionService.UserDataKey), Is.Not.Null);
+    }
+
+    [Test]
+    public async Task RefreshTokenAsync_WhenForbidden_ShouldKeepStoredTokensAndUserData()
+    {
+        var user = new AuthUser(Guid.NewGuid(), "student@example.com", "STUDENT", "LOCAL", true);
+        await _service.SaveSessionAsync("current-access", "keep-this-refresh", user);
+
+        _authPort.RefreshResult = AuthResult.Forbidden("Forbidden: Not allowed.");
+
+        var refreshed = await _service.RefreshTokenAsync();
+
+        Assert.That(refreshed, Is.False);
+        Assert.That(await _storage.GetAsync(AuthenticationSessionService.RefreshTokenKey), Is.EqualTo("keep-this-refresh"));
+        Assert.That(await _storage.GetAsync(AuthenticationSessionService.UserDataKey), Is.Not.Null);
+    }
+
+    [Test]
     public async Task TryRestoreSessionAsync_WhenAccessTokenExpiredAndNetworkFails_ShouldPreserveStoredSession()
     {
         var expiredJwt = CreateTestJwt(DateTimeOffset.UtcNow.AddMinutes(-10));

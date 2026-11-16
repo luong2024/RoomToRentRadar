@@ -229,6 +229,93 @@ public class HttpAuthAdapterTests
     }
 
     [Test]
+    public async Task RefreshTokenAsync_WhenBadRequest400ValidationFailed_ShouldReturnBadRequestFailureAndNotRefreshTokenExpiredOrRevoked()
+    {
+        var handler = new StubHttpMessageHandler((_, _) =>
+        {
+            var problemJson = """
+                {
+                  "status": 400,
+                  "title": "Validation Failed",
+                  "detail": "Refresh token is required.",
+                  "errors": {
+                    "refreshToken": ["Refresh token is required."]
+                  }
+                }
+                """;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
+            {
+                Content = new StringContent(problemJson, Encoding.UTF8, "application/json")
+            });
+        });
+
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.com/") };
+        var adapter = new HttpAuthAdapter(client);
+
+        var result = await adapter.RefreshTokenAsync(string.Empty);
+
+        Assert.That(result.IsSuccess, Is.False);
+        Assert.That(result.FailureType, Is.EqualTo(AuthFailureType.BadRequest));
+        Assert.That(result.FailureType, Is.Not.EqualTo(AuthFailureType.RefreshTokenExpiredOrRevoked));
+        Assert.That(result.ErrorMessage, Is.EqualTo("Refresh token is required."));
+    }
+
+    [Test]
+    public async Task RefreshTokenAsync_WhenForbidden403_ShouldReturnForbiddenFailure()
+    {
+        var handler = new StubHttpMessageHandler((_, _) =>
+        {
+            var problemJson = """
+                {
+                  "status": 403,
+                  "title": "Forbidden",
+                  "detail": "Account does not have permission to refresh this session."
+                }
+                """;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Forbidden)
+            {
+                Content = new StringContent(problemJson, Encoding.UTF8, "application/json")
+            });
+        });
+
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.com/") };
+        var adapter = new HttpAuthAdapter(client);
+
+        var result = await adapter.RefreshTokenAsync("some-refresh-token");
+
+        Assert.That(result.IsSuccess, Is.False);
+        Assert.That(result.FailureType, Is.EqualTo(AuthFailureType.Forbidden));
+        Assert.That(result.FailureType, Is.Not.EqualTo(AuthFailureType.RefreshTokenExpiredOrRevoked));
+    }
+
+    [Test]
+    public async Task RefreshTokenAsync_WhenOAuthErrorInvalidGrant_ShouldReturnRefreshTokenExpiredOrRevoked()
+    {
+        var handler = new StubHttpMessageHandler((_, _) =>
+        {
+            var oauthErrorJson = """
+                {
+                  "error": "invalid_grant",
+                  "error_description": "The refresh token is expired, revoked, or malformed."
+                }
+                """;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
+            {
+                Content = new StringContent(oauthErrorJson, Encoding.UTF8, "application/json")
+            });
+        });
+
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://api.example.com/") };
+        var adapter = new HttpAuthAdapter(client);
+
+        var result = await adapter.RefreshTokenAsync("expired-or-revoked-token");
+
+        Assert.That(result.IsSuccess, Is.False);
+        Assert.That(result.FailureType, Is.EqualTo(AuthFailureType.RefreshTokenExpiredOrRevoked));
+        Assert.That(result.ErrorMessage, Does.Contain("The refresh token is expired, revoked, or malformed."));
+    }
+
+    [Test]
     public async Task RefreshTokenAsync_WhenNetworkFails_ShouldReturnNetworkFailure()
     {
         var handler = new StubHttpMessageHandler((_, _) =>

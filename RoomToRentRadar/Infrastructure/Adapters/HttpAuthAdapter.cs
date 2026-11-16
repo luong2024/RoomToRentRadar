@@ -55,13 +55,13 @@ public class HttpAuthAdapter : IAuthenticationPort
                 return AuthResult.Success(string.Empty, string.Empty, user);
             }
 
-            var (errorMessage, _) = await ParseErrorResponseAsync(response, cancellationToken);
+            var errorDetails = await ParseErrorResponseAsync(response, cancellationToken);
             if ((int)response.StatusCode >= 500)
             {
-                return AuthResult.ServerFailure(errorMessage);
+                return AuthResult.ServerFailure(errorDetails.Message);
             }
 
-            return AuthResult.Failed(errorMessage);
+            return AuthResult.Failed(errorDetails.Message);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -98,13 +98,13 @@ public class HttpAuthAdapter : IAuthenticationPort
                 return BuildSessionAuthResult(authDto, "LOCAL");
             }
 
-            var (errorMessage, _) = await ParseErrorResponseAsync(response, cancellationToken);
+            var errorDetails = await ParseErrorResponseAsync(response, cancellationToken);
             if ((int)response.StatusCode >= 500)
             {
-                return AuthResult.ServerFailure(errorMessage);
+                return AuthResult.ServerFailure(errorDetails.Message);
             }
 
-            return AuthResult.Failed(errorMessage, AuthFailureType.InvalidCredentials);
+            return AuthResult.Failed(errorDetails.Message, AuthFailureType.InvalidCredentials);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -141,18 +141,18 @@ public class HttpAuthAdapter : IAuthenticationPort
                 return BuildSessionAuthResult(authDto, "GOOGLE");
             }
 
-            var (errorDetail, hasRoleValidationError) = await ParseErrorResponseAsync(response, cancellationToken);
-            if (response.StatusCode == HttpStatusCode.BadRequest && hasRoleValidationError)
+            var errorDetails = await ParseErrorResponseAsync(response, cancellationToken);
+            if (response.StatusCode == HttpStatusCode.BadRequest && errorDetails.HasRoleValidationError)
             {
                 return AuthResult.NeedRoleSelection(request.IdToken);
             }
 
             if ((int)response.StatusCode >= 500)
             {
-                return AuthResult.ServerFailure(errorDetail);
+                return AuthResult.ServerFailure(errorDetails.Message);
             }
 
-            return AuthResult.Failed(errorDetail, AuthFailureType.InvalidCredentials);
+            return AuthResult.Failed(errorDetails.Message, AuthFailureType.InvalidCredentials);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -188,19 +188,25 @@ public class HttpAuthAdapter : IAuthenticationPort
                 return BuildSessionAuthResult(authDto, "REFRESH");
             }
 
-            var (errorMessage, _) = await ParseErrorResponseAsync(response, cancellationToken);
+            var errorDetails = await ParseErrorResponseAsync(response, cancellationToken);
 
             if ((int)response.StatusCode >= 500)
             {
-                return AuthResult.ServerFailure(errorMessage);
+                return AuthResult.ServerFailure(errorDetails.Message);
             }
 
-            if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden or HttpStatusCode.BadRequest)
+            if (errorDetails.IsTokenExpiredOrRevoked)
             {
-                return AuthResult.InvalidToken(errorMessage);
+                return AuthResult.InvalidToken(errorDetails.Message);
             }
 
-            return AuthResult.Failed(errorMessage, AuthFailureType.Unknown);
+            return response.StatusCode switch
+            {
+                HttpStatusCode.BadRequest => AuthResult.BadRequest(errorDetails.Message),
+                HttpStatusCode.Forbidden => AuthResult.Forbidden(errorDetails.Message),
+                HttpStatusCode.Unauthorized => AuthResult.Failed(errorDetails.Message, AuthFailureType.InvalidCredentials),
+                _ => AuthResult.Failed(errorDetails.Message, AuthFailureType.Unknown)
+            };
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -259,7 +265,30 @@ public class HttpAuthAdapter : IAuthenticationPort
         return AuthResult.Success(authDto.AccessToken, authDto.RefreshToken, user);
     }
 
-    private static async Task<(string Message, bool HasRoleValidationError)> ParseErrorResponseAsync(
+    private static readonly string[] TokenErrorKeywords =
+    [
+        "invalid_grant",
+        "invalid_token",
+        "invalid refresh token",
+        "refresh token expired",
+        "refresh token has expired",
+        "refresh token revoked",
+        "refresh token has been revoked",
+        "the refresh token is invalid",
+        "the refresh token has already been rotated or revoked",
+        "token has expired",
+        "token expired",
+        "token has been revoked",
+        "token revoked"
+    ];
+
+    private sealed record AuthErrorDetails(
+        string Message,
+        bool HasRoleValidationError,
+        string? ErrorCode,
+        bool IsTokenExpiredOrRevoked);
+
+    private static async Task<AuthErrorDetails> ParseErrorResponseAsync(
         HttpResponseMessage response,
         CancellationToken cancellationToken)
     {
@@ -270,7 +299,7 @@ public class HttpAuthAdapter : IAuthenticationPort
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
             if (string.IsNullOrWhiteSpace(content))
             {
-                return (fallbackMessage, false);
+                return new AuthErrorDetails(fallbackMessage, false, null, false);
             }
 
             using var doc = JsonDocument.Parse(content);
@@ -281,22 +310,55 @@ public class HttpAuthAdapter : IAuthenticationPort
                                errorsProp.EnumerateObject().Any(p =>
                                    string.Equals(p.Name, "role", StringComparison.OrdinalIgnoreCase));
 
+            string? errorCode = null;
+            if (root.TryGetProperty("error", out var errorProp) && errorProp.ValueKind == JsonValueKind.String)
+            {
+                errorCode = errorProp.GetString();
+            }
+            else if (root.TryGetProperty("code", out var codeProp) && codeProp.ValueKind == JsonValueKind.String)
+            {
+                errorCode = codeProp.GetString();
+            }
+            else if (root.TryGetProperty("errorCode", out var errCodeProp) && errCodeProp.ValueKind == JsonValueKind.String)
+            {
+                errorCode = errCodeProp.GetString();
+            }
+
+            string? detail = null;
             if (root.TryGetProperty("detail", out var detailProp) && !string.IsNullOrWhiteSpace(detailProp.GetString()))
             {
-                return (detailProp.GetString()!, hasRoleError);
+                detail = detailProp.GetString();
             }
 
+            string? title = null;
             if (root.TryGetProperty("title", out var titleProp) && !string.IsNullOrWhiteSpace(titleProp.GetString()))
             {
-                return (titleProp.GetString()!, hasRoleError);
+                title = titleProp.GetString();
             }
 
+            string? message = null;
             if (root.TryGetProperty("message", out var messageProp) && !string.IsNullOrWhiteSpace(messageProp.GetString()))
             {
-                return (messageProp.GetString()!, hasRoleError);
+                message = messageProp.GetString();
             }
 
-            return (content, hasRoleError);
+            string? errorDescription = null;
+            if (root.TryGetProperty("error_description", out var descProp) && !string.IsNullOrWhiteSpace(descProp.GetString()))
+            {
+                errorDescription = descProp.GetString();
+            }
+
+            var chosenMessage = detail ?? title ?? message ?? errorDescription ?? content;
+
+            var isTokenExpiredOrRevoked = DetermineIfTokenExpiredOrRevoked(
+                errorCode,
+                title,
+                detail,
+                message,
+                errorDescription,
+                content);
+
+            return new AuthErrorDetails(chosenMessage, hasRoleError, errorCode, isTokenExpiredOrRevoked);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -304,8 +366,29 @@ public class HttpAuthAdapter : IAuthenticationPort
         }
         catch
         {
-            return (fallbackMessage, false);
+            return new AuthErrorDetails(fallbackMessage, false, null, false);
         }
+    }
+
+    private static bool DetermineIfTokenExpiredOrRevoked(params string?[] candidates)
+    {
+        foreach (var text in candidates)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                continue;
+            }
+
+            foreach (var keyword in TokenErrorKeywords)
+            {
+                if (text.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private sealed class BackendAuthSessionDto
