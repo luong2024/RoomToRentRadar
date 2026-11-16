@@ -1,3 +1,4 @@
+using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Ports.Contracts.Responses.Campuses;
 using RoomToRentRadar.Ports.Inbound.UseCases.Campuses;
 using RoomToRentRadar.Ports.Outbound.Repositories;
@@ -5,7 +6,7 @@ using RoomToRentRadar.Ports.Outbound.Repositories;
 namespace RoomToRentRadar.Application.UseCases.Campuses;
 
 /// <summary>
-/// Phase 0 stub for listing campuses (BR-CMP-01).
+/// Lists campuses ordered with the default campus first, then by name ascending (BR-CMP-01).
 /// </summary>
 public sealed class ListCampusesUseCase : IListCampusesUseCase
 {
@@ -17,8 +18,26 @@ public sealed class ListCampusesUseCase : IListCampusesUseCase
         _campusRepository = campusRepository;
     }
 
-    public Task<IReadOnlyList<CampusDto>> ExecuteAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<CampusDto>> ExecuteAsync(CancellationToken ct = default)
     {
-        throw new NotImplementedException();
+        var campuses = await _campusRepository.GetAllAsync(ct);
+        if (campuses.Count == 0)
+        {
+            return Array.Empty<CampusDto>();
+        }
+
+        return campuses
+            .OrderByDescending(c => c.IsDefault)
+            .ThenBy(c => c.Name)
+            .Select(MapToDto)
+            .ToList();
     }
+
+    private static CampusDto MapToDto(Campus campus) => new(
+        Id: campus.Id,
+        Name: campus.Name,
+        ShortName: campus.ShortName,
+        Latitude: campus.Latitude,
+        Longitude: campus.Longitude,
+        IsDefault: campus.IsDefault);
 }
