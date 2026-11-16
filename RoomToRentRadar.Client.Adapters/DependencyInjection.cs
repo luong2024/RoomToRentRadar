@@ -5,7 +5,7 @@ using RoomToRentRadar.Client.Adapters.Session;
 
 namespace RoomToRentRadar.Client.Adapters;
 
-public static class DependencyInjection
+public static partial class DependencyInjection
 {
     /// <summary>
     /// Registers the shared client API foundation (ADR-003): <see cref="ApiOptions"/>, session events,
@@ -47,6 +47,7 @@ public static class DependencyInjection
         }).AddHttpMessageHandler<NetworkErrorHandler>();
 
         AddApiHttpClient<IAuthGateway, HttpAuthGateway>(services, options);
+        AddFeatureGateways(services, options);
 
         return services;
     }
