@@ -3,6 +3,9 @@ using RoomToRentRadar.Features.Authentication.ViewModels;
 using RoomToRentRadar.Features.Authentication.Views;
 using RoomToRentRadar.Features.Home.ViewModels;
 using RoomToRentRadar.Features.Home.Views;
+using RoomToRentRadar.Features.RoomDetails.Services;
+using RoomToRentRadar.Features.RoomDetails.ViewModels;
+using RoomToRentRadar.Features.RoomDetails.Views;
 using RoomToRentRadar.Features.RoomListings.Services;
 using RoomToRentRadar.Features.RoomListings.ViewModels;
 using RoomToRentRadar.Features.RoomListings.Views;
@@ -18,7 +21,6 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddMobileInfrastructure(this IServiceCollection services)
     {
         services.AddSingleton<IErrorHandler, ModalErrorHandler>();
-
         // Secure storage abstraction for token persistence
         services.AddSingleton<ISecureStorage>(SecureStorage.Default);
         services.AddSingleton<ISecureStorageService, MauiSecureStorageService>();
@@ -50,23 +52,25 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddSingleton<IGoogleAuthAdapter, GoogleAuthAdapter>();
+        services.AddSingleton<IRoomDetailService, RoomDetailService>();
         return services;
     }
 
     public static IServiceCollection AddMobileFeatures(this IServiceCollection services)
     {
+        services.AddTransient<AppShell>();
         services.AddTransient<HomeViewModel>();
         services.AddTransient<HomePage>();
-
         services.AddTransient<AuthViewModel>();
         services.AddTransient<AuthPage>();
-
         services.AddTransient<IRoomListingsService, RoomListingsService>();
         services.AddTransient<RoomListingsViewModel>();
         services.AddTransient<RoomListingsPage>();
         services.AddTransient<RoomDetailsViewModel>();
         services.AddTransient<RoomDetailsPage>();
 
+        services.AddTransient<RoomDetailViewModel>();
+        services.AddTransient<RoomDetailPage>();
         return services;
     }
 }

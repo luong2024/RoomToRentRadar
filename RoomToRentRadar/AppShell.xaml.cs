@@ -1,6 +1,8 @@
 using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
 using RoomToRentRadar.Core.Constants;
+using RoomToRentRadar.Features.Authentication.Views;
+using RoomToRentRadar.Features.Home.Views;
 using RoomToRentRadar.Features.RoomListings.Views;
 using Font = Microsoft.Maui.Font;
 
@@ -8,10 +10,13 @@ namespace RoomToRentRadar
 {
     public partial class AppShell : Shell
     {
-        public AppShell()
+        public AppShell(HomePage homePage, RoomListingsPage roomListingsPage, AuthPage authPage)
         {
             InitializeComponent();
-            Routing.RegisterRoute(AppRoutes.RoomDetails, typeof(RoomDetailsPage));
+            HomeShellContent.Content = homePage;
+            RoomListingsShellContent.Content = roomListingsPage;
+            AuthShellContent.Content = authPage;
+            Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(Features.RoomDetails.Views.RoomDetailPage));
         }
 
         public void UpdateDesktopPaneCompactState(bool isCompact)

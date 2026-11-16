@@ -191,20 +191,56 @@
     </Shell.ItemTemplate>
 
     <ShellContent
+        x:Name="HomeShellContent"
         Title="Trang chủ"
-        ContentTemplate="{DataTemplate homeViews:HomePage}"
         Icon="{StaticResource IconNavHome}"
         Route="home"
         SemanticProperties.Description="Trang chủ"
         SemanticProperties.Hint="Đi tới trang chủ" />
 
     <ShellContent
-        Title="Danh sách phòng"
-        ContentTemplate="{DataTemplate roomViews:RoomListingsPage}"
+        x:Name="RoomListingsShellContent"
+        Title="Room Listings"
         Icon="{StaticResource IconNavRooms}"
         Route="rooms"
-        SemanticProperties.Description="Danh sách phòng trọ"
-        SemanticProperties.Hint="Đi tới danh sách phòng trọ quanh ICTU" />
+        SemanticProperties.Description="Room listings"
+        SemanticProperties.Hint="Go to room listings near ICTU" />
+
+    <FlyoutItem Title="Sign In / Register" Route="auth" Icon="{StaticResource IconProjects}">
+        <ShellContent
+            x:Name="AuthShellContent"
+            Title="Authentication"
+            Route="login"
+            SemanticProperties.Description="Sign In and Sign Up"
+            SemanticProperties.Hint="Navigate to authentication" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Sign In / Register" Route="auth" Icon="{StaticResource IconProjects}">
+        <ShellContent
+            Title="Authentication"
+            ContentTemplate="{DataTemplate authViews:AuthPage}"
+            Route="login"
+            SemanticProperties.Description="Sign In and Sign Up"
+            SemanticProperties.Hint="Navigate to authentication" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Sign In / Register" Route="auth" Icon="{StaticResource IconProjects}">
+        <ShellContent
+            Title="Authentication"
+            ContentTemplate="{DataTemplate authViews:AuthPage}"
+            Route="login"
+            SemanticProperties.Description="Sign In and Sign Up"
+            SemanticProperties.Hint="Navigate to authentication" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Sign In / Register" Route="auth" Icon="{StaticResource IconProjects}">
+        <ShellContent
+            Title="Authentication"
+            ContentTemplate="{DataTemplate authViews:AuthPage}"
+            Route="login"
+            SemanticProperties.Description="Sign In and Sign Up"
+            SemanticProperties.Hint="Navigate to authentication" />
+    </FlyoutItem>
 
     <FlyoutItem Title="Sign In / Register" Route="auth" Icon="{StaticResource IconProjects}">
         <ShellContent
