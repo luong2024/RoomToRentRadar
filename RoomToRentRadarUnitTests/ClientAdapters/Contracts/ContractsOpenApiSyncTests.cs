@@ -1,12 +1,13 @@
 using System.Reflection;
 using System.Text.RegularExpressions;
+using RoomToRentRadar.Ports.Contracts.Responses.Notifications;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadarUnitTests.ClientAdapters.Support;
 
 namespace RoomToRentRadarUnitTests.ClientAdapters.Contracts;
 
 /// <summary>
-/// T00.14 Phase 2: every public contract record in <c>Ports.Contracts.Requests</c>/<c>Responses</c> that has a
+/// T00.14 contract phases: every public contract record in <c>Ports.Contracts.Requests</c>/<c>Responses</c> that has a
 /// same-named schema in <c>docs/api/openapi.yaml</c> must expose exactly that schema's properties as positional
 /// constructor parameters (camelCase). Computed properties are ignored because they are not constructor parameters.
 /// </summary>
@@ -60,6 +61,29 @@ public class ContractsOpenApiSyncTests
 
         Assert.That(actual, Is.EquivalentTo(expected),
             $"Record '{recordType.Name}' constructor parameters (camelCase) must equal the properties of schema '{recordType.Name}' in docs/api/openapi.yaml.");
+    }
+
+    [Test]
+    public void PagedNotifications_ConstructorParameters_MatchOpenApiSchema()
+    {
+        // Paged* records are excluded from the generic scan because they merge PageMeta and expose computed
+        // paging members. PagedNotifications adds unreadCount, so its constructor is checked explicitly against
+        // PageMeta plus the inline properties (the generic allOf merge would also pick up the nested item $ref).
+        var block = SchemaBlock("PagedNotifications");
+        var inline = Regex.Matches(block, @"^            (?<name>[A-Za-z_][A-Za-z0-9_]*):", RegexOptions.Multiline)
+            .Select(m => m.Groups["name"].Value);
+        var expected = SchemaProperties("PageMeta")
+            .Concat(inline)
+            .Where(name => name is not ("totalPages" or "hasPreviousPage" or "hasNextPage"))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        var constructor = typeof(PagedNotifications).GetConstructors()
+            .OrderByDescending(c => c.GetParameters().Length)
+            .First();
+        var actual = constructor.GetParameters().Select(p => ToCamelCase(p.Name!)).ToArray();
+
+        Assert.That(actual, Is.EquivalentTo(expected),
+            "PagedNotifications constructor parameters (camelCase) must equal the PagedNotifications schema properties minus computed paging members.");
     }
 
     private static bool IsExcluded(string name) =>

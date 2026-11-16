@@ -1,14 +1,19 @@
 using System.Text.Json;
 using RoomToRentRadar.Client.Adapters.Http;
 using RoomToRentRadar.Domain.Enums;
+using RoomToRentRadar.Ports.Contracts.Requests.Notifications;
+using RoomToRentRadar.Ports.Contracts.Requests.Profile;
 using RoomToRentRadar.Ports.Contracts.Requests.Rooms;
 using RoomToRentRadar.Ports.Contracts.Responses.Campuses;
+using RoomToRentRadar.Ports.Contracts.Responses.Chat;
+using RoomToRentRadar.Ports.Contracts.Responses.Notifications;
 using RoomToRentRadar.Ports.Contracts.Responses.Photos;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
+using RoomToRentRadar.Ports.Contracts.Responses.SavedSearches;
 
 namespace RoomToRentRadarUnitTests.ClientAdapters.Contracts;
 
-/// <summary>T00.14 Phase 2: room/campus/photo DTOs round-trip through the shared API JSON options (camelCase, enum strings, DateOnly).</summary>
+/// <summary>T00.14 Phases 2-3: contract DTOs round-trip through the shared API JSON options (camelCase, enum strings, DateOnly).</summary>
 [TestFixture]
 public class ContractsJsonTests
 {
@@ -222,6 +227,213 @@ public class ContractsJsonTests
             var names = root.EnumerateObject().Select(p => p.Name).ToArray();
             Assert.That(names.Intersect(serverControlled, StringComparer.OrdinalIgnoreCase).ToArray(), Is.Empty,
                 "AreaSearchRequest must not carry server-controlled fields (GUARDRAILS 1.5.1).");
+        });
+    }
+
+    [Test]
+    public void PagedNotifications_Deserializes_UnreadCount_AndItems()
+    {
+        const string json = """
+        {
+          "items": [
+            { "id": "n1", "type": "NewMessage", "title": "New message", "body": "You have a new message", "targetType": "Conversation", "targetId": "c1", "isRead": false, "createdAtUtc": "2026-01-02T03:04:05Z" },
+            { "id": "n2", "type": "ListingApproved", "title": "Listing approved", "body": "Your listing is live", "targetType": null, "targetId": null, "isRead": true, "createdAtUtc": "2026-01-01T00:00:00Z" }
+          ],
+          "totalCount": 2,
+          "pageNumber": 1,
+          "pageSize": 20,
+          "unreadCount": 1
+        }
+        """;
+
+        var page = JsonSerializer.Deserialize<PagedNotifications>(json, ApiResponseReader.JsonOptions);
+
+        Assert.That(page, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(page!.UnreadCount, Is.EqualTo(1));
+            Assert.That(page.Items.Count, Is.EqualTo(2));
+            Assert.That(page.Items[0].Type, Is.EqualTo(NotificationType.NewMessage));
+            Assert.That(page.Items[0].TargetType, Is.EqualTo(NotificationTargetType.Conversation));
+            Assert.That(page.Items[0].TargetId, Is.EqualTo("c1"));
+            Assert.That(page.Items[0].IsRead, Is.False);
+            Assert.That(page.Items[1].Type, Is.EqualTo(NotificationType.ListingApproved));
+            Assert.That(page.Items[1].TargetType, Is.Null);
+            Assert.That(page.Items[1].TargetId, Is.Null);
+            Assert.That(page.Items[1].IsRead, Is.True);
+            Assert.That(page.TotalCount, Is.EqualTo(2));
+            Assert.That(page.PageNumber, Is.EqualTo(1));
+            Assert.That(page.PageSize, Is.EqualTo(20));
+            Assert.That(page.TotalPages, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void MessagePage_NextBeforeNull()
+    {
+        const string lastPageJson = """
+        {
+          "items": [
+            { "id": "m1", "conversationId": "c1", "senderId": "u1", "clientMessageId": "11111111-1111-1111-1111-111111111111", "body": "Is the room still available?", "sentAtUtc": "2026-01-02T03:04:05Z" }
+          ],
+          "nextBefore": null
+        }
+        """;
+        const string olderPageJson = """
+        { "items": [], "nextBefore": "2026-01-01T00:00:00Z" }
+        """;
+
+        var lastPage = JsonSerializer.Deserialize<MessagePage>(lastPageJson, ApiResponseReader.JsonOptions);
+        var olderPage = JsonSerializer.Deserialize<MessagePage>(olderPageJson, ApiResponseReader.JsonOptions);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(lastPage!.NextBefore, Is.Null, "null cursor means there are no older messages.");
+            Assert.That(lastPage.Items.Count, Is.EqualTo(1));
+            Assert.That(lastPage.Items[0].ConversationId, Is.EqualTo("c1"));
+            Assert.That(lastPage.Items[0].ClientMessageId, Is.EqualTo("11111111-1111-1111-1111-111111111111"));
+            Assert.That(lastPage.Items[0].Body, Is.EqualTo("Is the room still available?"));
+            Assert.That(lastPage.Items[0].SentAtUtc, Is.EqualTo(new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc)));
+            Assert.That(olderPage!.NextBefore, Is.EqualTo("2026-01-01T00:00:00Z"));
+            Assert.That(olderPage.Items, Is.Empty);
+        });
+    }
+
+    [Test]
+    public void ConversationDto_Deserializes_RoomAndOtherParty()
+    {
+        const string json = """
+        {
+          "id": "c1",
+          "room": { "id": "seed-z115", "title": "Student room Z115", "coverThumbUrl": null, "monthlyRentVnd": 1500000, "status": "Available" },
+          "otherParty": { "id": "u2", "displayName": "Landlord A", "role": "Landlord" },
+          "lastMessagePreview": "Is the room still available?",
+          "lastMessageAtUtc": "2026-01-02T03:04:05Z",
+          "unreadCount": 2,
+          "canSend": true,
+          "createdAtUtc": "2026-01-01T00:00:00Z"
+        }
+        """;
+        const string closedJson = """
+        {
+          "id": "c2",
+          "room": { "id": "seed-ktx-32", "title": "Private dorm 3/2", "coverThumbUrl": "https://cdn.example/t.jpg", "monthlyRentVnd": 900000, "status": "Rented" },
+          "otherParty": { "id": "u3", "displayName": "Student B", "role": "Student" },
+          "lastMessagePreview": null,
+          "lastMessageAtUtc": null,
+          "unreadCount": 0,
+          "canSend": false,
+          "createdAtUtc": "2025-12-01T00:00:00Z"
+        }
+        """;
+
+        var conversation = JsonSerializer.Deserialize<ConversationDto>(json, ApiResponseReader.JsonOptions);
+        var closed = JsonSerializer.Deserialize<ConversationDto>(closedJson, ApiResponseReader.JsonOptions);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(conversation!.Room.Id, Is.EqualTo("seed-z115"));
+            Assert.That(conversation.Room.Title, Is.EqualTo("Student room Z115"));
+            Assert.That(conversation.Room.CoverThumbUrl, Is.Null);
+            Assert.That(conversation.Room.MonthlyRentVnd, Is.EqualTo(1500000L));
+            Assert.That(conversation.Room.Status, Is.EqualTo(ListingStatus.Available));
+            Assert.That(conversation.OtherParty.Id, Is.EqualTo("u2"));
+            Assert.That(conversation.OtherParty.DisplayName, Is.EqualTo("Landlord A"));
+            Assert.That(conversation.OtherParty.Role, Is.EqualTo(UserRole.Landlord));
+            Assert.That(conversation.LastMessagePreview, Is.EqualTo("Is the room still available?"));
+            Assert.That(conversation.LastMessageAtUtc, Is.EqualTo(new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc)));
+            Assert.That(conversation.UnreadCount, Is.EqualTo(2));
+            Assert.That(conversation.CanSend, Is.True);
+            Assert.That(closed!.Room.Status, Is.EqualTo(ListingStatus.Rented));
+            Assert.That(closed.OtherParty.Role, Is.EqualTo(UserRole.Student));
+            Assert.That(closed.LastMessagePreview, Is.Null);
+            Assert.That(closed.LastMessageAtUtc, Is.Null);
+            Assert.That(closed.CanSend, Is.False, "canSend is false 30 days after the listing became unavailable (BR-CHT-07).");
+        });
+    }
+
+    [Test]
+    public void SavedSearchDto_Deserializes_AlertStateString()
+    {
+        const string json = """
+        {
+          "id": "ss1",
+          "name": "Near ICTU under 2 million",
+          "criteria": { "campusId": "ICTU", "maxRentVnd": 2000000, "roomTypes": ["BoardingRoom"], "maxDistanceKm": 2.0, "sort": "distance" },
+          "alertState": "Active",
+          "createdAtUtc": "2026-01-01T00:00:00Z",
+          "updatedAtUtc": "2026-01-02T00:00:00Z"
+        }
+        """;
+
+        var dto = JsonSerializer.Deserialize<SavedSearchDto>(json, ApiResponseReader.JsonOptions);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(dto!.AlertState, Is.EqualTo(AlertState.Active));
+            Assert.That(dto.Id, Is.EqualTo("ss1"));
+            Assert.That(dto.Name, Is.EqualTo("Near ICTU under 2 million"));
+            Assert.That(dto.Criteria.CampusId, Is.EqualTo("ICTU"));
+            Assert.That(dto.Criteria.MaxRentVnd, Is.EqualTo(2000000L));
+            Assert.That(dto.Criteria.MinRentVnd, Is.Null);
+            Assert.That(dto.Criteria.RoomTypes, Is.EqualTo(new[] { RoomType.BoardingRoom }));
+            Assert.That(dto.Criteria.MaxDistanceKm, Is.EqualTo(2.0));
+            Assert.That(dto.Criteria.Sort, Is.EqualTo("distance"));
+            Assert.That(dto.CreatedAtUtc, Is.EqualTo(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
+            Assert.That(dto.UpdatedAtUtc, Is.EqualTo(new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc)));
+        });
+    }
+
+    [Test]
+    public void UpdateMyProfileRequest_Serializes_NoRoleOrStatusFields()
+    {
+        var request = new UpdateMyProfileRequest(
+            FullName: "Nguyen Van A",
+            PhoneNumber: "0912345678",
+            SelectedCampusId: "ICTU",
+            PreferredLanguage: "vi");
+
+        var json = JsonSerializer.Serialize(request, ApiResponseReader.JsonOptions);
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+        var serverControlled = new[] { "id", "email", "role", "status", "isVerified", "authProvider", "landlordId", "createdAtUtc", "updatedAtUtc", "version" };
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(root.TryGetProperty("fullName", out var fullName), Is.True);
+            Assert.That(fullName.GetString(), Is.EqualTo("Nguyen Van A"));
+            Assert.That(root.TryGetProperty("phoneNumber", out var phone), Is.True);
+            Assert.That(phone.GetString(), Is.EqualTo("0912345678"));
+            Assert.That(root.TryGetProperty("selectedCampusId", out var campusId), Is.True);
+            Assert.That(campusId.GetString(), Is.EqualTo("ICTU"));
+            Assert.That(root.TryGetProperty("preferredLanguage", out var language), Is.True);
+            Assert.That(language.GetString(), Is.EqualTo("vi"));
+            Assert.That(root.TryGetProperty("FullName", out _), Is.False, "Properties must serialize camelCase, not PascalCase.");
+
+            var names = root.EnumerateObject().Select(p => p.Name).ToArray();
+            Assert.That(names.Intersect(serverControlled, StringComparer.OrdinalIgnoreCase).ToArray(), Is.Empty,
+                "UpdateMyProfileRequest must not carry server-controlled fields (GUARDRAILS 1.5.1).");
+        });
+    }
+
+    [Test]
+    public void RegisterDeviceRequest_Serializes_PlatformString()
+    {
+        var android = new RegisterDeviceRequest(PushToken: "fcm-token-1", Platform: DevicePlatform.Android);
+        var ios = new RegisterDeviceRequest(PushToken: "apns-token-1", Platform: DevicePlatform.iOS);
+
+        var androidJson = JsonSerializer.Serialize(android, ApiResponseReader.JsonOptions);
+        var iosJson = JsonSerializer.Serialize(ios, ApiResponseReader.JsonOptions);
+        using var androidDocument = JsonDocument.Parse(androidJson);
+        using var iosDocument = JsonDocument.Parse(iosJson);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(androidDocument.RootElement.TryGetProperty("pushToken", out var token), Is.True);
+            Assert.That(token.GetString(), Is.EqualTo("fcm-token-1"));
+            Assert.That(androidDocument.RootElement.TryGetProperty("platform", out var platform), Is.True);
+            Assert.That(platform.GetString(), Is.EqualTo("Android"));
+            Assert.That(iosDocument.RootElement.GetProperty("platform").GetString(), Is.EqualTo("iOS"));
         });
     }
 }
