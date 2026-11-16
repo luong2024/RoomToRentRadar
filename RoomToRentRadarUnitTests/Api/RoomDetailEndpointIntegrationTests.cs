@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using RoomToRentRadar.Domain.Aggregates;
 using RoomToRentRadar.Domain.Enums;
+using RoomToRentRadar.Domain.Services;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 
@@ -196,7 +197,7 @@ public class RoomDetailEndpointIntegrationTests
     [Test]
     public async Task GetRoomById_AnonymousUser_Returns200WithMaskedPhoneNumber()
     {
-        // Act (AC4: Guest/unauthenticated user receives null phone number)
+        // Act (AC1, AC2, AC4: Guest receives full room detail with null landlord phone and zalo)
         var response = await _client.GetAsync("/api/rooms/room-ictu-001");
 
         // Assert
@@ -207,13 +208,84 @@ public class RoomDetailEndpointIntegrationTests
 
         Assert.That(root.GetProperty("id").GetString(), Is.EqualTo("room-ictu-001"));
         Assert.That(root.GetProperty("title").GetString(), Does.Contain("cổng chính ICTU"));
-        Assert.That(root.GetProperty("monthlyRentVnd").GetDecimal(), Is.EqualTo(1800000m));
+        Assert.That(root.GetProperty("monthlyRentVnd").GetInt64(), Is.EqualTo(1800000L));
+        Assert.That(root.GetProperty("depositVnd").GetInt64(), Is.EqualTo(1000000L));
+        Assert.That(root.GetProperty("areaM2").GetDouble(), Is.EqualTo(22.0));
+        Assert.That(root.GetProperty("roomType").GetString(), Is.EqualTo("BoardingRoom"));
         Assert.That(root.GetProperty("status").GetString(), Is.EqualTo("Available"));
+        Assert.That(root.GetProperty("isVerified").GetBoolean(), Is.True);
+        Assert.That(root.GetProperty("distanceKm").GetDouble(), Is.GreaterThan(0.0));
+
+        // Address & Location
+        var address = root.GetProperty("address");
+        Assert.That(address.GetProperty("addressLine").GetString(), Does.Contain("Số 12 Đường Z115"));
+        Assert.That(address.GetProperty("ward").GetString(), Is.EqualTo("Tân Thịnh"));
+        Assert.That(address.GetProperty("district").GetString(), Is.EqualTo("TP. Thái Nguyên"));
+
+        var location = root.GetProperty("location");
+        Assert.That(location.GetProperty("latitude").GetDouble(), Is.EqualTo(21.5875));
+        Assert.That(location.GetProperty("longitude").GetDouble(), Is.EqualTo(105.8080));
+
+        // Utilities
+        var utilities = root.GetProperty("utilities");
+        Assert.That(utilities.GetProperty("estimatedMonthlyTotalVnd").GetInt64(), Is.GreaterThanOrEqualTo(1800000L));
+
+        // Amenities & Photos (Schema-compliant arrays per OpenAPI)
+        var amenities = root.GetProperty("amenities");
+        Assert.That(amenities.ValueKind, Is.EqualTo(JsonValueKind.Array));
+
+        var photos = root.GetProperty("photos");
+        Assert.That(photos.ValueKind, Is.EqualTo(JsonValueKind.Array));
 
         // AC4 & BR-AUTH-07: Guest must receive null for landlord phone and zalo
         var landlord = root.GetProperty("landlord");
+        Assert.That(landlord.GetProperty("displayName").GetString(), Is.EqualTo("Cô Lan"));
         Assert.That(landlord.GetProperty("phoneNumber").ValueKind, Is.EqualTo(JsonValueKind.Null));
         Assert.That(landlord.GetProperty("zaloUrl").ValueKind, Is.EqualTo(JsonValueKind.Null));
+        Assert.That(root.GetProperty("lastUpdatedAtUtc").GetString(), Is.Not.Null.And.Not.Empty);
+    }
+
+    [Test]
+    public async Task GetRoomById_SeededRoomZ115_ReturnsFullDetailsFromSqliteDatastore()
+    {
+        // Act 1: Anonymous request for seeded demo room in SQLite
+        var anonResponse = await _client.GetAsync("/api/rooms/seed-z115");
+        Assert.That(anonResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        var anonContent = await anonResponse.Content.ReadAsStringAsync();
+        using var anonDoc = JsonDocument.Parse(anonContent);
+        var anonRoot = anonDoc.RootElement;
+
+        // Assert AC1 & AC2: Seed room reads actual columns from SQLite (H2)
+        Assert.That(anonRoot.GetProperty("id").GetString(), Is.EqualTo("seed-z115"));
+        Assert.That(anonRoot.GetProperty("title").GetString(), Is.EqualTo("Phòng trọ Sinh viên Z115"));
+        Assert.That(anonRoot.GetProperty("monthlyRentVnd").GetInt64(), Is.EqualTo(1500000L));
+        Assert.That(anonRoot.GetProperty("depositVnd").GetInt64(), Is.EqualTo(1500000L), "Deposit must be persisted in SQLite, not 0");
+        Assert.That(anonRoot.GetProperty("areaM2").GetDouble(), Is.EqualTo(18.0));
+        Assert.That(anonRoot.GetProperty("roomType").GetString(), Is.EqualTo("BoardingRoom"));
+        Assert.That(anonRoot.GetProperty("status").GetString(), Is.EqualTo("Available"));
+        Assert.That(anonRoot.GetProperty("isVerified").GetBoolean(), Is.True);
+        Assert.That(anonRoot.GetProperty("maxOccupants").GetInt32(), Is.EqualTo(2));
+        Assert.That(anonRoot.GetProperty("furnishing").GetString(), Is.EqualTo("Basic"));
+        Assert.That(anonRoot.GetProperty("availableFrom").GetString(), Is.EqualTo("2026-11-01"));
+
+        // BR-LST-03: Rent (1.5M) + 100 kWh * 3500 (350k) + Water PerPerson (60k) + Internet (100k) + Parking (50k) = 2,060,000 VND
+        var utilities = anonRoot.GetProperty("utilities");
+        Assert.That(utilities.GetProperty("estimatedMonthlyTotalVnd").GetInt64(), Is.EqualTo(2060000L));
+
+        // Act 2: Authenticated request gets landlord contact joined from SQLite Users table
+        using var authRequest = new HttpRequestMessage(HttpMethod.Get, "/api/rooms/seed-z115");
+        authRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", GenerateJwt("student-001"));
+        var authResponse = await _client.SendAsync(authRequest);
+
+        Assert.That(authResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var authContent = await authResponse.Content.ReadAsStringAsync();
+        using var authDoc = JsonDocument.Parse(authContent);
+        var landlord = authDoc.RootElement.GetProperty("landlord");
+
+        Assert.That(landlord.GetProperty("displayName").GetString(), Is.EqualTo("Seed Landlord"));
+        Assert.That(landlord.GetProperty("phoneNumber").GetString(), Is.EqualTo("0988123456"), "Landlord phone joined from Users table");
+        Assert.That(landlord.GetProperty("zaloUrl").GetString(), Does.Contain("0988123456"));
     }
 
     [Test]
@@ -450,16 +522,29 @@ public class RoomDetailEndpointIntegrationTests
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var similar = await response.Content.ReadFromJsonAsync<List<RoomCardDto>>(JsonOptions);
 
+        const long targetRent = 1800000L;
+        const double targetLat = 21.5875;
+        const double targetLng = 105.8080;
+        var minRent = (long)Math.Round(targetRent * 0.8);
+        var maxRent = (long)Math.Round(targetRent * 1.2);
+
         Assert.Multiple(() =>
         {
-            Assert.That(similar, Is.Not.Null);
-            Assert.That(similar!.Count, Is.LessThanOrEqualTo(5));
+            Assert.That(similar, Is.Not.Null.And.Not.Empty, "Must return at least 1 similar candidate from seeded data");
+            Assert.That(similar!.Count, Is.GreaterThan(0).And.LessThanOrEqualTo(5));
 
+            double previousDistanceToTarget = -1.0;
             foreach (var card in similar)
             {
                 Assert.That(card.Id, Is.Not.EqualTo("room-ictu-001"), "Must exclude target room itself");
                 Assert.That(card.Status, Is.EqualTo(ListingStatus.Available), "Must only return Available rooms");
+                Assert.That(card.MonthlyRentVnd, Is.InRange(minRent, maxRent), "Must be within ±20% price tolerance (BR-LST-10)");
                 Assert.That(card.DistanceKm, Is.GreaterThanOrEqualTo(0.0), "Must have valid non-negative distance to campus");
+
+                var distanceToTarget = HaversineDistanceCalculator.CalculateDistanceKm(targetLat, targetLng, card.Latitude, card.Longitude);
+                Assert.That(distanceToTarget, Is.LessThanOrEqualTo(2.0), "Candidates must be within <= 2.0 km of target listing");
+                Assert.That(distanceToTarget, Is.GreaterThanOrEqualTo(previousDistanceToTarget), "Results must be ordered ascending by distance to target room");
+                previousDistanceToTarget = distanceToTarget;
             }
         });
     }
