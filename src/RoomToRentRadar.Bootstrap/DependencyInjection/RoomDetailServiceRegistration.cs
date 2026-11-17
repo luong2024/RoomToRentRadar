@@ -32,19 +32,12 @@ public static class RoomDetailServiceRegistration
             return services;
         }
 
-        // Reuse CosmosDbContext's Rooms container and CosmosClient instead of creating duplicate instances
+        // Reuse CosmosDbContext's Rooms container
         services.AddScoped<Container>(sp =>
         {
             var dbContext = sp.GetRequiredService<ICosmosDbContext>();
             return dbContext.RoomsContainer
                 ?? throw new InvalidOperationException("Cosmos DB RoomsContainer is not available.");
-        });
-
-        services.AddScoped<CosmosClient>(sp =>
-        {
-            var dbContext = sp.GetRequiredService<ICosmosDbContext>() as CosmosDbContext;
-            return dbContext?.Client
-                ?? throw new InvalidOperationException("Cosmos DB Client is not available.");
         });
 
         services.AddScoped<IRoomRepository, CosmosRoomRepository>();

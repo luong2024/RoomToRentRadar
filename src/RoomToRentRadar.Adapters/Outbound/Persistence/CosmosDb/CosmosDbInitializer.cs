@@ -459,7 +459,11 @@ public sealed class CosmosDbInitializer
 
         if (!indexingPolicy.SpatialIndexes.Any(index => index.Path.Equals("/location/*", StringComparison.Ordinal)))
         {
-            indexingPolicy.SpatialIndexes.Add(new SpatialPath { Path = "/location/*" });
+            indexingPolicy.SpatialIndexes.Add(new SpatialPath
+            {
+                Path = "/location/*",
+                SpatialTypes = { SpatialType.Point }
+            });
             modified = true;
         }
 
