@@ -171,6 +171,10 @@ jobs:
         run: |
           dotnet workload install maui-android
 
+      - name: Restore required .NET MAUI workloads
+        run: |
+          dotnet workload restore RoomToRentRadar/RoomToRentRadar.csproj
+
       - name: Restore MAUI Client test projects
         run: |
           dotnet restore RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj
