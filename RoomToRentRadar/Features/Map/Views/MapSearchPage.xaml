@@ -59,6 +59,8 @@
                 <VerticalStackLayout Grid.Column="1" Spacing="2">
                     <Button Text="Đã lưu" Command="{Binding ToggleSavedAreasCommand}" IsVisible="{Binding ShowStartDrawing}"
                             Style="{StaticResource MapSoftAction}" FontSize="11" Padding="12,4" AutomationId="OpenPolygonSavedPanel" />
+                    <Button Text="Thông báo" Command="{Binding ToggleNotificationsCommand}" IsVisible="{Binding ShowStartDrawing}"
+                            Style="{StaticResource MapSoftAction}" FontSize="11" Padding="12,4" AutomationId="OpenNotificationsPanel" />
                     <Label Text="{Binding DraftVertexCount, StringFormat='{0} điểm'}" IsVisible="{Binding IsDrawing}"
                            TextColor="{StaticResource Accent}" FontFamily="OpenSansSemibold" FontSize="12"
                            VerticalOptions="Center" AutomationId="PolygonVertexCount" />
@@ -98,6 +100,9 @@
         <Border x:Name="ResultsPanel" Style="{StaticResource MapPanel}" Padding="10" IsVisible="{Binding HasResults}" AutomationId="PolygonOrderedResults">
             <Border.Triggers>
                 <DataTrigger TargetType="Border" Binding="{Binding IsSavedPanelOpen}" Value="True">
+                    <Setter Property="IsVisible" Value="False" />
+                </DataTrigger>
+                <DataTrigger TargetType="Border" Binding="{Binding IsNotificationsPanelOpen}" Value="True">
                     <Setter Property="IsVisible" Value="False" />
                 </DataTrigger>
                 <DataTrigger TargetType="Border" Binding="{Binding ShowPreviewCard}" Value="True">
@@ -154,37 +159,93 @@
         </Border>
         </VerticalStackLayout>
 
-        <Border x:Name="SavedPanel" Style="{StaticResource MapPanel}" VerticalOptions="End" HorizontalOptions="Fill" MaximumWidthRequest="460" Margin="14,0,14,92"
-                Padding="18,14" MaximumHeightRequest="320" IsVisible="{Binding IsSavedPanelOpen}" AutomationId="PolygonSavedPanel">
-            <ScrollView VerticalScrollBarVisibility="Default">
-            <VerticalStackLayout Spacing="10">
-                <Grid ColumnDefinitions="*,Auto">
-                    <Label Text="Những vùng bạn thích" FontFamily="OpenSansSemibold" FontSize="17" VerticalOptions="Center" />
-                    <Button Grid.Column="1" Text="×" Command="{Binding ToggleSavedAreasCommand}" Style="{StaticResource MapSoftAction}"
-                            FontSize="20" Padding="0" WidthRequest="44" SemanticProperties.Description="Đóng khu vực đã lưu" />
-                </Grid>
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                    <Border Stroke="{StaticResource Line}" BackgroundColor="{StaticResource SoftSurface}" StrokeShape="RoundRectangle 16" Padding="10,0">
-                        <Entry Text="{Binding NewAreaName}" Placeholder="Đặt tên cho vùng này" MaxLength="60" AutomationId="PolygonAreaName"
-                               FontSize="13" MinimumHeightRequest="44" SemanticProperties.Description="Tên cho khu vực đã vẽ" />
+        <Grid VerticalOptions="End" HorizontalOptions="Fill" Margin="14,0,14,92">
+            <Grid HorizontalOptions="Fill" MaximumWidthRequest="460">
+            <Border x:Name="SavedPanel" Style="{StaticResource MapPanel}"
+                    Padding="18,14" MaximumHeightRequest="320" IsVisible="{Binding IsSavedPanelOpen}" AutomationId="PolygonSavedPanel">
+                <ScrollView VerticalScrollBarVisibility="Default">
+                <VerticalStackLayout Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="Những vùng bạn thích" FontFamily="OpenSansSemibold" FontSize="17" VerticalOptions="Center" />
+                        <Button Grid.Column="1" Text="×" Command="{Binding ToggleSavedAreasCommand}" Style="{StaticResource MapSoftAction}"
+                                FontSize="20" Padding="0" WidthRequest="44" SemanticProperties.Description="Đóng khu vực đã lưu" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <Border Stroke="{StaticResource Line}" BackgroundColor="{StaticResource SoftSurface}" StrokeShape="RoundRectangle 16" Padding="10,0">
+                            <Entry Text="{Binding NewAreaName}" Placeholder="Đặt tên cho vùng này" MaxLength="60" AutomationId="PolygonAreaName"
+                                   FontSize="13" MinimumHeightRequest="44" SemanticProperties.Description="Tên cho khu vực đã vẽ" />
+                        </Border>
+                        <Button Grid.Column="1" Text="Lưu" Command="{Binding SaveAreaCommand}" AutomationId="SavePolygonArea"
+                                IsEnabled="{Binding CanSaveCurrentArea}" Style="{StaticResource MapAction}" Padding="18,8" />
+                    </Grid>
+                    <Picker ItemsSource="{Binding SavedAreas}" Title="Chọn khu vực đã lưu"
+                            ItemDisplayBinding="{Binding Name, x:DataType=models:SavedAreaSearch}"
+                            SelectedItem="{Binding SelectedSavedArea}" IsVisible="{Binding HasSavedAreas}" AutomationId="SavedPolygonPicker"
+                            FontSize="12" MinimumHeightRequest="44" />
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8" IsVisible="{Binding HasSavedAreas}">
+                        <Button Text="Áp dụng" Command="{Binding ApplySavedAreaCommand}" AutomationId="RestorePolygonArea"
+                                IsEnabled="{Binding HasSelectedSavedArea}" Style="{StaticResource MapAction}" />
+                        <Button Grid.Column="1" Text="Xóa" Command="{Binding DeleteSavedAreaCommand}" AutomationId="DeletePolygonArea"
+                                IsEnabled="{Binding HasSelectedSavedArea}" Style="{StaticResource MapSoftAction}" />
+                    </Grid>
+                    <Border BackgroundColor="{StaticResource SoftSurface}" StrokeThickness="0" StrokeShape="RoundRectangle 16"
+                            Padding="12" IsVisible="{Binding HasSelectedSavedArea}">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <VerticalStackLayout Spacing="2">
+                                <Label Text="Thông báo phòng mới" FontFamily="OpenSansSemibold" FontSize="13" />
+                                <Label Text="{Binding AlertStateText}" Style="{StaticResource Caption}" FontSize="10"
+                                       MaxLines="2" AutomationId="SavedAreaAlertState" />
+                            </VerticalStackLayout>
+                            <Button Grid.Column="1" Text="{Binding AlertToggleText}" Command="{Binding ToggleSavedAreaAlertCommand}"
+                                    IsEnabled="{Binding CanToggleAlert}" Style="{StaticResource MapAction}"
+                                    FontSize="11" Padding="12,8" VerticalOptions="Center" AutomationId="ToggleSavedAreaAlert" />
+                        </Grid>
                     </Border>
-                    <Button Grid.Column="1" Text="Lưu" Command="{Binding SaveAreaCommand}" AutomationId="SavePolygonArea"
-                            IsEnabled="{Binding CanSaveCurrentArea}" Style="{StaticResource MapAction}" Padding="18,8" />
-                </Grid>
-                <Picker ItemsSource="{Binding SavedAreas}" Title="Chọn khu vực đã lưu"
-                        ItemDisplayBinding="{Binding Name, x:DataType=models:SavedAreaSearch}"
-                        SelectedItem="{Binding SelectedSavedArea}" IsVisible="{Binding HasSavedAreas}" AutomationId="SavedPolygonPicker"
-                        FontSize="12" MinimumHeightRequest="44" />
-                <Grid ColumnDefinitions="*,*" ColumnSpacing="8" IsVisible="{Binding HasSavedAreas}">
-                    <Button Text="Áp dụng" Command="{Binding ApplySavedAreaCommand}" AutomationId="RestorePolygonArea"
-                            IsEnabled="{Binding HasSelectedSavedArea}" Style="{StaticResource MapAction}" />
-                    <Button Grid.Column="1" Text="Xóa" Command="{Binding DeleteSavedAreaCommand}" AutomationId="DeletePolygonArea"
-                            IsEnabled="{Binding HasSelectedSavedArea}" Style="{StaticResource MapSoftAction}" />
-                </Grid>
-                <Label Text="Khu vực đã lưu chỉ nằm trên thiết bị này." Style="{StaticResource Caption}" FontSize="10" />
-            </VerticalStackLayout>
-            </ScrollView>
-        </Border>
+                    <Label Text="Khu vực lưu trên thiết bị này; bật thông báo để nhận phòng mới qua máy chủ."
+                           Style="{StaticResource Caption}" FontSize="10" />
+                </VerticalStackLayout>
+                </ScrollView>
+            </Border>
+            </Grid>
+        </Grid>
+
+        <Grid VerticalOptions="End" HorizontalOptions="Fill" Margin="14,0,14,92">
+            <Grid HorizontalOptions="Fill" MaximumWidthRequest="460">
+            <Border x:Name="NotificationsPanel" Style="{StaticResource MapPanel}" Padding="18,14"
+                    IsVisible="{Binding IsNotificationsPanelOpen}" AutomationId="NotificationsPanel">
+                <VerticalStackLayout Spacing="8">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="{Binding NotificationsTitle}" FontFamily="OpenSansSemibold" FontSize="17" VerticalOptions="Center" />
+                        <Button Grid.Column="1" Text="×" Command="{Binding ToggleNotificationsCommand}" Style="{StaticResource MapSoftAction}"
+                                FontSize="20" Padding="0" WidthRequest="44" SemanticProperties.Description="Đóng thông báo" />
+                    </Grid>
+                    <ActivityIndicator IsRunning="{Binding IsNotificationsBusy}" IsVisible="{Binding IsNotificationsBusy}"
+                                       WidthRequest="20" HeightRequest="20" HorizontalOptions="Center" />
+                    <CollectionView ItemsSource="{Binding Notifications}" HeightRequest="220" AutomationId="NotificationsList">
+                        <CollectionView.EmptyView>
+                            <Label Text="Chưa có thông báo nào. Bật thông báo cho một khu vực đã lưu để nhận phòng mới."
+                                   Style="{StaticResource Caption}" FontSize="11" HorizontalTextAlignment="Center"
+                                   VerticalTextAlignment="Center" Margin="0,24" />
+                        </CollectionView.EmptyView>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:MapNotificationItem">
+                                <Border Padding="12" Margin="0,0,0,6" BackgroundColor="{StaticResource SoftSurface}"
+                                        StrokeThickness="0" StrokeShape="RoundRectangle 14">
+                                    <VerticalStackLayout Spacing="3">
+                                        <Label Text="{Binding Title}" FontFamily="OpenSansSemibold" FontSize="13"
+                                               MaxLines="2" LineBreakMode="TailTruncation" />
+                                        <Label Text="{Binding Body}" Style="{StaticResource Caption}" FontSize="11"
+                                               MaxLines="3" LineBreakMode="TailTruncation" />
+                                        <Label Text="{Binding TimeText}" Style="{StaticResource Caption}" FontSize="10" />
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+            </Grid>
+        </Grid>
 
         <Border Style="{StaticResource MapPanel}" VerticalOptions="End" HorizontalOptions="Fill" Margin="14,0,14,8" Padding="8"
                 StrokeShape="RoundRectangle 28">

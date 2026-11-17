@@ -1,6 +1,7 @@
 using Microsoft.Maui.Storage;
 using RoomToRentRadar.Models;
 using RoomToRentRadar.Services;
+using RoomToRentRadar.Shared.SavedSearches;
 
 namespace RoomToRentRadarUnitTests;
 
@@ -33,6 +34,54 @@ public class SavedAreaSearchStoreTests
         Assert.That(loaded[0].Name, Is.EqualTo("Quận 10"));
         Assert.That(loaded[0].Vertices, Is.EqualTo(Vertices));
         Assert.That(loaded[0].SavedAt, Is.EqualTo(saved.SavedAt));
+    }
+
+    [Test]
+    public void ReplaceAll_ThenGetAll_RoundTripsAlertStateAndRemoteId()
+    {
+        var preferences = new FakePreferences();
+        var remoteId = Guid.NewGuid();
+        var saved = new SavedAreaSearch(
+            "area-1",
+            "Quận 10",
+            Vertices,
+            new DateTime(2026, 11, 12, 8, 30, 0, DateTimeKind.Utc))
+        {
+            RemoteId = remoteId,
+            AlertState = SavedSearchAlertState.Paused
+        };
+
+        new PreferencesSavedAreaSearchStore(preferences).ReplaceAll([saved]);
+        var loaded = new PreferencesSavedAreaSearchStore(preferences).GetAll();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(loaded, Has.Count.EqualTo(1));
+            Assert.That(loaded[0].RemoteId, Is.EqualTo(remoteId));
+            Assert.That(loaded[0].AlertState, Is.EqualTo(SavedSearchAlertState.Paused));
+            Assert.That(loaded[0].AlertStateText, Does.Contain("tạm dừng"));
+        });
+    }
+
+    [Test]
+    public void GetAll_LegacyEntryWithoutAlertFields_DefaultsToOff()
+    {
+        var preferences = new FakePreferences();
+        preferences.Set(
+            PreferencesSavedAreaSearchStore.PreferencesKey,
+            """
+            [
+              { "id": "legacy", "name": "Cũ", "vertices": [ { "lat": 10.0, "lng": 106.0 }, { "lat": 10.0, "lng": 107.0 }, { "lat": 11.0, "lng": 107.0 } ], "savedAt": "2026-11-12T08:30:00Z" }
+            ]
+            """);
+        var loaded = new PreferencesSavedAreaSearchStore(preferences).GetAll();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(loaded, Has.Count.EqualTo(1));
+            Assert.That(loaded[0].RemoteId, Is.Null);
+            Assert.That(loaded[0].AlertState, Is.EqualTo(SavedSearchAlertState.Off));
+        });
     }
 
     [Test]

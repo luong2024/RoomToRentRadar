@@ -8,7 +8,9 @@ using RoomToRentRadar.Api.Data;
 using RoomToRentRadar.Api.Data.Seed;
 using RoomToRentRadar.Api.Features.Auth;
 using RoomToRentRadar.Api.Features.Listings;
+using RoomToRentRadar.Api.Features.Notifications;
 using RoomToRentRadar.Api.Features.Photos;
+using RoomToRentRadar.Api.Features.SavedSearches;
 using RoomToRentRadar.Shared.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -87,6 +89,12 @@ builder.Services.AddSingleton<PhotoStorage>();
 builder.Services.AddSingleton<PhotoProcessor>();
 builder.Services.AddScoped<ListingPhotosService>();
 builder.Services.AddScoped<AreaSearchQueryService>();
+builder.Services.Configure<AlertsOptions>(
+    builder.Configuration.GetSection(AlertsOptions.SectionName));
+builder.Services.AddScoped<SavedSearchService>();
+builder.Services.AddScoped<SavedSearchAlertEvaluator>();
+builder.Services.AddScoped<NotificationsService>();
+builder.Services.AddHostedService<SavedSearchAlertWorker>();
 
 var app = builder.Build();
 

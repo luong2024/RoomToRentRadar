@@ -11,6 +11,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<ListingRule> ListingRules => Set<ListingRule>();
     public DbSet<User> Users => Set<User>();
     public DbSet<AuthSession> AuthSessions => Set<AuthSession>();
+    public DbSet<SavedSearch> SavedSearches => Set<SavedSearch>();
+    public DbSet<SavedSearchAlertLog> SavedSearchAlertLogs => Set<SavedSearchAlertLog>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
