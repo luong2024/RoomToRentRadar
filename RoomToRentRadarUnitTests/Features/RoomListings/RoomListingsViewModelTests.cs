@@ -39,7 +39,7 @@ public class RoomListingsViewModelTests
             Assert.That(vm.TotalCount, Is.EqualTo(5));
             Assert.That(vm.HasMoreItems, Is.True);
             Assert.That(vm.IsLoading, Is.False);
-            Assert.That(vm.ResultSummaryText, Is.EqualTo("Found 5 rooms near ICTU"));
+            Assert.That(vm.ResultSummaryText, Is.EqualTo("Tìm thấy 5 phòng quanh ICTU"));
         });
     }
 
@@ -228,7 +228,7 @@ public class RoomListingsViewModelTests
         await vm.OpenRoomDetailsCommand.ExecuteAsync(room);
 
         // Assert
-        Assert.That(_navigatedRoutes, Is.EqualTo(new[] { "room-detail?id=room-ictu-001" }));
+        Assert.That(_navigatedRoutes, Is.EqualTo(new[] { "rooms/details?id=room-ictu-001" }));
     }
 
     [Test]
@@ -250,7 +250,7 @@ public class RoomListingsViewModelTests
             Assert.That(vm.Rooms, Has.Count.EqualTo(2));
             Assert.That(vm.TotalCount, Is.EqualTo(9));
             Assert.That(vm.HasMoreItems, Is.True);
-            Assert.That(vm.ResultSummaryText, Is.EqualTo("Found 9 rooms for \"điều hòa\""));
+            Assert.That(vm.ResultSummaryText, Is.EqualTo("Tìm thấy 9 phòng cho \"điều hòa\""));
         });
     }
 

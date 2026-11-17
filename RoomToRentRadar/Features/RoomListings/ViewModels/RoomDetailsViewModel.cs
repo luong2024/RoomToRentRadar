@@ -33,7 +33,7 @@ public partial class RoomDetailsViewModel : ObservableObject
     }
 
     [ObservableProperty]
-    public partial string Title { get; set; } = "Room details";
+    public partial string Title { get; set; } = "Chi tiết phòng trọ";
 
     [ObservableProperty]
     public partial string RoomId { get; set; } = string.Empty;
@@ -82,7 +82,7 @@ public partial class RoomDetailsViewModel : ObservableObject
         {
             Room = null;
             IsNotFound = true;
-            StatusMessage = "A valid room ID was not provided.";
+            StatusMessage = "Không tìm thấy mã phòng trọ hợp lệ.";
             return;
         }
 
@@ -109,7 +109,7 @@ public partial class RoomDetailsViewModel : ObservableObject
             Room = room;
             IsNotFound = room is null;
             StatusMessage = room is null
-                ? "This room could not be found."
+                ? "Không tìm thấy thông tin phòng trọ này."
                 : string.Empty;
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -120,7 +120,7 @@ public partial class RoomDetailsViewModel : ObservableObject
         {
             Room = null;
             IsNotFound = true;
-            StatusMessage = "Unable to load room details. Please try again.";
+            StatusMessage = "Không thể tải chi tiết phòng trọ. Vui lòng thử lại.";
             _errorHandler.HandleError(ex);
         }
         finally

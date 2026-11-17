@@ -37,7 +37,7 @@
                         <Label
                             FontAttributes="Bold"
                             FontSize="13.5"
-                            Text="Back to listings"
+                            Text="Quay lại danh sách"
                             TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
                             VerticalOptions="Center" />
                     </HorizontalStackLayout>
@@ -136,7 +136,7 @@
                         <Label
                             FontAttributes="Bold"
                             FontSize="14"
-                            Text="Key amenities"
+                            Text="Tiện nghi nổi bật"
                             TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
 
                         <Label
