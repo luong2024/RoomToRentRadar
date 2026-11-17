@@ -1,23 +1,21 @@
 namespace RoomToRentRadar.Domain.Enums;
 
-/// <summary>
-/// Amenity catalog per docs/erd.md §4.5 and docs/api/openapi.yaml schema Amenity.
-/// </summary>
+/// <summary>Amenities a room can offer, matching <c>Amenity</c> in <c>docs/api/openapi.yaml</c>.</summary>
 public enum Amenity
 {
-    AirConditioner = 0,
-    WaterHeater = 1,
-    PrivateBathroom = 2,
-    Wifi = 3,
-    Kitchen = 4,
-    WashingMachine = 5,
-    Fridge = 6,
-    Bed = 7,
-    Wardrobe = 8,
-    Desk = 9,
-    Balcony = 10,
-    Window = 11,
-    MotorbikeParking = 12,
-    Elevator = 13,
-    DryingArea = 14
+    AirConditioner = 1,
+    WaterHeater = 2,
+    PrivateBathroom = 3,
+    Wifi = 4,
+    Kitchen = 5,
+    WashingMachine = 6,
+    Fridge = 7,
+    Bed = 8,
+    Wardrobe = 9,
+    Desk = 10,
+    Balcony = 11,
+    Window = 12,
+    MotorbikeParking = 13,
+    Elevator = 14,
+    DryingArea = 15
 }

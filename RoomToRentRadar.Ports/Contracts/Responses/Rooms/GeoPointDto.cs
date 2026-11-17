@@ -1,8 +1,6 @@
 namespace RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 
-/// <summary>
-/// Geographic coordinates DTO per docs/api/openapi.yaml schema GeoPointDto.
-/// </summary>
+/// <summary>Matches <c>GeoPointDto</c> in <c>docs/api/openapi.yaml</c> 1:1.</summary>
 public sealed record GeoPointDto(
     double Latitude,
     double Longitude

@@ -1,11 +1,9 @@
-using RoomToRentRadar.Domain.Enums;
-
 namespace RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 
-/// <summary>
-/// Authoritative full room detail response DTO per docs/api/openapi.yaml schema RoomDetailDto.
-/// Conforms to US02, US03, US11, and BR-AUTH-07 phone gating.
-/// </summary>
+using RoomToRentRadar.Domain.Enums;
+using RoomToRentRadar.Ports.Contracts.Responses.Photos;
+
+/// <summary>Matches <c>RoomDetailDto</c> in <c>docs/api/openapi.yaml</c> 1:1.</summary>
 public sealed record RoomDetailDto(
     string Id,
     string Title,
@@ -16,19 +14,19 @@ public sealed record RoomDetailDto(
     long MonthlyRentVnd,
     long DepositVnd,
     double AreaM2,
+    int? MaxOccupants,
+    Furnishing Furnishing,
+    DateOnly? AvailableFrom,
     AddressDto Address,
     GeoPointDto Location,
     double DistanceKm,
     UtilitiesView Utilities,
     IReadOnlyList<Amenity> Amenities,
     SafetyDto Safety,
+    HouseRulesDto? HouseRules,
     IReadOnlyList<PhotoDto> Photos,
     LandlordContactDto Landlord,
-    DateTime LastUpdatedAtUtc,
-    HouseRulesDto? HouseRules = null,
-    int? MaxOccupants = null,
-    string? Furnishing = null,
-    string? AvailableFrom = null,
-    bool IsFavourite = false,
-    DateTime? PublishedAtUtc = null
+    bool IsFavourite,
+    DateTime? PublishedAtUtc,
+    DateTime LastUpdatedAtUtc
 );

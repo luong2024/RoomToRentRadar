@@ -1,11 +1,12 @@
 using Microsoft.Extensions.DependencyInjection;
 using RoomToRentRadar.Client.Adapters.Abstractions;
 using RoomToRentRadar.Client.Adapters.Http;
+using RoomToRentRadar.Client.Adapters.Mocks;
 using RoomToRentRadar.Client.Adapters.Session;
 
 namespace RoomToRentRadar.Client.Adapters;
 
-public static class DependencyInjection
+public static partial class DependencyInjection
 {
     /// <summary>
     /// Registers the shared client API foundation (ADR-003): <see cref="ApiOptions"/>, session events,
@@ -20,17 +21,22 @@ public static class DependencyInjection
     ///    Use absolute "/api/..." paths, write JSON with <see cref="ApiResponseReader.JsonOptions"/> and read responses
     ///    with ApiResponseReader.ReadAsync / EnsureSuccessAsync. Do not attach Authorization, handle 401 or catch
     ///    HttpRequestException yourself — the handlers already do it (network errors arrive as ApiException.IsNetworkError).
-    /// 3. Add one line in this method: AddApiHttpClient&lt;IFeatureGateway, HttpFeatureGateway&gt;(services, options);
-    /// 4. Optional mock: if (options.UseMocks) services.AddSingleton&lt;IFeatureGateway, MockFeatureGateway&gt;();
-    ///    else AddApiHttpClient&lt;IFeatureGateway, HttpFeatureGateway&gt;(services, options);
+    /// 3. Add one line in DependencyInjection.Gateways.cs (AddFeatureGateways):
+    ///    AddApiHttpClient&lt;IFeatureGateway, HttpFeatureGateway&gt;(services, options);
+    /// 4. Optional mock: AddGateway&lt;IFeatureGateway, HttpFeatureGateway, MockFeatureGateway&gt;(services, options);
+    ///    mocks are Debug-only — MockGuard rejects UseMocks in Release builds.
     /// 5. Test with services.ConfigureHttpClientDefaults(b => b.ConfigurePrimaryHttpMessageHandler(() => stub))
     ///    plus InMemorySessionStore — no real network needed.
     /// </remarks>
     public static IServiceCollection AddClientAdapters(this IServiceCollection services, ApiOptions options)
+        => AddClientAdapters(services, options, ClientBuildInfo.IsDebugBuild);
+
+    internal static IServiceCollection AddClientAdapters(this IServiceCollection services, ApiOptions options, bool isDebugBuild)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(options);
         options.Validate();
+        MockGuard.EnsureAllowed(options.UseMocks, isDebugBuild);
 
         services.AddSingleton(options);
         services.AddSingleton<SessionEvents>();
@@ -47,6 +53,7 @@ public static class DependencyInjection
         }).AddHttpMessageHandler<NetworkErrorHandler>();
 
         AddApiHttpClient<IAuthGateway, HttpAuthGateway>(services, options);
+        AddFeatureGateways(services, options);
 
         return services;
     }

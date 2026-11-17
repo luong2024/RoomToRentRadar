@@ -5,6 +5,7 @@ using RoomToRentRadar.Domain.Aggregates;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.Services;
+using RoomToRentRadar.Ports.Contracts.Responses.Photos;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 
@@ -61,10 +62,14 @@ public static class RoomMapper
             totalEstimate += room.ParkingFeeVnd.Value;
         }
 
+        var waterUnit = Enum.TryParse<WaterPriceUnit>(room.WaterPriceUnit, true, out var parsedUnit)
+            ? parsedUnit
+            : WaterPriceUnit.PerCubicMeter;
+
         var utilities = new UtilitiesView(
             ElectricityPriceVndPerKwh: room.ElectricityPriceVndPerKwh,
             WaterPriceVnd: room.WaterPriceVnd,
-            WaterPriceUnit: room.WaterPriceUnit,
+            WaterPriceUnit: waterUnit,
             InternetFeeVnd: room.InternetFeeVnd,
             ParkingFeeVnd: room.ParkingFeeVnd,
             OtherFeesNote: room.OtherFeesNote,
@@ -95,7 +100,11 @@ public static class RoomMapper
         var safety = new SafetyDto(
             Score: 0,
             IsVerified: room.IsSafetyVerified,
-            Features: Array.Empty<string>());
+            Features: Array.Empty<SafetyFeature>());
+
+        var furnishing = Enum.TryParse<Furnishing>(room.Furnishing, true, out var parsedFurnishing)
+            ? parsedFurnishing
+            : Furnishing.Unfurnished;
 
         return new RoomDetailDto(
             Id: room.Id,
@@ -107,21 +116,21 @@ public static class RoomMapper
             MonthlyRentVnd: room.MonthlyRentVnd,
             DepositVnd: room.DepositVnd,
             AreaM2: room.AreaM2,
+            MaxOccupants: room.MaxOccupants,
+            Furnishing: furnishing,
+            AvailableFrom: room.AvailableFrom,
             Address: address,
             Location: location,
             DistanceKm: distanceKm,
             Utilities: utilities,
             Amenities: Array.Empty<Amenity>(),
             Safety: safety,
+            HouseRules: null,
             Photos: Array.Empty<PhotoDto>(),
             Landlord: landlordContact,
-            LastUpdatedAtUtc: room.LastUpdatedAtUtc,
-            HouseRules: null,
-            MaxOccupants: room.MaxOccupants,
-            Furnishing: room.Furnishing,
-            AvailableFrom: room.AvailableFrom?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             IsFavourite: false,
-            PublishedAtUtc: room.PublishedAtUtc);
+            PublishedAtUtc: room.PublishedAtUtc,
+            LastUpdatedAtUtc: room.LastUpdatedAtUtc);
     }
 
     public static RoomCardDto ToCardDto(

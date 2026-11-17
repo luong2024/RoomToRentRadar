@@ -103,8 +103,8 @@ public class RoomMapperTests
         Assert.That(dto.Location.Latitude, Is.EqualTo(21.5875));
         Assert.That(dto.Location.Longitude, Is.EqualTo(105.8080));
         Assert.That(dto.MaxOccupants, Is.EqualTo(2));
-        Assert.That(dto.Furnishing, Is.EqualTo("Full"));
-        Assert.That(dto.AvailableFrom, Is.EqualTo("2026-11-15"));
+        Assert.That(dto.Furnishing, Is.EqualTo(Furnishing.Full));
+        Assert.That(dto.AvailableFrom, Is.EqualTo(new DateOnly(2026, 11, 15)));
         Assert.That(dto.Landlord.DisplayName, Is.EqualTo("Nguyễn Văn Chủ Trọ"));
         Assert.That(dto.Landlord.PhoneNumber, Is.EqualTo("0987654321"));
         Assert.That(dto.Landlord.ZaloUrl, Is.EqualTo("https://zalo.me/0987654321"));

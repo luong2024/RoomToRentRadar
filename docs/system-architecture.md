@@ -91,8 +91,9 @@ RoomToRentRadar.slnx
 │   │   ├── Authorization/ policies, ClaimsPrincipal extensions
 │   │   └── Program.cs
 │   ├── RoomToRentRadar.Client.Adapters/     net10.0 · exists since PR #22 (Abstractions, Http, Session, Mocks) — add Caching/, Realtime/ (ADR-003)
-│   │   ├── Abstractions/  I*Gateway, ISessionStore, ICacheStore, IConnectivity, IPushTokenProvider
+│   │   ├── Abstractions/  I*Gateway (+ ApiOperationAttribute), ISessionStore, ICacheStore, IConnectivity, IPushTokenProvider
 │   │   ├── Http/          Http*Gateway, AuthTokenHandler, ApiJsonContext (source-gen), ApiOptions
+│   │   ├── Mocks/         Mock* gateways — enabled only via ApiOptions.UseMocks, blocked in Release by MockGuard
 │   │   ├── Caching/       SqliteCacheStore, Cached*Gateway decorators, PendingOperationQueue
 │   │   ├── Realtime/      SignalRChatConnection
 │   │   └── DependencyInjection.cs   AddClientAdapters(ApiOptions)

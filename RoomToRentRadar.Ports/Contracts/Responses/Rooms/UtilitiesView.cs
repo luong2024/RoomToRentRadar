@@ -1,12 +1,12 @@
 namespace RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 
-/// <summary>
-/// Structured utility fees and documented estimate view per docs/api/openapi.yaml schema UtilitiesView.
-/// </summary>
+using RoomToRentRadar.Domain.Enums;
+
+/// <summary>Matches <c>UtilitiesView</c> in <c>docs/api/openapi.yaml</c> 1:1 (UtilitiesDto + estimated monthly total).</summary>
 public sealed record UtilitiesView(
     long? ElectricityPriceVndPerKwh,
     long? WaterPriceVnd,
-    string? WaterPriceUnit,
+    WaterPriceUnit WaterPriceUnit,
     long? InternetFeeVnd,
     long? ParkingFeeVnd,
     string? OtherFeesNote,
