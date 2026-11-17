@@ -136,9 +136,9 @@ public sealed class UpdateLandlordProfileUseCase : IUpdateLandlordProfileUseCase
             profile.Landlord?.VerificationStatus ?? KycVerificationStatus.Unverified,
             profile.Landlord?.VerificationNotes,
             profile.Landlord?.VerifiedAt,
-            command.BankName,
-            command.BankAccountNumber,
-            command.BankAccountHolder,
+            command.BankName ?? profile.Landlord?.BankName,
+            command.BankAccountNumber ?? profile.Landlord?.BankAccountNumber,
+            command.BankAccountHolder ?? profile.Landlord?.BankAccountHolder,
             profile.Landlord?.Rating ?? 5.0,
             profile.Landlord?.ReviewCount ?? 0);
 

@@ -5,6 +5,7 @@ using RoomToRentRadar.Application.UseCases.Profile;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.Exceptions;
+using RoomToRentRadar.Domain.ValueObjects;
 
 namespace RoomToRentRadar.Application.Tests.Profile;
 
@@ -51,6 +52,33 @@ public class UpdateTenantProfileUseCaseTests
             Assert.That(repo.AddCallCount, Is.EqualTo(0), "AddAsync must NOT be called for existing profile");
             Assert.That(repo.UpdateCallCount, Is.EqualTo(1), "UpdateAsync must be called for existing profile");
             Assert.That(repo.LastUpdatedProfile?.Version, Is.EqualTo("\"initial-etag-123\""), "UpdateAsync must retain loaded ETag");
+        });
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WhenScreenOmitsPrivateTenantFields_PreservesExistingValues()
+    {
+        var userId = Guid.NewGuid();
+        var existing = UserProfile.CreateDefault(userId, UserRole.Student, FixedNow);
+        existing.SetVersion("\"tenant-etag\"");
+        existing.UpdateTenantDetails(new TenantDetails(
+            "SV001", "ICTU", "CNTT", new DateOnly(2002, 2, 3), Gender.Female,
+            "Emergency contact", PhoneNumber.Create("0987654321"), 2_000_000m), FixedNow);
+        var repo = new TrackingUserProfileRepository(existing);
+        var useCase = new UpdateTenantProfileUseCase(repo, new FixedTimeProvider(FixedNow));
+
+        var command = new UpdateTenantCommand(
+            "Nguyen Van Updated", "0912345678", null, "Updated bio", "SV002", "ICTU", "KTPM",
+            null, null, null, null, 2_500_000m);
+
+        await useCase.ExecuteAsync(userId, command);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(repo.LastUpdatedProfile?.Tenant?.DateOfBirth, Is.EqualTo(new DateOnly(2002, 2, 3)));
+            Assert.That(repo.LastUpdatedProfile?.Tenant?.Gender, Is.EqualTo(Gender.Female));
+            Assert.That(repo.LastUpdatedProfile?.Tenant?.EmergencyContactName, Is.EqualTo("Emergency contact"));
+            Assert.That(repo.LastUpdatedProfile?.Tenant?.EmergencyContactPhone?.Value, Is.EqualTo("0987654321"));
         });
     }
 

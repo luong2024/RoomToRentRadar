@@ -53,6 +53,7 @@ public partial class ProfileViewModel : ObservableObject
     [RelayCommand]
     public async Task LoadAsync()
     {
+        Guid? requestedUserId = null;
         try
         {
             IsBusy = true;
@@ -68,6 +69,7 @@ public partial class ProfileViewModel : ObservableObject
                 return;
             }
 
+            requestedUserId = currentUser.Id;
             // The account identity comes from the active authenticated session;
             // profile details are then loaded only from the protected /me endpoint.
             ClearProfile();
@@ -75,10 +77,21 @@ public partial class ProfileViewModel : ObservableObject
             Role = currentUser.Role;
             var profile = await _profileService.GetMyProfileAsync();
             if (profile is null) throw new InvalidOperationException("Your profile could not be loaded.");
+
+            if (!ProfileSessionGuard.CanApplyProfile(_sessionService, currentUser, profile))
+            {
+                return;
+            }
+
             Apply(profile);
         }
         catch (Exception ex)
         {
+            if (requestedUserId.HasValue && _sessionService.CurrentUser?.Id != requestedUserId)
+            {
+                return;
+            }
+
             StatusMessage = "Unable to load your profile. Please try again.";
             _errorHandler.HandleError(ex);
         }
@@ -133,6 +146,7 @@ public partial class ProfileViewModel : ObservableObject
     [RelayCommand]
     public async Task SaveAsync()
     {
+        Guid? requestedUserId = null;
         if (string.IsNullOrWhiteSpace(FullName))
         {
             StatusMessage = "Full name is required.";
@@ -153,15 +167,34 @@ public partial class ProfileViewModel : ObservableObject
 
         try
         {
+            var currentUser = _sessionService.CurrentUser;
+            if (currentUser is null || !ProfileSessionGuard.IsCurrentSession(_sessionService, currentUser))
+            {
+                StatusMessage = "Please sign in again before saving your profile.";
+                return;
+            }
+
+            requestedUserId = currentUser.Id;
             IsBusy = true;
             var saved = await _profileService.UpdateAsync(BuildProfile(string.IsNullOrWhiteSpace(MaxBudgetText) ? null : maxBudget), _pendingAvatarData);
             if (saved is null) throw new InvalidOperationException("The profile update returned no data.");
+
+            if (!ProfileSessionGuard.CanApplyProfile(_sessionService, currentUser, saved))
+            {
+                return;
+            }
+
             _pendingAvatarData = null;
             Apply(saved);
             StatusMessage = "Profile saved successfully.";
         }
         catch (Exception ex)
         {
+            if (requestedUserId.HasValue && _sessionService.CurrentUser?.Id != requestedUserId)
+            {
+                return;
+            }
+
             StatusMessage = "Unable to save your profile. Please check your details and try again.";
             _errorHandler.HandleError(ex);
         }
@@ -211,8 +244,17 @@ public partial class ProfileViewModel : ObservableObject
         Admin = new() { StaffCode = StaffCode, Department = Department, Title = JobTitle }
     };
 
-    private static ImageSource? ToImageSource(string? value) => Uri.TryCreate(value, UriKind.Absolute, out var uri)
-        ? ImageSource.FromUri(uri) : null;
+    private static ImageSource? ToImageSource(string? value)
+    {
+        if (AvatarDataUri.TryDecode(value, out var bytes) && bytes is not null)
+        {
+            return ImageSource.FromStream(() => new MemoryStream(bytes));
+        }
+
+        return Uri.TryCreate(value, UriKind.Absolute, out var uri)
+            ? ImageSource.FromUri(uri)
+            : null;
+    }
 
     private static bool IsValidVietnamesePhoneNumber(string? phoneNumber)
     {

@@ -38,9 +38,12 @@ public sealed class UpdateTenantProfileUseCase : IUpdateTenantProfileUseCase
         var phone = PhoneNumber.CreateOptional(command.PhoneNumber);
         profile.UpdateBasicInfo(command.FullName, phone, command.AvatarUrl, command.Bio, now);
 
-        var emergencyPhone = PhoneNumber.CreateOptional(command.EmergencyContactPhone);
+        var existingTenant = profile.Tenant;
+        var emergencyPhone = command.EmergencyContactPhone is null
+            ? existingTenant?.EmergencyContactPhone
+            : PhoneNumber.CreateOptional(command.EmergencyContactPhone);
 
-        var gender = Gender.Unspecified;
+        var gender = existingTenant?.Gender ?? Gender.Unspecified;
         if (!string.IsNullOrWhiteSpace(command.Gender))
         {
             if (Enum.TryParse<Gender>(command.Gender, true, out var g) && Enum.IsDefined(typeof(Gender), g))
@@ -68,14 +71,14 @@ public sealed class UpdateTenantProfileUseCase : IUpdateTenantProfileUseCase
         }
 
         var tenantDetails = new TenantDetails(
-            command.StudentId,
-            command.University ?? "ICTU",
-            command.Faculty,
-            command.DateOfBirth,
+            command.StudentId ?? existingTenant?.StudentId,
+            command.University ?? existingTenant?.University ?? "ICTU",
+            command.Faculty ?? existingTenant?.Faculty,
+            command.DateOfBirth ?? existingTenant?.DateOfBirth,
             gender,
-            command.EmergencyContactName,
+            command.EmergencyContactName ?? existingTenant?.EmergencyContactName,
             emergencyPhone,
-            command.MaxBudget);
+            command.MaxBudget ?? existingTenant?.MaxBudget);
 
         profile.UpdateTenantDetails(tenantDetails, now);
 
