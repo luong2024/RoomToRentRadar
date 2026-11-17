@@ -5,8 +5,11 @@
              xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
              xmlns:inputs="clr-namespace:RoomToRentRadar.Pages.Controls.Inputs"
              xmlns:fonts="clr-namespace:Fonts"
+             xmlns:loc="clr-namespace:RoomToRentRadar.Resources.Strings"
              x:Class="RoomToRentRadar.Pages.LoginPage"
              x:DataType="vm:LoginPageModel"
+             Shell.NavBarIsVisible="False"
+             Shell.TabBarIsVisible="False"
              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCanvasLight}, Dark={StaticResource SurfaceCanvasDark}}">
 
     <ScrollView Padding="{StaticResource ScreenMargin}">
@@ -145,13 +148,13 @@
             </Border>
 
             <!-- 3. Register Footer Navigation -->
-            <HorizontalStackLayout HorizontalOptions="Center" Spacing="4" Margin="0,0,0,24">
-                <Label Text="Don't have an account?"
+            <HorizontalStackLayout HorizontalOptions="Center" Spacing="4" Margin="0,0,0,12">
+                <Label Text="{Binding DontHaveAccountText}"
                        Style="{StaticResource TextBodyMedium}"
                        TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
                        VerticalTextAlignment="Center" />
 
-                <Button Text="Sign up now"
+                <Button Text="{Binding SignUpNowText}"
                         Style="{StaticResource GhostButton}"
                         Command="{Binding NavigateToRegisterCommand}"
                         FontFamily="{StaticResource FontFamilySemibold}"
@@ -160,6 +163,16 @@
                         HeightRequest="36"
                         VerticalOptions="Center" />
             </HorizontalStackLayout>
+
+            <!-- 4. Continue as Guest -->
+            <Button Text="{Binding ContinueAsGuestText}"
+                    Style="{StaticResource GhostButton}"
+                    Command="{Binding ContinueAsGuestCommand}"
+                    TextColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource Teal400}}"
+                    FontSize="{StaticResource FontSizeBodyMedium}"
+                    HeightRequest="48"
+                    HorizontalOptions="Center"
+                    Margin="0,0,0,24" />
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

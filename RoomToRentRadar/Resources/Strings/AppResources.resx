@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- Bottom Navigation Bar -->
+  <data name="Nav_Explore" xml:space="preserve">
+    <value>Explore</value>
+  </data>
+  <data name="Nav_Map" xml:space="preserve">
+    <value>Map</value>
+  </data>
+  <data name="Nav_Saved" xml:space="preserve">
+    <value>Saved</value>
+  </data>
+  <data name="Nav_Messages" xml:space="preserve">
+    <value>Messages</value>
+  </data>
+  <data name="Nav_Account" xml:space="preserve">
+    <value>Account</value>
+  </data>
+  <data name="Nav_Hint_Explore" xml:space="preserve">
+    <value>Browse verified student rooms near ICTU</value>
+  </data>
+  <data name="Nav_Hint_Map" xml:space="preserve">
+    <value>View rooms on interactive map near campus</value>
+  </data>
+  <data name="Nav_Hint_Saved" xml:space="preserve">
+    <value>View saved favorites and search alerts</value>
+  </data>
+  <data name="Nav_Hint_Messages" xml:space="preserve">
+    <value>Chat with verified landlords</value>
+  </data>
+  <data name="Nav_Hint_Account" xml:space="preserve">
+    <value>View account profile and app preferences</value>
+  </data>
+
+  <!-- Account Screen -->
+  <data name="Account_Title" xml:space="preserve">
+    <value>Account</value>
+  </data>
+  <data name="Account_Guest_WelcomeTitle" xml:space="preserve">
+    <value>Welcome to RoomToRentRadar</value>
+  </data>
+  <data name="Account_Guest_WelcomeMessage" xml:space="preserve">
+    <value>Sign in to save favorite rooms, receive instant price alerts, and chat with verified landlords.</value>
+  </data>
+  <data name="Account_Guest_SignIn" xml:space="preserve">
+    <value>Sign In</value>
+  </data>
+  <data name="Account_Guest_Register" xml:space="preserve">
+    <value>Register</value>
+  </data>
+  <data name="Account_Item_MyCampus" xml:space="preserve">
+    <value>My campus</value>
+  </data>
+  <data name="Account_Item_Language" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="Account_Item_PersonalDetails" xml:space="preserve">
+    <value>Personal details</value>
+  </data>
+  <data name="Account_Item_SavedSearches" xml:space="preserve">
+    <value>Saved searches</value>
+  </data>
+  <data name="Account_Item_Notifications" xml:space="preserve">
+    <value>Notifications</value>
+  </data>
+  <data name="Account_Item_Help" xml:space="preserve">
+    <value>Help, terms &amp; privacy</value>
+  </data>
+  <data name="Account_Item_PushNotifications" xml:space="preserve">
+    <value>Push notifications</value>
+  </data>
+  <data name="Account_Item_SignOut" xml:space="preserve">
+    <value>Sign out</value>
+  </data>
+  <data name="Account_Footer_Copyright" xml:space="preserve">
+    <value>RoomToRentRadar 1.0 · Group 2, ICTU</value>
+  </data>
+  <data name="Account_Language_PromptTitle" xml:space="preserve">
+    <value>Select Language / Chọn ngôn ngữ</value>
+  </data>
+  <data name="Account_Language_PromptCancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+
+  <!-- Role Badges -->
+  <data name="Role_Guest" xml:space="preserve">
+    <value>Guest · not signed in</value>
+  </data>
+  <data name="Role_Landlord_Verified" xml:space="preserve">
+    <value>Landlord · verified</value>
+  </data>
+  <data name="Role_Landlord_Pending" xml:space="preserve">
+    <value>Landlord · pending verification</value>
+  </data>
+  <data name="Role_Student_IctuSso" xml:space="preserve">
+    <value>Student · signed in with ICTU</value>
+  </data>
+  <data name="Role_Student_VerifiedEmail" xml:space="preserve">
+    <value>Student · verified email</value>
+  </data>
+  <data name="Role_Admin" xml:space="preserve">
+    <value>Administrator · ICTU Radar</value>
+  </data>
+
+  <!-- Auth -->
+  <data name="Auth_ContinueAsGuest" xml:space="preserve">
+    <value>Continue as Guest (Browse rooms)</value>
+  </data>
+  <data name="Auth_DontHaveAccount" xml:space="preserve">
+    <value>Don't have an account?</value>
+  </data>
+  <data name="Auth_SignUpNow" xml:space="preserve">
+    <value>Sign up now</value>
+  </data>
+
+  <!-- Map Screen -->
+  <data name="Map_Title" xml:space="preserve">
+    <value>Map Explorer</value>
+  </data>
+  <data name="Map_Subtitle" xml:space="preserve">
+    <value>Interactive Rental Map near ICTU</value>
+  </data>
+  <data name="Map_EmptyTitle" xml:space="preserve">
+    <value>Interactive Map</value>
+  </data>
+  <data name="Map_EmptyMessage" xml:space="preserve">
+    <value>Search rooms on an interactive map with walking and driving distances to ICTU. Map integration is coming in Sprint Task T01.3.</value>
+  </data>
+  <data name="Map_EmptyAction" xml:space="preserve">
+    <value>Explore Listings</value>
+  </data>
+
+  <!-- Messages Screen -->
+  <data name="Messages_Title" xml:space="preserve">
+    <value>Messages</value>
+  </data>
+  <data name="Messages_Subtitle" xml:space="preserve">
+    <value>In-App Chat Radar</value>
+  </data>
+  <data name="Messages_UnreadBannerTitle" xml:space="preserve">
+    <value>You have 2 unread messages</value>
+  </data>
+  <data name="Messages_UnreadBannerSubtitle" xml:space="preserve">
+    <value>From verified landlords regarding your room inquiries near ICTU.</value>
+  </data>
+  <data name="Messages_EmptyTitle" xml:space="preserve">
+    <value>Real-time Chat</value>
+  </data>
+  <data name="Messages_EmptyMessage" xml:space="preserve">
+    <value>Chat directly with landlords, schedule viewing appointments, and ask questions before renting. Full SignalR chat integration is coming in US14.</value>
+  </data>
+
+  <!-- Saved Screen -->
+  <data name="Saved_Title" xml:space="preserve">
+    <value>Saved Rooms</value>
+  </data>
+  <data name="Saved_Subtitle" xml:space="preserve">
+    <value>Favorites &amp; Search Alerts</value>
+  </data>
+  <data name="Saved_EmptyTitle" xml:space="preserve">
+    <value>No Saved Rooms Yet</value>
+  </data>
+  <data name="Saved_EmptyMessage" xml:space="preserve">
+    <value>Tap the heart icon on any room listing in Explore to save it here for quick access, price updates, and room comparison (US10).</value>
+  </data>
+
+  <!-- Common & Dialogs -->
+  <data name="Common_Ok" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="Account_Alert_CampusTitle" xml:space="preserve">
+    <value>My Campus</value>
+  </data>
+  <data name="Account_Alert_CampusMessage" xml:space="preserve">
+    <value>ICTU (Information &amp; Communication Technology University) is your default campus reference.</value>
+  </data>
+  <data name="Account_Alert_PersonalDetailsTitle" xml:space="preserve">
+    <value>Personal Details</value>
+  </data>
+  <data name="Account_Alert_PersonalDetailsMessage" xml:space="preserve">
+    <value>Name: {0}&#10;Email: {1}&#10;Role: {2}</value>
+  </data>
+  <data name="Account_Alert_HelpTitle" xml:space="preserve">
+    <value>Help &amp; Privacy</value>
+  </data>
+  <data name="Account_Alert_HelpMessage" xml:space="preserve">
+    <value>RoomToRentRadar 1.0&#10;Group 2 ICTU Mobile Rental Radar Project.</value>
+  </data>
+</root>

@@ -45,9 +45,14 @@ namespace RoomToRentRadar
             builder.Services.AddSingleton<ModalErrorHandler>();
             builder.Services.AddSingleton<ISessionStore, MauiSecureSessionStore>();
 
-            // Main Landing Page
+            // Main Landing Page & Authenticated Tabs
             builder.Services.AddTransient<PageModels.MainLandingPageModel>();
             builder.Services.AddTransient<Pages.MainLandingPage>();
+            builder.Services.AddTransient<PageModels.AccountPageModel>();
+            builder.Services.AddTransient<Pages.AccountPlaceholderPage>();
+            builder.Services.AddTransient<Pages.MapPlaceholderPage>();
+            builder.Services.AddTransient<Pages.SavedPlaceholderPage>();
+            builder.Services.AddTransient<Pages.MessagesPlaceholderPage>();
 
             // UI Design System Catalog
             builder.Services.AddSingleton<PageModels.UiCatalogPageModel>();

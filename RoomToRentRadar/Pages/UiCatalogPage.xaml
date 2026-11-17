@@ -16,7 +16,7 @@
         <common:PageHeaderBar Grid.Row="0"
                                Title="UI Design System"
                                Subtitle="Navy + Teal Design System · Cross-Platform Foundation"
-                               CanGoBack="False" />
+                               CanGoBack="True" />
 
         <!-- 2. Scrollable Catalog Content -->
         <ScrollView Grid.Row="1" Padding="{StaticResource ScreenMargin}">
