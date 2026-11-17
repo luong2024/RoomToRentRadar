@@ -1,0 +1,231 @@
+namespace RoomToRentRadarUnitTests.Application.Rooms;
+
+using NSubstitute;
+using RoomToRentRadar.Application.UseCases.Rooms;
+using RoomToRentRadar.Domain.Aggregates;
+using RoomToRentRadar.Domain.Entities;
+using RoomToRentRadar.Domain.Enums;
+using RoomToRentRadar.Domain.Exceptions;
+using RoomToRentRadar.Domain.ValueObjects;
+using RoomToRentRadar.Ports.Contracts.Common;
+using RoomToRentRadar.Ports.Outbound.ExternalServices;
+using RoomToRentRadar.Ports.Outbound.Repositories;
+
+[TestFixture]
+public class GetRoomDetailUseCaseTests
+{
+    private static readonly Campus Ictu = new(
+        "ICTU", "Trường Đại học Công nghệ Thông tin và Truyền thông", "ICTU", 21.5851, 105.8066, isDefault: true, sortOrder: 1);
+    private static readonly Campus Tnus = new(
+        "TNUS", "Trường Đại học Khoa học", "TNUS", 21.5887, 105.8098, isDefault: false, sortOrder: 2);
+
+    private IRoomRepository _roomRepository = null!;
+    private IUserRepository _userRepository = null!;
+    private ICampusRepository _campusRepository = null!;
+    private ICurrentUserContextPort _currentUserContext = null!;
+    private GetRoomDetailUseCase _sut = null!;
+
+    [SetUp]
+    public void SetUp()
+    {
+        _roomRepository = Substitute.For<IRoomRepository>();
+        _userRepository = Substitute.For<IUserRepository>();
+        _campusRepository = Substitute.For<ICampusRepository>();
+        _currentUserContext = Substitute.For<ICurrentUserContextPort>();
+
+        _campusRepository.GetDefaultCampusAsync(Arg.Any<CancellationToken>()).Returns(Ictu);
+        _campusRepository.GetByIdAsync("ICTU", Arg.Any<CancellationToken>()).Returns(Ictu);
+        _campusRepository.GetByIdAsync("TNUS", Arg.Any<CancellationToken>()).Returns(Tnus);
+        _campusRepository.GetByIdAsync(Arg.Is<string>(id => id != "ICTU" && id != "TNUS"), Arg.Any<CancellationToken>())
+            .Returns((Campus?)null);
+
+        _sut = new GetRoomDetailUseCase(_roomRepository, _userRepository, _campusRepository, _currentUserContext);
+    }
+
+    private static Room CreateSampleRoom(
+        string id = "room-001",
+        string landlordId = "landlord-001",
+        ListingStatus status = ListingStatus.Available)
+    {
+        return Room.Reconstitute(
+            id: id,
+            landlordId: landlordId,
+            title: "Phòng trọ khép kín gần cổng trường ICTU",
+            roomType: RoomType.BoardingRoom,
+            monthlyRentVnd: 1_800_000L,
+            depositVnd: 1_800_000L,
+            areaM2: 25.5,
+            addressLine: "Số 123 Đường Z115",
+            ward: "Tân Thịnh",
+            district: "TP. Thái Nguyên",
+            latitude: 21.5875,
+            longitude: 105.8080,
+            status: status,
+            createdAtUtc: new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc),
+            lastUpdatedAtUtc: new DateTime(2026, 11, 10, 12, 0, 0, DateTimeKind.Utc),
+            version: 1,
+            description: "Phòng đầy đủ tiện nghi, giờ giấc tự do, an ninh tốt.",
+            maxOccupants: 2,
+            furnishing: "Basic",
+            availableFrom: new DateOnly(2026, 11, 1),
+            verifiedAtUtc: new DateTime(2026, 11, 2, 0, 0, 0, DateTimeKind.Utc),
+            publishedAtUtc: new DateTime(2026, 11, 2, 0, 0, 0, DateTimeKind.Utc));
+    }
+
+    private static User CreateSampleLandlord(string id = "landlord-001", string phone = "0987654321")
+    {
+        return User.RegisterLocal(
+            email: new EmailAddress("landlord@example.com"),
+            passwordHash: "hash-secret",
+            fullName: "Nguyễn Văn Chủ Trọ",
+            role: UserRole.Landlord,
+            phoneNumber: phone);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WhenRoomExistsAndAvailable_ReturnsFullDetails()
+    {
+        // Arrange (AC1, AC2)
+        var room = CreateSampleRoom(status: ListingStatus.Available);
+        var landlord = CreateSampleLandlord();
+        _roomRepository.GetByIdAsync("room-001", Arg.Any<CancellationToken>()).Returns(room);
+        _userRepository.GetByIdAsync("landlord-001", Arg.Any<CancellationToken>()).Returns(landlord);
+        _currentUserContext.IsAuthenticated.Returns(true);
+
+        // Act
+        var result = await _sut.ExecuteAsync("room-001");
+
+        // Assert
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result.Id, Is.EqualTo("room-001"));
+        Assert.That(result.Title, Is.EqualTo("Phòng trọ khép kín gần cổng trường ICTU"));
+        Assert.That(result.MonthlyRentVnd, Is.EqualTo(1_800_000L));
+        Assert.That(result.Status, Is.EqualTo(ListingStatus.Available));
+        Assert.That(result.IsVerified, Is.True);
+        Assert.That(result.Landlord.DisplayName, Is.EqualTo("Nguyễn Văn Chủ Trọ"));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WhenUserIsAuthenticated_ReturnsLandlordPhoneNumber()
+    {
+        // Arrange (AC4: Signed-in user can see phone number)
+        var room = CreateSampleRoom();
+        var landlord = CreateSampleLandlord(phone: "0987654321");
+        _roomRepository.GetByIdAsync("room-001", Arg.Any<CancellationToken>()).Returns(room);
+        _userRepository.GetByIdAsync("landlord-001", Arg.Any<CancellationToken>()).Returns(landlord);
+        _currentUserContext.IsAuthenticated.Returns(true);
+
+        // Act
+        var result = await _sut.ExecuteAsync("room-001");
+
+        // Assert
+        Assert.That(result.Landlord.PhoneNumber, Is.EqualTo("0987654321"));
+        Assert.That(result.Landlord.ZaloUrl, Is.EqualTo("https://zalo.me/0987654321"));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WhenUserIsAnonymous_MasksLandlordPhoneNumber()
+    {
+        // Arrange (AC4: Anonymous user receives null phone number)
+        var room = CreateSampleRoom();
+        var landlord = CreateSampleLandlord(phone: "0987654321");
+        _roomRepository.GetByIdAsync("room-001", Arg.Any<CancellationToken>()).Returns(room);
+        _userRepository.GetByIdAsync("landlord-001", Arg.Any<CancellationToken>()).Returns(landlord);
+        _currentUserContext.IsAuthenticated.Returns(false);
+
+        // Act
+        var result = await _sut.ExecuteAsync("room-001");
+
+        // Assert
+        Assert.That(result.Landlord.PhoneNumber, Is.Null);
+        Assert.That(result.Landlord.ZaloUrl, Is.Null);
+        Assert.That(result.Landlord.DisplayName, Is.EqualTo("Nguyễn Văn Chủ Trọ"));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WhenRoomIsRented_ReturnsDetailsWithRentedStatus()
+    {
+        // Arrange (AC2 / BR-LST-04a: Rented is viewable by public)
+        var room = CreateSampleRoom(status: ListingStatus.Rented);
+        var landlord = CreateSampleLandlord();
+        _roomRepository.GetByIdAsync("room-001", Arg.Any<CancellationToken>()).Returns(room);
+        _userRepository.GetByIdAsync("landlord-001", Arg.Any<CancellationToken>()).Returns(landlord);
+
+        // Act
+        var result = await _sut.ExecuteAsync("room-001");
+
+        // Assert
+        Assert.That(result.Status, Is.EqualTo(ListingStatus.Rented));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WhenRoomIsUnpublished_ReturnsDetailsWithUnpublishedStatus()
+    {
+        // Arrange (AC2 / BR-LST-04a: Unpublished is viewable by public)
+        var room = CreateSampleRoom(status: ListingStatus.Unpublished);
+        var landlord = CreateSampleLandlord();
+        _roomRepository.GetByIdAsync("room-001", Arg.Any<CancellationToken>()).Returns(room);
+        _userRepository.GetByIdAsync("landlord-001", Arg.Any<CancellationToken>()).Returns(landlord);
+
+        // Act
+        var result = await _sut.ExecuteAsync("room-001");
+
+        // Assert
+        Assert.That(result.Status, Is.EqualTo(ListingStatus.Unpublished));
+    }
+
+    [TestCase(ListingStatus.PendingReview)]
+    [TestCase(ListingStatus.Rejected)]
+    [TestCase(ListingStatus.Suspended)]
+    public void ExecuteAsync_WhenRoomIsNonPublicAndCallerIsGuest_ThrowsRoomNotFound(ListingStatus hiddenStatus)
+    {
+        // Arrange (BR-LST-04a: PendingReview, Rejected, Suspended return 404 to non-owners)
+        var room = CreateSampleRoom(status: hiddenStatus);
+        _roomRepository.GetByIdAsync("room-001", Arg.Any<CancellationToken>()).Returns(room);
+        _currentUserContext.IsAuthenticated.Returns(false);
+
+        // Act & Assert
+        var ex = Assert.ThrowsAsync<DomainValidationException>(() => _sut.ExecuteAsync("room-001"));
+        Assert.That(ex!.ErrorCode, Is.EqualTo(ProblemCodes.RoomNotFound));
+    }
+
+    [Test]
+    public void ExecuteAsync_WhenRoomDoesNotExist_ThrowsRoomNotFound()
+    {
+        // Arrange
+        _roomRepository.GetByIdAsync("non-existing-id", Arg.Any<CancellationToken>()).Returns((Room?)null);
+
+        // Act & Assert
+        var ex = Assert.ThrowsAsync<DomainValidationException>(() => _sut.ExecuteAsync("non-existing-id"));
+        Assert.That(ex!.ErrorCode, Is.EqualTo(ProblemCodes.RoomNotFound));
+    }
+
+    [Test]
+    public void ExecuteAsync_WhenCampusNotFound_ThrowsCampusNotFound()
+    {
+        // Arrange (BR-CMP-01)
+        var room = CreateSampleRoom();
+        _roomRepository.GetByIdAsync("room-001", Arg.Any<CancellationToken>()).Returns(room);
+
+        // Act & Assert
+        var ex = Assert.ThrowsAsync<DomainValidationException>(() => _sut.ExecuteAsync("room-001", campusId: "UNKNOWN_CAMPUS"));
+        Assert.That(ex!.ErrorCode, Is.EqualTo(ProblemCodes.CampusNotFound));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithCampusId_CalculatesCorrectDistanceForCampus()
+    {
+        // Arrange
+        var room = CreateSampleRoom();
+        var landlord = CreateSampleLandlord();
+        _roomRepository.GetByIdAsync("room-001", Arg.Any<CancellationToken>()).Returns(room);
+        _userRepository.GetByIdAsync("landlord-001", Arg.Any<CancellationToken>()).Returns(landlord);
+
+        // Act
+        var resultIctu = await _sut.ExecuteAsync("room-001", campusId: "ICTU");
+        var resultTnus = await _sut.ExecuteAsync("room-001", campusId: "TNUS");
+
+        // Assert
+        Assert.That(resultIctu.DistanceKm, Is.Not.EqualTo(resultTnus.DistanceKm));
+    }
+}
