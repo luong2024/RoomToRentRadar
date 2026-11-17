@@ -234,8 +234,8 @@ Immutable rows. Current rules = max `VersionNumber` per room.
 | Width | INTEGER | NN | |
 | Height | INTEGER | NN | |
 | OriginalPath | TEXT | NN | storage key, e.g. `rooms/2026/11/<id>/original.jpg` |
-| MediumPath | TEXT | NN | 1280 px |
-| ThumbPath | TEXT | NN | 400 px |
+| MediumPath | TEXT | NN | target 1280 px; MVP = OriginalPath (ADR-008 amendment) |
+| ThumbPath | TEXT | NN | target 400 px; MVP = OriginalPath (ADR-008 amendment) |
 | SortOrder | INTEGER | NN | 0 = cover |
 | CreatedAtUtc | TEXT | NN | |
 | AttachedAtUtc | TEXT | | |
