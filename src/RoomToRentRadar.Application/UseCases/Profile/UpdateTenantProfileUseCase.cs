@@ -71,14 +71,14 @@ public sealed class UpdateTenantProfileUseCase : IUpdateTenantProfileUseCase
         }
 
         var tenantDetails = new TenantDetails(
-            command.StudentId ?? existingTenant?.StudentId,
-            command.University ?? existingTenant?.University ?? "ICTU",
-            command.Faculty ?? existingTenant?.Faculty,
+            ResolveOptional(command.StudentId, command.IsStudentIdSpecified, existingTenant?.StudentId),
+            ResolveOptional(command.University, command.IsUniversitySpecified, existingTenant?.University ?? "ICTU"),
+            ResolveOptional(command.Faculty, command.IsFacultySpecified, existingTenant?.Faculty),
             command.DateOfBirth ?? existingTenant?.DateOfBirth,
             gender,
             command.EmergencyContactName ?? existingTenant?.EmergencyContactName,
             emergencyPhone,
-            command.MaxBudget ?? existingTenant?.MaxBudget);
+            ResolveOptional(command.MaxBudget, command.IsMaxBudgetSpecified, existingTenant?.MaxBudget));
 
         profile.UpdateTenantDetails(tenantDetails, now);
 
@@ -96,4 +96,10 @@ public sealed class UpdateTenantProfileUseCase : IUpdateTenantProfileUseCase
 
         return GetMyProfileUseCase.MapToDto(profile);
     }
+
+    private static T? ResolveOptional<T>(T? value, bool isSpecified, T? existingValue)
+        where T : class => isSpecified || value is not null ? value : existingValue;
+
+    private static decimal? ResolveOptional(decimal? value, bool isSpecified, decimal? existingValue) =>
+        isSpecified || value.HasValue ? value : existingValue;
 }

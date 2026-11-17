@@ -83,6 +83,58 @@ public class UpdateTenantProfileUseCaseTests
     }
 
     [Test]
+    public async Task ExecuteAsync_WhenOptionalTenantFieldsAreOmitted_PreservesExistingValues()
+    {
+        var userId = Guid.NewGuid();
+        var existing = UserProfile.CreateDefault(userId, UserRole.Student, FixedNow);
+        existing.UpdateTenantDetails(new TenantDetails(
+            "SV001", "ICTU", "CNTT", null, Gender.Unspecified, null, null, 2_000_000m), FixedNow);
+        var repo = new TrackingUserProfileRepository(existing);
+        var useCase = new UpdateTenantProfileUseCase(repo, new FixedTimeProvider(FixedNow));
+
+        var command = new UpdateTenantCommand(
+            "Nguyen Van Updated", null, null, null, null, null, null, null, null, null, null, null);
+
+        await useCase.ExecuteAsync(userId, command);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(repo.LastUpdatedProfile?.Tenant?.StudentId, Is.EqualTo("SV001"));
+            Assert.That(repo.LastUpdatedProfile?.Tenant?.University, Is.EqualTo("ICTU"));
+            Assert.That(repo.LastUpdatedProfile?.Tenant?.Faculty, Is.EqualTo("CNTT"));
+            Assert.That(repo.LastUpdatedProfile?.Tenant?.MaxBudget, Is.EqualTo(2_000_000m));
+        });
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WhenOptionalTenantFieldsAreExplicitlyCleared_ClearsExistingValues()
+    {
+        var userId = Guid.NewGuid();
+        var existing = UserProfile.CreateDefault(userId, UserRole.Student, FixedNow);
+        existing.UpdateTenantDetails(new TenantDetails(
+            "SV001", "ICTU", "CNTT", null, Gender.Unspecified, null, null, 2_000_000m), FixedNow);
+        var repo = new TrackingUserProfileRepository(existing);
+        var useCase = new UpdateTenantProfileUseCase(repo, new FixedTimeProvider(FixedNow));
+
+        var command = new UpdateTenantCommand(
+            "Nguyen Van Updated", null, null, null, null, null, null, null, null, null, null, null,
+            IsStudentIdSpecified: true,
+            IsUniversitySpecified: true,
+            IsFacultySpecified: true,
+            IsMaxBudgetSpecified: true);
+
+        await useCase.ExecuteAsync(userId, command);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(repo.LastUpdatedProfile?.Tenant?.StudentId, Is.Null);
+            Assert.That(repo.LastUpdatedProfile?.Tenant?.University, Is.Null);
+            Assert.That(repo.LastUpdatedProfile?.Tenant?.Faculty, Is.Null);
+            Assert.That(repo.LastUpdatedProfile?.Tenant?.MaxBudget, Is.Null);
+        });
+    }
+
+    [Test]
     public void ExecuteAsync_WhenAddAsyncEncountersConflict_ShouldThrowConcurrencyConflictException()
     {
         var userId = Guid.NewGuid();

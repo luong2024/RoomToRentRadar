@@ -62,7 +62,11 @@ public record UpdateTenantCommand(
     string? Gender,
     string? EmergencyContactName,
     string? EmergencyContactPhone,
-    decimal? MaxBudget);
+    decimal? MaxBudget,
+    bool IsStudentIdSpecified = false,
+    bool IsUniversitySpecified = false,
+    bool IsFacultySpecified = false,
+    bool IsMaxBudgetSpecified = false);
 
 public record UpdateLandlordCommand(
     string FullName,
