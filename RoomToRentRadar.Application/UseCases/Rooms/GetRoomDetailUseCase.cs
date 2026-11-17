@@ -13,6 +13,7 @@ namespace RoomToRentRadar.Application.UseCases.Rooms;
 
 /// <summary>
 /// Returns full room details for US02 (getRoomDetail).
+/// Author: Tran Thuy Duyen (T02.1 - US02).
 /// Campus is resolved via <see cref="ICampusRepository"/> per BR-CMP-01..03 (M1).
 /// Distance is calculated by <see cref="HaversineDistanceCalculator"/> rounded to 1 decimal place per BR-SRCH-03 (M5).
 /// Phone masking follows BR-AUTH-07: null for anonymous callers.
