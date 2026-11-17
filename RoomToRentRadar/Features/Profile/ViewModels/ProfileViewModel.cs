@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Text.RegularExpressions;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Features.Profile.Models;
 using RoomToRentRadar.Features.Profile.Services;
@@ -11,10 +12,12 @@ public partial class ProfileViewModel : ObservableObject
     private const int MaxAvatarBytes = 1024 * 1024;
     private readonly IProfileService _profileService;
     private readonly IErrorHandler _errorHandler;
+    private readonly IAuthenticationSessionService _sessionService;
     private string? _pendingAvatarData;
 
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private string _statusMessage = string.Empty;
+    [ObservableProperty] private string _accountEmail = string.Empty;
     [ObservableProperty] private string _role = string.Empty;
     [ObservableProperty] private string _fullName = string.Empty;
     [ObservableProperty] private string? _phoneNumber;
@@ -37,10 +40,14 @@ public partial class ProfileViewModel : ObservableObject
     public bool IsAdmin => string.Equals(Role, "ADMIN", StringComparison.OrdinalIgnoreCase);
     public string RoleDisplay => IsStudent ? "Student" : IsLandlord ? "Landlord" : IsAdmin ? "Administrator" : Role;
 
-    public ProfileViewModel(IProfileService profileService, IErrorHandler errorHandler)
+    public ProfileViewModel(
+        IProfileService profileService,
+        IErrorHandler errorHandler,
+        IAuthenticationSessionService sessionService)
     {
         _profileService = profileService;
         _errorHandler = errorHandler;
+        _sessionService = sessionService;
     }
 
     [RelayCommand]
@@ -50,6 +57,22 @@ public partial class ProfileViewModel : ObservableObject
         {
             IsBusy = true;
             StatusMessage = string.Empty;
+
+            var currentUser = _sessionService.CurrentUser;
+            if (currentUser is null || !_sessionService.IsAuthenticated)
+            {
+                AccountEmail = string.Empty;
+                Role = string.Empty;
+                ClearProfile();
+                StatusMessage = "Please sign in to view your profile.";
+                return;
+            }
+
+            // The account identity comes from the active authenticated session;
+            // profile details are then loaded only from the protected /me endpoint.
+            ClearProfile();
+            AccountEmail = currentUser.Email;
+            Role = currentUser.Role;
             var profile = await _profileService.GetMyProfileAsync();
             if (profile is null) throw new InvalidOperationException("Your profile could not be loaded.");
             Apply(profile);
@@ -110,6 +133,18 @@ public partial class ProfileViewModel : ObservableObject
     [RelayCommand]
     public async Task SaveAsync()
     {
+        if (string.IsNullOrWhiteSpace(FullName))
+        {
+            StatusMessage = "Full name is required.";
+            return;
+        }
+
+        if (!IsValidVietnamesePhoneNumber(PhoneNumber))
+        {
+            StatusMessage = "Phone number must be a valid Vietnamese mobile number (for example, 0912345678).";
+            return;
+        }
+
         if (!decimal.TryParse(MaxBudgetText, out var maxBudget) && !string.IsNullOrWhiteSpace(MaxBudgetText))
         {
             StatusMessage = "Maximum budget must be a valid number.";
@@ -149,6 +184,25 @@ public partial class ProfileViewModel : ObservableObject
         AvatarPreview = ToImageSource(profile.AvatarUrl);
     }
 
+    private void ClearProfile()
+    {
+        FullName = string.Empty;
+        PhoneNumber = null;
+        Bio = null;
+        AvatarUrl = null;
+        AvatarPreview = null;
+        StudentId = null;
+        University = null;
+        Faculty = null;
+        MaxBudgetText = null;
+        BusinessName = null;
+        Address = null;
+        VerificationStatus = null;
+        StaffCode = null;
+        Department = null;
+        JobTitle = null;
+    }
+
     private ProfileApiDto BuildProfile(decimal? maxBudget) => new()
     {
         Role = Role, FullName = FullName, PhoneNumber = PhoneNumber, Bio = Bio, AvatarUrl = AvatarUrl,
@@ -159,4 +213,19 @@ public partial class ProfileViewModel : ObservableObject
 
     private static ImageSource? ToImageSource(string? value) => Uri.TryCreate(value, UriKind.Absolute, out var uri)
         ? ImageSource.FromUri(uri) : null;
+
+    private static bool IsValidVietnamesePhoneNumber(string? phoneNumber)
+    {
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+        {
+            return true;
+        }
+
+        var normalized = phoneNumber.Trim()
+            .Replace(" ", string.Empty)
+            .Replace("-", string.Empty)
+            .Replace("+84", "0", StringComparison.Ordinal);
+
+        return Regex.IsMatch(normalized, "^(03|05|07|08|09)\\d{8}$");
+    }
 }

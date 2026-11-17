@@ -1,6 +1,7 @@
 using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
 using RoomToRentRadar.Core.Constants;
+using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Features.RoomListings.Views;
 using Font = Microsoft.Maui.Font;
 
@@ -8,11 +9,33 @@ namespace RoomToRentRadar
 {
     public partial class AppShell : Shell
     {
+        private IAuthenticationSessionService? _sessionService;
+
         public AppShell()
         {
             InitializeComponent();
             Routing.RegisterRoute(AppRoutes.RoomDetails, typeof(RoomDetailsPage));
         }
+
+        public void ConfigureSession(IAuthenticationSessionService sessionService)
+        {
+            if (ReferenceEquals(_sessionService, sessionService)) return;
+
+            if (_sessionService is not null)
+            {
+                _sessionService.CurrentUserChanged -= OnCurrentUserChanged;
+            }
+
+            _sessionService = sessionService;
+            _sessionService.CurrentUserChanged += OnCurrentUserChanged;
+            UpdateProfileVisibility();
+        }
+
+        private void OnCurrentUserChanged(object? sender, Core.Models.Authentication.AuthUser? user) =>
+            MainThread.BeginInvokeOnMainThread(UpdateProfileVisibility);
+
+        private void UpdateProfileVisibility() =>
+            ProfileShellContent.IsVisible = _sessionService?.IsAuthenticated == true;
 
         public void UpdateDesktopPaneCompactState(bool isCompact)
         {

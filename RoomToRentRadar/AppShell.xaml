@@ -217,6 +217,7 @@
     </FlyoutItem>
 
     <ShellContent
+        x:Name="ProfileShellContent"
         Title="Hồ sơ"
         ContentTemplate="{DataTemplate profileViews:ProfilePage}"
         Icon="{StaticResource IconProjects}"

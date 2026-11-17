@@ -40,13 +40,6 @@ public static class RoomDetailServiceRegistration
                 ?? throw new InvalidOperationException("Cosmos DB RoomsContainer is not available.");
         });
 
-        services.AddScoped<CosmosClient>(sp =>
-        {
-            var dbContext = sp.GetRequiredService<ICosmosDbContext>() as CosmosDbContext;
-            return dbContext?.Client
-                ?? throw new InvalidOperationException("Cosmos DB Client is not available.");
-        });
-
         services.AddScoped<IRoomRepository, CosmosRoomRepository>();
         services.TryAddScoped<IGetRoomDetailsUseCase, GetRoomDetailsUseCase>();
         services.TryAddScoped<ISearchRoomsUseCase, SearchRoomsUseCase>();

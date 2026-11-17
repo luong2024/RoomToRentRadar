@@ -24,6 +24,12 @@
             </Border>
 
             <Label Text="Personal information" FontAttributes="Bold" FontSize="18" />
+            <Label Text="{Binding StatusMessage}"
+                   TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+            <VerticalStackLayout Spacing="2">
+                <Label Text="Account" FontAttributes="Bold" />
+                <Label Text="{Binding AccountEmail}" />
+            </VerticalStackLayout>
             <Entry Placeholder="Full name" Text="{Binding FullName}" />
             <Entry Placeholder="Phone number" Keyboard="Telephone" Text="{Binding PhoneNumber}" />
             <Editor Placeholder="Short bio" AutoSize="TextChanges" Text="{Binding Bio}" />
@@ -50,7 +56,6 @@
                 <Entry Placeholder="Job title" Text="{Binding JobTitle}" />
             </VerticalStackLayout>
 
-            <Label Text="{Binding StatusMessage}" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
             <Button Text="Save profile" Command="{Binding SaveCommand}" />
         </VerticalStackLayout>
     </ScrollView>

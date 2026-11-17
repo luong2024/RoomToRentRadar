@@ -20,7 +20,13 @@ namespace RoomToRentRadar
 
         protected override Window CreateWindow(IActivationState? activationState)
         {
-            return new MainWindow(new AppShell());
+            var shell = new AppShell();
+            if (_sessionService is not null)
+            {
+                shell.ConfigureSession(_sessionService);
+            }
+
+            return new MainWindow(shell);
         }
 
         protected override async void OnStart()
