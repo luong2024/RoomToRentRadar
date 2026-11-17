@@ -65,6 +65,109 @@ public class GatewayRegistrationTests
         Assert.That(ex.InnerException, Is.InstanceOf<HttpRequestException>());
     }
 
+    [Test]
+    public void EveryGatewayInterface_IsRegistered_AsHttp()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ISessionStore>(new InMemorySessionStore());
+        services.AddClientAdapters(new ApiOptions());
+        using var provider = services.BuildServiceProvider();
+
+        Assert.That(FeatureGatewayInterfaces, Has.Length.EqualTo(10));
+        foreach (var gatewayInterface in FeatureGatewayInterfaces)
+        {
+            Assert.That(provider.GetRequiredService(gatewayInterface), Is.InstanceOf(HttpTypeFor(gatewayInterface)), gatewayInterface.Name);
+        }
+    }
+
+    [Test]
+    public void UseMocksFalse_ResolvesHttpGateways_ForEveryGatewayInterface()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ISessionStore>(new InMemorySessionStore());
+        services.AddClientAdapters(new ApiOptions { UseMocks = false });
+        using var provider = services.BuildServiceProvider();
+
+        foreach (var gatewayInterface in FeatureGatewayInterfaces)
+        {
+            Assert.That(provider.GetRequiredService(gatewayInterface), Is.InstanceOf(HttpTypeFor(gatewayInterface)), gatewayInterface.Name);
+        }
+    }
+
+    [Test]
+    public void UseMocksTrue_DebugBuild_ResolvesMockRoomAndCampus()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ISessionStore>(new InMemorySessionStore());
+        services.AddClientAdapters(new ApiOptions { UseMocks = true }, isDebugBuild: true);
+        using var provider = services.BuildServiceProvider();
+
+        Assert.That(provider.GetRequiredService<IRoomGateway>(), Is.InstanceOf<MockRoomGateway>());
+        Assert.That(provider.GetRequiredService<ICampusGateway>(), Is.InstanceOf<MockCampusGateway>());
+        // The other eight gateways stay Http until their feature tasks ship their own mocks.
+        foreach (var gatewayInterface in FeatureGatewayInterfaces.Where(t => t != typeof(IRoomGateway) && t != typeof(ICampusGateway)))
+        {
+            Assert.That(provider.GetRequiredService(gatewayInterface), Is.InstanceOf(HttpTypeFor(gatewayInterface)), gatewayInterface.Name);
+        }
+    }
+
+    [Test]
+    public void UseMocksTrue_ReleaseBuild_Throws()
+    {
+        var services = new ServiceCollection();
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            services.AddClientAdapters(new ApiOptions { UseMocks = true }, isDebugBuild: false));
+
+        Assert.That(ex!.Message, Is.EqualTo("UseMocks is only allowed in Debug builds."));
+    }
+
+    [Test]
+    public void UseMocksTrue_AuthGateway_StillHttp()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ISessionStore>(new InMemorySessionStore());
+        services.AddClientAdapters(new ApiOptions { UseMocks = true }, isDebugBuild: true);
+        using var provider = services.BuildServiceProvider();
+
+        Assert.That(provider.GetRequiredService<IAuthGateway>(), Is.InstanceOf<HttpAuthGateway>());
+    }
+
+#if DEBUG
+    [Test]
+    public void AddClientAdapters_PublicOverload_UseMocksTrue_IsAllowed()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ISessionStore>(new InMemorySessionStore());
+
+        Assert.DoesNotThrow(() => services.AddClientAdapters(new ApiOptions { UseMocks = true }));
+    }
+#else
+    [Test]
+    public void AddClientAdapters_PublicOverload_UseMocksTrue_Throws()
+    {
+        var services = new ServiceCollection();
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            services.AddClientAdapters(new ApiOptions { UseMocks = true }));
+
+        Assert.That(ex!.Message, Is.EqualTo("UseMocks is only allowed in Debug builds."));
+    }
+#endif
+
+    private static readonly Type[] FeatureGatewayInterfaces = typeof(IRoomGateway).Assembly
+        .GetTypes()
+        .Where(t => t.IsInterface
+            && t.Namespace == "RoomToRentRadar.Client.Adapters.Abstractions"
+            && t.Name.EndsWith("Gateway", StringComparison.Ordinal)
+            && t != typeof(IAuthGateway))
+        .OrderBy(t => t.Name, StringComparer.Ordinal)
+        .ToArray();
+
+    private static Type HttpTypeFor(Type gatewayInterface) =>
+        typeof(IRoomGateway).Assembly.GetType(
+            "RoomToRentRadar.Client.Adapters.Http.Http" + gatewayInterface.Name[1..], throwOnError: true)!;
+
     private static ServiceProvider BuildProvider(StubHttpMessageHandler stub, InMemorySessionStore store)
     {
         var services = new ServiceCollection();

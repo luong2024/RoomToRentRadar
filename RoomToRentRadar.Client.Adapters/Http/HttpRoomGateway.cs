@@ -27,19 +27,19 @@ public sealed class HttpRoomGateway : IRoomGateway
     }
 
     public Task<AreaSearchResultDto> SearchRoomsInAreaAsync(AreaSearchRequest request, CancellationToken ct = default) =>
-        Task.FromException<AreaSearchResultDto>(new NotImplementedException("T05.1: searchRoomsInArea is not implemented yet"));
+        Pending.For<AreaSearchResultDto>("T05.1", "searchRoomsInArea");
 
     public Task<ComparisonDto> CompareRoomsAsync(IReadOnlyList<string> roomIds, string? campusId = null, CancellationToken ct = default) =>
-        Task.FromException<ComparisonDto>(new NotImplementedException("T10.1: compareRooms is not implemented yet"));
+        Pending.For<ComparisonDto>("T10.1", "compareRooms");
 
     public Task<RoomDetailDto> GetRoomDetailAsync(string roomId, string? campusId = null, CancellationToken ct = default) =>
-        Task.FromException<RoomDetailDto>(new NotImplementedException("T02.1: getRoomDetail is not implemented yet"));
+        Pending.For<RoomDetailDto>("T02.1", "getRoomDetail");
 
     public Task<IReadOnlyList<RoomCardDto>> GetSimilarRoomsAsync(string roomId, string? campusId = null, CancellationToken ct = default) =>
-        Task.FromException<IReadOnlyList<RoomCardDto>>(new NotImplementedException("T02.1: getSimilarRooms is not implemented yet"));
+        Pending.For<IReadOnlyList<RoomCardDto>>("T02.1", "getSimilarRooms");
 
     public Task<TravelTimesDto> GetRoomTravelTimesAsync(string roomId, string? campusId = null, CancellationToken ct = default) =>
-        Task.FromException<TravelTimesDto>(new NotImplementedException("T09.1: getRoomTravelTimes is not implemented yet"));
+        Pending.For<TravelTimesDto>("T09.1", "getRoomTravelTimes");
 
     private static string BuildSearchUrl(RoomSearchRequest request)
     {
