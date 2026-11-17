@@ -9,31 +9,31 @@ public sealed class UpdateTenantProfileRequest
     }
 
     public UpdateTenantProfileRequest(
-        string fullName,
-        string? phoneNumber,
-        string? avatarUrl,
-        string? bio,
-        string? studentId,
-        string? university,
-        string? faculty,
-        DateOnly? dateOfBirth,
-        string? gender,
-        string? emergencyContactName,
-        string? emergencyContactPhone,
-        decimal? maxBudget)
+        string FullName,
+        string? PhoneNumber = null,
+        string? AvatarUrl = null,
+        string? Bio = null,
+        string? StudentId = null,
+        string? University = null,
+        string? Faculty = null,
+        DateOnly? DateOfBirth = null,
+        string? Gender = null,
+        string? EmergencyContactName = null,
+        string? EmergencyContactPhone = null,
+        decimal? MaxBudget = null)
     {
-        FullName = fullName;
-        PhoneNumber = phoneNumber;
-        AvatarUrl = avatarUrl;
-        Bio = bio;
-        StudentId = studentId;
-        University = university;
-        Faculty = faculty;
-        DateOfBirth = dateOfBirth;
-        Gender = gender;
-        EmergencyContactName = emergencyContactName;
-        EmergencyContactPhone = emergencyContactPhone;
-        MaxBudget = maxBudget;
+        this.FullName = FullName;
+        this.PhoneNumber = PhoneNumber;
+        this.AvatarUrl = AvatarUrl;
+        this.Bio = Bio;
+        this.StudentId = StudentId;
+        this.University = University;
+        this.Faculty = Faculty;
+        this.DateOfBirth = DateOfBirth;
+        this.Gender = Gender;
+        this.EmergencyContactName = EmergencyContactName;
+        this.EmergencyContactPhone = EmergencyContactPhone;
+        this.MaxBudget = MaxBudget;
     }
 
     public string FullName { get; set; } = string.Empty;
