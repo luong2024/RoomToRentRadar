@@ -49,6 +49,12 @@ public static class ServiceCollectionExtensions
             return new ApiClient(httpClient);
         });
 
+        // Route guard service
+        services.AddSingleton<IRouteGuardService, RouteGuardService>();
+
+        // Shell navigation
+        services.AddTransient<AppShell>();
+
         services.AddSingleton<IGoogleAuthAdapter, GoogleAuthAdapter>();
         return services;
     }
