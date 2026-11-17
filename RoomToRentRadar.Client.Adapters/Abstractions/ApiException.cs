@@ -8,6 +8,9 @@ public class ApiException : Exception
     public string? ErrorCode { get; }
     public IReadOnlyDictionary<string, string[]>? ValidationErrors { get; }
 
+    /// <summary>True when the request never got an HTTP response (StatusCode is 0).</summary>
+    public bool IsNetworkError => ErrorCode == ApiErrorCodes.NetworkError;
+
     public ApiException(
         string message,
         HttpStatusCode statusCode,
