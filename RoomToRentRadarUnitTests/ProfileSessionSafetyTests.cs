@@ -2,6 +2,7 @@ using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Core.Models.Authentication;
 using RoomToRentRadar.Features.Profile.Models;
 using RoomToRentRadar.Features.Profile.Services;
+using RoomToRentRadar.Infrastructure.Api;
 
 namespace RoomToRentRadarUnitTests;
 
@@ -34,6 +35,40 @@ public class ProfileSessionSafetyTests
             Assert.That(decoded, Is.True);
             Assert.That(bytes, Is.EqualTo(original));
         });
+    }
+
+    [Test]
+    public async Task UpdateAsync_WhenPendingAvatarBelongsToPreviousUser_DoesNotSendItForCurrentUser()
+    {
+        var userA = Guid.NewGuid();
+        var userB = Guid.NewGuid();
+        var pendingAvatar = new PendingProfileAvatar();
+        pendingAvatar.Set(userA, "data:image/png;base64,YXZhdGFyLWZvci11c2VyLWE=");
+        var client = new CapturingApiClient();
+        var service = new ProfileService(client);
+        var profile = new ProfileApiDto { Role = "STUDENT", FullName = "User B" };
+
+        await service.UpdateAsync(profile, pendingAvatar.GetFor(userB));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(((UpdateTenantProfileRequest)client.PutRequest!).AvatarUrl, Is.Null);
+            Assert.That(pendingAvatar.GetFor(userA), Is.Null);
+        });
+    }
+
+    private sealed class CapturingApiClient : IApiClient
+    {
+        public object? PutRequest { get; private set; }
+
+        public Task<TResponse?> GetAsync<TResponse>(string endpoint, CancellationToken cancellationToken = default) =>
+            Task.FromResult<TResponse?>(default);
+
+        public Task<TResponse?> PutAsync<TRequest, TResponse>(string endpoint, TRequest request, CancellationToken cancellationToken = default)
+        {
+            PutRequest = request;
+            return Task.FromResult<TResponse?>(default);
+        }
     }
 
     private sealed class FakeSession(AuthUser? user) : IAuthenticationSessionService

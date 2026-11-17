@@ -13,7 +13,8 @@ public partial class ProfileViewModel : ObservableObject
     private readonly IProfileService _profileService;
     private readonly IErrorHandler _errorHandler;
     private readonly IAuthenticationSessionService _sessionService;
-    private string? _pendingAvatarData;
+    private readonly PendingProfileAvatar _pendingAvatar = new();
+    private Guid? _loadedProfileUserId;
 
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private string _statusMessage = string.Empty;
@@ -64,7 +65,8 @@ public partial class ProfileViewModel : ObservableObject
             {
                 AccountEmail = string.Empty;
                 Role = string.Empty;
-                ClearProfile();
+                _loadedProfileUserId = null;
+                ClearProfile(clearPendingAvatar: true);
                 StatusMessage = "Please sign in to view your profile.";
                 return;
             }
@@ -72,7 +74,8 @@ public partial class ProfileViewModel : ObservableObject
             requestedUserId = currentUser.Id;
             // The account identity comes from the active authenticated session;
             // profile details are then loaded only from the protected /me endpoint.
-            ClearProfile();
+            ClearProfile(clearPendingAvatar: _loadedProfileUserId != currentUser.Id);
+            _loadedProfileUserId = currentUser.Id;
             AccountEmail = currentUser.Email;
             Role = currentUser.Role;
             var profile = await _profileService.GetMyProfileAsync();
@@ -103,6 +106,21 @@ public partial class ProfileViewModel : ObservableObject
     {
         try
         {
+            var selectingUser = _sessionService.CurrentUser;
+            if (selectingUser is null || !ProfileSessionGuard.IsCurrentSession(_sessionService, selectingUser))
+            {
+                StatusMessage = "Please sign in before choosing an avatar.";
+                return;
+            }
+
+            if (_loadedProfileUserId != selectingUser.Id)
+            {
+                ClearProfile(clearPendingAvatar: true);
+                _loadedProfileUserId = null;
+                StatusMessage = "The account changed. Reload the profile before choosing an avatar.";
+                return;
+            }
+
             var result = await FilePicker.Default.PickAsync(new PickOptions
             {
                 PickerTitle = "Choose a profile photo",
@@ -113,6 +131,16 @@ public partial class ProfileViewModel : ObservableObject
                     [DevicePlatform.WinUI] = [".jpg", ".jpeg", ".png"]
                 })
             });
+
+            // A user may sign out or switch accounts while the native picker is open.
+            // Never retain a selection that was started by the previous session.
+            if (!ProfileSessionGuard.IsCurrentSession(_sessionService, selectingUser))
+            {
+                _pendingAvatar.Clear();
+                StatusMessage = "The account changed while choosing an avatar. The selection was discarded.";
+                return;
+            }
+
             if (result is null) return;
 
             var contentType = result.ContentType?.ToLowerInvariant();
@@ -132,7 +160,14 @@ public partial class ProfileViewModel : ObservableObject
             }
 
             var bytes = memory.ToArray();
-            _pendingAvatarData = $"data:{contentType};base64,{Convert.ToBase64String(bytes)}";
+            if (!ProfileSessionGuard.IsCurrentSession(_sessionService, selectingUser))
+            {
+                _pendingAvatar.Clear();
+                StatusMessage = "The account changed while choosing an avatar. The selection was discarded.";
+                return;
+            }
+
+            _pendingAvatar.Set(selectingUser.Id, $"data:{contentType};base64,{Convert.ToBase64String(bytes)}");
             AvatarPreview = ImageSource.FromStream(() => new MemoryStream(bytes));
             StatusMessage = "Avatar selected. Save changes to upload it.";
         }
@@ -174,9 +209,18 @@ public partial class ProfileViewModel : ObservableObject
                 return;
             }
 
+            if (_loadedProfileUserId != currentUser.Id)
+            {
+                ClearProfile(clearPendingAvatar: true);
+                _loadedProfileUserId = null;
+                StatusMessage = "The account changed. Reload the profile before saving.";
+                return;
+            }
+
             requestedUserId = currentUser.Id;
             IsBusy = true;
-            var saved = await _profileService.UpdateAsync(BuildProfile(string.IsNullOrWhiteSpace(MaxBudgetText) ? null : maxBudget), _pendingAvatarData);
+            var pendingAvatarData = _pendingAvatar.GetFor(currentUser.Id);
+            var saved = await _profileService.UpdateAsync(BuildProfile(string.IsNullOrWhiteSpace(MaxBudgetText) ? null : maxBudget), pendingAvatarData);
             if (saved is null) throw new InvalidOperationException("The profile update returned no data.");
 
             if (!ProfileSessionGuard.CanApplyProfile(_sessionService, currentUser, saved))
@@ -184,7 +228,7 @@ public partial class ProfileViewModel : ObservableObject
                 return;
             }
 
-            _pendingAvatarData = null;
+            _pendingAvatar.Clear();
             Apply(saved);
             StatusMessage = "Profile saved successfully.";
         }
@@ -217,8 +261,13 @@ public partial class ProfileViewModel : ObservableObject
         AvatarPreview = ToImageSource(profile.AvatarUrl);
     }
 
-    private void ClearProfile()
+    private void ClearProfile(bool clearPendingAvatar = false)
     {
+        if (clearPendingAvatar)
+        {
+            _pendingAvatar.Clear();
+        }
+
         FullName = string.Empty;
         PhoneNumber = null;
         Bio = null;
