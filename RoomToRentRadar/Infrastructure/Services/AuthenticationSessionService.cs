@@ -18,7 +18,9 @@ public class AuthenticationSessionService : IAuthenticationSessionService
     private readonly ISecureStorageService _secureStorage;
     private readonly IAuthenticationPort _authenticationPort;
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
+    private readonly TaskCompletionSource<bool> _initTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+    private long _sessionEpoch;
     private string? _cachedAccessToken;
     private string? _cachedRefreshToken;
     private AuthUser? _currentUser;
@@ -33,6 +35,8 @@ public class AuthenticationSessionService : IAuthenticationSessionService
 
     public bool IsAuthenticated => _currentUser != null && !string.IsNullOrWhiteSpace(_cachedAccessToken);
 
+    public bool IsInitialized => _initTcs.Task.IsCompleted;
+
     public AuthUser? CurrentUser => _currentUser;
 
     public event EventHandler<AuthUser?>? CurrentUserChanged;
@@ -40,6 +44,8 @@ public class AuthenticationSessionService : IAuthenticationSessionService
     public async Task SaveSessionAsync(string accessToken, string refreshToken, AuthUser user, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(user);
+
+        Interlocked.Increment(ref _sessionEpoch);
 
         // Snapshot current in-memory state in case of rollback
         var prevAccessToken = _cachedAccessToken;
@@ -74,6 +80,7 @@ public class AuthenticationSessionService : IAuthenticationSessionService
             _cachedAccessToken = accessToken;
             _cachedRefreshToken = refreshToken;
             _currentUser = user;
+            _initTcs.TrySetResult(true);
         }
         catch (Exception)
         {
@@ -125,6 +132,11 @@ public class AuthenticationSessionService : IAuthenticationSessionService
 
     public async Task<string?> GetAccessTokenAsync(CancellationToken cancellationToken = default)
     {
+        if (_currentUser == null)
+        {
+            return null;
+        }
+
         if (!string.IsNullOrWhiteSpace(_cachedAccessToken))
         {
             return _cachedAccessToken;
@@ -143,6 +155,11 @@ public class AuthenticationSessionService : IAuthenticationSessionService
 
     public async Task<string?> GetRefreshTokenAsync(CancellationToken cancellationToken = default)
     {
+        if (_currentUser == null)
+        {
+            return null;
+        }
+
         if (!string.IsNullOrWhiteSpace(_cachedRefreshToken))
         {
             return _cachedRefreshToken;
@@ -161,6 +178,7 @@ public class AuthenticationSessionService : IAuthenticationSessionService
 
     public async Task<bool> TryRestoreSessionAsync(CancellationToken cancellationToken = default)
     {
+        var restored = false;
         try
         {
             var accessToken = await _secureStorage.GetAsync(AccessTokenKey);
@@ -170,6 +188,7 @@ public class AuthenticationSessionService : IAuthenticationSessionService
             if (string.IsNullOrWhiteSpace(refreshToken) || string.IsNullOrWhiteSpace(userData))
             {
                 await ClearSessionAsync(cancellationToken);
+                restored = false;
                 return false;
             }
 
@@ -182,12 +201,14 @@ public class AuthenticationSessionService : IAuthenticationSessionService
             {
                 // Corrupted user JSON
                 await ClearSessionAsync(cancellationToken);
+                restored = false;
                 return false;
             }
 
             if (user == null || user.Id == Guid.Empty)
             {
                 await ClearSessionAsync(cancellationToken);
+                restored = false;
                 return false;
             }
 
@@ -198,6 +219,7 @@ public class AuthenticationSessionService : IAuthenticationSessionService
                 _cachedRefreshToken = refreshToken;
                 _currentUser = user;
                 CurrentUserChanged?.Invoke(this, _currentUser);
+                restored = true;
                 return true;
             }
 
@@ -208,27 +230,74 @@ public class AuthenticationSessionService : IAuthenticationSessionService
             var refreshed = await RefreshTokenAsync(cancellationToken);
             if (refreshed)
             {
+                restored = true;
                 return true;
             }
 
             // If refresh failed because the token was expired or revoked, RefreshTokenAsync
             // already called ClearSessionAsync() and wiped SecureStorage.
             // If refresh failed due to a transient error (e.g. offline, timeout, server error),
-            // we intentionally preserve the session in SecureStorage for later retry.
+            // we intentionally preserve the session in SecureStorage for later retry,
+            // while ensuring in-memory state reflects that the session is not currently active.
+            _currentUser = null;
+            restored = false;
             return false;
         }
         catch
         {
             // Error reading secure storage or unexpected exception - do not clear storage on transient exceptions
+            restored = false;
             return false;
+        }
+        finally
+        {
+            _initTcs.TrySetResult(restored);
+        }
+    }
+
+    public async Task EnsureInitializedAsync(CancellationToken cancellationToken = default)
+    {
+        if (_initTcs.Task.IsCompleted)
+        {
+            return;
+        }
+
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(TimeSpan.FromSeconds(5));
+
+        try
+        {
+            await _initTcs.Task.WaitAsync(cts.Token);
+        }
+        catch (TimeoutException)
+        {
+            _initTcs.TrySetResult(false);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            _initTcs.TrySetResult(false);
         }
     }
 
     public async Task<bool> RefreshTokenAsync(CancellationToken cancellationToken = default)
     {
+        var initialEpoch = Interlocked.Read(ref _sessionEpoch);
         await _refreshLock.WaitAsync(cancellationToken);
         try
         {
+            // If session epoch changed while waiting for lock (e.g. logout happened), discard
+            if (Interlocked.Read(ref _sessionEpoch) != initialEpoch)
+            {
+                return false;
+            }
+
+            // Double-check: If another concurrent thread just refreshed the token while we were waiting for the lock,
+            // we can reuse the new valid access token instead of triggering a redundant refresh
+            if (!string.IsNullOrWhiteSpace(_cachedAccessToken) && !IsJwtExpired(_cachedAccessToken, clockSkewSeconds: 30))
+            {
+                return true;
+            }
+
             var currentRefreshToken = _cachedRefreshToken ?? await _secureStorage.GetAsync(RefreshTokenKey);
             if (string.IsNullOrWhiteSpace(currentRefreshToken))
             {
@@ -237,6 +306,13 @@ public class AuthenticationSessionService : IAuthenticationSessionService
             }
 
             var result = await _authenticationPort.RefreshTokenAsync(currentRefreshToken, cancellationToken);
+
+            // Re-check epoch after network call returns: if logout or account switch occurred in-flight, discard
+            if (Interlocked.Read(ref _sessionEpoch) != initialEpoch)
+            {
+                return false;
+            }
+
             if (result.IsSuccess &&
                 !string.IsNullOrWhiteSpace(result.AccessToken) &&
                 !string.IsNullOrWhiteSpace(result.RefreshToken) &&
@@ -246,9 +322,9 @@ public class AuthenticationSessionService : IAuthenticationSessionService
                 return true;
             }
 
-            // Only clear session when the refresh token is confirmed expired or revoked.
+            // Clear session when the refresh token is confirmed expired, revoked, or rejected as unauthorized.
             // For transient errors (offline network, timeout, server 5xx), keep existing session intact.
-            if (result.FailureType == AuthFailureType.RefreshTokenExpiredOrRevoked)
+            if (result.FailureType is AuthFailureType.RefreshTokenExpiredOrRevoked or AuthFailureType.InvalidCredentials)
             {
                 await ClearSessionAsync(cancellationToken);
             }
@@ -272,6 +348,8 @@ public class AuthenticationSessionService : IAuthenticationSessionService
 
     public async Task ClearSessionAsync(CancellationToken cancellationToken = default)
     {
+        Interlocked.Increment(ref _sessionEpoch);
+
         _cachedAccessToken = null;
         _cachedRefreshToken = null;
         _currentUser = null;
@@ -284,11 +362,58 @@ public class AuthenticationSessionService : IAuthenticationSessionService
         }
         catch
         {
-            // Storage remove exception suppressed
+            try
+            {
+                await _secureStorage.SetAsync(AccessTokenKey, string.Empty);
+                await _secureStorage.SetAsync(RefreshTokenKey, string.Empty);
+                await _secureStorage.SetAsync(UserDataKey, string.Empty);
+            }
+            catch
+            {
+                // Storage remove/set exception suppressed
+            }
         }
 
         CurrentUserChanged?.Invoke(this, null);
         await Task.CompletedTask;
+    }
+
+    public async Task<LogoutResult> LogoutAsync(CancellationToken cancellationToken = default)
+    {
+        // 1. Immediately invalidate session epoch to discard any in-flight token refresh
+        Interlocked.Increment(ref _sessionEpoch);
+
+        var serverRevoked = false;
+        string? errorMessage = null;
+
+        try
+        {
+            var refreshToken = _cachedRefreshToken ?? await _secureStorage.GetAsync(RefreshTokenKey);
+            if (!string.IsNullOrWhiteSpace(refreshToken))
+            {
+                try
+                {
+                    serverRevoked = await _authenticationPort.LogoutAsync(refreshToken, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    errorMessage = ex.Message;
+                    serverRevoked = false;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            // 2. Unconditionally wipe local session credentials and state
+            await ClearSessionAsync(cancellationToken);
+            _initTcs.TrySetResult(false);
+        }
+
+        return new LogoutResult(true, serverRevoked, errorMessage);
     }
 
     /// <summary>

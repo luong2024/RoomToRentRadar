@@ -106,3 +106,11 @@ public sealed record GoogleAuthResult(
     public static GoogleAuthResult Failed(string? errorMessage = null) =>
         new(false, ErrorMessage: errorMessage ?? "Google sign-in was canceled or failed. Please try again.");
 }
+
+/// <summary>
+/// Result of a logout attempt distinguishing local storage cleanup from server-side token revocation.
+/// </summary>
+public sealed record LogoutResult(
+    bool LocalSessionCleared,
+    bool ServerRevoked,
+    string? ErrorMessage = null);

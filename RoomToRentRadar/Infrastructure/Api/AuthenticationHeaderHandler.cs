@@ -36,8 +36,18 @@ public class AuthenticationHeaderHandler : DelegatingHandler
         var response = await base.SendAsync(request, cancellationToken);
 
         // If unauthorized and we had a token, only retry if request body can be safely reproduced
-        if (response.StatusCode == HttpStatusCode.Unauthorized && !string.IsNullOrWhiteSpace(token))
+        // and request was not directed to an authentication endpoint (preventing recursion)
+        if (response.StatusCode == HttpStatusCode.Unauthorized &&
+            !string.IsNullOrWhiteSpace(token) &&
+            !IsAuthEndpoint(request.RequestUri))
         {
+            // Verify account isolation: do not retry if user logged out or switched accounts while request was in-flight
+            var currentToken = await _sessionService.GetAccessTokenAsync(cancellationToken);
+            if (!string.Equals(currentToken, token, StringComparison.Ordinal))
+            {
+                return response;
+            }
+
             if (CanRetryRequest(request))
             {
                 var refreshed = await _sessionService.RefreshTokenAsync(cancellationToken);
@@ -62,6 +72,21 @@ public class AuthenticationHeaderHandler : DelegatingHandler
         }
 
         return response;
+    }
+
+    private static bool IsAuthEndpoint(Uri? uri)
+    {
+        if (uri == null)
+        {
+            return false;
+        }
+
+        var path = uri.AbsolutePath.ToLowerInvariant();
+        return path.Contains("/api/v1/auth/refresh") ||
+               path.Contains("/api/v1/auth/login") ||
+               path.Contains("/api/v1/auth/logout") ||
+               path.Contains("/api/v1/auth/register") ||
+               path.Contains("/api/v1/auth/google");
     }
 
     private static bool CanRetryRequest(HttpRequestMessage request)

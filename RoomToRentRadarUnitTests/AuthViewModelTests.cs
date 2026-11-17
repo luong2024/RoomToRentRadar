@@ -457,6 +457,7 @@ public class AuthViewModelTests
         public bool ThrowOnSave { get; set; }
 
         public bool IsAuthenticated => SavedUser != null && !string.IsNullOrWhiteSpace(SavedAccessToken);
+        public bool IsInitialized => true;
         public AuthUser? CurrentUser => SavedUser;
 
         public event EventHandler<AuthUser?>? CurrentUserChanged;
@@ -486,6 +487,18 @@ public class AuthViewModelTests
 
         public Task<bool> RefreshTokenAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(true);
+
+        public Task EnsureInitializedAsync(CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
+        public Task<LogoutResult> LogoutAsync(CancellationToken cancellationToken = default)
+        {
+            SavedAccessToken = null;
+            SavedRefreshToken = null;
+            SavedUser = null;
+            CurrentUserChanged?.Invoke(this, null);
+            return Task.FromResult(new LogoutResult(true, true));
+        }
 
         public Task ClearSessionAsync(CancellationToken cancellationToken = default)
         {
