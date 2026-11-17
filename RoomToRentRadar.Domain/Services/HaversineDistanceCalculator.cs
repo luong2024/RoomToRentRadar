@@ -5,7 +5,7 @@ public static class HaversineDistanceCalculator
     private const double EarthRadiusKm = 6371.0;
 
     /// <summary>
-    /// Great-circle distance in km, rounded to 0.1 km (BR-SRCH-03). Returns <see cref="double.NaN"/>
+    /// Great-circle distance in km, rounded to 0.1 km (BR-SRCH-03, M5). Returns <see cref="double.NaN"/>
     /// when any argument is NaN or infinite so callers can reject the request (H3) instead of
     /// serializing an invalid number.
     /// </summary>
