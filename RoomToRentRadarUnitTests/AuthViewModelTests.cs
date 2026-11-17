@@ -1,4 +1,5 @@
 using System.Text;
+using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Core.Models.Authentication;
 using RoomToRentRadar.Features.Authentication.ViewModels;
@@ -206,6 +207,70 @@ public class AuthViewModelTests
         Assert.That(_sessionService.SavedRefreshToken, Is.EqualTo("test-refresh-token"));
         Assert.That(_sessionService.SavedUser, Is.EqualTo(user));
         Assert.That(callbackUser, Is.EqualTo(user));
+    }
+
+    [Test]
+    public async Task SignInAsync_WhenReturnUrlQueryAttributeProvided_ShouldNavigateToPreservedReturnUrlAndResetIt()
+    {
+        _viewModel.ApplyQueryAttributes(new Dictionary<string, object>
+        {
+            ["returnUrl"] = Uri.EscapeDataString("//booking?roomId=99")
+        });
+
+        Assert.That(_viewModel.ReturnUrl, Is.EqualTo("//booking?roomId=99"));
+
+        _viewModel.LoginEmail = "student@example.com";
+        _viewModel.LoginPassword = "ValidPassword1";
+
+        var user = new AuthUser(Guid.NewGuid(), "student@example.com", UserRoleConstants.Student, "LOCAL", true);
+        _authPort.LoginResult = AuthResult.Success("test-access-token", "test-refresh-token", user);
+
+        string? navigatedRoute = null;
+        _viewModel.NavigateToRouteHandler = route =>
+        {
+            navigatedRoute = route;
+            return Task.CompletedTask;
+        };
+
+        await _viewModel.SignInAsync(CancellationToken.None);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_viewModel.IsSuccess, Is.True);
+            Assert.That(navigatedRoute, Is.EqualTo("//booking?roomId=99"));
+            Assert.That(_viewModel.ReturnUrl, Is.Null);
+        });
+    }
+
+    [Test]
+    public async Task SignInAsync_WhenReturnUrlDisallowedForAuthenticatedRole_ShouldFallbackToHome()
+    {
+        _viewModel.ApplyQueryAttributes(new Dictionary<string, object>
+        {
+            ["redirect"] = "//roommates"
+        });
+
+        _viewModel.LoginEmail = "landlord@example.com";
+        _viewModel.LoginPassword = "ValidPassword1";
+
+        var landlord = new AuthUser(Guid.NewGuid(), "landlord@example.com", UserRoleConstants.Landlord, "LOCAL", true);
+        _authPort.LoginResult = AuthResult.Success("test-access-token", "test-refresh-token", landlord);
+
+        string? navigatedRoute = null;
+        _viewModel.NavigateToRouteHandler = route =>
+        {
+            navigatedRoute = route;
+            return Task.CompletedTask;
+        };
+
+        await _viewModel.SignInAsync(CancellationToken.None);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_viewModel.IsSuccess, Is.True);
+            Assert.That(navigatedRoute, Is.EqualTo($"//{AppRoutes.Home}"));
+            Assert.That(_viewModel.ReturnUrl, Is.Null);
+        });
     }
 
     [Test]
