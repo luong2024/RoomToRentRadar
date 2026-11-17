@@ -38,6 +38,8 @@
     <Compile Include="..\RoomToRentRadar\Features\RoomListings\Models\*.cs" LinkBase="Linked\Features\RoomListings\Models" />
     <Compile Include="..\RoomToRentRadar\Features\RoomListings\Services\*.cs" LinkBase="Linked\Features\RoomListings\Services" />
     <Compile Include="..\RoomToRentRadar\Features\RoomListings\ViewModels\*.cs" LinkBase="Linked\Features\RoomListings\ViewModels" />
+    <Compile Include="..\RoomToRentRadar\Features\Profile\Models\*.cs" LinkBase="Linked\Features\Profile\Models" />
+    <Compile Include="..\RoomToRentRadar\Features\Profile\Services\*.cs" LinkBase="Linked\Features\Profile\Services" />
   </ItemGroup>
 
   <ItemGroup>
