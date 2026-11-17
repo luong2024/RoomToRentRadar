@@ -4,6 +4,7 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:f="clr-namespace:Fonts"
+    xmlns:loc="clr-namespace:RoomToRentRadar.Core.Localization"
     xmlns:vm="clr-namespace:RoomToRentRadar.Features.RoomListings.ViewModels"
     Title="{Binding Title}"
     x:DataType="vm:RoomDetailsViewModel"
@@ -37,7 +38,7 @@
                         <Label
                             FontAttributes="Bold"
                             FontSize="13.5"
-                            Text="Quay lại danh sách"
+                            Text="{loc:Translate RoomDetails_Back}"
                             TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
                             VerticalOptions="Center" />
                     </HorizontalStackLayout>
@@ -136,7 +137,7 @@
                         <Label
                             FontAttributes="Bold"
                             FontSize="14"
-                            Text="Tiện nghi nổi bật"
+                            Text="{loc:Translate RoomDetails_AmenitiesTitle}"
                             TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
 
                         <Label

@@ -85,6 +85,7 @@ public class RoomDetailsViewModelTests
             int pageSize,
             RoomSortOption sortBy = RoomSortOption.Newest,
             string? search = null,
+            RoomFilterCriteria? filter = null,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(new PagedResponse<RoomListItemModel>([], page, pageSize, 0));
 

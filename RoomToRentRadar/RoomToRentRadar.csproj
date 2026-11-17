@@ -29,7 +29,7 @@
 		<MauiEnableXamlCBindingWithSourceCompilation>true</MauiEnableXamlCBindingWithSourceCompilation>
 
 		<!-- Display name -->
-		<ApplicationTitle>RoomToRentRadar</ApplicationTitle>
+		<ApplicationTitle>Trọ ICTU</ApplicationTitle>
 
 		<!-- App Identifier -->
 		<ApplicationId>com.companyname.roomtorentradar</ApplicationId>

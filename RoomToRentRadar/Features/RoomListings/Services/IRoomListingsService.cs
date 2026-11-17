@@ -12,6 +12,7 @@ public interface IRoomListingsService
         int pageSize,
         RoomSortOption sortBy = RoomSortOption.Newest,
         string? search = null,
+        RoomFilterCriteria? filter = null,
         CancellationToken cancellationToken = default);
 
     Task<RoomListItemModel?> GetRoomByIdAsync(

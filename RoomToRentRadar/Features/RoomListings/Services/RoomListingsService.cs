@@ -1,3 +1,4 @@
+using System.Globalization;
 using RoomToRentRadar.Features.RoomListings.Models;
 using RoomToRentRadar.Infrastructure.Api;
 
@@ -9,6 +10,16 @@ namespace RoomToRentRadar.Features.RoomListings.Services;
 /// </summary>
 public sealed class RoomListingsService : IRoomListingsService
 {
+    private static readonly Dictionary<string, string[]> AmenityKeywords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["aircon"] = ["Điều hòa", "Air conditioner", "aircon"],
+        ["wifi"] = ["Wifi", "Wi-Fi"],
+        ["parking"] = ["để xe", "gửi xe", "giữ xe", "Parking", "parking"],
+        ["bathroom"] = ["khép kín", "Nóng lạnh", "Private bathroom", "bathroom"],
+        ["washing"] = ["Máy giặt", "Washing machine", "washing"],
+        ["kitchen"] = ["Bếp", "Kitchen", "kitchen"]
+    };
+
     private readonly IApiClient _apiClient;
     private readonly bool _enableDebugFallback;
 
@@ -28,6 +39,7 @@ public sealed class RoomListingsService : IRoomListingsService
         int pageSize,
         RoomSortOption sortBy = RoomSortOption.Newest,
         string? search = null,
+        RoomFilterCriteria? filter = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(page, 1);
@@ -39,6 +51,37 @@ public sealed class RoomListingsService : IRoomListingsService
         if (!string.IsNullOrEmpty(searchTerm))
         {
             endpoint += $"&search={Uri.EscapeDataString(searchTerm)}";
+        }
+
+        if (filter is not null)
+        {
+            if (filter.MinPrice.HasValue)
+            {
+                endpoint += $"&minPrice={filter.MinPrice.Value.ToString(CultureInfo.InvariantCulture)}";
+            }
+
+            if (filter.MaxPrice.HasValue)
+            {
+                endpoint += $"&maxPrice={filter.MaxPrice.Value.ToString(CultureInfo.InvariantCulture)}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(filter.RoomType))
+            {
+                endpoint += $"&roomType={Uri.EscapeDataString(filter.RoomType.Trim())}";
+            }
+
+            if (filter.Amenities is { Count: > 0 })
+            {
+                var normalizedAmenities = filter.Amenities
+                    .Where(a => !string.IsNullOrWhiteSpace(a))
+                    .Select(a => Uri.EscapeDataString(a.Trim()))
+                    .ToArray();
+
+                if (normalizedAmenities.Length > 0)
+                {
+                    endpoint += $"&amenities={string.Join(",", normalizedAmenities)}";
+                }
+            }
         }
 
         try
@@ -54,7 +97,7 @@ public sealed class RoomListingsService : IRoomListingsService
             !cancellationToken.IsCancellationRequested &&
             (ex is HttpRequestException or InvalidOperationException or TaskCanceledException))
         {
-            return GetFallbackMockPage(page, pageSize, sortBy, searchTerm);
+            return GetFallbackMockPage(page, pageSize, sortBy, searchTerm, filter);
         }
     }
 
@@ -94,14 +137,20 @@ public sealed class RoomListingsService : IRoomListingsService
         int page,
         int pageSize,
         RoomSortOption sortBy,
-        string? searchTerm)
+        string? searchTerm,
+        RoomFilterCriteria? filter)
     {
         IEnumerable<RoomListItemModel> query = MockRooms;
 
-        // Filter the full mock catalog before paging, mirroring server-side search semantics.
+        // Filter the full mock catalog before paging, mirroring server-side search and filter semantics.
         if (!string.IsNullOrEmpty(searchTerm))
         {
             query = query.Where(r => MatchesSearch(r, searchTerm));
+        }
+
+        if (filter is not null)
+        {
+            query = query.Where(r => MatchesFilter(r, filter));
         }
 
         query = sortBy switch
@@ -134,6 +183,52 @@ public sealed class RoomListingsService : IRoomListingsService
         }
 
         return room.Amenities?.Any(a => a.Contains(term, StringComparison.OrdinalIgnoreCase)) == true;
+    }
+
+    private static bool MatchesFilter(RoomListItemModel room, RoomFilterCriteria filter)
+    {
+        if (filter.MinPrice.HasValue && room.Price < filter.MinPrice.Value)
+        {
+            return false;
+        }
+
+        if (filter.MaxPrice.HasValue && room.Price > filter.MaxPrice.Value)
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.RoomType) &&
+            !string.Equals(room.RoomType, filter.RoomType.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (filter.Amenities is { Count: > 0 })
+        {
+            foreach (var rawAmenity in filter.Amenities)
+            {
+                if (!string.IsNullOrWhiteSpace(rawAmenity) && !MatchesAmenity(room, rawAmenity.Trim()))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private static bool MatchesAmenity(RoomListItemModel room, string amenityKey)
+    {
+        var keywords = AmenityKeywords.TryGetValue(amenityKey, out var mapped)
+            ? mapped
+            : [amenityKey];
+
+        if (room.Amenities?.Any(a => keywords.Any(k => a.Contains(k, StringComparison.OrdinalIgnoreCase))) == true)
+        {
+            return true;
+        }
+
+        return keywords.Any(k => room.Title.Contains(k, StringComparison.OrdinalIgnoreCase));
     }
 
     private static readonly IReadOnlyList<RoomListItemModel> MockRooms =
@@ -210,6 +305,7 @@ public sealed class RoomListingsService : IRoomListingsService
             Price = 2_000_000m,
             AreaSqm = 26,
             Address = "Tổ 5, Phường Tân Thịnh, TP. Thái Nguyên",
+            RoomType = "shared",
             DistanceToCampusKm = 1.5,
             ThumbnailUrl = "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=600&q=80",
             IsVerified = false,
@@ -314,6 +410,7 @@ public sealed class RoomListingsService : IRoomListingsService
             Price = 2_450_000m,
             AreaSqm = 29,
             Address = "Phường Tân Thịnh, TP. Thái Nguyên",
+            RoomType = "shared",
             DistanceToCampusKm = 1.6,
             ThumbnailUrl = "https://images.unsplash.com/photo-1560185127-6ed189bf02f4?w=600&q=80",
             IsVerified = false,
