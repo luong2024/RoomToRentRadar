@@ -12,14 +12,14 @@ Today `MauiProgram.cs` calls `AddApplicationServices()` + `AddInfrastructure()` 
 | Option | Pros | Cons |
 |---|---|---|
 | A. Client reuses server Inbound Ports (`ISearchRoomsUseCase`) with HTTP implementations | One set of interfaces | Server signatures carry server concerns (e.g. `userId` parameters taken from the token); confusing to have two implementations of the same use case with different semantics |
-| **B. Client gateways** (`IRoomsGateway` …) in a client adapters library, reusing the shared **DTOs** from `RoomToRentRadar.Ports/Contracts` | Clear separation; signatures fit the client (no userId, cancellation, cache policy); unit-testable on `net10.0`; decorators for caching | One more project; interfaces per feature |
+| **B. Client gateways** (`IRoomGateway` …) in a client adapters library, reusing the shared **DTOs** from `RoomToRentRadar.Ports/Contracts` | Clear separation; signatures fit the client (no userId, cancellation, cache policy); unit-testable on `net10.0`; decorators for caching | One more project; interfaces per feature |
 | C. Generated client (NSwag/Kiota) from OpenAPI | No hand-written HTTP code | Generator tooling + regeneration step; generated DTOs duplicate `Ports/Contracts` |
 | Transport: gRPC / GraphQL | Compact / flexible | Poor fit for MAUI on all platforms (gRPC-Web), extra learning, caching harder; no clear win at this scale |
 
 ## Decision
 1. **Transport:** HTTPS REST with JSON (`System.Text.Json` + **source-generated** `JsonSerializerContext` for speed and trimming safety), response compression (Brotli/Gzip) on the server, real-time chat events over SignalR (ADR-009).
 2. **New project `RoomToRentRadar.Client.Adapters` (`net10.0` class library)** — references `RoomToRentRadar.Ports` only (for `Contracts`). Folders:
-   - `Abstractions/` — `I<Feature>Gateway` interfaces (`IAuthGateway`, `IRoomsGateway`, `IFavouritesGateway`, `ISavedSearchesGateway`, `IListingsGateway`, `IModerationGateway`, `IChatGateway`, `INotificationsGateway`, `ICampusGateway`), `ISessionStore`, `ICacheStore`.
+   - `Abstractions/` — `I<Feature>Gateway` interfaces (`IAuthGateway`, `IRoomGateway`, `ICampusGateway`, `IFavouriteGateway`, `ISavedSearchGateway`, `INotificationGateway`, `IChatGateway`, `IMyListingGateway`, `IReportGateway`, `IAdminGateway`, `IProfileGateway`), each method mapped to its `operationId` via `ApiOperationAttribute`; `ISessionStore`, `ICacheStore`.
    - `Http/` — `Http<Feature>Gateway` implementations using a typed `HttpClient` from `IHttpClientFactory`; `AuthTokenHandler` (`DelegatingHandler`: attaches bearer, single-flight refresh on 401); resilience via `Microsoft.Extensions.Http.Resilience` (timeout 10 s; retry ×2 with jitter **only for GET**).
    - `Caching/` — `Cached<Feature>Gateway` decorators (ADR-004).
    - `Realtime/` — `SignalRChatConnection`.
