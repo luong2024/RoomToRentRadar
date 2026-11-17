@@ -29,6 +29,11 @@ public static class RoomMapper
     }
 
 
+    /// <summary>
+    /// Maps a <see cref="Room"/> domain aggregate to <see cref="RoomDetailDto"/> for US02 (getRoomDetail).
+    /// Resolves H3: Eliminates fabricated defaults for ward, safety score, house rules, and utility estimates.
+    /// Utility calculations adhere strictly to BR-LST-03.
+    /// </summary>
     public static RoomDetailDto ToDetailDto(
         Room room,
         string? landlordPhoneNumber,
@@ -139,6 +144,7 @@ public static class RoomMapper
             Features: safetyFeatures
         );
 
+        // H3: Return null when room has no house rules (avoid hardcoded dummy rules)
         HouseRulesDto? houseRules = null;
         if (room.HouseRules != null && room.HouseRules.Count > 0)
         {
