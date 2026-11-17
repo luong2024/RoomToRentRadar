@@ -40,13 +40,13 @@ public sealed class GetRoomDetailUseCase : IGetRoomDetailUseCase
     {
         if (string.IsNullOrWhiteSpace(roomId))
         {
-            throw new DomainValidationException("Room ID is required.", ProblemCodes.RoomNotFound);
+            throw new EntityNotFoundException(ProblemCodes.RoomNotFound, "Room ID is required.");
         }
 
         var room = await _roomRepository.GetByIdAsync(roomId.Trim(), ct);
         if (room == null)
         {
-            throw new DomainValidationException($"Room with ID '{roomId}' was not found.", ProblemCodes.RoomNotFound);
+            throw new EntityNotFoundException(ProblemCodes.RoomNotFound, $"Room with ID '{roomId}' was not found.");
         }
 
         // BR-LST-04a: Available, Rented, Unpublished are viewable by public.
@@ -62,9 +62,9 @@ public sealed class GetRoomDetailUseCase : IGetRoomDetailUseCase
 
             if (!isOwner && !isAdmin)
             {
-                throw new DomainValidationException(
-                    $"Room with ID '{roomId}' was not found or is not public.",
-                    ProblemCodes.RoomNotFound);
+                throw new EntityNotFoundException(
+                    ProblemCodes.RoomNotFound,
+                    $"Room with ID '{roomId}' was not found or is not public.");
             }
         }
 

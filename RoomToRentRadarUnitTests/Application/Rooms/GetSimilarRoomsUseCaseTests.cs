@@ -92,7 +92,7 @@ public class GetSimilarRoomsUseCaseTests
         _roomRepository.GetByIdAsync("missing-room", Arg.Any<CancellationToken>()).Returns((Room?)null);
 
         // Act & Assert
-        var ex = Assert.ThrowsAsync<DomainValidationException>(() => _sut.ExecuteAsync("missing-room"));
+        var ex = Assert.ThrowsAsync<EntityNotFoundException>(() => _sut.ExecuteAsync("missing-room"));
         Assert.That(ex!.ErrorCode, Is.EqualTo(ProblemCodes.RoomNotFound));
     }
 

@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
@@ -102,6 +103,15 @@ public class RoomDetailEndpointIntegrationTests
     public async Task GetRoomById_AuthenticatedUser_ReturnsUnmaskedLandlordPhoneNumber()
     {
         // Arrange (AC4)
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<RoomToRentRadar.Datastore.Sqlite.Context.SqliteDbContext>();
+            var conn = db.CreateOpenConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "UPDATE Users SET PhoneNumber = '0988123456' WHERE Id = 'seed-landlord';";
+            cmd.ExecuteNonQuery();
+        }
+
         var token = GenerateJwt("student-123");
         var request = new HttpRequestMessage(HttpMethod.Get, "/api/rooms/seed-z115");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);

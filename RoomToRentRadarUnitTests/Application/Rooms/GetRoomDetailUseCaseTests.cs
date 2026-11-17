@@ -74,12 +74,25 @@ public class GetRoomDetailUseCaseTests
 
     private static User CreateSampleLandlord(string id = "landlord-001", string phone = "0987654321")
     {
-        return User.RegisterLocal(
-            email: new EmailAddress("landlord@example.com"),
-            passwordHash: "hash-secret",
+        return User.Reconstitute(
+            id: id,
+            email: "landlord@example.com",
             fullName: "Nguyễn Văn Chủ Trọ",
+            passwordHash: "hash-secret",
             role: UserRole.Landlord,
-            phoneNumber: phone);
+            authProvider: AuthProvider.Local,
+            ssoSubjectId: null,
+            phoneNumber: phone,
+            studentCode: null,
+            isVerified: true,
+            failedLoginCount: 0,
+            lockoutEndUtc: null,
+            createdAtUtc: new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc),
+            updatedAtUtc: new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc),
+            refreshTokens: null,
+            selectedCampusId: "ICTU",
+            preferredLanguage: "vi",
+            version: 1);
     }
 
     [Test]
@@ -185,7 +198,7 @@ public class GetRoomDetailUseCaseTests
         _currentUserContext.IsAuthenticated.Returns(false);
 
         // Act & Assert
-        var ex = Assert.ThrowsAsync<DomainValidationException>(() => _sut.ExecuteAsync("room-001"));
+        var ex = Assert.ThrowsAsync<EntityNotFoundException>(() => _sut.ExecuteAsync("room-001"));
         Assert.That(ex!.ErrorCode, Is.EqualTo(ProblemCodes.RoomNotFound));
     }
 
@@ -196,7 +209,7 @@ public class GetRoomDetailUseCaseTests
         _roomRepository.GetByIdAsync("non-existing-id", Arg.Any<CancellationToken>()).Returns((Room?)null);
 
         // Act & Assert
-        var ex = Assert.ThrowsAsync<DomainValidationException>(() => _sut.ExecuteAsync("non-existing-id"));
+        var ex = Assert.ThrowsAsync<EntityNotFoundException>(() => _sut.ExecuteAsync("non-existing-id"));
         Assert.That(ex!.ErrorCode, Is.EqualTo(ProblemCodes.RoomNotFound));
     }
 

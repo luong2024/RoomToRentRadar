@@ -41,13 +41,13 @@ public sealed class GetSimilarRoomsUseCase : IGetSimilarRoomsUseCase
     {
         if (string.IsNullOrWhiteSpace(roomId))
         {
-            throw new DomainValidationException("Room ID is required.", ProblemCodes.RoomNotFound);
+            throw new EntityNotFoundException(ProblemCodes.RoomNotFound, "Room ID is required.");
         }
 
         var targetRoom = await _roomRepository.GetByIdAsync(roomId.Trim(), ct);
         if (targetRoom == null)
         {
-            throw new DomainValidationException($"Room with ID '{roomId}' was not found.", ProblemCodes.RoomNotFound);
+            throw new EntityNotFoundException(ProblemCodes.RoomNotFound, $"Room with ID '{roomId}' was not found.");
         }
 
         Campus campus;
@@ -75,6 +75,7 @@ public sealed class GetSimilarRoomsUseCase : IGetSimilarRoomsUseCase
             MaxRentVnd: maxRent,
             MinAreaM2: null,
             MaxAreaM2: null,
+            RoomTypes: null,
             MinLat: targetRoom.Latitude - deltaLat,
             MaxLat: targetRoom.Latitude + deltaLat,
             MinLng: targetRoom.Longitude - deltaLng,

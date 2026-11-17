@@ -14,12 +14,25 @@ public class RoomMapperTests
 
     private static User CreateSampleLandlord(string id = "landlord-1", string phone = "0987654321")
     {
-        return User.RegisterLocal(
-            email: new EmailAddress("landlord@example.com"),
-            passwordHash: "hash-secret",
+        return User.Reconstitute(
+            id: id,
+            email: "landlord@example.com",
             fullName: "Nguyễn Văn Chủ Trọ",
+            passwordHash: "hash-secret",
             role: UserRole.Landlord,
-            phoneNumber: phone);
+            authProvider: AuthProvider.Local,
+            ssoSubjectId: null,
+            phoneNumber: phone,
+            studentCode: null,
+            isVerified: true,
+            failedLoginCount: 0,
+            lockoutEndUtc: null,
+            createdAtUtc: new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc),
+            updatedAtUtc: new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc),
+            refreshTokens: null,
+            selectedCampusId: "ICTU",
+            preferredLanguage: "vi",
+            version: 1);
     }
 
     private static Room CreateSampleRoom(
