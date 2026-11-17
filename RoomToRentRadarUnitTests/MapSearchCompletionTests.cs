@@ -5,7 +5,9 @@ using RoomToRentRadar.Models;
 using RoomToRentRadar.Services;
 using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.Shared.Listings;
+using RoomToRentRadar.Shared.Notifications;
 using RoomToRentRadar.Shared.Pagination;
+using RoomToRentRadar.Shared.SavedSearches;
 
 namespace RoomToRentRadarUnitTests;
 
@@ -233,5 +235,9 @@ public class MapSearchCompletionTests
         public Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<LoginResponse?> DemoLoginAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task LogoutAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<SavedSearchDto> CreateSavedSearchAsync(CreateSavedSearchRequest request, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<SavedSearchDto?> SetSavedSearchAlertAsync(Guid id, SavedSearchAlertState alertState, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task DeleteSavedSearchAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<IReadOnlyList<NotificationDto>> GetNotificationsAsync(int limit = 20, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 }

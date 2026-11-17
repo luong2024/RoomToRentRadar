@@ -49,10 +49,13 @@ appsettings.*.local.json
 
 # Runtime data and logs
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
 *.log
 logs/
 *.dmp
+RoomToRentRadar.Api/App_Data/
 
 # OS/editor files
 .DS_Store

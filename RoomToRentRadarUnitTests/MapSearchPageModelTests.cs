@@ -6,7 +6,9 @@ using RoomToRentRadar.Models;
 using RoomToRentRadar.Services;
 using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.Shared.Listings;
+using RoomToRentRadar.Shared.Notifications;
 using RoomToRentRadar.Shared.Pagination;
+using RoomToRentRadar.Shared.SavedSearches;
 
 namespace RoomToRentRadarUnitTests;
 
@@ -299,6 +301,273 @@ public class MapSearchPageModelTests
         Assert.That(model.SortOptions[model.SelectedSortIndex].WireValue, Is.EqualTo(ListingSortWire.DistanceAsc));
     }
 
+    [Test]
+    public async Task ToggleSavedAreaAlert_WhenOff_CreatesServerSearchAndPersistsActive()
+    {
+        var area = SavedArea("Vùng A");
+        var model = CreateModel(out var api, out var store, out _, storeAreas: [area]);
+        model.SelectedSavedArea = model.SavedAreas[0];
+
+        await model.ToggleSavedAreaAlertCommand.ExecuteAsync(null);
+
+        Assert.That(api.CreatedSearches, Has.Count.EqualTo(1));
+        var request = api.CreatedSearches[0];
+        Assert.Multiple(() =>
+        {
+            Assert.That(request.Name, Is.EqualTo("Vùng A"));
+            Assert.That(request.AlertState, Is.EqualTo(SavedSearchAlertState.Active));
+            Assert.That(request.Area, Is.Not.Null);
+            Assert.That(request.Area!.Type, Is.EqualTo("Polygon"));
+            var ring = request.Area.Coordinates![0];
+            Assert.That(ring, Has.Length.EqualTo(4));
+            Assert.That(ring[0], Is.EqualTo(new[] { A.Lng, A.Lat }));
+            Assert.That(ring[^1], Is.EqualTo(ring[0]));
+        });
+
+        var saved = model.SavedAreas.Single();
+        Assert.Multiple(() =>
+        {
+            Assert.That(saved.RemoteId, Is.EqualTo(api.NextRemoteId));
+            Assert.That(saved.AlertState, Is.EqualTo(SavedSearchAlertState.Active));
+            Assert.That(store.Stored.Single().AlertState, Is.EqualTo(SavedSearchAlertState.Active));
+            Assert.That(model.AlertToggleText, Is.EqualTo("Tạm dừng"));
+            Assert.That(model.AlertStateText, Does.Contain("Đang nhận thông báo"));
+            Assert.That(model.StatusMessage, Does.Contain("Đã bật thông báo"));
+            Assert.That(api.AlertUpdates, Is.Empty);
+        });
+    }
+
+    [Test]
+    public async Task ToggleSavedAreaAlert_ActiveThenPaused_CallsServerAndUpdatesLocalStore()
+    {
+        var remoteId = Guid.NewGuid();
+        var area = SavedArea("Vùng B", remoteId, SavedSearchAlertState.Active);
+        var model = CreateModel(out var api, out var store, out _, storeAreas: [area]);
+        model.SelectedSavedArea = model.SavedAreas[0];
+
+        await model.ToggleSavedAreaAlertCommand.ExecuteAsync(null);
+
+        Assert.That(api.AlertUpdates, Is.EqualTo(new[] { (remoteId, SavedSearchAlertState.Paused) }));
+        Assert.That(api.CreatedSearches, Is.Empty);
+        Assert.That(model.SavedAreas.Single().AlertState, Is.EqualTo(SavedSearchAlertState.Paused));
+        Assert.That(store.Stored.Single().AlertState, Is.EqualTo(SavedSearchAlertState.Paused));
+        Assert.That(model.AlertToggleText, Is.EqualTo("Bật lại"));
+
+        await model.ToggleSavedAreaAlertCommand.ExecuteAsync(null);
+
+        Assert.That(api.AlertUpdates, Has.Count.EqualTo(2));
+        Assert.That(api.AlertUpdates[1], Is.EqualTo((remoteId, SavedSearchAlertState.Active)));
+        Assert.That(model.SavedAreas.Single().AlertState, Is.EqualTo(SavedSearchAlertState.Active));
+        Assert.That(store.Stored.Single().AlertState, Is.EqualTo(SavedSearchAlertState.Active));
+    }
+
+    [Test]
+    public async Task ToggleSavedAreaAlert_WhenRemoteSearchIsGone_RecreatesIt()
+    {
+        var area = SavedArea("Vùng C", Guid.NewGuid(), SavedSearchAlertState.Paused);
+        var api = new FakeApiClient { AlertUpdateReturnsMissing = true };
+        var store = new FakeSavedAreaStore([area]);
+        var model = new MapSearchPageModel(api, store, new FakeErrorHandler());
+        model.SelectedSavedArea = model.SavedAreas[0];
+
+        await model.ToggleSavedAreaAlertCommand.ExecuteAsync(null);
+
+        Assert.That(api.CreatedSearches, Has.Count.EqualTo(1));
+        Assert.That(api.CreatedSearches[0].AlertState, Is.EqualTo(SavedSearchAlertState.Active));
+        Assert.That(model.SavedAreas.Single().RemoteId, Is.EqualTo(api.NextRemoteId));
+        Assert.That(model.SavedAreas.Single().AlertState, Is.EqualTo(SavedSearchAlertState.Active));
+        Assert.That(store.Stored.Single().RemoteId, Is.EqualTo(api.NextRemoteId));
+    }
+
+    [Test]
+    public async Task ToggleSavedAreaAlert_WhenServerFails_KeepsLocalState()
+    {
+        var exception = new ApiException(HttpStatusCode.InternalServerError, "boom");
+        var area = SavedArea("Vùng D");
+        var api = new FakeApiClient { SavedSearchException = exception };
+        var store = new FakeSavedAreaStore([area]);
+        var errors = new FakeErrorHandler();
+        var model = new MapSearchPageModel(api, store, errors);
+        model.SelectedSavedArea = model.SavedAreas[0];
+
+        await model.ToggleSavedAreaAlertCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(model.SavedAreas.Single().AlertState, Is.EqualTo(SavedSearchAlertState.Off));
+            Assert.That(model.SavedAreas.Single().RemoteId, Is.Null);
+            Assert.That(store.Stored.Single().AlertState, Is.EqualTo(SavedSearchAlertState.Off));
+            Assert.That(errors.HandledException, Is.SameAs(exception));
+            Assert.That(model.StatusMessage, Does.Contain("Không thể đổi trạng thái thông báo"));
+            Assert.That(model.IsAlertBusy, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task ToggleSavedAreaAlert_WhenDeviceSaveFails_ReportsTheServerOnlyChange()
+    {
+        var remoteId = Guid.NewGuid();
+        var area = SavedArea("Vùng G", remoteId, SavedSearchAlertState.Active);
+        var api = new FakeApiClient();
+        var store = new FakeSavedAreaStore([area]) { FailWrites = true };
+        var model = new MapSearchPageModel(api, store, new FakeErrorHandler());
+        model.SelectedSavedArea = model.SavedAreas[0];
+
+        await model.ToggleSavedAreaAlertCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(api.AlertUpdates, Is.EqualTo(new[] { (remoteId, SavedSearchAlertState.Paused) }));
+            Assert.That(model.SavedAreas.Single().AlertState, Is.EqualTo(SavedSearchAlertState.Paused));
+            Assert.That(store.Stored.Single().AlertState, Is.EqualTo(SavedSearchAlertState.Active));
+            Assert.That(model.StatusMessage, Does.Contain("chưa lưu được trên thiết bị"));
+            Assert.That(model.StatusMessage, Does.Not.Contain("Đã tạm dừng"));
+            Assert.That(model.IsAlertBusy, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task DeleteSavedArea_WithRemoteId_DeletesServerRowBeforeLocalCopy()
+    {
+        var remoteId = Guid.NewGuid();
+        var model = CreateModel(out var api, out var store, out _, storeAreas:
+            [SavedArea("Vùng E", remoteId, SavedSearchAlertState.Active)]);
+        model.SelectedSavedArea = model.SavedAreas[0];
+
+        await model.DeleteSavedAreaCommand.ExecuteAsync(null);
+
+        Assert.That(api.DeletedSearches, Is.EqualTo(new[] { remoteId }));
+        Assert.That(model.SavedAreas, Is.Empty);
+        Assert.That(store.Stored, Is.Empty);
+        Assert.That(model.StatusMessage, Does.Contain("Đã xóa khu vực"));
+    }
+
+    [Test]
+    public async Task DeleteSavedArea_WhenServerDeleteFails_KeepsLocalCopy()
+    {
+        var exception = new ApiException(HttpStatusCode.ServiceUnavailable, "down");
+        var api = new FakeApiClient { SavedSearchException = exception };
+        var store = new FakeSavedAreaStore([SavedArea("Vùng F", Guid.NewGuid(), SavedSearchAlertState.Active)]);
+        var errors = new FakeErrorHandler();
+        var model = new MapSearchPageModel(api, store, errors);
+        model.SelectedSavedArea = model.SavedAreas[0];
+
+        await model.DeleteSavedAreaCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(model.SavedAreas, Has.Count.EqualTo(1));
+            Assert.That(store.Stored, Has.Count.EqualTo(1));
+            Assert.That(api.DeletedSearches, Is.Empty);
+            Assert.That(errors.HandledException, Is.SameAs(exception));
+            Assert.That(model.StatusMessage, Does.Contain("Khu vực vẫn được giữ lại"));
+        });
+    }
+
+    [Test]
+    public async Task ToggleNotifications_LoadsInboxAndClosesSavedPanel()
+    {
+        var model = CreateModel(out var api, out _, out _);
+        api.Notifications =
+        [
+            new NotificationDto(
+                Guid.NewGuid(),
+                "Phòng mới trong “Quận 10”",
+                "Phòng mới · 3.500.000 ₫ · 25 m²",
+                Guid.NewGuid(),
+                new DateTime(2026, 11, 17, 2, 30, 0, DateTimeKind.Utc))
+        ];
+        model.IsSavedPanelOpen = true;
+
+        await model.ToggleNotificationsCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(model.IsSavedPanelOpen, Is.False);
+            Assert.That(model.IsNotificationsPanelOpen, Is.True);
+            Assert.That(model.HasNotifications, Is.True);
+            Assert.That(model.NotificationsTitle, Is.EqualTo("Thông báo · 1"));
+            Assert.That(model.Notifications[0].Title, Is.EqualTo("Phòng mới trong “Quận 10”"));
+            Assert.That(model.Notifications[0].Body, Does.Contain("3.500.000"));
+            Assert.That(model.Notifications[0].TimeText, Is.Not.Empty);
+        });
+
+        await model.ToggleNotificationsCommand.ExecuteAsync(null);
+
+        Assert.That(model.IsNotificationsPanelOpen, Is.False);
+    }
+
+    [Test]
+    public async Task ToggleSavedAreas_ClosesNotificationsPanel()
+    {
+        var model = CreateModel(out _, out _, out _);
+        await model.ToggleNotificationsCommand.ExecuteAsync(null);
+        Assert.That(model.IsNotificationsPanelOpen, Is.True);
+
+        model.ToggleSavedAreasCommand.Execute(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(model.IsSavedPanelOpen, Is.True);
+            Assert.That(model.IsNotificationsPanelOpen, Is.False);
+        });
+    }
+
+    [Test]
+    public void ShowPreviewCard_IsHiddenWhileNotificationsPanelIsOpen()
+    {
+        var model = CreateModel(out _, out _, out _, Result(Listing("Phòng", 10.2, 106.2)));
+        DrawTriangle(model);
+        model.FinishDrawingCommand.Execute(null);
+        model.SelectListing(model.Listings[0]);
+        Assert.That(model.ShowPreviewCard, Is.True);
+
+        model.ToggleNotificationsCommand.Execute(null);
+
+        Assert.That(model.IsNotificationsPanelOpen, Is.True);
+        Assert.That(model.ShowPreviewCard, Is.False);
+    }
+
+    [Test]
+    public async Task StartDrawing_ClosesTheNotificationsPanel()
+    {
+        var model = CreateModel(out _, out _, out _);
+        await model.ToggleNotificationsCommand.ExecuteAsync(null);
+        Assert.That(model.IsNotificationsPanelOpen, Is.True);
+
+        model.StartDrawingCommand.Execute(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(model.IsDrawing, Is.True);
+            Assert.That(model.IsNotificationsPanelOpen, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task NewSearch_ClosesTheNotificationsPanel()
+    {
+        var model = CreateModel(out _, out _, out _, Result(Listing("Phòng", 10.2, 106.2)));
+        DrawTriangle(model);
+        await model.FinishDrawingCommand.ExecuteAsync(null);
+        await model.ToggleNotificationsCommand.ExecuteAsync(null);
+        Assert.That(model.IsNotificationsPanelOpen, Is.True);
+
+        await model.SearchCommand.ExecuteAsync(null);
+
+        Assert.That(model.IsNotificationsPanelOpen, Is.False);
+    }
+
+    private static SavedAreaSearch SavedArea(
+        string name,
+        Guid? remoteId = null,
+        SavedSearchAlertState alertState = SavedSearchAlertState.Off)
+        => new("area-1", name, [A, B, C], new DateTime(2026, 11, 12, 8, 30, 0, DateTimeKind.Utc))
+        {
+            RemoteId = remoteId,
+            AlertState = alertState
+        };
+
     private static void DrawTriangle(MapSearchPageModel model)
     {
         model.StartDrawingCommand.Execute(null);
@@ -344,6 +613,20 @@ public class MapSearchPageModelTests
 
         public AreaSearchRequest? LastRequest => Requests.Count == 0 ? null : Requests[^1];
 
+        public List<CreateSavedSearchRequest> CreatedSearches { get; } = [];
+
+        public List<(Guid Id, SavedSearchAlertState State)> AlertUpdates { get; } = [];
+
+        public List<Guid> DeletedSearches { get; } = [];
+
+        public IReadOnlyList<NotificationDto> Notifications { get; set; } = [];
+
+        public Exception? SavedSearchException { get; init; }
+
+        public bool AlertUpdateReturnsMissing { get; init; }
+
+        public Guid NextRemoteId { get; init; } = Guid.NewGuid();
+
         public Task<ListingSearchResultDto> GetListingsAsync(
             int limit,
             string? cursor = null,
@@ -383,6 +666,58 @@ public class MapSearchPageModelTests
                 ? Task.FromResult(Result)
                 : Task.FromException<SearchResultDto<ListingSummaryDto>>(Exception);
         }
+
+        public Task<SavedSearchDto> CreateSavedSearchAsync(
+            CreateSavedSearchRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            if (SavedSearchException is { } exception)
+                return Task.FromException<SavedSearchDto>(exception);
+
+            CreatedSearches.Add(request);
+            return Task.FromResult(new SavedSearchDto(
+                NextRemoteId,
+                request.Name ?? "",
+                request.AlertState,
+                request.Area!,
+                DateTime.UtcNow,
+                DateTime.UtcNow));
+        }
+
+        public Task<SavedSearchDto?> SetSavedSearchAlertAsync(
+            Guid id,
+            SavedSearchAlertState alertState,
+            CancellationToken cancellationToken = default)
+        {
+            if (SavedSearchException is { } exception)
+                return Task.FromException<SavedSearchDto?>(exception);
+
+            AlertUpdates.Add((id, alertState));
+            if (AlertUpdateReturnsMissing)
+                return Task.FromResult<SavedSearchDto?>(null);
+
+            return Task.FromResult<SavedSearchDto?>(new SavedSearchDto(
+                id,
+                "Khu vực",
+                alertState,
+                new AreaPolygon { Type = "Polygon", Coordinates = [] },
+                DateTime.UtcNow,
+                DateTime.UtcNow));
+        }
+
+        public Task DeleteSavedSearchAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            if (SavedSearchException is { } exception)
+                return Task.FromException(exception);
+
+            DeletedSearches.Add(id);
+            return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyList<NotificationDto>> GetNotificationsAsync(
+            int limit = 20,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(Notifications);
     }
 
     private sealed class QueuedApiClient : IApiClient
@@ -437,15 +772,42 @@ public class MapSearchPageModelTests
 
         public void Complete(int index, SearchResultDto<ListingSummaryDto> result)
             => _pending[index].TrySetResult(result);
+
+        public Task<SavedSearchDto> CreateSavedSearchAsync(
+            CreateSavedSearchRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<SavedSearchDto?> SetSavedSearchAlertAsync(
+            Guid id,
+            SavedSearchAlertState alertState,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task DeleteSavedSearchAsync(Guid id, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<IReadOnlyList<NotificationDto>> GetNotificationsAsync(
+            int limit = 20,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 
     private sealed class FakeSavedAreaStore(IReadOnlyList<SavedAreaSearch> areas) : ISavedAreaSearchStore
     {
         public List<SavedAreaSearch> Stored { get; private set; } = [.. areas];
 
+        public bool FailWrites { get; init; }
+
         public IReadOnlyList<SavedAreaSearch> GetAll() => Stored;
 
-        public void ReplaceAll(IReadOnlyList<SavedAreaSearch> areas) => Stored = [.. areas];
+        public void ReplaceAll(IReadOnlyList<SavedAreaSearch> areas)
+        {
+            if (FailWrites)
+                throw new IOException("The device storage is unavailable.");
+
+            Stored = [.. areas];
+        }
     }
 
     private sealed class FakeErrorHandler : IErrorHandler

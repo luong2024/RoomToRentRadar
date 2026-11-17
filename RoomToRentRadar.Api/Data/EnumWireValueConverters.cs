@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RoomToRentRadar.Shared.Listings;
+using RoomToRentRadar.Shared.SavedSearches;
 
 namespace RoomToRentRadar.Api.Data;
 
@@ -62,6 +63,32 @@ public sealed class ListingPhotoKindConverter : ValueConverter<ListingPhotoKind,
         "photo" => ListingPhotoKind.Photo,
         "panorama" => ListingPhotoKind.Panorama,
         _ => throw new InvalidOperationException($"Unknown listing photo kind '{value}'.")
+    };
+}
+
+public sealed class SavedSearchAlertStateConverter : ValueConverter<SavedSearchAlertState, string>
+{
+    public SavedSearchAlertStateConverter()
+        : base(
+            value => ToWireValue(value),
+            value => FromWireValue(value))
+    {
+    }
+
+    public static string ToWireValue(SavedSearchAlertState state) => state switch
+    {
+        SavedSearchAlertState.Off => "off",
+        SavedSearchAlertState.Active => "active",
+        SavedSearchAlertState.Paused => "paused",
+        _ => throw new ArgumentOutOfRangeException(nameof(state), state, null)
+    };
+
+    public static SavedSearchAlertState FromWireValue(string value) => value switch
+    {
+        "off" => SavedSearchAlertState.Off,
+        "active" => SavedSearchAlertState.Active,
+        "paused" => SavedSearchAlertState.Paused,
+        _ => throw new InvalidOperationException($"Unknown saved search alert state '{value}'.")
     };
 }
 

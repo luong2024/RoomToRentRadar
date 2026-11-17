@@ -29,6 +29,7 @@ public sealed class ListingsApiFactory : WebApplicationFactory<Program>
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:Default", $"Data Source={DatabasePath}");
         builder.UseSetting("Storage:PhotoRootPath", MediaRootPath);
+        builder.UseSetting("Alerts:Enabled", "false");
         builder.ConfigureTestServices(services =>
         {
             services.AddSingleton<DbCommandInterceptor>(QueryCounter);
@@ -46,6 +47,9 @@ public sealed class ListingsApiFactory : WebApplicationFactory<Program>
     {
         await using var scope = Services.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await dbContext.Notifications.ExecuteDeleteAsync();
+        await dbContext.SavedSearchAlertLogs.ExecuteDeleteAsync();
+        await dbContext.SavedSearches.ExecuteDeleteAsync();
         await dbContext.AuthSessions.ExecuteDeleteAsync();
         await dbContext.Users.ExecuteDeleteAsync();
         await dbContext.ListingAmenities.ExecuteDeleteAsync();

@@ -5,6 +5,8 @@ using System.Text;
 using System.Text.Json;
 using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.Shared.Listings;
+using RoomToRentRadar.Shared.Notifications;
+using RoomToRentRadar.Shared.SavedSearches;
 using RoomToRentRadar.Shared.Serialization;
 
 namespace RoomToRentRadar.Infrastructure.Api;
@@ -163,6 +165,77 @@ public sealed class ApiClient(HttpClient httpClient) : IApiClient
         }
 
         response.EnsureSuccessStatusCode();
+    }
+
+    public async Task<SavedSearchDto> CreateSavedSearchAsync(
+        CreateSavedSearchRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PostAsJsonAsync(
+            "api/v1/saved-searches",
+            request,
+            ApiJson.Options,
+            cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+            throw await CreateApiExceptionAsync(response, cancellationToken);
+
+        var savedSearch = await response.Content.ReadFromJsonAsync<SavedSearchDto>(
+            ApiJson.Options,
+            cancellationToken);
+
+        return savedSearch ?? throw new InvalidOperationException(
+            "The saved search endpoint returned an empty response.");
+    }
+
+    public async Task<SavedSearchDto?> SetSavedSearchAlertAsync(
+        Guid id,
+        SavedSearchAlertState alertState,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PutAsJsonAsync(
+            $"api/v1/saved-searches/{id}/alert",
+            new SetSavedSearchAlertRequest { AlertState = alertState },
+            ApiJson.Options,
+            cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            return null;
+
+        if (!response.IsSuccessStatusCode)
+            throw await CreateApiExceptionAsync(response, cancellationToken);
+
+        var savedSearch = await response.Content.ReadFromJsonAsync<SavedSearchDto>(
+            ApiJson.Options,
+            cancellationToken);
+
+        return savedSearch ?? throw new InvalidOperationException(
+            "The saved search alert endpoint returned an empty response.");
+    }
+
+    public async Task DeleteSavedSearchAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.DeleteAsync($"api/v1/saved-searches/{id}", cancellationToken);
+
+        // A row that is already gone is the desired end state.
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            return;
+
+        if (!response.IsSuccessStatusCode)
+            throw await CreateApiExceptionAsync(response, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<NotificationDto>> GetNotificationsAsync(
+        int limit = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var notifications = await httpClient.GetFromJsonAsync<List<NotificationDto>>(
+            $"api/v1/notifications?limit={limit}",
+            ApiJson.Options,
+            cancellationToken);
+
+        return notifications ?? throw new InvalidOperationException(
+            "The notifications endpoint returned an empty response.");
     }
 
     private static string BuildListingsUrl(

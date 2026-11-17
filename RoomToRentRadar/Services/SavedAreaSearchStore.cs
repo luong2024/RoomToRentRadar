@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using RoomToRentRadar.Models;
 
 namespace RoomToRentRadar.Services;
@@ -14,7 +15,7 @@ public sealed class PreferencesSavedAreaSearchStore(IPreferences preferences) : 
 {
     public const string PreferencesKey = "map.saved_area_searches.v1";
 
-    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions SerializerOptions = SavedAreaSearchJson.Options;
 
     public IReadOnlyList<SavedAreaSearch> GetAll()
     {
@@ -50,7 +51,7 @@ public sealed class FileSavedAreaSearchStore : ISavedAreaSearchStore
 {
     public const string FileName = "map-saved-area-searches.v1.json";
     private const int MaximumSnapshotBytes = 1_048_576;
-    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions SerializerOptions = SavedAreaSearchJson.Options;
     private readonly object _gate = new();
     private readonly string _directoryPath;
     private readonly string _filePath;
@@ -200,4 +201,16 @@ public sealed class FileSavedAreaSearchStore : ISavedAreaSearchStore
     }
 
     private sealed record Snapshot(int Version, IReadOnlyList<SavedAreaSearch> Areas);
+}
+
+internal static class SavedAreaSearchJson
+{
+    public static readonly JsonSerializerOptions Options = Create();
+
+    private static JsonSerializerOptions Create()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseLower));
+        return options;
+    }
 }

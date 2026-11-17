@@ -4,7 +4,9 @@ using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Infrastructure.Auth;
 using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.Shared.Listings;
+using RoomToRentRadar.Shared.Notifications;
 using RoomToRentRadar.Shared.Pagination;
+using RoomToRentRadar.Shared.SavedSearches;
 
 namespace RoomToRentRadarUnitTests;
 
@@ -186,6 +188,25 @@ public class LoginViewModelTests
             AreaSearchRequest request,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The login screen does not search by area.");
+
+        public Task<SavedSearchDto> CreateSavedSearchAsync(
+            CreateSavedSearchRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The login screen does not save searches.");
+
+        public Task<SavedSearchDto?> SetSavedSearchAlertAsync(
+            Guid id,
+            SavedSearchAlertState alertState,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The login screen does not change alerts.");
+
+        public Task DeleteSavedSearchAsync(Guid id, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The login screen does not delete saved searches.");
+
+        public Task<IReadOnlyList<NotificationDto>> GetNotificationsAsync(
+            int limit = 20,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The login screen does not load notifications.");
     }
 
     private sealed class FakeTokenStore : ITokenStore

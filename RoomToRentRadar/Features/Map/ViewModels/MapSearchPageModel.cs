@@ -7,6 +7,7 @@ using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Models;
 using RoomToRentRadar.Services;
 using RoomToRentRadar.Shared.Listings;
+using RoomToRentRadar.Shared.SavedSearches;
 
 namespace RoomToRentRadar.Features.Map.ViewModels;
 
@@ -50,6 +51,8 @@ public partial class MapSearchPageModel : ObservableObject
 
     public ObservableCollection<SavedAreaSearch> SavedAreas { get; } = [];
 
+    public ObservableCollection<MapNotificationItem> Notifications { get; } = [];
+
     public IReadOnlyList<MapSortOption> SortOptions { get; } = MapSortOption.All;
 
     [ObservableProperty]
@@ -92,6 +95,15 @@ public partial class MapSearchPageModel : ObservableObject
     [ObservableProperty]
     public partial bool IsSavedPanelOpen { get; set; }
 
+    [ObservableProperty]
+    public partial bool IsNotificationsPanelOpen { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsNotificationsBusy { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsAlertBusy { get; set; }
+
     public bool HasPolygon => Draft.IsClosed;
     public bool HasDraft => Draft.Vertices.Count > 0;
     public int DraftVertexCount => Draft.Vertices.Count;
@@ -102,13 +114,29 @@ public partial class MapSearchPageModel : ObservableObject
     public bool HasSelection => SelectedListing is not null;
 
     /// <summary>The preview and the saved-area panel share the bottom corner on phones.</summary>
-    public bool ShowPreviewCard => HasSelection && !IsSavedPanelOpen;
+    public bool ShowPreviewCard => HasSelection && !IsSavedPanelOpen && !IsNotificationsPanelOpen;
 
     public bool HasResults => Listings.Count > 0;
 
     public bool HasSavedAreas => SavedAreas.Count > 0;
 
+    public bool HasNotifications => Notifications.Count > 0;
+
+    public string NotificationsTitle => HasNotifications ? $"Thông báo · {Notifications.Count}" : "Thông báo";
+
     public bool HasSelectedSavedArea => SelectedSavedArea is not null;
+
+    public bool CanToggleAlert => SelectedSavedArea is not null && !IsAlertBusy;
+
+    public string AlertToggleText => SelectedSavedArea?.AlertState switch
+    {
+        SavedSearchAlertState.Active => "Tạm dừng",
+        SavedSearchAlertState.Paused => "Bật lại",
+        _ => "Bật thông báo"
+    };
+
+    public string AlertStateText => SelectedSavedArea?.AlertStateText
+        ?? "Chọn một khu vực đã lưu để bật thông báo.";
 
     public bool ShowStartDrawing => !IsDrawing;
 
@@ -142,9 +170,19 @@ public partial class MapSearchPageModel : ObservableObject
 
     partial void OnIsSavedPanelOpenChanged(bool value) => OnPropertyChanged(nameof(ShowPreviewCard));
 
+    partial void OnIsNotificationsPanelOpenChanged(bool value) => OnPropertyChanged(nameof(ShowPreviewCard));
+
+    partial void OnIsAlertBusyChanged(bool value) => OnPropertyChanged(nameof(CanToggleAlert));
+
     partial void OnNewAreaNameChanged(string value) => OnPropertyChanged(nameof(CanSaveCurrentArea));
 
-    partial void OnSelectedSavedAreaChanged(SavedAreaSearch? value) => OnPropertyChanged(nameof(HasSelectedSavedArea));
+    partial void OnSelectedSavedAreaChanged(SavedAreaSearch? value)
+    {
+        OnPropertyChanged(nameof(HasSelectedSavedArea));
+        OnPropertyChanged(nameof(CanToggleAlert));
+        OnPropertyChanged(nameof(AlertToggleText));
+        OnPropertyChanged(nameof(AlertStateText));
+    }
 
     partial void OnSelectedSortIndexChanged(int value)
     {
@@ -198,6 +236,7 @@ public partial class MapSearchPageModel : ObservableObject
         ClearResults();
         _areaRejected = false;
         IsSavedPanelOpen = false;
+        IsNotificationsPanelOpen = false;
         IsDrawing = true;
         OnPropertyChanged(nameof(HasResults));
         StatusMessage = "Chạm để chấm nhiều điểm quanh khu vực. Bấm Tìm phòng khi đã vẽ xong.";
@@ -278,6 +317,7 @@ public partial class MapSearchPageModel : ObservableObject
         {
             ClearResults();
             _areaRejected = false;
+            IsNotificationsPanelOpen = false;
         }
         IsLoadingMore = append;
         IsBusy = !append;
@@ -450,10 +490,24 @@ public partial class MapSearchPageModel : ObservableObject
     }
 
     [RelayCommand]
-    private void DeleteSavedArea()
+    private async Task DeleteSavedAreaAsync()
     {
         if (SelectedSavedArea is not { } saved)
             return;
+
+        if (saved.RemoteId is { } remoteId)
+        {
+            try
+            {
+                await _apiClient.DeleteSavedSearchAsync(remoteId);
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Không thể xóa thông báo trên máy chủ. Khu vực vẫn được giữ lại; hãy thử lại.";
+                _errorHandler.HandleError(ex);
+                return;
+            }
+        }
 
         var remaining = SavedAreas.Where(area => area.Id != saved.Id).ToArray();
         try
@@ -474,10 +528,179 @@ public partial class MapSearchPageModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task ToggleSavedAreaAlertAsync()
+    {
+        if (SelectedSavedArea is not { } area || IsAlertBusy)
+            return;
+
+        IsAlertBusy = true;
+        try
+        {
+            var nextState = area.AlertState == SavedSearchAlertState.Active
+                ? SavedSearchAlertState.Paused
+                : SavedSearchAlertState.Active;
+
+            SavedSearchDto? updated = area.RemoteId is { } remoteId
+                ? await _apiClient.SetSavedSearchAlertAsync(remoteId, nextState)
+                : null;
+
+            // The server row may have been removed (or never created); recreate it
+            // with the state the user asked for so the local copy stays authoritative.
+            var createdOnServer = updated is null;
+            updated ??= await _apiClient.CreateSavedSearchAsync(BuildCreateRequest(area, nextState));
+
+            var updatedArea = area with
+            {
+                RemoteId = updated.Id,
+                AlertState = updated.AlertState
+            };
+
+            var areas = SavedAreas
+                .Select(candidate => candidate.Id == updatedArea.Id ? updatedArea : candidate)
+                .ToArray();
+            var localSaveFailed = false;
+            try
+            {
+                _savedAreaStore.ReplaceAll(areas);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+            {
+                if (createdOnServer)
+                {
+                    await TryDeleteRemoteAsync(updated.Id);
+                    StatusMessage = "Không thể lưu thông báo trên thiết bị. Thông báo chưa được bật; hãy thử lại.";
+                    return;
+                }
+
+                localSaveFailed = true;
+            }
+
+            ReplaceSavedArea(updatedArea);
+            StatusMessage = localSaveFailed
+                ? "Đã đổi thông báo trên máy chủ nhưng chưa lưu được trên thiết bị."
+                : updatedArea.AlertState switch
+                {
+                    SavedSearchAlertState.Active => $"Đã bật thông báo cho “{updatedArea.Name}”.",
+                    SavedSearchAlertState.Paused => $"Đã tạm dừng thông báo cho “{updatedArea.Name}”.",
+                    _ => $"Đã tắt thông báo cho “{updatedArea.Name}”."
+                };
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Không thể đổi trạng thái thông báo. Vui lòng thử lại.";
+            _errorHandler.HandleError(ex);
+        }
+        finally
+        {
+            IsAlertBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ToggleNotificationsAsync()
+    {
+        if (IsNotificationsPanelOpen)
+        {
+            IsNotificationsPanelOpen = false;
+            return;
+        }
+
+        IsSavedPanelOpen = false;
+        IsNotificationsPanelOpen = true;
+        await RefreshNotificationsAsync();
+    }
+
+    [RelayCommand]
     private void ClearSelection() => SelectedListing = null;
 
     [RelayCommand]
-    private void ToggleSavedAreas() => IsSavedPanelOpen = !IsSavedPanelOpen;
+    private void ToggleSavedAreas()
+    {
+        if (!IsSavedPanelOpen)
+            IsNotificationsPanelOpen = false;
+        IsSavedPanelOpen = !IsSavedPanelOpen;
+    }
+
+    private async Task RefreshNotificationsAsync()
+    {
+        if (IsNotificationsBusy)
+            return;
+
+        IsNotificationsBusy = true;
+        try
+        {
+            var notifications = await _apiClient.GetNotificationsAsync();
+            Notifications.Clear();
+            foreach (var notification in notifications)
+                Notifications.Add(new MapNotificationItem(notification));
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Không thể tải thông báo. Vui lòng thử lại.";
+            _errorHandler.HandleError(ex);
+        }
+        finally
+        {
+            IsNotificationsBusy = false;
+            OnPropertyChanged(nameof(HasNotifications));
+            OnPropertyChanged(nameof(NotificationsTitle));
+        }
+    }
+
+    private void ReplaceSavedArea(SavedAreaSearch updatedArea)
+    {
+        for (var index = 0; index < SavedAreas.Count; index++)
+        {
+            if (SavedAreas[index].Id != updatedArea.Id)
+                continue;
+
+            SavedAreas[index] = updatedArea;
+            break;
+        }
+
+        SelectedSavedArea = updatedArea;
+        OnPropertyChanged(nameof(AlertToggleText));
+        OnPropertyChanged(nameof(AlertStateText));
+        OnPropertyChanged(nameof(CanToggleAlert));
+    }
+
+    private async Task TryDeleteRemoteAsync(Guid remoteId)
+    {
+        try
+        {
+            await _apiClient.DeleteSavedSearchAsync(remoteId);
+        }
+        catch (Exception)
+        {
+            // Best effort: a server row that survives only keeps the local copy
+            // usable; the next enable attempt will update it instead of creating
+            // a duplicate.
+        }
+    }
+
+    private static CreateSavedSearchRequest BuildCreateRequest(
+        SavedAreaSearch area,
+        SavedSearchAlertState alertState)
+        => new()
+        {
+            Name = area.Name,
+            AlertState = alertState,
+            Area = ToAreaPolygon(area)
+        };
+
+    private static AreaPolygon ToAreaPolygon(SavedAreaSearch area)
+    {
+        var vertices = area.Vertices;
+        var ring = vertices
+            .Select(vertex => new[] { vertex.Lng, vertex.Lat })
+            .Append(new[] { vertices[0].Lng, vertices[0].Lat })
+            .ToArray();
+        return new AreaPolygon
+        {
+            Type = "Polygon",
+            Coordinates = [ring]
+        };
+    }
 
     private bool TryLoadSavedAreas()
     {

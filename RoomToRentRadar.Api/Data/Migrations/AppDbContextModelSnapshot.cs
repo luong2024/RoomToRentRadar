@@ -17,6 +17,43 @@ namespace RoomToRentRadar.Api.Data.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.14");
 
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.AuthSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("expires_at");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("token_hash");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_auth_sessions_token_hash");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_auth_sessions_user_id");
+
+                    b.ToTable("auth_sessions", (string)null);
+                });
+
             modelBuilder.Entity("RoomToRentRadar.Api.Domain.Listing", b =>
                 {
                     b.Property<Guid>("Id")
@@ -279,7 +316,105 @@ namespace RoomToRentRadar.Api.Data.Migrations
                         });
                 });
 
-            modelBuilder.Entity("RoomToRentRadar.Api.Domain.AuthSession", b =>
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.Notification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("body");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("ListingId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("listing_id");
+
+                    b.Property<Guid>("SavedSearchId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("saved_search_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("title");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_notifications_user_created_at");
+
+                    b.ToTable("notifications", (string)null);
+                });
+
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.SavedSearch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AlertState")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("alert_state");
+
+                    b.Property<DateTime?>("AlertsActivatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("alerts_activated_at");
+
+                    b.Property<string>("AreaJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("area_json");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AlertState")
+                        .HasDatabaseName("ix_saved_searches_alert_state");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_saved_searches_user_id");
+
+                    b.ToTable("saved_searches", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_saved_searches_alert_state", "alert_state IN ('off', 'active', 'paused')");
+                        });
+                });
+
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.SavedSearchAlertLog", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -290,30 +425,28 @@ namespace RoomToRentRadar.Api.Data.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("created_at");
 
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("expires_at");
+                    b.Property<bool>("Delivered")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("delivered");
 
-                    b.Property<string>("TokenHash")
-                        .IsRequired()
-                        .HasMaxLength(100)
+                    b.Property<Guid>("ListingId")
                         .HasColumnType("TEXT")
-                        .HasColumnName("token_hash");
+                        .HasColumnName("listing_id");
 
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid>("SavedSearchId")
                         .HasColumnType("TEXT")
-                        .HasColumnName("user_id");
+                        .HasColumnName("saved_search_id");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TokenHash")
+                    b.HasIndex("SavedSearchId", "CreatedAt")
+                        .HasDatabaseName("ix_saved_search_alert_logs_search_created_at");
+
+                    b.HasIndex("SavedSearchId", "ListingId")
                         .IsUnique()
-                        .HasDatabaseName("ix_auth_sessions_token_hash");
+                        .HasDatabaseName("ux_saved_search_alert_logs_search_listing");
 
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_auth_sessions_user_id");
-
-                    b.ToTable("auth_sessions");
+                    b.ToTable("saved_search_alert_logs", (string)null);
                 });
 
             modelBuilder.Entity("RoomToRentRadar.Api.Domain.User", b =>
@@ -357,7 +490,18 @@ namespace RoomToRentRadar.Api.Data.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_users_email");
 
-                    b.ToTable("users");
+                    b.ToTable("users", (string)null);
+                });
+
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.AuthSession", b =>
+                {
+                    b.HasOne("RoomToRentRadar.Api.Domain.User", "User")
+                        .WithMany("Sessions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("RoomToRentRadar.Api.Domain.ListingAmenity", b =>
@@ -393,10 +537,10 @@ namespace RoomToRentRadar.Api.Data.Migrations
                     b.Navigation("Listing");
                 });
 
-            modelBuilder.Entity("RoomToRentRadar.Api.Domain.AuthSession", b =>
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.Notification", b =>
                 {
                     b.HasOne("RoomToRentRadar.Api.Domain.User", "User")
-                        .WithMany("Sessions")
+                        .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -404,9 +548,26 @@ namespace RoomToRentRadar.Api.Data.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("RoomToRentRadar.Api.Domain.User", b =>
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.SavedSearch", b =>
                 {
-                    b.Navigation("Sessions");
+                    b.HasOne("RoomToRentRadar.Api.Domain.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.SavedSearchAlertLog", b =>
+                {
+                    b.HasOne("RoomToRentRadar.Api.Domain.SavedSearch", "SavedSearch")
+                        .WithMany("AlertLogs")
+                        .HasForeignKey("SavedSearchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SavedSearch");
                 });
 
             modelBuilder.Entity("RoomToRentRadar.Api.Domain.Listing", b =>
@@ -416,6 +577,16 @@ namespace RoomToRentRadar.Api.Data.Migrations
                     b.Navigation("Photos");
 
                     b.Navigation("Rules");
+                });
+
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.SavedSearch", b =>
+                {
+                    b.Navigation("AlertLogs");
+                });
+
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.User", b =>
+                {
+                    b.Navigation("Sessions");
                 });
 #pragma warning restore 612, 618
         }
