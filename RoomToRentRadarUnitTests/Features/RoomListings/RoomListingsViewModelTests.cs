@@ -1,4 +1,6 @@
+using System.Globalization;
 using RoomToRentRadar.Core.Interfaces;
+using RoomToRentRadar.Core.Localization;
 using RoomToRentRadar.Features.RoomListings.Models;
 using RoomToRentRadar.Features.RoomListings.Services;
 using RoomToRentRadar.Features.RoomListings.ViewModels;
@@ -11,13 +13,22 @@ public class RoomListingsViewModelTests
     private FakeRoomListingsService _fakeService = null!;
     private FakeErrorHandler _fakeErrorHandler = null!;
     private List<string> _navigatedRoutes = null!;
+    private CultureInfo _initialCulture = null!;
 
     [SetUp]
     public void SetUp()
     {
+        _initialCulture = LocalizationResourceManager.Instance.CurrentCulture;
+        LocalizationResourceManager.Instance.SetCulture(new CultureInfo("vi"));
         _fakeService = new FakeRoomListingsService();
         _fakeErrorHandler = new FakeErrorHandler();
         _navigatedRoutes = [];
+    }
+
+    [TearDown]
+    public void TearDown()
+    {
+        LocalizationResourceManager.Instance.SetCulture(_initialCulture);
     }
 
     [Test]
@@ -340,6 +351,165 @@ public class RoomListingsViewModelTests
             Assert.That(vm.Rooms, Has.Count.EqualTo(2));
             Assert.That(vm.SearchQuery, Is.EqualTo("quyết thắng"));
         });
+    }
+
+    [Test]
+    public async Task LoadingState_WhileInitialLoadInFlight_ShowsOnlyLoadingState()
+    {
+        var loadTcs = new TaskCompletionSource<PagedResponse<RoomListItemModel>>();
+        _fakeService.Handler = (_, _, _, _) => loadTcs.Task;
+        var vm = CreateViewModel(pageSize: 2);
+
+        var loadTask = vm.InitializeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.ShowLoadingState, Is.True);
+            Assert.That(vm.ShowEmptyState, Is.False);
+            Assert.That(vm.ShowErrorState, Is.False);
+            Assert.That(vm.ShowContentState, Is.False);
+        });
+
+        loadTcs.SetResult(new PagedResponse<RoomListItemModel>(CreateRooms(1, 2), 1, 2, 2));
+        await loadTask;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.ShowLoadingState, Is.False);
+            Assert.That(vm.ShowEmptyState, Is.False);
+            Assert.That(vm.ShowErrorState, Is.False);
+            Assert.That(vm.ShowContentState, Is.True);
+        });
+    }
+
+    [Test]
+    public async Task EmptyState_WhenInitialLoadReturnsZeroRooms_ShowsOnlyEmptyState()
+    {
+        _fakeService.SetupPages(totalCount: 0, pageSize: 2, allRooms: []);
+        var vm = CreateViewModel(pageSize: 2);
+
+        await vm.InitializeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.ShowLoadingState, Is.False);
+            Assert.That(vm.ShowEmptyState, Is.True);
+            Assert.That(vm.ShowErrorState, Is.False);
+            Assert.That(vm.ShowContentState, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task ErrorState_WhenInitialLoadThrowsHttpRequestException_ShowsOnlyErrorStateAndSetsMessage()
+    {
+        _fakeService.Handler = (_, _, _, _) => throw new HttpRequestException("Network failure");
+        var vm = CreateViewModel(pageSize: 2);
+
+        await vm.InitializeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.ShowLoadingState, Is.False);
+            Assert.That(vm.ShowEmptyState, Is.False);
+            Assert.That(vm.ShowErrorState, Is.True);
+            Assert.That(vm.ShowContentState, Is.False);
+            Assert.That(vm.ErrorMessage, Does.Contain("kết nối"));
+            Assert.That(_fakeErrorHandler.HandledExceptions, Has.Count.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task RetryCommand_WhenErrorOccurred_RetriesServiceCallAndRecovers()
+    {
+        var shouldFail = true;
+        _fakeService.Handler = (_, _, _, _) =>
+        {
+            if (shouldFail)
+            {
+                throw new HttpRequestException("Network failure");
+            }
+
+            return Task.FromResult(new PagedResponse<RoomListItemModel>(CreateRooms(1, 2), 1, 2, 2));
+        };
+
+        var vm = CreateViewModel(pageSize: 2);
+        await vm.InitializeAsync();
+
+        Assert.That(vm.ShowErrorState, Is.True);
+
+        shouldFail = false;
+        await vm.RetryCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.ShowErrorState, Is.False);
+            Assert.That(vm.ShowContentState, Is.True);
+            Assert.That(vm.Rooms, Has.Count.EqualTo(2));
+        });
+    }
+
+    [Test]
+    public async Task ResetFiltersCommand_WhenExecuted_ClearsSearchAndReloadsCatalog()
+    {
+        _fakeService.SetupPages(totalCount: 2, pageSize: 2, allRooms: CreateRooms(1, 2));
+        var vm = CreateViewModel(pageSize: 2);
+        vm.SearchQuery = "Phòng trọ cao cấp";
+
+        await vm.ResetFiltersCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.SearchQuery, Is.Empty);
+            Assert.That(vm.ShowContentState, Is.True);
+            Assert.That(vm.Rooms, Has.Count.EqualTo(2));
+        });
+    }
+
+    [Test]
+    public void CultureChange_WhenSwitchedToEnglish_UpdatesTitleEmptyMessageSortOptionsAndSummaryText()
+    {
+        // Arrange
+        var vm = CreateViewModel(pageSize: 6);
+        vm.TotalCount = 12;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.Title, Is.EqualTo("Khám phá phòng trọ"));
+            Assert.That(vm.EmptyStateMessage, Is.EqualTo("Chưa có phòng trọ nào phù hợp."));
+            Assert.That(vm.ResultSummaryText, Is.EqualTo("Tìm thấy 12 phòng quanh ICTU"));
+            Assert.That(vm.SortOptions[0].DisplayName, Is.EqualTo("Mới nhất"));
+            Assert.That(vm.PriceSortLabel, Is.EqualTo("Giá"));
+        });
+
+        // Act
+        LocalizationResourceManager.Instance.SetCulture(new CultureInfo("en"));
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.Title, Is.EqualTo("Explore Rooms"));
+            Assert.That(vm.EmptyStateMessage, Is.EqualTo("No matching rooms found."));
+            Assert.That(vm.ResultSummaryText, Is.EqualTo("Found 12 rooms around ICTU"));
+            Assert.That(vm.SortOptions[0].DisplayName, Is.EqualTo("Newest"));
+            Assert.That(vm.PriceSortLabel, Is.EqualTo("Price"));
+        });
+    }
+
+    [Test]
+    public void CultureChange_WhenPriceSortSelectedAndSwitched_UpdatesPriceSortLabel()
+    {
+        // Arrange
+        var vm = CreateViewModel(pageSize: 6);
+        var priceAscOption = vm.SortOptions.First(o => o.Option == RoomSortOption.PriceAsc);
+        vm.SelectedSortOptionItem = priceAscOption;
+
+        Assert.That(vm.PriceSortLabel, Is.EqualTo("Giá: Thấp đến Cao"));
+
+        // Act
+        LocalizationResourceManager.Instance.SetCulture(new CultureInfo("en"));
+
+        // Assert
+        Assert.That(vm.PriceSortLabel, Is.EqualTo("Price: Low to High"));
     }
 
     private RoomListingsViewModel CreateViewModel(int pageSize) =>

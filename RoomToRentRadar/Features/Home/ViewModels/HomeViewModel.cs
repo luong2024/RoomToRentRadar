@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Core.Constants;
+using RoomToRentRadar.Core.Localization;
 
 namespace RoomToRentRadar.Features.Home.ViewModels;
 
@@ -15,16 +16,45 @@ public partial class HomeViewModel : ObservableObject
     internal HomeViewModel(Func<string, Task>? navigateAsync)
     {
         _navigateAsync = navigateAsync;
+        UpdateLocalizedStrings();
+        LocalizationResourceManager.Instance.PropertyChanged += (_, _) => UpdateLocalizedStrings();
+    }
+
+    private void UpdateLocalizedStrings()
+    {
+        Title = LocalizationResourceManager.Instance["App_Name"];
+        Subtitle = LocalizationResourceManager.Instance["Home_Subtitle"];
     }
 
     [ObservableProperty]
-    public partial string Title { get; set; } = "RoomToRentRadar";
+    public partial string Title { get; set; } = "Smart Rent";
 
     [ObservableProperty]
     public partial string Subtitle { get; set; } = "Tìm phòng trọ lý tưởng quanh ĐH CNTT&TT (ICTU)";
 
     [ObservableProperty]
     public partial string QuickSearchText { get; set; } = string.Empty;
+
+    [RelayCommand]
+    public void OpenMenu()
+    {
+#if ANDROID || IOS || MACCATALYST || WINDOWS
+        if (Microsoft.Maui.Controls.Shell.Current is not null)
+        {
+            Microsoft.Maui.Controls.Shell.Current.FlyoutIsPresented = true;
+        }
+#endif
+    }
+
+    [RelayCommand]
+    public void OpenNotifications()
+    {
+    }
+
+    [RelayCommand]
+    public void OpenProfile()
+    {
+    }
 
     [RelayCommand]
     public async Task ExploreRoomsAsync()

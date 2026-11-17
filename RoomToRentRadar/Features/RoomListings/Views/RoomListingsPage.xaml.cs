@@ -47,29 +47,9 @@ public partial class RoomListingsPage : ContentPage
 
     private void UpdatePriceMenuPosition()
     {
-        double x = 0;
-        double y = 0;
-        Element? current = PriceDropdownButton;
-
-        while (current is VisualElement ve && !ReferenceEquals(ve, RootPageGrid))
+        if (RootPageGrid.Height > 0)
         {
-            x += ve.X;
-            y += ve.Y;
-
-            if (ve.Parent is ScrollView scroll)
-            {
-                x -= scroll.ScrollX;
-                y -= scroll.ScrollY;
-            }
-
-            current = ve.Parent;
+            PriceDropdownMenu.HeightRequest = Math.Clamp(RootPageGrid.Height * 0.50, 320, 480);
         }
-
-        double menuWidth = PriceDropdownMenu.WidthRequest > 0 ? PriceDropdownMenu.WidthRequest : 210;
-        double maxLeft = Math.Max(8, RootPageGrid.Width - menuWidth - 12);
-        double clampedLeft = Math.Clamp(x, 8, maxLeft);
-        double top = y + PriceDropdownButton.Height + 6;
-
-        PriceDropdownMenu.Margin = new Thickness(clampedLeft, top, 0, 0);
     }
 }

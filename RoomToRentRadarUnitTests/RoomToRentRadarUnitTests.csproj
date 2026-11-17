@@ -23,6 +23,8 @@
     <Compile Include="..\RoomToRentRadar\Infrastructure\Api\IApiClient.cs" Link="Linked\Infrastructure\Api\IApiClient.cs" />
     <Compile Include="..\RoomToRentRadar\Infrastructure\Api\ApiSettings.cs" Link="Linked\Infrastructure\Api\ApiSettings.cs" />
     <Compile Include="..\RoomToRentRadar\Features\Home\ViewModels\HomeViewModel.cs" Link="Linked\Features\Home\ViewModels\HomeViewModel.cs" />
+    <Compile Include="..\RoomToRentRadar\Resources\Strings\AppResources.cs" Link="Linked\Resources\Strings\AppResources.cs" />
+    <Compile Include="..\RoomToRentRadar\Core\Localization\LocalizationResourceManager.cs" Link="Linked\Core\Localization\LocalizationResourceManager.cs" />
     <Compile Include="..\RoomToRentRadar\Features\RoomListings\Models\*.cs" LinkBase="Linked\Features\RoomListings\Models" />
     <Compile Include="..\RoomToRentRadar\Features\RoomListings\Services\*.cs" LinkBase="Linked\Features\RoomListings\Services" />
     <Compile Include="..\RoomToRentRadar\Features\RoomListings\ViewModels\*.cs" LinkBase="Linked\Features\RoomListings\ViewModels" />

@@ -1,8 +1,10 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Interfaces;
+using RoomToRentRadar.Core.Localization;
 using RoomToRentRadar.Features.RoomListings.Models;
 using RoomToRentRadar.Features.RoomListings.Services;
 
@@ -22,6 +24,8 @@ public partial class RoomListingsViewModel : ObservableObject
     private readonly IRoomListingsService _roomListingsService;
     private readonly IErrorHandler _errorHandler;
     private readonly Func<string, Task>? _navigateAsync;
+    private readonly Dictionary<string, RoomListItemModel> _favoriteRoomsById = new(StringComparer.Ordinal);
+    private readonly List<RoomListItemModel> _exploreSnapshot = [];
     private CancellationTokenSource? _paginationCts;
     private bool _isInitialized;
     private bool _suppressAutoSortReload;
@@ -45,6 +49,26 @@ public partial class RoomListingsViewModel : ObservableObject
             .Where(o => o.Option is RoomSortOption.PriceAsc or RoomSortOption.PriceDesc)
             .ToArray();
         SelectedSortOptionItem = SortOptions[0];
+        Rooms.CollectionChanged += (_, _) => NotifyStateProperties();
+
+        UpdateLocalizedStrings();
+        LocalizationResourceManager.Instance.PropertyChanged += (_, _) => UpdateLocalizedStrings();
+    }
+
+    private void UpdateLocalizedStrings()
+    {
+        Title = LocalizationResourceManager.Instance["Title_ExploreRooms"];
+        EmptyStateMessage = LocalizationResourceManager.Instance["Empty_NoRooms"];
+
+        foreach (var option in SortOptions)
+        {
+            option.UpdateDisplayName();
+        }
+
+        OnPropertyChanged(nameof(PriceSortLabel));
+        OnPropertyChanged(nameof(ResultSummaryText));
+        OnPropertyChanged(nameof(ActiveFilterSummary));
+        OnPropertyChanged(nameof(FilterShowResultsText));
     }
 
     public ObservableCollection<RoomListItemModel> Rooms { get; } = [];
@@ -65,6 +89,23 @@ public partial class RoomListingsViewModel : ObservableObject
 
     [ObservableProperty]
     public partial bool IsLoading { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasError { get; set; }
+
+    [ObservableProperty]
+    public partial string ErrorMessage { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool HasCompletedInitialLoad { get; set; }
+
+    public bool ShowLoadingState => IsLoading && Rooms.Count == 0;
+
+    public bool ShowErrorState => !IsLoading && HasError && Rooms.Count == 0;
+
+    public bool ShowEmptyState => !IsLoading && !HasError && HasCompletedInitialLoad && Rooms.Count == 0;
+
+    public bool ShowContentState => !IsLoading && !HasError && Rooms.Count > 0;
 
     [ObservableProperty]
     public partial bool IsRefreshing { get; set; }
@@ -90,30 +131,150 @@ public partial class RoomListingsViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsPriceMenuOpen { get; set; }
 
+    [ObservableProperty]
+    public partial string SelectedPricePreset { get; set; } = "1m-2m";
+
+    [ObservableProperty]
+    public partial string FilterMinPriceText { get; set; } = "1,000,000";
+
+    [ObservableProperty]
+    public partial string FilterMaxPriceText { get; set; } = "5,000,000";
+
+    [ObservableProperty]
+    public partial string SelectedRoomType { get; set; } = "private";
+
+    [ObservableProperty]
+    public partial bool IsAmenityAirConSelected { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool IsAmenityWifiSelected { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsAmenityParkingSelected { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsAmenityBathroomSelected { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsAmenityWashingSelected { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsAmenityKitchenSelected { get; set; }
+
+    public bool IsPriceUnder1MSelected =>
+        string.Equals(SelectedPricePreset, "under1m", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsPrice1MTo2MSelected =>
+        string.Equals(SelectedPricePreset, "1m-2m", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsPrice2MTo3MSelected =>
+        string.Equals(SelectedPricePreset, "2m-3m", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsPrivateRoomSelected =>
+        string.Equals(SelectedRoomType, "private", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsSharedRoomSelected =>
+        string.Equals(SelectedRoomType, "shared", StringComparison.OrdinalIgnoreCase);
+
+    public string FilterShowResultsText =>
+        string.Format(
+            LocalizationResourceManager.Instance.CurrentCulture,
+            LocalizationResourceManager.Instance["Filter_ShowResults_Format"],
+            TotalCount > 0 ? TotalCount : 24);
+
+    [ObservableProperty]
+    public partial string SelectedBottomTab { get; set; } = "explore";
+
+    public bool IsExploreTabSelected =>
+        string.Equals(SelectedBottomTab, "explore", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsFavoritesTabSelected =>
+        string.Equals(SelectedBottomTab, "favorites", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsMessagesTabSelected =>
+        string.Equals(SelectedBottomTab, "messages", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsProfileTabSelected =>
+        string.Equals(SelectedBottomTab, "profile", StringComparison.OrdinalIgnoreCase);
+
+    public int FavoriteCount => _favoriteRoomsById.Count;
+
+    public bool HasFavorites => FavoriteCount > 0;
+
     public bool IsPriceSortSelected =>
         SelectedSortOptionItem.Option is RoomSortOption.PriceAsc or RoomSortOption.PriceDesc;
 
     public string PriceSortLabel =>
-        IsPriceSortSelected ? SelectedSortOptionItem.DisplayName : "Giá";
+        IsPriceSortSelected ? SelectedSortOptionItem.DisplayName : LocalizationResourceManager.Instance["Sort_Price"];
 
     public bool HasSearchQuery => !string.IsNullOrWhiteSpace(SearchQuery);
 
+    public string ActiveFilterSummary =>
+        string.Format(
+            LocalizationResourceManager.Instance.CurrentCulture,
+            LocalizationResourceManager.Instance["Filter_Active_Format"],
+            SearchQuery);
+
     public string ResultSummaryText =>
         HasSearchQuery
-            ? $"Tìm thấy {TotalCount} phòng cho \"{SearchQuery.Trim()}\""
+            ? string.Format(
+                LocalizationResourceManager.Instance.CurrentCulture,
+                LocalizationResourceManager.Instance["Result_Summary_WithSearch"],
+                TotalCount,
+                SearchQuery.Trim())
             : TotalCount > 0
-                ? $"Tìm thấy {TotalCount} phòng quanh ICTU"
-                : "Đang cập nhật danh sách phòng quanh ICTU";
+                ? string.Format(
+                    LocalizationResourceManager.Instance.CurrentCulture,
+                    LocalizationResourceManager.Instance["Result_Summary_Format"],
+                    TotalCount)
+                : LocalizationResourceManager.Instance["Result_Summary_Updating"];
+
+    partial void OnIsLoadingChanged(bool value) => NotifyStateProperties();
+
+    partial void OnHasErrorChanged(bool value) => NotifyStateProperties();
+
+    partial void OnHasCompletedInitialLoadChanged(bool value) => NotifyStateProperties();
+
+    private void NotifyStateProperties()
+    {
+        OnPropertyChanged(nameof(ShowLoadingState));
+        OnPropertyChanged(nameof(ShowErrorState));
+        OnPropertyChanged(nameof(ShowEmptyState));
+        OnPropertyChanged(nameof(ShowContentState));
+    }
 
     partial void OnSearchQueryChanged(string value)
     {
         OnPropertyChanged(nameof(HasSearchQuery));
         OnPropertyChanged(nameof(ResultSummaryText));
+        OnPropertyChanged(nameof(ActiveFilterSummary));
     }
 
     partial void OnTotalCountChanged(int value)
     {
         OnPropertyChanged(nameof(ResultSummaryText));
+        OnPropertyChanged(nameof(FilterShowResultsText));
+    }
+
+    partial void OnSelectedPricePresetChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsPriceUnder1MSelected));
+        OnPropertyChanged(nameof(IsPrice1MTo2MSelected));
+        OnPropertyChanged(nameof(IsPrice2MTo3MSelected));
+    }
+
+    partial void OnSelectedRoomTypeChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsPrivateRoomSelected));
+        OnPropertyChanged(nameof(IsSharedRoomSelected));
+    }
+
+    partial void OnSelectedBottomTabChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsExploreTabSelected));
+        OnPropertyChanged(nameof(IsFavoritesTabSelected));
+        OnPropertyChanged(nameof(IsMessagesTabSelected));
+        OnPropertyChanged(nameof(IsProfileTabSelected));
     }
 
     partial void OnSelectedSortOptionItemChanged(RoomSortOptionItem value)
@@ -173,6 +334,105 @@ public partial class RoomListingsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    public void ToggleFavorite(RoomListItemModel? room)
+    {
+        if (room is null)
+        {
+            return;
+        }
+
+        room.ToggleFavorite();
+    }
+
+    [RelayCommand]
+    public Task ToggleQuickFilterAsync(string? keyword)
+    {
+        if (string.IsNullOrWhiteSpace(keyword))
+        {
+            return Task.CompletedTask;
+        }
+
+        var trimmed = keyword.Trim();
+        if (string.Equals(SearchQuery?.Trim(), trimmed, StringComparison.OrdinalIgnoreCase))
+        {
+            return ClearSearchAsync();
+        }
+
+        return ApplySearchAsync(trimmed);
+    }
+
+    [RelayCommand]
+    public void SelectBottomTab(string? tabKey)
+    {
+        var normalized = string.IsNullOrWhiteSpace(tabKey) ? "explore" : tabKey.Trim().ToLowerInvariant();
+        if (string.Equals(SelectedBottomTab, normalized, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        IsPriceMenuOpen = false;
+        SelectedBottomTab = normalized;
+
+        if (normalized == "explore")
+        {
+            Rooms.Clear();
+            foreach (var item in _exploreSnapshot)
+            {
+                Rooms.Add(item);
+            }
+
+            EmptyStateMessage = Rooms.Count == 0
+                ? "Không tìm thấy phòng trọ nào phù hợp."
+                : string.Empty;
+        }
+        else if (normalized == "favorites")
+        {
+            Rooms.Clear();
+            foreach (var fav in _favoriteRoomsById.Values)
+            {
+                Rooms.Add(fav);
+            }
+
+            EmptyStateMessage = Rooms.Count == 0
+                ? "Chưa có phòng yêu thích nào. Hãy nhấn biểu tượng trái tim trên thẻ phòng để lưu!"
+                : string.Empty;
+        }
+        else if (normalized == "messages")
+        {
+            Rooms.Clear();
+            EmptyStateMessage = "Chưa có tin nhắn nào. Hãy chọn một phòng trọ để nhắn tin trực tiếp với chủ trọ.";
+        }
+        else if (normalized == "profile")
+        {
+            Rooms.Clear();
+            EmptyStateMessage = "Tài khoản sinh viên ICTU • Lưu phòng yêu thích và nhận thông báo phòng mới quanh trường.";
+        }
+    }
+
+    [RelayCommand]
+    public void OpenMenu()
+    {
+#if ANDROID || IOS || MACCATALYST || WINDOWS
+        if (Microsoft.Maui.Controls.Shell.Current is not null)
+        {
+            Microsoft.Maui.Controls.Shell.Current.FlyoutIsPresented = true;
+        }
+#endif
+    }
+
+    [RelayCommand]
+    public void OpenNotifications()
+    {
+        IsPriceMenuOpen = false;
+    }
+
+    [RelayCommand]
+    public void OpenProfile()
+    {
+        SelectBottomTab("profile");
+    }
+
+    [RelayCommand]
     public async Task InitializeAsync()
     {
         if (_isInitialized)
@@ -182,6 +442,108 @@ public partial class RoomListingsViewModel : ObservableObject
 
         _isInitialized = true;
         await LoadFirstPageAsync(isPullToRefresh: false);
+    }
+
+    [RelayCommand]
+    public Task RetryAsync()
+    {
+        _isInitialized = true;
+        return LoadFirstPageAsync(isPullToRefresh: false);
+    }
+
+    [RelayCommand]
+    public void SelectPricePreset(string? preset)
+    {
+        var normalized = preset?.Trim().ToLowerInvariant() ?? string.Empty;
+        SelectedPricePreset = normalized;
+
+        switch (normalized)
+        {
+            case "under1m":
+                FilterMinPriceText = "0";
+                FilterMaxPriceText = "1,000,000";
+                break;
+            case "1m-2m":
+                FilterMinPriceText = "1,000,000";
+                FilterMaxPriceText = "2,000,000";
+                break;
+            case "2m-3m":
+                FilterMinPriceText = "2,000,000";
+                FilterMaxPriceText = "3,000,000";
+                break;
+        }
+    }
+
+    [RelayCommand]
+    public void SelectRoomType(string? roomType)
+    {
+        SelectedRoomType = string.IsNullOrWhiteSpace(roomType)
+            ? "private"
+            : roomType.Trim().ToLowerInvariant();
+    }
+
+    [RelayCommand]
+    public void ToggleAmenityFilter(string? amenityKey)
+    {
+        switch (amenityKey?.Trim().ToLowerInvariant())
+        {
+            case "aircon":
+                IsAmenityAirConSelected = !IsAmenityAirConSelected;
+                break;
+            case "wifi":
+                IsAmenityWifiSelected = !IsAmenityWifiSelected;
+                break;
+            case "parking":
+                IsAmenityParkingSelected = !IsAmenityParkingSelected;
+                break;
+            case "bathroom":
+                IsAmenityBathroomSelected = !IsAmenityBathroomSelected;
+                break;
+            case "washing":
+                IsAmenityWashingSelected = !IsAmenityWashingSelected;
+                break;
+            case "kitchen":
+                IsAmenityKitchenSelected = !IsAmenityKitchenSelected;
+                break;
+        }
+    }
+
+    [RelayCommand]
+    public Task ApplyFilterSheetAsync()
+    {
+        IsPriceMenuOpen = false;
+        _isInitialized = true;
+        return LoadFirstPageAsync(isPullToRefresh: false);
+    }
+
+    [RelayCommand]
+    public Task ResetFiltersAsync()
+    {
+        SearchQuery = string.Empty;
+        SelectedPricePreset = "1m-2m";
+        FilterMinPriceText = "1,000,000";
+        FilterMaxPriceText = "5,000,000";
+        SelectedRoomType = "private";
+        IsAmenityAirConSelected = false;
+        IsAmenityWifiSelected = false;
+        IsAmenityParkingSelected = false;
+        IsAmenityBathroomSelected = false;
+        IsAmenityWashingSelected = false;
+        IsAmenityKitchenSelected = false;
+
+        _suppressAutoSortReload = true;
+        try
+        {
+            SelectedSortOptionItem = SortOptions[0];
+        }
+        finally
+        {
+            _suppressAutoSortReload = false;
+        }
+
+        IsPriceMenuOpen = false;
+        _isInitialized = true;
+        return LoadFirstPageAsync(isPullToRefresh: false);
     }
 
     [RelayCommand]
@@ -259,7 +621,9 @@ public partial class RoomListingsViewModel : ObservableObject
             {
                 if (existingIds.Add(room.Id))
                 {
+                    AttachRoomItem(room);
                     Rooms.Add(room);
+                    _exploreSnapshot.Add(room);
                 }
             }
 
@@ -330,6 +694,9 @@ public partial class RoomListingsViewModel : ObservableObject
 
         try
         {
+            HasError = false;
+            ErrorMessage = string.Empty;
+
             if (isPullToRefresh)
             {
                 IsRefreshing = true;
@@ -339,6 +706,7 @@ public partial class RoomListingsViewModel : ObservableObject
             {
                 IsLoading = true;
                 IsRefreshing = false;
+                Rooms.Clear();
             }
 
             IsLoadingMore = false;
@@ -358,21 +726,37 @@ public partial class RoomListingsViewModel : ObservableObject
                 return;
             }
 
+            if (!IsExploreTabSelected)
+            {
+                SelectedBottomTab = "explore";
+            }
+
+            foreach (var oldRoom in _exploreSnapshot)
+            {
+                oldRoom.PropertyChanged -= OnRoomItemPropertyChanged;
+            }
+
+            _exploreSnapshot.Clear();
             Rooms.Clear();
             var existingIds = new HashSet<string>(StringComparer.Ordinal);
             foreach (var room in response.Items)
             {
                 if (existingIds.Add(room.Id))
                 {
+                    AttachRoomItem(room);
                     Rooms.Add(room);
+                    _exploreSnapshot.Add(room);
                 }
             }
 
             CurrentPage = 1;
             TotalCount = response.TotalCount;
             HasMoreItems = response.Items.Count >= PageSize && Rooms.Count < response.TotalCount;
+            HasCompletedInitialLoad = true;
+            HasError = false;
+            ErrorMessage = string.Empty;
             EmptyStateMessage = Rooms.Count == 0
-                ? "Không tìm thấy phòng trọ nào phù hợp."
+                ? "Chưa tìm thấy phòng trọ phù hợp."
                 : string.Empty;
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -381,9 +765,15 @@ public partial class RoomListingsViewModel : ObservableObject
         }
         catch (Exception ex) when (!token.IsCancellationRequested && ReferenceEquals(_paginationCts, currentCts))
         {
+            HasCompletedInitialLoad = true;
+            HasError = true;
+            ErrorMessage = ex is HttpRequestException
+                ? "Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng."
+                : "Không thể tải danh sách phòng trọ. Vui lòng thử lại sau.";
+
             if (Rooms.Count == 0)
             {
-                EmptyStateMessage = "Không thể tải danh sách phòng. Vui lòng thử lại.";
+                EmptyStateMessage = ErrorMessage;
             }
 
             _errorHandler.HandleError(ex);
@@ -400,10 +790,52 @@ public partial class RoomListingsViewModel : ObservableObject
                 {
                     IsLoading = false;
                 }
+
+                NotifyStateProperties();
             }
         }
     }
 
     private string? GetActiveSearchTerm() =>
         HasSearchQuery ? SearchQuery.Trim() : null;
+
+    private void AttachRoomItem(RoomListItemModel room)
+    {
+        room.PropertyChanged -= OnRoomItemPropertyChanged;
+        room.IsFavorite = _favoriteRoomsById.ContainsKey(room.Id);
+        if (room.IsFavorite)
+        {
+            _favoriteRoomsById[room.Id] = room;
+        }
+
+        room.PropertyChanged += OnRoomItemPropertyChanged;
+    }
+
+    private void OnRoomItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (sender is not RoomListItemModel room || e.PropertyName != nameof(RoomListItemModel.IsFavorite))
+        {
+            return;
+        }
+
+        if (room.IsFavorite)
+        {
+            _favoriteRoomsById[room.Id] = room;
+        }
+        else
+        {
+            _favoriteRoomsById.Remove(room.Id);
+            if (IsFavoritesTabSelected)
+            {
+                Rooms.Remove(room);
+                if (Rooms.Count == 0)
+                {
+                    EmptyStateMessage = "Chưa có phòng yêu thích nào. Hãy nhấn biểu tượng trái tim trên thẻ phòng để lưu!";
+                }
+            }
+        }
+
+        OnPropertyChanged(nameof(FavoriteCount));
+        OnPropertyChanged(nameof(HasFavorites));
+    }
 }
