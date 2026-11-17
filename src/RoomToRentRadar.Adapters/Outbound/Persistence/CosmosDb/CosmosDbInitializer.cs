@@ -75,7 +75,14 @@ public sealed class CosmosDbInitializer
             await EnsureSpatialAndCompositeIndexesAsync(effectiveContainer, effectiveProperties, cancellationToken);
 
             await SeedInitialDataAsync(campusesContainerResponse.Container, effectiveContainer, cancellationToken);
-            await SynchronizeRoomDetailsAsync(effectiveContainer, roomsRepositoryContainerResponse.Container, cancellationToken);
+            if (roomsRepositoryContainerResponse?.Container is { } roomsRepositoryContainer)
+            {
+                await SynchronizeRoomDetailsAsync(effectiveContainer, roomsRepositoryContainer, cancellationToken);
+            }
+            else
+            {
+                _logger.LogWarning("Skipping room-details synchronization because the '{RoomsContainerName}' container is unavailable.", roomsContainerName);
+            }
 
             _logger.LogInformation("Cosmos DB initialization completed successfully.");
         }
