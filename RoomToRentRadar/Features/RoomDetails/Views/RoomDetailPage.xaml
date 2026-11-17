@@ -320,7 +320,7 @@
                                         <Label
                                             FontAttributes="Bold"
                                             FontSize="12.5"
-                                            Text="{Binding Room.Rating, StringFormat='{0:0.0}'}"
+                                            Text="{Binding Room.RatingDisplay}"
                                             TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
                                             VerticalOptions="Center" />
                                     </HorizontalStackLayout>

@@ -24,14 +24,14 @@ public class RoomDetailModel
     public int Kitchens { get; set; } = 1;
 
     // Đánh giá sao
-    public double Rating { get; set; } = 4.95;
-    public int ReviewCount { get; set; } = 22;
+    public double? Rating { get; set; }
+    public int? ReviewCount { get; set; }
 
     // Thông tin chủ trọ
-    public string LandlordName { get; set; } = "Bác Hùng (Chủ trọ ICTU)";
+    public string LandlordName { get; set; } = "Chưa có thông tin chủ trọ";
     public string? LandlordPhone { get; set; }
-    public string LandlordEmail { get; set; } = "chutro.ictu@gmail.com";
-    public string LandlordAvatar { get; set; } = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200";
+    public string? LandlordEmail { get; set; }
+    public string? LandlordAvatar { get; set; }
 
     public List<string> ImageUrls { get; set; } = [];
     public List<RoomAmenityModel> Amenities { get; set; } = [];
@@ -43,6 +43,7 @@ public class RoomDetailModel
     public string FormattedDeposit => $"{Deposit:N0} ₫";
     public string FormattedArea => $"{AreaSquareMeters:0.#} m²";
     public string FormattedLastUpdated => $"Cập nhật: {LastUpdated:dd/MM/yyyy}";
+    public string RatingDisplay => Rating is double rating ? rating.ToString("0.0") : "Chưa có đánh giá";
     public decimal TotalPackage => Price + Deposit;
     public string FormattedTotalPackage => $"{TotalPackage:N0} ₫";
 }

@@ -65,8 +65,6 @@ public class RoomDetailViewModelTests
         };
         _serviceMock.Setup(s => s.GetRoomDetailAsync("room-02", It.IsAny<CancellationToken>()))
             .ReturnsAsync(fakeRoom);
-        _serviceMock.Setup(s => s.GetSimilarRoomsAsync("room-02", It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
 
         _viewModel.RoomId = "room-02";
 
@@ -80,23 +78,23 @@ public class RoomDetailViewModelTests
     }
 
     [Test]
-    public async Task AC3_UnavailableOrRentedRoom_ShouldDisableBooking_AndLoadSimilarRooms()
+    public async Task AC3_UnavailableOrRentedRoom_ShouldDisableBooking_AndUseSimilarRoomsFromDetailResponse()
     {
         // Arrange
         var fakeRoom = new RoomDetailModel
         {
             Id = "room-03",
-            Status = ListingStatus.Unavailable
+            Status = ListingStatus.Unavailable,
+            SimilarRooms = []
         };
         var similarRooms = new List<SimilarRoomModel>
         {
             new() { Id = "sim-1", Title = "Phòng thay thế 1", Price = 1500000 }
         };
+        fakeRoom.SimilarRooms = similarRooms;
 
         _serviceMock.Setup(s => s.GetRoomDetailAsync("room-03", It.IsAny<CancellationToken>()))
             .ReturnsAsync(fakeRoom);
-        _serviceMock.Setup(s => s.GetSimilarRoomsAsync("room-03", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(similarRooms);
 
         _viewModel.RoomId = "room-03";
 
@@ -108,6 +106,7 @@ public class RoomDetailViewModelTests
         Assert.That(_viewModel.CanBookOrContact, Is.False, "Phòng unavailable không được cho phép đặt lịch!");
         Assert.That(_viewModel.ShowSimilarRooms, Is.True);
         Assert.That(_viewModel.SimilarRooms.Count, Is.EqualTo(1));
+        _serviceMock.Verify(s => s.GetSimilarRoomsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Test]

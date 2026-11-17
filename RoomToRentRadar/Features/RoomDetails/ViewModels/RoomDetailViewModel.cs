@@ -131,15 +131,8 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
             // Refresh computed properties
             NotifyStatusPropertiesChanged();
 
-            // Load similar properties when property is rented or unavailable (AC3)
-            if (room.SimilarRooms is { Count: > 0 })
-            {
-                SimilarRooms = room.SimilarRooms;
-            }
-            else if (ShowSimilarRooms)
-            {
-                SimilarRooms = await _roomDetailService.GetSimilarRoomsAsync(roomId, token);
-            }
+            // Similar rooms are included in the detail response. An empty list is a valid API result.
+            SimilarRooms = room.SimilarRooms ?? [];
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {

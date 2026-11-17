@@ -55,12 +55,7 @@ public class RoomDetailService : IRoomDetailService
     public async Task<List<SimilarRoomModel>> GetSimilarRoomsAsync(string roomId, CancellationToken cancellationToken = default)
     {
         var detail = await GetRoomDetailAsync(roomId, cancellationToken);
-        if (detail?.SimilarRooms is { Count: > 0 })
-        {
-            return detail.SimilarRooms;
-        }
-
-        return GetFallbackSimilarRooms(roomId);
+        return detail?.SimilarRooms ?? [];
     }
 
     private static RoomDetailModel MapDtoToModel(RoomDetailApiDto dto)

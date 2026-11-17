@@ -5,7 +5,6 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:f="clr-namespace:Fonts"
     xmlns:homeViews="clr-namespace:RoomToRentRadar.Features.Home.Views"
-    xmlns:authViews="clr-namespace:RoomToRentRadar.Features.Authentication.Views"
     xmlns:roomViews="clr-namespace:RoomToRentRadar.Features.RoomListings.Views"
     Title="RoomToRentRadar"
     FlyoutBackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource DesktopRailBackgroundDark}}"
@@ -210,42 +209,6 @@
         <ShellContent
             x:Name="AuthShellContent"
             Title="Authentication"
-            Route="login"
-            SemanticProperties.Description="Sign In and Sign Up"
-            SemanticProperties.Hint="Navigate to authentication" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Sign In / Register" Route="auth" Icon="{StaticResource IconProjects}">
-        <ShellContent
-            Title="Authentication"
-            ContentTemplate="{DataTemplate authViews:AuthPage}"
-            Route="login"
-            SemanticProperties.Description="Sign In and Sign Up"
-            SemanticProperties.Hint="Navigate to authentication" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Sign In / Register" Route="auth" Icon="{StaticResource IconProjects}">
-        <ShellContent
-            Title="Authentication"
-            ContentTemplate="{DataTemplate authViews:AuthPage}"
-            Route="login"
-            SemanticProperties.Description="Sign In and Sign Up"
-            SemanticProperties.Hint="Navigate to authentication" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Sign In / Register" Route="auth" Icon="{StaticResource IconProjects}">
-        <ShellContent
-            Title="Authentication"
-            ContentTemplate="{DataTemplate authViews:AuthPage}"
-            Route="login"
-            SemanticProperties.Description="Sign In and Sign Up"
-            SemanticProperties.Hint="Navigate to authentication" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Sign In / Register" Route="auth" Icon="{StaticResource IconProjects}">
-        <ShellContent
-            Title="Authentication"
-            ContentTemplate="{DataTemplate authViews:AuthPage}"
             Route="login"
             SemanticProperties.Description="Sign In and Sign Up"
             SemanticProperties.Hint="Navigate to authentication" />
