@@ -11,16 +11,20 @@ public class RoomDetailApiDto
     public string Description { get; set; } = string.Empty;
     public decimal Price { get; set; }
     public string FormattedPrice { get; set; } = string.Empty;
-    public decimal Deposit { get; set; }
+    public decimal? Deposit { get; set; }
     public string FormattedDeposit { get; set; } = string.Empty;
     public double Area { get; set; }
     public string FormattedArea { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
+    public string? ThumbnailUrl { get; set; }
+    public List<string> ImageUrls { get; set; } = [];
     public string RoomType { get; set; } = string.Empty;
+    public int? Bedrooms { get; set; }
+    public int? Bathrooms { get; set; }
     public List<string> Amenities { get; set; } = [];
     public List<string> HouseRules { get; set; } = [];
     public string LandlordPhone { get; set; } = string.Empty;
-    public DateTime LastUpdatedDate { get; set; }
+    public DateTime? LastUpdatedDate { get; set; }
     public bool IsVerified { get; set; }
     public string Status { get; set; } = string.Empty;
     public bool IsAvailable { get; set; } = true;

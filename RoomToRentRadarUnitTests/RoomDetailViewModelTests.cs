@@ -12,6 +12,7 @@ public class RoomDetailViewModelTests
 {
     private Mock<IRoomDetailService> _serviceMock = null!;
     private Mock<IErrorHandler> _errorHandlerMock = null!;
+    private Mock<IAuthenticationSessionService> _sessionServiceMock = null!;
     private RoomDetailViewModel _viewModel = null!;
 
     [SetUp]
@@ -19,7 +20,8 @@ public class RoomDetailViewModelTests
     {
         _serviceMock = new Mock<IRoomDetailService>();
         _errorHandlerMock = new Mock<IErrorHandler>();
-        _viewModel = new RoomDetailViewModel(_serviceMock.Object, _errorHandlerMock.Object);
+        _sessionServiceMock = new Mock<IAuthenticationSessionService>();
+        _viewModel = new RoomDetailViewModel(_serviceMock.Object, _errorHandlerMock.Object, _sessionServiceMock.Object);
     }
 
     [Test]
@@ -110,24 +112,49 @@ public class RoomDetailViewModelTests
     }
 
     [Test]
-    public void AC4_LandlordPhone_ShouldBeMasked_WhenUserNotLoggedIn()
+    public void RoomInformation_ShouldRemainVisible_WhenUserIsNotLoggedIn()
     {
         // Arrange
         _viewModel.Room = new RoomDetailModel
         {
             LandlordPhone = "0987654321"
         };
-        _viewModel.IsUserLoggedIn = false;
-
         // Assert
-        Assert.That(_viewModel.CanViewPhoneNumber, Is.False);
-        Assert.That(_viewModel.DisplayPhoneNumber, Is.EqualTo("Login to view phone number"));
-
-        // Act: Đăng nhập
-        _viewModel.IsUserLoggedIn = true;
-
-        // Assert
-        Assert.That(_viewModel.CanViewPhoneNumber, Is.True);
         Assert.That(_viewModel.DisplayPhoneNumber, Is.EqualTo("0987654321"));
+    }
+
+    [Test]
+    public void HasLandlordContact_WhenBackendReturnsMaskedPhone_IsFalse()
+    {
+        _viewModel.Room = new RoomDetailModel
+        {
+            LandlordPhone = "*** (Authentication required)"
+        };
+
+        Assert.That(_viewModel.HasLandlordContact, Is.False);
+        Assert.That(_viewModel.CanCallLandlord, Is.False);
+    }
+
+    [Test]
+    public async Task BookInspectionAsync_WhenUserIsNotAuthenticated_NavigatesToLogin()
+    {
+        string? navigatedRoute = null;
+        _sessionServiceMock.SetupGet(session => session.IsAuthenticated).Returns(false);
+        _viewModel = new RoomDetailViewModel(
+            _serviceMock.Object,
+            _errorHandlerMock.Object,
+            _sessionServiceMock.Object,
+            route =>
+            {
+                navigatedRoute = route;
+                return Task.CompletedTask;
+            })
+        {
+            Room = new RoomDetailModel { Status = ListingStatus.Available }
+        };
+
+        await _viewModel.BookInspectionAsync();
+
+        Assert.That(navigatedRoute, Is.EqualTo("//auth/login"));
     }
 }

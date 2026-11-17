@@ -11,11 +11,12 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
 {
     private readonly IRoomDetailService _roomDetailService;
     private readonly IErrorHandler _errorHandler;
+    private readonly IAuthenticationSessionService _sessionService;
     private readonly Func<string, Task>? _navigateAsync;
     private CancellationTokenSource? _loadCts;
 
     [ObservableProperty]
-    public partial string Title { get; set; } = "Chi tiết phòng trọ";
+    public partial string Title { get; set; } = "Room details";
 
     [ObservableProperty]
     public partial bool IsBusy { get; set; }
@@ -31,9 +32,6 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
 
     [ObservableProperty]
     public partial RoomDetailModel? Room { get; set; }
-
-    [ObservableProperty]
-    public partial bool IsUserLoggedIn { get; set; } = false; // Auth simulation toggle
 
     [ObservableProperty]
     public partial List<SimilarRoomModel> SimilarRooms { get; set; } = [];
@@ -55,17 +53,20 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         ? "This room is no longer available. Browse similar available rooms below."
         : "This listing is temporarily unavailable. Browse similar available rooms below.");
 
-    // Landlord Phone Visibility based on Authentication (AC4)
-    public bool CanViewPhoneNumber => IsUserLoggedIn && !string.IsNullOrWhiteSpace(Room?.LandlordPhone);
-    public string DisplayPhoneNumber => CanViewPhoneNumber ? Room!.LandlordPhone! : "Login to view phone number";
+    public bool HasLandlordContact => !string.IsNullOrWhiteSpace(Room?.LandlordPhone)
+        && !Room.LandlordPhone.StartsWith("***", StringComparison.Ordinal);
+    public bool CanCallLandlord => IsAvailable && HasLandlordContact;
+    public string DisplayPhoneNumber => Room?.LandlordPhone ?? "Contact information is unavailable";
 
     public RoomDetailViewModel(
         IRoomDetailService roomDetailService,
         IErrorHandler errorHandler,
+        IAuthenticationSessionService sessionService,
         Func<string, Task>? navigateAsync = null)
     {
         _roomDetailService = roomDetailService ?? throw new ArgumentNullException(nameof(roomDetailService));
         _errorHandler = errorHandler ?? throw new ArgumentNullException(nameof(errorHandler));
+        _sessionService = sessionService ?? throw new ArgumentNullException(nameof(sessionService));
         _navigateAsync = navigateAsync;
     }
 
@@ -119,7 +120,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
             {
                 Room = null;
                 IsNotFound = true;
-                StatusMessage = "Không tìm thấy thông tin phòng trọ này hoặc phòng đã bị xóa.";
+                StatusMessage = "This room was not found or has been removed.";
                 NotifyStatusPropertiesChanged();
                 return;
             }
@@ -142,7 +143,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         {
             Room = null;
             IsNotFound = true;
-            StatusMessage = "Không thể tải chi tiết phòng trọ. Vui lòng kiểm tra kết nối mạng và thử lại.";
+            StatusMessage = "Unable to load room details. Check your network connection and try again.";
             _errorHandler.HandleError(ex);
         }
         finally
@@ -157,15 +158,6 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     }
 
     [RelayCommand]
-    public void ToggleAuthSimulation()
-    {
-        // Toggle simulation for instructor and automated verification (AC4)
-        IsUserLoggedIn = !IsUserLoggedIn;
-        OnPropertyChanged(nameof(CanViewPhoneNumber));
-        OnPropertyChanged(nameof(DisplayPhoneNumber));
-    }
-
-    [RelayCommand]
     public async Task SelectSimilarRoomAsync(SimilarRoomModel similarRoom)
     {
         if (similarRoom is null || string.IsNullOrWhiteSpace(similarRoom.Id)) return;
@@ -177,12 +169,21 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     public async Task BookInspectionAsync()
     {
-        if (!CanBookOrContact) return;
+        if (!CanBookOrContact)
+        {
+            return;
+        }
+
+        if (!_sessionService.IsAuthenticated)
+        {
+            await NavigateAsync($"//{AppRoutes.Login}");
+            return;
+        }
 
 #if ANDROID || IOS || MACCATALYST || WINDOWS
         if (Shell.Current is not null)
         {
-            await Shell.Current.DisplayAlertAsync("Đặt lịch xem phòng", $"Xác nhận gửi yêu cầu hẹn xem phòng \"{Room?.Title}\" tới chủ trọ?", "Xác nhận", "Hủy");
+            await Shell.Current.DisplayAlertAsync("Schedule a viewing", $"Send a viewing request for \"{Room?.Title}\" to the landlord?", "Confirm", "Cancel");
         }
 #endif
     }
@@ -190,20 +191,10 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     [RelayCommand]
     public async Task CallLandlordAsync()
     {
-        if (!IsUserLoggedIn)
+        var phoneNumber = Room?.LandlordPhone;
+        if (CanCallLandlord && !string.IsNullOrWhiteSpace(phoneNumber) && PhoneDialer.Default.IsSupported)
         {
-#if ANDROID || IOS || MACCATALYST || WINDOWS
-            if (Shell.Current is not null)
-            {
-                await Shell.Current.DisplayAlertAsync("Yêu cầu đăng nhập", "Vui lòng đăng nhập để xem số điện thoại và liên hệ chủ trọ.", "Đóng");
-            }
-#endif
-            return;
-        }
-
-        if (PhoneDialer.Default.IsSupported && !string.IsNullOrWhiteSpace(Room?.LandlordPhone))
-        {
-            PhoneDialer.Default.Open(Room.LandlordPhone);
+            PhoneDialer.Default.Open(phoneNumber);
         }
     }
 
@@ -246,7 +237,8 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         OnPropertyChanged(nameof(ShowSimilarRooms));
         OnPropertyChanged(nameof(ListingStatusTitle));
         OnPropertyChanged(nameof(ListingStatusMessage));
-        OnPropertyChanged(nameof(CanViewPhoneNumber));
+        OnPropertyChanged(nameof(HasLandlordContact));
+        OnPropertyChanged(nameof(CanCallLandlord));
         OnPropertyChanged(nameof(DisplayPhoneNumber));
     }
 }

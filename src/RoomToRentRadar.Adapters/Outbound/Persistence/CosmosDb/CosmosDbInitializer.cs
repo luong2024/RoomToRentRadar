@@ -46,6 +46,12 @@ public sealed class CosmosDbInitializer
                 new ContainerProperties(roomDetailsContainerName, "/id"),
                 cancellationToken: cancellationToken);
 
+            var roomsContainerName = string.IsNullOrWhiteSpace(_settings.RoomsContainerName) ? "Rooms" : _settings.RoomsContainerName;
+            _logger.LogInformation("Creating container '{RoomsContainerName}' (/id)...", roomsContainerName);
+            var roomsRepositoryContainerResponse = await database.CreateContainerIfNotExistsAsync(
+                new ContainerProperties(roomsContainerName, "/id"),
+                cancellationToken: cancellationToken);
+
             var listingsContainerName = string.IsNullOrWhiteSpace(_settings.ContainerName) ? "RoomListings" : _settings.ContainerName;
             _logger.LogInformation("Creating container '{ListingsContainerName}' (/campusId)...", listingsContainerName);
             var roomsContainerResponse = await database.CreateContainerIfNotExistsAsync(
@@ -69,6 +75,7 @@ public sealed class CosmosDbInitializer
             await EnsureSpatialAndCompositeIndexesAsync(effectiveContainer, effectiveProperties, cancellationToken);
 
             await SeedInitialDataAsync(campusesContainerResponse.Container, effectiveContainer, cancellationToken);
+            await SynchronizeRoomDetailsAsync(effectiveContainer, roomsRepositoryContainerResponse.Container, cancellationToken);
 
             _logger.LogInformation("Cosmos DB initialization completed successfully.");
         }
@@ -457,9 +464,21 @@ public sealed class CosmosDbInitializer
         properties.IndexingPolicy = indexingPolicy;
         var modified = false;
 
-        if (!indexingPolicy.SpatialIndexes.Any(index => index.Path.Equals("/location/*", StringComparison.Ordinal)))
+        var locationIndex = indexingPolicy.SpatialIndexes.FirstOrDefault(index =>
+            index.Path.Equals("/location/*", StringComparison.Ordinal));
+
+        if (locationIndex is null)
         {
-            indexingPolicy.SpatialIndexes.Add(new SpatialPath { Path = "/location/*" });
+            indexingPolicy.SpatialIndexes.Add(new SpatialPath
+            {
+                Path = "/location/*",
+                SpatialTypes = { SpatialType.Point }
+            });
+            modified = true;
+        }
+        else if (!locationIndex.SpatialTypes.Contains(SpatialType.Point))
+        {
+            locationIndex.SpatialTypes.Add(SpatialType.Point);
             modified = true;
         }
 
@@ -553,7 +572,7 @@ public sealed class CosmosDbInitializer
             }
         }
 
-        if (!hasRooms)
+        if (!hasRooms || isDevelopment)
         {
             var sampleRooms = new List<RoomListingDocument>
             {
@@ -561,12 +580,12 @@ public sealed class CosmosDbInitializer
                 {
                     Id = "room-ictu-001",
                     CampusId = ictuId,
-                    Title = "Phòng trọ khép kín cao cấp ngõ 89 Z115 sát cổng ICTU",
-                    Description = "Phòng mới xây có điều hòa, nóng lạnh, gác xép, wifi tốc độ cao. Cách cổng chính ICTU 200m đi bộ.",
+                    Title = "Premium private room near ICTU Gate, Alley 89 Z115",
+                    Description = "Newly built room with air conditioning, water heater, mezzanine, and high-speed Wi-Fi. A 200 m walk from ICTU's main gate.",
                     MonthlyRentAmount = 1800000,
                     MonthlyRentCurrency = "VND",
                     AreaSquareMeters = 22.0,
-                    Address = "Số 15 ngõ 89 đường Z115, Quyết Thắng, TP. Thái Nguyên",
+                    Address = "15 Alley 89, Z115 Road, Quyết Thắng, Thái Nguyên City",
                     Latitude = 21.5865,
                     Longitude = 105.8080,
                     Location = new Microsoft.Azure.Cosmos.Spatial.Point(105.8080, 21.5865),
@@ -579,12 +598,12 @@ public sealed class CosmosDbInitializer
                 {
                     Id = "room-ictu-002",
                     CampusId = ictuId,
-                    Title = "Ký túc xá tư nhân full đồ ban công thoáng mát",
-                    Description = "Full nội thất giường tầng, bàn học, tủ quần áo riêng. Giờ giấc tự do, an ninh camera 24/7.",
+                    Title = "Fully furnished private dorm room with a balcony",
+                    Description = "Includes bunk beds, study desks, and private wardrobes. Flexible hours with 24/7 camera security.",
                     MonthlyRentAmount = 1200000,
                     MonthlyRentCurrency = "VND",
                     AreaSquareMeters = 18.5,
-                    Address = "Đường Tân Thịnh, đối diện cổng phụ ICTU",
+                    Address = "Tân Thịnh Road, opposite ICTU's secondary gate",
                     Latitude = 21.5840,
                     Longitude = 105.8060,
                     Location = new Microsoft.Azure.Cosmos.Spatial.Point(105.8060, 21.5840),
@@ -597,12 +616,12 @@ public sealed class CosmosDbInitializer
                 {
                     Id = "room-ictu-003",
                     CampusId = ictuId,
-                    Title = "Căn hộ mini 1 phòng ngủ 1 khách cho nhóm sinh viên",
-                    Description = "Căn hộ mini rộng rãi, có bếp riêng, máy giặt chung sân phơi tầng thượng. Thích hợp ở 2-3 bạn.",
+                    Title = "One-bedroom mini apartment for students",
+                    Description = "Spacious mini apartment with a private kitchen, shared washing machine, and rooftop drying area. Suitable for 2–3 people.",
                     MonthlyRentAmount = 2800000,
                     MonthlyRentCurrency = "VND",
                     AreaSquareMeters = 35.0,
-                    Address = "Tổ 4, P. Thịnh Đán, TP. Thái Nguyên",
+                    Address = "Group 4, Thịnh Đán Ward, Thái Nguyên City",
                     Latitude = 21.5790,
                     Longitude = 105.8020,
                     Location = new Microsoft.Azure.Cosmos.Spatial.Point(105.8020, 21.5790),
@@ -615,12 +634,12 @@ public sealed class CosmosDbInitializer
                 {
                     Id = "room-ictu-004",
                     CampusId = ictuId,
-                    Title = "Phòng trọ giá rẻ cho sinh viên năm nhất",
-                    Description = "Phòng trọ bình dân có vệ sinh khép kín, gần chợ sinh viên Quyết Thắng.",
+                    Title = "Affordable room for first-year students",
+                    Description = "Budget-friendly room with a private bathroom, near Quyết Thắng student market.",
                     MonthlyRentAmount = 900000,
                     MonthlyRentCurrency = "VND",
                     AreaSquareMeters = 15.0,
-                    Address = "Khu tập thể Z115, TP. Thái Nguyên",
+                    Address = "Z115 residential area, Thái Nguyên City",
                     Latitude = 21.5890,
                     Longitude = 105.8110,
                     Location = new Microsoft.Azure.Cosmos.Spatial.Point(105.8110, 21.5890),
@@ -633,12 +652,12 @@ public sealed class CosmosDbInitializer
                 {
                     Id = "room-ictu-005",
                     CampusId = ictuId,
-                    Title = "Phòng trọ đã có bạn thuê (Test Occupied - AC4)",
-                    Description = "Phòng trọ đã kín người.",
+                    Title = "Rented room (occupied listing)",
+                    Description = "This room is fully occupied.",
                     MonthlyRentAmount = 1500000,
                     MonthlyRentCurrency = "VND",
                     AreaSquareMeters = 20.0,
-                    Address = "Đường Z115, TP. Thái Nguyên",
+                    Address = "Z115 Road, Thái Nguyên City",
                     Latitude = 21.5855,
                     Longitude = 105.8075,
                     Location = new Microsoft.Azure.Cosmos.Spatial.Point(105.8075, 21.5855),
@@ -651,12 +670,12 @@ public sealed class CosmosDbInitializer
                 {
                     Id = "room-ictu-006",
                     CampusId = ictuId,
-                    Title = "Phòng trọ chưa kiểm duyệt (Test Unverified - AC4)",
-                    Description = "Phòng mới đăng chờ admin duyệt.",
+                    Title = "Unverified room listing",
+                    Description = "New listing awaiting administrator approval.",
                     MonthlyRentAmount = 1600000,
                     MonthlyRentCurrency = "VND",
                     AreaSquareMeters = 20.0,
-                    Address = "Đường Z115, TP. Thái Nguyên",
+                    Address = "Z115 Road, Thái Nguyên City",
                     Latitude = 21.5855,
                     Longitude = 105.8075,
                     Location = new Microsoft.Azure.Cosmos.Spatial.Point(105.8075, 21.5855),
@@ -674,5 +693,53 @@ public sealed class CosmosDbInitializer
 
             _logger.LogInformation("Seeded {Count} sample rooms for campus {CampusId}.", sampleRooms.Count, ictuId);
         }
+    }
+
+    private async Task SynchronizeRoomDetailsAsync(
+        Container listingsContainer,
+        Container roomsContainer,
+        CancellationToken cancellationToken)
+    {
+        var query = new QueryDefinition("SELECT * FROM c");
+        using var iterator = listingsContainer.GetItemQueryIterator<RoomListingDocument>(query);
+        var synchronizedCount = 0;
+
+        while (iterator.HasMoreResults)
+        {
+            var page = await iterator.ReadNextAsync(cancellationToken);
+            foreach (var listing in page)
+            {
+                var detail = new RoomDocument
+                {
+                    Id = listing.Id,
+                    Title = listing.Title,
+                    Description = listing.Description,
+                    Price = listing.MonthlyRentAmount,
+                    Area = listing.AreaSquareMeters,
+                    Address = listing.Address,
+                    ThumbnailUrl = listing.ThumbnailUrl,
+                    ImageUrls = string.IsNullOrWhiteSpace(listing.ThumbnailUrl) ? [] : [listing.ThumbnailUrl],
+                    IsVerified = listing.VerificationStatus == 2,
+                    Status = listing.Status,
+                    Deposit = 0,
+                    RoomType = string.Empty,
+                    Amenities = [],
+                    HouseRules = [],
+                    LandlordPhone = string.Empty,
+                    LastUpdatedDate = listing.CreatedAtUtc,
+                    Latitude = listing.Latitude,
+                    Longitude = listing.Longitude,
+                    Location = new CosmosPoint
+                    {
+                        Coordinates = [listing.Longitude, listing.Latitude]
+                    }
+                };
+
+                await roomsContainer.UpsertItemAsync(detail, new PartitionKey(detail.Id), cancellationToken: cancellationToken);
+                synchronizedCount++;
+            }
+        }
+
+        _logger.LogInformation("Synchronized {Count} room detail records from Cosmos listings.", synchronizedCount);
     }
 }
