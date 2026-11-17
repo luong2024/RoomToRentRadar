@@ -21,6 +21,8 @@ public sealed partial class RoomListItemModel : ObservableObject
 
     public required string Address { get; init; }
 
+    public string RoomType { get; init; } = "private";
+
     public string District { get; init; } = "TP. Thái Nguyên";
 
     public double DistanceToCampusKm { get; init; }

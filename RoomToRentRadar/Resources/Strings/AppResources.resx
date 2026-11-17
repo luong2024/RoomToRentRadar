@@ -104,4 +104,24 @@
   <data name="Card_Verified" xml:space="preserve"><value>Đã xác thực</value></data>
   <data name="Card_Available" xml:space="preserve"><value>Còn trống</value></data>
   <data name="Card_ViewDetails" xml:space="preserve"><value>Xem chi tiết</value></data>
+  <data name="Filter_SheetTitle" xml:space="preserve"><value>Lọc phòng trọ</value></data>
+  <data name="Filter_SheetSubtitle" xml:space="preserve"><value>Tìm chỗ ở sinh viên phù hợp nhất</value></data>
+  <data name="Filter_PriceRange" xml:space="preserve"><value>Khoảng giá</value></data>
+  <data name="Filter_PriceUnder1M" xml:space="preserve"><value>Dưới 1M</value></data>
+  <data name="Filter_Price1MTo2M" xml:space="preserve"><value>1M – 2M</value></data>
+  <data name="Filter_Price2MTo3M" xml:space="preserve"><value>2M – 3M</value></data>
+  <data name="Filter_MinPrice" xml:space="preserve"><value>Giá tối thiểu</value></data>
+  <data name="Filter_MaxPrice" xml:space="preserve"><value>Giá tối đa</value></data>
+  <data name="Filter_RoomType" xml:space="preserve"><value>Loại phòng</value></data>
+  <data name="Filter_PrivateRoom" xml:space="preserve"><value>Phòng riêng</value></data>
+  <data name="Filter_SharedRoom" xml:space="preserve"><value>Ở ghép</value></data>
+  <data name="Filter_Amenities" xml:space="preserve"><value>Tiện nghi</value></data>
+  <data name="Filter_Amenity_AirCon" xml:space="preserve"><value>Điều hòa</value></data>
+  <data name="Filter_Amenity_Wifi" xml:space="preserve"><value>Wi-Fi</value></data>
+  <data name="Filter_Amenity_Parking" xml:space="preserve"><value>Chỗ để xe</value></data>
+  <data name="Filter_Amenity_Bathroom" xml:space="preserve"><value>Khép kín</value></data>
+  <data name="Filter_Amenity_Washing" xml:space="preserve"><value>Máy giặt</value></data>
+  <data name="Filter_Amenity_Kitchen" xml:space="preserve"><value>Bếp nấu</value></data>
+  <data name="Filter_ResetAll" xml:space="preserve"><value>Đặt lại</value></data>
+  <data name="Filter_ShowResults_Format" xml:space="preserve"><value>Xem kết quả ({0})</value></data>
 </root>

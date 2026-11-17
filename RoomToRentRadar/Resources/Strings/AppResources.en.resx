@@ -104,4 +104,24 @@
   <data name="Card_Verified" xml:space="preserve"><value>Verified</value></data>
   <data name="Card_Available" xml:space="preserve"><value>Available</value></data>
   <data name="Card_ViewDetails" xml:space="preserve"><value>View details</value></data>
+  <data name="Filter_SheetTitle" xml:space="preserve"><value>Filter Rooms</value></data>
+  <data name="Filter_SheetSubtitle" xml:space="preserve"><value>Find your ideal student accommodation</value></data>
+  <data name="Filter_PriceRange" xml:space="preserve"><value>Price Range</value></data>
+  <data name="Filter_PriceUnder1M" xml:space="preserve"><value>Under 1M</value></data>
+  <data name="Filter_Price1MTo2M" xml:space="preserve"><value>1M – 2M</value></data>
+  <data name="Filter_Price2MTo3M" xml:space="preserve"><value>2M – 3M</value></data>
+  <data name="Filter_MinPrice" xml:space="preserve"><value>Min Price</value></data>
+  <data name="Filter_MaxPrice" xml:space="preserve"><value>Max Price</value></data>
+  <data name="Filter_RoomType" xml:space="preserve"><value>Room Type</value></data>
+  <data name="Filter_PrivateRoom" xml:space="preserve"><value>Private Room</value></data>
+  <data name="Filter_SharedRoom" xml:space="preserve"><value>Shared Room</value></data>
+  <data name="Filter_Amenities" xml:space="preserve"><value>Amenities</value></data>
+  <data name="Filter_Amenity_AirCon" xml:space="preserve"><value>Air Conditioner</value></data>
+  <data name="Filter_Amenity_Wifi" xml:space="preserve"><value>Wi-Fi</value></data>
+  <data name="Filter_Amenity_Parking" xml:space="preserve"><value>Parking</value></data>
+  <data name="Filter_Amenity_Bathroom" xml:space="preserve"><value>Private Bathroom</value></data>
+  <data name="Filter_Amenity_Washing" xml:space="preserve"><value>Washing Machine</value></data>
+  <data name="Filter_Amenity_Kitchen" xml:space="preserve"><value>Kitchen</value></data>
+  <data name="Filter_ResetAll" xml:space="preserve"><value>Reset All</value></data>
+  <data name="Filter_ShowResults_Format" xml:space="preserve"><value>Show Results ({0})</value></data>
 </root>

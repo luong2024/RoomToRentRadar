@@ -512,6 +512,99 @@ public class RoomListingsViewModelTests
         Assert.That(vm.PriceSortLabel, Is.EqualTo("Price: Low to High"));
     }
 
+    [Test]
+    public async Task ApplyFilterSheetCommand_WhenExecuted_PassesFilterCriteriaToService()
+    {
+        // Arrange
+        _fakeService.SetupPages(totalCount: 3, pageSize: 2, allRooms: CreateRooms(1, 3));
+        var vm = CreateViewModel(pageSize: 2);
+        vm.SelectPricePreset("2m-3m");
+        vm.SelectRoomType("shared");
+        vm.ToggleAmenityFilter("wifi");
+        vm.ToggleAmenityFilter("kitchen");
+
+        // Act
+        await vm.ApplyFilterSheetCommand.ExecuteAsync(null);
+
+        // Assert
+        var appliedFilter = _fakeService.LastRequestedFilter;
+        Assert.Multiple(() =>
+        {
+            Assert.That(appliedFilter, Is.Not.Null);
+            Assert.That(appliedFilter!.MinPrice, Is.EqualTo(2_000_000m));
+            Assert.That(appliedFilter.MaxPrice, Is.EqualTo(3_000_000m));
+            Assert.That(appliedFilter.RoomType, Is.EqualTo("shared"));
+            Assert.That(appliedFilter.Amenities, Is.EqualTo(new[] { "wifi", "kitchen" }));
+            Assert.That(vm.IsPriceMenuOpen, Is.False);
+            Assert.That(vm.Rooms, Has.Count.EqualTo(2));
+            Assert.That(vm.TotalCount, Is.EqualTo(3));
+        });
+    }
+
+    [Test]
+    public async Task InitialAndResetFilters_PricePreset1MTo2M_MatchesMin1MAndMax2M()
+    {
+        // Arrange
+        _fakeService.SetupPages(totalCount: 2, pageSize: 2, allRooms: CreateRooms(1, 2));
+        var vm = CreateViewModel(pageSize: 2);
+
+        // Assert initial state matches "1m-2m" preset
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.SelectedPricePreset, Is.EqualTo("1m-2m"));
+            Assert.That(vm.FilterMinPriceText, Is.EqualTo("1,000,000"));
+            Assert.That(vm.FilterMaxPriceText, Is.EqualTo("2,000,000"));
+        });
+
+        // Mutate filters away from defaults
+        vm.SelectPricePreset("2m-3m");
+        vm.FilterMaxPriceText = "5,000,000";
+        Assert.That(vm.SelectedPricePreset, Is.Empty);
+
+        // Act: reset filters
+        await vm.ResetFiltersCommand.ExecuteAsync(null);
+
+        // Assert reset state is synchronized with "1m-2m" preset
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.SelectedPricePreset, Is.EqualTo("1m-2m"));
+            Assert.That(vm.FilterMinPriceText, Is.EqualTo("1,000,000"));
+            Assert.That(vm.FilterMaxPriceText, Is.EqualTo("2,000,000"));
+            Assert.That(_fakeService.LastRequestedFilter?.MinPrice, Is.EqualTo(1_000_000m));
+            Assert.That(_fakeService.LastRequestedFilter?.MaxPrice, Is.EqualTo(2_000_000m));
+        });
+    }
+
+    [Test]
+    public async Task ErrorState_WhenEnglishSelectedAndSwitchCulture_LocalizesErrorMessage()
+    {
+        // Arrange
+        LocalizationResourceManager.Instance.SetCulture(new CultureInfo("en"));
+        _fakeService.Handler = (_, _, _, _) => throw new HttpRequestException("Network failure");
+        var vm = CreateViewModel(pageSize: 2);
+
+        // Act
+        await vm.InitializeAsync();
+
+        // Assert English error message
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.ShowErrorState, Is.True);
+            Assert.That(vm.ErrorMessage, Is.EqualTo("Cannot connect to server. Please check your network connection."));
+            Assert.That(vm.EmptyStateMessage, Is.EqualTo("Cannot connect to server. Please check your network connection."));
+        });
+
+        // Act: switch back to Vietnamese while error is shown
+        LocalizationResourceManager.Instance.SetCulture(new CultureInfo("vi"));
+
+        // Assert Vietnamese error message
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.ErrorMessage, Is.EqualTo("Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng."));
+            Assert.That(vm.EmptyStateMessage, Is.EqualTo("Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng."));
+        });
+    }
+
     private RoomListingsViewModel CreateViewModel(int pageSize) =>
         new(_fakeService, _fakeErrorHandler, route =>
         {
@@ -545,6 +638,8 @@ public class RoomListingsViewModelTests
 
         public RoomSortOption LastRequestedSort { get; private set; }
 
+        public RoomFilterCriteria? LastRequestedFilter { get; private set; }
+
         public List<string?> RequestedSearches { get; } = [];
 
         public Func<int, int, RoomSortOption, CancellationToken, Task<PagedResponse<RoomListItemModel>>>? Handler { get; set; }
@@ -563,10 +658,12 @@ public class RoomListingsViewModelTests
             int pageSize,
             RoomSortOption sortBy = RoomSortOption.Newest,
             string? search = null,
+            RoomFilterCriteria? filter = null,
             CancellationToken cancellationToken = default)
         {
             CallCount++;
             LastRequestedSort = sortBy;
+            LastRequestedFilter = filter;
             RequestedSearches.Add(search);
 
             if (Handler is not null)

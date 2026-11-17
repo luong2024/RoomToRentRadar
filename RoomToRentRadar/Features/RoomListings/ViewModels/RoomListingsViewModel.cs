@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Core.Constants;
@@ -27,8 +28,10 @@ public partial class RoomListingsViewModel : ObservableObject
     private readonly Dictionary<string, RoomListItemModel> _favoriteRoomsById = new(StringComparer.Ordinal);
     private readonly List<RoomListItemModel> _exploreSnapshot = [];
     private CancellationTokenSource? _paginationCts;
+    private string? _lastErrorResourceKey;
     private bool _isInitialized;
     private bool _suppressAutoSortReload;
+    private bool _isUpdatingPricePreset;
 
     public RoomListingsViewModel(
         IRoomListingsService roomListingsService,
@@ -58,7 +61,19 @@ public partial class RoomListingsViewModel : ObservableObject
     private void UpdateLocalizedStrings()
     {
         Title = LocalizationResourceManager.Instance["Title_ExploreRooms"];
-        EmptyStateMessage = LocalizationResourceManager.Instance["Empty_NoRooms"];
+
+        if (HasError && !string.IsNullOrEmpty(_lastErrorResourceKey))
+        {
+            ErrorMessage = LocalizationResourceManager.Instance[_lastErrorResourceKey];
+            if (Rooms.Count == 0)
+            {
+                EmptyStateMessage = ErrorMessage;
+            }
+        }
+        else if (Rooms.Count == 0)
+        {
+            EmptyStateMessage = LocalizationResourceManager.Instance["Empty_NoRooms"];
+        }
 
         foreach (var option in SortOptions)
         {
@@ -138,13 +153,13 @@ public partial class RoomListingsViewModel : ObservableObject
     public partial string FilterMinPriceText { get; set; } = "1,000,000";
 
     [ObservableProperty]
-    public partial string FilterMaxPriceText { get; set; } = "5,000,000";
+    public partial string FilterMaxPriceText { get; set; } = "2,000,000";
 
     [ObservableProperty]
     public partial string SelectedRoomType { get; set; } = "private";
 
     [ObservableProperty]
-    public partial bool IsAmenityAirConSelected { get; set; } = true;
+    public partial bool IsAmenityAirConSelected { get; set; }
 
     [ObservableProperty]
     public partial bool IsAmenityWifiSelected { get; set; }
@@ -261,6 +276,29 @@ public partial class RoomListingsViewModel : ObservableObject
         OnPropertyChanged(nameof(IsPriceUnder1MSelected));
         OnPropertyChanged(nameof(IsPrice1MTo2MSelected));
         OnPropertyChanged(nameof(IsPrice2MTo3MSelected));
+    }
+
+    partial void OnFilterMinPriceTextChanged(string value) => SyncPricePresetFromInputs();
+
+    partial void OnFilterMaxPriceTextChanged(string value) => SyncPricePresetFromInputs();
+
+    private void SyncPricePresetFromInputs()
+    {
+        if (_isUpdatingPricePreset)
+        {
+            return;
+        }
+
+        var min = TryParsePrice(FilterMinPriceText);
+        var max = TryParsePrice(FilterMaxPriceText);
+
+        SelectedPricePreset = (min, max) switch
+        {
+            (0m, 1_000_000m) => "under1m",
+            (1_000_000m, 2_000_000m) => "1m-2m",
+            (2_000_000m, 3_000_000m) => "2m-3m",
+            _ => string.Empty
+        };
     }
 
     partial void OnSelectedRoomTypeChanged(string value)
@@ -455,22 +493,30 @@ public partial class RoomListingsViewModel : ObservableObject
     public void SelectPricePreset(string? preset)
     {
         var normalized = preset?.Trim().ToLowerInvariant() ?? string.Empty;
-        SelectedPricePreset = normalized;
-
-        switch (normalized)
+        _isUpdatingPricePreset = true;
+        try
         {
-            case "under1m":
-                FilterMinPriceText = "0";
-                FilterMaxPriceText = "1,000,000";
-                break;
-            case "1m-2m":
-                FilterMinPriceText = "1,000,000";
-                FilterMaxPriceText = "2,000,000";
-                break;
-            case "2m-3m":
-                FilterMinPriceText = "2,000,000";
-                FilterMaxPriceText = "3,000,000";
-                break;
+            SelectedPricePreset = normalized;
+
+            switch (normalized)
+            {
+                case "under1m":
+                    FilterMinPriceText = "0";
+                    FilterMaxPriceText = "1,000,000";
+                    break;
+                case "1m-2m":
+                    FilterMinPriceText = "1,000,000";
+                    FilterMaxPriceText = "2,000,000";
+                    break;
+                case "2m-3m":
+                    FilterMinPriceText = "2,000,000";
+                    FilterMaxPriceText = "3,000,000";
+                    break;
+            }
+        }
+        finally
+        {
+            _isUpdatingPricePreset = false;
         }
     }
 
@@ -520,9 +566,7 @@ public partial class RoomListingsViewModel : ObservableObject
     public Task ResetFiltersAsync()
     {
         SearchQuery = string.Empty;
-        SelectedPricePreset = "1m-2m";
-        FilterMinPriceText = "1,000,000";
-        FilterMaxPriceText = "5,000,000";
+        SelectPricePreset("1m-2m");
         SelectedRoomType = "private";
         IsAmenityAirConSelected = false;
         IsAmenityWifiSelected = false;
@@ -608,6 +652,7 @@ public partial class RoomListingsViewModel : ObservableObject
                 PageSize,
                 sortOption,
                 GetActiveSearchTerm(),
+                BuildFilterCriteria(),
                 token);
 
             if (token.IsCancellationRequested)
@@ -695,6 +740,7 @@ public partial class RoomListingsViewModel : ObservableObject
         try
         {
             HasError = false;
+            _lastErrorResourceKey = null;
             ErrorMessage = string.Empty;
 
             if (isPullToRefresh)
@@ -713,12 +759,13 @@ public partial class RoomListingsViewModel : ObservableObject
 
             var sortOption = SelectedSortOptionItem?.Option ?? RoomSortOption.Newest;
 
-            // Search is executed server-side so results cover the whole catalog and stay paginated.
+            // Search and filter are executed server-side so results cover the whole catalog and stay paginated.
             var response = await _roomListingsService.GetRoomListingsAsync(
                 page: 1,
                 pageSize: PageSize,
                 sortBy: sortOption,
                 search: GetActiveSearchTerm(),
+                filter: BuildFilterCriteria(),
                 cancellationToken: token);
 
             if (token.IsCancellationRequested || !ReferenceEquals(_paginationCts, currentCts))
@@ -754,9 +801,10 @@ public partial class RoomListingsViewModel : ObservableObject
             HasMoreItems = response.Items.Count >= PageSize && Rooms.Count < response.TotalCount;
             HasCompletedInitialLoad = true;
             HasError = false;
+            _lastErrorResourceKey = null;
             ErrorMessage = string.Empty;
             EmptyStateMessage = Rooms.Count == 0
-                ? "Chưa tìm thấy phòng trọ phù hợp."
+                ? LocalizationResourceManager.Instance["Empty_NoRooms"]
                 : string.Empty;
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -767,9 +815,10 @@ public partial class RoomListingsViewModel : ObservableObject
         {
             HasCompletedInitialLoad = true;
             HasError = true;
-            ErrorMessage = ex is HttpRequestException
-                ? "Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng."
-                : "Không thể tải danh sách phòng trọ. Vui lòng thử lại sau.";
+            _lastErrorResourceKey = ex is HttpRequestException
+                ? "State_ErrorNetwork"
+                : "State_ErrorServer";
+            ErrorMessage = LocalizationResourceManager.Instance[_lastErrorResourceKey];
 
             if (Rooms.Count == 0)
             {
@@ -798,6 +847,83 @@ public partial class RoomListingsViewModel : ObservableObject
 
     private string? GetActiveSearchTerm() =>
         HasSearchQuery ? SearchQuery.Trim() : null;
+
+    public RoomFilterCriteria BuildFilterCriteria()
+    {
+        var minPrice = TryParsePrice(FilterMinPriceText);
+        var maxPrice = TryParsePrice(FilterMaxPriceText);
+        var roomType = string.IsNullOrWhiteSpace(SelectedRoomType)
+            ? null
+            : SelectedRoomType.Trim().ToLowerInvariant();
+        var amenities = GetSelectedAmenities();
+
+        return new RoomFilterCriteria
+        {
+            MinPrice = minPrice,
+            MaxPrice = maxPrice,
+            RoomType = roomType,
+            Amenities = amenities
+        };
+    }
+
+    private IReadOnlyList<string> GetSelectedAmenities()
+    {
+        var list = new List<string>(6);
+        if (IsAmenityAirConSelected)
+        {
+            list.Add("aircon");
+        }
+
+        if (IsAmenityWifiSelected)
+        {
+            list.Add("wifi");
+        }
+
+        if (IsAmenityParkingSelected)
+        {
+            list.Add("parking");
+        }
+
+        if (IsAmenityBathroomSelected)
+        {
+            list.Add("bathroom");
+        }
+
+        if (IsAmenityWashingSelected)
+        {
+            list.Add("washing");
+        }
+
+        if (IsAmenityKitchenSelected)
+        {
+            list.Add("kitchen");
+        }
+
+        return list;
+    }
+
+    private static decimal? TryParsePrice(string? priceText)
+    {
+        if (string.IsNullOrWhiteSpace(priceText))
+        {
+            return null;
+        }
+
+        var cleaned = priceText
+            .Replace(",", string.Empty, StringComparison.Ordinal)
+            .Replace(".", string.Empty, StringComparison.Ordinal)
+            .Replace(" ", string.Empty, StringComparison.Ordinal)
+            .Replace("đ", string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("₫", string.Empty, StringComparison.Ordinal)
+            .Trim();
+
+        if (decimal.TryParse(cleaned, NumberStyles.Number, CultureInfo.InvariantCulture, out var value) && value >= 0)
+        {
+            return value;
+        }
+
+        return null;
+    }
 
     private void AttachRoomItem(RoomListItemModel room)
     {
