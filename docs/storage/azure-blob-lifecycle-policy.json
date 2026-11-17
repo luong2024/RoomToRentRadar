@@ -1,0 +1,35 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "_instructions": [
+    "AZURE STORAGE ACCOUNT LIFECYCLE MANAGEMENT POLICY FOR RoomToRentRadar",
+    "Azure rule filters at the Storage Account level REQUIRE every prefix to start with the container name: '<container-name>/<prefix>'.",
+    "In RoomToRentRadar, the configured KYC container defaults to 'kyc' (configured via KycStorage:ContainerName).",
+    "Therefore, the exact prefix matching staging blobs is: 'kyc/staging/'.",
+    "Verified KYC documents reside under 'kyc/verified/' and are NEVER matched or deleted by this rule.",
+    "If your deployment overrides KycStorage:ContainerName (e.g., 'radar-documents'), update this prefixMatch or use the accompanying Bicep/IaC template."
+  ],
+  "rules": [
+    {
+      "enabled": true,
+      "name": "cleanup-unpromoted-kyc-staging-documents",
+      "type": "Lifecycle",
+      "definition": {
+        "actions": {
+          "baseBlob": {
+            "delete": {
+              "daysAfterCreationGreaterThan": 1
+            }
+          }
+        },
+        "filters": {
+          "blobTypes": [
+            "blockBlob"
+          ],
+          "prefixMatch": [
+            "kyc/staging/"
+          ]
+        }
+      }
+    }
+  ]
+}

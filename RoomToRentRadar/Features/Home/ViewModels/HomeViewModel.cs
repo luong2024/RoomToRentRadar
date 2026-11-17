@@ -57,6 +57,12 @@ public partial class HomeViewModel : ObservableObject
     }
 
     [RelayCommand]
+    public async Task NavigateToAuthAsync()
+    {
+        await NavigateToRouteAsync("//auth/login");
+    }
+
+    [RelayCommand]
     public async Task ExploreRoomsAsync()
     {
         await QuickFilterAsync(QuickSearchText);
