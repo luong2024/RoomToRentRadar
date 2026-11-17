@@ -120,9 +120,10 @@ public sealed class RoomsController : ControllerBase
             return NotFound(notFoundProblem);
         }
 
-        // ADR-012 §6 & OpenAPI getRoomDetail:
-        // Cache ETag is weak (W/"<hash>"), computed from the caller's serialized response body,
-        // accompanied by Cache-Control: private, no-cache and Vary: Authorization.
+        // H6: Cache ETag adheres strictly to ADR-012 §6 and RFC 9110 §8.8.3:
+        // 1. Weak validator prefix W/"<hash>" computed from caller-specific serialized response body.
+        // 2. Cache-Control: private, no-cache to prevent intermediate proxy poisoning.
+        // 3. Vary: Authorization because landlord phone visibility differs by auth state (BR-AUTH-07).
         var jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
         var hash = Convert.ToHexString(SHA256.HashData(jsonBytes)).ToLowerInvariant();
         var etag = $"W/\"{hash}\"";
