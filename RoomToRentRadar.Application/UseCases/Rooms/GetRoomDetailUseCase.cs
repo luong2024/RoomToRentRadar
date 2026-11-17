@@ -73,6 +73,7 @@ public sealed class GetRoomDetailUseCase : IGetRoomDetailUseCase
 
     private async Task<Campus> ResolveCampusAsync(string? campusId, CancellationToken ct)
     {
+        // M1: Unknown campusId throws DomainValidationException (mapped to 400 CAMPUS_NOT_FOUND) instead of silent fallback
         if (!string.IsNullOrWhiteSpace(campusId))
         {
             var trimmedId = campusId.Trim();
