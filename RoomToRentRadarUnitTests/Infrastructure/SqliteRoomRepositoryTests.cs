@@ -3,10 +3,12 @@ using RoomToRentRadar.Datastore.Sqlite;
 using RoomToRentRadar.Datastore.Sqlite.Configurations;
 using RoomToRentRadar.Datastore.Sqlite.Context;
 using RoomToRentRadar.Datastore.Sqlite.Repositories;
+using RoomToRentRadar.Datastore.Sqlite.Transactions;
 using RoomToRentRadar.Domain.Aggregates;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.Exceptions;
 using RoomToRentRadar.Ports.Outbound.Repositories;
+using RoomToRentRadar.Ports.Outbound.Transactions;
 
 namespace RoomToRentRadarUnitTests.Infrastructure;
 
@@ -437,6 +439,14 @@ public class SqliteRoomRepositoryTests
             Assert.That(
                 services.Single(d => d.ServiceType == typeof(IRoomRepository)).ImplementationType,
                 Is.EqualTo(typeof(SqliteRoomRepository)));
+            Assert.That(
+                services.Single(d => d.ServiceType == typeof(IRoomPhotoRepository)).ImplementationType,
+                Is.EqualTo(typeof(SqliteRoomPhotoRepository)),
+                "US08 cần repository ảnh (ERD §4.8).");
+            Assert.That(
+                services.Single(d => d.ServiceType == typeof(IUnitOfWork)).ImplementationType,
+                Is.EqualTo(typeof(SqliteUnitOfWork)),
+                "US08 cần unit of work để room + photos commit nguyên tử.");
             Assert.That(
                 services.Single(d => d.ServiceType == typeof(ICampusRepository)).ImplementationType,
                 Is.EqualTo(typeof(SqliteCampusRepository)));
