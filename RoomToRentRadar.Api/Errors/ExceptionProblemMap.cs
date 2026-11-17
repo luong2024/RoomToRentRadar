@@ -75,6 +75,22 @@ public static class ExceptionProblemMap
             LimitExceededException limitExceeded =>
                 new(StatusCodes.Status409Conflict, "Conflict", limitExceeded.ErrorCode ?? ProblemCodes.LimitExceeded),
 
+            // R16 (ADR-012): mutation without If-Match.
+            IfMatchRequiredException =>
+                new(StatusCodes.Status428PreconditionRequired, "Precondition Required", ProblemCodes.IfMatchRequired),
+
+            // R17 (ADR-012): stale If-Match.
+            EtagMismatchException =>
+                new(StatusCodes.Status412PreconditionFailed, "Precondition Failed", ProblemCodes.EtagMismatch),
+
+            // R18: BR-MED-02 upload above 10 MB.
+            FileTooLargeException =>
+                new(StatusCodes.Status413PayloadTooLarge, "Payload Too Large", ProblemCodes.FileTooLarge),
+
+            // R19: BR-MED-02 magic bytes are not JPEG/PNG.
+            UnsupportedMediaTypeException =>
+                new(StatusCodes.Status415UnsupportedMediaType, "Unsupported Media Type", ProblemCodes.UnsupportedMediaType),
+
             _ => null
         };
     }
