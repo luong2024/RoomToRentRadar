@@ -129,8 +129,8 @@ public class RoomMapperTests
     [Test]
     public void ToDetailDto_CalculatesUtilityEstimatePerPerson_CorrectlyPerBrLst03()
     {
-        // Arrange: Rent = 2,000,000 | 100 kWh * 3,500 = 350,000 | Water PerPerson: 30,000 * 2 = 60,000 | Net = 100,000 | Parking = 50,000
-        // Total expected = 2,000,000 + 350,000 + 60,000 + 100,000 + 50,000 = 2,560,000
+        // Arrange (BR-LST-03): Rent = 2,000,000 | 100 kWh * 3,500 = 350,000 | Water PerPerson: 1 * 30,000 = 30,000 | Net = 100,000 | Parking = 50,000
+        // Total expected = 2,000,000 + 350,000 + 30,000 + 100,000 + 50,000 = 2,530,000
         var room = CreateSampleRoom(
             monthlyRent: 2_000_000L,
             electricity: 3_500L,
@@ -145,7 +145,7 @@ public class RoomMapperTests
         var dto = RoomMapper.ToDetailDto(room, landlord, Ictu, isPhoneVisible: false);
 
         // Assert
-        Assert.That(dto.Utilities.EstimatedMonthlyTotalVnd, Is.EqualTo(2_560_000L));
+        Assert.That(dto.Utilities.EstimatedMonthlyTotalVnd, Is.EqualTo(2_530_000L));
     }
 
     [Test]

@@ -7,6 +7,7 @@ using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.Exceptions;
 using RoomToRentRadar.Ports.Contracts.Common;
+using RoomToRentRadar.Ports.Outbound.ExternalServices;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 
 [TestFixture]
@@ -19,6 +20,7 @@ public class GetSimilarRoomsUseCaseTests
     private IRoomRepository _roomRepository = null!;
     private ICampusRepository _campusRepository = null!;
     private IRoomSearchReadModel _readModel = null!;
+    private ICurrentUserContextPort _currentUserContext = null!;
     private GetSimilarRoomsUseCase _sut = null!;
 
     [SetUp]
@@ -27,13 +29,15 @@ public class GetSimilarRoomsUseCaseTests
         _roomRepository = Substitute.For<IRoomRepository>();
         _campusRepository = Substitute.For<ICampusRepository>();
         _readModel = Substitute.For<IRoomSearchReadModel>();
+        _currentUserContext = Substitute.For<ICurrentUserContextPort>();
+        _currentUserContext.IsAuthenticated.Returns(false);
 
         _campusRepository.GetDefaultCampusAsync(Arg.Any<CancellationToken>()).Returns(Ictu);
         _campusRepository.GetByIdAsync("ICTU", Arg.Any<CancellationToken>()).Returns(Ictu);
         _campusRepository.GetByIdAsync(Arg.Is<string>(id => id != "ICTU"), Arg.Any<CancellationToken>())
             .Returns((Campus?)null);
 
-        _sut = new GetSimilarRoomsUseCase(_roomRepository, _campusRepository, _readModel);
+        _sut = new GetSimilarRoomsUseCase(_roomRepository, _campusRepository, _readModel, _currentUserContext);
     }
 
     private static Room CreateTargetRoom(
@@ -41,7 +45,8 @@ public class GetSimilarRoomsUseCaseTests
         long rent = 2_000_000L,
         RoomType type = RoomType.BoardingRoom,
         double lat = 21.5875,
-        double lng = 105.8080)
+        double lng = 105.8080,
+        ListingStatus status = ListingStatus.Available)
     {
         return Room.Reconstitute(
             id: id,
@@ -56,7 +61,7 @@ public class GetSimilarRoomsUseCaseTests
             district: "TP. Thái Nguyên",
             latitude: lat,
             longitude: lng,
-            status: ListingStatus.Available,
+            status: status,
             createdAtUtc: BasePublishedAt,
             lastUpdatedAtUtc: BasePublishedAt,
             version: 1);
@@ -178,5 +183,62 @@ public class GetSimilarRoomsUseCaseTests
 
         // Assert (BR-LST-10: max 5)
         Assert.That(result, Has.Count.EqualTo(5));
+    }
+
+    [TestCase(ListingStatus.PendingReview)]
+    [TestCase(ListingStatus.Rejected)]
+    [TestCase(ListingStatus.Suspended)]
+    public void ExecuteAsync_WhenTargetRoomIsNonPublicAndCallerIsGuest_ThrowsRoomNotFound(ListingStatus hiddenStatus)
+    {
+        // Arrange (BR-LST-04a / anti-IDOR)
+        var targetRoom = CreateTargetRoom("target-room", rent: 2_000_000L, status: hiddenStatus);
+        _roomRepository.GetByIdAsync("target-room", Arg.Any<CancellationToken>()).Returns(targetRoom);
+        _currentUserContext.IsAuthenticated.Returns(false);
+
+        // Act & Assert
+        var ex = Assert.ThrowsAsync<EntityNotFoundException>(() => _sut.ExecuteAsync("target-room"));
+        Assert.That(ex!.ErrorCode, Is.EqualTo(ProblemCodes.RoomNotFound));
+    }
+
+    [TestCase(ListingStatus.PendingReview)]
+    [TestCase(ListingStatus.Rejected)]
+    [TestCase(ListingStatus.Suspended)]
+    public async Task ExecuteAsync_WhenTargetRoomIsNonPublicAndCallerIsOwner_ReturnsSimilarRooms(ListingStatus hiddenStatus)
+    {
+        // Arrange (BR-LST-04a: Owner can query similar rooms for their own non-public listing)
+        var targetRoom = CreateTargetRoom("target-room", rent: 2_000_000L, status: hiddenStatus);
+        _roomRepository.GetByIdAsync("target-room", Arg.Any<CancellationToken>()).Returns(targetRoom);
+        _currentUserContext.IsAuthenticated.Returns(true);
+        _currentUserContext.UserId.Returns(targetRoom.LandlordId);
+        _currentUserContext.Role.Returns("Landlord");
+        _readModel.QueryCandidatesAsync(Arg.Any<RoomSearchQueryFilter>(), Arg.Any<CancellationToken>())
+            .Returns(new List<RoomSearchCandidate>());
+
+        // Act
+        var result = await _sut.ExecuteAsync("target-room");
+
+        // Assert
+        Assert.That(result, Is.Not.Null);
+    }
+
+    [TestCase(ListingStatus.PendingReview)]
+    [TestCase(ListingStatus.Rejected)]
+    [TestCase(ListingStatus.Suspended)]
+    public async Task ExecuteAsync_WhenTargetRoomIsNonPublicAndCallerIsAdmin_ReturnsSimilarRooms(ListingStatus hiddenStatus)
+    {
+        // Arrange (BR-LST-04a: Admin can query similar rooms for non-public listing)
+        var targetRoom = CreateTargetRoom("target-room", rent: 2_000_000L, status: hiddenStatus);
+        _roomRepository.GetByIdAsync("target-room", Arg.Any<CancellationToken>()).Returns(targetRoom);
+        _currentUserContext.IsAuthenticated.Returns(true);
+        _currentUserContext.UserId.Returns("admin-user-id");
+        _currentUserContext.Role.Returns("Admin");
+        _readModel.QueryCandidatesAsync(Arg.Any<RoomSearchQueryFilter>(), Arg.Any<CancellationToken>())
+            .Returns(new List<RoomSearchCandidate>());
+
+        // Act
+        var result = await _sut.ExecuteAsync("target-room");
+
+        // Assert
+        Assert.That(result, Is.Not.Null);
     }
 }

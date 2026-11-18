@@ -8,6 +8,7 @@ using RoomToRentRadar.Domain.Services;
 using RoomToRentRadar.Ports.Contracts.Common;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadar.Ports.Inbound.UseCases.Rooms;
+using RoomToRentRadar.Ports.Outbound.ExternalServices;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 
 /// <summary>
@@ -23,15 +24,18 @@ public sealed class GetSimilarRoomsUseCase : IGetSimilarRoomsUseCase
     private readonly IRoomRepository _roomRepository;
     private readonly ICampusRepository _campusRepository;
     private readonly IRoomSearchReadModel _readModel;
+    private readonly ICurrentUserContextPort _currentUserContext;
 
     public GetSimilarRoomsUseCase(
         IRoomRepository roomRepository,
         ICampusRepository campusRepository,
-        IRoomSearchReadModel readModel)
+        IRoomSearchReadModel readModel,
+        ICurrentUserContextPort currentUserContext)
     {
         _roomRepository = roomRepository ?? throw new ArgumentNullException(nameof(roomRepository));
         _campusRepository = campusRepository ?? throw new ArgumentNullException(nameof(campusRepository));
         _readModel = readModel ?? throw new ArgumentNullException(nameof(readModel));
+        _currentUserContext = currentUserContext ?? throw new ArgumentNullException(nameof(currentUserContext));
     }
 
     public async Task<IReadOnlyList<RoomCardDto>> ExecuteAsync(
@@ -48,6 +52,25 @@ public sealed class GetSimilarRoomsUseCase : IGetSimilarRoomsUseCase
         if (targetRoom == null)
         {
             throw new EntityNotFoundException(ProblemCodes.RoomNotFound, $"Room with ID '{roomId}' was not found.");
+        }
+
+        // BR-LST-04a / GUARDRAILS §1.5.6 (anti-IDOR): Available, Rented, Unpublished are viewable by public.
+        // PendingReview, Rejected, Suspended return 404 to non-owners/non-admins.
+        if (targetRoom.Status != ListingStatus.Available &&
+            targetRoom.Status != ListingStatus.Rented &&
+            targetRoom.Status != ListingStatus.Unpublished)
+        {
+            var isOwner = _currentUserContext.IsAuthenticated &&
+                          string.Equals(_currentUserContext.UserId, targetRoom.LandlordId, StringComparison.Ordinal);
+            var isAdmin = _currentUserContext.IsAuthenticated &&
+                          string.Equals(_currentUserContext.Role, "Admin", StringComparison.OrdinalIgnoreCase);
+
+            if (!isOwner && !isAdmin)
+            {
+                throw new EntityNotFoundException(
+                    ProblemCodes.RoomNotFound,
+                    $"Room with ID '{roomId}' was not found or is not public.");
+            }
         }
 
         Campus campus;

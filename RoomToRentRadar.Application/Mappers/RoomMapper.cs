@@ -39,8 +39,8 @@ public static class RoomMapper
             var unit = room.WaterPriceUnit?.Trim();
             if (string.Equals(unit, "PerPerson", StringComparison.OrdinalIgnoreCase))
             {
-                var occupants = room.MaxOccupants.GetValueOrDefault(1);
-                totalEstimate += occupants * room.WaterPriceVnd.Value;
+                // BR-LST-03: 1 × per-person price (estimate for 1 prospective tenant)
+                totalEstimate += 1L * room.WaterPriceVnd.Value;
             }
             else if (string.Equals(unit, "Included", StringComparison.OrdinalIgnoreCase))
             {
