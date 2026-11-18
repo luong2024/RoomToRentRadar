@@ -100,5 +100,8 @@ public sealed class InMemoryRoomRepository : IRoomRepository
         isSafetyVerified: source.IsSafetyVerified,
         verifiedAtUtc: source.VerifiedAtUtc,
         verifiedByUserId: source.VerifiedByUserId,
-        publishedAtUtc: source.PublishedAtUtc);
+        publishedAtUtc: source.PublishedAtUtc,
+        amenities: source.Amenities,
+        safetyFeatures: source.SafetyFeatures,
+        houseRuleHistory: source.HouseRuleHistory);
 }
