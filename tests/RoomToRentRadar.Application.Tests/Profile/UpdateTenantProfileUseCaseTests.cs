@@ -165,6 +165,26 @@ public class UpdateTenantProfileUseCaseTests
     }
 
     [Test]
+    public void ExecuteAsync_WhenAvatarDataUriIsUnsupported_RejectsRequestBeforeReadingRepository()
+    {
+        var repo = new TrackingUserProfileRepository();
+        var useCase = new UpdateTenantProfileUseCase(repo, new FixedTimeProvider(FixedNow));
+        var command = new UpdateTenantCommand(
+            "Nguyen Van Avatar", null, "data:image/gif;base64,R0lGODlh", null,
+            null, null, null, null, null, null, null, null);
+
+        var ex = Assert.ThrowsAsync<ProfileValidationException>(() =>
+            useCase.ExecuteAsync(Guid.NewGuid(), command));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ex!.Message, Does.Contain("PNG/JPEG"));
+            Assert.That(repo.AddCallCount, Is.Zero);
+            Assert.That(repo.UpdateCallCount, Is.Zero);
+        });
+    }
+
+    [Test]
     public void ExecuteAsync_WhenGenderIsInvalidStringNumber_ShouldThrowProfileValidationException()
     {
         var userId = Guid.NewGuid();

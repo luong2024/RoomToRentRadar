@@ -49,6 +49,7 @@ public partial class ProfileViewModel : ObservableObject
         _profileService = profileService;
         _errorHandler = errorHandler;
         _sessionService = sessionService;
+        _sessionService.CurrentUserChanged += OnCurrentUserChanged;
     }
 
     [RelayCommand]
@@ -151,15 +152,14 @@ public partial class ProfileViewModel : ObservableObject
             }
 
             await using var stream = await result.OpenReadAsync();
-            using var memory = new MemoryStream();
-            await stream.CopyToAsync(memory);
-            if (memory.Length > MaxAvatarBytes)
+            var avatarRead = await ReadAvatarAsync(stream);
+            if (avatarRead.TooLarge)
             {
                 StatusMessage = "Avatar image must be 1 MB or smaller.";
                 return;
             }
 
-            var bytes = memory.ToArray();
+            var bytes = avatarRead.Bytes!;
             if (!ProfileSessionGuard.IsCurrentSession(_sessionService, selectingUser))
             {
                 _pendingAvatar.Clear();
@@ -251,6 +251,27 @@ public partial class ProfileViewModel : ObservableObject
         OnPropertyChanged(nameof(IsAdmin)); OnPropertyChanged(nameof(RoleDisplay));
     }
 
+    private async void OnCurrentUserChanged(object? sender, Core.Models.Authentication.AuthUser? user)
+    {
+        if (_loadedProfileUserId == user?.Id)
+        {
+            return;
+        }
+
+        ClearProfile(clearPendingAvatar: true);
+        _loadedProfileUserId = null;
+        AccountEmail = string.Empty;
+        Role = string.Empty;
+
+        if (user is null || !_sessionService.IsAuthenticated || _sessionService.CurrentUser?.Id != user.Id)
+        {
+            StatusMessage = "Please sign in to view your profile.";
+            return;
+        }
+
+        await LoadAsync();
+    }
+
     private void Apply(ProfileApiDto profile)
     {
         Role = profile.Role; FullName = profile.FullName; PhoneNumber = profile.PhoneNumber; Bio = profile.Bio; AvatarUrl = profile.AvatarUrl;
@@ -318,5 +339,27 @@ public partial class ProfileViewModel : ObservableObject
             .Replace("+84", "0", StringComparison.Ordinal);
 
         return Regex.IsMatch(normalized, "^(03|05|07|08|09)\\d{8}$");
+    }
+
+    private static async Task<(byte[]? Bytes, bool TooLarge)> ReadAvatarAsync(Stream stream)
+    {
+        using var memory = new MemoryStream();
+        var buffer = new byte[81920];
+
+        while (memory.Length < MaxAvatarBytes)
+        {
+            var bytesToRead = (int)Math.Min(buffer.Length, MaxAvatarBytes - memory.Length);
+            var read = await stream.ReadAsync(buffer.AsMemory(0, bytesToRead));
+            if (read == 0)
+            {
+                return (memory.ToArray(), false);
+            }
+
+            memory.Write(buffer, 0, read);
+        }
+
+        return (await stream.ReadAsync(buffer.AsMemory(0, 1)) == 0
+            ? (memory.ToArray(), false)
+            : (null, true));
     }
 }

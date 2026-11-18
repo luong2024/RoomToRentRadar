@@ -170,6 +170,28 @@ public class UserProfileTests
     }
 
     [Test]
+    public void UpdateBasicInfo_WhenEmbeddedAvatarExceedsOneMiB_ShouldThrowProfileValidationException()
+    {
+        var profile = UserProfile.CreateDefault(Guid.NewGuid(), UserRole.Student, DateTimeOffset.UtcNow);
+        var oversizedAvatar = $"data:image/png;base64,{Convert.ToBase64String(new byte[1024 * 1024 + 1])}";
+
+        var ex = Assert.Throws<ProfileValidationException>(() =>
+            profile.UpdateBasicInfo("Avatar User", null, oversizedAvatar, null, DateTimeOffset.UtcNow));
+
+        Assert.That(ex!.Message, Does.Contain("1 MB or smaller"));
+    }
+
+    [Test]
+    public void UpdateBasicInfo_WhenAvatarIsHttpsUrl_ShouldAcceptAvatarReference()
+    {
+        var profile = UserProfile.CreateDefault(Guid.NewGuid(), UserRole.Student, DateTimeOffset.UtcNow);
+
+        profile.UpdateBasicInfo("Avatar User", null, "https://storage.example/avatar.png", null, DateTimeOffset.UtcNow);
+
+        Assert.That(profile.AvatarUrl, Is.EqualTo("https://storage.example/avatar.png"));
+    }
+
+    [Test]
     public void RehydrateBasicInfo_WhenFullNameIsEmpty_ShouldNotThrowAndPreserveState()
     {
         var profile = UserProfile.CreateDefault(Guid.NewGuid(), UserRole.Student, DateTimeOffset.UtcNow);

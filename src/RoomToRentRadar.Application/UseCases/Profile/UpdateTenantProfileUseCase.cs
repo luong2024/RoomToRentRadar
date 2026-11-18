@@ -22,6 +22,8 @@ public sealed class UpdateTenantProfileUseCase : IUpdateTenantProfileUseCase
 
     public async Task<UserProfileDto> ExecuteAsync(Guid userId, UpdateTenantCommand command, CancellationToken cancellationToken = default)
     {
+        UserProfile.ValidateAvatarUrl(command.AvatarUrl);
+
         var now = _timeProvider.GetUtcNow();
         var existingProfile = await _repository.GetByUserIdAsync(
             userId,

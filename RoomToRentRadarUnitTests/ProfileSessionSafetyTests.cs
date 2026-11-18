@@ -2,6 +2,7 @@ using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Core.Models.Authentication;
 using RoomToRentRadar.Features.Profile.Models;
 using RoomToRentRadar.Features.Profile.Services;
+using RoomToRentRadar.Features.Profile.ViewModels;
 using RoomToRentRadar.Infrastructure.Api;
 
 namespace RoomToRentRadarUnitTests;
@@ -57,6 +58,42 @@ public class ProfileSessionSafetyTests
         });
     }
 
+    [Test]
+    public async Task CurrentUserChanged_WhenProfilePageIsShowingAnotherAccount_ClearsOldProfileThenLoadsNewAccount()
+    {
+        var userA = new AuthUser(Guid.NewGuid(), "a@example.com", "STUDENT", "LOCAL", true);
+        var userB = new AuthUser(Guid.NewGuid(), "b@example.com", "STUDENT", "LOCAL", true);
+        var session = new FakeSession(userA);
+        var profiles = new SwitchingProfileService(
+            new ProfileApiDto { UserId = userA.Id, Role = "STUDENT", FullName = "User A" });
+        var viewModel = new ProfileViewModel(profiles, new NoOpErrorHandler(), session);
+
+        await viewModel.LoadAsync();
+        Assert.That(viewModel.FullName, Is.EqualTo("User A"));
+
+        await session.SaveSessionAsync("access", "refresh", userB);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.FullName, Is.Empty, "Old profile data must disappear before the new request completes.");
+            Assert.That(viewModel.AccountEmail, Is.EqualTo("b@example.com"), "Only the current session identity may be shown while reload is pending.");
+            Assert.That(viewModel.AvatarUrl, Is.Null);
+        });
+
+        profiles.CompleteNewProfile(new ProfileApiDto { UserId = userB.Id, Role = "STUDENT", FullName = "User B" });
+
+        for (var attempt = 0; attempt < 20 && viewModel.FullName != "User B"; attempt++)
+        {
+            await Task.Delay(10);
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.FullName, Is.EqualTo("User B"));
+            Assert.That(viewModel.AccountEmail, Is.EqualTo("b@example.com"));
+        });
+    }
+
     private sealed class CapturingApiClient : IApiClient
     {
         public object? PutRequest { get; private set; }
@@ -92,6 +129,37 @@ public class ProfileSessionSafetyTests
             CurrentUser = null;
             CurrentUserChanged?.Invoke(this, null);
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class NoOpErrorHandler : IErrorHandler
+    {
+        public void HandleError(Exception ex) { }
+    }
+
+    private sealed class SwitchingProfileService(ProfileApiDto firstProfile) : IProfileService
+    {
+        private readonly TaskCompletionSource<ProfileApiDto?> _nextProfile = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _getCallCount;
+        public Task<ProfileApiDto?> GetMyProfileAsync(CancellationToken cancellationToken = default)
+        {
+            if (Interlocked.Increment(ref _getCallCount) == 1)
+            {
+                return Task.FromResult<ProfileApiDto?>(firstProfile);
+            }
+
+            return _nextProfile.Task;
+        }
+
+        public async Task<ProfileApiDto?> UpdateAsync(ProfileApiDto profile, string? newAvatarData, CancellationToken cancellationToken = default)
+        {
+            await Task.CompletedTask;
+            return profile;
+        }
+
+        public void CompleteNewProfile(ProfileApiDto profile)
+        {
+            _nextProfile.SetResult(profile);
         }
     }
 }
