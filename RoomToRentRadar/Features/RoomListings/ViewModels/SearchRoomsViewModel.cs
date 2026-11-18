@@ -15,6 +15,8 @@ public abstract partial class SearchRoomsViewModel : ObservableObject
 {
     protected static readonly CultureInfo ViCulture = new("vi-VN");
     public const double DefaultRadiusKm = 5.0;
+    public const double IctuLatitude = 21.5852;
+    public const double IctuLongitude = 105.8073;
 
     protected readonly IRoomListingsService RoomListingsService;
     private bool _isUpdatingPricePreset;
@@ -42,6 +44,15 @@ public abstract partial class SearchRoomsViewModel : ObservableObject
 
     [ObservableProperty]
     public partial bool IsFilterPanelOpen { get; set; }
+
+    partial void OnIsFilterPanelOpenChanged(bool value)
+    {
+        OnFilterPanelOpenStateChanged(value);
+    }
+
+    protected virtual void OnFilterPanelOpenStateChanged(bool isOpen)
+    {
+    }
 
     [ObservableProperty]
     public partial int TotalResultCount { get; set; }
@@ -89,9 +100,14 @@ public abstract partial class SearchRoomsViewModel : ObservableObject
 
     // --- Distance Filter ---
     [ObservableProperty]
+    public partial bool IsDistanceFilterActive { get; set; }
+
+    [ObservableProperty]
     public partial double RadiusInKm { get; set; } = DefaultRadiusKm;
 
-    public string FormattedRadius => $"{RadiusInKm:0.#} km";
+    public string FormattedRadius => IsDistanceFilterActive
+        ? $"{RadiusInKm:0.#} km"
+        : (LocalizationResourceManager.Instance["Filter_DistanceDisabled"] ?? "Tắt");
 
     // --- Room Type Filter ---
     [ObservableProperty]
@@ -203,6 +219,11 @@ public abstract partial class SearchRoomsViewModel : ObservableObject
     }
 
     partial void OnRadiusInKmChanged(double value)
+    {
+        OnPropertyChanged(nameof(FormattedRadius));
+    }
+
+    partial void OnIsDistanceFilterActiveChanged(bool value)
     {
         OnPropertyChanged(nameof(FormattedRadius));
     }
@@ -365,6 +386,7 @@ public abstract partial class SearchRoomsViewModel : ObservableObject
         MinArea = null;
         MaxArea = null;
 
+        IsDistanceFilterActive = false;
         RadiusInKm = DefaultRadiusKm;
         SelectedRoomType = "all";
 
@@ -415,6 +437,7 @@ public abstract partial class SearchRoomsViewModel : ObservableObject
                 break;
 
             case "Distance":
+                IsDistanceFilterActive = false;
                 RadiusInKm = DefaultRadiusKm;
                 break;
 
@@ -429,6 +452,7 @@ public abstract partial class SearchRoomsViewModel : ObservableObject
 
     public virtual RoomSearchCriteria CreateSearchCriteria(int pageNumber = 1, int pageSize = 10, string? keyword = null)
     {
+        var hasActiveDistance = IsDistanceFilterActive && RadiusInKm > 0;
         return new RoomSearchCriteria
         {
             MinPrice = MinPrice,
@@ -436,7 +460,9 @@ public abstract partial class SearchRoomsViewModel : ObservableObject
             MinArea = MinArea,
             MaxArea = MaxArea,
             RoomType = string.Equals(SelectedRoomType, "all", StringComparison.OrdinalIgnoreCase) ? null : SelectedRoomType,
-            RadiusInKm = RadiusInKm > 0 ? RadiusInKm : null,
+            RadiusInKm = hasActiveDistance ? RadiusInKm : null,
+            Latitude = hasActiveDistance ? IctuLatitude : null,
+            Longitude = hasActiveDistance ? IctuLongitude : null,
             Keyword = keyword,
             PageNumber = pageNumber,
             PageSize = pageSize
@@ -497,8 +523,8 @@ public abstract partial class SearchRoomsViewModel : ObservableObject
             });
         }
 
-        // 3. Distance tag (only if different from default)
-        if (Math.Abs(RadiusInKm - DefaultRadiusKm) > 0.1)
+        // 3. Distance tag (only if distance filter is active)
+        if (IsDistanceFilterActive && RadiusInKm > 0)
         {
             ActiveFilters.Add(new ActiveFilterItem
             {

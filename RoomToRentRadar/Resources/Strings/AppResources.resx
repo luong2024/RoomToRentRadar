@@ -137,4 +137,5 @@
   <data name="Validation_MinAreaGreaterThanMax" xml:space="preserve"><value>Diện tích tối thiểu không được lớn hơn diện tích tối đa.</value></data>
   <data name="Validation_AreaNegative" xml:space="preserve"><value>Diện tích không được nhỏ hơn 0.</value></data>
   <data name="ActiveFilter_ClearAll" xml:space="preserve"><value>Xóa tất cả bộ lọc</value></data>
+  <data name="Filter_DistanceDisabled" xml:space="preserve"><value>Tắt</value></data>
 </root>

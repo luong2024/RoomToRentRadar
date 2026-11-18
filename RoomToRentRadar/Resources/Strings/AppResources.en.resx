@@ -137,4 +137,5 @@
   <data name="Validation_MinAreaGreaterThanMax" xml:space="preserve"><value>Minimum area cannot be greater than maximum area.</value></data>
   <data name="Validation_AreaNegative" xml:space="preserve"><value>Area cannot be negative.</value></data>
   <data name="ActiveFilter_ClearAll" xml:space="preserve"><value>Clear all filters</value></data>
+  <data name="Filter_DistanceDisabled" xml:space="preserve"><value>Off</value></data>
 </root>

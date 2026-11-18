@@ -256,7 +256,7 @@
                         </Border.Shadow>
                         <Border.Triggers>
                             <DataTrigger
-                                Binding="{Binding IsPriceMenuOpen}"
+                                Binding="{Binding IsFilterPanelOpen}"
                                 TargetType="Border"
                                 Value="True">
                                 <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
@@ -284,7 +284,7 @@
                                 VerticalOptions="Center">
                                 <Label.Triggers>
                                     <DataTrigger
-                                        Binding="{Binding IsPriceMenuOpen}"
+                                        Binding="{Binding IsFilterPanelOpen}"
                                         TargetType="Label"
                                         Value="True">
                                         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PageBackgroundDark}}" />
@@ -900,12 +900,12 @@
         <!-- Half-Screen Filter Rooms Bottom Sheet Overlay -->
         <Grid
             x:Name="PriceMenuOverlay"
-            IsVisible="{Binding IsPriceMenuOpen}"
+            IsVisible="{Binding IsFilterPanelOpen}"
             ZIndex="50">
             <!-- Subtle Scrim Backdrop (Top 50% of screen remains visible; tap to close) -->
             <Grid BackgroundColor="#33000000">
                 <Grid.GestureRecognizers>
-                    <TapGestureRecognizer Command="{Binding ClosePriceMenuCommand}" />
+                    <TapGestureRecognizer Command="{Binding CloseFilterPanelCommand}" />
                 </Grid.GestureRecognizers>
             </Grid>
 

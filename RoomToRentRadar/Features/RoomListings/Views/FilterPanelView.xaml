@@ -474,7 +474,7 @@
 
                     <!-- SECTION C: Distance Slider -->
                     <VerticalStackLayout Spacing="10">
-                        <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" VerticalOptions="Center">
                             <HorizontalStackLayout Grid.Column="0" Spacing="8" VerticalOptions="Center">
                                 <Label
                                     FontFamily="{x:Static f:FluentUI.FontFamily}"
@@ -506,15 +506,32 @@
                                     Text="{Binding FormattedRadius}"
                                     TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
                             </Border>
+
+                            <!-- Distance Filter Toggle Switch -->
+                            <Switch
+                                Grid.Column="2"
+                                IsToggled="{Binding IsDistanceFilterActive, Mode=TwoWay}"
+                                OnColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                VerticalOptions="Center" />
                         </Grid>
 
                         <Slider
+                            IsEnabled="{Binding IsDistanceFilterActive}"
                             Maximum="20"
                             MaximumTrackColor="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
                             Minimum="1"
                             MinimumTrackColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
                             ThumbColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
-                            Value="{Binding RadiusInKm, Mode=TwoWay}" />
+                            Value="{Binding RadiusInKm, Mode=TwoWay}">
+                            <Slider.Triggers>
+                                <DataTrigger
+                                    Binding="{Binding IsDistanceFilterActive}"
+                                    TargetType="Slider"
+                                    Value="False">
+                                    <Setter Property="Opacity" Value="0.4" />
+                                </DataTrigger>
+                            </Slider.Triggers>
+                        </Slider>
 
                         <Grid ColumnDefinitions="Auto,*,Auto">
                             <Label
