@@ -54,7 +54,7 @@ public class CosmosRoomRepository : IRoomRepository
         var maxArea = area * 1.3;
 
         var query = new QueryDefinition(
-            "SELECT TOP 5 * FROM c WHERE c.id != @roomId AND c.status = 0 AND (NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false) AND c.price >= @minPrice AND c.price <= @maxPrice AND c.area >= @minArea AND c.area <= @maxArea")
+            "SELECT TOP 5 * FROM c WHERE c.id != @roomId AND c.status = 0 AND c.isVerified = true AND (NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false) AND c.price >= @minPrice AND c.price <= @maxPrice AND c.area >= @minArea AND c.area <= @maxArea")
             .WithParameter("@roomId", roomId)
             .WithParameter("@minPrice", minPrice)
             .WithParameter("@maxPrice", maxPrice)

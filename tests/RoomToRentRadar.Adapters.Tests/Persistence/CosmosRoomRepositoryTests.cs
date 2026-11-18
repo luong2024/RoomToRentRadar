@@ -309,4 +309,36 @@ public class CosmosRoomRepositoryTests
         Assert.That(parameters.Any(p => p.Name == "@keyword"), Is.False);
         Assert.That(capturedQueryDef.QueryText, Does.Not.Contain("@keyword"));
     }
+
+    [Test]
+    public async Task GetSimilarRoomsAsync_ShouldIncludeIsVerifiedConditionInQuery()
+    {
+        QueryDefinition? capturedQueryDef = null;
+
+        var feedResponseMock = new Mock<FeedResponse<RoomDocument>>();
+        feedResponseMock.Setup(r => r.GetEnumerator()).Returns(new List<RoomDocument>().GetEnumerator());
+
+        var feedIteratorMock = new Mock<FeedIterator<RoomDocument>>();
+        feedIteratorMock.SetupSequence(i => i.HasMoreResults)
+            .Returns(true)
+            .Returns(false);
+        feedIteratorMock.Setup(i => i.ReadNextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(feedResponseMock.Object);
+
+        _containerMock
+            .Setup(c => c.GetItemQueryIterator<RoomDocument>(
+                It.IsAny<QueryDefinition>(),
+                It.IsAny<string>(),
+                It.IsAny<QueryRequestOptions>()))
+            .Callback<QueryDefinition, string, QueryRequestOptions>((qd, _, _) =>
+            {
+                capturedQueryDef = qd;
+            })
+            .Returns(feedIteratorMock.Object);
+
+        await _repository.GetSimilarRoomsAsync("target-room", price: 2000000m, area: 25.0);
+
+        Assert.That(capturedQueryDef, Is.Not.Null);
+        Assert.That(capturedQueryDef!.QueryText, Does.Contain("c.isVerified = true"));
+    }
 }

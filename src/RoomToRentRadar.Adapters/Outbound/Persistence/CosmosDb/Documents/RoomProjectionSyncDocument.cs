@@ -15,8 +15,24 @@ public sealed class RoomProjectionSyncDocument
     [JsonProperty("campusId")]
     public string CampusId { get; set; } = string.Empty;
 
+    private string? _previousCampusId;
+
+    [JsonProperty("previousCampusIds")]
+    public List<string> PreviousCampusIds { get; set; } = [];
+
     [JsonProperty("previousCampusId")]
-    public string? PreviousCampusId { get; set; }
+    public string? PreviousCampusId
+    {
+        get => PreviousCampusIds.Count > 0 ? PreviousCampusIds[0] : _previousCampusId;
+        set
+        {
+            _previousCampusId = value;
+            if (!string.IsNullOrWhiteSpace(value) && !PreviousCampusIds.Contains(value, StringComparer.Ordinal))
+            {
+                PreviousCampusIds.Add(value);
+            }
+        }
+    }
 
     [JsonProperty("operation")]
     public string Operation { get; set; } = string.Empty;

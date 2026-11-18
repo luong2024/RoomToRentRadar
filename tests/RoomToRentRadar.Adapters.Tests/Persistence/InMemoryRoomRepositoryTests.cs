@@ -61,7 +61,8 @@ public class InMemoryRoomRepositoryTests
             Title = "Phòng phù hợp cả giá và diện tích",
             Price = 3100000m, // trong khoảng [2.1m, 3.9m]
             Area = 31.0,      // trong khoảng [21.0, 39.0]
-            Status = RoomStatus.Available
+            Status = RoomStatus.Available,
+            IsVerified = true
         };
 
         // 2. Giá phù hợp nhưng Diện tích quá NHỎ (< 21.0)
@@ -71,7 +72,8 @@ public class InMemoryRoomRepositoryTests
             Title = "Phòng giá phù hợp nhưng diện tích quá nhỏ",
             Price = 3000000m, // hợp lệ
             Area = 18.0,      // < 21.0 (vi phạm)
-            Status = RoomStatus.Available
+            Status = RoomStatus.Available,
+            IsVerified = true
         };
 
         // 3. Giá phù hợp nhưng Diện tích quá LỚN (> 39.0)
@@ -81,7 +83,8 @@ public class InMemoryRoomRepositoryTests
             Title = "Phòng giá phù hợp nhưng diện tích quá lớn",
             Price = 3000000m, // hợp lệ
             Area = 45.0,      // > 39.0 (vi phạm)
-            Status = RoomStatus.Available
+            Status = RoomStatus.Available,
+            IsVerified = true
         };
 
         // 4. Diện tích phù hợp nhưng Giá quá RẺ (< 2,100,000)
@@ -91,7 +94,8 @@ public class InMemoryRoomRepositoryTests
             Title = "Phòng diện tích phù hợp nhưng giá quá rẻ",
             Price = 1800000m, // < 2.1m (vi phạm)
             Area = 30.0,      // hợp lệ
-            Status = RoomStatus.Available
+            Status = RoomStatus.Available,
+            IsVerified = true
         };
 
         // 5. Diện tích phù hợp nhưng Giá quá ĐẮT (> 3,900,000)
@@ -101,7 +105,8 @@ public class InMemoryRoomRepositoryTests
             Title = "Phòng diện tích phù hợp nhưng giá quá đắt",
             Price = 4500000m, // > 3.9m (vi phạm)
             Area = 30.0,      // hợp lệ
-            Status = RoomStatus.Available
+            Status = RoomStatus.Available,
+            IsVerified = true
         };
 
         // 6. Phù hợp giá và diện tích nhưng không Available
@@ -111,7 +116,19 @@ public class InMemoryRoomRepositoryTests
             Title = "Phòng phù hợp nhưng đã được thuê",
             Price = 3000000m,
             Area = 30.0,
-            Status = RoomStatus.Rented
+            Status = RoomStatus.Rented,
+            IsVerified = true
+        };
+
+        // 7. Phù hợp giá và diện tích nhưng chưa xác minh (IsVerified = false)
+        var unverifiedRoom = new Room
+        {
+            Id = "unverified-room",
+            Title = "Phòng phù hợp nhưng chưa xác minh",
+            Price = 3000000m,
+            Area = 30.0,
+            Status = RoomStatus.Available,
+            IsVerified = false
         };
 
         _repository.Upsert(targetRoom);
@@ -121,6 +138,7 @@ public class InMemoryRoomRepositoryTests
         _repository.Upsert(priceTooCheapRoom);
         _repository.Upsert(priceTooExpensiveRoom);
         _repository.Upsert(notAvailableRoom);
+        _repository.Upsert(unverifiedRoom);
 
         // Act
         var results = await _repository.GetSimilarRoomsAsync("target-room", price: 3000000m, area: 30.0);
@@ -131,7 +149,7 @@ public class InMemoryRoomRepositoryTests
 
         Assert.Multiple(() =>
         {
-            // Phòng thỏa mãn cả giá và diện tích phải có mặt
+            // Phòng thỏa mãn cả giá và diện tích và đã xác minh phải có mặt
             Assert.That(resultIds, Does.Contain(validRoom.Id));
 
             // Phòng có giá phù hợp nhưng diện tích nằm ngoài khoảng cho phép PHẢI BỊ LOẠI
@@ -143,6 +161,7 @@ public class InMemoryRoomRepositoryTests
             Assert.That(resultIds, Does.Not.Contain(priceTooExpensiveRoom.Id));
             Assert.That(resultIds, Does.Not.Contain(targetRoom.Id));
             Assert.That(resultIds, Does.Not.Contain(notAvailableRoom.Id));
+            Assert.That(resultIds, Does.Not.Contain(unverifiedRoom.Id), "Phòng chưa xác minh (IsVerified = false) phải bị loại");
         });
     }
 
@@ -157,7 +176,8 @@ public class InMemoryRoomRepositoryTests
                 Title = $"Phòng {i}",
                 Price = 2000000m,
                 Area = 25.0,
-                Status = RoomStatus.Available
+                Status = RoomStatus.Available,
+                IsVerified = true
             });
         }
 

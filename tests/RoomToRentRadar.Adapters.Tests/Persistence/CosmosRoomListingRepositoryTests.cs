@@ -491,6 +491,110 @@ public class CosmosRoomListingRepositoryTests
             "room-1", new PartitionKey("campus-A"), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Test]
+    public async Task AddAsync_WhenPriorIntentIsStillPendingWithCleanup_PreservesPreviousCampusInNextIntent()
+    {
+        var listingsContainer = new Mock<Container>();
+        var roomsContainer = new Mock<Container>();
+        var outboxContainer = CreateOutboxContainer();
+
+        listingsContainer.Setup(c => c.ReadItemAsync<RoomListingDocument>(It.IsAny<string>(), It.IsAny<PartitionKey>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new CosmosException("Missing", HttpStatusCode.NotFound, 0, "activity", 0));
+        listingsContainer.Setup(c => c.CreateItemAsync(It.IsAny<RoomListingDocument>(), It.IsAny<PartitionKey?>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Mock<ItemResponse<RoomListingDocument>>().Object);
+        listingsContainer.Setup(c => c.ReplaceItemAsync(It.IsAny<RoomListingDocument>(), It.IsAny<string>(), It.IsAny<PartitionKey?>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Mock<ItemResponse<RoomListingDocument>>().Object);
+
+        roomsContainer.Setup(c => c.ReadItemAsync<RoomDocument>(It.IsAny<string>(), It.IsAny<PartitionKey>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new CosmosException("Missing", HttpStatusCode.NotFound, 0, "activity", 0));
+        roomsContainer.Setup(c => c.CreateItemAsync(It.IsAny<RoomDocument>(), It.IsAny<PartitionKey?>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Mock<ItemResponse<RoomDocument>>().Object);
+
+        // Existing intent: moved to campus-B, but tombstone for campus-A is STILL PENDING
+        var pendingIntent = new RoomProjectionSyncDocument
+        {
+            Id = "room-1",
+            RoomId = "room-1",
+            CampusId = "campus-B",
+            PreviousCampusIds = ["campus-A"],
+            Sequence = 2,
+            State = RoomProjectionSyncDocument.PendingState,
+            ETag = "pending-etag"
+        };
+        var pendingIntentResponse = new Mock<ItemResponse<RoomProjectionSyncDocument>>();
+        pendingIntentResponse.SetupGet(response => response.Resource).Returns(pendingIntent);
+        outboxContainer.Setup(container => container.ReadItemAsync<RoomProjectionSyncDocument>(
+                "room-1", new PartitionKey("room-1"), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(pendingIntentResponse.Object);
+
+        RoomProjectionSyncDocument? capturedNextIntent = null;
+        outboxContainer.Setup(container => container.ReplaceItemAsync(
+                It.IsAny<RoomProjectionSyncDocument>(), "room-1", new PartitionKey("room-1"), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .Callback<RoomProjectionSyncDocument, string, PartitionKey?, ItemRequestOptions, CancellationToken>((doc, _, _, _, _) => capturedNextIntent = doc)
+            .ReturnsAsync(new Mock<ItemResponse<RoomProjectionSyncDocument>>().Object);
+
+        var repository = new CosmosRoomListingRepository(listingsContainer.Object, roomsContainer.Object, outboxContainer.Object);
+
+        // Next update is ALSO at campus-B
+        var updateAtCampusB = CreateListing(ListingRoomStatus.Available, "campus-B");
+        await repository.AddAsync(updateAtCampusB);
+
+        Assert.That(capturedNextIntent, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            // Intent version 3 must NOT lose campus-A from PreviousCampusIds
+            Assert.That(capturedNextIntent!.PreviousCampusIds, Does.Contain("campus-A"));
+            Assert.That(capturedNextIntent.PreviousCampusId, Is.EqualTo("campus-A"));
+            Assert.That(capturedNextIntent.CampusId, Is.EqualTo("campus-B"));
+            Assert.That(capturedNextIntent.Sequence, Is.EqualTo(3));
+        });
+    }
+
+    [Test]
+    public async Task ReconcilePendingAsync_WhenMultiplePreviousCampusesPending_TombstonesAllPreviousCampuses()
+    {
+        var listingsContainer = new Mock<Container>();
+        var roomsContainer = new Mock<Container>();
+        var outboxContainer = CreateOutboxContainer();
+
+        listingsContainer.Setup(c => c.ReadItemAsync<RoomListingDocument>(It.IsAny<string>(), It.IsAny<PartitionKey>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new CosmosException("Missing", HttpStatusCode.NotFound, 0, "activity", 0));
+        listingsContainer.Setup(c => c.CreateItemAsync(It.IsAny<RoomListingDocument>(), It.IsAny<PartitionKey?>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Mock<ItemResponse<RoomListingDocument>>().Object);
+
+        roomsContainer.Setup(c => c.ReadItemAsync<RoomDocument>(It.IsAny<string>(), It.IsAny<PartitionKey>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new CosmosException("Missing", HttpStatusCode.NotFound, 0, "activity", 0));
+        roomsContainer.Setup(c => c.CreateItemAsync(It.IsAny<RoomDocument>(), It.IsAny<PartitionKey?>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Mock<ItemResponse<RoomDocument>>().Object);
+
+        var pendingIntent = new RoomProjectionSyncDocument
+        {
+            Id = "room-1",
+            RoomId = "room-1",
+            CampusId = "campus-C",
+            PreviousCampusIds = ["campus-A", "campus-B"],
+            Operation = "upsert",
+            Sequence = 5,
+            State = RoomProjectionSyncDocument.PendingState,
+            Listing = new RoomListingDocument { Id = "room-1", CampusId = "campus-C" },
+            ETag = "pending-etag"
+        };
+        SetupPendingIntentQuery(outboxContainer, pendingIntent);
+
+        var repository = new CosmosRoomListingRepository(listingsContainer.Object, roomsContainer.Object, outboxContainer.Object);
+
+        await repository.ReconcilePendingAsync();
+
+        // Must tombstone both campus-A and campus-B in listings container
+        listingsContainer.Verify(container => container.CreateItemAsync(
+            It.Is<RoomListingDocument>(doc => doc.Id == "room-1" && doc.CampusId == "campus-A" && doc.IsDeleted),
+            new PartitionKey("campus-A"), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()), Times.Once);
+
+        listingsContainer.Verify(container => container.CreateItemAsync(
+            It.Is<RoomListingDocument>(doc => doc.Id == "room-1" && doc.CampusId == "campus-B" && doc.IsDeleted),
+            new PartitionKey("campus-B"), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     private static Mock<Container> CreateOutboxContainer()
     {
         var outboxContainer = new Mock<Container>();

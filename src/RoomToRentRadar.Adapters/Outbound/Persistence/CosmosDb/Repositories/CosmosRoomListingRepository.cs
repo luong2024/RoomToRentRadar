@@ -143,7 +143,7 @@ public sealed class CosmosRoomListingRepository : IRoomListingRepository
 
         var doc = roomListing.ToDocument();
         var intent = await CreateIntentAsync(roomListing.Id, doc.CampusId, UpsertOperation, doc, cancellationToken);
-        await SynchronizeUpsertAsync(doc, intent.Sequence, intent.PreviousCampusId, cancellationToken);
+        await SynchronizeUpsertAsync(doc, intent.Sequence, intent.PreviousCampusIds, cancellationToken);
         await CompleteIntentAsync(intent, cancellationToken);
     }
 
@@ -153,7 +153,7 @@ public sealed class CosmosRoomListingRepository : IRoomListingRepository
         ArgumentException.ThrowIfNullOrWhiteSpace(campusId);
 
         var intent = await CreateIntentAsync(roomId, campusId, DeleteOperation, null, cancellationToken);
-        await SynchronizeDeleteAsync(roomId, campusId, intent.Sequence, cancellationToken);
+        await SynchronizeDeleteAsync(roomId, campusId, intent.PreviousCampusIds, intent.Sequence, cancellationToken);
         await CompleteIntentAsync(intent, cancellationToken);
     }
 
@@ -178,11 +178,11 @@ public sealed class CosmosRoomListingRepository : IRoomListingRepository
                             continue;
                         }
 
-                        await SynchronizeUpsertAsync(intent.Listing, intent.Sequence, intent.PreviousCampusId, cancellationToken);
+                        await SynchronizeUpsertAsync(intent.Listing, intent.Sequence, intent.PreviousCampusIds, cancellationToken);
                     }
                     else if (string.Equals(intent.Operation, DeleteOperation, StringComparison.Ordinal))
                     {
-                        await SynchronizeDeleteAsync(intent.RoomId, intent.CampusId, intent.Sequence, cancellationToken);
+                        await SynchronizeDeleteAsync(intent.RoomId, intent.CampusId, intent.PreviousCampusIds, intent.Sequence, cancellationToken);
                     }
                     else
                     {
@@ -230,20 +230,26 @@ public sealed class CosmosRoomListingRepository : IRoomListingRepository
     private async Task SynchronizeUpsertAsync(
         RoomListingDocument listing,
         long sequence,
-        string? previousCampusId,
+        IReadOnlyList<string>? previousCampusIds,
         CancellationToken cancellationToken)
     {
         await WriteProjectionIfNewerAsync(_listingsContainer, listing, listing.Id, new PartitionKey(listing.CampusId), sequence, cancellationToken);
-        if (!string.IsNullOrWhiteSpace(previousCampusId) &&
-            !string.Equals(previousCampusId, listing.CampusId, StringComparison.Ordinal))
+        if (previousCampusIds is not null)
         {
-            await DeleteProjectionIfNotNewerAsync(
-                _listingsContainer,
-                new RoomListingDocument { Id = listing.Id, CampusId = previousCampusId },
-                listing.Id,
-                new PartitionKey(previousCampusId),
-                sequence,
-                cancellationToken);
+            foreach (var previousCampusId in previousCampusIds)
+            {
+                if (!string.IsNullOrWhiteSpace(previousCampusId) &&
+                    !string.Equals(previousCampusId, listing.CampusId, StringComparison.Ordinal))
+                {
+                    await DeleteProjectionIfNotNewerAsync(
+                        _listingsContainer,
+                        new RoomListingDocument { Id = listing.Id, CampusId = previousCampusId },
+                        listing.Id,
+                        new PartitionKey(previousCampusId),
+                        sequence,
+                        cancellationToken);
+                }
+            }
         }
         await SynchronizeDetailProjectionAsync(listing, sequence, cancellationToken);
     }
@@ -255,10 +261,73 @@ public sealed class CosmosRoomListingRepository : IRoomListingRepository
         await WriteProjectionIfNewerAsync(_roomsContainer, detail, detail.Id, new PartitionKey(detail.Id), sequence, cancellationToken);
     }
 
-    private async Task SynchronizeDeleteAsync(string roomId, string campusId, long sequence, CancellationToken cancellationToken)
+    private async Task SynchronizeDeleteAsync(
+        string roomId,
+        string campusId,
+        IReadOnlyList<string>? previousCampusIds,
+        long sequence,
+        CancellationToken cancellationToken)
     {
         await DeleteProjectionIfNotNewerAsync(_roomsContainer, new RoomDocument { Id = roomId }, roomId, new PartitionKey(roomId), sequence, cancellationToken);
         await DeleteProjectionIfNotNewerAsync(_listingsContainer, new RoomListingDocument { Id = roomId, CampusId = campusId }, roomId, new PartitionKey(campusId), sequence, cancellationToken);
+
+        if (previousCampusIds is not null)
+        {
+            foreach (var previousCampusId in previousCampusIds)
+            {
+                if (!string.IsNullOrWhiteSpace(previousCampusId) &&
+                    !string.Equals(previousCampusId, campusId, StringComparison.Ordinal))
+                {
+                    await DeleteProjectionIfNotNewerAsync(
+                        _listingsContainer,
+                        new RoomListingDocument { Id = roomId, CampusId = previousCampusId },
+                        roomId,
+                        new PartitionKey(previousCampusId),
+                        sequence,
+                        cancellationToken);
+                }
+            }
+        }
+    }
+
+    private static List<string> DeterminePreviousCampusIds(
+        RoomProjectionSyncDocument? existing,
+        string currentCampusId)
+    {
+        var cleanupCampusIds = new HashSet<string>(StringComparer.Ordinal);
+
+        if (existing is not null)
+        {
+            // If the prior intent is still pending, inherit all cleanup campuses that haven't completed yet
+            if (string.Equals(existing.State, RoomProjectionSyncDocument.PendingState, StringComparison.Ordinal))
+            {
+                if (existing.PreviousCampusIds is not null)
+                {
+                    foreach (var prev in existing.PreviousCampusIds)
+                    {
+                        if (!string.IsNullOrWhiteSpace(prev) && !string.Equals(prev, currentCampusId, StringComparison.Ordinal))
+                        {
+                            cleanupCampusIds.Add(prev);
+                        }
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(existing.PreviousCampusId) &&
+                    !string.Equals(existing.PreviousCampusId, currentCampusId, StringComparison.Ordinal))
+                {
+                    cleanupCampusIds.Add(existing.PreviousCampusId);
+                }
+            }
+
+            // If the room changed campus relative to the existing intent's primary campus, that campus needs cleanup
+            if (!string.IsNullOrWhiteSpace(existing.CampusId) &&
+                !string.Equals(existing.CampusId, currentCampusId, StringComparison.Ordinal))
+            {
+                cleanupCampusIds.Add(existing.CampusId);
+            }
+        }
+
+        return cleanupCampusIds.ToList();
     }
 
     private async Task<RoomProjectionSyncDocument> CreateIntentAsync(
@@ -275,14 +344,15 @@ public sealed class CosmosRoomListingRepository : IRoomListingRepository
                 roomId,
                 new PartitionKey(roomId),
                 cancellationToken);
+
+            var previousCampusIds = DeterminePreviousCampusIds(existing, campusId);
+
             var intent = new RoomProjectionSyncDocument
             {
                 Id = roomId,
                 RoomId = roomId,
                 CampusId = campusId,
-                PreviousCampusId = existing is not null && !string.Equals(existing.CampusId, campusId, StringComparison.Ordinal)
-                    ? existing.CampusId
-                    : null,
+                PreviousCampusIds = previousCampusIds,
                 Operation = operation,
                 Listing = listing,
                 Sequence = (existing?.Sequence ?? 0) + 1,
