@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using Microsoft.Azure.Cosmos;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Context;
@@ -9,6 +10,10 @@ namespace RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Repositories;
 
 public sealed class CosmosFavouriteRepository : IFavouriteRepository
 {
+    private const int MaxOptimisticConcurrencyRetries = 30;
+    private const string QuotaGuardRoomIdSentinel = "__quota_guard__";
+
+    private readonly ConcurrentDictionary<Guid, SemaphoreSlim> _userWriteLocks = new();
     private readonly ICosmosDbContext _dbContext;
 
     public CosmosFavouriteRepository(ICosmosDbContext dbContext)
@@ -89,39 +94,102 @@ public sealed class CosmosFavouriteRepository : IFavouriteRepository
 
         await _dbContext.EnsureFavouritesContainerAsync(cancellationToken);
 
-        var doc = FavouriteDocument.FromDomain(favourite);
-        doc.ETag = null;
-        var partitionKey = doc.UserId;
+        return await AddIfNotExistsCoreAsync(favourite, cancellationToken);
+    }
+
+    public async Task<(FavouriteRoom? Favourite, FavouriteAddStatus Status)> TryAddWithQuotaAsync(
+        FavouriteRoom favourite,
+        int maxQuota,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(favourite);
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxQuota, 1);
+
+        await _dbContext.EnsureFavouritesContainerAsync(cancellationToken);
+
+        var userLock = _userWriteLocks.GetOrAdd(favourite.UserId, static _ => new SemaphoreSlim(1, 1));
+        await userLock.WaitAsync(cancellationToken);
 
         try
         {
-            var created = await _dbContext.Favourites.CreateItemAsync(
-                doc,
-                partitionKey,
-                cancellationToken);
+            var partitionKey = favourite.UserId.ToString("D");
 
-            return (created.ToDomain(), true);
-        }
-        catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.Conflict)
-        {
-            // Concurrent insert or already existing item: read and return idempotently
-            var existing = await _dbContext.Favourites.ReadItemAsync(
-                doc.Id,
-                partitionKey,
-                cancellationToken);
-
-            if (existing is not null)
+            for (var attempt = 0; attempt < MaxOptimisticConcurrencyRetries; attempt++)
             {
-                return (existing.ToDomain(), false);
+                // 1. Point-read check for idempotency
+                var existingDoc = await _dbContext.Favourites.ReadItemAsync(
+                    favourite.Id,
+                    partitionKey,
+                    cancellationToken);
+
+                if (existingDoc is not null)
+                {
+                    return (existingDoc.ToDomain(), FavouriteAddStatus.AlreadyExists);
+                }
+
+                // 2. Load per-user distributed quota guard document (with Cosmos _etag)
+                var quotaDoc = await GetOrCreateQuotaGuardDocumentAsync(favourite.UserId, cancellationToken);
+
+                // 3. Check current count in the user's partition before inserting
+                var currentItems = await GetByUserIdAsync(favourite.UserId, cancellationToken);
+                if (currentItems.Count >= maxQuota)
+                {
+                    return (null, FavouriteAddStatus.QuotaExceeded);
+                }
+
+                // 4. Advance quota guard _etag with If-Match optimistic concurrency control
+                //    so concurrent API instances cannot both pass the quota check simultaneously
+                quotaDoc.CreatedAtUtc = DateTimeOffset.UtcNow;
+                try
+                {
+                    await _dbContext.Favourites.ReplaceItemAsync(
+                        quotaDoc,
+                        quotaDoc.Id,
+                        quotaDoc.UserId,
+                        ifMatchEtag: quotaDoc.ETag,
+                        cancellationToken: cancellationToken);
+                }
+                catch (CosmosException ex) when (
+                    ex.StatusCode == HttpStatusCode.PreconditionFailed ||
+                    ex.StatusCode == HttpStatusCode.NotFound ||
+                    ex.StatusCode == HttpStatusCode.Conflict)
+                {
+                    continue;
+                }
+
+                // 5. Insert the favourite item
+                var (saved, wasCreated) = await AddIfNotExistsCoreAsync(favourite, cancellationToken);
+                if (!wasCreated)
+                {
+                    return (saved, FavouriteAddStatus.AlreadyExists);
+                }
+
+                // 6. Post-insert verification & rollback guard against overlapping distributed writes
+                var postInsertItems = await GetByUserIdAsync(favourite.UserId, cancellationToken);
+                if (postInsertItems.Count > maxQuota)
+                {
+                    var allowedIds = postInsertItems
+                        .OrderBy(f => f.CreatedAtUtc)
+                        .ThenBy(f => f.Id, StringComparer.Ordinal)
+                        .Take(maxQuota)
+                        .Select(f => f.Id)
+                        .ToHashSet(StringComparer.Ordinal);
+
+                    if (!allowedIds.Contains(saved.Id))
+                    {
+                        await _dbContext.Favourites.DeleteItemAsync(saved.Id, partitionKey, CancellationToken.None);
+                        return (null, FavouriteAddStatus.QuotaExceeded);
+                    }
+                }
+
+                return (saved, FavouriteAddStatus.Created);
             }
 
-            // Fallback if concurrently deleted right after conflict
-            var upserted = await _dbContext.Favourites.UpsertItemAsync(
-                doc,
-                partitionKey,
-                cancellationToken);
-
-            return (upserted.ToDomain(), true);
+            return (null, FavouriteAddStatus.QuotaExceeded);
+        }
+        finally
+        {
+            userLock.Release();
         }
     }
 
@@ -141,5 +209,85 @@ public sealed class CosmosFavouriteRepository : IFavouriteRepository
         var partitionKey = userId.ToString("D");
 
         await _dbContext.Favourites.DeleteItemAsync(id, partitionKey, cancellationToken);
+    }
+
+    private async Task<FavouriteDocument> GetOrCreateQuotaGuardDocumentAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var guardId = $"quota:{userId:D}";
+
+        var existing = await _dbContext.Favourites.ReadItemAsync(
+            guardId,
+            guardId,
+            cancellationToken);
+
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        var guardDoc = new FavouriteDocument
+        {
+            Id = guardId,
+            UserId = guardId,
+            RoomId = QuotaGuardRoomIdSentinel,
+            CreatedAtUtc = DateTimeOffset.UtcNow
+        };
+
+        try
+        {
+            return await _dbContext.Favourites.CreateItemAsync(
+                guardDoc,
+                guardId,
+                cancellationToken);
+        }
+        catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.Conflict)
+        {
+            var createdByPeer = await _dbContext.Favourites.ReadItemAsync(
+                guardId,
+                guardId,
+                cancellationToken);
+
+            return createdByPeer ?? guardDoc;
+        }
+    }
+
+    private async Task<(FavouriteRoom Favourite, bool WasCreated)> AddIfNotExistsCoreAsync(
+        FavouriteRoom favourite,
+        CancellationToken cancellationToken)
+    {
+        var doc = FavouriteDocument.FromDomain(favourite);
+        doc.ETag = null;
+        var partitionKey = doc.UserId;
+
+        try
+        {
+            var created = await _dbContext.Favourites.CreateItemAsync(
+                doc,
+                partitionKey,
+                cancellationToken);
+
+            return (created.ToDomain(), true);
+        }
+        catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.Conflict)
+        {
+            var existing = await _dbContext.Favourites.ReadItemAsync(
+                doc.Id,
+                partitionKey,
+                cancellationToken);
+
+            if (existing is not null)
+            {
+                return (existing.ToDomain(), false);
+            }
+
+            var upserted = await _dbContext.Favourites.UpsertItemAsync(
+                doc,
+                partitionKey,
+                cancellationToken);
+
+            return (upserted.ToDomain(), true);
+        }
     }
 }

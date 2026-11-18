@@ -31,19 +31,49 @@ public class CosmosRoomRepository : IRoomRepository
             return null;
         }
 
+        var trimmedId = id.Trim();
+
         try
         {
             ItemResponse<RoomDocument> response = await _container.ReadItemAsync<RoomDocument>(
-                id: id,
-                partitionKey: new PartitionKey(id),
+                id: trimmedId,
+                partitionKey: new PartitionKey(trimmedId),
                 cancellationToken: cancellationToken);
 
-            return response.Resource?.ToDomain();
+            if (response?.Resource is not null)
+            {
+                return response.Resource.ToDomain();
+            }
         }
         catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
+            // Fall through to case-insensitive lookup when exact-case point read misses
+        }
+
+        var fallbackQuery = new QueryDefinition(
+            "SELECT TOP 1 * FROM c WHERE STRINGEQUALS(c.id, @id, true)")
+            .WithParameter("@id", trimmedId);
+
+        using var iterator = _container.GetItemQueryIterator<RoomDocument>(
+            fallbackQuery,
+            requestOptions: new QueryRequestOptions { MaxItemCount = 1 });
+
+        if (iterator is null)
+        {
             return null;
         }
+
+        while (iterator.HasMoreResults)
+        {
+            var page = await iterator.ReadNextAsync(cancellationToken);
+            var match = page.FirstOrDefault();
+            if (match is not null)
+            {
+                return match.ToDomain();
+            }
+        }
+
+        return null;
     }
 
     public async Task<IReadOnlyList<Room>> GetByIdsAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default)
@@ -56,7 +86,7 @@ public class CosmosRoomRepository : IRoomRepository
         var distinctIds = ids
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .Select(id => id.Trim())
-            .Distinct(StringComparer.Ordinal)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
         if (distinctIds.Length == 0)
@@ -72,15 +102,63 @@ public class CosmosRoomRepository : IRoomRepository
             MaxItemCount = distinctIds.Length
         };
 
-        using var iterator = _container.GetItemQueryIterator<RoomDocument>(query, requestOptions: requestOptions);
         var results = new List<Room>(distinctIds.Length);
+        var foundIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        while (iterator.HasMoreResults)
+        using (var iterator = _container.GetItemQueryIterator<RoomDocument>(query, requestOptions: requestOptions))
         {
-            var response = await iterator.ReadNextAsync(cancellationToken);
-            foreach (var doc in response)
+            if (iterator is not null)
             {
-                results.Add(doc.ToDomain());
+                while (iterator.HasMoreResults)
+                {
+                    var response = await iterator.ReadNextAsync(cancellationToken);
+                    foreach (var doc in response)
+                    {
+                        if (foundIds.Add(doc.Id))
+                        {
+                            results.Add(doc.ToDomain());
+                        }
+                    }
+                }
+            }
+        }
+
+        var unmatchedIds = distinctIds
+            .Where(id => !foundIds.Contains(id))
+            .ToArray();
+
+        if (unmatchedIds.Length > 0)
+        {
+            var clauses = new List<string>(unmatchedIds.Length);
+            for (var i = 0; i < unmatchedIds.Length; i++)
+            {
+                clauses.Add($"STRINGEQUALS(c.id, @id{i}, true)");
+            }
+
+            var fallbackSql = $"SELECT * FROM c WHERE {string.Join(" OR ", clauses)}";
+            var fallbackQuery = new QueryDefinition(fallbackSql);
+            for (var i = 0; i < unmatchedIds.Length; i++)
+            {
+                fallbackQuery = fallbackQuery.WithParameter($"@id{i}", unmatchedIds[i]);
+            }
+
+            using var fallbackIterator = _container.GetItemQueryIterator<RoomDocument>(
+                fallbackQuery,
+                requestOptions: new QueryRequestOptions { MaxItemCount = unmatchedIds.Length });
+
+            if (fallbackIterator is not null)
+            {
+                while (fallbackIterator.HasMoreResults)
+                {
+                    var response = await fallbackIterator.ReadNextAsync(cancellationToken);
+                    foreach (var doc in response)
+                    {
+                        if (foundIds.Add(doc.Id))
+                        {
+                            results.Add(doc.ToDomain());
+                        }
+                    }
+                }
             }
         }
 

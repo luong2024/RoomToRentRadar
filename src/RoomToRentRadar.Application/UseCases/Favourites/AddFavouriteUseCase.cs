@@ -61,19 +61,20 @@ public sealed class AddFavouriteUseCase : IAddFavouriteUseCase
                 $"Room '{room.Id}' is not verified and cannot be added to favourites.");
         }
 
-        // 3. Enforce per-account favourite quota
-        var currentCount = await _favouriteRepository.CountByUserIdAsync(userId, cancellationToken);
-        if (currentCount >= MaxFavouritesPerUser)
+        // 3. Atomically enforce per-account favourite quota and persist using canonical Room.Id
+        var now = _timeProvider.GetUtcNow();
+        var favourite = FavouriteRoom.Create(userId, room.Id, now);
+        var (saved, status) = await _favouriteRepository.TryAddWithQuotaAsync(
+            favourite,
+            MaxFavouritesPerUser,
+            cancellationToken);
+
+        if (status == FavouriteAddStatus.QuotaExceeded || saved is null)
         {
             throw new RequestValidationException(
                 "favourites",
                 $"Favourites limit of {MaxFavouritesPerUser} rooms per account has been reached.");
         }
-
-        // 4. Persist using the canonical Room.Id so Cosmos DB case-sensitive queries match accurately
-        var now = _timeProvider.GetUtcNow();
-        var favourite = FavouriteRoom.Create(userId, room.Id, now);
-        var (saved, _) = await _favouriteRepository.AddIfNotExistsAsync(favourite, cancellationToken);
 
         return FavouriteRoomMapper.ToDto(saved, room);
     }

@@ -83,7 +83,6 @@ public sealed class SyncFavouritesUseCase : ISyncFavouritesUseCase
             .ToList();
 
         var addedCount = 0;
-        var allFavourites = new List<FavouriteRoom>(existingFavourites);
 
         if (newCandidateIds.Count > 0)
         {
@@ -91,8 +90,6 @@ public sealed class SyncFavouritesUseCase : ISyncFavouritesUseCase
             var candidateRoomsById = candidateRooms
                 .GroupBy(r => r.Id, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
-
-            var currentCount = allFavourites.Count;
 
             foreach (var candidateId in newCandidateIds)
             {
@@ -105,7 +102,14 @@ public sealed class SyncFavouritesUseCase : ISyncFavouritesUseCase
                     continue;
                 }
 
-                if (currentCount >= MaxFavouritesPerUser)
+                var now = _timeProvider.GetUtcNow();
+                var favourite = FavouriteRoom.Create(userId, room.Id, now);
+                var (saved, status) = await _favouriteRepository.TryAddWithQuotaAsync(
+                    favourite,
+                    MaxFavouritesPerUser,
+                    cancellationToken);
+
+                if (status == FavouriteAddStatus.QuotaExceeded || saved is null)
                 {
                     if (skippedSeen.Add(candidateId))
                     {
@@ -114,26 +118,17 @@ public sealed class SyncFavouritesUseCase : ISyncFavouritesUseCase
                     continue;
                 }
 
-                var now = _timeProvider.GetUtcNow();
-                var favourite = FavouriteRoom.Create(userId, room.Id, now);
-                var (saved, wasCreated) = await _favouriteRepository.AddIfNotExistsAsync(favourite, cancellationToken);
-
-                if (wasCreated)
+                if (status == FavouriteAddStatus.Created)
                 {
                     addedCount++;
-                    currentCount++;
-                    allFavourites.Add(saved);
-                    existingByNormalizedId[saved.NormalizedRoomId] = saved;
                 }
-                else if (!existingByNormalizedId.ContainsKey(saved.NormalizedRoomId))
-                {
-                    allFavourites.Add(saved);
-                    existingByNormalizedId[saved.NormalizedRoomId] = saved;
-                }
+
+                existingByNormalizedId[saved.NormalizedRoomId] = saved;
             }
         }
 
-        if (allFavourites.Count == 0)
+        var finalFavourites = await _favouriteRepository.GetByUserIdAsync(userId, cancellationToken);
+        if (finalFavourites.Count == 0)
         {
             return new SyncFavouritesResultDto(
                 AddedCount: addedCount,
@@ -142,7 +137,7 @@ public sealed class SyncFavouritesUseCase : ISyncFavouritesUseCase
                 TotalCount: 0);
         }
 
-        var orderedFavourites = allFavourites
+        var orderedFavourites = finalFavourites
             .OrderByDescending(f => f.CreatedAtUtc)
             .ThenBy(f => f.RoomId, StringComparer.Ordinal)
             .ToList();
