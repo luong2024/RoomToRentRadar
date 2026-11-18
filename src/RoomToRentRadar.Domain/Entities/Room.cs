@@ -26,4 +26,5 @@ public class Room
     public DateTime LastUpdatedDate { get; set; } = DateTime.UtcNow;
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
+    public string? ThumbnailUrl { get; set; }
 }
