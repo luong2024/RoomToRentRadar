@@ -38,19 +38,25 @@ public sealed class ListingReportsService(AppDbContext dbContext)
             return ListingReportResult.OwnListing();
         }
 
-        var hasOpenReport = await dbContext.ListingReports
+        // Duplicate reports follow the queue's active set: a report that is open
+        // or already in review still blocks a new one from the same reporter.
+        var hasActiveReport = await dbContext.ListingReports
             .AnyAsync(
                 report => report.ListingId == listingId
                     && report.ReporterId == reporterId
-                    && report.Status == ListingReportStatus.Open,
+                    && (report.Status == ListingReportStatus.Open
+                        || report.Status == ListingReportStatus.InReview),
                 cancellationToken);
-        if (hasOpenReport)
+        if (hasActiveReport)
         {
             return ListingReportResult.DuplicateOpenReport();
         }
 
         var now = DateTime.UtcNow;
         var windowStart = now - RateLimitWindow;
+
+        // Soft limit: the count and the insert are separate statements, so
+        // simultaneous submissions can exceed the cap by the race width.
         var recentReportTimes = await dbContext.ListingReports
             .AsNoTracking()
             .Where(report => report.ReporterId == reporterId && report.CreatedAt >= windowStart)
@@ -82,8 +88,8 @@ public sealed class ListingReportsService(AppDbContext dbContext)
         }
         catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
         {
-            // The partial unique index (listing_id, reporter_id) WHERE status = 'open'
-            // also guards against two simultaneous submissions.
+            // The partial unique index (listing_id, reporter_id) WHERE status IN
+            // ('open', 'in_review') also guards two simultaneous submissions.
             return ListingReportResult.DuplicateOpenReport();
         }
 

@@ -35,7 +35,7 @@ public sealed class ModerationActionsService(AppDbContext dbContext)
             .AnyAsync(
                 report => report.ClaimedByUserId != null
                     && report.ClaimedByUserId != actorId
-                    && report.ClaimedUntilUtc >= now,
+                    && report.ClaimedUntilUtc > now,
                 cancellationToken);
         if (claimedByOther)
         {
@@ -48,7 +48,8 @@ public sealed class ModerationActionsService(AppDbContext dbContext)
         var updated = await ActiveReports(listingId.Value)
             .Where(report => report.ClaimedByUserId == null
                 || report.ClaimedByUserId == actorId
-                || report.ClaimedUntilUtc < now)
+                || report.ClaimedUntilUtc == null
+                || report.ClaimedUntilUtc <= now)
             .ExecuteUpdateAsync(
                 setters => setters
                     .SetProperty(report => report.Status, ListingReportStatus.InReview)
@@ -92,7 +93,7 @@ public sealed class ModerationActionsService(AppDbContext dbContext)
 
         var claimOwners = await ActiveReports(listingId.Value)
             .AsNoTracking()
-            .Where(report => report.ClaimedByUserId != null && report.ClaimedUntilUtc >= now)
+            .Where(report => report.ClaimedByUserId != null && report.ClaimedUntilUtc > now)
             .Select(report => report.ClaimedByUserId!.Value)
             .Distinct()
             .ToListAsync(cancellationToken);
@@ -108,7 +109,7 @@ public sealed class ModerationActionsService(AppDbContext dbContext)
 
         var released = await ActiveReports(listingId.Value)
             .Where(report => report.ClaimedByUserId != null
-                && report.ClaimedUntilUtc >= now
+                && report.ClaimedUntilUtc > now
                 && (isAdmin || report.ClaimedByUserId == actorId))
             .ExecuteUpdateAsync(
                 setters => setters
@@ -153,15 +154,25 @@ public sealed class ModerationActionsService(AppDbContext dbContext)
         }
 
         var activeReports = ActiveReports(listingId.Value);
-        var activeCount = await activeReports.CountAsync(cancellationToken);
-        if (activeCount == 0)
+        var activeStatuses = await activeReports
+            .AsNoTracking()
+            .Select(report => report.Status)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        if (activeStatuses.Count == 0)
         {
             return ModerationActionOutcome.InvalidReportState;
         }
 
+        // A single status identifies the group's state; a mix of open and
+        // in-review reports has no single previous status to record.
+        ListingReportStatus? previousReportStatus = activeStatuses.Count == 1
+            ? activeStatuses[0]
+            : null;
+
         var claimOwners = await activeReports
             .AsNoTracking()
-            .Where(report => report.ClaimedByUserId != null && report.ClaimedUntilUtc >= now)
+            .Where(report => report.ClaimedByUserId != null && report.ClaimedUntilUtc > now)
             .Select(report => report.ClaimedByUserId!.Value)
             .Distinct()
             .ToListAsync(cancellationToken);
@@ -181,45 +192,59 @@ public sealed class ModerationActionsService(AppDbContext dbContext)
         var listing = await dbContext.Listings
             .AsNoTracking()
             .Where(candidate => candidate.Id == listingId.Value)
-            .Select(candidate => new { candidate.Version })
+            .Select(candidate => new { candidate.Version, candidate.Status })
             .FirstOrDefaultAsync(cancellationToken);
         if (listing is null)
         {
             return ModerationActionOutcome.ReportNotFound;
         }
 
-        var nextListingStatus = action switch
+        ListingStatus? nextListingStatus = null;
+        switch (action)
         {
-            ModerationResolutionAction.HideListing => (ListingStatus?)ListingStatus.Hidden,
-            ModerationResolutionAction.RemoveListing => ListingStatus.Removed,
-            _ => null
-        };
+            case ModerationResolutionAction.HideListing:
+                if (listing.Status == ListingStatus.Removed)
+                {
+                    return ModerationActionOutcome.InvalidListingTransition;
+                }
 
-        var listingUpdated = nextListingStatus is { } status
-            ? await dbContext.Listings
+                if (listing.Status != ListingStatus.Hidden)
+                {
+                    nextListingStatus = ListingStatus.Hidden;
+                }
+
+                break;
+            case ModerationResolutionAction.RemoveListing:
+                if (listing.Status != ListingStatus.Removed)
+                {
+                    nextListingStatus = ListingStatus.Removed;
+                }
+
+                break;
+        }
+
+        // Only a real status change touches the listing, and it must win the
+        // version check; dismiss, warn_owner and no-op transitions leave the
+        // listing untouched.
+        if (nextListingStatus is { } status)
+        {
+            var listingUpdated = await dbContext.Listings
                 .Where(candidate => candidate.Id == listingId.Value && candidate.Version == listing.Version)
                 .ExecuteUpdateAsync(
                     setters => setters
                         .SetProperty(candidate => candidate.Status, status)
                         .SetProperty(candidate => candidate.UpdatedAt, now)
                         .SetProperty(candidate => candidate.Version, candidate => candidate.Version + 1),
-                    cancellationToken)
-            : await dbContext.Listings
-                .Where(candidate => candidate.Id == listingId.Value && candidate.Version == listing.Version)
-                .ExecuteUpdateAsync(
-                    setters => setters
-                        .SetProperty(candidate => candidate.Version, candidate => candidate.Version + 1),
                     cancellationToken);
-        if (listingUpdated == 0)
-        {
-            return ModerationActionOutcome.ResolutionConflict;
+            if (listingUpdated == 0)
+            {
+                return ModerationActionOutcome.ResolutionConflict;
+            }
         }
 
         var nextReportStatus = action == ModerationResolutionAction.Dismiss
             ? ListingReportStatus.Dismissed
             : ListingReportStatus.Resolved;
-        var hasOpenReports = await ActiveReports(listingId.Value)
-            .AnyAsync(report => report.Status == ListingReportStatus.Open, cancellationToken);
 
         var resolvedReports = await ActiveReports(listingId.Value)
             .ExecuteUpdateAsync(
@@ -242,9 +267,7 @@ public sealed class ModerationActionsService(AppDbContext dbContext)
             ResolutionAction = action,
             ListingId = listingId.Value,
             ReportId = reportId,
-            PreviousReportStatus = hasOpenReports
-                ? ListingReportStatus.Open
-                : ListingReportStatus.InReview,
+            PreviousReportStatus = previousReportStatus,
             NextReportStatus = nextReportStatus,
             Note = note,
             CreatedAt = now

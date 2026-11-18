@@ -246,14 +246,15 @@ public sealed class ModerationActionEndpointTests
         await AssertProblemAsync(response, HttpStatusCode.Conflict, "claim_conflict");
     }
 
-    [TestCase(ModerationResolutionAction.Dismiss, ListingStatus.Published, ListingReportStatus.Dismissed)]
-    [TestCase(ModerationResolutionAction.HideListing, ListingStatus.Hidden, ListingReportStatus.Resolved)]
-    [TestCase(ModerationResolutionAction.RemoveListing, ListingStatus.Removed, ListingReportStatus.Resolved)]
-    [TestCase(ModerationResolutionAction.WarnOwner, ListingStatus.Published, ListingReportStatus.Resolved)]
+    [TestCase(ModerationResolutionAction.Dismiss, ListingStatus.Published, ListingReportStatus.Dismissed, 0)]
+    [TestCase(ModerationResolutionAction.HideListing, ListingStatus.Hidden, ListingReportStatus.Resolved, 1)]
+    [TestCase(ModerationResolutionAction.RemoveListing, ListingStatus.Removed, ListingReportStatus.Resolved, 1)]
+    [TestCase(ModerationResolutionAction.WarnOwner, ListingStatus.Published, ListingReportStatus.Resolved, 0)]
     public async Task Resolve_AppliesActionToWholeGroupAndWritesAudit(
         ModerationResolutionAction action,
         ListingStatus expectedListingStatus,
-        ListingReportStatus expectedReportStatus)
+        ListingReportStatus expectedReportStatus,
+        long expectedListingVersion)
     {
         var first = await SeedReportAsync(_listingId, _userId, ListingReportStatus.Open);
         var second = await SeedReportAsync(_listingId, Reporter2Id, ListingReportStatus.Open);
@@ -278,7 +279,7 @@ public sealed class ModerationActionEndpointTests
         Assert.Multiple(() =>
         {
             Assert.That(listing.Status, Is.EqualTo(expectedListingStatus));
-            Assert.That(listing.Version, Is.EqualTo(1));
+            Assert.That(listing.Version, Is.EqualTo(expectedListingVersion));
         });
 
         var audit = await AuditLogsAsync();
@@ -293,6 +294,66 @@ public sealed class ModerationActionEndpointTests
             Assert.That(resolveLog.PreviousReportStatus, Is.EqualTo(ListingReportStatus.InReview));
             Assert.That(resolveLog.NextReportStatus, Is.EqualTo(expectedReportStatus));
             Assert.That(resolveLog.Note, Is.EqualTo(Note));
+        });
+    }
+
+    [Test]
+    public async Task Resolve_HideAlreadyHiddenListing_ResolvesWithoutVersionBump()
+    {
+        var reportId = await SeedReportAsync(_listingId, _userId, ListingReportStatus.Open);
+        await SetListingStatusAsync(_listingId, ListingStatus.Hidden);
+
+        var response = await ResolveAsync(
+            reportId, await AccessTokenAsync(AdminEmail), ModerationResolutionAction.HideListing, Note);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+        var listing = await ListingAsync(_listingId);
+        var report = await ReportAsync(reportId);
+        Assert.Multiple(() =>
+        {
+            Assert.That(listing.Status, Is.EqualTo(ListingStatus.Hidden));
+            Assert.That(listing.Version, Is.EqualTo(0));
+            Assert.That(report.Status, Is.EqualTo(ListingReportStatus.Resolved));
+        });
+    }
+
+    [Test]
+    public async Task Resolve_HideRemovedListing_ReturnsInvalidListingTransition()
+    {
+        var reportId = await SeedReportAsync(_listingId, _userId, ListingReportStatus.Open);
+        await SetListingStatusAsync(_listingId, ListingStatus.Removed);
+
+        var response = await ResolveAsync(
+            reportId, await AccessTokenAsync(AdminEmail), ModerationResolutionAction.HideListing, Note);
+
+        await AssertProblemAsync(response, HttpStatusCode.Conflict, "invalid_listing_transition");
+        var listing = await ListingAsync(_listingId);
+        var report = await ReportAsync(reportId);
+        Assert.Multiple(() =>
+        {
+            Assert.That(listing.Status, Is.EqualTo(ListingStatus.Removed));
+            Assert.That(listing.Version, Is.EqualTo(0));
+            Assert.That(report.Status, Is.EqualTo(ListingReportStatus.Open));
+        });
+        Assert.That(await AuditLogsAsync(), Is.Empty);
+    }
+
+    [Test]
+    public async Task Resolve_MixedReportStatuses_WritesNullPreviousStatus()
+    {
+        var openReport = await SeedReportAsync(_listingId, _userId, ListingReportStatus.Open);
+        await SeedReportAsync(_listingId, Reporter2Id, ListingReportStatus.InReview);
+
+        var response = await ResolveAsync(
+            openReport, await AccessTokenAsync(AdminEmail), ModerationResolutionAction.Dismiss, Note);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+        var resolveLog = (await AuditLogsAsync())
+            .Single(log => log.Action == ModerationAuditAction.Resolve);
+        Assert.Multiple(() =>
+        {
+            Assert.That(resolveLog.PreviousReportStatus, Is.Null);
+            Assert.That(resolveLog.NextReportStatus, Is.EqualTo(ListingReportStatus.Dismissed));
         });
     }
 
@@ -612,6 +673,15 @@ public sealed class ModerationActionEndpointTests
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var report = await dbContext.ListingReports.SingleAsync(candidate => candidate.Id == reportId);
         report.ClaimedUntilUtc = claimedUntilUtc;
+        await dbContext.SaveChangesAsync();
+    }
+
+    private async Task SetListingStatusAsync(Guid listingId, ListingStatus status)
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var listing = await dbContext.Listings.SingleAsync(candidate => candidate.Id == listingId);
+        listing.Status = status;
         await dbContext.SaveChangesAsync();
     }
 

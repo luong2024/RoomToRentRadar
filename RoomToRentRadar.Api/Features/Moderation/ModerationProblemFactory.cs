@@ -12,6 +12,7 @@ public static class ModerationProblemFactory
     public const string ClaimConflict = "claim_conflict";
     public const string NotClaimOwner = "not_claim_owner";
     public const string InvalidReportState = "invalid_report_state";
+    public const string InvalidListingTransition = "invalid_listing_transition";
     public const string ResolutionConflict = "resolution_conflict";
 
     public static ProblemDetails InvalidQuery(string code, string detail)
@@ -104,6 +105,20 @@ public static class ModerationProblemFactory
             Detail = detail
         };
         problem.Extensions["code"] = InvalidReportState;
+        return problem;
+    }
+
+    public static ProblemDetails InvalidListingTransitionProblem()
+    {
+        var problem = new ProblemDetails
+        {
+            Type = "https://tools.ietf.org/html/rfc9110#section-15.5.10",
+            Status = StatusCodes.Status409Conflict,
+            Title = "Invalid listing transition",
+            Detail = "A removed listing cannot be hidden; resolve the group with dismiss, "
+                + "remove_listing or warn_owner instead."
+        };
+        problem.Extensions["code"] = InvalidListingTransition;
         return problem;
     }
 

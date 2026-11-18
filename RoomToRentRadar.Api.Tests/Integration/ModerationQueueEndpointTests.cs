@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using RoomToRentRadar.Api.Data;
 using RoomToRentRadar.Api.Domain;
+using RoomToRentRadar.Api.Features.Auth;
+using RoomToRentRadar.Api.Features.Moderation;
 using RoomToRentRadar.Api.Tests.Infrastructure;
 using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.Shared.Listings;
@@ -234,6 +236,54 @@ public sealed class ModerationQueueEndpointTests
                 _listingIds[1],
                 _listingIds[2]
             }));
+        });
+    }
+
+    [Test]
+    public async Task GetQueue_CapsReportIdsPerGroup()
+    {
+        const int reportCount = ModerationQueueService.MaximumReportIdsPerGroup + 5;
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var (hash, salt) = PasswordHasher.Hash(TestUsersSeed.Password);
+            for (var index = 0; index < reportCount; index++)
+            {
+                var reporterId = Guid.NewGuid();
+                dbContext.Users.Add(new User
+                {
+                    Id = reporterId,
+                    Email = $"bulk-reporter-{index}@example.test",
+                    DisplayName = $"Bulk Reporter {index}",
+                    PasswordHash = hash,
+                    PasswordSalt = salt,
+                    Role = UserRole.User,
+                    CreatedAt = BaseTime
+                });
+                dbContext.ListingReports.Add(new ListingReport
+                {
+                    Id = Guid.NewGuid(),
+                    ListingId = _listingIds[0],
+                    ReporterId = reporterId,
+                    Reason = ListingReportReason.Spam,
+                    Status = ListingReportStatus.Open,
+                    CreatedAt = BaseTime.AddMinutes(index)
+                });
+            }
+
+            await dbContext.SaveChangesAsync();
+        }
+
+        var response = await GetQueueAsync(await AccessTokenForRoleAsync("moderator"));
+        var queue = await response.Content.ReadFromJsonAsync<ModerationReportQueueDto>(ApiJson.Options);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(queue!.Items, Has.Count.EqualTo(1));
+            Assert.That(queue.Items[0].TotalReports, Is.EqualTo(reportCount));
+            Assert.That(
+                queue.Items[0].ReportIds,
+                Has.Count.EqualTo(ModerationQueueService.MaximumReportIdsPerGroup));
         });
     }
 

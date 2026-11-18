@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RoomToRentRadar.Api.Data;
+using RoomToRentRadar.Api.Domain;
 using RoomToRentRadar.Shared.Listings;
 using RoomToRentRadar.Shared.Moderation;
 using RoomToRentRadar.Shared.Pagination;
@@ -14,6 +15,12 @@ namespace RoomToRentRadar.Api.Features.Moderation;
 /// </summary>
 public sealed class ModerationQueueService(AppDbContext dbContext)
 {
+    /// <summary>
+    /// Report ids are a bounded preview of the group; open the report detail
+    /// endpoint for the reports beyond this limit.
+    /// </summary>
+    public const int MaximumReportIdsPerGroup = 50;
+
     public async Task<ModerationReportQueueDto> GetQueueAsync(
         ModerationQueueQuery query,
         ModerationQueueCursor? cursor,
@@ -57,51 +64,71 @@ public sealed class ModerationQueueService(AppDbContext dbContext)
             .Select(listing => new { listing.Id, listing.Title, listing.Status })
             .ToDictionaryAsync(listing => listing.Id, cancellationToken);
 
-        var activeReports = await dbContext.ListingReports
+        var reasonCounts = await ActiveReports()
+            .AsNoTracking()
+            .Where(report => listingIds.Contains(report.ListingId))
+            .GroupBy(report => new { report.ListingId, report.Reason })
+            .Select(group => new
+            {
+                group.Key.ListingId,
+                group.Key.Reason,
+                Count = group.Count()
+            })
+            .ToListAsync(cancellationToken);
+
+        var reasonsByListing = reasonCounts
+            .GroupBy(row => row.ListingId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<ModerationReasonCountDto>)group
+                    .OrderByDescending(row => row.Count)
+                    .ThenBy(row => row.Reason)
+                    .Select(row => new ModerationReasonCountDto(row.Reason, row.Count))
+                    .ToList());
+
+        var activeClaims = await ActiveReports()
             .AsNoTracking()
             .Where(report => listingIds.Contains(report.ListingId)
-                && (report.Status == ListingReportStatus.Open
-                    || report.Status == ListingReportStatus.InReview))
+                && report.ClaimedByUserId != null
+                && report.ClaimedUntilUtc > now)
             .Select(report => new
             {
-                report.Id,
                 report.ListingId,
-                report.Reason,
-                report.CreatedAt,
                 report.ClaimedByUserId,
                 report.ClaimedUntilUtc
             })
             .ToListAsync(cancellationToken);
 
-        var reportsByListing = activeReports
-            .GroupBy(report => report.ListingId)
-            .ToDictionary(group => group.Key, group => group.ToList());
+        var claimsByListing = activeClaims
+            .GroupBy(claim => claim.ListingId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.OrderByDescending(claim => claim.ClaimedUntilUtc).First());
 
         var items = new List<ModerationReportGroupDto>(rows.Count);
         foreach (var row in rows)
         {
-            var listing = listings[row.ListingId];
-            var reports = reportsByListing[row.ListingId];
+            // A moderator can resolve a group between the page query and these
+            // follow-up queries; skip groups that no longer have a listing
+            // instead of failing the whole request.
+            if (!listings.TryGetValue(row.ListingId, out var listing))
+            {
+                continue;
+            }
 
-            var activeClaim = reports
-                .Where(report => report.ClaimedByUserId is not null
-                    && report.ClaimedUntilUtc is not null
-                    && report.ClaimedUntilUtc > now)
-                .OrderByDescending(report => report.ClaimedUntilUtc)
-                .FirstOrDefault();
-
-            var reasons = reports
-                .GroupBy(report => report.Reason)
-                .OrderByDescending(group => group.Count())
-                .ThenBy(group => group.Key)
-                .Select(group => new ModerationReasonCountDto(group.Key, group.Count()))
-                .ToList();
-
-            var reportIds = reports
+            var reportIds = await ActiveReports()
+                .AsNoTracking()
+                .Where(report => report.ListingId == row.ListingId)
                 .OrderBy(report => report.CreatedAt)
                 .ThenBy(report => report.Id)
                 .Select(report => report.Id)
-                .ToList();
+                .Take(MaximumReportIdsPerGroup)
+                .ToListAsync(cancellationToken);
+
+            claimsByListing.TryGetValue(row.ListingId, out var claim);
+            var reasons = reasonsByListing.TryGetValue(row.ListingId, out var countedReasons)
+                ? countedReasons
+                : [];
 
             items.Add(new ModerationReportGroupDto(
                 row.ListingId,
@@ -110,13 +137,38 @@ public sealed class ModerationQueueService(AppDbContext dbContext)
                 row.TotalReports,
                 reasons,
                 row.OldestReportAt,
-                activeClaim?.ClaimedByUserId,
-                activeClaim?.ClaimedUntilUtc,
+                claim?.ClaimedByUserId,
+                claim?.ClaimedUntilUtc,
                 reportIds));
         }
 
         return new ModerationReportQueueDto(items, pagination);
     }
+
+    public Task<ModerationReportDetailDto?> GetReportAsync(
+        Guid reportId,
+        CancellationToken cancellationToken)
+        => (from report in dbContext.ListingReports.AsNoTracking()
+            join listing in dbContext.Listings.AsNoTracking()
+                on report.ListingId equals listing.Id
+            where report.Id == reportId
+            select new ModerationReportDetailDto(
+                report.Id,
+                report.ListingId,
+                listing.Title,
+                listing.Status,
+                report.ReporterId,
+                report.Reason,
+                report.Details,
+                report.Status,
+                report.ClaimedByUserId,
+                report.ClaimedUntilUtc,
+                report.CreatedAt))
+            .FirstOrDefaultAsync(cancellationToken);
+
+    private IQueryable<ListingReport> ActiveReports()
+        => dbContext.ListingReports.Where(report => report.Status == ListingReportStatus.Open
+            || report.Status == ListingReportStatus.InReview);
 
     private async Task<List<ModerationGroupRow>> LoadGroupPageAsync(
         ModerationQueueQuery query,

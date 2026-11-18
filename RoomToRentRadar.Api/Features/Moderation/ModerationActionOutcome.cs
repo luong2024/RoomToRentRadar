@@ -7,5 +7,6 @@ public enum ModerationActionOutcome
     ClaimConflict,
     NotClaimOwner,
     InvalidReportState,
+    InvalidListingTransition,
     ResolutionConflict
 }

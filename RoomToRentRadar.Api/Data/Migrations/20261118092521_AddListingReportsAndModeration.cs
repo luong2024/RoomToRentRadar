@@ -149,13 +149,14 @@ namespace RoomToRentRadar.Api.Data.Migrations
                 table: "moderation_audit_logs",
                 column: "report_id");
 
-            // SQLite enforces uniqueness only while the report is open, so a user
-            // can report the same listing again after theirs was reviewed.
+            // SQLite enforces uniqueness while the report is active (open or in
+            // review), so a user can report the listing again only after the
+            // previous report was resolved or dismissed.
             migrationBuilder.Sql(
                 """
                 CREATE UNIQUE INDEX "ix_listing_reports_listing_reporter_open"
                 ON "listing_reports" ("listing_id", "reporter_id")
-                WHERE "status" = 'open';
+                WHERE "status" IN ('open', 'in_review');
                 """);
 
             migrationBuilder.Sql(

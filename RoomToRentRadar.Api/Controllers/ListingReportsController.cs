@@ -31,6 +31,13 @@ public sealed class ListingReportsController(ListingReportsService listingReport
             return ToProblem(ReportProblemFactory.InvalidReasonProblem());
         }
 
+        if (request.Details is { Length: > ReportDetailsSanitizer.MaximumInputLength })
+        {
+            return ToProblem(ReportProblemFactory.InvalidDetailsProblem(
+                $"details must contain at most {ReportDetailsSanitizer.MaximumInputLength} characters "
+                + "before HTML and control characters are removed."));
+        }
+
         var details = ReportDetailsSanitizer.Sanitize(request.Details);
         if (details is { Length: > ReportDetailsSanitizer.MaximumLength })
         {
@@ -49,7 +56,9 @@ public sealed class ListingReportsController(ListingReportsService listingReport
         return result.Outcome switch
         {
             ListingReportOutcome.Created =>
-                StatusCode(StatusCodes.Status201Created, new CreateListingReportResponse(result.ReportId)),
+                Created(
+                    $"/api/v1/moderation/reports/{result.ReportId}",
+                    new CreateListingReportResponse(result.ReportId)),
             ListingReportOutcome.ListingNotFound =>
                 ToProblem(ListingProblemFactory.NotFound()),
             ListingReportOutcome.OwnListing =>

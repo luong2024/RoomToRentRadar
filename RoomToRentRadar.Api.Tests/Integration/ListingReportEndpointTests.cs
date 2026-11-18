@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using RoomToRentRadar.Api.Data;
 using RoomToRentRadar.Api.Domain;
+using RoomToRentRadar.Api.Features.Reports;
 using RoomToRentRadar.Api.Tests.Infrastructure;
 using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.Shared.Reports;
@@ -75,6 +76,9 @@ public sealed class ListingReportEndpointTests
         var created = await response.Content.ReadFromJsonAsync<CreateListingReportResponse>(ApiJson.Options);
         Assert.That(created, Is.Not.Null);
         Assert.That(created!.Id, Is.Not.EqualTo(Guid.Empty));
+        Assert.That(
+            response.Headers.Location?.ToString(),
+            Is.EqualTo($"/api/v1/moderation/reports/{created.Id}"));
 
         var reports = await ReportsAsync(_listingIds[0]);
         Assert.That(reports, Has.Count.EqualTo(1));
@@ -134,6 +138,38 @@ public sealed class ListingReportEndpointTests
     }
 
     [Test]
+    public async Task Create_RawDetailsTooLong_ReturnsInvalidDetailsProblem()
+    {
+        var response = await CreateAsync(
+            _listingIds[0],
+            await AccessTokenAsync(),
+            new CreateListingReportRequest
+            {
+                Reason = "spam",
+                Details = new string('a', ReportDetailsSanitizer.MaximumInputLength + 1)
+            });
+
+        await AssertProblemAsync(response, HttpStatusCode.BadRequest, "invalid_report_details");
+    }
+
+    [Test]
+    public async Task Create_TagHeavyDetailsUnderRawLimit_AreSanitized()
+    {
+        var response = await CreateAsync(
+            _listingIds[0],
+            await AccessTokenAsync(),
+            new CreateListingReportRequest
+            {
+                Reason = "spam",
+                Details = string.Concat(Enumerable.Repeat("<b>a</b>", 900))
+            });
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+        var reports = await ReportsAsync(_listingIds[0]);
+        Assert.That(reports[0].Details, Is.EqualTo(new string('a', 900)));
+    }
+
+    [Test]
     public async Task Create_UnknownListing_ReturnsListingNotFound()
     {
         var response = await CreateAsync(
@@ -179,6 +215,33 @@ public sealed class ListingReportEndpointTests
             token,
             new CreateListingReportRequest { Reason = "spam" });
         Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+
+        var second = await CreateAsync(
+            _listingIds[0],
+            token,
+            new CreateListingReportRequest { Reason = "scam" });
+
+        await AssertProblemAsync(second, HttpStatusCode.Conflict, "duplicate_open_report");
+        Assert.That(await ReportsAsync(_listingIds[0]), Has.Count.EqualTo(1));
+    }
+
+    [Test]
+    public async Task Create_WhilePreviousReportInReview_ReturnsConflict()
+    {
+        var token = await AccessTokenAsync();
+        var first = await CreateAsync(
+            _listingIds[0],
+            token,
+            new CreateListingReportRequest { Reason = "spam" });
+        Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var report = await dbContext.ListingReports.SingleAsync();
+            report.Status = ListingReportStatus.InReview;
+            await dbContext.SaveChangesAsync();
+        }
 
         var second = await CreateAsync(
             _listingIds[0],

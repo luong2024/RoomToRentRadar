@@ -48,6 +48,22 @@ public sealed class ModerationReportsController(
         return Ok(queue);
     }
 
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(ModerationReportDetailDto), StatusCodes.Status200OK, "application/json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError, "application/problem+json")]
+    public async Task<ActionResult<ModerationReportDetailDto>> GetReport(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var report = await moderationQueueService.GetReportAsync(id, cancellationToken);
+        return report is null
+            ? ToProblem(ModerationProblemFactory.ReportNotFoundProblem())
+            : Ok(report);
+    }
+
     [HttpPost("{id:guid}/claim")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
@@ -133,6 +149,8 @@ public sealed class ModerationReportsController(
                 "Claim the report group before resolving it.")),
             ModerationActionOutcome.InvalidReportState => ToProblem(ModerationProblemFactory.InvalidReportStateProblem(
                 "The report group has no open or in-review reports.")),
+            ModerationActionOutcome.InvalidListingTransition =>
+                ToProblem(ModerationProblemFactory.InvalidListingTransitionProblem()),
             _ => ToProblem(ModerationProblemFactory.ResolutionConflictProblem())
         };
     }

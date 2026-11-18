@@ -11,6 +11,9 @@ namespace RoomToRentRadar.Api.Features.Reports;
 /// </summary>
 public static partial class ReportDetailsSanitizer
 {
+    /// <summary>Raw input bound checked before the regexes run.</summary>
+    public const int MaximumInputLength = 8000;
+
     public const int MaximumLength = 1000;
 
     public static string? Sanitize(string? value)
