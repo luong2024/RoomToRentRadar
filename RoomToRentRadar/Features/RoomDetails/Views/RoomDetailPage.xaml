@@ -86,7 +86,7 @@
                 <Border
                     Padding="28"
                     BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
-                    IsVisible="{Binding IsNotFound}"
+                    IsVisible="{Binding IsLoadStateVisible}"
                     Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
                     StrokeShape="RoundRectangle 16"
                     StrokeThickness="1">
@@ -113,6 +113,17 @@
                             Padding="20,10"
                             TextColor="White"
                             Text="Back to room listings" />
+                        <Button
+                            BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                            Command="{Binding LoadRoomDetailsCommand}"
+                            CornerRadius="12"
+                            FontAttributes="Bold"
+                            HorizontalOptions="Center"
+                            IsVisible="{Binding HasLoadError}"
+                            Margin="0,8,0,0"
+                            Padding="20,10"
+                            TextColor="White"
+                            Text="Retry" />
                     </VerticalStackLayout>
                 </Border>
 

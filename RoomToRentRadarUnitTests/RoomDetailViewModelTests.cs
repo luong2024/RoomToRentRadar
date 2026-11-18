@@ -216,6 +216,7 @@ public class RoomDetailViewModelTests
             Assert.That(_viewModel.Room, Is.Null);
             Assert.That(_viewModel.SimilarRooms, Is.Empty);
             Assert.That(_viewModel.IsNotFound, Is.True);
+            Assert.That(_viewModel.HasLoadError, Is.False);
         });
     }
 
@@ -234,7 +235,8 @@ public class RoomDetailViewModelTests
         {
             Assert.That(_viewModel.Room, Is.Null);
             Assert.That(_viewModel.SimilarRooms, Is.Empty);
-            Assert.That(_viewModel.IsNotFound, Is.True);
+            Assert.That(_viewModel.IsNotFound, Is.False);
+            Assert.That(_viewModel.HasLoadError, Is.True);
         });
         _errorHandlerMock.Verify(handler => handler.HandleError(It.IsAny<HttpRequestException>()), Times.Once);
     }

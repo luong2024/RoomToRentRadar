@@ -587,7 +587,7 @@ public sealed class CosmosDbInitializer
             }
         }
 
-        if (!hasRooms || isDevelopment)
+        if (!hasRooms)
         {
             var sampleRooms = new List<RoomListingDocument>
             {
@@ -703,7 +703,14 @@ public sealed class CosmosDbInitializer
 
             foreach (var room in sampleRooms)
             {
-                await roomsContainer.UpsertItemAsync(room, new PartitionKey(room.CampusId), cancellationToken: cancellationToken);
+                try
+                {
+                    await roomsContainer.CreateItemAsync(room, new PartitionKey(room.CampusId), cancellationToken: cancellationToken);
+                }
+                catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    _logger.LogDebug("Sample room {RoomId} already exists; leaving it unchanged.", room.Id);
+                }
             }
 
             _logger.LogInformation("Seeded {Count} sample rooms for campus {CampusId}.", sampleRooms.Count, ictuId);
@@ -715,7 +722,7 @@ public sealed class CosmosDbInitializer
         Container roomsContainer,
         CancellationToken cancellationToken)
     {
-        var query = new QueryDefinition("SELECT * FROM c");
+        var query = new QueryDefinition("SELECT * FROM c WHERE NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false");
         using var iterator = listingsContainer.GetItemQueryIterator<RoomListingDocument>(query);
         var synchronizedCount = 0;
 
@@ -729,10 +736,39 @@ public sealed class CosmosDbInitializer
                     listing.Id,
                     new PartitionKey(listing.Id),
                     cancellationToken);
-                var detail = RoomDocument.MergeListingFields(listing, existingDetail);
+                if (existingDetail is not null &&
+                    (existingDetail.IsDeleted || existingDetail.ProjectionVersion > listing.ProjectionVersion))
+                {
+                    _logger.LogDebug("Skipped stale listing {RoomId} during startup synchronization.", listing.Id);
+                    continue;
+                }
 
-                await roomsContainer.UpsertItemAsync(detail, new PartitionKey(detail.Id), cancellationToken: cancellationToken);
-                synchronizedCount++;
+                var detail = RoomDocument.MergeListingFields(listing, existingDetail);
+                detail.ProjectionVersion = listing.ProjectionVersion;
+                detail.IsDeleted = false;
+
+                try
+                {
+                    if (existingDetail is null)
+                    {
+                        await roomsContainer.CreateItemAsync(detail, new PartitionKey(detail.Id), cancellationToken: cancellationToken);
+                    }
+                    else
+                    {
+                        await roomsContainer.ReplaceItemAsync(
+                            detail,
+                            detail.Id,
+                            new PartitionKey(detail.Id),
+                            new ItemRequestOptions { IfMatchEtag = existingDetail.ETag },
+                            cancellationToken);
+                    }
+                    synchronizedCount++;
+                }
+                catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Conflict ||
+                                                 ex.StatusCode == System.Net.HttpStatusCode.PreconditionFailed)
+                {
+                    _logger.LogDebug("Skipped concurrent update for room {RoomId} during startup synchronization.", listing.Id);
+                }
             }
         }
 

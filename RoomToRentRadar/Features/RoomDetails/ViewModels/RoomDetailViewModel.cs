@@ -26,6 +26,9 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     public partial bool IsNotFound { get; set; }
 
     [ObservableProperty]
+    public partial bool HasLoadError { get; set; }
+
+    [ObservableProperty]
     public partial string StatusMessage { get; set; } = string.Empty;
 
     [ObservableProperty]
@@ -38,6 +41,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     public partial List<SimilarRoomModel> SimilarRooms { get; set; } = [];
 
     public bool HasRoom => Room is not null;
+    public bool IsLoadStateVisible => IsNotFound || HasLoadError;
 
     // Listing Status & Visibility (AC2, AC3)
     public bool IsAvailable => Room?.Status == ListingStatus.Available;
@@ -101,7 +105,6 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         var currentCts = new CancellationTokenSource();
         var previousCts = Interlocked.Exchange(ref _loadCts, currentCts);
         previousCts?.Cancel();
-        previousCts?.Dispose();
 
         if (string.IsNullOrWhiteSpace(RoomId))
         {
@@ -109,6 +112,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
             Room = null;
             SimilarRooms = [];
             IsNotFound = true;
+            HasLoadError = false;
             StatusMessage = "A room ID is required.";
             NotifyStatusPropertiesChanged();
             if (ReferenceEquals(_loadCts, currentCts))
@@ -127,6 +131,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
             IsBusy = true;
             Room = null;
             IsNotFound = false;
+            HasLoadError = false;
             StatusMessage = string.Empty;
             SimilarRooms = [];
             NotifyStatusPropertiesChanged();
@@ -143,6 +148,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
                 Room = null;
                 SimilarRooms = [];
                 IsNotFound = true;
+                HasLoadError = false;
                 StatusMessage = "This room was not found or has been removed.";
                 NotifyStatusPropertiesChanged();
                 return;
@@ -151,6 +157,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
             Room = room;
             Title = room.Title;
             IsNotFound = false;
+            HasLoadError = false;
 
             // Refresh computed properties
             NotifyStatusPropertiesChanged();
@@ -168,9 +175,11 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
             {
                 Room = null;
                 SimilarRooms = [];
-                IsNotFound = true;
+                IsNotFound = false;
+                HasLoadError = true;
                 StatusMessage = "Unable to load room details. Check your network connection and try again.";
                 _errorHandler.HandleError(ex);
+                NotifyStatusPropertiesChanged();
             }
         }
         finally
@@ -179,8 +188,9 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
             {
                 IsBusy = false;
                 _loadCts = null;
-                currentCts.Dispose();
             }
+
+            currentCts.Dispose();
         }
     }
 
@@ -289,6 +299,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
 
     private void NotifyStatusPropertiesChanged()
     {
+        OnPropertyChanged(nameof(IsLoadStateVisible));
         OnPropertyChanged(nameof(HasRoom));
         OnPropertyChanged(nameof(IsAvailable));
         OnPropertyChanged(nameof(IsRented));

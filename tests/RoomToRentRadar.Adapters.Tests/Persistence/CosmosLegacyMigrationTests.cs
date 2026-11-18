@@ -1,5 +1,6 @@
 namespace RoomToRentRadar.Adapters.Tests.Persistence;
 
+using System.Reflection;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -88,6 +89,52 @@ public class CosmosLegacyMigrationTests
         _mockListingsContainer
             .Setup(c => c.ReadItemAsync<RoomListingDocument>(It.IsAny<string>(), It.IsAny<PartitionKey>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new CosmosException("Not found", System.Net.HttpStatusCode.NotFound, 0, "1", 0));
+    }
+
+    [Test]
+    public async Task SynchronizeRoomDetailsAsync_WhenDetailHasNewerTombstone_DoesNotReviveIt()
+    {
+        var listing = new RoomListingDocument
+        {
+            Id = "room-deleted",
+            CampusId = "campus-ictu",
+            ProjectionVersion = 10,
+            Status = 0
+        };
+        var page = new Mock<FeedResponse<RoomListingDocument>>();
+        page.Setup(response => response.GetEnumerator()).Returns(new List<RoomListingDocument> { listing }.GetEnumerator());
+        var iterator = new Mock<FeedIterator<RoomListingDocument>>();
+        iterator.SetupSequence(value => value.HasMoreResults).Returns(true).Returns(false);
+        iterator.Setup(value => value.ReadNextAsync(It.IsAny<CancellationToken>())).ReturnsAsync(page.Object);
+        _mockListingsContainer.Setup(container => container.GetItemQueryIterator<RoomListingDocument>(
+                It.IsAny<QueryDefinition>(), null, null))
+            .Returns(iterator.Object);
+
+        var readResponse = new Mock<ItemResponse<RoomDocument>>();
+        readResponse.SetupGet(response => response.Resource).Returns(new RoomDocument
+        {
+            Id = "room-deleted",
+            IsDeleted = true,
+            ProjectionVersion = 11
+        });
+        _mockRoomDetailsContainer.Setup(container => container.ReadItemAsync<RoomDocument>(
+                "room-deleted", It.IsAny<PartitionKey>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(readResponse.Object);
+
+        var initializer = new CosmosDbInitializer(
+            _mockClient.Object,
+            Options.Create(_options),
+            NullLogger<CosmosDbInitializer>.Instance);
+        var method = typeof(CosmosDbInitializer).GetMethod(
+            "SynchronizeRoomDetailsAsync",
+            BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+        await (Task)method.Invoke(initializer, [_mockListingsContainer.Object, _mockRoomDetailsContainer.Object, CancellationToken.None])!;
+
+        _mockRoomDetailsContainer.Verify(container => container.CreateItemAsync(
+            It.IsAny<RoomDocument>(), It.IsAny<PartitionKey?>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()), Times.Never);
+        _mockRoomDetailsContainer.Verify(container => container.ReplaceItemAsync(
+            It.IsAny<RoomDocument>(), It.IsAny<string>(), It.IsAny<PartitionKey?>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Test]
