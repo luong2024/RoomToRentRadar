@@ -18,6 +18,9 @@ public class GlobalExceptionHandlerTests
             new RequestValidationException("email", "Email is required."),
             StatusCodes.Status400BadRequest);
         yield return new TestCaseData(
+            new ValidationException("CampusId", "Campus ID is required."),
+            StatusCodes.Status400BadRequest);
+        yield return new TestCaseData(
             new InvalidEmailException("Invalid email."),
             StatusCodes.Status400BadRequest);
         yield return new TestCaseData(
@@ -44,6 +47,9 @@ public class GlobalExceptionHandlerTests
         yield return new TestCaseData(
             new UserInactiveException(),
             StatusCodes.Status401Unauthorized);
+        yield return new TestCaseData(
+            new NotFoundException("Room was not found."),
+            StatusCodes.Status404NotFound);
         yield return new TestCaseData(
             new InvalidOperationException("Unexpected failure"),
             StatusCodes.Status500InternalServerError);

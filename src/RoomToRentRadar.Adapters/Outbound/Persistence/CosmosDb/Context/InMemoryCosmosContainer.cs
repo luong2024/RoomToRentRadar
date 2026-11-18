@@ -195,6 +195,24 @@ public sealed class InMemoryCosmosContainer<T> : ICosmosContainer<T> where T : c
                     }
                 }
             }
+            else if (typeof(T) == typeof(FavouriteDocument))
+            {
+                var favItems = items.Cast<FavouriteDocument>();
+                if (queryText.Contains("userId", StringComparison.OrdinalIgnoreCase))
+                {
+                    var userIdParam = GetQueryParameter(queryDefinition, "@userId");
+                    if (userIdParam is not null)
+                    {
+                        var filtered = favItems
+                            .Where(f => string.Equals(f.UserId, userIdParam.ToString(), StringComparison.OrdinalIgnoreCase))
+                            .OrderByDescending(f => f.CreatedAtUtc)
+                            .ThenBy(f => f.RoomId, StringComparer.Ordinal)
+                            .Cast<T>()
+                            .ToList();
+                        return Task.FromResult<IReadOnlyList<T>>(filtered);
+                    }
+                }
+            }
 
             return Task.FromResult<IReadOnlyList<T>>(items);
         }
@@ -240,6 +258,21 @@ public sealed class InMemoryCosmosContainer<T> : ICosmosContainer<T> where T : c
             if (allDocs.Any(t => string.Equals(t.TokenHash, tokenDoc.TokenHash, StringComparison.Ordinal)))
             {
                 throw CreateConflictException($"Unique index violation: RefreshToken with hash '{tokenDoc.TokenHash}' already exists.");
+            }
+        }
+        else if (item is FavouriteDocument favDoc)
+        {
+            var allDocs = _storage.Values
+                .Select(entry => JsonConvert.DeserializeObject<T>(entry.Json)!)
+                .Where(d => currentId is null || GetItemId(d) != currentId)
+                .Cast<FavouriteDocument>();
+
+            if (allDocs.Any(f =>
+                string.Equals(f.UserId, favDoc.UserId, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(f.RoomId, favDoc.RoomId, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw CreateConflictException(
+                    $"Unique index violation: Favourite for user '{favDoc.UserId}' and room '{favDoc.RoomId}' already exists.");
             }
         }
     }

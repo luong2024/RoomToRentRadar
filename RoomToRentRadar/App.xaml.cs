@@ -5,8 +5,9 @@ namespace RoomToRentRadar
 {
     public partial class App : Application
     {
-        private readonly IAuthenticationSessionService _sessionService;
-        private readonly IServiceProvider _services;
+        private readonly IAuthenticationSessionService? _sessionService;
+        private readonly IServiceProvider? _services;
+        private Task<bool>? _startupRestoreTask;
 
         public App(IAuthenticationSessionService sessionService, IServiceProvider services)
         {
@@ -15,9 +16,23 @@ namespace RoomToRentRadar
             _services = services;
         }
 
+        public App(IAuthenticationSessionService sessionService)
+        {
+            InitializeComponent();
+            _sessionService = sessionService;
+        }
+
+        public App()
+        {
+            InitializeComponent();
+        }
+
         protected override Window CreateWindow(IActivationState? activationState)
         {
-            var appShell = _services.GetRequiredService<AppShell>();
+            _ = TriggerSessionRestoreSafeAsync();
+            var appShell = _services != null
+                ? _services.GetRequiredService<AppShell>()
+                : new AppShell();
 #if WINDOWS
             return new MainWindow(appShell);
 #else
@@ -28,10 +43,20 @@ namespace RoomToRentRadar
         protected override async void OnStart()
         {
             base.OnStart();
+            await TriggerSessionRestoreSafeAsync();
+        }
+
+        private async Task TriggerSessionRestoreSafeAsync()
+        {
+            if (_sessionService == null)
+            {
+                return;
+            }
 
             try
             {
-                await _sessionService.TryRestoreSessionAsync();
+                _startupRestoreTask ??= _sessionService.TryRestoreSessionAsync();
+                await _startupRestoreTask;
             }
             catch
             {

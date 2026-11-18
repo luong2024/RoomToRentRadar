@@ -12,7 +12,8 @@ builder.Services
     .AddOutboundAdapters(builder.Configuration, builder.Environment)
     .AddRoomDetailServices(builder.Configuration)
     .AddInboundAdapters(builder.Configuration)
-    .AddProfileFeature();
+    .AddProfileFeature()
+    .AddFavouritesFeature();
 
 var app = builder.Build();
 

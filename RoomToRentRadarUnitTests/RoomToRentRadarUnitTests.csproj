@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
-      <ResizetizerErrorOnDuplicateOutputFilename>false</ResizetizerErrorOnDuplicateOutputFilename>
+    <ResizetizerErrorOnDuplicateOutputFilename>false</ResizetizerErrorOnDuplicateOutputFilename>
     <EnableMauiAssetProcessing>false</EnableMauiAssetProcessing>
     <EnableMauiSplashScreenProcessing>false</EnableMauiSplashScreenProcessing>
     <EnableMauiFontProcessing>false</EnableMauiFontProcessing>

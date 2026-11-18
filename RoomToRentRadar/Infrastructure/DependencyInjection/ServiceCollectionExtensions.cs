@@ -54,6 +54,9 @@ public static class ServiceCollectionExtensions
             return new ApiClient(httpClient);
         });
 
+        // Route guard service
+        services.AddSingleton<IRouteGuardService, RouteGuardService>();
+
         services.AddSingleton<IGoogleAuthAdapter, GoogleAuthAdapter>();
         services.AddSingleton<IProfileService, ProfileService>();
         services.AddSingleton<IProfileUiThreadDispatcher, MauiProfileUiThreadDispatcher>();
