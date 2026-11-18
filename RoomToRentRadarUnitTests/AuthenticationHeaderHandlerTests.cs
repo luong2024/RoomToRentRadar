@@ -219,6 +219,7 @@ public class AuthenticationHeaderHandlerTests
         public int RefreshCalls { get; private set; }
 
         public bool IsAuthenticated => !string.IsNullOrEmpty(AccessToken);
+        public bool IsInitialized => true;
         public AuthUser? CurrentUser => null;
 #pragma warning disable CS0067
         public event EventHandler<AuthUser?>? CurrentUserChanged;
@@ -250,6 +251,15 @@ public class AuthenticationHeaderHandlerTests
 
             AccessToken = NewTokenOnRefresh;
             return Task.FromResult(true);
+        }
+
+        public Task EnsureInitializedAsync(CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
+        public Task<LogoutResult> LogoutAsync(CancellationToken cancellationToken = default)
+        {
+            AccessToken = null;
+            return Task.FromResult(new LogoutResult(true, true));
         }
 
         public Task ClearSessionAsync(CancellationToken cancellationToken = default)

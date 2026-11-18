@@ -12,12 +12,20 @@ builder.Services
     .AddOutboundAdapters(builder.Configuration, builder.Environment)
     .AddRoomDetailServices(builder.Configuration)
     .AddInboundAdapters(builder.Configuration)
-    .AddProfileFeature();
+    .AddProfileFeature()
+    .AddFavouritesFeature();
 
 var app = builder.Build();
 
 app.UseExceptionHandler();
-app.UseHttpsRedirection();
+// Android emulators access the development host through 10.0.2.2. Redirecting
+// HTTP to the localhost development certificate changes that host and breaks the
+// TLS handshake. Keep HTTPS mandatory outside Development, while allowing the
+// explicitly configured HTTP development endpoint (port 49966).
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();

@@ -20,6 +20,8 @@ public sealed class CosmosDbOptions
 
     public string CampusesContainerName { get; set; } = "Campuses";
 
+    public string RoomProjectionSyncOutboxContainerName { get; set; } = "RoomProjectionSyncOutbox";
+
     public string UsersContainerName { get; set; } = "Users";
 
     public string RefreshTokensContainerName { get; set; } = "RefreshTokens";
@@ -29,6 +31,8 @@ public sealed class CosmosDbOptions
     public string ExternalLoginIndexContainerName { get; set; } = "ExternalLoginIndex";
 
     public string UserProfilesContainerName { get; set; } = "UserProfiles";
+
+    public string FavouritesContainerName { get; set; } = "Favourites";
 
     private string _roomsContainerName = "Rooms";
     private string? _containerName;

@@ -8,6 +8,7 @@
     xmlns:loc="clr-namespace:RoomToRentRadar.Core.Localization"
     xmlns:authViews="clr-namespace:RoomToRentRadar.Features.Authentication.Views"
     xmlns:roomViews="clr-namespace:RoomToRentRadar.Features.RoomListings.Views"
+    xmlns:profileViews="clr-namespace:RoomToRentRadar.Features.Profile.Views"
     Title="Trọ ICTU"
     FlyoutBackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource DesktopRailBackgroundDark}}"
     FlyoutVerticalScrollMode="{OnPlatform WinUI=Disabled, Default=Auto}"
@@ -192,16 +193,16 @@
     </Shell.ItemTemplate>
 
     <ShellContent
+        x:Name="HomeShellContent"
         Title="{loc:Translate Nav_Home}"
-        ContentTemplate="{DataTemplate homeViews:HomePage}"
         Icon="{StaticResource IconNavHome}"
         Route="home"
         SemanticProperties.Description="{loc:Translate Nav_Home}"
         SemanticProperties.Hint="{loc:Translate Nav_Home_Hint}" />
 
     <ShellContent
+        x:Name="RoomListingsShellContent"
         Title="{loc:Translate Nav_Rooms}"
-        ContentTemplate="{DataTemplate roomViews:RoomListingsPage}"
         Icon="{StaticResource IconNavRooms}"
         Route="rooms"
         SemanticProperties.Description="{loc:Translate Nav_Rooms}"
@@ -209,12 +210,20 @@
 
     <FlyoutItem Title="Sign In / Register" Route="auth" Icon="{StaticResource IconProjects}">
         <ShellContent
+            x:Name="AuthShellContent"
             Title="Authentication"
-            ContentTemplate="{DataTemplate authViews:AuthPage}"
             Route="login"
             SemanticProperties.Description="Sign In and Sign Up"
             SemanticProperties.Hint="Navigate to authentication" />
     </FlyoutItem>
+
+    <ShellContent
+        x:Name="ProfileShellContent"
+        Title="Hồ sơ"
+        Icon="{StaticResource IconProjects}"
+        Route="profile"
+        SemanticProperties.Description="View and edit your profile"
+        SemanticProperties.Hint="Open your profile" />
 
     <Shell.FlyoutFooter>
         <VerticalStackLayout

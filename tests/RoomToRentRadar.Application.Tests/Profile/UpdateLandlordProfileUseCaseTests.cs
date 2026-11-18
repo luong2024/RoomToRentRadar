@@ -6,6 +6,7 @@ using RoomToRentRadar.Application.UseCases.Profile;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.Exceptions;
+using RoomToRentRadar.Domain.ValueObjects;
 
 namespace RoomToRentRadar.Application.Tests.Profile;
 
@@ -54,6 +55,32 @@ public class UpdateLandlordProfileUseCaseTests
             Assert.That(repo.AddCallCount, Is.EqualTo(0));
             Assert.That(repo.UpdateCallCount, Is.EqualTo(1));
             Assert.That(repo.LastUpdatedProfile?.Version, Is.EqualTo("\"landlord-etag-456\""));
+        });
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WhenScreenOmitsBankFields_PreservesExistingValues()
+    {
+        var userId = Guid.NewGuid();
+        var existing = UserProfile.CreateDefault(userId, UserRole.Landlord, FixedNow);
+        existing.SetVersion("\"landlord-etag\"");
+        existing.UpdateLandlordDetails(new LandlordDetails(
+            "Existing business", "Existing address", null, null, null, null,
+            KycVerificationStatus.Unverified, null, null, "Existing bank", "123456789", "Existing owner"), FixedNow);
+        var repo = new TrackingUserProfileRepository(existing);
+        var useCase = new UpdateLandlordProfileUseCase(repo, new FakeKycDocumentStorageService(), new FixedTimeProvider(FixedNow));
+
+        var command = new UpdateLandlordCommand(
+            "Landlord Updated", "0911223344", null, "Updated bio", "Updated business", "Updated address",
+            null, null, null, null, null, null, null);
+
+        await useCase.ExecuteAsync(userId, command);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(repo.LastUpdatedProfile?.Landlord?.BankName, Is.EqualTo("Existing bank"));
+            Assert.That(repo.LastUpdatedProfile?.Landlord?.BankAccountNumber, Is.EqualTo("123456789"));
+            Assert.That(repo.LastUpdatedProfile?.Landlord?.BankAccountHolder, Is.EqualTo("Existing owner"));
         });
     }
 

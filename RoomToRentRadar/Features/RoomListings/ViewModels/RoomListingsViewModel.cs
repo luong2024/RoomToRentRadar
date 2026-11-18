@@ -704,7 +704,7 @@ public partial class RoomListingsViewModel : ObservableObject
             return;
         }
 
-        var targetRoute = $"{AppRoutes.RoomDetails}?id={Uri.EscapeDataString(room.Id)}";
+        var targetRoute = $"{AppRoutes.RoomDetail}?id={Uri.EscapeDataString(room.Id)}";
 
         try
         {
