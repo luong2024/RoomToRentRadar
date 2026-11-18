@@ -3,6 +3,7 @@ using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Core.Models.Authentication;
 using RoomToRentRadar.Features.Authentication.ViewModels;
+using RoomToRentRadar.Infrastructure.Services;
 
 namespace RoomToRentRadarUnitTests;
 
@@ -238,6 +239,44 @@ public class AuthViewModelTests
         {
             Assert.That(_viewModel.IsSuccess, Is.True);
             Assert.That(navigatedRoute, Is.EqualTo("//booking?roomId=99"));
+            Assert.That(_viewModel.ReturnUrl, Is.Null);
+        });
+    }
+
+    [Test]
+    public async Task SignInAsync_WhenReturnUrlContainsMultiLayerPercentEncodedQueryParams_ShouldDecodeOnlyOnceAndPreserveInnerEncoding()
+    {
+        // Original protected route contains query parameters with percent-encoded values (%2F and %252F)
+        const string originalProtectedRoute = "//booking?roomId=42&callback=%2Frooms%2Fdetails%3Fid%3D99&nested=%252F";
+        var loginRedirectUri = RouteGuardService.BuildLoginRedirectRoute(originalProtectedRoute);
+        var encodedReturnUrlParam = loginRedirectUri.Split("returnUrl=")[1];
+
+        _viewModel.ApplyQueryAttributes(new Dictionary<string, object>
+        {
+            ["returnUrl"] = encodedReturnUrlParam
+        });
+
+        Assert.That(_viewModel.ReturnUrl, Is.EqualTo(originalProtectedRoute));
+
+        _viewModel.LoginEmail = "student@example.com";
+        _viewModel.LoginPassword = "ValidPassword1";
+
+        var user = new AuthUser(Guid.NewGuid(), "student@example.com", UserRoleConstants.Student, "LOCAL", true);
+        _authPort.LoginResult = AuthResult.Success("test-access-token", "test-refresh-token", user);
+
+        string? navigatedRoute = null;
+        _viewModel.NavigateToRouteHandler = route =>
+        {
+            navigatedRoute = route;
+            return Task.CompletedTask;
+        };
+
+        await _viewModel.SignInAsync(CancellationToken.None);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_viewModel.IsSuccess, Is.True);
+            Assert.That(navigatedRoute, Is.EqualTo(originalProtectedRoute));
             Assert.That(_viewModel.ReturnUrl, Is.Null);
         });
     }
