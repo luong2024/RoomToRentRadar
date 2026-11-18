@@ -137,7 +137,7 @@ public class AuthenticationSessionServiceLogoutTests
         var refreshStartedTcs = new TaskCompletionSource<bool>();
         var allowRefreshToCompleteTcs = new TaskCompletionSource<bool>();
 
-        _authPort.OnRefreshTokenAsync = async () =>
+        _authPort.OnRefreshTokenAsync = async _ =>
         {
             refreshStartedTcs.TrySetResult(true);
             await allowRefreshToCompleteTcs.Task;
@@ -167,12 +167,164 @@ public class AuthenticationSessionServiceLogoutTests
     }
 
     [Test]
+    public async Task RefreshTokenAsync_WhenAccountBLogsInWhileAccountARefreshIsInFlight_ShouldKeepAccountBSession()
+    {
+        var userA = new AuthUser(Guid.NewGuid(), "accountA@test.com", "STUDENT", "LOCAL", true);
+        var userB = new AuthUser(Guid.NewGuid(), "accountB@test.com", "LANDLORD", "LOCAL", true);
+
+        await _service.SaveSessionAsync("access-A", "refresh-A", userA);
+
+        var refreshStartedTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var allowRefreshToCompleteTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        _authPort.OnRefreshTokenAsync = async _ =>
+        {
+            refreshStartedTcs.TrySetResult(true);
+            await allowRefreshToCompleteTcs.Task;
+            return AuthResult.Success("access-A-rotated", "refresh-A-rotated", userA);
+        };
+
+        // 1. Account A starts refreshing token in background
+        var refreshTask = Task.Run(() => _service.RefreshTokenAsync());
+        await refreshStartedTcs.Task;
+
+        // 2. Account B logs in while Account A's refresh is still in-flight
+        await _service.SaveSessionAsync("access-B", "refresh-B", userB);
+
+        // 3. Account A's refresh response arrives from backend
+        allowRefreshToCompleteTcs.TrySetResult(true);
+        var refreshSuccess = await refreshTask;
+
+        // 4. Final session MUST belong to Account B
+        Assert.Multiple(async () =>
+        {
+            Assert.That(refreshSuccess, Is.False, "Account A's in-flight refresh must be invalidated after Account B logs in.");
+            Assert.That(_service.IsAuthenticated, Is.True);
+            Assert.That(_service.CurrentUser, Is.EqualTo(userB));
+            Assert.That(await _service.GetAccessTokenAsync(), Is.EqualTo("access-B"));
+            Assert.That(await _service.GetRefreshTokenAsync(), Is.EqualTo("refresh-B"));
+            Assert.That(await _storage.GetAsync(AuthenticationSessionService.AccessTokenKey), Is.EqualTo("access-B"));
+            Assert.That(await _storage.GetAsync(AuthenticationSessionService.RefreshTokenKey), Is.EqualTo("refresh-B"));
+
+            var storedUserJson = await _storage.GetAsync(AuthenticationSessionService.UserDataKey);
+            var storedUser = JsonSerializer.Deserialize<AuthUser>(storedUserJson!);
+            Assert.That(storedUser?.Id, Is.EqualTo(userB.Id));
+            Assert.That(storedUser?.Email, Is.EqualTo("accountB@test.com"));
+        });
+    }
+
+    [Test]
+    public async Task RefreshTokenAsync_WhenRefreshStartsDuringAccountBSaveSessionStorageWrite_ShouldInvalidateStaleRefreshAndKeepAccountBSession()
+    {
+        var userA = new AuthUser(Guid.NewGuid(), "accountA@test.com", "STUDENT", "LOCAL", true);
+        var userB = new AuthUser(Guid.NewGuid(), "accountB@test.com", "LANDLORD", "LOCAL", true);
+
+        await _service.SaveSessionAsync("access-A", "refresh-A", userA);
+
+        var saveBEnteredStorageWriteTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var allowSaveBStorageWriteToFinishTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var refreshEnteredBackendCallTcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var allowRefreshToReturnTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // Pause Account B's SaveSessionAsync right when it writes AccessTokenKey to SecureStorage
+        // (after entry _sessionEpoch increment, but BEFORE _cachedRefreshToken and _currentUser in memory are updated to B)
+        _storage.OnSetAsync = async (key, value) =>
+        {
+            if (key == AuthenticationSessionService.AccessTokenKey && value == "access-B")
+            {
+                saveBEnteredStorageWriteTcs.TrySetResult(true);
+                await allowSaveBStorageWriteToFinishTcs.Task;
+            }
+        };
+
+        _authPort.OnRefreshTokenAsync = async refreshTokenUsed =>
+        {
+            refreshEnteredBackendCallTcs.TrySetResult(refreshTokenUsed);
+            await allowRefreshToReturnTcs.Task;
+            return AuthResult.Success("access-A-rotated", "refresh-A-rotated", userA);
+        };
+
+        // 1. Start Account B login (SaveSessionAsync), which pauses during SecureStorage write
+        var saveBTask = Task.Run(() => _service.SaveSessionAsync("access-B", "refresh-B", userB));
+        await saveBEnteredStorageWriteTcs.Task;
+
+        // 2. While Account B's SaveSessionAsync is awaiting storage I/O (in-memory _cachedRefreshToken is still "refresh-A"),
+        // start a token refresh that reads the current epoch and stale "refresh-A"
+        var refreshTask = Task.Run(() => _service.RefreshTokenAsync());
+        var usedRefreshToken = await refreshEnteredBackendCallTcs.Task;
+        Assert.That(usedRefreshToken, Is.EqualTo("refresh-A"));
+
+        // 3. Allow Account B's SaveSessionAsync to finish committing Account B to SecureStorage and memory
+        allowSaveBStorageWriteToFinishTcs.TrySetResult(true);
+        await saveBTask;
+
+        // 4. Now allow the stale Account A refresh call to return its new tokens
+        allowRefreshToReturnTcs.TrySetResult(true);
+        var refreshResult = await refreshTask;
+
+        // 5. Commit-time epoch & token verification MUST reject Account A's refresh result and keep Account B
+        Assert.Multiple(async () =>
+        {
+            Assert.That(refreshResult, Is.False, "Refresh started during Account B's SaveSessionAsync window must be rejected at commit time.");
+            Assert.That(_service.IsAuthenticated, Is.True);
+            Assert.That(_service.CurrentUser, Is.EqualTo(userB));
+            Assert.That(await _service.GetAccessTokenAsync(), Is.EqualTo("access-B"));
+            Assert.That(await _service.GetRefreshTokenAsync(), Is.EqualTo("refresh-B"));
+            Assert.That(await _storage.GetAsync(AuthenticationSessionService.AccessTokenKey), Is.EqualTo("access-B"));
+            Assert.That(await _storage.GetAsync(AuthenticationSessionService.RefreshTokenKey), Is.EqualTo("refresh-B"));
+
+            var storedUserJson = await _storage.GetAsync(AuthenticationSessionService.UserDataKey);
+            var storedUser = JsonSerializer.Deserialize<AuthUser>(storedUserJson!);
+            Assert.That(storedUser?.Id, Is.EqualTo(userB.Id));
+            Assert.That(storedUser?.Email, Is.EqualTo("accountB@test.com"));
+        });
+    }
+
+    [Test]
+    public async Task RefreshTokenAsync_WhenAccountARefreshFailsWithRevokedTokenAfterAccountBLogsIn_ShouldNotClearAccountBSession()
+    {
+        var userA = new AuthUser(Guid.NewGuid(), "accountA@test.com", "STUDENT", "LOCAL", true);
+        var userB = new AuthUser(Guid.NewGuid(), "accountB@test.com", "LANDLORD", "LOCAL", true);
+
+        await _service.SaveSessionAsync("access-A", "refresh-A", userA);
+
+        var refreshStartedTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var allowRefreshToCompleteTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        _authPort.OnRefreshTokenAsync = async _ =>
+        {
+            refreshStartedTcs.TrySetResult(true);
+            await allowRefreshToCompleteTcs.Task;
+            return AuthResult.InvalidToken("Account A refresh token expired or revoked");
+        };
+
+        var refreshTask = Task.Run(() => _service.RefreshTokenAsync());
+        await refreshStartedTcs.Task;
+
+        // Account B logs in while Account A's failing refresh is in-flight
+        await _service.SaveSessionAsync("access-B", "refresh-B", userB);
+
+        allowRefreshToCompleteTcs.TrySetResult(true);
+        var refreshSuccess = await refreshTask;
+
+        Assert.Multiple(async () =>
+        {
+            Assert.That(refreshSuccess, Is.False);
+            Assert.That(_service.IsAuthenticated, Is.True);
+            Assert.That(_service.CurrentUser, Is.EqualTo(userB));
+            Assert.That(await _service.GetAccessTokenAsync(), Is.EqualTo("access-B"));
+            Assert.That(await _service.GetRefreshTokenAsync(), Is.EqualTo("refresh-B"));
+            Assert.That(await _storage.GetAsync(AuthenticationSessionService.AccessTokenKey), Is.EqualTo("access-B"));
+        });
+    }
+
+    [Test]
     public async Task RefreshTokenAsync_WhenServerReturnsUnauthorizedInvalidCredentials_ShouldClearSessionAndNotify()
     {
         var user = new AuthUser(Guid.NewGuid(), "expired@test.com", "STUDENT", "LOCAL", true);
         await _service.SaveSessionAsync("access-old", "refresh-expired", user);
 
-        _authPort.OnRefreshTokenAsync = () =>
+        _authPort.OnRefreshTokenAsync = _ =>
             Task.FromResult(AuthResult.Failed("Unauthorized", AuthFailureType.InvalidCredentials));
 
         var notifiedNull = false;
@@ -236,14 +388,19 @@ public class AuthenticationSessionServiceLogoutTests
     {
         private readonly Dictionary<string, string> _dict = new();
         public bool ThrowOnRemove { get; set; }
+        public Func<string, string, Task>? OnSetAsync { get; set; }
 
         public Task<string?> GetAsync(string key) =>
             Task.FromResult(_dict.TryGetValue(key, out var val) ? val : null);
 
-        public Task SetAsync(string key, string value)
+        public async Task SetAsync(string key, string value)
         {
+            if (OnSetAsync != null)
+            {
+                await OnSetAsync(key, value);
+            }
+
             _dict[key] = value;
-            return Task.CompletedTask;
         }
 
         public bool Remove(string key)
@@ -264,7 +421,7 @@ public class AuthenticationSessionServiceLogoutTests
         public bool LogoutReturnValue { get; set; } = true;
         public Exception? ThrowOnLogout { get; set; }
         public string? LastLogoutRefreshToken { get; private set; }
-        public Func<Task<AuthResult>>? OnRefreshTokenAsync { get; set; }
+        public Func<string, Task<AuthResult>>? OnRefreshTokenAsync { get; set; }
 
         public Task<bool> LogoutAsync(string refreshToken, CancellationToken cancellationToken = default)
         {
@@ -277,7 +434,7 @@ public class AuthenticationSessionServiceLogoutTests
         {
             if (OnRefreshTokenAsync != null)
             {
-                return await OnRefreshTokenAsync();
+                return await OnRefreshTokenAsync(refreshToken);
             }
 
             return AuthResult.Success("fresh-acc", "fresh-ref", new AuthUser(Guid.NewGuid(), "a@b.com", "STUDENT", "LOCAL", true));
