@@ -12,7 +12,7 @@ public sealed class CosmosPoint
     public double[] Coordinates { get; set; } = [0, 0]; // [longitude, latitude]
 }
 
-public sealed class RoomDocument
+public sealed class RoomDocument : IProjectionVersionedDocument
 {
     [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
@@ -32,6 +32,12 @@ public sealed class RoomDocument
     [JsonProperty("address")]
     public string Address { get; set; } = string.Empty;
 
+    [JsonProperty("thumbnailUrl")]
+    public string? ThumbnailUrl { get; set; }
+
+    [JsonProperty("imageUrls")]
+    public List<string> ImageUrls { get; set; } = [];
+
     [JsonProperty("isVerified")]
     public bool IsVerified { get; set; }
 
@@ -39,10 +45,16 @@ public sealed class RoomDocument
     public int Status { get; set; }
 
     [JsonProperty("deposit")]
-    public decimal Deposit { get; set; }
+    public decimal? Deposit { get; set; }
 
     [JsonProperty("roomType")]
     public string RoomType { get; set; } = string.Empty;
+
+    [JsonProperty("bedrooms")]
+    public int? Bedrooms { get; set; }
+
+    [JsonProperty("bathrooms")]
+    public int? Bathrooms { get; set; }
 
     [JsonProperty("amenities")]
     public List<string> Amenities { get; set; } = [];
@@ -54,7 +66,7 @@ public sealed class RoomDocument
     public string LandlordPhone { get; set; } = string.Empty;
 
     [JsonProperty("lastUpdatedDate")]
-    public DateTime LastUpdatedDate { get; set; }
+    public DateTime? LastUpdatedDate { get; set; }
 
     [JsonProperty("latitude")]
     public double? Latitude { get; set; }
@@ -64,6 +76,58 @@ public sealed class RoomDocument
 
     [JsonProperty("location")]
     public CosmosPoint? Location { get; set; }
+
+    [JsonProperty("projectionVersion")]
+    public long ProjectionVersion { get; set; }
+
+    [JsonProperty("isDeleted")]
+    public bool IsDeleted { get; set; }
+
+    [JsonProperty("_etag")]
+    public string? ETag { get; set; }
+
+    /// <summary>
+    /// Applies only fields owned by <see cref="RoomListingDocument"/> to an
+    /// existing detail document. Detail-only fields, including the gallery,
+    /// deposit, room type, amenities, house rules, contact details, and room
+    /// counts, must survive listing synchronization.
+    /// </summary>
+    public static RoomDocument MergeListingFields(
+        RoomListingDocument listing,
+        RoomDocument? existingDetail)
+    {
+        ArgumentNullException.ThrowIfNull(listing);
+
+        var detail = existingDetail ?? new RoomDocument { Id = listing.Id };
+
+        detail.Id = listing.Id;
+        detail.Title = listing.Title;
+        detail.Description = listing.Description;
+        detail.Price = listing.MonthlyRentAmount;
+        detail.Area = listing.AreaSquareMeters;
+        detail.Address = listing.Address;
+        detail.ThumbnailUrl = listing.ThumbnailUrl;
+        detail.IsVerified = listing.VerificationStatus == 2;
+        detail.Status = listing.Status;
+        // A listing's creation timestamp is only a valid initial value. It must
+        // never overwrite the detail record's actual last-update timestamp.
+        detail.LastUpdatedDate ??= listing.CreatedAtUtc;
+        detail.Latitude = listing.Latitude;
+        detail.Longitude = listing.Longitude;
+        detail.Location = new CosmosPoint
+        {
+            Coordinates = [listing.Longitude, listing.Latitude]
+        };
+
+        // A new document has no gallery yet, so its thumbnail is a reasonable
+        // initial image. Existing galleries are never replaced by listing data.
+        if (existingDetail is null && !string.IsNullOrWhiteSpace(listing.ThumbnailUrl))
+        {
+            detail.ImageUrls = [listing.ThumbnailUrl];
+        }
+
+        return detail;
+    }
 
     public static RoomDocument FromDomain(Room room)
     {
@@ -87,10 +151,14 @@ public sealed class RoomDocument
             Price = room.Price,
             Area = room.Area,
             Address = room.Address,
+            ThumbnailUrl = room.ThumbnailUrl,
+            ImageUrls = room.ImageUrls.ToList(),
             IsVerified = room.IsVerified,
             Status = (int)room.Status,
             Deposit = room.Deposit,
             RoomType = room.RoomType,
+            Bedrooms = room.Bedrooms,
+            Bathrooms = room.Bathrooms,
             Amenities = room.Amenities.ToList(),
             HouseRules = room.HouseRules.ToList(),
             LandlordPhone = room.LandlordPhone,
@@ -120,10 +188,14 @@ public sealed class RoomDocument
             Price = Price,
             Area = Area,
             Address = Address,
+            ThumbnailUrl = ThumbnailUrl,
+            ImageUrls = ImageUrls ?? [],
             IsVerified = IsVerified,
             Status = (RoomStatus)Status,
             Deposit = Deposit,
             RoomType = RoomType,
+            Bedrooms = Bedrooms,
+            Bathrooms = Bathrooms,
             Amenities = Amenities ?? [],
             HouseRules = HouseRules ?? [],
             LandlordPhone = LandlordPhone,

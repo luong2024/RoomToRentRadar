@@ -32,7 +32,7 @@ public static class RoomDetailServiceRegistration
             return services;
         }
 
-        // Reuse CosmosDbContext's Rooms container and CosmosClient instead of creating duplicate instances
+        // Reuse CosmosDbContext's Rooms container
         services.AddScoped<Container>(sp =>
         {
             var dbContext = sp.GetRequiredService<ICosmosDbContext>();

@@ -392,6 +392,122 @@ public class AuthAndRbacIntegrationTests
         });
     }
 
+    [Test]
+    public async Task Logout_WithValidSession_ShouldReturn204NoContent_AndSubsequentRefreshShouldFailWith401()
+    {
+        var email = $"logout.valid.{Guid.NewGuid():N}@ictu.edu.vn";
+        await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterUserRequest(email, "SecurePass123", "STUDENT"));
+        var loginRes = await _client.PostAsJsonAsync("/api/v1/auth/login", new LoginWithEmailRequest(email, "SecurePass123"));
+        var session = await loginRes.Content.ReadFromJsonAsync<AuthSessionResponse>();
+
+        var logoutResponse = await _client.PostAsJsonAsync("/api/v1/auth/logout", new LogoutRequest(session!.RefreshToken));
+        Assert.That(logoutResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+        var refreshResponse = await _client.PostAsJsonAsync("/api/v1/auth/refresh", new RefreshSessionRequest(session.RefreshToken));
+        Assert.That(refreshResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
+    public async Task Logout_WhenAccessTokenExpired_ShouldStillSucceedWith204NoContent()
+    {
+        var email = $"logout.expiredjwt.{Guid.NewGuid():N}@ictu.edu.vn";
+        await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterUserRequest(email, "SecurePass123", "STUDENT"));
+        var loginRes = await _client.PostAsJsonAsync("/api/v1/auth/login", new LoginWithEmailRequest(email, "SecurePass123"));
+        var session = await loginRes.Content.ReadFromJsonAsync<AuthSessionResponse>();
+
+        var expiredJwt = CreateCustomJwt(
+            secret: AuthWebApplicationFactory.TestJwtSecret,
+            claims:
+            [
+                new Claim(JwtRegisteredClaimNames.Sub, session!.UserId.ToString()),
+                new Claim(ClaimTypes.Role, "STUDENT"),
+                new Claim(AuthClaimTypes.SecurityStamp, "stamp")
+            ],
+            expiresUtc: DateTime.UtcNow.AddMinutes(-5));
+
+        using var logoutRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
+        logoutRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", expiredJwt);
+        logoutRequest.Content = JsonContent.Create(new LogoutRequest(session.RefreshToken));
+
+        var logoutResponse = await _client.SendAsync(logoutRequest);
+        Assert.That(logoutResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+        var refreshResponse = await _client.PostAsJsonAsync("/api/v1/auth/refresh", new RefreshSessionRequest(session.RefreshToken));
+        Assert.That(refreshResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
+    public async Task Logout_WhenCalledRepeatedlyWithSameToken_ShouldBeIdempotentAndReturn204NoContent()
+    {
+        var email = $"logout.idempotent.{Guid.NewGuid():N}@ictu.edu.vn";
+        await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterUserRequest(email, "SecurePass123", "STUDENT"));
+        var loginRes = await _client.PostAsJsonAsync("/api/v1/auth/login", new LoginWithEmailRequest(email, "SecurePass123"));
+        var session = await loginRes.Content.ReadFromJsonAsync<AuthSessionResponse>();
+
+        var firstLogout = await _client.PostAsJsonAsync("/api/v1/auth/logout", new LogoutRequest(session!.RefreshToken));
+        var secondLogout = await _client.PostAsJsonAsync("/api/v1/auth/logout", new LogoutRequest(session.RefreshToken));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(firstLogout.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+            Assert.That(secondLogout.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+        });
+    }
+
+    [Test]
+    public async Task Logout_WhenTokenDoesNotExist_ShouldReturn401Unauthorized()
+    {
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/logout", new LogoutRequest("non-existent-refresh-token"));
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+            Assert.That(problem, Is.Not.Null);
+            Assert.That(problem!.Status, Is.EqualTo(401));
+        });
+    }
+
+    [Test]
+    public async Task Logout_WhenRequestBodyMissingRefreshToken_ShouldReturn400BadRequest()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
+        request.Content = new StringContent("{}", Encoding.UTF8, "application/json");
+
+        var response = await _client.SendAsync(request);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(problem, Is.Not.Null);
+            Assert.That(problem!.Status, Is.EqualTo(400));
+        });
+    }
+
+    [Test]
+    public async Task Logout_WhenRequestsExceedRateLimit_ShouldReturn429TooManyRequests()
+    {
+        using var rateLimitedFactory = new AuthWebApplicationFactory(authPermitLimit: 3);
+        using var client = rateLimitedFactory.CreateClient();
+
+        for (var i = 0; i < 3; i++)
+        {
+            var response = await client.PostAsJsonAsync("/api/v1/auth/logout", new LogoutRequest("some-dummy-token"));
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        }
+
+        var throttledResponse = await client.PostAsJsonAsync("/api/v1/auth/logout", new LogoutRequest("some-dummy-token"));
+        var problem = await throttledResponse.Content.ReadFromJsonAsync<ProblemDetails>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(throttledResponse.StatusCode, Is.EqualTo(HttpStatusCode.TooManyRequests));
+            Assert.That(problem, Is.Not.Null);
+            Assert.That(problem!.Status, Is.EqualTo(429));
+        });
+    }
+
     private async Task<HttpResponseMessage> SendWithBearerAsync(string url, string token)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, url);

@@ -39,12 +39,42 @@ public sealed class LogoutUseCase : ILogoutUseCase
         var existingToken = await _refreshTokenRepository.GetByTokenHashAsync(tokenHash, cancellationToken)
             ?? throw new InvalidRefreshTokenException();
 
-        if (!existingToken.IsRevoked)
+        // Idempotency: If already revoked, return cleanly without re-executing or throwing.
+        if (existingToken.IsRevoked)
         {
-            var utcNow = _timeProvider.GetUtcNow();
-            existingToken.Revoke(utcNow, "UserLogout");
-            _refreshTokenRepository.Update(existingToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            return;
         }
+
+        var utcNow = _timeProvider.GetUtcNow();
+
+        // Atomicity & Token Family Scoping: Execute in transaction, revoking all active tokens
+        // belonging exclusively to this token family. Independent sessions (different families) remain unaffected.
+        await _unitOfWork.ExecuteInTransactionAsync(async ct =>
+        {
+            var familyTokens = await _refreshTokenRepository.GetByFamilyAsync(existingToken.TokenFamily, ct);
+            var anyUpdated = false;
+
+            if (!existingToken.IsRevoked)
+            {
+                existingToken.Revoke(utcNow, "UserLogout");
+                _refreshTokenRepository.Update(existingToken);
+                anyUpdated = true;
+            }
+
+            foreach (var familyToken in familyTokens)
+            {
+                if (!familyToken.IsRevoked)
+                {
+                    familyToken.Revoke(utcNow, "UserLogout");
+                    _refreshTokenRepository.Update(familyToken);
+                    anyUpdated = true;
+                }
+            }
+
+            if (anyUpdated)
+            {
+                await _unitOfWork.SaveChangesAsync(ct);
+            }
+        }, cancellationToken);
     }
 }

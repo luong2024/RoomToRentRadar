@@ -46,6 +46,20 @@ public sealed class CosmosDbInitializer
                 new ContainerProperties(roomDetailsContainerName, "/id"),
                 cancellationToken: cancellationToken);
 
+            var roomsContainerName = string.IsNullOrWhiteSpace(_settings.RoomsContainerName) ? "Rooms" : _settings.RoomsContainerName;
+            _logger.LogInformation("Creating container '{RoomsContainerName}' (/id)...", roomsContainerName);
+            var roomsRepositoryContainerResponse = await database.CreateContainerIfNotExistsAsync(
+                new ContainerProperties(roomsContainerName, "/id"),
+                cancellationToken: cancellationToken);
+
+            var syncOutboxContainerName = string.IsNullOrWhiteSpace(_settings.RoomProjectionSyncOutboxContainerName)
+                ? "RoomProjectionSyncOutbox"
+                : _settings.RoomProjectionSyncOutboxContainerName;
+            _logger.LogInformation("Creating container '{SyncOutboxContainerName}' (/id)...", syncOutboxContainerName);
+            await database.CreateContainerIfNotExistsAsync(
+                new ContainerProperties(syncOutboxContainerName, "/id"),
+                cancellationToken: cancellationToken);
+
             var listingsContainerName = string.IsNullOrWhiteSpace(_settings.ContainerName) ? "RoomListings" : _settings.ContainerName;
             _logger.LogInformation("Creating container '{ListingsContainerName}' (/campusId)...", listingsContainerName);
             var roomsContainerResponse = await database.CreateContainerIfNotExistsAsync(
@@ -69,6 +83,14 @@ public sealed class CosmosDbInitializer
             await EnsureSpatialAndCompositeIndexesAsync(effectiveContainer, effectiveProperties, cancellationToken);
 
             await SeedInitialDataAsync(campusesContainerResponse.Container, effectiveContainer, cancellationToken);
+            if (roomsRepositoryContainerResponse?.Container is { } roomsRepositoryContainer)
+            {
+                await SynchronizeRoomDetailsAsync(effectiveContainer, roomsRepositoryContainer, cancellationToken);
+            }
+            else
+            {
+                _logger.LogWarning("Skipping room-details synchronization because the '{RoomsContainerName}' container is unavailable.", roomsContainerName);
+            }
 
             _logger.LogInformation("Cosmos DB initialization completed successfully.");
         }
@@ -215,7 +237,7 @@ public sealed class CosmosDbInitializer
 
                         // Map to RoomListingDocument and perform data parity verification / upsert
                         var isVerified = ((int?)doc["verificationStatus"] == 2) || ((bool?)doc["isVerified"] == true);
-                        var status = (int?)doc["status"] == 0 ? 0 : 1;
+                        var status = MapLegacyStatusToListingStatus((int?)doc["status"]);
 
                         var listingDoc = new RoomListingDocument
                         {
@@ -457,9 +479,21 @@ public sealed class CosmosDbInitializer
         properties.IndexingPolicy = indexingPolicy;
         var modified = false;
 
-        if (!indexingPolicy.SpatialIndexes.Any(index => index.Path.Equals("/location/*", StringComparison.Ordinal)))
+        var locationIndex = indexingPolicy.SpatialIndexes.FirstOrDefault(index =>
+            index.Path.Equals("/location/*", StringComparison.Ordinal));
+
+        if (locationIndex is null)
         {
-            indexingPolicy.SpatialIndexes.Add(new SpatialPath { Path = "/location/*" });
+            indexingPolicy.SpatialIndexes.Add(new SpatialPath
+            {
+                Path = "/location/*",
+                SpatialTypes = { SpatialType.Point }
+            });
+            modified = true;
+        }
+        else if (!locationIndex.SpatialTypes.Contains(SpatialType.Point))
+        {
+            locationIndex.SpatialTypes.Add(SpatialType.Point);
             modified = true;
         }
 
@@ -561,12 +595,12 @@ public sealed class CosmosDbInitializer
                 {
                     Id = "room-ictu-001",
                     CampusId = ictuId,
-                    Title = "Phòng trọ khép kín cao cấp ngõ 89 Z115 sát cổng ICTU",
-                    Description = "Phòng mới xây có điều hòa, nóng lạnh, gác xép, wifi tốc độ cao. Cách cổng chính ICTU 200m đi bộ.",
+                    Title = "Premium private room near ICTU Gate, Alley 89 Z115",
+                    Description = "Newly built room with air conditioning, water heater, mezzanine, and high-speed Wi-Fi. A 200 m walk from ICTU's main gate.",
                     MonthlyRentAmount = 1800000,
                     MonthlyRentCurrency = "VND",
                     AreaSquareMeters = 22.0,
-                    Address = "Số 15 ngõ 89 đường Z115, Quyết Thắng, TP. Thái Nguyên",
+                    Address = "15 Alley 89, Z115 Road, Quyết Thắng, Thái Nguyên City",
                     Latitude = 21.5865,
                     Longitude = 105.8080,
                     Location = new Microsoft.Azure.Cosmos.Spatial.Point(105.8080, 21.5865),
@@ -579,12 +613,12 @@ public sealed class CosmosDbInitializer
                 {
                     Id = "room-ictu-002",
                     CampusId = ictuId,
-                    Title = "Ký túc xá tư nhân full đồ ban công thoáng mát",
-                    Description = "Full nội thất giường tầng, bàn học, tủ quần áo riêng. Giờ giấc tự do, an ninh camera 24/7.",
+                    Title = "Fully furnished private dorm room with a balcony",
+                    Description = "Includes bunk beds, study desks, and private wardrobes. Flexible hours with 24/7 camera security.",
                     MonthlyRentAmount = 1200000,
                     MonthlyRentCurrency = "VND",
                     AreaSquareMeters = 18.5,
-                    Address = "Đường Tân Thịnh, đối diện cổng phụ ICTU",
+                    Address = "Tân Thịnh Road, opposite ICTU's secondary gate",
                     Latitude = 21.5840,
                     Longitude = 105.8060,
                     Location = new Microsoft.Azure.Cosmos.Spatial.Point(105.8060, 21.5840),
@@ -597,12 +631,12 @@ public sealed class CosmosDbInitializer
                 {
                     Id = "room-ictu-003",
                     CampusId = ictuId,
-                    Title = "Căn hộ mini 1 phòng ngủ 1 khách cho nhóm sinh viên",
-                    Description = "Căn hộ mini rộng rãi, có bếp riêng, máy giặt chung sân phơi tầng thượng. Thích hợp ở 2-3 bạn.",
+                    Title = "One-bedroom mini apartment for students",
+                    Description = "Spacious mini apartment with a private kitchen, shared washing machine, and rooftop drying area. Suitable for 2–3 people.",
                     MonthlyRentAmount = 2800000,
                     MonthlyRentCurrency = "VND",
                     AreaSquareMeters = 35.0,
-                    Address = "Tổ 4, P. Thịnh Đán, TP. Thái Nguyên",
+                    Address = "Group 4, Thịnh Đán Ward, Thái Nguyên City",
                     Latitude = 21.5790,
                     Longitude = 105.8020,
                     Location = new Microsoft.Azure.Cosmos.Spatial.Point(105.8020, 21.5790),
@@ -615,12 +649,12 @@ public sealed class CosmosDbInitializer
                 {
                     Id = "room-ictu-004",
                     CampusId = ictuId,
-                    Title = "Phòng trọ giá rẻ cho sinh viên năm nhất",
-                    Description = "Phòng trọ bình dân có vệ sinh khép kín, gần chợ sinh viên Quyết Thắng.",
+                    Title = "Affordable room for first-year students",
+                    Description = "Budget-friendly room with a private bathroom, near Quyết Thắng student market.",
                     MonthlyRentAmount = 900000,
                     MonthlyRentCurrency = "VND",
                     AreaSquareMeters = 15.0,
-                    Address = "Khu tập thể Z115, TP. Thái Nguyên",
+                    Address = "Z115 residential area, Thái Nguyên City",
                     Latitude = 21.5890,
                     Longitude = 105.8110,
                     Location = new Microsoft.Azure.Cosmos.Spatial.Point(105.8110, 21.5890),
@@ -633,12 +667,12 @@ public sealed class CosmosDbInitializer
                 {
                     Id = "room-ictu-005",
                     CampusId = ictuId,
-                    Title = "Phòng trọ đã có bạn thuê (Test Occupied - AC4)",
-                    Description = "Phòng trọ đã kín người.",
+                    Title = "Rented room (occupied listing)",
+                    Description = "This room is fully occupied.",
                     MonthlyRentAmount = 1500000,
                     MonthlyRentCurrency = "VND",
                     AreaSquareMeters = 20.0,
-                    Address = "Đường Z115, TP. Thái Nguyên",
+                    Address = "Z115 Road, Thái Nguyên City",
                     Latitude = 21.5855,
                     Longitude = 105.8075,
                     Location = new Microsoft.Azure.Cosmos.Spatial.Point(105.8075, 21.5855),
@@ -651,12 +685,12 @@ public sealed class CosmosDbInitializer
                 {
                     Id = "room-ictu-006",
                     CampusId = ictuId,
-                    Title = "Phòng trọ chưa kiểm duyệt (Test Unverified - AC4)",
-                    Description = "Phòng mới đăng chờ admin duyệt.",
+                    Title = "Unverified room listing",
+                    Description = "New listing awaiting administrator approval.",
                     MonthlyRentAmount = 1600000,
                     MonthlyRentCurrency = "VND",
                     AreaSquareMeters = 20.0,
-                    Address = "Đường Z115, TP. Thái Nguyên",
+                    Address = "Z115 Road, Thái Nguyên City",
                     Latitude = 21.5855,
                     Longitude = 105.8075,
                     Location = new Microsoft.Azure.Cosmos.Spatial.Point(105.8075, 21.5855),
@@ -669,10 +703,115 @@ public sealed class CosmosDbInitializer
 
             foreach (var room in sampleRooms)
             {
-                await roomsContainer.UpsertItemAsync(room, new PartitionKey(room.CampusId), cancellationToken: cancellationToken);
+                try
+                {
+                    await roomsContainer.CreateItemAsync(room, new PartitionKey(room.CampusId), cancellationToken: cancellationToken);
+                }
+                catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    _logger.LogDebug("Sample room {RoomId} already exists; leaving it unchanged.", room.Id);
+                }
             }
 
             _logger.LogInformation("Seeded {Count} sample rooms for campus {CampusId}.", sampleRooms.Count, ictuId);
         }
     }
+
+    private async Task SynchronizeRoomDetailsAsync(
+        Container listingsContainer,
+        Container roomsContainer,
+        CancellationToken cancellationToken)
+    {
+        var query = new QueryDefinition("SELECT * FROM c WHERE NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false");
+        using var iterator = listingsContainer.GetItemQueryIterator<RoomListingDocument>(query);
+        var synchronizedCount = 0;
+
+        while (iterator.HasMoreResults)
+        {
+            var page = await iterator.ReadNextAsync(cancellationToken);
+            foreach (var listing in page)
+            {
+                var existingDetail = await ReadItemOrNullAsync<RoomDocument>(
+                    roomsContainer,
+                    listing.Id,
+                    new PartitionKey(listing.Id),
+                    cancellationToken);
+                if (existingDetail is not null)
+                {
+                    if (existingDetail.IsDeleted)
+                    {
+                        _logger.LogDebug("Skipped deleted room {RoomId} during startup synchronization.", listing.Id);
+                        continue;
+                    }
+
+                    if (existingDetail.ProjectionVersion > listing.ProjectionVersion)
+                    {
+                        _logger.LogDebug("Skipped stale listing {RoomId} during startup synchronization.", listing.Id);
+                        continue;
+                    }
+
+                    if (existingDetail.ProjectionVersion == listing.ProjectionVersion &&
+                        !HasListingFieldsDiverged(listing, existingDetail))
+                    {
+                        _logger.LogDebug("Skipped up-to-date room {RoomId} with matching projection version {Version}.", listing.Id, listing.ProjectionVersion);
+                        continue;
+                    }
+                }
+
+                var detail = RoomDocument.MergeListingFields(listing, existingDetail);
+                detail.ProjectionVersion = listing.ProjectionVersion;
+                detail.IsDeleted = false;
+
+                try
+                {
+                    if (existingDetail is null)
+                    {
+                        await roomsContainer.CreateItemAsync(detail, new PartitionKey(detail.Id), cancellationToken: cancellationToken);
+                    }
+                    else
+                    {
+                        await roomsContainer.ReplaceItemAsync(
+                            detail,
+                            detail.Id,
+                            new PartitionKey(detail.Id),
+                            new ItemRequestOptions { IfMatchEtag = existingDetail.ETag },
+                            cancellationToken);
+                    }
+                    synchronizedCount++;
+                }
+                catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Conflict ||
+                                                 ex.StatusCode == System.Net.HttpStatusCode.PreconditionFailed)
+                {
+                    _logger.LogDebug("Skipped concurrent update for room {RoomId} during startup synchronization.", listing.Id);
+                }
+            }
+        }
+
+        _logger.LogInformation("Synchronized {Count} room detail records from Cosmos listings.", synchronizedCount);
+    }
+
+    private static bool HasListingFieldsDiverged(RoomListingDocument listing, RoomDocument detail)
+    {
+        if (!string.Equals(detail.Title, listing.Title, StringComparison.Ordinal)) return true;
+        if (!string.Equals(detail.Description, listing.Description, StringComparison.Ordinal)) return true;
+        if (detail.Price != listing.MonthlyRentAmount) return true;
+        if (detail.Area != listing.AreaSquareMeters) return true;
+        if (!string.Equals(detail.Address, listing.Address, StringComparison.Ordinal)) return true;
+        if (!string.Equals(detail.ThumbnailUrl, listing.ThumbnailUrl, StringComparison.Ordinal)) return true;
+        if (detail.IsVerified != (listing.VerificationStatus == 2)) return true;
+        if (detail.Status != listing.Status) return true;
+        if (detail.Latitude != listing.Latitude) return true;
+        if (detail.Longitude != listing.Longitude) return true;
+
+        return false;
+    }
+
+    private static int MapLegacyStatusToListingStatus(int? legacyStatus) => legacyStatus switch
+    {
+        0 => 0, // Available -> Available
+        1 => 1, // Rented -> Occupied
+        2 => 2, // Pending -> Reserved
+        3 => 3, // UnderMaintenance -> Hidden
+        _ => 3  // Unknown legacy state must not become bookable.
+    };
 }
