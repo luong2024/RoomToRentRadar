@@ -1,6 +1,8 @@
 using System.Globalization;
+using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.Exceptions;
+using RoomToRentRadar.Domain.ValueObjects;
 
 namespace RoomToRentRadar.Domain.Aggregates;
 
@@ -53,6 +55,26 @@ public sealed class Room
     public int Version { get; private set; }
     public string ConcurrencyToken { get; private set; }
 
+    private readonly HashSet<Amenity> _amenities = [];
+    private readonly List<RoomSafetyFeature> _safetyFeatures = [];
+    private readonly List<HouseRuleVersion> _houseRuleHistory = [];
+
+    public IReadOnlyCollection<Amenity> Amenities => _amenities;
+    public IReadOnlyCollection<RoomSafetyFeature> SafetyFeatures => _safetyFeatures.AsReadOnly();
+    public IReadOnlyCollection<HouseRuleVersion> HouseRuleHistory => _houseRuleHistory.AsReadOnly();
+
+    public HouseRuleVersion? CurrentHouseRules =>
+        _houseRuleHistory.OrderByDescending(h => h.VersionNumber).FirstOrDefault();
+
+    /// <summary>
+    /// Derived score (docs/erd.md §4.4, BR-LST-08):
+    /// When IsSafetyVerified is true, score = count of confirmed safety features.
+    /// Otherwise, score = count of declared safety features.
+    /// </summary>
+    public int SafetyScore => IsSafetyVerified
+        ? _safetyFeatures.Count(f => f.IsConfirmed)
+        : _safetyFeatures.Count;
+
     /// <summary>
     /// Version read from storage when this instance was loaded (GUARDRAILS §1.5.2). <c>UpdateAsync</c>
     /// must match THIS value, not <c>Version - 1</c>: several transitions may happen between load and save.
@@ -92,7 +114,10 @@ public sealed class Room
         DateTime lastUpdatedAtUtc,
         DateTime createdAtUtc,
         int version,
-        string concurrencyToken)
+        string concurrencyToken,
+        IEnumerable<Amenity>? amenities = null,
+        IEnumerable<RoomSafetyFeature>? safetyFeatures = null,
+        IEnumerable<HouseRuleVersion>? houseRuleHistory = null)
     {
         Id = id;
         LandlordId = landlordId;
@@ -128,6 +153,24 @@ public sealed class Room
         Version = version;
         LoadedVersion = version;
         ConcurrencyToken = concurrencyToken;
+
+        if (amenities != null)
+        {
+            foreach (var a in amenities)
+            {
+                _amenities.Add(a);
+            }
+        }
+
+        if (safetyFeatures != null)
+        {
+            _safetyFeatures.AddRange(safetyFeatures);
+        }
+
+        if (houseRuleHistory != null)
+        {
+            _houseRuleHistory.AddRange(houseRuleHistory);
+        }
     }
 
     /// <summary>ERD §1: every date-time column is stored and exposed as UTC.</summary>
@@ -172,9 +215,15 @@ public sealed class Room
         long? internetFeeVnd = null,
         long? parkingFeeVnd = null,
         string? otherFeesNote = null,
-        DateTime? utcNow = null)
+        DateTime? utcNow = null,
+        IEnumerable<Amenity>? amenities = null,
+        IEnumerable<SafetyFeature>? safetyFeatures = null)
     {
         var now = AsUtc(utcNow ?? DateTime.UtcNow)!.Value;
+
+        var initialSafetyFeatures = safetyFeatures?
+            .Distinct()
+            .Select(f => new RoomSafetyFeature(f, isConfirmed: false));
 
         var room = new Room(
             id: Guid.NewGuid().ToString("N"),
@@ -209,7 +258,9 @@ public sealed class Room
             lastUpdatedAtUtc: now,
             createdAtUtc: now,
             version: 1,
-            concurrencyToken: ConcurrencyTokenFor(1));
+            concurrencyToken: ConcurrencyTokenFor(1),
+            amenities: amenities,
+            safetyFeatures: initialSafetyFeatures);
 
         room.EnsureInvariants();
         return room;
@@ -249,7 +300,10 @@ public sealed class Room
         bool isSafetyVerified = false,
         DateTime? verifiedAtUtc = null,
         string? verifiedByUserId = null,
-        DateTime? publishedAtUtc = null)
+        DateTime? publishedAtUtc = null,
+        IEnumerable<Amenity>? amenities = null,
+        IEnumerable<RoomSafetyFeature>? safetyFeatures = null,
+        IEnumerable<HouseRuleVersion>? houseRuleHistory = null)
     {
         if (string.IsNullOrWhiteSpace(id))
         {
@@ -301,7 +355,10 @@ public sealed class Room
             version: version,
             concurrencyToken: string.IsNullOrWhiteSpace(concurrencyToken)
                 ? ConcurrencyTokenFor(version)
-                : concurrencyToken);
+                : concurrencyToken,
+            amenities: amenities,
+            safetyFeatures: safetyFeatures,
+            houseRuleHistory: houseRuleHistory);
 
         room.EnsureInvariants();
         return room;
@@ -402,6 +459,165 @@ public sealed class Room
 
         Status = ListingStatus.Suspended;
         StatusReason = reason.Trim();
+        Touch();
+    }
+
+    // ----------------------------------------------------------------- Amenities, Safety & House Rules
+
+    /// <summary>
+    /// Updates the amenities provided by this room (<c>docs/erd.md</c> §4.5).
+    /// Deduplicates items and validates against the <see cref="Amenity"/> catalog.
+    /// </summary>
+    public void SetAmenities(IEnumerable<Amenity> amenities)
+    {
+        ArgumentNullException.ThrowIfNull(amenities);
+
+        var validAmenities = new HashSet<Amenity>();
+        foreach (var amenity in amenities)
+        {
+            if (!Enum.IsDefined(amenity))
+            {
+                throw new DomainValidationException($"Amenity '{(int)amenity}' is not recognized.");
+            }
+            validAmenities.Add(amenity);
+        }
+
+        _amenities.Clear();
+        foreach (var a in validAmenities)
+        {
+            _amenities.Add(a);
+        }
+
+        Touch();
+    }
+
+    /// <summary>
+    /// Landlord declares safety features (<c>docs/erd.md</c> §4.6, BR-LST-08).
+    /// Features start with <c>IsConfirmed = false</c>. If the listing is already available or verified,
+    /// adding new features sets <see cref="NeedsReReview"/> to true.
+    /// </summary>
+    public void DeclareSafetyFeatures(IEnumerable<SafetyFeature> features)
+    {
+        ArgumentNullException.ThrowIfNull(features);
+
+        var featureList = features.ToList();
+        foreach (var f in featureList)
+        {
+            if (!Enum.IsDefined(f))
+            {
+                throw new DomainValidationException($"Safety feature '{(int)f}' is not recognized.");
+            }
+        }
+
+        var distinctFeatures = featureList.Distinct().ToList();
+        var existingConfirmed = _safetyFeatures.Where(f => f.IsConfirmed).Select(f => f.Feature).ToHashSet();
+        var addedAnyNew = distinctFeatures.Any(f => !_safetyFeatures.Any(existing => existing.Feature == f));
+
+        _safetyFeatures.Clear();
+        foreach (var f in distinctFeatures)
+        {
+            var isConfirmed = existingConfirmed.Contains(f);
+            _safetyFeatures.Add(new RoomSafetyFeature(f, isConfirmed));
+        }
+
+        if (addedAnyNew && (Status == ListingStatus.Available || IsSafetyVerified))
+        {
+            NeedsReReview = true;
+        }
+
+        Touch();
+    }
+
+    /// <summary>
+    /// Admin confirms safety features during moderation (BR-LST-08).
+    /// Marks confirmed features, sets <see cref="IsSafetyVerified"/> to true, and records the admin auditor.
+    /// </summary>
+    public void ConfirmSafetyFeatures(IEnumerable<SafetyFeature> confirmedFeatures, string adminUserId, DateTime? utcNow = null)
+    {
+        ArgumentNullException.ThrowIfNull(confirmedFeatures);
+        if (string.IsNullOrWhiteSpace(adminUserId))
+        {
+            throw new DomainValidationException("Admin user ID is required to confirm safety features.");
+        }
+
+        var confirmedSet = confirmedFeatures.ToHashSet();
+        for (var i = 0; i < _safetyFeatures.Count; i++)
+        {
+            var current = _safetyFeatures[i];
+            if (confirmedSet.Contains(current.Feature))
+            {
+                _safetyFeatures[i] = current.WithConfirmed(true);
+            }
+        }
+
+        IsSafetyVerified = true;
+        VerifiedByUserId = adminUserId.Trim();
+        VerifiedAtUtc = AsUtc(utcNow ?? DateTime.UtcNow);
+        Touch();
+    }
+
+    /// <summary>
+    /// Adds a new immutable house rules version to this room (<c>docs/erd.md</c> §4.7, BR-HR-01..02).
+    /// Version numbers increment sequentially.
+    /// </summary>
+    public void AddHouseRuleVersion(
+        GuestPolicy guestPolicy,
+        CookingPolicy cookingPolicy,
+        bool parkingAvailable,
+        bool petsAllowed,
+        bool smokingAllowed,
+        string createdByUserId,
+        string? quietHoursStart = null,
+        string? quietHoursEnd = null,
+        string? curfewTime = null,
+        string? guestPolicyNote = null,
+        string? parkingRules = null,
+        string? otherRules = null,
+        DateTime? utcNow = null)
+    {
+        var nextVersion = _houseRuleHistory.Count == 0 ? 1 : _houseRuleHistory.Max(h => h.VersionNumber) + 1;
+        var version = new HouseRuleVersion(
+            id: Guid.NewGuid().ToString("N"),
+            roomId: Id,
+            versionNumber: nextVersion,
+            guestPolicy: guestPolicy,
+            cookingPolicy: cookingPolicy,
+            parkingAvailable: parkingAvailable,
+            petsAllowed: petsAllowed,
+            smokingAllowed: smokingAllowed,
+            createdByUserId: createdByUserId,
+            createdAtUtc: utcNow ?? DateTime.UtcNow,
+            quietHoursStart: quietHoursStart,
+            quietHoursEnd: quietHoursEnd,
+            curfewTime: curfewTime,
+            guestPolicyNote: guestPolicyNote,
+            parkingRules: parkingRules,
+            otherRules: otherRules);
+
+        _houseRuleHistory.Add(version);
+        Touch();
+    }
+
+    /// <summary>
+    /// Attaches an existing house rule version instance, enforcing RoomId and sequential version integrity.
+    /// </summary>
+    public void AddHouseRuleVersion(HouseRuleVersion version)
+    {
+        ArgumentNullException.ThrowIfNull(version);
+        if (!string.Equals(version.RoomId, Id, StringComparison.Ordinal))
+        {
+            throw new DomainValidationException($"House rule version belongs to room '{version.RoomId}', not '{Id}'.");
+        }
+
+        var expectedVersion = _houseRuleHistory.Count == 0 ? 1 : _houseRuleHistory.Max(h => h.VersionNumber) + 1;
+        if (version.VersionNumber != expectedVersion)
+        {
+            throw new DomainValidationException(
+                $"Expected house rule version number {expectedVersion}, but received {version.VersionNumber}.",
+                "INVALID_VERSION_NUMBER");
+        }
+
+        _houseRuleHistory.Add(version);
         Touch();
     }
 
@@ -522,6 +738,14 @@ public sealed class Room
         if (ElectricityPriceVndPerKwh is < 0 or > 10_000)
         {
             throw new DomainValidationException("Electricity price must be between 0 and 10,000 VND per kWh."); // BR-LST-03
+        }
+
+        foreach (var amenity in _amenities)
+        {
+            if (!Enum.IsDefined(amenity))
+            {
+                throw new DomainValidationException($"Amenity '{(int)amenity}' is not recognized.");
+            }
         }
     }
 }
