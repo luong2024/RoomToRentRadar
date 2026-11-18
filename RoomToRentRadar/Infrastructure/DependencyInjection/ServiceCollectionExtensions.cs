@@ -56,6 +56,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IGoogleAuthAdapter, GoogleAuthAdapter>();
         services.AddSingleton<IProfileService, ProfileService>();
+        services.AddSingleton<IProfileUiThreadDispatcher, MauiProfileUiThreadDispatcher>();
         services.AddSingleton<IRoomDetailService, RoomDetailService>();
         return services;
     }

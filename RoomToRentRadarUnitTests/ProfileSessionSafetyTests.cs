@@ -66,7 +66,7 @@ public class ProfileSessionSafetyTests
         var session = new FakeSession(userA);
         var profiles = new SwitchingProfileService(
             new ProfileApiDto { UserId = userA.Id, Role = "STUDENT", FullName = "User A" });
-        var viewModel = new ProfileViewModel(profiles, new NoOpErrorHandler(), session);
+        var viewModel = new ProfileViewModel(profiles, new NoOpErrorHandler(), session, new RecordingDispatcher());
 
         await viewModel.LoadAsync();
         Assert.That(viewModel.FullName, Is.EqualTo("User A"));
@@ -91,6 +91,77 @@ public class ProfileSessionSafetyTests
         {
             Assert.That(viewModel.FullName, Is.EqualTo("User B"));
             Assert.That(viewModel.AccountEmail, Is.EqualTo("b@example.com"));
+        });
+    }
+
+    [Test]
+    public async Task LoadAsync_WhenEarlierRequestFinishesAfterLaterRequest_DoesNotOverwriteNewerProfile()
+    {
+        var user = new AuthUser(Guid.NewGuid(), "user@example.com", "STUDENT", "LOCAL", true);
+        var profiles = new QueuedProfileService();
+        var viewModel = new ProfileViewModel(profiles, new NoOpErrorHandler(), new FakeSession(user));
+
+        var firstLoad = viewModel.LoadAsync();
+        await profiles.FirstRequestStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        var secondLoad = viewModel.LoadAsync();
+        await profiles.SecondRequestStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        profiles.CompleteSecond(new ProfileApiDto { UserId = user.Id, Role = "STUDENT", FullName = "Newest profile" });
+        await secondLoad;
+        profiles.CompleteFirst(new ProfileApiDto { UserId = user.Id, Role = "STUDENT", FullName = "Stale profile" });
+        await firstLoad;
+
+        Assert.That(viewModel.FullName, Is.EqualTo("Newest profile"));
+    }
+
+    [Test]
+    public async Task CurrentUserChanged_WhenRaisedFromBackgroundThread_DispatchesProfileStateUpdate()
+    {
+        var userA = new AuthUser(Guid.NewGuid(), "a@example.com", "STUDENT", "LOCAL", true);
+        var userB = new AuthUser(Guid.NewGuid(), "b@example.com", "STUDENT", "LOCAL", true);
+        var session = new FakeSession(userA);
+        var profiles = new SwitchingProfileService(new ProfileApiDto { UserId = userA.Id, Role = "STUDENT", FullName = "User A" });
+        var dispatcher = new RecordingDispatcher();
+        var viewModel = new ProfileViewModel(profiles, new NoOpErrorHandler(), session, dispatcher);
+
+        await viewModel.LoadAsync();
+        await Task.Run(() => session.SaveSessionAsync("access", "refresh", userB));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(dispatcher.DispatchCount, Is.EqualTo(1));
+            Assert.That(viewModel.FullName, Is.Empty);
+            Assert.That(viewModel.AccountEmail, Is.EqualTo("b@example.com"));
+        });
+    }
+
+    [Test]
+    public async Task LoadAsync_WhenSameUserHasPendingAvatar_RestoresPendingAvatarPreview()
+    {
+        var user = new AuthUser(Guid.NewGuid(), "user@example.com", "STUDENT", "LOCAL", true);
+        var pendingAvatar = new PendingProfileAvatar();
+        var profiles = new StaticProfileService(new ProfileApiDto
+        {
+            UserId = user.Id,
+            Role = "STUDENT",
+            FullName = "Profile user",
+            AvatarUrl = "https://cdn.example/avatar.png"
+        });
+        var viewModel = new ProfileViewModel(
+            profiles,
+            new NoOpErrorHandler(),
+            new FakeSession(user),
+            new RecordingDispatcher(),
+            pendingAvatar);
+
+        await viewModel.LoadAsync();
+        pendingAvatar.Set(user.Id, "data:image/png;base64,AQIDBA==");
+        await viewModel.LoadAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.AvatarUrl, Is.EqualTo("https://cdn.example/avatar.png"));
+            Assert.That(viewModel.AvatarPreview, Is.Not.Null);
         });
     }
 
@@ -135,6 +206,58 @@ public class ProfileSessionSafetyTests
     private sealed class NoOpErrorHandler : IErrorHandler
     {
         public void HandleError(Exception ex) { }
+    }
+
+    private sealed class RecordingDispatcher : IProfileUiThreadDispatcher
+    {
+        public int DispatchCount { get; private set; }
+
+        public void Dispatch(Action action)
+        {
+            DispatchCount++;
+            action();
+        }
+    }
+
+    private sealed class StaticProfileService(ProfileApiDto profile) : IProfileService
+    {
+        public Task<ProfileApiDto?> GetMyProfileAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<ProfileApiDto?>(profile);
+
+        public Task<ProfileApiDto?> UpdateAsync(ProfileApiDto updatedProfile, string? newAvatarData, CancellationToken cancellationToken = default) =>
+            Task.FromResult<ProfileApiDto?>(updatedProfile);
+    }
+
+    private sealed class QueuedProfileService : IProfileService
+    {
+        private readonly TaskCompletionSource<ProfileApiDto?> _firstProfile = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<ProfileApiDto?> _secondProfile = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _requestCount;
+
+        public TaskCompletionSource<bool> FirstRequestStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<bool> SecondRequestStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task<ProfileApiDto?> GetMyProfileAsync(CancellationToken cancellationToken = default)
+        {
+            return Interlocked.Increment(ref _requestCount) switch
+            {
+                1 => Start(FirstRequestStarted, _firstProfile),
+                2 => Start(SecondRequestStarted, _secondProfile),
+                _ => throw new InvalidOperationException("Unexpected profile request.")
+            };
+        }
+
+        public Task<ProfileApiDto?> UpdateAsync(ProfileApiDto profile, string? newAvatarData, CancellationToken cancellationToken = default) =>
+            Task.FromResult<ProfileApiDto?>(profile);
+
+        public void CompleteFirst(ProfileApiDto profile) => _firstProfile.SetResult(profile);
+        public void CompleteSecond(ProfileApiDto profile) => _secondProfile.SetResult(profile);
+
+        private static Task<ProfileApiDto?> Start(TaskCompletionSource<bool> started, TaskCompletionSource<ProfileApiDto?> response)
+        {
+            started.SetResult(true);
+            return response.Task;
+        }
     }
 
     private sealed class SwitchingProfileService(ProfileApiDto firstProfile) : IProfileService

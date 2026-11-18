@@ -13,8 +13,10 @@ public partial class ProfileViewModel : ObservableObject
     private readonly IProfileService _profileService;
     private readonly IErrorHandler _errorHandler;
     private readonly IAuthenticationSessionService _sessionService;
-    private readonly PendingProfileAvatar _pendingAvatar = new();
+    private readonly IProfileUiThreadDispatcher _uiThreadDispatcher;
+    private readonly PendingProfileAvatar _pendingAvatar;
     private Guid? _loadedProfileUserId;
+    private long _loadVersion;
 
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private string _statusMessage = string.Empty;
@@ -44,17 +46,36 @@ public partial class ProfileViewModel : ObservableObject
     public ProfileViewModel(
         IProfileService profileService,
         IErrorHandler errorHandler,
-        IAuthenticationSessionService sessionService)
+        IAuthenticationSessionService sessionService,
+        IProfileUiThreadDispatcher? uiThreadDispatcher = null)
+        : this(
+            profileService,
+            errorHandler,
+            sessionService,
+            uiThreadDispatcher ?? new MauiProfileUiThreadDispatcher(),
+            new PendingProfileAvatar())
+    {
+    }
+
+    internal ProfileViewModel(
+        IProfileService profileService,
+        IErrorHandler errorHandler,
+        IAuthenticationSessionService sessionService,
+        IProfileUiThreadDispatcher uiThreadDispatcher,
+        PendingProfileAvatar pendingAvatar)
     {
         _profileService = profileService;
         _errorHandler = errorHandler;
         _sessionService = sessionService;
+        _uiThreadDispatcher = uiThreadDispatcher;
+        _pendingAvatar = pendingAvatar;
         _sessionService.CurrentUserChanged += OnCurrentUserChanged;
     }
 
     [RelayCommand]
     public async Task LoadAsync()
     {
+        var loadVersion = Interlocked.Increment(ref _loadVersion);
         Guid? requestedUserId = null;
         try
         {
@@ -82,16 +103,19 @@ public partial class ProfileViewModel : ObservableObject
             var profile = await _profileService.GetMyProfileAsync();
             if (profile is null) throw new InvalidOperationException("Your profile could not be loaded.");
 
-            if (!ProfileSessionGuard.CanApplyProfile(_sessionService, currentUser, profile))
+            if (loadVersion != Volatile.Read(ref _loadVersion) ||
+                !ProfileSessionGuard.CanApplyProfile(_sessionService, currentUser, profile))
             {
                 return;
             }
 
             Apply(profile);
+            RestorePendingAvatarPreview(currentUser.Id);
         }
         catch (Exception ex)
         {
-            if (requestedUserId.HasValue && _sessionService.CurrentUser?.Id != requestedUserId)
+            if (loadVersion != Volatile.Read(ref _loadVersion) ||
+                (requestedUserId.HasValue && _sessionService.CurrentUser?.Id != requestedUserId))
             {
                 return;
             }
@@ -99,7 +123,13 @@ public partial class ProfileViewModel : ObservableObject
             StatusMessage = "Unable to load your profile. Please try again.";
             _errorHandler.HandleError(ex);
         }
-        finally { IsBusy = false; }
+        finally
+        {
+            if (loadVersion == Volatile.Read(ref _loadVersion))
+            {
+                IsBusy = false;
+            }
+        }
     }
 
     [RelayCommand]
@@ -251,7 +281,18 @@ public partial class ProfileViewModel : ObservableObject
         OnPropertyChanged(nameof(IsAdmin)); OnPropertyChanged(nameof(RoleDisplay));
     }
 
-    private async void OnCurrentUserChanged(object? sender, Core.Models.Authentication.AuthUser? user)
+    private void OnCurrentUserChanged(object? sender, Core.Models.Authentication.AuthUser? user)
+    {
+        if (_loadedProfileUserId == user?.Id)
+        {
+            return;
+        }
+
+        Interlocked.Increment(ref _loadVersion);
+        _uiThreadDispatcher.Dispatch(() => _ = HandleCurrentUserChangedAsync(user));
+    }
+
+    private async Task HandleCurrentUserChangedAsync(Core.Models.Authentication.AuthUser? user)
     {
         if (_loadedProfileUserId == user?.Id)
         {
@@ -304,6 +345,15 @@ public partial class ProfileViewModel : ObservableObject
         StaffCode = null;
         Department = null;
         JobTitle = null;
+    }
+
+    private void RestorePendingAvatarPreview(Guid userId)
+    {
+        var pendingAvatar = _pendingAvatar.GetFor(userId);
+        if (!string.IsNullOrWhiteSpace(pendingAvatar))
+        {
+            AvatarPreview = ToImageSource(pendingAvatar);
+        }
     }
 
     private ProfileApiDto BuildProfile(decimal? maxBudget) => new()

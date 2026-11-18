@@ -192,6 +192,17 @@ public class UserProfileTests
     }
 
     [Test]
+    public void UpdateBasicInfo_WhenAvatarIsHttpUrl_ShouldThrowProfileValidationException()
+    {
+        var profile = UserProfile.CreateDefault(Guid.NewGuid(), UserRole.Student, DateTimeOffset.UtcNow);
+
+        var ex = Assert.Throws<ProfileValidationException>(() =>
+            profile.UpdateBasicInfo("Avatar User", null, "http://storage.example/avatar.png", null, DateTimeOffset.UtcNow));
+
+        Assert.That(ex!.Message, Does.Contain("HTTPS URL"));
+    }
+
+    [Test]
     public void RehydrateBasicInfo_WhenFullNameIsEmpty_ShouldNotThrowAndPreserveState()
     {
         var profile = UserProfile.CreateDefault(Guid.NewGuid(), UserRole.Student, DateTimeOffset.UtcNow);

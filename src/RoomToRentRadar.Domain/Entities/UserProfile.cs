@@ -76,7 +76,7 @@ public sealed class UserProfile
         }
 
         if (Uri.TryCreate(avatarUrl, UriKind.Absolute, out var uri) &&
-            (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+            uri.Scheme == Uri.UriSchemeHttps)
         {
             return;
         }
