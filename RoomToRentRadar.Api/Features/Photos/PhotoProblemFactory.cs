@@ -5,6 +5,7 @@ namespace RoomToRentRadar.Api.Features.Photos;
 public static class PhotoProblemFactory
 {
     public const string ListingNotFound = "listing_not_found";
+    public const string ListingUnavailable = "listing_unavailable";
     public const string EmptyUpload = "empty_upload";
     public const string InvalidPhotoKind = "invalid_photo_kind";
     public const string InvalidPhoto = "invalid_photo";
@@ -17,6 +18,12 @@ public static class PhotoProblemFactory
         StatusCodes.Status404NotFound,
         "Listing not found",
         $"Listing '{listingId}' does not exist.");
+
+    public static ProblemDetails ListingUnavailableProblem() => Create(
+        ListingUnavailable,
+        StatusCodes.Status410Gone,
+        "Listing unavailable",
+        "The listing is not available.");
 
     public static ProblemDetails EmptyUploadProblem() => Create(
         EmptyUpload,
@@ -84,6 +91,7 @@ public static class PhotoProblemFactory
         StatusCodes.Status400BadRequest => "https://tools.ietf.org/html/rfc9110#section-15.5.1",
         StatusCodes.Status404NotFound => "https://tools.ietf.org/html/rfc9110#section-15.5.5",
         StatusCodes.Status409Conflict => "https://tools.ietf.org/html/rfc9110#section-15.5.10",
+        StatusCodes.Status410Gone => "https://tools.ietf.org/html/rfc9110#section-15.5.11",
         StatusCodes.Status413PayloadTooLarge => "https://tools.ietf.org/html/rfc9110#section-15.5.14",
         StatusCodes.Status415UnsupportedMediaType => "https://tools.ietf.org/html/rfc9110#section-15.5.16",
         _ => "about:blank"

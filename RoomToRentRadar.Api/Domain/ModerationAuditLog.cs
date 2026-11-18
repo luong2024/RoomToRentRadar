@@ -10,7 +10,7 @@ public sealed class ModerationAuditLog
     public ModerationAuditAction Action { get; set; }
     public ModerationResolutionAction? ResolutionAction { get; set; }
     public Guid ListingId { get; set; }
-    public Guid ReportId { get; set; }
+    public Guid? ReportId { get; set; }
     public ListingReportStatus? PreviousReportStatus { get; set; }
     public ListingReportStatus? NextReportStatus { get; set; }
     public string? Note { get; set; }

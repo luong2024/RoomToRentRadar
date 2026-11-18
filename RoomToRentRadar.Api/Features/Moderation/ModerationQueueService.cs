@@ -145,6 +145,59 @@ public sealed class ModerationQueueService(AppDbContext dbContext)
         return new ModerationReportQueueDto(items, pagination);
     }
 
+    /// <summary>
+    /// Lists listings for one status, oldest first, so moderators see the
+    /// longest-waiting pending-review listings before approving them.
+    /// </summary>
+    public async Task<ModerationListingQueueDto> GetListingQueueAsync(
+        ModerationListingQueueQuery query,
+        ModerationListingQueueCursor? cursor,
+        CancellationToken cancellationToken)
+    {
+        var listings = dbContext.Listings
+            .AsNoTracking()
+            .Where(listing => listing.Status == query.Status);
+
+        if (cursor is not null)
+        {
+            var createdAt = cursor.CreatedAt;
+            var listingId = cursor.ListingId;
+            listings = listings.Where(listing =>
+                listing.CreatedAt > createdAt
+                || (listing.CreatedAt == createdAt && listing.Id.CompareTo(listingId) > 0));
+        }
+
+        var rows = await listings
+            .OrderBy(listing => listing.CreatedAt)
+            .ThenBy(listing => listing.Id)
+            .Take(query.Limit + 1)
+            .Select(listing => new ModerationListingDto(
+                listing.Id,
+                listing.Title,
+                listing.OwnerId,
+                listing.Status,
+                listing.CreatedAt,
+                listing.UpdatedAt))
+            .ToListAsync(cancellationToken);
+
+        var hasMore = rows.Count > query.Limit;
+        if (hasMore)
+        {
+            rows.RemoveAt(rows.Count - 1);
+        }
+
+        string? nextCursor = null;
+        if (hasMore && rows.Count > 0)
+        {
+            var last = rows[^1];
+            nextCursor = ModerationListingQueueCursorCodec.Encode(
+                last.Status, last.CreatedAt, last.Id);
+        }
+
+        return new ModerationListingQueueDto(
+            rows, new PaginationInfo(query.Limit, nextCursor, hasMore));
+    }
+
     public Task<ModerationReportDetailDto?> GetReportAsync(
         Guid reportId,
         CancellationToken cancellationToken)

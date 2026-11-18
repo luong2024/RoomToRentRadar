@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RoomToRentRadar.Api.Features.Photos;
 using RoomToRentRadar.Shared.Listings;
@@ -11,21 +13,27 @@ public sealed class ListingPhotosController(ListingPhotosService listingPhotosSe
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<ListingPhotoDto>), StatusCodes.Status200OK, "application/json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status410Gone, "application/problem+json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError, "application/problem+json")]
     public async Task<ActionResult<IReadOnlyList<ListingPhotoDto>>> GetPhotos(
         Guid listingId,
         CancellationToken cancellationToken)
     {
-        var result = await listingPhotosService.GetGalleryAsync(listingId, cancellationToken);
+        var result = await listingPhotosService.GetGalleryAsync(
+            listingId,
+            CurrentUserIdOrNull,
+            cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : ToProblem(result.Problem!);
     }
 
+    [Authorize]
     [HttpPost]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(PhotoUploadLimits.MaxRequestBodyBytes)]
     [RequestFormLimits(MultipartBodyLengthLimit = PhotoUploadLimits.MaxRequestBodyBytes)]
     [ProducesResponseType(typeof(IReadOnlyList<ListingPhotoDto>), StatusCodes.Status201Created, "application/json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/problem+json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict, "application/problem+json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status413PayloadTooLarge, "application/problem+json")]
@@ -42,11 +50,25 @@ public sealed class ListingPhotosController(ListingPhotosService listingPhotosSe
             return ToProblem(validationProblem!);
         }
 
-        var result = await listingPhotosService.UploadAsync(listingId, photoKind, files!, cancellationToken);
+        var result = await listingPhotosService.UploadAsync(
+            listingId,
+            CurrentUserId,
+            photoKind,
+            files!,
+            cancellationToken);
         return result.IsSuccess
             ? Created($"/api/v1/listings/{listingId}/photos", result.Value)
             : ToProblem(result.Problem!);
     }
+
+    private Guid? CurrentUserIdOrNull
+        => User.Identity?.IsAuthenticated == true
+            && Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)
+                ? userId
+                : null;
+
+    private Guid CurrentUserId
+        => Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
     private ObjectResult ToProblem(ProblemDetails problem)
         => Problem(

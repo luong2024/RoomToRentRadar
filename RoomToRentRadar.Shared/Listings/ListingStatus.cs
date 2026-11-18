@@ -7,6 +7,9 @@ public enum ListingStatus
     [JsonStringEnumMemberName("draft")]
     Draft,
 
+    [JsonStringEnumMemberName("pending_review")]
+    PendingReview,
+
     [JsonStringEnumMemberName("published")]
     Published,
 

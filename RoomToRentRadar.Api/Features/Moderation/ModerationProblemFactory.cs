@@ -6,6 +6,7 @@ public static class ModerationProblemFactory
 {
     public const string InvalidLimit = "invalid_limit";
     public const string InvalidCursor = "invalid_cursor";
+    public const string InvalidStatus = "invalid_status";
     public const string InvalidResolutionAction = "invalid_resolution_action";
     public const string InvalidModerationNote = "invalid_moderation_note";
     public const string ReportNotFound = "report_not_found";
@@ -14,6 +15,8 @@ public static class ModerationProblemFactory
     public const string InvalidReportState = "invalid_report_state";
     public const string InvalidListingTransition = "invalid_listing_transition";
     public const string ResolutionConflict = "resolution_conflict";
+    public const string ListingNotFound = "listing_not_found";
+    public const string ApprovalConflict = "approval_conflict";
 
     public static ProblemDetails InvalidQuery(string code, string detail)
     {
@@ -132,6 +135,45 @@ public static class ModerationProblemFactory
             Detail = "The report group or its listing changed concurrently; refresh the queue and try again."
         };
         problem.Extensions["code"] = ResolutionConflict;
+        return problem;
+    }
+
+    public static ProblemDetails ListingNotFoundProblem()
+    {
+        var problem = new ProblemDetails
+        {
+            Type = "https://tools.ietf.org/html/rfc9110#section-15.5.5",
+            Status = StatusCodes.Status404NotFound,
+            Title = "Listing not found",
+            Detail = "No listing exists with the requested identifier."
+        };
+        problem.Extensions["code"] = ListingNotFound;
+        return problem;
+    }
+
+    public static ProblemDetails InvalidApprovalTransitionProblem()
+    {
+        var problem = new ProblemDetails
+        {
+            Type = "https://tools.ietf.org/html/rfc9110#section-15.5.10",
+            Status = StatusCodes.Status409Conflict,
+            Title = "Invalid listing transition",
+            Detail = "Only a pending-review listing can be approved."
+        };
+        problem.Extensions["code"] = InvalidListingTransition;
+        return problem;
+    }
+
+    public static ProblemDetails ApprovalConflictProblem()
+    {
+        var problem = new ProblemDetails
+        {
+            Type = "https://tools.ietf.org/html/rfc9110#section-15.5.10",
+            Status = StatusCodes.Status409Conflict,
+            Title = "Approval conflict",
+            Detail = "The listing changed concurrently; refresh and try again."
+        };
+        problem.Extensions["code"] = ApprovalConflict;
         return problem;
     }
 }

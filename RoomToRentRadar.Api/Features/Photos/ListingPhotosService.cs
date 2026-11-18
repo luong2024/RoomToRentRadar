@@ -8,16 +8,22 @@ namespace RoomToRentRadar.Api.Features.Photos;
 
 public sealed class ListingPhotosService(
     AppDbContext dbContext,
-    PhotoStorage photoStorage,
-    PhotoProcessor photoProcessor)
+    ListingPhotoWriter photoWriter)
 {
     public async Task<PhotoResult<IReadOnlyList<ListingPhotoDto>>> UploadAsync(
         Guid listingId,
+        Guid ownerId,
         ListingPhotoKind kind,
         IReadOnlyList<IFormFile> files,
         CancellationToken cancellationToken)
     {
-        if (!await dbContext.Listings.AnyAsync(x => x.Id == listingId, cancellationToken))
+        var listing = await dbContext.Listings
+            .AsNoTracking()
+            .Where(x => x.Id == listingId)
+            .Select(x => new { x.OwnerId })
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (listing is null || listing.OwnerId != ownerId)
         {
             return Failure(PhotoProblemFactory.ListingMissing(listingId));
         }
@@ -35,43 +41,22 @@ public sealed class ListingPhotosService(
         var nextSortOrder = existing.Count == 0 ? 0 : existing.Max(x => x.SortOrder) + 1;
         var hasCover = existing.Exists(x => x.IsCover);
 
-        var writtenPhotos = new List<Guid>();
-        var newPhotos = new List<ListingPhoto>(files.Count);
+        var write = await photoWriter.WriteAsync(
+            listingId,
+            files,
+            nextSortOrder,
+            hasCover,
+            kind,
+            cancellationToken);
+        if (!write.Succeeded)
+        {
+            return Failure(PhotoProblemFactory.PhotoInvalid());
+        }
+
+        var newPhotos = write.Photos.ToList();
 
         try
         {
-            foreach (var file in files)
-            {
-                var content = await ReadAsync(file, cancellationToken);
-                if (!photoProcessor.TryProcess(content, out var processed))
-                {
-                    DeleteWrittenPhotos(listingId, writtenPhotos);
-                    return Failure(PhotoProblemFactory.PhotoInvalid());
-                }
-
-                var photoId = Guid.NewGuid();
-                await photoStorage.SaveAsync(
-                    listingId,
-                    photoId,
-                    processed!.Original,
-                    processed.Thumbnail,
-                    cancellationToken);
-                writtenPhotos.Add(photoId);
-
-                newPhotos.Add(new ListingPhoto
-                {
-                    Id = photoId,
-                    ListingId = listingId,
-                    Url = photoStorage.GetOriginalUrl(listingId, photoId),
-                    ThumbUrl = photoStorage.GetThumbnailUrl(listingId, photoId),
-                    Width = processed.Width,
-                    Height = processed.Height,
-                    Kind = kind,
-                    SortOrder = nextSortOrder + newPhotos.Count,
-                    IsCover = !hasCover && newPhotos.Count == 0
-                });
-            }
-
             await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
             dbContext.ListingPhotos.AddRange(newPhotos);
             await dbContext.SaveChangesAsync(cancellationToken);
@@ -79,7 +64,7 @@ public sealed class ListingPhotosService(
         }
         catch
         {
-            DeleteWrittenPhotos(listingId, writtenPhotos);
+            photoWriter.Delete(listingId, write.WrittenPhotoIds);
             throw;
         }
 
@@ -89,11 +74,24 @@ public sealed class ListingPhotosService(
 
     public async Task<PhotoResult<IReadOnlyList<ListingPhotoDto>>> GetGalleryAsync(
         Guid listingId,
+        Guid? viewerId,
         CancellationToken cancellationToken)
     {
-        if (!await dbContext.Listings.AnyAsync(x => x.Id == listingId, cancellationToken))
+        var listing = await dbContext.Listings
+            .AsNoTracking()
+            .Where(x => x.Id == listingId)
+            .Select(x => new { x.Status, x.OwnerId })
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (listing is null)
         {
             return Failure(PhotoProblemFactory.ListingMissing(listingId));
+        }
+
+        if (listing.Status != ListingStatus.Published
+            && (viewerId is null || listing.OwnerId != viewerId))
+        {
+            return Failure(PhotoProblemFactory.ListingUnavailableProblem());
         }
 
         var photos = await dbContext.ListingPhotos
@@ -132,21 +130,4 @@ public sealed class ListingPhotosService(
         photo.Alt,
         photo.SortOrder,
         photo.IsCover);
-
-    private static async Task<byte[]> ReadAsync(IFormFile file, CancellationToken cancellationToken)
-    {
-        using var buffer = new MemoryStream();
-        await file.CopyToAsync(buffer, cancellationToken);
-        return buffer.ToArray();
-    }
-
-    private void DeleteWrittenPhotos(Guid listingId, List<Guid> writtenPhotos)
-    {
-        foreach (var photoId in writtenPhotos)
-        {
-            photoStorage.Delete(listingId, photoId);
-        }
-
-        writtenPhotos.Clear();
-    }
 }

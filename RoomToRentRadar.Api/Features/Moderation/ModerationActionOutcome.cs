@@ -4,6 +4,7 @@ public enum ModerationActionOutcome
 {
     Success,
     ReportNotFound,
+    ListingNotFound,
     ClaimConflict,
     NotClaimOwner,
     InvalidReportState,
