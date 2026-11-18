@@ -23,6 +23,13 @@ public interface IAuthenticationSessionService
     AuthUser? CurrentUser { get; }
 
     /// <summary>
+    /// Gets the current session generation identifier, which advances whenever a session is created,
+    /// replaced (account switch), or cleared (logout), but remains stable across token rotations
+    /// within the same authenticated session.
+    /// </summary>
+    long SessionEpoch => 0;
+
+    /// <summary>
     /// Event raised when the current authenticated user or authentication status changes.
     /// </summary>
     event EventHandler<AuthUser?>? CurrentUserChanged;

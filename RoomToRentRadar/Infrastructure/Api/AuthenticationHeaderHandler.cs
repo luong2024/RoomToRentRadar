@@ -27,7 +27,11 @@ public class AuthenticationHeaderHandler : DelegatingHandler
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
+        var initialSessionEpoch = _sessionService.SessionEpoch;
+        var initialUserId = _sessionService.CurrentUser?.Id;
         var token = await _sessionService.GetAccessTokenAsync(cancellationToken);
+        initialUserId ??= _sessionService.CurrentUser?.Id;
+
         if (!string.IsNullOrWhiteSpace(token))
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -39,39 +43,70 @@ public class AuthenticationHeaderHandler : DelegatingHandler
         // and request was not directed to an authentication endpoint (preventing recursion)
         if (response.StatusCode == HttpStatusCode.Unauthorized &&
             !string.IsNullOrWhiteSpace(token) &&
-            !IsAuthEndpoint(request.RequestUri))
+            !IsAuthEndpoint(request.RequestUri) &&
+            CanRetryRequest(request))
         {
             // Verify account isolation: do not retry if user logged out or switched accounts while request was in-flight
-            var currentToken = await _sessionService.GetAccessTokenAsync(cancellationToken);
-            if (!string.Equals(currentToken, token, StringComparison.Ordinal))
+            if (!IsSameActiveSession(initialUserId, initialSessionEpoch))
             {
                 return response;
             }
 
-            if (CanRetryRequest(request))
+            var currentToken = await _sessionService.GetAccessTokenAsync(cancellationToken);
+            if (!IsSameActiveSession(initialUserId, initialSessionEpoch))
             {
-                var refreshed = await _sessionService.RefreshTokenAsync(cancellationToken);
-                if (refreshed)
+                return response;
+            }
+
+            string? retryToken = null;
+
+            // Distinguish same-session token rotation from account switch/logout:
+            // If another concurrent request in the same session already rotated the access token,
+            // reuse that new token directly; otherwise trigger a token refresh.
+            if (!string.IsNullOrWhiteSpace(currentToken) &&
+                !string.Equals(currentToken, token, StringComparison.Ordinal))
+            {
+                retryToken = currentToken;
+            }
+            else if (await _sessionService.RefreshTokenAsync(cancellationToken) &&
+                     IsSameActiveSession(initialUserId, initialSessionEpoch))
+            {
+                retryToken = await _sessionService.GetAccessTokenAsync(cancellationToken);
+            }
+
+            if (!string.IsNullOrWhiteSpace(retryToken) &&
+                IsSameActiveSession(initialUserId, initialSessionEpoch))
+            {
+                var clonedRequest = await CloneHttpRequestMessageAsync(request, cancellationToken);
+                if (clonedRequest != null)
                 {
-                    var newToken = await _sessionService.GetAccessTokenAsync(cancellationToken);
-                    if (!string.IsNullOrWhiteSpace(newToken))
+                    using (clonedRequest)
                     {
-                        var clonedRequest = await CloneHttpRequestMessageAsync(request, cancellationToken);
-                        if (clonedRequest != null)
-                        {
-                            using (clonedRequest)
-                            {
-                                clonedRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", newToken);
-                                response.Dispose();
-                                return await base.SendAsync(clonedRequest, cancellationToken);
-                            }
-                        }
+                        clonedRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", retryToken);
+                        response.Dispose();
+                        return await base.SendAsync(clonedRequest, cancellationToken);
                     }
                 }
             }
         }
 
         return response;
+    }
+
+    private bool IsSameActiveSession(Guid? initialUserId, long initialSessionEpoch)
+    {
+        if (!_sessionService.IsAuthenticated)
+        {
+            return false;
+        }
+
+        if (_sessionService.SessionEpoch != initialSessionEpoch)
+        {
+            return false;
+        }
+
+        var currentUserId = _sessionService.CurrentUser?.Id;
+        return initialUserId == currentUserId;
     }
 
     private static bool IsAuthEndpoint(Uri? uri)
