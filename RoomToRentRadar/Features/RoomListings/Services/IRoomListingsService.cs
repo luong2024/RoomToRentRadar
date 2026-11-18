@@ -18,4 +18,9 @@ public interface IRoomListingsService
     Task<RoomListItemModel?> GetRoomByIdAsync(
         string roomId,
         CancellationToken cancellationToken = default);
+
+    Task<SearchRoomsResult> SearchRoomsAsync(
+        RoomSearchCriteria criteria,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult(new SearchRoomsResult([], 0, 0, criteria.PageNumber, []));
 }
