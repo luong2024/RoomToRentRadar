@@ -13,9 +13,21 @@ public interface IAuthenticationSessionService
     bool IsAuthenticated { get; }
 
     /// <summary>
+    /// Gets whether the initial session restoration attempt has completed.
+    /// </summary>
+    bool IsInitialized { get; }
+
+    /// <summary>
     /// Gets the current authenticated user's profile, or null if unauthenticated.
     /// </summary>
     AuthUser? CurrentUser { get; }
+
+    /// <summary>
+    /// Gets the current session generation identifier, which advances whenever a session is created,
+    /// replaced (account switch), or cleared (logout), but remains stable across token rotations
+    /// within the same authenticated session.
+    /// </summary>
+    long SessionEpoch => 0;
 
     /// <summary>
     /// Event raised when the current authenticated user or authentication status changes.
@@ -52,4 +64,15 @@ public interface IAuthenticationSessionService
     /// Clears the active session and removes stored credentials from secure storage.
     /// </summary>
     Task ClearSessionAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Logs out the user by revoking the refresh token with the backend (if reachable)
+    /// and clearing all local authentication tokens and persisted profile state.
+    /// </summary>
+    Task<LogoutResult> LogoutAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Awaits completion of the initial session restoration attempt on application startup.
+    /// </summary>
+    Task EnsureInitializedAsync(CancellationToken cancellationToken = default);
 }

@@ -1,7 +1,9 @@
 using System.Text;
+using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Core.Models.Authentication;
 using RoomToRentRadar.Features.Authentication.ViewModels;
+using RoomToRentRadar.Infrastructure.Services;
 
 namespace RoomToRentRadarUnitTests;
 
@@ -206,6 +208,108 @@ public class AuthViewModelTests
         Assert.That(_sessionService.SavedRefreshToken, Is.EqualTo("test-refresh-token"));
         Assert.That(_sessionService.SavedUser, Is.EqualTo(user));
         Assert.That(callbackUser, Is.EqualTo(user));
+    }
+
+    [Test]
+    public async Task SignInAsync_WhenReturnUrlQueryAttributeProvided_ShouldNavigateToPreservedReturnUrlAndResetIt()
+    {
+        _viewModel.ApplyQueryAttributes(new Dictionary<string, object>
+        {
+            ["returnUrl"] = Uri.EscapeDataString("//booking?roomId=99")
+        });
+
+        Assert.That(_viewModel.ReturnUrl, Is.EqualTo("//booking?roomId=99"));
+
+        _viewModel.LoginEmail = "student@example.com";
+        _viewModel.LoginPassword = "ValidPassword1";
+
+        var user = new AuthUser(Guid.NewGuid(), "student@example.com", UserRoleConstants.Student, "LOCAL", true);
+        _authPort.LoginResult = AuthResult.Success("test-access-token", "test-refresh-token", user);
+
+        string? navigatedRoute = null;
+        _viewModel.NavigateToRouteHandler = route =>
+        {
+            navigatedRoute = route;
+            return Task.CompletedTask;
+        };
+
+        await _viewModel.SignInAsync(CancellationToken.None);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_viewModel.IsSuccess, Is.True);
+            Assert.That(navigatedRoute, Is.EqualTo("//booking?roomId=99"));
+            Assert.That(_viewModel.ReturnUrl, Is.Null);
+        });
+    }
+
+    [Test]
+    public async Task SignInAsync_WhenReturnUrlContainsMultiLayerPercentEncodedQueryParams_ShouldDecodeOnlyOnceAndPreserveInnerEncoding()
+    {
+        // Original protected route contains query parameters with percent-encoded values (%2F and %252F)
+        const string originalProtectedRoute = "//booking?roomId=42&callback=%2Frooms%2Fdetails%3Fid%3D99&nested=%252F";
+        var loginRedirectUri = RouteGuardService.BuildLoginRedirectRoute(originalProtectedRoute);
+        var encodedReturnUrlParam = loginRedirectUri.Split("returnUrl=")[1];
+
+        _viewModel.ApplyQueryAttributes(new Dictionary<string, object>
+        {
+            ["returnUrl"] = encodedReturnUrlParam
+        });
+
+        Assert.That(_viewModel.ReturnUrl, Is.EqualTo(originalProtectedRoute));
+
+        _viewModel.LoginEmail = "student@example.com";
+        _viewModel.LoginPassword = "ValidPassword1";
+
+        var user = new AuthUser(Guid.NewGuid(), "student@example.com", UserRoleConstants.Student, "LOCAL", true);
+        _authPort.LoginResult = AuthResult.Success("test-access-token", "test-refresh-token", user);
+
+        string? navigatedRoute = null;
+        _viewModel.NavigateToRouteHandler = route =>
+        {
+            navigatedRoute = route;
+            return Task.CompletedTask;
+        };
+
+        await _viewModel.SignInAsync(CancellationToken.None);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_viewModel.IsSuccess, Is.True);
+            Assert.That(navigatedRoute, Is.EqualTo(originalProtectedRoute));
+            Assert.That(_viewModel.ReturnUrl, Is.Null);
+        });
+    }
+
+    [Test]
+    public async Task SignInAsync_WhenReturnUrlDisallowedForAuthenticatedRole_ShouldFallbackToHome()
+    {
+        _viewModel.ApplyQueryAttributes(new Dictionary<string, object>
+        {
+            ["redirect"] = "//roommates"
+        });
+
+        _viewModel.LoginEmail = "landlord@example.com";
+        _viewModel.LoginPassword = "ValidPassword1";
+
+        var landlord = new AuthUser(Guid.NewGuid(), "landlord@example.com", UserRoleConstants.Landlord, "LOCAL", true);
+        _authPort.LoginResult = AuthResult.Success("test-access-token", "test-refresh-token", landlord);
+
+        string? navigatedRoute = null;
+        _viewModel.NavigateToRouteHandler = route =>
+        {
+            navigatedRoute = route;
+            return Task.CompletedTask;
+        };
+
+        await _viewModel.SignInAsync(CancellationToken.None);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_viewModel.IsSuccess, Is.True);
+            Assert.That(navigatedRoute, Is.EqualTo($"//{AppRoutes.Home}"));
+            Assert.That(_viewModel.ReturnUrl, Is.Null);
+        });
     }
 
     [Test]
@@ -457,6 +561,7 @@ public class AuthViewModelTests
         public bool ThrowOnSave { get; set; }
 
         public bool IsAuthenticated => SavedUser != null && !string.IsNullOrWhiteSpace(SavedAccessToken);
+        public bool IsInitialized => true;
         public AuthUser? CurrentUser => SavedUser;
 
         public event EventHandler<AuthUser?>? CurrentUserChanged;
@@ -486,6 +591,18 @@ public class AuthViewModelTests
 
         public Task<bool> RefreshTokenAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(true);
+
+        public Task EnsureInitializedAsync(CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
+        public Task<LogoutResult> LogoutAsync(CancellationToken cancellationToken = default)
+        {
+            SavedAccessToken = null;
+            SavedRefreshToken = null;
+            SavedUser = null;
+            CurrentUserChanged?.Invoke(this, null);
+            return Task.FromResult(new LogoutResult(true, true));
+        }
 
         public Task ClearSessionAsync(CancellationToken cancellationToken = default)
         {
