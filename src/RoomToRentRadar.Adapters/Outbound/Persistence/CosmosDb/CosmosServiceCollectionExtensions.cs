@@ -3,6 +3,7 @@ namespace RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using RoomToRentRadar.Adapters.Outbound.Caching;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Configurations;
@@ -56,9 +57,14 @@ public static class CosmosServiceCollectionExtensions
             return new CosmosClient(settings.AccountEndpoint, authKey, options);
         });
 
-        services.AddScoped<IRoomListingRepository, CosmosRoomListingRepository>();
+        services.AddScoped<CosmosRoomListingRepository>(serviceProvider => new CosmosRoomListingRepository(
+            serviceProvider.GetRequiredService<CosmosClient>(),
+            serviceProvider.GetRequiredService<IOptions<CosmosDbOptions>>(),
+            serviceProvider.GetRequiredService<ILogger<CosmosRoomListingRepository>>()));
+        services.AddScoped<IRoomListingRepository>(serviceProvider => serviceProvider.GetRequiredService<CosmosRoomListingRepository>());
         services.AddScoped<ICampusRepository, CosmosCampusRepository>();
         services.AddScoped<CosmosDbInitializer>();
+        services.AddHostedService<RoomProjectionReconciliationService>();
 
         return services;
     }

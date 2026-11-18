@@ -6,6 +6,8 @@ using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Core.Localization;
 using RoomToRentRadar.Core.Models.Authentication;
+using RoomToRentRadar.Features.Authentication.Views;
+using RoomToRentRadar.Features.Home.Views;
 using RoomToRentRadar.Features.RoomListings.Views;
 using RoomToRentRadar.Infrastructure.Services;
 using Font = Microsoft.Maui.Font;
@@ -30,6 +32,34 @@ namespace RoomToRentRadar
             _sessionService = sessionService;
             _routeGuardService = routeGuardService;
 
+            Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(Features.RoomDetails.Views.RoomDetailPage));
+            Routing.RegisterRoute(AppRoutes.RoomDetails, typeof(RoomDetailsPage));
+
+            UpdateLanguageButtonStyles();
+            LocalizationResourceManager.Instance.PropertyChanged += (_, _) => UpdateLanguageButtonStyles();
+
+            if (_sessionService != null)
+            {
+                _sessionService.CurrentUserChanged += OnCurrentUserChanged;
+            }
+        }
+
+        public AppShell(
+            HomePage homePage,
+            RoomListingsPage roomListingsPage,
+            AuthPage authPage,
+            IAuthenticationSessionService? sessionService = null,
+            IRouteGuardService? routeGuardService = null)
+        {
+            InitializeComponent();
+            _sessionService = sessionService;
+            _routeGuardService = routeGuardService;
+
+            HomeShellContent.Content = homePage;
+            RoomListingsShellContent.Content = roomListingsPage;
+            AuthShellContent.Content = authPage;
+
+            Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(Features.RoomDetails.Views.RoomDetailPage));
             Routing.RegisterRoute(AppRoutes.RoomDetails, typeof(RoomDetailsPage));
 
             UpdateLanguageButtonStyles();

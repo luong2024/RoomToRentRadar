@@ -239,7 +239,7 @@ public class RoomListingsViewModelTests
         await vm.OpenRoomDetailsCommand.ExecuteAsync(room);
 
         // Assert
-        Assert.That(_navigatedRoutes, Is.EqualTo(new[] { "rooms/details?id=room-ictu-001" }));
+        Assert.That(_navigatedRoutes, Is.EqualTo(new[] { "room-detail?id=room-ictu-001" }));
     }
 
     [Test]

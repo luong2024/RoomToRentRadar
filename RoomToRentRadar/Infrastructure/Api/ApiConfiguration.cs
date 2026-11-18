@@ -31,6 +31,17 @@ public static class ApiConfiguration
 #if DEBUG
             if (customUri.Scheme == Uri.UriSchemeHttp || customUri.Scheme == Uri.UriSchemeHttps)
             {
+                if (DeviceInfo.Platform == DevicePlatform.Android &&
+                    DeviceInfo.DeviceType == DeviceType.Virtual &&
+                    IsLoopbackHost(customUri.Host))
+                {
+                    var emulatorUri = new UriBuilder(customUri)
+                    {
+                        Host = "10.0.2.2"
+                    };
+                    return emulatorUri.Uri;
+                }
+
                 return customUri;
             }
 #else
@@ -97,4 +108,9 @@ public static class ApiConfiguration
     {
         Preferences.Default.Remove(ApiBaseUrlPreferenceKey);
     }
+
+    private static bool IsLoopbackHost(string host) =>
+        string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(host, "127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(host, "::1", StringComparison.OrdinalIgnoreCase);
 }

@@ -192,16 +192,16 @@
     </Shell.ItemTemplate>
 
     <ShellContent
+        x:Name="HomeShellContent"
         Title="{loc:Translate Nav_Home}"
-        ContentTemplate="{DataTemplate homeViews:HomePage}"
         Icon="{StaticResource IconNavHome}"
         Route="home"
         SemanticProperties.Description="{loc:Translate Nav_Home}"
         SemanticProperties.Hint="{loc:Translate Nav_Home_Hint}" />
 
     <ShellContent
+        x:Name="RoomListingsShellContent"
         Title="{loc:Translate Nav_Rooms}"
-        ContentTemplate="{DataTemplate roomViews:RoomListingsPage}"
         Icon="{StaticResource IconNavRooms}"
         Route="rooms"
         SemanticProperties.Description="{loc:Translate Nav_Rooms}"
@@ -209,8 +209,8 @@
 
     <FlyoutItem Title="Sign In / Register" Route="auth" Icon="{StaticResource IconProjects}">
         <ShellContent
+            x:Name="AuthShellContent"
             Title="Authentication"
-            ContentTemplate="{DataTemplate authViews:AuthPage}"
             Route="login"
             SemanticProperties.Description="Sign In and Sign Up"
             SemanticProperties.Hint="Navigate to authentication" />

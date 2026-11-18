@@ -230,10 +230,11 @@ public class RouteGuardService : IRouteGuardService
                 : rawRouteWithQuery[queryIndex..];
         }
 
-        // Relative detail routes (such as rooms/details) are pushed onto the stack without leading "//"
-        if (normalizedBase == AppRoutes.RoomDetails.ToLowerInvariant())
+        // Relative detail routes (room-detail and rooms/details) are pushed onto the stack without leading "//"
+        if (normalizedBase == AppRoutes.RoomDetail.ToLowerInvariant() ||
+            normalizedBase == AppRoutes.RoomDetails.ToLowerInvariant())
         {
-            return $"{AppRoutes.RoomDetails}{querySuffix}";
+            return $"{normalizedBase}{querySuffix}";
         }
 
         return $"//{normalizedBase}{querySuffix}";
@@ -266,6 +267,7 @@ public class RouteGuardService : IRouteGuardService
     {
         return normalizedRoute == AppRoutes.Home.ToLowerInvariant()
                || normalizedRoute == AppRoutes.RoomListings.ToLowerInvariant()
+               || normalizedRoute == AppRoutes.RoomDetail.ToLowerInvariant()
                || normalizedRoute == AppRoutes.RoomDetails.ToLowerInvariant();
     }
 
