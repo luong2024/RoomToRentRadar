@@ -71,6 +71,16 @@ public class OsrmRoutingProviderTests
         Assert.ThrowsAsync<RoutingProviderUnavailableException>(() => provider.GetRouteAsync(Origin, Destination));
     }
 
+    [TestCase("""{"code":"Ok","routes":[null]}""")]
+    [TestCase("""{"code":"Ok","routes":["not-a-route"]}""")]
+    public void GetRouteAsync_WhenOsrmRouteEntryIsNotObject_ShouldThrowUnavailableException(string json)
+    {
+        using var client = CreateClient((_, _) => Task.FromResult(JsonResponse(json)));
+        var provider = CreateProvider(client);
+
+        Assert.ThrowsAsync<RoutingProviderUnavailableException>(() => provider.GetRouteAsync(Origin, Destination));
+    }
+
     [Test]
     public void GetRouteAsync_WhenOsrmReturnsHttpError_ShouldThrowUnavailableException()
     {

@@ -98,6 +98,11 @@ public sealed class OsrmRoutingProvider : IRoutingProvider
         }
 
         var route = routesElement[0];
+        if (route.ValueKind != JsonValueKind.Object)
+        {
+            throw new JsonException("OSRM routes array contains an invalid route.");
+        }
+
         var distanceMeters = GetFiniteNonNegativeNumber(route, "distance");
         var durationSeconds = GetFiniteNonNegativeNumber(route, "duration");
 

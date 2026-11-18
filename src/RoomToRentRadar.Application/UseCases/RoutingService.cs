@@ -68,9 +68,15 @@ public sealed class RoutingService : IRoutingService
             throw new RoutingProviderUnavailableException("The routing provider returned invalid route metrics.");
         }
 
+        var durationMinutes = Math.Ceiling(route.DurationSeconds / 60d);
+        if (durationMinutes > int.MaxValue)
+        {
+            throw new RoutingProviderUnavailableException("The routing provider returned a duration that is too large.");
+        }
+
         return new RouteResponse(
             DistanceKm: Math.Round(route.DistanceMeters / 1000d, 2, MidpointRounding.AwayFromZero),
-            DurationMinutes: (int)Math.Ceiling(route.DurationSeconds / 60d),
+            DurationMinutes: (int)durationMinutes,
             RouteCoordinates: route.RouteCoordinates ?? Array.Empty<RouteCoordinate>());
     }
 

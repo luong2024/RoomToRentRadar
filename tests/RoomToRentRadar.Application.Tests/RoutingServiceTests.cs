@@ -65,6 +65,18 @@ public class RoutingServiceTests
     }
 
     [Test]
+    public void GetRouteAsync_WhenProviderDurationExceedsIntMinutes_ShouldThrowUnavailableException()
+    {
+        _routingProvider.Result = new RoutingProviderResult(
+            1000d,
+            ((double)int.MaxValue + 1d) * 60d,
+            Array.Empty<RouteCoordinate>());
+
+        Assert.ThrowsAsync<RoutingProviderUnavailableException>(() => _service.GetRouteAsync(
+            new RouteRequest(21.0285, 105.8542, 21.0368, 105.8342)));
+    }
+
+    [Test]
     public void GetRouteForRoomAsync_WhenRoomDoesNotExist_ShouldThrowNotFoundException()
     {
         Assert.ThrowsAsync<NotFoundException>(() => _service.GetRouteForRoomAsync("missing", 21.0368, 105.8342));
