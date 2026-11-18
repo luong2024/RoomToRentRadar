@@ -5,9 +5,11 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using RoomToRentRadar.Client.Adapters.Abstractions;
 using RoomToRentRadar.Client.Adapters.Http;
+using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Ports.Contracts.Common;
 using RoomToRentRadar.Ports.Contracts.Requests.Rooms;
 using RoomToRentRadar.Ports.Contracts.Responses.Campuses;
+using RoomToRentRadar.Ports.Contracts.Responses.Photos;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 
 namespace RoomToRentRadarUnitTests.ClientAdapters.Gateways;
@@ -32,7 +34,7 @@ public class HttpGatewayStubsTests
     private static readonly MethodInfo[] GatewayMethods =
         GatewayInterfaces.SelectMany(t => t.GetMethods()).ToArray();
 
-    private static readonly string[] RealOperationIds = ["searchRooms", "listCampuses"];
+    private static readonly string[] RealOperationIds = ["searchRooms", "listCampuses", "getRoomDetail", "getSimilarRooms"];
 
     private static IEnumerable<TestCaseData> StubCases() =>
         GatewayMethods
@@ -66,11 +68,11 @@ public class HttpGatewayStubsTests
     }
 
     [Test]
-    public async Task OnlySearchRoomsAndListCampuses_AreReal()
+    public async Task RealOperations_CompleteHttpRoundTrip()
     {
         var stubMethods = GatewayMethods.Where(m => !RealOperationIds.Contains(OperationId(m))).ToArray();
         Assert.That(GatewayMethods, Has.Length.EqualTo(50));
-        Assert.That(stubMethods, Has.Length.EqualTo(48));
+        Assert.That(stubMethods, Has.Length.EqualTo(46));
         foreach (var method in stubMethods)
         {
             var task = InvokeWithDefaultArgs(method);
@@ -78,22 +80,30 @@ public class HttpGatewayStubsTests
             Assert.That(task.Exception!.InnerException, Is.InstanceOf<NotImplementedException>());
         }
 
-        // The two real operations complete an actual HTTP round-trip instead of throwing NotImplementedException.
+        // The real operations complete an actual HTTP round-trip instead of throwing NotImplementedException.
         var stub = new StubHttpMessageHandler(request => request.RequestUri!.AbsolutePath switch
         {
             "/api/rooms" => Json(new PagedResult<RoomCardDto>([], 0, 1, 20)),
             "/api/campuses" => Json(Array.Empty<CampusDto>()),
+            "/api/rooms/room-1" => Json(SampleRoomDetail()),
+            "/api/rooms/room-1/similar" => Json(Array.Empty<RoomCardDto>()),
             _ => new HttpResponseMessage(HttpStatusCode.NotFound)
         });
         using var client = new HttpClient(stub) { BaseAddress = new Uri("http://localhost") };
 
         var page = await new HttpRoomGateway(client).SearchRoomsAsync(new RoomSearchRequest());
         var campuses = await new HttpCampusGateway(client).ListCampusesAsync();
+        var detail = await new HttpRoomGateway(client).GetRoomDetailAsync("room-1");
+        var similar = await new HttpRoomGateway(client).GetSimilarRoomsAsync("room-1");
 
         Assert.That(page.TotalCount, Is.EqualTo(0));
         Assert.That(campuses, Is.Empty);
+        Assert.That(detail.Id, Is.EqualTo("room-1"));
+        Assert.That(similar, Is.Empty);
         Assert.That(stub.CountForPath("/api/rooms"), Is.EqualTo(1));
         Assert.That(stub.CountForPath("/api/campuses"), Is.EqualTo(1));
+        Assert.That(stub.CountForPath("/api/rooms/room-1"), Is.EqualTo(1));
+        Assert.That(stub.CountForPath("/api/rooms/room-1/similar"), Is.EqualTo(1));
     }
 
     [Test]
@@ -195,4 +205,20 @@ public class HttpGatewayStubsTests
             Content = new StringContent(
                 JsonSerializer.Serialize(body, ApiResponseReader.JsonOptions), Encoding.UTF8, "application/json")
         };
+
+    private static RoomDetailDto SampleRoomDetail() => new(
+        "room-1", "Phòng trọ test", "Mô tả", RoomType.BoardingRoom, ListingStatus.Available, true,
+        2_500_000, 2_500_000, 25.0, 2, Furnishing.Full, new DateOnly(2026, 12, 1),
+        new AddressDto("12 Z115", "Quyết Thắng", "Thái Nguyên"),
+        new GeoPointDto(21.5851, 105.8066),
+        1.2,
+        new UtilitiesView(3500, 100000, WaterPriceUnit.PerPerson, null, 50000, null, 2950000),
+        [Amenity.Wifi, Amenity.AirConditioner],
+        new SafetyDto(4, true, [SafetyFeature.Cctv, SafetyFeature.SecureEntrance]),
+        null,
+        Array.Empty<PhotoDto>(),
+        new LandlordContactDto("landlord-1", "Nguyễn Thị Hoa", true, new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc), null, null),
+        false,
+        new DateTime(2026, 11, 15, 0, 0, 0, DateTimeKind.Utc),
+        new DateTime(2026, 11, 15, 0, 0, 0, DateTimeKind.Utc));
 }

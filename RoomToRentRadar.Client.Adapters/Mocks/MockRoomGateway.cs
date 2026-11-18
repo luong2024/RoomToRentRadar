@@ -69,6 +69,7 @@ public sealed class MockRoomGateway : IRoomGateway
 
     public Task<RoomDetailDto> GetRoomDetailAsync(string roomId, string? campusId = null, CancellationToken ct = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
         var room = FindRoom(roomId);
         var campus = ResolveCampus(campusId);
         var detail = new RoomDetailDto(
@@ -95,6 +96,7 @@ public sealed class MockRoomGateway : IRoomGateway
 
     public Task<IReadOnlyList<RoomCardDto>> GetSimilarRoomsAsync(string roomId, string? campusId = null, CancellationToken ct = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
         var room = FindRoom(roomId);
         var campus = ResolveCampus(campusId);
         var similar = SampleRooms.All
