@@ -65,6 +65,9 @@ public sealed class RoomDocument
     [JsonProperty("location")]
     public CosmosPoint? Location { get; set; }
 
+    [JsonProperty("thumbnailUrl")]
+    public string? ThumbnailUrl { get; set; }
+
     public static RoomDocument FromDomain(Room room)
     {
         ArgumentNullException.ThrowIfNull(room);
@@ -97,7 +100,8 @@ public sealed class RoomDocument
             LastUpdatedDate = room.LastUpdatedDate,
             Latitude = room.Latitude,
             Longitude = room.Longitude,
-            Location = location
+            Location = location,
+            ThumbnailUrl = room.ThumbnailUrl
         };
     }
 
@@ -129,7 +133,8 @@ public sealed class RoomDocument
             LandlordPhone = LandlordPhone,
             LastUpdatedDate = LastUpdatedDate,
             Latitude = lat,
-            Longitude = lon
+            Longitude = lon,
+            ThumbnailUrl = ThumbnailUrl
         };
     }
 }

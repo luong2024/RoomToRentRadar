@@ -46,6 +46,47 @@ public class CosmosRoomRepository : IRoomRepository
         }
     }
 
+    public async Task<IReadOnlyList<Room>> GetByIdsAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default)
+    {
+        if (ids is null || ids.Count == 0)
+        {
+            return Array.Empty<Room>();
+        }
+
+        var distinctIds = ids
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => id.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        if (distinctIds.Length == 0)
+        {
+            return Array.Empty<Room>();
+        }
+
+        var query = new QueryDefinition("SELECT * FROM c WHERE ARRAY_CONTAINS(@ids, c.id)")
+            .WithParameter("@ids", distinctIds);
+
+        var requestOptions = new QueryRequestOptions
+        {
+            MaxItemCount = distinctIds.Length
+        };
+
+        using var iterator = _container.GetItemQueryIterator<RoomDocument>(query, requestOptions: requestOptions);
+        var results = new List<Room>(distinctIds.Length);
+
+        while (iterator.HasMoreResults)
+        {
+            var response = await iterator.ReadNextAsync(cancellationToken);
+            foreach (var doc in response)
+            {
+                results.Add(doc.ToDomain());
+            }
+        }
+
+        return results;
+    }
+
     public async Task<IReadOnlyList<Room>> GetSimilarRoomsAsync(string roomId, decimal price, double area, CancellationToken cancellationToken = default)
     {
         var minPrice = price * 0.7m;
