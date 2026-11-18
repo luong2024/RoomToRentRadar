@@ -51,6 +51,15 @@ public class GlobalExceptionHandlerTests
             new NotFoundException("Room was not found."),
             StatusCodes.Status404NotFound);
         yield return new TestCaseData(
+            new RouteNotFoundException(),
+            StatusCodes.Status404NotFound);
+        yield return new TestCaseData(
+            new RoutingProviderUnavailableException("OSRM is unavailable."),
+            StatusCodes.Status502BadGateway);
+        yield return new TestCaseData(
+            new RoutingProviderTimeoutException(),
+            StatusCodes.Status504GatewayTimeout);
+        yield return new TestCaseData(
             new InvalidOperationException("Unexpected failure"),
             StatusCodes.Status500InternalServerError);
     }
