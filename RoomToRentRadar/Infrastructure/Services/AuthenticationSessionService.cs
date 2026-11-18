@@ -18,6 +18,7 @@ public class AuthenticationSessionService : IAuthenticationSessionService
     private readonly ISecureStorageService _secureStorage;
     private readonly IAuthenticationPort _authenticationPort;
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
+    private readonly SemaphoreSlim _sessionLock = new(1, 1);
     private readonly TaskCompletionSource<bool> _initTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     private long _sessionEpoch;
@@ -45,6 +46,26 @@ public class AuthenticationSessionService : IAuthenticationSessionService
     {
         ArgumentNullException.ThrowIfNull(user);
 
+        // Immediately advance epoch on entry so any in-flight refresh started before this call is invalidated
+        Interlocked.Increment(ref _sessionEpoch);
+
+        AuthUser? committedUser;
+        await _sessionLock.WaitAsync(cancellationToken);
+        try
+        {
+            await SaveSessionCoreAsync(accessToken, refreshToken, user);
+            committedUser = _currentUser;
+        }
+        finally
+        {
+            _sessionLock.Release();
+        }
+
+        CurrentUserChanged?.Invoke(this, committedUser);
+    }
+
+    private async Task SaveSessionCoreAsync(string accessToken, string refreshToken, AuthUser user)
+    {
         Interlocked.Increment(ref _sessionEpoch);
 
         // Snapshot current in-memory state in case of rollback
@@ -76,18 +97,21 @@ public class AuthenticationSessionService : IAuthenticationSessionService
             var serializedUser = JsonSerializer.Serialize(user);
             await _secureStorage.SetAsync(UserDataKey, serializedUser);
 
-            // Successfully persisted to secure storage, now update memory state
+            // Successfully persisted to secure storage; update in-memory state and advance epoch at commit time
+            // so any refresh that started while storage writes were in-flight is also invalidated
             _cachedAccessToken = accessToken;
             _cachedRefreshToken = refreshToken;
             _currentUser = user;
+            Interlocked.Increment(ref _sessionEpoch);
             _initTcs.TrySetResult(true);
         }
         catch (Exception)
         {
-            // Rollback in-memory state
+            // Rollback in-memory state and advance epoch
             _cachedAccessToken = prevAccessToken;
             _cachedRefreshToken = prevRefreshToken;
             _currentUser = prevUser;
+            Interlocked.Increment(ref _sessionEpoch);
 
             // Revert storage keys to previous snapshot or remove
             try
@@ -126,8 +150,6 @@ public class AuthenticationSessionService : IAuthenticationSessionService
 
             throw;
         }
-
-        CurrentUserChanged?.Invoke(this, _currentUser);
     }
 
     public async Task<string?> GetAccessTokenAsync(CancellationToken cancellationToken = default)
@@ -226,6 +248,7 @@ public class AuthenticationSessionService : IAuthenticationSessionService
             // Access token is missing or expired, attempt to refresh using the refresh token
             _cachedRefreshToken = refreshToken;
             _currentUser = user;
+            var restoreEpoch = Interlocked.Read(ref _sessionEpoch);
 
             var refreshed = await RefreshTokenAsync(cancellationToken);
             if (refreshed)
@@ -238,8 +261,13 @@ public class AuthenticationSessionService : IAuthenticationSessionService
             // already called ClearSessionAsync() and wiped SecureStorage.
             // If refresh failed due to a transient error (e.g. offline, timeout, server error),
             // we intentionally preserve the session in SecureStorage for later retry,
-            // while ensuring in-memory state reflects that the session is not currently active.
-            _currentUser = null;
+            // while ensuring in-memory state reflects that the session is not currently active
+            // (unless a new session was saved concurrently while refresh was in-flight).
+            if (Interlocked.Read(ref _sessionEpoch) == restoreEpoch)
+            {
+                _currentUser = null;
+            }
+
             restored = false;
             return false;
         }
@@ -285,7 +313,7 @@ public class AuthenticationSessionService : IAuthenticationSessionService
         await _refreshLock.WaitAsync(cancellationToken);
         try
         {
-            // If session epoch changed while waiting for lock (e.g. logout happened), discard
+            // If session epoch changed while waiting for lock (e.g. logout or account switch occurred), discard
             if (Interlocked.Read(ref _sessionEpoch) != initialEpoch)
             {
                 return false;
@@ -298,6 +326,7 @@ public class AuthenticationSessionService : IAuthenticationSessionService
                 return true;
             }
 
+            var expectedUserId = _currentUser?.Id;
             var currentRefreshToken = _cachedRefreshToken ?? await _secureStorage.GetAsync(RefreshTokenKey);
             if (string.IsNullOrWhiteSpace(currentRefreshToken))
             {
@@ -307,26 +336,61 @@ public class AuthenticationSessionService : IAuthenticationSessionService
 
             var result = await _authenticationPort.RefreshTokenAsync(currentRefreshToken, cancellationToken);
 
-            // Re-check epoch after network call returns: if logout or account switch occurred in-flight, discard
+            // Fast-path check before acquiring _sessionLock: if logout or account switch occurred in-flight, discard
             if (Interlocked.Read(ref _sessionEpoch) != initialEpoch)
             {
                 return false;
             }
 
-            if (result.IsSuccess &&
-                !string.IsNullOrWhiteSpace(result.AccessToken) &&
-                !string.IsNullOrWhiteSpace(result.RefreshToken) &&
-                result.User != null)
+            AuthUser? updatedUserToNotify = null;
+            var sessionUpdated = false;
+            var sessionCleared = false;
+
+            await _sessionLock.WaitAsync(cancellationToken);
+            try
             {
-                await SaveSessionAsync(result.AccessToken, result.RefreshToken, result.User, cancellationToken);
+                // Commit-time verification under _sessionLock:
+                // If SaveSessionAsync or ClearSessionAsync started or committed while this refresh was in-flight,
+                // _sessionEpoch will have advanced and/or the active refresh token/user in memory will have changed.
+                var activeRefreshToken = _cachedRefreshToken;
+                if (Interlocked.Read(ref _sessionEpoch) != initialEpoch ||
+                    (activeRefreshToken != null && !string.Equals(activeRefreshToken, currentRefreshToken, StringComparison.Ordinal)) ||
+                    (expectedUserId.HasValue && _currentUser != null && _currentUser.Id != expectedUserId.Value))
+                {
+                    return false;
+                }
+
+                if (result.IsSuccess &&
+                    !string.IsNullOrWhiteSpace(result.AccessToken) &&
+                    !string.IsNullOrWhiteSpace(result.RefreshToken) &&
+                    result.User != null)
+                {
+                    await SaveSessionCoreAsync(result.AccessToken, result.RefreshToken, result.User);
+                    updatedUserToNotify = _currentUser;
+                    sessionUpdated = true;
+                }
+                else if (result.FailureType is AuthFailureType.RefreshTokenExpiredOrRevoked or AuthFailureType.InvalidCredentials)
+                {
+                    // Clear session when the refresh token is confirmed expired, revoked, or rejected as unauthorized.
+                    // For transient errors (offline network, timeout, server 5xx), keep existing session intact.
+                    await ClearSessionCoreAsync();
+                    sessionCleared = true;
+                }
+            }
+            finally
+            {
+                _sessionLock.Release();
+            }
+
+            if (sessionUpdated)
+            {
+                CurrentUserChanged?.Invoke(this, updatedUserToNotify);
                 return true;
             }
 
-            // Clear session when the refresh token is confirmed expired, revoked, or rejected as unauthorized.
-            // For transient errors (offline network, timeout, server 5xx), keep existing session intact.
-            if (result.FailureType is AuthFailureType.RefreshTokenExpiredOrRevoked or AuthFailureType.InvalidCredentials)
+            if (sessionCleared)
             {
-                await ClearSessionAsync(cancellationToken);
+                CurrentUserChanged?.Invoke(this, null);
             }
 
             return false;
@@ -350,6 +414,23 @@ public class AuthenticationSessionService : IAuthenticationSessionService
     {
         Interlocked.Increment(ref _sessionEpoch);
 
+        await _sessionLock.WaitAsync(cancellationToken);
+        try
+        {
+            await ClearSessionCoreAsync();
+        }
+        finally
+        {
+            _sessionLock.Release();
+        }
+
+        CurrentUserChanged?.Invoke(this, null);
+    }
+
+    private async Task ClearSessionCoreAsync()
+    {
+        Interlocked.Increment(ref _sessionEpoch);
+
         _cachedAccessToken = null;
         _cachedRefreshToken = null;
         _currentUser = null;
@@ -368,14 +449,13 @@ public class AuthenticationSessionService : IAuthenticationSessionService
                 await _secureStorage.SetAsync(RefreshTokenKey, string.Empty);
                 await _secureStorage.SetAsync(UserDataKey, string.Empty);
             }
-            catch
+           catch
             {
                 // Storage remove/set exception suppressed
             }
         }
 
-        CurrentUserChanged?.Invoke(this, null);
-        await Task.CompletedTask;
+        Interlocked.Increment(ref _sessionEpoch);
     }
 
     public async Task<LogoutResult> LogoutAsync(CancellationToken cancellationToken = default)
