@@ -108,6 +108,25 @@ public class CosmosRoomRepositoryTests
     }
 
     [Test]
+    public async Task GetByIdAsync_WhenProjectionIsTombstoned_ReturnsNull()
+    {
+        var response = new Mock<ItemResponse<RoomDocument>>();
+        response.SetupGet(item => item.Resource).Returns(new RoomDocument
+        {
+            Id = "room-deleted",
+            IsDeleted = true,
+            ProjectionVersion = 11
+        });
+        _containerMock.Setup(container => container.ReadItemAsync<RoomDocument>(
+                "room-deleted", It.IsAny<PartitionKey>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(response.Object);
+
+        var result = await _repository.GetByIdAsync("room-deleted");
+
+        Assert.That(result, Is.Null);
+    }
+
+    [Test]
     public void RoomDocument_FromDomain_WithoutCoordinates_ShouldHaveNullLocation()
     {
         var room = new Room
@@ -146,6 +165,72 @@ public class CosmosRoomRepositoryTests
             Assert.That(room.Longitude, Is.EqualTo(105.8542));
             Assert.That(room.Latitude, Is.EqualTo(21.0285));
         });
+    }
+
+    [Test]
+    public void MergeListingFields_WhenDetailAlreadyExists_PreservesDetailOnlyFieldsAndGallery()
+    {
+        var existing = new RoomDocument
+        {
+            Id = "room-detail-1",
+            Deposit = 1_500_000m,
+            RoomType = "Studio",
+            Bedrooms = 2,
+            Bathrooms = 1,
+            Amenities = ["Air conditioner", "Washing machine"],
+            HouseRules = ["No smoking"],
+            LandlordPhone = "0912345678",
+            LastUpdatedDate = new DateTime(2026, 11, 18, 9, 30, 0, DateTimeKind.Utc),
+            ImageUrls = ["https://images.example/gallery-1.jpg", "https://images.example/gallery-2.jpg"]
+        };
+        var listing = new RoomListingDocument
+        {
+            Id = existing.Id,
+            Title = "Updated listing title",
+            Description = "Updated listing description",
+            MonthlyRentAmount = 3_000_000m,
+            AreaSquareMeters = 28,
+            Address = "Updated address",
+            ThumbnailUrl = "https://images.example/new-thumbnail.jpg",
+            VerificationStatus = 2,
+            Status = (int)RoomStatus.Available,
+            Latitude = 21.587,
+            Longitude = 105.808,
+            CreatedAtUtc = new DateTime(2026, 11, 17, 0, 0, 0, DateTimeKind.Utc)
+        };
+
+        var merged = RoomDocument.MergeListingFields(listing, existing);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(merged.Title, Is.EqualTo(listing.Title));
+            Assert.That(merged.Price, Is.EqualTo(listing.MonthlyRentAmount));
+            Assert.That(merged.ThumbnailUrl, Is.EqualTo(listing.ThumbnailUrl));
+            Assert.That(merged.Deposit, Is.EqualTo(1_500_000m));
+            Assert.That(merged.RoomType, Is.EqualTo("Studio"));
+            Assert.That(merged.Bedrooms, Is.EqualTo(2));
+            Assert.That(merged.Bathrooms, Is.EqualTo(1));
+            Assert.That(merged.Amenities, Is.EqualTo(["Air conditioner", "Washing machine"]));
+            Assert.That(merged.HouseRules, Is.EqualTo(["No smoking"]));
+            Assert.That(merged.LandlordPhone, Is.EqualTo("0912345678"));
+            Assert.That(merged.LastUpdatedDate, Is.EqualTo(new DateTime(2026, 11, 18, 9, 30, 0, DateTimeKind.Utc)));
+            Assert.That(merged.ImageUrls, Is.EqualTo(["https://images.example/gallery-1.jpg", "https://images.example/gallery-2.jpg"]));
+        });
+    }
+
+    [Test]
+    public void MergeListingFields_WhenDetailIsNew_InitializesLastUpdatedDateFromListingCreation()
+    {
+        var createdAt = new DateTime(2026, 11, 17, 0, 0, 0, DateTimeKind.Utc);
+        var listing = new RoomListingDocument
+        {
+            Id = "new-room",
+            CreatedAtUtc = createdAt
+        };
+
+        var merged = RoomDocument.MergeListingFields(listing, existingDetail: null);
+
+        Assert.That(merged.LastUpdatedDate, Is.EqualTo(createdAt));
     }
 
     [Test]
@@ -223,5 +308,37 @@ public class CosmosRoomRepositoryTests
         var parameters = capturedQueryDef!.GetQueryParameters();
         Assert.That(parameters.Any(p => p.Name == "@keyword"), Is.False);
         Assert.That(capturedQueryDef.QueryText, Does.Not.Contain("@keyword"));
+    }
+
+    [Test]
+    public async Task GetSimilarRoomsAsync_ShouldIncludeIsVerifiedConditionInQuery()
+    {
+        QueryDefinition? capturedQueryDef = null;
+
+        var feedResponseMock = new Mock<FeedResponse<RoomDocument>>();
+        feedResponseMock.Setup(r => r.GetEnumerator()).Returns(new List<RoomDocument>().GetEnumerator());
+
+        var feedIteratorMock = new Mock<FeedIterator<RoomDocument>>();
+        feedIteratorMock.SetupSequence(i => i.HasMoreResults)
+            .Returns(true)
+            .Returns(false);
+        feedIteratorMock.Setup(i => i.ReadNextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(feedResponseMock.Object);
+
+        _containerMock
+            .Setup(c => c.GetItemQueryIterator<RoomDocument>(
+                It.IsAny<QueryDefinition>(),
+                It.IsAny<string>(),
+                It.IsAny<QueryRequestOptions>()))
+            .Callback<QueryDefinition, string, QueryRequestOptions>((qd, _, _) =>
+            {
+                capturedQueryDef = qd;
+            })
+            .Returns(feedIteratorMock.Object);
+
+        await _repository.GetSimilarRoomsAsync("target-room", price: 2000000m, area: 25.0);
+
+        Assert.That(capturedQueryDef, Is.Not.Null);
+        Assert.That(capturedQueryDef!.QueryText, Does.Contain("c.isVerified = true"));
     }
 }
