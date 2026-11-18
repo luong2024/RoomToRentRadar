@@ -11,6 +11,23 @@ namespace RoomToRentRadar.Api.Tests.Infrastructure;
 
 public sealed class ListingsApiFactory : WebApplicationFactory<Program>
 {
+    private const string CreateNoUpdateTriggerSql =
+        """
+        CREATE TRIGGER "trg_moderation_audit_logs_no_update"
+        BEFORE UPDATE ON "moderation_audit_logs"
+        BEGIN
+            SELECT RAISE(ABORT, 'moderation audit log is append-only');
+        END;
+        """;
+
+    private const string CreateNoDeleteTriggerSql =
+        """
+        CREATE TRIGGER "trg_moderation_audit_logs_no_delete"
+        BEFORE DELETE ON "moderation_audit_logs"
+        BEGIN
+            SELECT RAISE(ABORT, 'moderation audit log is append-only');
+        END;
+        """;
     private readonly string _directory = Path.Combine(
         Path.GetTempPath(),
         "RoomToRentRadarTests",
@@ -47,6 +64,16 @@ public sealed class ListingsApiFactory : WebApplicationFactory<Program>
     {
         await using var scope = Services.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        // The audit table is append-only at the database level, so cleanup has to
+        // drop the guards before deleting rows and restore them afterwards.
+        await dbContext.Database.ExecuteSqlRawAsync(
+            "DROP TRIGGER IF EXISTS \"trg_moderation_audit_logs_no_update\";");
+        await dbContext.Database.ExecuteSqlRawAsync(
+            "DROP TRIGGER IF EXISTS \"trg_moderation_audit_logs_no_delete\";");
+
+        await dbContext.ModerationAuditLogs.ExecuteDeleteAsync();
+        await dbContext.ListingReports.ExecuteDeleteAsync();
         await dbContext.Notifications.ExecuteDeleteAsync();
         await dbContext.SavedSearchAlertLogs.ExecuteDeleteAsync();
         await dbContext.SavedSearches.ExecuteDeleteAsync();
@@ -56,6 +83,10 @@ public sealed class ListingsApiFactory : WebApplicationFactory<Program>
         await dbContext.ListingRules.ExecuteDeleteAsync();
         await dbContext.ListingPhotos.ExecuteDeleteAsync();
         await dbContext.Listings.ExecuteDeleteAsync();
+
+        await dbContext.Database.ExecuteSqlRawAsync(CreateNoUpdateTriggerSql);
+        await dbContext.Database.ExecuteSqlRawAsync(CreateNoDeleteTriggerSql);
+
         QueryCounter.Reset();
         ClearMediaDirectory();
     }

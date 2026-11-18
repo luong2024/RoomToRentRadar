@@ -139,6 +139,12 @@ namespace RoomToRentRadar.Api.Data.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("updated_at");
 
+                    b.Property<long>("Version")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("version");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Status", "Bedrooms")
@@ -284,6 +290,78 @@ namespace RoomToRentRadar.Api.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.ListingReport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("ClaimedByUserId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("claimed_by_user_id");
+
+                    b.Property<DateTime?>("ClaimedUntilUtc")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("claimed_until_utc");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Details")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("details");
+
+                    b.Property<Guid>("ListingId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("listing_id");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid>("ReporterId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("reporter_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("status");
+
+                    b.Property<long>("Version")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClaimedByUserId");
+
+                    b.HasIndex("ListingId")
+                        .HasDatabaseName("ix_listing_reports_listing_id");
+
+                    b.HasIndex("ReporterId");
+
+                    b.HasIndex("Status", "ListingId")
+                        .HasDatabaseName("ix_listing_reports_status_listing_id");
+
+                    b.ToTable("listing_reports", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_listing_reports_details_length", "details IS NULL OR length(details) <= 1000");
+
+                            t.HasCheckConstraint("ck_listing_reports_reason", "reason IN ('spam', 'wrong_info', 'scam', 'offensive', 'already_rented')");
+
+                            t.HasCheckConstraint("ck_listing_reports_status", "status IN ('open', 'in_review', 'resolved', 'dismissed')");
+                        });
+                });
+
             modelBuilder.Entity("RoomToRentRadar.Api.Domain.ListingRule", b =>
                 {
                     b.Property<Guid>("Id")
@@ -313,6 +391,77 @@ namespace RoomToRentRadar.Api.Data.Migrations
                     b.ToTable("listing_rules", null, t =>
                         {
                             t.HasCheckConstraint("ck_listing_rules_sort_order_non_negative", "sort_order >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.ModerationAuditLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("action");
+
+                    b.Property<Guid>("ActorUserId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("actor_user_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("ListingId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("listing_id");
+
+                    b.Property<string>("NextReportStatus")
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("next_report_status");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("note");
+
+                    b.Property<string>("PreviousReportStatus")
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("previous_report_status");
+
+                    b.Property<Guid>("ReportId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("report_id");
+
+                    b.Property<string>("ResolutionAction")
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("resolution_action");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReportId");
+
+                    b.HasIndex("ActorUserId", "CreatedAt")
+                        .HasDatabaseName("ix_moderation_audit_logs_actor_created_at");
+
+                    b.HasIndex("ListingId", "CreatedAt")
+                        .HasDatabaseName("ix_moderation_audit_logs_listing_created_at");
+
+                    b.ToTable("moderation_audit_logs", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_moderation_audit_logs_action", "action IN ('claim', 'release', 'resolve')");
+
+                            t.HasCheckConstraint("ck_moderation_audit_logs_next_status", "next_report_status IS NULL OR next_report_status IN ('open', 'in_review', 'resolved', 'dismissed')");
+
+                            t.HasCheckConstraint("ck_moderation_audit_logs_previous_status", "previous_report_status IS NULL OR previous_report_status IN ('open', 'in_review', 'resolved', 'dismissed')");
+
+                            t.HasCheckConstraint("ck_moderation_audit_logs_resolution_action", "resolution_action IS NULL OR resolution_action IN ('dismiss', 'hide_listing', 'remove_listing', 'warn_owner')");
                         });
                 });
 
@@ -484,13 +633,24 @@ namespace RoomToRentRadar.Api.Data.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("password_salt");
 
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("user")
+                        .HasColumnName("role");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
                         .IsUnique()
                         .HasDatabaseName("ix_users_email");
 
-                    b.ToTable("users", (string)null);
+                    b.ToTable("users", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_users_role", "role IN ('user', 'moderator', 'admin')");
+                        });
                 });
 
             modelBuilder.Entity("RoomToRentRadar.Api.Domain.AuthSession", b =>
@@ -526,6 +686,28 @@ namespace RoomToRentRadar.Api.Data.Migrations
                     b.Navigation("Listing");
                 });
 
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.ListingReport", b =>
+                {
+                    b.HasOne("RoomToRentRadar.Api.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("ClaimedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("RoomToRentRadar.Api.Domain.Listing", "Listing")
+                        .WithMany()
+                        .HasForeignKey("ListingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RoomToRentRadar.Api.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("ReporterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Listing");
+                });
+
             modelBuilder.Entity("RoomToRentRadar.Api.Domain.ListingRule", b =>
                 {
                     b.HasOne("RoomToRentRadar.Api.Domain.Listing", "Listing")
@@ -535,6 +717,27 @@ namespace RoomToRentRadar.Api.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Listing");
+                });
+
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.ModerationAuditLog", b =>
+                {
+                    b.HasOne("RoomToRentRadar.Api.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("ActorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("RoomToRentRadar.Api.Domain.Listing", null)
+                        .WithMany()
+                        .HasForeignKey("ListingId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("RoomToRentRadar.Api.Domain.ListingReport", null)
+                        .WithMany()
+                        .HasForeignKey("ReportId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("RoomToRentRadar.Api.Domain.Notification", b =>

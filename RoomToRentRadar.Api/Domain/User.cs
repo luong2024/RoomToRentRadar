@@ -7,6 +7,7 @@ public sealed class User
     public string DisplayName { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public string PasswordSalt { get; set; } = string.Empty;
+    public UserRole Role { get; set; }
     public DateTime CreatedAt { get; set; }
     public ICollection<AuthSession> Sessions { get; set; } = [];
 }

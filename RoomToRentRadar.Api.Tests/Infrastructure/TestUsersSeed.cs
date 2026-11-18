@@ -11,21 +11,52 @@ public static class TestUsersSeed
     public const string Password = "Demo-password-123";
     public const string DisplayName = "Demo Tester";
 
-    public static async Task<User> SeedAsync(AppDbContext dbContext)
+    public static async Task<User> SeedAsync(AppDbContext dbContext, UserRole role = UserRole.User)
     {
-        var (hash, salt) = PasswordHasher.Hash(Password);
-        var user = new User
-        {
-            Id = new Guid("aaaaaaaa-0000-0000-0000-000000000001"),
-            Email = Email,
-            DisplayName = DisplayName,
-            PasswordHash = hash,
-            PasswordSalt = salt,
-            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
-        };
+        var user = Create(
+            new Guid("aaaaaaaa-0000-0000-0000-000000000001"),
+            Email,
+            DisplayName,
+            Password,
+            role);
 
         dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync();
         return user;
+    }
+
+    public static async Task<User> SeedAdditionalAsync(
+        AppDbContext dbContext,
+        Guid id,
+        string email,
+        UserRole role = UserRole.User,
+        string displayName = "Secondary Tester",
+        string password = Password)
+    {
+        var user = Create(id, email, displayName, password, role);
+
+        dbContext.Users.Add(user);
+        await dbContext.SaveChangesAsync();
+        return user;
+    }
+
+    private static User Create(
+        Guid id,
+        string email,
+        string displayName,
+        string password,
+        UserRole role)
+    {
+        var (hash, salt) = PasswordHasher.Hash(password);
+        return new User
+        {
+            Id = id,
+            Email = email,
+            DisplayName = displayName,
+            PasswordHash = hash,
+            PasswordSalt = salt,
+            Role = role,
+            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+        };
     }
 }

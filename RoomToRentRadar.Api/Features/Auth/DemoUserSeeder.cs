@@ -9,6 +9,7 @@ public static class DemoUserSeeder
     public const string EmailKey = "Auth:DemoEmail";
     public const string PasswordKey = "Auth:DemoPassword";
     public const string DisplayNameKey = "Auth:DemoDisplayName";
+    public const string RoleKey = "Auth:DemoRole";
 
     public static async Task<bool> SeedAsync(
         AppDbContext dbContext,
@@ -19,6 +20,17 @@ public static class DemoUserSeeder
         var email = configuration[EmailKey]?.Trim();
         var password = configuration[PasswordKey];
         var displayName = configuration[DisplayNameKey]?.Trim();
+        var role = UserRole.User;
+        var configuredRole = configuration[RoleKey]?.Trim();
+        if (!string.IsNullOrEmpty(configuredRole)
+            && !UserRoleWire.TryParse(configuredRole.ToLowerInvariant(), out role))
+        {
+            logger.LogWarning(
+                "Ignoring {RoleKey} value {ConfiguredRole}; falling back to the user role.",
+                RoleKey,
+                configuredRole);
+            role = UserRole.User;
+        }
 
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
         {
@@ -30,9 +42,19 @@ public static class DemoUserSeeder
         }
 
         var normalizedEmail = AuthService.NormalizeEmail(email);
-        if (await dbContext.Users.AnyAsync(user => user.Email == normalizedEmail, cancellationToken))
+        var existing = await dbContext.Users
+            .FirstOrDefaultAsync(user => user.Email == normalizedEmail, cancellationToken);
+        if (existing is not null)
         {
-            return false;
+            if (existing.Role == role)
+            {
+                return false;
+            }
+
+            existing.Role = role;
+            await dbContext.SaveChangesAsync(cancellationToken);
+            logger.LogInformation("Updated the demo user role to {Role}.", UserRoleWire.ToWireValue(role));
+            return true;
         }
 
         var (hash, salt) = PasswordHasher.Hash(password);
@@ -43,6 +65,7 @@ public static class DemoUserSeeder
             DisplayName = string.IsNullOrWhiteSpace(displayName) ? "Demo renter" : displayName,
             PasswordHash = hash,
             PasswordSalt = salt,
+            Role = role,
             CreatedAt = DateTime.UtcNow
         });
         await dbContext.SaveChangesAsync(cancellationToken);
