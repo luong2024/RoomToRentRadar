@@ -8,6 +8,77 @@ namespace RoomToRentRadarUnitTests;
 public class RoomDetailServiceTests
 {
     [Test]
+    public async Task GetRoomDetailAsync_WhenAvailabilityIsMissing_FailsClosedAsUnavailable()
+    {
+        var service = new RoomDetailService(new FakeApiClient(_ => new RoomDetailApiDto { Id = "room-1" }));
+
+        var result = await service.GetRoomDetailAsync("room-1");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result!.Status, Is.EqualTo(ListingStatus.Unavailable));
+            Assert.That(result.IsAvailable, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task GetRoomDetailAsync_WhenStatusIsRented_PrefersStatusOverAvailabilityFlag()
+    {
+        var service = new RoomDetailService(new FakeApiClient(_ => new RoomDetailApiDto
+        {
+            Id = "room-1",
+            Status = "Rented",
+            IsAvailable = true
+        }));
+
+        var result = await service.GetRoomDetailAsync("room-1");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result!.Status, Is.EqualTo(ListingStatus.Rented));
+            Assert.That(result.IsAvailable, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task GetRoomDetailAsync_WhenStatusIsOccupied_MapsToRented()
+    {
+        var service = new RoomDetailService(new FakeApiClient(_ => new RoomDetailApiDto
+        {
+            Id = "room-1",
+            Status = "Occupied",
+            IsAvailable = false
+        }));
+
+        var result = await service.GetRoomDetailAsync("room-1");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result!.Status, Is.EqualTo(ListingStatus.Rented));
+            Assert.That(result.IsAvailable, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task GetRoomDetailAsync_WhenStatusIsAvailable_PrefersStatusOverAvailabilityFlag()
+    {
+        var service = new RoomDetailService(new FakeApiClient(_ => new RoomDetailApiDto
+        {
+            Id = "room-1",
+            Status = "Available",
+            IsAvailable = false
+        }));
+
+        var result = await service.GetRoomDetailAsync("room-1");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result!.Status, Is.EqualTo(ListingStatus.Available));
+            Assert.That(result.IsAvailable, Is.True);
+        });
+    }
+
+    [Test]
     public async Task GetSimilarRoomsAsync_WhenApiResponseContainsNoSimilarRooms_ReturnsEmptyList()
     {
         var service = new RoomDetailService(new FakeApiClient(_ => new RoomDetailApiDto
@@ -98,6 +169,29 @@ public class RoomDetailServiceTests
             Assert.That(result.ImageUrls, Is.Empty);
             Assert.That(result.HasImages, Is.False);
         });
+    }
+
+    [Test]
+    public async Task GetRoomDetailAsync_WhenApiProvidesSimilarRoomThumbnail_MapsThumbnailUrl()
+    {
+        const string thumbnailUrl = "https://cdn.example.test/similar-room.jpg";
+        var service = new RoomDetailService(new FakeApiClient(_ => new RoomDetailApiDto
+        {
+            Id = "room-1",
+            SimilarRooms =
+            [
+                new SimilarRoomApiDto
+                {
+                    Id = "room-2",
+                    ThumbnailUrl = thumbnailUrl
+                }
+            ]
+        }));
+
+        var result = await service.GetRoomDetailAsync("room-1");
+
+        Assert.That(result!.SimilarRooms, Has.Count.EqualTo(1));
+        Assert.That(result.SimilarRooms[0].ThumbnailUrl, Is.EqualTo(thumbnailUrl));
     }
 
     private sealed class FakeApiClient(Func<string, object?> handler) : IApiClient

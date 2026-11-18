@@ -186,6 +186,65 @@ public class RoomListingsServiceTests
         });
     }
 
+    [Test]
+    public async Task GetRoomListingsAsync_WhenFilterProvided_AppendsFilterQueryParametersToEndpoint()
+    {
+        // Arrange
+        string? capturedEndpoint = null;
+        var fakeApiClient = new FakeApiClient(endpoint =>
+        {
+            capturedEndpoint = endpoint;
+            return new PagedResponse<RoomListItemModel>([], 1, 6, 0);
+        });
+        var service = new RoomListingsService(fakeApiClient, enableDebugFallback: false);
+        var filter = new RoomFilterCriteria
+        {
+            MinPrice = 1_000_000m,
+            MaxPrice = 2_000_000m,
+            RoomType = "private",
+            Amenities = ["aircon", "wifi"]
+        };
+
+        // Act
+        await service.GetRoomListingsAsync(1, 6, RoomSortOption.PriceAsc, search: "z115", filter: filter);
+
+        // Assert
+        Assert.That(
+            capturedEndpoint,
+            Is.EqualTo("api/rooms?page=1&pageSize=6&sortBy=price_asc&search=z115&minPrice=1000000&maxPrice=2000000&roomType=private&amenities=aircon,wifi"));
+    }
+
+    [Test]
+    public async Task GetRoomListingsAsync_WhenFallbackFilter_FiltersBeforePagingAndUpdatesTotalCount()
+    {
+        // Arrange
+        var fakeApiClient = new FakeApiClient(_ => throw new HttpRequestException("Backend offline"));
+        var service = new RoomListingsService(fakeApiClient, enableDebugFallback: true);
+        var filter = new RoomFilterCriteria
+        {
+            MinPrice = 1_000_000m,
+            MaxPrice = 2_000_000m,
+            RoomType = "private",
+            Amenities = ["aircon"]
+        };
+
+        // Act
+        var page1 = await service.GetRoomListingsAsync(1, 2, RoomSortOption.PriceAsc, filter: filter);
+        var page2 = await service.GetRoomListingsAsync(2, 2, RoomSortOption.PriceAsc, filter: filter);
+
+        // Assert
+        var allFilteredItems = page1.Items.Concat(page2.Items).ToList();
+        Assert.Multiple(() =>
+        {
+            Assert.That(page1.TotalCount, Is.EqualTo(allFilteredItems.Count));
+            Assert.That(page1.TotalCount, Is.GreaterThan(2));
+            Assert.That(allFilteredItems.All(r =>
+                r.Price is >= 1_000_000m and <= 2_000_000m &&
+                string.Equals(r.RoomType, "private", StringComparison.OrdinalIgnoreCase) &&
+                r.Amenities.Any(a => a.Contains("Điều hòa", StringComparison.OrdinalIgnoreCase))), Is.True);
+        });
+    }
+
     private sealed class FakeApiClient(Func<string, object?> handler) : IApiClient
     {
         public Task<TResponse?> GetAsync<TResponse>(string endpoint, CancellationToken cancellationToken = default)

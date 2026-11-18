@@ -4,17 +4,152 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:f="clr-namespace:Fonts"
+    xmlns:loc="clr-namespace:RoomToRentRadar.Core.Localization"
     xmlns:vm="clr-namespace:RoomToRentRadar.Features.Home.ViewModels"
     Title="{Binding Title}"
     x:DataType="vm:HomeViewModel"
-    BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}">
+    BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}"
+    Shell.NavBarIsVisible="False">
 
-    <ScrollView>
-        <VerticalStackLayout
-            Padding="{OnIdiom Phone='16,20', Tablet='24,24', Desktop='32,28'}"
-            HorizontalOptions="Fill"
-            MaximumWidthRequest="1080"
-            Spacing="24">
+    <Grid
+        HorizontalOptions="Fill"
+        MaximumWidthRequest="1160"
+        RowDefinitions="Auto,*"
+        RowSpacing="0">
+
+        <!-- Header Row: Button Menu (☰) + Title & Location + Actions (Bell & Profile) -->
+        <Grid
+            Grid.Row="0"
+            Padding="{OnIdiom Phone='16,12,16,12', Tablet='24,16,24,16', Desktop='32,16,32,16'}"
+            HorizontalOptions="Fill">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" VerticalOptions="Center">
+                <!-- Button Menu (Hamburger 44x44px) -->
+                <Border
+                    Grid.Column="0"
+                    Padding="0"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                    HeightRequest="44"
+                    MinimumHeightRequest="44"
+                    MinimumWidthRequest="44"
+                    SemanticProperties.Description="{loc:Translate Menu_Open}"
+                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                    StrokeShape="RoundRectangle 14"
+                    StrokeThickness="1"
+                    VerticalOptions="Center"
+                    WidthRequest="44">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding OpenMenuCommand}" />
+                    </Border.GestureRecognizers>
+                    <Label
+                        FontFamily="{x:Static f:FluentUI.FontFamily}"
+                        FontSize="22"
+                        HorizontalOptions="Center"
+                        Text="{x:Static f:FluentUI.navigation_24_regular}"
+                        TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                        VerticalOptions="Center" />
+                </Border>
+
+                <!-- Title and Location in Center -->
+                <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                    <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+                        <Label
+                            FontFamily="{x:Static f:FluentUI.FontFamily}"
+                            FontSize="13"
+                            Text="{x:Static f:FluentUI.location_16_regular}"
+                            TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                            VerticalOptions="Center" />
+                        <Label
+                            FontAttributes="Bold"
+                            FontFamily="OpenSansSemibold"
+                            FontSize="12"
+                            Text="{loc:Translate Campus_Location}"
+                            TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                            VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    <Label
+                        FontAttributes="Bold"
+                        FontFamily="OpenSansSemibold"
+                        FontSize="20"
+                        LineBreakMode="TailTruncation"
+                        MaxLines="1"
+                        Text="{Binding Title}"
+                        TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                </VerticalStackLayout>
+
+                <!-- Header Actions: Notification & Profile (44x44 Touch Targets) -->
+                <HorizontalStackLayout Grid.Column="2" Spacing="8" VerticalOptions="Center">
+                    <!-- Notification Action Button -->
+                    <Border
+                        Padding="0"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                        HeightRequest="44"
+                        MinimumHeightRequest="44"
+                        MinimumWidthRequest="44"
+                        SemanticProperties.Description="{loc:Translate Notification_Title}"
+                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                        StrokeShape="RoundRectangle 14"
+                        StrokeThickness="1"
+                        VerticalOptions="Center"
+                        WidthRequest="44">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding OpenNotificationsCommand}" />
+                        </Border.GestureRecognizers>
+                        <Grid>
+                            <Label
+                                FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                FontSize="20"
+                                HorizontalOptions="Center"
+                                Text="{x:Static f:FluentUI.alert_20_regular}"
+                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                VerticalOptions="Center" />
+                            <!-- Subtle Unread Dot -->
+                            <Border
+                                Margin="0,9,10,0"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource AccentHighlight}, Dark={StaticResource AccentHighlightDark}}"
+                                HeightRequest="8"
+                                HorizontalOptions="End"
+                                Stroke="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                                StrokeShape="RoundRectangle 4"
+                                StrokeThickness="1.5"
+                                VerticalOptions="Start"
+                                WidthRequest="8" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Profile Action Button -->
+                    <Border
+                        Padding="0"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}"
+                        HeightRequest="44"
+                        MinimumHeightRequest="44"
+                        MinimumWidthRequest="44"
+                        SemanticProperties.Description="{loc:Translate Profile_Title}"
+                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                        StrokeShape="RoundRectangle 14"
+                        StrokeThickness="1"
+                        VerticalOptions="Center"
+                        WidthRequest="44">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding OpenProfileCommand}" />
+                        </Border.GestureRecognizers>
+                        <Label
+                            FontFamily="{x:Static f:FluentUI.FontFamily}"
+                            FontSize="20"
+                            HorizontalOptions="Center"
+                            Text="{x:Static f:FluentUI.person_20_regular}"
+                            TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                            VerticalOptions="Center" />
+                    </Border>
+                </HorizontalStackLayout>
+            </Grid>
+        </Grid>
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout
+                Padding="{OnIdiom Phone='16,8,16,24', Tablet='24,12,24,28', Desktop='32,16,32,32'}"
+                HorizontalOptions="Fill"
+                MaximumWidthRequest="1080"
+                Spacing="24">
 
             <!-- Hero Banner -->
             <Border
@@ -53,7 +188,7 @@
                                 <Label
                                     FontAttributes="Bold"
                                     FontSize="12"
-                                    Text="CỔNG THÔNG TIN PHÒNG TRỌ SINH VIÊN ICTU"
+                                    Text="{loc:Translate Home_BannerPill}"
                                     TextColor="{StaticResource White}"
                                     VerticalOptions="Center" />
                             </HorizontalStackLayout>
@@ -87,7 +222,7 @@
                         LineHeight="1.45"
                         MaximumWidthRequest="720"
                         HorizontalOptions="Start"
-                        Text="Tra cứu nhanh phòng trọ quanh trường ĐH CNTT&amp;TT Thái Nguyên với giá thuê minh bạch, khoảng cách thực tế tới cổng trường và bộ lọc tiện nghi trực quan."
+                        Text="{loc:Translate Home_IntroDesc}"
                         TextColor="{StaticResource HeroSubtitleLight}" />
 
                     <!-- Interactive Search Bar + Primary CTA -->
@@ -116,7 +251,7 @@
                                 BackgroundColor="Transparent"
                                 ClearButtonVisibility="WhileEditing"
                                 FontSize="14"
-                                Placeholder="Nhập tên đường (Z115, Quyết Thắng) hoặc tiện ích (Điều hòa, Gác xép)..."
+                                Placeholder="{loc:Translate Home_SearchPlaceholder}"
                                 PlaceholderColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
                                 ReturnCommand="{Binding SearchFromHomeCommand}"
                                 ReturnType="Search"
@@ -145,7 +280,7 @@
                                     <Label
                                         FontAttributes="Bold"
                                         FontSize="14"
-                                        Text="Khám phá phòng trọ ngay"
+                                        Text="{loc:Translate Home_CtaButton}"
                                         TextColor="{StaticResource White}"
                                         VerticalOptions="Center" />
                                     <Label
@@ -168,7 +303,7 @@
                             Margin="0,4,10,4"
                             FontAttributes="Bold"
                             FontSize="12"
-                            Text="Tìm nhanh:"
+                            Text="{loc:Translate Home_PopularTags}"
                             TextColor="{StaticResource HeroSubtitleLight}"
                             VerticalOptions="Center" />
 
@@ -186,7 +321,7 @@
                             <Label
                                 FontAttributes="Bold"
                                 FontSize="12"
-                                Text="❄️ Có điều hòa"
+                                Text="{loc:Translate Home_Tag_AirConditioner}"
                                 TextColor="{StaticResource White}" />
                         </Border>
 
@@ -204,7 +339,7 @@
                             <Label
                                 FontAttributes="Bold"
                                 FontSize="12"
-                                Text="🚿 Khép kín"
+                                Text="{loc:Translate Home_Tag_PrivateBathroom}"
                                 TextColor="{StaticResource White}" />
                         </Border>
 
@@ -222,7 +357,7 @@
                             <Label
                                 FontAttributes="Bold"
                                 FontSize="12"
-                                Text="🪜 Có gác xép"
+                                Text="{loc:Translate Home_Tag_Mezzanine}"
                                 TextColor="{StaticResource White}" />
                         </Border>
 
@@ -240,7 +375,7 @@
                             <Label
                                 FontAttributes="Bold"
                                 FontSize="12"
-                                Text="📍 Đường Z115"
+                                Text="{loc:Translate Home_Tag_StreetZ115}"
                                 TextColor="{StaticResource White}" />
                         </Border>
 
@@ -258,7 +393,7 @@
                             <Label
                                 FontAttributes="Bold"
                                 FontSize="12"
-                                Text="🔥 Bình nóng lạnh"
+                                Text="{loc:Translate Home_Tag_WaterHeater}"
                                 TextColor="{StaticResource White}" />
                         </Border>
                     </FlexLayout>
@@ -309,11 +444,11 @@
                             <Label
                                 FontAttributes="Bold"
                                 FontSize="20"
-                                Text="100+ Phòng xác thực"
+                                Text="{loc:Translate Home_Stat_VerifiedTitle}"
                                 TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
                             <Label
                                 FontSize="13"
-                                Text="Hình ảnh &amp; thông tin kiểm duyệt"
+                                Text="{loc:Translate Home_Stat_VerifiedDesc}"
                                 TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
                         </VerticalStackLayout>
                     </HorizontalStackLayout>
@@ -356,11 +491,11 @@
                             <Label
                                 FontAttributes="Bold"
                                 FontSize="20"
-                                Text="Gần trường &lt; 2 km"
+                                Text="{loc:Translate Home_Stat_NearCampusTitle}"
                                 TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
                             <Label
                                 FontSize="13"
-                                Text="Đi bộ hoặc xe đạp tới giảng đường"
+                                Text="{loc:Translate Home_Stat_NearCampusDesc}"
                                 TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
                         </VerticalStackLayout>
                     </HorizontalStackLayout>
@@ -403,11 +538,11 @@
                             <Label
                                 FontAttributes="Bold"
                                 FontSize="20"
-                                Text="Giá sinh viên từ 1,1tr"
+                                Text="{loc:Translate Home_Stat_PriceTitle}"
                                 TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
                             <Label
                                 FontSize="13"
-                                Text="Phù hợp ngân sách ở ghép &amp; ở một mình"
+                                Text="{loc:Translate Home_Stat_PriceDesc}"
                                 TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
                         </VerticalStackLayout>
                     </HorizontalStackLayout>
@@ -435,11 +570,11 @@
                             <Label
                                 FontAttributes="Bold"
                                 FontSize="18"
-                                Text="Tìm phòng dễ dàng chỉ với 3 bước"
+                                Text="{loc:Translate Home_Guide_Title}"
                                 TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
                             <Label
                                 FontSize="13"
-                                Text="Được thiết kế tối ưu cho tân sinh viên và sinh viên ĐH CNTT&amp;TT (ICTU)"
+                                Text="{loc:Translate Home_Guide_Subtitle}"
                                 TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
                         </VerticalStackLayout>
 
@@ -457,7 +592,7 @@
                                 <Label
                                     FontAttributes="Bold"
                                     FontSize="13"
-                                    Text="Xem tất cả phòng"
+                                    Text="{loc:Translate Home_Guide_ViewAll}"
                                     TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
                                     VerticalOptions="Center" />
                                 <Label
@@ -496,14 +631,14 @@
                                     <Label
                                         FontAttributes="Bold"
                                         FontSize="14"
-                                        Text="1. Chọn tiêu chí &amp; mức giá"
+                                        Text="{loc:Translate Home_Step1_Title}"
                                         TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
                                         VerticalOptions="Center" />
                                 </HorizontalStackLayout>
                                 <Label
                                     FontSize="12.5"
                                     LineHeight="1.35"
-                                    Text="Sắp xếp theo phòng mới đăng, khoảng cách gần trường hoặc giá từ thấp đến cao."
+                                    Text="{loc:Translate Home_Step1_Desc}"
                                     TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
                             </VerticalStackLayout>
                         </Border>
@@ -528,14 +663,14 @@
                                     <Label
                                         FontAttributes="Bold"
                                         FontSize="14"
-                                        Text="2. Kiểm tra tiện ích sẵn có"
+                                        Text="{loc:Translate Home_Step2_Title}"
                                         TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
                                         VerticalOptions="Center" />
                                 </HorizontalStackLayout>
                                 <Label
                                     FontSize="12.5"
                                     LineHeight="1.35"
-                                    Text="Xem ngay diện tích, điều hòa, nóng lạnh, gác xép và nhãn xác thực trên từng thẻ phòng."
+                                    Text="{loc:Translate Home_Step2_Desc}"
                                     TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
                             </VerticalStackLayout>
                         </Border>
@@ -560,14 +695,14 @@
                                     <Label
                                         FontAttributes="Bold"
                                         FontSize="14"
-                                        Text="3. Xem chi tiết &amp; liên hệ"
+                                        Text="{loc:Translate Home_Step3_Title}"
                                         TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
                                         VerticalOptions="Center" />
                                 </HorizontalStackLayout>
                                 <Label
                                     FontSize="12.5"
                                     LineHeight="1.35"
-                                    Text="Bấm vào phòng bất kỳ để xem thông tin chi tiết và chọn phòng ưng ý nhanh nhất."
+                                    Text="{loc:Translate Home_Step3_Desc}"
                                     TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
                             </VerticalStackLayout>
                         </Border>
@@ -577,4 +712,5 @@
 
         </VerticalStackLayout>
     </ScrollView>
+    </Grid>
 </ContentPage>

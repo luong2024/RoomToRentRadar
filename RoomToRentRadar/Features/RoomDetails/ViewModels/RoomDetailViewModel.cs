@@ -13,6 +13,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     private readonly IErrorHandler _errorHandler;
     private readonly IAuthenticationSessionService _sessionService;
     private readonly Func<string, Task>? _navigateAsync;
+    private readonly Func<string, string, string, string?, Task<bool>>? _displayAlertAsync;
     private CancellationTokenSource? _loadCts;
 
     [ObservableProperty]
@@ -42,6 +43,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     public bool IsAvailable => Room?.Status == ListingStatus.Available;
     public bool IsRented => Room?.Status == ListingStatus.Rented;
     public bool IsUnavailable => Room?.Status == ListingStatus.Unavailable;
+    public bool IsAddressHidden => !IsAvailable;
     public bool CanBookOrContact => IsAvailable;
     public bool ShowSimilarRooms => IsRented || IsUnavailable;
     public string ListingStatusTitle => IsRented
@@ -62,12 +64,14 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         IRoomDetailService roomDetailService,
         IErrorHandler errorHandler,
         IAuthenticationSessionService sessionService,
-        Func<string, Task>? navigateAsync = null)
+        Func<string, Task>? navigateAsync = null,
+        Func<string, string, string, string?, Task<bool>>? displayAlertAsync = null)
     {
         _roomDetailService = roomDetailService ?? throw new ArgumentNullException(nameof(roomDetailService));
         _errorHandler = errorHandler ?? throw new ArgumentNullException(nameof(errorHandler));
         _sessionService = sessionService ?? throw new ArgumentNullException(nameof(sessionService));
         _navigateAsync = navigateAsync;
+        _displayAlertAsync = displayAlertAsync;
     }
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
@@ -76,38 +80,56 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         {
             var rawId = idObj.ToString() ?? string.Empty;
             var roomId = Uri.UnescapeDataString(rawId);
-            if (string.Equals(RoomId, roomId, StringComparison.Ordinal) && (IsBusy || Room is not null))
+            if (string.Equals(RoomId, roomId, StringComparison.Ordinal) && IsBusy)
             {
                 return;
             }
 
             RoomId = roomId;
-            _ = LoadRoomDetailsAsync();
+            _ = LoadRoomDetailsCommand.ExecuteAsync(null);
+        }
+        else
+        {
+            RoomId = string.Empty;
+            _ = LoadRoomDetailsCommand.ExecuteAsync(null);
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(AllowConcurrentExecutions = true)]
     public async Task LoadRoomDetailsAsync()
     {
-        if (string.IsNullOrWhiteSpace(RoomId))
-        {
-            IsNotFound = true;
-            StatusMessage = "A room ID is required.";
-            return;
-        }
-
         var currentCts = new CancellationTokenSource();
         var previousCts = Interlocked.Exchange(ref _loadCts, currentCts);
         previousCts?.Cancel();
         previousCts?.Dispose();
+
+        if (string.IsNullOrWhiteSpace(RoomId))
+        {
+            IsBusy = false;
+            Room = null;
+            SimilarRooms = [];
+            IsNotFound = true;
+            StatusMessage = "A room ID is required.";
+            NotifyStatusPropertiesChanged();
+            if (ReferenceEquals(_loadCts, currentCts))
+            {
+                _loadCts = null;
+                currentCts.Dispose();
+            }
+            return;
+        }
+
         var token = currentCts.Token;
         var roomId = RoomId;
 
         try
         {
             IsBusy = true;
+            Room = null;
             IsNotFound = false;
             StatusMessage = string.Empty;
+            SimilarRooms = [];
+            NotifyStatusPropertiesChanged();
 
             var room = await _roomDetailService.GetRoomDetailAsync(roomId, token);
 
@@ -119,6 +141,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
             if (room is null)
             {
                 Room = null;
+                SimilarRooms = [];
                 IsNotFound = true;
                 StatusMessage = "This room was not found or has been removed.";
                 NotifyStatusPropertiesChanged();
@@ -139,12 +162,16 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         {
             // A newer navigation request superseded this load.
         }
-        catch (Exception ex) when (!token.IsCancellationRequested && ReferenceEquals(_loadCts, currentCts))
+        catch (Exception ex)
         {
-            Room = null;
-            IsNotFound = true;
-            StatusMessage = "Unable to load room details. Check your network connection and try again.";
-            _errorHandler.HandleError(ex);
+            if (!token.IsCancellationRequested && ReferenceEquals(_loadCts, currentCts))
+            {
+                Room = null;
+                SimilarRooms = [];
+                IsNotFound = true;
+                StatusMessage = "Unable to load room details. Check your network connection and try again.";
+                _errorHandler.HandleError(ex);
+            }
         }
         finally
         {
@@ -166,6 +193,10 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         await NavigateAsync(targetRoute);
     }
 
+    /// <summary>
+    /// Placeholder action for scheduling a viewing (US02 scope covers room details & listing status).
+    /// Full appointment booking workflow is scheduled for the viewing management user story.
+    /// </summary>
     [RelayCommand]
     public async Task BookInspectionAsync()
     {
@@ -180,12 +211,41 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
             return;
         }
 
-#if ANDROID || IOS || MACCATALYST || WINDOWS
-        if (Shell.Current is not null)
+        await DisplayAlertAsync(
+            "Coming Soon",
+            "Viewing appointment scheduling is not available yet.",
+            "OK",
+            null);
+    }
+
+    private async Task<bool> DisplayAlertAsync(string title, string message, string accept, string? cancel)
+    {
+        try
         {
-            await Shell.Current.DisplayAlertAsync("Schedule a viewing", $"Send a viewing request for \"{Room?.Title}\" to the landlord?", "Confirm", "Cancel");
-        }
+            if (_displayAlertAsync is not null)
+            {
+                return await _displayAlertAsync(title, message, accept, cancel);
+            }
+
+#if ANDROID || IOS || MACCATALYST || WINDOWS
+            if (Shell.Current is not null)
+            {
+                if (cancel is null)
+                {
+                    await Shell.Current.DisplayAlertAsync(title, message, accept);
+                    return true;
+                }
+
+                return await Shell.Current.DisplayAlertAsync(title, message, accept, cancel);
+            }
 #endif
+        }
+        catch (Exception ex)
+        {
+            _errorHandler.HandleError(ex);
+        }
+
+        return false;
     }
 
     [RelayCommand]
@@ -233,6 +293,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         OnPropertyChanged(nameof(IsAvailable));
         OnPropertyChanged(nameof(IsRented));
         OnPropertyChanged(nameof(IsUnavailable));
+        OnPropertyChanged(nameof(IsAddressHidden));
         OnPropertyChanged(nameof(CanBookOrContact));
         OnPropertyChanged(nameof(ShowSimilarRooms));
         OnPropertyChanged(nameof(ListingStatusTitle));

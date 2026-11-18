@@ -12,7 +12,7 @@ public sealed class CosmosPoint
     public double[] Coordinates { get; set; } = [0, 0]; // [longitude, latitude]
 }
 
-public sealed class RoomDocument
+public sealed class RoomDocument : IProjectionVersionedDocument
 {
     [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
@@ -76,6 +76,58 @@ public sealed class RoomDocument
 
     [JsonProperty("location")]
     public CosmosPoint? Location { get; set; }
+
+    [JsonProperty("projectionVersion")]
+    public long ProjectionVersion { get; set; }
+
+    [JsonProperty("isDeleted")]
+    public bool IsDeleted { get; set; }
+
+    [JsonProperty("_etag")]
+    public string? ETag { get; set; }
+
+    /// <summary>
+    /// Applies only fields owned by <see cref="RoomListingDocument"/> to an
+    /// existing detail document. Detail-only fields, including the gallery,
+    /// deposit, room type, amenities, house rules, contact details, and room
+    /// counts, must survive listing synchronization.
+    /// </summary>
+    public static RoomDocument MergeListingFields(
+        RoomListingDocument listing,
+        RoomDocument? existingDetail)
+    {
+        ArgumentNullException.ThrowIfNull(listing);
+
+        var detail = existingDetail ?? new RoomDocument { Id = listing.Id };
+
+        detail.Id = listing.Id;
+        detail.Title = listing.Title;
+        detail.Description = listing.Description;
+        detail.Price = listing.MonthlyRentAmount;
+        detail.Area = listing.AreaSquareMeters;
+        detail.Address = listing.Address;
+        detail.ThumbnailUrl = listing.ThumbnailUrl;
+        detail.IsVerified = listing.VerificationStatus == 2;
+        detail.Status = listing.Status;
+        // A listing's creation timestamp is only a valid initial value. It must
+        // never overwrite the detail record's actual last-update timestamp.
+        detail.LastUpdatedDate ??= listing.CreatedAtUtc;
+        detail.Latitude = listing.Latitude;
+        detail.Longitude = listing.Longitude;
+        detail.Location = new CosmosPoint
+        {
+            Coordinates = [listing.Longitude, listing.Latitude]
+        };
+
+        // A new document has no gallery yet, so its thumbnail is a reasonable
+        // initial image. Existing galleries are never replaced by listing data.
+        if (existingDetail is null && !string.IsNullOrWhiteSpace(listing.ThumbnailUrl))
+        {
+            detail.ImageUrls = [listing.ThumbnailUrl];
+        }
+
+        return detail;
+    }
 
     public static RoomDocument FromDomain(Room room)
     {

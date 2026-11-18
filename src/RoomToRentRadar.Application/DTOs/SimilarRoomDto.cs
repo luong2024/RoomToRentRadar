@@ -9,6 +9,7 @@ public class SimilarRoomDto
     public double Area { get; set; }
     public string FormattedArea { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
+    public string? ThumbnailUrl { get; set; }
     public string RoomType { get; set; } = string.Empty;
     public bool IsVerified { get; set; }
 }

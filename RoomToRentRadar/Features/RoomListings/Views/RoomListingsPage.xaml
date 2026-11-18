@@ -4,309 +4,310 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:f="clr-namespace:Fonts"
+    xmlns:loc="clr-namespace:RoomToRentRadar.Core.Localization"
     xmlns:models="clr-namespace:RoomToRentRadar.Features.RoomListings.Models"
+    xmlns:shimmer="clr-namespace:Syncfusion.Maui.Toolkit.Shimmer;assembly=Syncfusion.Maui.Toolkit"
     xmlns:views="clr-namespace:RoomToRentRadar.Features.RoomListings.Views"
     xmlns:vm="clr-namespace:RoomToRentRadar.Features.RoomListings.ViewModels"
     x:Name="ListingsPageRoot"
     Title="{Binding Title}"
     x:DataType="vm:RoomListingsViewModel"
-    BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}">
+    BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}"
+    Shell.NavBarIsVisible="False">
 
     <Grid x:Name="RootPageGrid">
+        <!-- Main Content Container -->
         <Grid
             x:Name="ListingsContentGrid"
-            Padding="{OnIdiom Phone='16,12', Tablet='24,16', Desktop='24,16'}"
+            Padding="{OnIdiom Phone='16,12,16,12', Tablet='24,16,24,16', Desktop='24,16,24,16'}"
             HorizontalOptions="Fill"
             MaximumWidthRequest="1160"
             RowDefinitions="Auto,*"
-            RowSpacing="4">
+            RowSpacing="10">
 
-        <!-- Header Zone (Title + Result Summary + Sort Pills) -->
-        <Border
-            Grid.Row="0"
-            Margin="0,0,0,12"
-            Padding="16"
-            BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
-            Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
-            StrokeShape="RoundRectangle 16"
-            StrokeThickness="1">
-            <Border.Shadow>
-                <Shadow
-                    Brush="{StaticResource Black}"
-                    Offset="0,2"
-                    Opacity="0.04"
-                    Radius="8" />
-            </Border.Shadow>
+            <!-- Header Controls: Menu Button + Title + Actions + Search + Filters -->
+            <VerticalStackLayout
+                Grid.Row="0"
+                Margin="0,0,0,4"
+                Spacing="12">
 
-            <VerticalStackLayout Spacing="12">
-                <!-- Title Row -->
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" VerticalOptions="Center">
-                    <VerticalStackLayout Grid.Column="0" Spacing="4">
-                        <Label
-                            FontAttributes="Bold"
-                            FontSize="22"
-                            Text="Phòng trọ quanh ICTU"
-                            TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
-                        <Label
-                            FontSize="13"
-                            Text="{Binding ResultSummaryText}"
-                            TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
-                    </VerticalStackLayout>
-
+                <!-- 1. Header Row: Button Menu (☰) + Title & Location + Actions (Bell & Profile) -->
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" VerticalOptions="Center">
+                    <!-- Button Menu (Hamburger 44x44px) -->
                     <Border
-                        Grid.Column="1"
-                        Padding="10,6"
-                        BackgroundColor="{AppThemeBinding Light={StaticResource AccentHighlightSoft}, Dark={StaticResource AccentHighlightSoftDark}}"
-                        StrokeShape="RoundRectangle 20"
-                        StrokeThickness="0"
-                        VerticalOptions="Center">
+                        Grid.Column="0"
+                        Padding="0"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                        HeightRequest="44"
+                        MinimumHeightRequest="44"
+                        MinimumWidthRequest="44"
+                        SemanticProperties.Description="{loc:Translate Menu_Open}"
+                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                        StrokeShape="RoundRectangle 14"
+                        StrokeThickness="1"
+                        VerticalOptions="Center"
+                        WidthRequest="44">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding OpenMenuCommand}" />
+                        </Border.GestureRecognizers>
+                        <Label
+                            FontFamily="{x:Static f:FluentUI.FontFamily}"
+                            FontSize="22"
+                            HorizontalOptions="Center"
+                            Text="{x:Static f:FluentUI.navigation_24_regular}"
+                            TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                            VerticalOptions="Center" />
+                    </Border>
+
+                    <!-- Title and Location in Center -->
+                    <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
                         <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
                             <Label
                                 FontFamily="{x:Static f:FluentUI.FontFamily}"
-                                FontSize="16"
+                                FontSize="13"
                                 Text="{x:Static f:FluentUI.location_16_regular}"
-                                TextColor="{AppThemeBinding Light={StaticResource AccentHighlight}, Dark={StaticResource AccentHighlightDark}}"
+                                TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
                                 VerticalOptions="Center" />
                             <Label
                                 FontAttributes="Bold"
+                                FontFamily="OpenSansSemibold"
                                 FontSize="12"
-                                Text="Thái Nguyên"
-                                TextColor="{AppThemeBinding Light={StaticResource AccentHighlightPillText}, Dark={StaticResource AccentHighlightPillTextDark}}"
+                                Text="{loc:Translate Campus_Location}"
+                                TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
                                 VerticalOptions="Center" />
                         </HorizontalStackLayout>
-                    </Border>
+                        <Label
+                            FontAttributes="Bold"
+                            FontFamily="OpenSansSemibold"
+                            FontSize="20"
+                            LineBreakMode="TailTruncation"
+                            MaxLines="1"
+                            Text="{Binding Title}"
+                            TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                    </VerticalStackLayout>
+
+                    <!-- Header Actions: Notification & Profile (44x44 Touch Targets) -->
+                    <HorizontalStackLayout Grid.Column="2" Spacing="8" VerticalOptions="Center">
+                        <!-- Notification Action Button -->
+                        <Border
+                            Padding="0"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                            HeightRequest="44"
+                            MinimumHeightRequest="44"
+                            MinimumWidthRequest="44"
+                            SemanticProperties.Description="{loc:Translate Notification_Title}"
+                            Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                            StrokeShape="RoundRectangle 14"
+                            StrokeThickness="1"
+                            VerticalOptions="Center"
+                            WidthRequest="44">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenNotificationsCommand}" />
+                            </Border.GestureRecognizers>
+                            <Grid>
+                                <Label
+                                    FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                    FontSize="20"
+                                    HorizontalOptions="Center"
+                                    Text="{x:Static f:FluentUI.alert_20_regular}"
+                                    TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                    VerticalOptions="Center" />
+                                <!-- Subtle Unread Dot -->
+                                <Border
+                                    Margin="0,9,10,0"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource AccentHighlight}, Dark={StaticResource AccentHighlightDark}}"
+                                    HeightRequest="8"
+                                    HorizontalOptions="End"
+                                    Stroke="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                                    StrokeShape="RoundRectangle 4"
+                                    StrokeThickness="1.5"
+                                    VerticalOptions="Start"
+                                    WidthRequest="8" />
+                            </Grid>
+                        </Border>
+
+                        <!-- Profile Action Button -->
+                        <Border
+                            Padding="0"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}"
+                            HeightRequest="44"
+                            MinimumHeightRequest="44"
+                            MinimumWidthRequest="44"
+                            SemanticProperties.Description="{loc:Translate Profile_Title}"
+                            Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                            StrokeShape="RoundRectangle 14"
+                            StrokeThickness="1"
+                            VerticalOptions="Center"
+                            WidthRequest="44">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenProfileCommand}" />
+                            </Border.GestureRecognizers>
+                            <Label
+                                FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                FontSize="20"
+                                HorizontalOptions="Center"
+                                Text="{x:Static f:FluentUI.person_20_regular}"
+                                TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                VerticalOptions="Center" />
+                        </Border>
+                    </HorizontalStackLayout>
                 </Grid>
 
-                <!-- Unified Search & Sort Control Bar -->
-                <Grid
-                    ColumnDefinitions="{OnIdiom Phone='*', Tablet='*,Auto', Desktop='*,Auto'}"
-                    ColumnSpacing="14"
-                    RowDefinitions="{OnIdiom Phone='Auto,Auto', Tablet='Auto', Desktop='Auto'}"
-                    RowSpacing="10"
-                    VerticalOptions="Center">
+                <!-- Live Result Summary Text -->
+                <Label
+                    FontSize="12.5"
+                    LineBreakMode="TailTruncation"
+                    MaxLines="1"
+                    Text="{Binding ResultSummaryText}"
+                    TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
 
-                    <!-- Inline Quick Search Box -->
+                <!-- 2. Search Bar + Separate Filter Button (SlidersHorizontal) -->
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" VerticalOptions="Center">
+                    <!-- Redesigned Search Bar with Search Icon -->
                     <Border
-                        Grid.Row="0"
                         Grid.Column="0"
-                        Padding="12,4,6,4"
-                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}"
+                        Padding="14,2,6,2"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                        MinimumHeightRequest="48"
                         Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
-                        StrokeShape="RoundRectangle 12"
+                        StrokeShape="RoundRectangle 14"
                         StrokeThickness="1"
                         VerticalOptions="Center">
-                        <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8" VerticalOptions="Center">
+                        <Border.Shadow>
+                            <Shadow
+                                Brush="{StaticResource Black}"
+                                Offset="0,2"
+                                Opacity="0.03"
+                                Radius="8" />
+                        </Border.Shadow>
+
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" VerticalOptions="Center">
                             <Label
                                 Grid.Column="0"
                                 FontFamily="{x:Static f:FluentUI.FontFamily}"
-                                FontSize="17"
+                                FontSize="18"
                                 Text="{x:Static f:FluentUI.search_20_regular}"
-                                TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
+                                TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
                                 VerticalOptions="Center" />
 
                             <Entry
                                 Grid.Column="1"
-                                StyleId="BorderlessEntry"
                                 BackgroundColor="Transparent"
-                                FontSize="13.5"
-                                Placeholder="Tìm theo tên phòng, đường (Z115, Quyết Thắng) hoặc tiện ích..."
+                                FontSize="14"
+                                MinimumHeightRequest="44"
+                                Placeholder="{loc:Translate Search_Placeholder}"
                                 PlaceholderColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
                                 ReturnCommand="{Binding ApplySearchCommand}"
                                 ReturnCommandParameter="{Binding SearchQuery}"
                                 ReturnType="Search"
+                                StyleId="BorderlessEntry"
                                 Text="{Binding SearchQuery}"
                                 TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
                                 VerticalOptions="Center" />
 
+                            <!-- Clear Search Button (44x44 Touch Target) -->
                             <Border
                                 Grid.Column="2"
-                                Padding="6,4"
+                                Padding="0"
                                 BackgroundColor="Transparent"
+                                HeightRequest="44"
                                 IsVisible="{Binding HasSearchQuery}"
-                                StrokeShape="RoundRectangle 8"
+                                MinimumHeightRequest="44"
+                                MinimumWidthRequest="44"
+                                StrokeShape="RoundRectangle 10"
                                 StrokeThickness="0"
-                                VerticalOptions="Center">
+                                VerticalOptions="Center"
+                                WidthRequest="44">
                                 <Border.GestureRecognizers>
                                     <TapGestureRecognizer Command="{Binding ClearSearchCommand}" />
                                 </Border.GestureRecognizers>
                                 <Label
                                     FontFamily="{x:Static f:FluentUI.FontFamily}"
-                                    FontSize="14"
+                                    FontSize="16"
+                                    HorizontalOptions="Center"
                                     Text="{x:Static f:FluentUI.dismiss_16_regular}"
-                                    TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
-                                    VerticalOptions="Center" />
-                            </Border>
-
-                            <Border
-                                Grid.Column="3"
-                                Padding="12,7"
-                                BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
-                                StrokeShape="RoundRectangle 9"
-                                StrokeThickness="0"
-                                VerticalOptions="Center">
-                                <Border.GestureRecognizers>
-                                    <TapGestureRecognizer
-                                        Command="{Binding ApplySearchCommand}"
-                                        CommandParameter="{Binding SearchQuery}" />
-                                </Border.GestureRecognizers>
-                                <Label
-                                    FontAttributes="Bold"
-                                    FontSize="12"
-                                    Text="Tìm"
-                                    TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PageBackgroundDark}}"
+                                    TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}"
                                     VerticalOptions="Center" />
                             </Border>
                         </Grid>
                     </Border>
 
-                    <!-- Horizontal Sort Pills + Price Dropdown Trigger -->
-                    <ScrollView
-                        x:Name="SortScrollView"
-                        Grid.Row="{OnIdiom Phone=1, Tablet=0, Desktop=0}"
-                        Grid.Column="{OnIdiom Phone=0, Tablet=1, Desktop=1}"
-                        HorizontalScrollBarVisibility="Never"
-                        Orientation="Horizontal"
-                        VerticalOptions="Center">
-                        <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
-                            <Label
-                                Margin="0,0,2,0"
-                                FontAttributes="Bold"
-                                FontSize="12.5"
-                                Text="Sắp xếp:"
-                                TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
-                                VerticalOptions="Center" />
+                    <!-- Separate Filter Button with SlidersHorizontal Icon (48x48 Touch Target) -->
+                    <Border
+                        x:Name="PriceDropdownButton"
+                        Grid.Column="1"
+                        Padding="0"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                        HeightRequest="48"
+                        MinimumHeightRequest="48"
+                        MinimumWidthRequest="48"
+                        SemanticProperties.Description="{loc:Translate Filter_SortTooltip}"
+                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                        StrokeShape="RoundRectangle 14"
+                        StrokeThickness="1"
+                        VerticalOptions="Center"
+                        WidthRequest="48">
+                        <Border.Shadow>
+                            <Shadow
+                                Brush="{StaticResource Black}"
+                                Offset="0,2"
+                                Opacity="0.03"
+                                Radius="8" />
+                        </Border.Shadow>
+                        <Border.Triggers>
+                            <DataTrigger
+                                Binding="{Binding IsPriceMenuOpen}"
+                                TargetType="Border"
+                                Value="True">
+                                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                                <Setter Property="StrokeThickness" Value="0" />
+                            </DataTrigger>
+                            <DataTrigger
+                                Binding="{Binding IsPriceSortSelected}"
+                                TargetType="Border"
+                                Value="True">
+                                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                                <Setter Property="StrokeThickness" Value="0" />
+                            </DataTrigger>
+                        </Border.Triggers>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding TogglePriceMenuCommand}" />
+                        </Border.GestureRecognizers>
 
-                            <HorizontalStackLayout
-                                BindableLayout.ItemsSource="{Binding PrimarySortOptions}"
-                                Spacing="8"
-                                VerticalOptions="Center">
-                                <BindableLayout.ItemTemplate>
-                                    <DataTemplate x:DataType="models:RoomSortOptionItem">
-                                        <Border
-                                            Padding="14,9"
-                                            BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
-                                            Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
-                                            StrokeShape="RoundRectangle 20"
-                                            StrokeThickness="1">
-                                            <Border.Triggers>
-                                                <DataTrigger
-                                                    Binding="{Binding IsSelected}"
-                                                    TargetType="Border"
-                                                    Value="True">
-                                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
-                                                    <Setter Property="StrokeThickness" Value="0" />
-                                                </DataTrigger>
-                                            </Border.Triggers>
-                                            <Border.GestureRecognizers>
-                                                <TapGestureRecognizer
-                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:RoomListingsViewModel}}, Path=SelectSortCommand, x:DataType=vm:RoomListingsViewModel}"
-                                                    CommandParameter="{Binding .}" />
-                                            </Border.GestureRecognizers>
-
-                                            <Label
-                                                FontAttributes="Bold"
-                                                FontSize="13"
-                                                Text="{Binding DisplayName}"
-                                                TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
-                                                VerticalOptions="Center">
-                                                <Label.Triggers>
-                                                    <DataTrigger
-                                                        Binding="{Binding IsSelected}"
-                                                        TargetType="Label"
-                                                        Value="True">
-                                                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PageBackgroundDark}}" />
-                                                    </DataTrigger>
-                                                </Label.Triggers>
-                                            </Label>
-                                        </Border>
-                                    </DataTemplate>
-                                </BindableLayout.ItemTemplate>
-                            </HorizontalStackLayout>
-
-                            <!-- Price Dropdown Selector ("Giá v") -->
-                            <Border
-                                x:Name="PriceDropdownButton"
-                                Padding="14,9"
-                                BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
-                                WidthRequest="196"
-                                Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
-                                StrokeShape="RoundRectangle 12"
-                                StrokeThickness="1">
-                                <Border.Triggers>
-                                    <DataTrigger
-                                        Binding="{Binding IsPriceMenuOpen}"
-                                        TargetType="Border"
-                                        Value="True">
-                                        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
-                                    </DataTrigger>
-                                    <DataTrigger
-                                        Binding="{Binding IsPriceSortSelected}"
-                                        TargetType="Border"
-                                        Value="True">
-                                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
-                                        <Setter Property="StrokeThickness" Value="0" />
-                                    </DataTrigger>
-                                </Border.Triggers>
-                                <Border.GestureRecognizers>
-                                    <TapGestureRecognizer Command="{Binding TogglePriceMenuCommand}" />
-                                </Border.GestureRecognizers>
-
-                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" VerticalOptions="Center">
-                                    <Label
-                                        Grid.Column="0"
-                                        FontAttributes="Bold"
-                                        FontSize="13"
-                                        LineBreakMode="TailTruncation"
-                                        MaxLines="1"
-                                        Text="{Binding PriceSortLabel}"
-                                        TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
-                                        VerticalOptions="Center">
-                                        <Label.Triggers>
-                                            <DataTrigger
-                                                Binding="{Binding IsPriceSortSelected}"
-                                                TargetType="Label"
-                                                Value="True">
-                                                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PageBackgroundDark}}" />
-                                            </DataTrigger>
-                                        </Label.Triggers>
-                                    </Label>
-
-                                    <Label
-                                        Grid.Column="1"
-                                        FontFamily="{x:Static f:FluentUI.FontFamily}"
-                                        FontSize="15"
-                                        Text="{x:Static f:FluentUI.chevron_down_16_regular}"
-                                        TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
-                                        VerticalOptions="Center">
-                                        <Label.Triggers>
-                                            <DataTrigger
-                                                Binding="{Binding IsPriceMenuOpen}"
-                                                TargetType="Label"
-                                                Value="True">
-                                                <Setter Property="Text" Value="{x:Static f:FluentUI.chevron_up_16_regular}" />
-                                            </DataTrigger>
-                                            <DataTrigger
-                                                Binding="{Binding IsPriceSortSelected}"
-                                                TargetType="Label"
-                                                Value="True">
-                                                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PageBackgroundDark}}" />
-                                            </DataTrigger>
-                                        </Label.Triggers>
-                                    </Label>
-                                </Grid>
-                            </Border>
-                        </HorizontalStackLayout>
-                    </ScrollView>
+                        <Label
+                            FontFamily="{x:Static f:FluentUI.FontFamily}"
+                            FontSize="20"
+                            HorizontalOptions="Center"
+                            Text="{x:Static f:FluentUI.options_20_regular}"
+                            TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                            VerticalOptions="Center">
+                            <Label.Triggers>
+                                <DataTrigger
+                                    Binding="{Binding IsPriceMenuOpen}"
+                                    TargetType="Label"
+                                    Value="True">
+                                    <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PageBackgroundDark}}" />
+                                </DataTrigger>
+                                <DataTrigger
+                                    Binding="{Binding IsPriceSortSelected}"
+                                    TargetType="Label"
+                                    Value="True">
+                                    <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PageBackgroundDark}}" />
+                                </DataTrigger>
+                            </Label.Triggers>
+                        </Label>
+                    </Border>
                 </Grid>
 
-                <!-- Active TitleBar Search Filter Chip -->
+                <!-- Active Search Filter Pill -->
                 <Border
-                    Padding="10,6"
+                    Padding="12,8"
                     BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}"
                     HorizontalOptions="Start"
                     IsVisible="{Binding HasSearchQuery}"
+                    MinimumHeightRequest="44"
                     Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
-                    StrokeShape="RoundRectangle 10"
+                    StrokeShape="RoundRectangle 12"
                     StrokeThickness="1">
                     <Border.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding ClearSearchCommand}" />
@@ -314,222 +315,1421 @@
                     <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
                         <Label
                             FontFamily="{x:Static f:FluentUI.FontFamily}"
-                            FontSize="14"
+                            FontSize="15"
                             Text="{x:Static f:FluentUI.search_20_regular}"
                             TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
                             VerticalOptions="Center" />
                         <Label
                             FontAttributes="Bold"
-                            FontSize="12"
-                            Text="{Binding SearchQuery, StringFormat='Đang lọc: {0}'}"
+                            FontFamily="OpenSansSemibold"
+                            FontSize="12.5"
+                            Text="{Binding ActiveFilterSummary}"
                             TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
                             VerticalOptions="Center" />
                         <Label
                             FontFamily="{x:Static f:FluentUI.FontFamily}"
-                            FontSize="13"
+                            FontSize="14"
                             Text="{x:Static f:FluentUI.dismiss_16_regular}"
                             TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
                             VerticalOptions="Center" />
                     </HorizontalStackLayout>
                 </Border>
             </VerticalStackLayout>
-        </Border>
 
-        <!-- Room Listings Grid with Pull-to-Refresh & Infinite Scroll -->
-        <RefreshView
-            Grid.Row="1"
-            BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}"
-            Command="{Binding RefreshRoomsCommand}"
-            IsRefreshing="{Binding IsRefreshing}"
-            RefreshColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}">
+            <!-- Main Content Area: Mutually Exclusive States -->
+            <Grid Grid.Row="1">
 
-            <CollectionView
-                AutomationId="RoomListingsCollectionView"
-                ItemsSource="{Binding Rooms}"
-                RemainingItemsThreshold="3"
-                RemainingItemsThresholdReachedCommand="{Binding LoadMoreRoomsCommand}"
-                SelectionMode="None">
-
-                <CollectionView.ItemsLayout>
-                    <GridItemsLayout
-                        HorizontalItemSpacing="16"
-                        Orientation="Vertical"
-                        Span="{OnIdiom Phone=1, Tablet=2, Desktop=2}"
-                        VerticalItemSpacing="16" />
-                </CollectionView.ItemsLayout>
-
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="models:RoomListItemModel">
-                        <views:RoomCardView>
-                            <views:RoomCardView.GestureRecognizers>
-                                <TapGestureRecognizer
-                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:RoomListingsViewModel}}, Path=OpenRoomDetailsCommand, x:DataType=vm:RoomListingsViewModel}"
-                                    CommandParameter="{Binding .}" />
-                            </views:RoomCardView.GestureRecognizers>
-                        </views:RoomCardView>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-
-                <CollectionView.EmptyView>
-                    <ContentView>
-                        <VerticalStackLayout
-                            Padding="24"
+                <!-- 1. LOADING STATE: Shimmer Skeleton Cards + Status Message -->
+                <ScrollView
+                    IsVisible="{Binding ShowLoadingState}"
+                    VerticalScrollBarVisibility="Never">
+                    <VerticalStackLayout Spacing="16" Padding="0,4,0,24">
+                        <!-- Loading Status Indicator -->
+                        <Border
+                            Padding="14,8"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}"
                             HorizontalOptions="Center"
-                            Spacing="12"
-                            VerticalOptions="Center">
-
-                            <ActivityIndicator
-                                Color="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
-                                HorizontalOptions="Center"
-                                IsRunning="{Binding IsLoading}"
-                                IsVisible="{Binding IsLoading}" />
-
-                            <Border
-                                Padding="16"
-                                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}"
-                                HorizontalOptions="Center"
-                                StrokeShape="RoundRectangle 16"
-                                StrokeThickness="0">
+                            Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                            StrokeShape="RoundRectangle 20"
+                            StrokeThickness="1">
+                            <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                                <ActivityIndicator
+                                    HeightRequest="16"
+                                    IsRunning="{Binding ShowLoadingState}"
+                                    WidthRequest="16"
+                                    Color="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
                                 <Label
-                                    FontFamily="{x:Static f:FluentUI.FontFamily}"
-                                    FontSize="32"
-                                    HorizontalOptions="Center"
-                                    Text="{x:Static f:FluentUI.search_28_regular}"
-                                    TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
-                            </Border>
+                                    FontFamily="OpenSansSemibold"
+                                    FontSize="13"
+                                    Text="{loc:Translate State_LoadingMessage}"
+                                    TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                    VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                        </Border>
 
-                            <Label
-                                FontAttributes="Bold"
-                                FontSize="16"
-                                HorizontalTextAlignment="Center"
-                                Text="{Binding EmptyStateMessage}"
-                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                        <!-- Skeleton Card 1 -->
+                        <Border
+                            BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                            Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                            StrokeShape="RoundRectangle 18"
+                            StrokeThickness="1">
+                            <shimmer:SfShimmer
+                                IsActive="True"
+                                Fill="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}"
+                                WaveColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource BorderSubtleDark}}">
+                                <shimmer:SfShimmer.CustomView>
+                                    <VerticalStackLayout Spacing="0">
+                                        <!-- Skeleton Thumbnail -->
+                                        <shimmer:ShimmerView
+                                            HeightRequest="214"
+                                            ShapeType="Rectangle" />
 
-                            <Button
-                                Padding="16,12"
-                                BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
-                                Command="{Binding RefreshRoomsCommand}"
-                                CornerRadius="12"
-                                FontAttributes="Bold"
-                                FontSize="14"
-                                HorizontalOptions="Center"
-                                Text="Tải lại danh sách"
-                                TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PageBackgroundDark}}" />
-                        </VerticalStackLayout>
-                    </ContentView>
-                </CollectionView.EmptyView>
+                                        <!-- Skeleton Body -->
+                                        <VerticalStackLayout Padding="16,14,16,16" Spacing="10">
+                                            <!-- Price & Status Row -->
+                                            <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                                                <shimmer:ShimmerView
+                                                    Grid.Column="0"
+                                                    HeightRequest="22"
+                                                    HorizontalOptions="Start"
+                                                    ShapeType="RoundedRectangle"
+                                                    WidthRequest="140" />
+                                                <HorizontalStackLayout Grid.Column="1" Spacing="6">
+                                                    <shimmer:ShimmerView
+                                                        HeightRequest="22"
+                                                        ShapeType="RoundedRectangle"
+                                                        WidthRequest="64" />
+                                                    <shimmer:ShimmerView
+                                                        HeightRequest="22"
+                                                        ShapeType="RoundedRectangle"
+                                                        WidthRequest="50" />
+                                                </HorizontalStackLayout>
+                                            </Grid>
 
-                <CollectionView.Footer>
-                    <Grid Padding="12" HorizontalOptions="Center">
-                        <HorizontalStackLayout
+                                            <!-- Title lines -->
+                                            <shimmer:ShimmerView
+                                                HeightRequest="16"
+                                                HorizontalOptions="Fill"
+                                                ShapeType="RoundedRectangle" />
+                                            <shimmer:ShimmerView
+                                                HeightRequest="16"
+                                                HorizontalOptions="Start"
+                                                ShapeType="RoundedRectangle"
+                                                WidthRequest="220" />
+
+                                            <!-- Location line -->
+                                            <shimmer:ShimmerView
+                                                HeightRequest="14"
+                                                HorizontalOptions="Start"
+                                                ShapeType="RoundedRectangle"
+                                                WidthRequest="160" />
+
+                                            <!-- Divider -->
+                                            <BoxView
+                                                HeightRequest="1"
+                                                Color="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" />
+
+                                            <!-- Amenities & Action -->
+                                            <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                                                <HorizontalStackLayout Grid.Column="0" Spacing="6">
+                                                    <shimmer:ShimmerView
+                                                        HeightRequest="24"
+                                                        ShapeType="RoundedRectangle"
+                                                        WidthRequest="70" />
+                                                    <shimmer:ShimmerView
+                                                        HeightRequest="24"
+                                                        ShapeType="RoundedRectangle"
+                                                        WidthRequest="60" />
+                                                </HorizontalStackLayout>
+                                                <shimmer:ShimmerView
+                                                    Grid.Column="1"
+                                                    HeightRequest="34"
+                                                    ShapeType="RoundedRectangle"
+                                                    WidthRequest="100" />
+                                            </Grid>
+                                        </VerticalStackLayout>
+                                    </VerticalStackLayout>
+                                </shimmer:SfShimmer.CustomView>
+                            </shimmer:SfShimmer>
+                        </Border>
+
+                        <!-- Skeleton Card 2 -->
+                        <Border
+                            BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                            Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                            StrokeShape="RoundRectangle 18"
+                            StrokeThickness="1">
+                            <shimmer:SfShimmer
+                                IsActive="True"
+                                Fill="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}"
+                                WaveColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource BorderSubtleDark}}">
+                                <shimmer:SfShimmer.CustomView>
+                                    <VerticalStackLayout Spacing="0">
+                                        <shimmer:ShimmerView
+                                            HeightRequest="214"
+                                            ShapeType="Rectangle" />
+                                        <VerticalStackLayout Padding="16,14,16,16" Spacing="10">
+                                            <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                                                <shimmer:ShimmerView
+                                                    Grid.Column="0"
+                                                    HeightRequest="22"
+                                                    HorizontalOptions="Start"
+                                                    ShapeType="RoundedRectangle"
+                                                    WidthRequest="120" />
+                                                <HorizontalStackLayout Grid.Column="1" Spacing="6">
+                                                    <shimmer:ShimmerView
+                                                        HeightRequest="22"
+                                                        ShapeType="RoundedRectangle"
+                                                        WidthRequest="64" />
+                                                    <shimmer:ShimmerView
+                                                        HeightRequest="22"
+                                                        ShapeType="RoundedRectangle"
+                                                        WidthRequest="50" />
+                                                </HorizontalStackLayout>
+                                            </Grid>
+                                            <shimmer:ShimmerView
+                                                HeightRequest="16"
+                                                HorizontalOptions="Fill"
+                                                ShapeType="RoundedRectangle" />
+                                            <shimmer:ShimmerView
+                                                HeightRequest="16"
+                                                HorizontalOptions="Start"
+                                                ShapeType="RoundedRectangle"
+                                                WidthRequest="180" />
+                                            <shimmer:ShimmerView
+                                                HeightRequest="14"
+                                                HorizontalOptions="Start"
+                                                ShapeType="RoundedRectangle"
+                                                WidthRequest="140" />
+                                            <BoxView
+                                                HeightRequest="1"
+                                                Color="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" />
+                                            <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                                                <HorizontalStackLayout Grid.Column="0" Spacing="6">
+                                                    <shimmer:ShimmerView
+                                                        HeightRequest="24"
+                                                        ShapeType="RoundedRectangle"
+                                                        WidthRequest="80" />
+                                                </HorizontalStackLayout>
+                                                <shimmer:ShimmerView
+                                                    Grid.Column="1"
+                                                    HeightRequest="34"
+                                                    ShapeType="RoundedRectangle"
+                                                    WidthRequest="100" />
+                                            </Grid>
+                                        </VerticalStackLayout>
+                                    </VerticalStackLayout>
+                                </shimmer:SfShimmer.CustomView>
+                            </shimmer:SfShimmer>
+                        </Border>
+                    </VerticalStackLayout>
+                </ScrollView>
+
+                <!-- 2. EMPTY STATE: Friendly House-Search Illustration + Suggestions + Reset Action -->
+                <ScrollView
+                    IsVisible="{Binding ShowEmptyState}"
+                    VerticalScrollBarVisibility="Never">
+                    <VerticalStackLayout
+                        Padding="24,32"
+                        HorizontalOptions="Center"
+                        MaximumWidthRequest="460"
+                        Spacing="16"
+                        VerticalOptions="Center">
+
+                        <!-- Friendly House-Search Icon Badge -->
+                        <Border
+                            Padding="0"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}"
+                            HeightRequest="80"
                             HorizontalOptions="Center"
-                            IsVisible="{Binding IsLoadingMore}"
-                            Spacing="8"
-                            VerticalOptions="Center">
-                            <ActivityIndicator
-                                WidthRequest="20"
-                                HeightRequest="20"
-                                Color="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
-                                IsRunning="{Binding IsLoadingMore}" />
+                            Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                            StrokeShape="RoundRectangle 40"
+                            StrokeThickness="1"
+                            WidthRequest="80">
                             <Label
-                                FontSize="13"
-                                Text="Đang tải thêm phòng..."
-                                TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
+                                FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                FontSize="36"
+                                HorizontalOptions="Center"
+                                Text="{x:Static f:FluentUI.building_home_24_regular}"
+                                TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
                                 VerticalOptions="Center" />
-                        </HorizontalStackLayout>
-                    </Grid>
-                </CollectionView.Footer>
+                        </Border>
 
-            </CollectionView>
-        </RefreshView>
+                        <!-- Title -->
+                        <Label
+                            FontAttributes="Bold"
+                            FontFamily="OpenSansSemibold"
+                            FontSize="20"
+                            HorizontalTextAlignment="Center"
+                            Text="{loc:Translate State_EmptyTitle}"
+                            TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+
+                        <!-- Description -->
+                        <Label
+                            FontSize="14"
+                            HorizontalTextAlignment="Center"
+                            LineHeight="1.35"
+                            Text="{loc:Translate State_EmptyDesc}"
+                            TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+
+                        <!-- Suggestions Card -->
+                        <Border
+                            Margin="0,4"
+                            Padding="16"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                            HorizontalOptions="Fill"
+                            Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                            StrokeShape="RoundRectangle 16"
+                            StrokeThickness="1">
+                            <Border.Shadow>
+                                <Shadow
+                                    Brush="{StaticResource Black}"
+                                    Offset="0,2"
+                                    Opacity="0.03"
+                                    Radius="8" />
+                            </Border.Shadow>
+                            <VerticalStackLayout Spacing="10">
+                                <Label
+                                    FontAttributes="Bold"
+                                    FontFamily="OpenSansSemibold"
+                                    FontSize="13"
+                                    Text="{loc:Translate State_SuggestionsTitle}"
+                                    TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+
+                                <HorizontalStackLayout Spacing="8">
+                                    <Label
+                                        FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                        FontSize="14"
+                                        Text="{x:Static f:FluentUI.checkmark_16_regular}"
+                                        TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                        VerticalOptions="Center" />
+                                    <Label
+                                        FontSize="13"
+                                        Text="{loc:Translate State_Suggestion1}"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}"
+                                        VerticalOptions="Center" />
+                                </HorizontalStackLayout>
+
+                                <HorizontalStackLayout Spacing="8">
+                                    <Label
+                                        FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                        FontSize="14"
+                                        Text="{x:Static f:FluentUI.checkmark_16_regular}"
+                                        TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                        VerticalOptions="Center" />
+                                    <Label
+                                        FontSize="13"
+                                        Text="{loc:Translate State_Suggestion2}"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}"
+                                        VerticalOptions="Center" />
+                                </HorizontalStackLayout>
+
+                                <HorizontalStackLayout Spacing="8">
+                                    <Label
+                                        FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                        FontSize="14"
+                                        Text="{x:Static f:FluentUI.checkmark_16_regular}"
+                                        TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                        VerticalOptions="Center" />
+                                    <Label
+                                        FontSize="13"
+                                        Text="{loc:Translate State_Suggestion3}"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}"
+                                        VerticalOptions="Center" />
+                                </HorizontalStackLayout>
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <!-- Primary Action: Xóa bộ lọc tìm kiếm -->
+                        <Button
+                            Padding="20,12"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                            Command="{Binding ResetFiltersCommand}"
+                            CornerRadius="16"
+                            FontAttributes="Bold"
+                            FontFamily="OpenSansSemibold"
+                            FontSize="14"
+                            HorizontalOptions="Fill"
+                            MinimumHeightRequest="48"
+                            Text="{loc:Translate Action_ResetFilters}"
+                            TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PageBackgroundDark}}" />
+                    </VerticalStackLayout>
+                </ScrollView>
+
+                <!-- 3. ERROR STATE: Wi-Fi Off / Warning Illustration + Error Message + Thử lại Action -->
+                <ScrollView
+                    IsVisible="{Binding ShowErrorState}"
+                    VerticalScrollBarVisibility="Never">
+                    <VerticalStackLayout
+                        Padding="24,36"
+                        HorizontalOptions="Center"
+                        MaximumWidthRequest="460"
+                        Spacing="16"
+                        VerticalOptions="Center">
+
+                        <!-- Wi-Fi Off Warning Icon Badge -->
+                        <Border
+                            Padding="0"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource AccentHighlightSoft}, Dark={StaticResource AccentHighlightSoftDark}}"
+                            HeightRequest="80"
+                            HorizontalOptions="Center"
+                            Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                            StrokeShape="RoundRectangle 40"
+                            StrokeThickness="1"
+                            WidthRequest="80">
+                            <Label
+                                FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                FontSize="36"
+                                HorizontalOptions="Center"
+                                Text="{x:Static f:FluentUI.wifi_off_24_regular}"
+                                TextColor="{AppThemeBinding Light={StaticResource AccentHighlight}, Dark={StaticResource AccentHighlightDark}}"
+                                VerticalOptions="Center" />
+                        </Border>
+
+                        <!-- Error Title -->
+                        <Label
+                            FontAttributes="Bold"
+                            FontFamily="OpenSansSemibold"
+                            FontSize="20"
+                            HorizontalTextAlignment="Center"
+                            Text="{loc:Translate State_ErrorTitle}"
+                            TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+
+                        <!-- Error Description Message -->
+                        <Label
+                            FontSize="14"
+                            HorizontalTextAlignment="Center"
+                            LineHeight="1.35"
+                            Text="{Binding ErrorMessage}"
+                            TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+
+                        <!-- Primary Action: Thử lại -->
+                        <Button
+                            Margin="0,8,0,0"
+                            Padding="24,12"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                            Command="{Binding RetryCommand}"
+                            CornerRadius="16"
+                            FontAttributes="Bold"
+                            FontFamily="OpenSansSemibold"
+                            FontSize="14"
+                            HorizontalOptions="Center"
+                            MinimumHeightRequest="48"
+                            MinimumWidthRequest="160"
+                            Text="{loc:Translate Action_Retry}"
+                            TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PageBackgroundDark}}" />
+                    </VerticalStackLayout>
+                </ScrollView>
+
+                <!-- 4. CONTENT STATE: Active Room Listings with Pull-to-Refresh & Infinite Scroll -->
+                <RefreshView
+                    BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}"
+                    Command="{Binding RefreshRoomsCommand}"
+                    IsRefreshing="{Binding IsRefreshing}"
+                    IsVisible="{Binding ShowContentState}"
+                    RefreshColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}">
+
+                    <CollectionView
+                        AutomationId="RoomListingsCollectionView"
+                        ItemsSource="{Binding Rooms}"
+                        RemainingItemsThreshold="3"
+                        RemainingItemsThresholdReachedCommand="{Binding LoadMoreRoomsCommand}"
+                        SelectionMode="None">
+
+                        <CollectionView.ItemsLayout>
+                            <GridItemsLayout
+                                HorizontalItemSpacing="16"
+                                Orientation="Vertical"
+                                Span="{OnIdiom Phone=1, Tablet=2, Desktop=2}"
+                                VerticalItemSpacing="16" />
+                        </CollectionView.ItemsLayout>
+
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:RoomListItemModel">
+                                <views:RoomCardView>
+                                    <views:RoomCardView.GestureRecognizers>
+                                        <TapGestureRecognizer
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:RoomListingsViewModel}}, Path=OpenRoomDetailsCommand, x:DataType=vm:RoomListingsViewModel}"
+                                            CommandParameter="{Binding .}" />
+                                    </views:RoomCardView.GestureRecognizers>
+                                </views:RoomCardView>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+
+                        <CollectionView.Footer>
+                            <Grid Padding="12,12,12,20" HorizontalOptions="Center">
+                                <HorizontalStackLayout
+                                    HorizontalOptions="Center"
+                                    IsVisible="{Binding IsLoadingMore}"
+                                    Spacing="8"
+                                    VerticalOptions="Center">
+                                    <ActivityIndicator
+                                        HeightRequest="20"
+                                        IsRunning="{Binding IsLoadingMore}"
+                                        WidthRequest="20"
+                                        Color="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                                    <Label
+                                        FontSize="13"
+                                        Text="{loc:Translate State_LoadingMore}"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
+                                        VerticalOptions="Center" />
+                                </HorizontalStackLayout>
+                            </Grid>
+                        </CollectionView.Footer>
+
+                    </CollectionView>
+                </RefreshView>
+
+            </Grid>
         </Grid>
 
-        <!-- Floating Price Dropdown Menu Overlay -->
+        <!-- Half-Screen Filter Rooms Bottom Sheet Overlay -->
         <Grid
             x:Name="PriceMenuOverlay"
             IsVisible="{Binding IsPriceMenuOpen}"
             ZIndex="50">
-            <BoxView Color="Transparent">
-                <BoxView.GestureRecognizers>
+            <!-- Subtle Scrim Backdrop (Top 50% of screen remains visible; tap to close) -->
+            <Grid BackgroundColor="#33000000">
+                <Grid.GestureRecognizers>
                     <TapGestureRecognizer Command="{Binding ClosePriceMenuCommand}" />
-                </BoxView.GestureRecognizers>
-            </BoxView>
+                </Grid.GestureRecognizers>
+            </Grid>
 
+            <!-- Bottom Sheet Container (50% Mobile Screen Height) -->
             <Border
                 x:Name="PriceDropdownMenu"
-                Padding="4"
+                Padding="0"
                 BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
-                HorizontalOptions="Start"
+                HeightRequest="390"
+                HorizontalOptions="Fill"
+                MaximumWidthRequest="520"
                 Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
-                StrokeShape="RoundRectangle 12"
+                StrokeShape="RoundRectangle 26,26,0,0"
                 StrokeThickness="1"
-                VerticalOptions="Start"
-                WidthRequest="196">
+                VerticalOptions="End">
                 <Border.Shadow>
                     <Shadow
                         Brush="{StaticResource Black}"
-                        Offset="0,6"
-                        Opacity="0.10"
-                        Radius="12" />
+                        Offset="0,-6"
+                        Opacity="0.14"
+                        Radius="20" />
                 </Border.Shadow>
 
-                <VerticalStackLayout
-                    BindableLayout.ItemsSource="{Binding PriceSortOptions}"
-                    Spacing="2">
-                    <BindableLayout.ItemTemplate>
-                        <DataTemplate x:DataType="models:RoomSortOptionItem">
+                <Grid RowDefinitions="Auto,*,Auto">
+
+                    <!-- 1. Sheet Header: Drag Handle + Title & Subtitle + Close (X) -->
+                    <VerticalStackLayout
+                        Grid.Row="0"
+                        Padding="20,10,16,10"
+                        Spacing="8">
+                        <!-- Top Drag Handle Pill -->
+                        <Border
+                            BackgroundColor="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                            HeightRequest="5"
+                            HorizontalOptions="Center"
+                            StrokeShape="RoundRectangle 3"
+                            StrokeThickness="0"
+                            WidthRequest="44" />
+
+                        <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                            <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center">
+                                <Label
+                                    FontAttributes="Bold"
+                                    FontFamily="OpenSansSemibold"
+                                    FontSize="20"
+                                    Text="{loc:Translate Filter_SheetTitle}"
+                                    TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                <Label
+                                    FontSize="12.5"
+                                    Text="{loc:Translate Filter_SheetSubtitle}"
+                                    TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+                            </VerticalStackLayout>
+
+                            <!-- Close X Button -->
                             <Border
-                                Padding="12,10"
+                                Grid.Column="1"
+                                Padding="0"
                                 BackgroundColor="Transparent"
-                                Stroke="Transparent"
-                                StrokeShape="RoundRectangle 8"
-                                StrokeThickness="1">
-                                <Border.Triggers>
-                                    <DataTrigger
-                                        Binding="{Binding IsSelected}"
-                                        TargetType="Border"
-                                        Value="True">
-                                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}" />
-                                        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" />
-                                    </DataTrigger>
-                                </Border.Triggers>
+                                HeightRequest="40"
+                                MinimumHeightRequest="40"
+                                MinimumWidthRequest="40"
+                                StrokeShape="RoundRectangle 20"
+                                StrokeThickness="0"
+                                VerticalOptions="Start"
+                                WidthRequest="40">
                                 <Border.GestureRecognizers>
-                                    <TapGestureRecognizer
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:RoomListingsViewModel}}, Path=SelectSortCommand, x:DataType=vm:RoomListingsViewModel}"
-                                        CommandParameter="{Binding .}" />
+                                    <TapGestureRecognizer Command="{Binding ClosePriceMenuCommand}" />
                                 </Border.GestureRecognizers>
+                                <Label
+                                    FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                    FontSize="20"
+                                    HorizontalOptions="Center"
+                                    Text="{x:Static f:FluentUI.dismiss_20_regular}"
+                                    TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                    VerticalOptions="Center" />
+                            </Border>
+                        </Grid>
 
-                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                    <Label
-                                        Grid.Column="0"
-                                        FontSize="13"
-                                        Text="{Binding DisplayName}"
-                                        TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
-                                        VerticalOptions="Center">
-                                        <Label.Triggers>
-                                            <DataTrigger
-                                                Binding="{Binding IsSelected}"
-                                                TargetType="Label"
-                                                Value="True">
-                                                <Setter Property="FontAttributes" Value="Bold" />
-                                                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
-                                            </DataTrigger>
-                                        </Label.Triggers>
-                                    </Label>
+                        <BoxView
+                            HeightRequest="1"
+                            Color="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" />
+                    </VerticalStackLayout>
 
+                    <!-- 2. Scrollable Filter Form Body (Fits inside half-screen height) -->
+                    <ScrollView
+                        Grid.Row="1"
+                        Padding="20,4,20,12"
+                        VerticalScrollBarVisibility="Default">
+                        <VerticalStackLayout Spacing="16">
+
+                            <!-- SECTION A: Price Range -->
+                            <VerticalStackLayout Spacing="10">
+                                <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
                                     <Label
-                                        Grid.Column="1"
                                         FontFamily="{x:Static f:FluentUI.FontFamily}"
-                                        FontSize="14"
-                                        IsVisible="{Binding IsSelected}"
-                                        Text="{x:Static f:FluentUI.checkmark_16_regular}"
+                                        FontSize="18"
+                                        Text="{x:Static f:FluentUI.tag_20_regular}"
                                         TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
                                         VerticalOptions="Center" />
+                                    <Label
+                                        FontAttributes="Bold"
+                                        FontFamily="OpenSansSemibold"
+                                        FontSize="15"
+                                        Text="{loc:Translate Filter_PriceRange}"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                        VerticalOptions="Center" />
+                                </HorizontalStackLayout>
+
+                                <!-- 3 Price Preset Pills: Under 1M | 1M - 2M ✓ | 2M - 3M -->
+                                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                                    <!-- Pill 1: Under 1M -->
+                                    <Border
+                                        Grid.Column="0"
+                                        Padding="8,9"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                                        MinimumHeightRequest="40"
+                                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                        StrokeShape="RoundRectangle 20"
+                                        StrokeThickness="1">
+                                        <Border.Triggers>
+                                            <DataTrigger
+                                                Binding="{Binding IsPriceUnder1MSelected}"
+                                                TargetType="Border"
+                                                Value="True">
+                                                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                                                <Setter Property="StrokeThickness" Value="0" />
+                                            </DataTrigger>
+                                        </Border.Triggers>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer
+                                                Command="{Binding SelectPricePresetCommand}"
+                                                CommandParameter="under1m" />
+                                        </Border.GestureRecognizers>
+                                        <HorizontalStackLayout HorizontalOptions="Center" Spacing="4" VerticalOptions="Center">
+                                            <Label
+                                                FontFamily="OpenSansSemibold"
+                                                FontSize="12.5"
+                                                Text="{loc:Translate Filter_PriceUnder1M}"
+                                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                                VerticalOptions="Center">
+                                                <Label.Triggers>
+                                                    <DataTrigger
+                                                        Binding="{Binding IsPriceUnder1MSelected}"
+                                                        TargetType="Label"
+                                                        Value="True">
+                                                        <Setter Property="TextColor" Value="{StaticResource White}" />
+                                                        <Setter Property="FontAttributes" Value="Bold" />
+                                                    </DataTrigger>
+                                                </Label.Triggers>
+                                            </Label>
+                                            <Label
+                                                FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                                FontSize="13"
+                                                IsVisible="{Binding IsPriceUnder1MSelected}"
+                                                Text="{x:Static f:FluentUI.checkmark_16_regular}"
+                                                TextColor="{StaticResource White}"
+                                                VerticalOptions="Center" />
+                                        </HorizontalStackLayout>
+                                    </Border>
+
+                                    <!-- Pill 2: 1M - 2M -->
+                                    <Border
+                                        Grid.Column="1"
+                                        Padding="8,9"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                                        MinimumHeightRequest="40"
+                                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                        StrokeShape="RoundRectangle 20"
+                                        StrokeThickness="1">
+                                        <Border.Triggers>
+                                            <DataTrigger
+                                                Binding="{Binding IsPrice1MTo2MSelected}"
+                                                TargetType="Border"
+                                                Value="True">
+                                                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                                                <Setter Property="StrokeThickness" Value="0" />
+                                            </DataTrigger>
+                                        </Border.Triggers>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer
+                                                Command="{Binding SelectPricePresetCommand}"
+                                                CommandParameter="1m-2m" />
+                                        </Border.GestureRecognizers>
+                                        <HorizontalStackLayout HorizontalOptions="Center" Spacing="4" VerticalOptions="Center">
+                                            <Label
+                                                FontFamily="OpenSansSemibold"
+                                                FontSize="12.5"
+                                                Text="{loc:Translate Filter_Price1MTo2M}"
+                                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                                VerticalOptions="Center">
+                                                <Label.Triggers>
+                                                    <DataTrigger
+                                                        Binding="{Binding IsPrice1MTo2MSelected}"
+                                                        TargetType="Label"
+                                                        Value="True">
+                                                        <Setter Property="TextColor" Value="{StaticResource White}" />
+                                                        <Setter Property="FontAttributes" Value="Bold" />
+                                                    </DataTrigger>
+                                                </Label.Triggers>
+                                            </Label>
+                                            <Label
+                                                FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                                FontSize="13"
+                                                IsVisible="{Binding IsPrice1MTo2MSelected}"
+                                                Text="{x:Static f:FluentUI.checkmark_16_regular}"
+                                                TextColor="{StaticResource White}"
+                                                VerticalOptions="Center" />
+                                        </HorizontalStackLayout>
+                                    </Border>
+
+                                    <!-- Pill 3: 2M - 3M -->
+                                    <Border
+                                        Grid.Column="2"
+                                        Padding="8,9"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                                        MinimumHeightRequest="40"
+                                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                        StrokeShape="RoundRectangle 20"
+                                        StrokeThickness="1">
+                                        <Border.Triggers>
+                                            <DataTrigger
+                                                Binding="{Binding IsPrice2MTo3MSelected}"
+                                                TargetType="Border"
+                                                Value="True">
+                                                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                                                <Setter Property="StrokeThickness" Value="0" />
+                                            </DataTrigger>
+                                        </Border.Triggers>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer
+                                                Command="{Binding SelectPricePresetCommand}"
+                                                CommandParameter="2m-3m" />
+                                        </Border.GestureRecognizers>
+                                        <HorizontalStackLayout HorizontalOptions="Center" Spacing="4" VerticalOptions="Center">
+                                            <Label
+                                                FontFamily="OpenSansSemibold"
+                                                FontSize="12.5"
+                                                Text="{loc:Translate Filter_Price2MTo3M}"
+                                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                                VerticalOptions="Center">
+                                                <Label.Triggers>
+                                                    <DataTrigger
+                                                        Binding="{Binding IsPrice2MTo3MSelected}"
+                                                        TargetType="Label"
+                                                        Value="True">
+                                                        <Setter Property="TextColor" Value="{StaticResource White}" />
+                                                        <Setter Property="FontAttributes" Value="Bold" />
+                                                    </DataTrigger>
+                                                </Label.Triggers>
+                                            </Label>
+                                            <Label
+                                                FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                                FontSize="13"
+                                                IsVisible="{Binding IsPrice2MTo3MSelected}"
+                                                Text="{x:Static f:FluentUI.checkmark_16_regular}"
+                                                TextColor="{StaticResource White}"
+                                                VerticalOptions="Center" />
+                                        </HorizontalStackLayout>
+                                    </Border>
                                 </Grid>
+
+                                <!-- Min Price & Max Price Boxes -->
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                    <!-- Min Price Box -->
+                                    <Border
+                                        Grid.Column="0"
+                                        Padding="12,8"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}"
+                                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                        StrokeShape="RoundRectangle 12"
+                                        StrokeThickness="1">
+                                        <VerticalStackLayout Spacing="2">
+                                            <Label
+                                                FontSize="11"
+                                                Text="{loc:Translate Filter_MinPrice}"
+                                                TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                            <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                                                <Entry
+                                                    Grid.Column="0"
+                                                    BackgroundColor="Transparent"
+                                                    FontAttributes="Bold"
+                                                    FontFamily="OpenSansSemibold"
+                                                    FontSize="14"
+                                                    Keyboard="Numeric"
+                                                    StyleId="BorderlessEntry"
+                                                    Text="{Binding FilterMinPriceText}"
+                                                    TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                                <Label
+                                                    Grid.Column="1"
+                                                    FontAttributes="Bold"
+                                                    FontSize="13"
+                                                    Text="₫"
+                                                    TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}"
+                                                    TextDecorations="Underline"
+                                                    VerticalOptions="Center" />
+                                            </Grid>
+                                        </VerticalStackLayout>
+                                    </Border>
+
+                                    <!-- Max Price Box -->
+                                    <Border
+                                        Grid.Column="1"
+                                        Padding="12,8"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}"
+                                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                        StrokeShape="RoundRectangle 12"
+                                        StrokeThickness="1">
+                                        <VerticalStackLayout Spacing="2">
+                                            <Label
+                                                FontSize="11"
+                                                Text="{loc:Translate Filter_MaxPrice}"
+                                                TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                            <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                                                <Entry
+                                                    Grid.Column="0"
+                                                    BackgroundColor="Transparent"
+                                                    FontAttributes="Bold"
+                                                    FontFamily="OpenSansSemibold"
+                                                    FontSize="14"
+                                                    Keyboard="Numeric"
+                                                    StyleId="BorderlessEntry"
+                                                    Text="{Binding FilterMaxPriceText}"
+                                                    TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                                <Label
+                                                    Grid.Column="1"
+                                                    FontAttributes="Bold"
+                                                    FontSize="13"
+                                                    Text="₫"
+                                                    TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}"
+                                                    TextDecorations="Underline"
+                                                    VerticalOptions="Center" />
+                                            </Grid>
+                                        </VerticalStackLayout>
+                                    </Border>
+                                </Grid>
+                            </VerticalStackLayout>
+
+                            <BoxView
+                                HeightRequest="1"
+                                Color="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" />
+
+                            <!-- SECTION B: Room Type -->
+                            <VerticalStackLayout Spacing="10">
+                                <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                                    <Label
+                                        FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                        FontSize="18"
+                                        Text="{x:Static f:FluentUI.home_20_regular}"
+                                        TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                        VerticalOptions="Center" />
+                                    <Label
+                                        FontAttributes="Bold"
+                                        FontFamily="OpenSansSemibold"
+                                        FontSize="15"
+                                        Text="{loc:Translate Filter_RoomType}"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                        VerticalOptions="Center" />
+                                </HorizontalStackLayout>
+
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                    <!-- Private Room Card -->
+                                    <Border
+                                        Grid.Column="0"
+                                        Padding="12,11"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                        StrokeShape="RoundRectangle 14"
+                                        StrokeThickness="1.5">
+                                        <Border.Triggers>
+                                            <DataTrigger
+                                                Binding="{Binding IsPrivateRoomSelected}"
+                                                TargetType="Border"
+                                                Value="True">
+                                                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}" />
+                                                <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                                            </DataTrigger>
+                                        </Border.Triggers>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer
+                                                Command="{Binding SelectRoomTypeCommand}"
+                                                CommandParameter="private" />
+                                        </Border.GestureRecognizers>
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" VerticalOptions="Center">
+                                            <Label
+                                                Grid.Column="0"
+                                                FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                                FontSize="18"
+                                                Text="{x:Static f:FluentUI.door_20_regular}"
+                                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                                VerticalOptions="Center" />
+                                            <Label
+                                                Grid.Column="1"
+                                                FontAttributes="Bold"
+                                                FontFamily="OpenSansSemibold"
+                                                FontSize="12.5"
+                                                LineBreakMode="TailTruncation"
+                                                MaxLines="1"
+                                                Text="{loc:Translate Filter_PrivateRoom}"
+                                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                                VerticalOptions="Center" />
+                                            <Border
+                                                Grid.Column="2"
+                                                Padding="0"
+                                                BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                                HeightRequest="18"
+                                                IsVisible="{Binding IsPrivateRoomSelected}"
+                                                StrokeShape="RoundRectangle 9"
+                                                StrokeThickness="0"
+                                                VerticalOptions="Center"
+                                                WidthRequest="18">
+                                                <Label
+                                                    FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                                    FontSize="11"
+                                                    HorizontalOptions="Center"
+                                                    Text="{x:Static f:FluentUI.checkmark_16_regular}"
+                                                    TextColor="{StaticResource White}"
+                                                    VerticalOptions="Center" />
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Shared Room Card -->
+                                    <Border
+                                        Grid.Column="1"
+                                        Padding="12,11"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                        StrokeShape="RoundRectangle 14"
+                                        StrokeThickness="1.5">
+                                        <Border.Triggers>
+                                            <DataTrigger
+                                                Binding="{Binding IsSharedRoomSelected}"
+                                                TargetType="Border"
+                                                Value="True">
+                                                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}" />
+                                                <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                                            </DataTrigger>
+                                        </Border.Triggers>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer
+                                                Command="{Binding SelectRoomTypeCommand}"
+                                                CommandParameter="shared" />
+                                        </Border.GestureRecognizers>
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" VerticalOptions="Center">
+                                            <Label
+                                                Grid.Column="0"
+                                                FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                                FontSize="18"
+                                                Text="{x:Static f:FluentUI.people_20_regular}"
+                                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                                VerticalOptions="Center" />
+                                            <Label
+                                                Grid.Column="1"
+                                                FontAttributes="Bold"
+                                                FontFamily="OpenSansSemibold"
+                                                FontSize="12.5"
+                                                LineBreakMode="TailTruncation"
+                                                MaxLines="1"
+                                                Text="{loc:Translate Filter_SharedRoom}"
+                                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                                VerticalOptions="Center" />
+                                            <Border
+                                                Grid.Column="2"
+                                                Padding="0"
+                                                BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                                HeightRequest="18"
+                                                IsVisible="{Binding IsSharedRoomSelected}"
+                                                StrokeShape="RoundRectangle 9"
+                                                StrokeThickness="0"
+                                                VerticalOptions="Center"
+                                                WidthRequest="18">
+                                                <Label
+                                                    FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                                    FontSize="11"
+                                                    HorizontalOptions="Center"
+                                                    Text="{x:Static f:FluentUI.checkmark_16_regular}"
+                                                    TextColor="{StaticResource White}"
+                                                    VerticalOptions="Center" />
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+                            </VerticalStackLayout>
+
+                            <BoxView
+                                HeightRequest="1"
+                                Color="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" />
+
+                            <!-- SECTION C: Amenities -->
+                            <VerticalStackLayout Spacing="10">
+                                <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                                    <Label
+                                        FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                        FontSize="18"
+                                        Text="{x:Static f:FluentUI.star_20_regular}"
+                                        TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                        VerticalOptions="Center" />
+                                    <Label
+                                        FontAttributes="Bold"
+                                        FontFamily="OpenSansSemibold"
+                                        FontSize="15"
+                                        Text="{loc:Translate Filter_Amenities}"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                        VerticalOptions="Center" />
+                                </HorizontalStackLayout>
+
+                                <Grid
+                                    ColumnDefinitions="*,*"
+                                    ColumnSpacing="10"
+                                    RowDefinitions="Auto,Auto,Auto"
+                                    RowSpacing="8">
+
+                                    <!-- 1. Air Conditioner -->
+                                    <Border
+                                        Grid.Row="0"
+                                        Grid.Column="0"
+                                        Padding="12,9"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                        StrokeShape="RoundRectangle 20"
+                                        StrokeThickness="1.2">
+                                        <Border.Triggers>
+                                            <DataTrigger
+                                                Binding="{Binding IsAmenityAirConSelected}"
+                                                TargetType="Border"
+                                                Value="True">
+                                                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}" />
+                                                <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                                            </DataTrigger>
+                                        </Border.Triggers>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer
+                                                Command="{Binding ToggleAmenityFilterCommand}"
+                                                CommandParameter="aircon" />
+                                        </Border.GestureRecognizers>
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6" VerticalOptions="Center">
+                                            <Label
+                                                Grid.Column="0"
+                                                FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                                FontSize="16"
+                                                Text="{x:Static f:FluentUI.weather_snowflake_20_regular}"
+                                                TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                                VerticalOptions="Center" />
+                                            <Label
+                                                Grid.Column="1"
+                                                FontFamily="OpenSansSemibold"
+                                                FontSize="12"
+                                                LineBreakMode="TailTruncation"
+                                                MaxLines="1"
+                                                Text="{loc:Translate Filter_Amenity_AirCon}"
+                                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                                VerticalOptions="Center" />
+                                            <Border
+                                                Grid.Column="2"
+                                                Padding="0"
+                                                BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                                HeightRequest="16"
+                                                IsVisible="{Binding IsAmenityAirConSelected}"
+                                                StrokeShape="RoundRectangle 8"
+                                                StrokeThickness="0"
+                                                VerticalOptions="Center"
+                                                WidthRequest="16">
+                                                <Label
+                                                    FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                                    FontSize="10"
+                                                    HorizontalOptions="Center"
+                                                    Text="{x:Static f:FluentUI.checkmark_16_regular}"
+                                                    TextColor="{StaticResource White}"
+                                                    VerticalOptions="Center" />
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 2. Wi-Fi -->
+                                    <Border
+                                        Grid.Row="0"
+                                        Grid.Column="1"
+                                        Padding="12,9"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                        StrokeShape="RoundRectangle 20"
+                                        StrokeThickness="1.2">
+                                        <Border.Triggers>
+                                            <DataTrigger
+                                                Binding="{Binding IsAmenityWifiSelected}"
+                                                TargetType="Border"
+                                                Value="True">
+                                                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}" />
+                                                <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                                            </DataTrigger>
+                                        </Border.Triggers>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer
+                                                Command="{Binding ToggleAmenityFilterCommand}"
+                                                CommandParameter="wifi" />
+                                        </Border.GestureRecognizers>
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6" VerticalOptions="Center">
+                                            <Label
+                                                Grid.Column="0"
+                                                FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                                FontSize="16"
+                                                Text="{x:Static f:FluentUI.wifi_1_20_regular}"
+                                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                                VerticalOptions="Center" />
+                                            <Label
+                                                Grid.Column="1"
+                                                FontFamily="OpenSansSemibold"
+                                                FontSize="12"
+                                                LineBreakMode="TailTruncation"
+                                                MaxLines="1"
+                                                Text="{loc:Translate Filter_Amenity_Wifi}"
+                                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                                VerticalOptions="Center" />
+                                            <Border
+                                                Grid.Column="2"
+                                                Padding="0"
+                                                BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                                HeightRequest="16"
+                                                IsVisible="{Binding IsAmenityWifiSelected}"
+                                                StrokeShape="RoundRectangle 8"
+                                                StrokeThickness="0"
+                                                VerticalOptions="Center"
+                                                WidthRequest="16">
+                                                <Label
+                                                    FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                                    FontSize="10"
+                                                    HorizontalOptions="Center"
+                                                    Text="{x:Static f:FluentUI.checkmark_16_regular}"
+                                                    TextColor="{StaticResource White}"
+                                                    VerticalOptions="Center" />
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 3. Parking -->
+                                    <Border
+                                        Grid.Row="1"
+                                        Grid.Column="0"
+                                        Padding="12,9"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                        StrokeShape="RoundRectangle 20"
+                                        StrokeThickness="1.2">
+                                        <Border.Triggers>
+                                            <DataTrigger
+                                                Binding="{Binding IsAmenityParkingSelected}"
+                                                TargetType="Border"
+                                                Value="True">
+                                                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}" />
+                                                <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                                            </DataTrigger>
+                                        </Border.Triggers>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer
+                                                Command="{Binding ToggleAmenityFilterCommand}"
+                                                CommandParameter="parking" />
+                                        </Border.GestureRecognizers>
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6" VerticalOptions="Center">
+                                            <Label
+                                                Grid.Column="0"
+                                                FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                                FontSize="16"
+                                                Text="{x:Static f:FluentUI.vehicle_car_20_regular}"
+                                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                                VerticalOptions="Center" />
+                                            <Label
+                                                Grid.Column="1"
+                                                FontFamily="OpenSansSemibold"
+                                                FontSize="12"
+                                                LineBreakMode="TailTruncation"
+                                                MaxLines="1"
+                                                Text="{loc:Translate Filter_Amenity_Parking}"
+                                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                                VerticalOptions="Center" />
+                                            <Border
+                                                Grid.Column="2"
+                                                Padding="0"
+                                                BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                                HeightRequest="16"
+                                                IsVisible="{Binding IsAmenityParkingSelected}"
+                                                StrokeShape="RoundRectangle 8"
+                                                StrokeThickness="0"
+                                                VerticalOptions="Center"
+                                                WidthRequest="16">
+                                                <Label
+                                                    FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                                    FontSize="10"
+                                                    HorizontalOptions="Center"
+                                                    Text="{x:Static f:FluentUI.checkmark_16_regular}"
+                                                    TextColor="{StaticResource White}"
+                                                    VerticalOptions="Center" />
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 4. Private Bathroom -->
+                                    <Border
+                                        Grid.Row="1"
+                                        Grid.Column="1"
+                                        Padding="12,9"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                        StrokeShape="RoundRectangle 20"
+                                        StrokeThickness="1.2">
+                                        <Border.Triggers>
+                                            <DataTrigger
+                                                Binding="{Binding IsAmenityBathroomSelected}"
+                                                TargetType="Border"
+                                                Value="True">
+                                                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}" />
+                                                <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                                            </DataTrigger>
+                                        </Border.Triggers>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer
+                                                Command="{Binding ToggleAmenityFilterCommand}"
+                                                CommandParameter="bathroom" />
+                                        </Border.GestureRecognizers>
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6" VerticalOptions="Center">
+                                            <Label
+                                                Grid.Column="0"
+                                                FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                                FontSize="16"
+                                                Text="{x:Static f:FluentUI.drop_20_regular}"
+                                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                                VerticalOptions="Center" />
+                                            <Label
+                                                Grid.Column="1"
+                                                FontFamily="OpenSansSemibold"
+                                                FontSize="12"
+                                                LineBreakMode="TailTruncation"
+                                                MaxLines="1"
+                                                Text="{loc:Translate Filter_Amenity_Bathroom}"
+                                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                                VerticalOptions="Center" />
+                                            <Border
+                                                Grid.Column="2"
+                                                Padding="0"
+                                                BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                                HeightRequest="16"
+                                                IsVisible="{Binding IsAmenityBathroomSelected}"
+                                                StrokeShape="RoundRectangle 8"
+                                                StrokeThickness="0"
+                                                VerticalOptions="Center"
+                                                WidthRequest="16">
+                                                <Label
+                                                    FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                                    FontSize="10"
+                                                    HorizontalOptions="Center"
+                                                    Text="{x:Static f:FluentUI.checkmark_16_regular}"
+                                                    TextColor="{StaticResource White}"
+                                                    VerticalOptions="Center" />
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 5. Washing Machine -->
+                                    <Border
+                                        Grid.Row="2"
+                                        Grid.Column="0"
+                                        Padding="12,9"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                        StrokeShape="RoundRectangle 20"
+                                        StrokeThickness="1.2">
+                                        <Border.Triggers>
+                                            <DataTrigger
+                                                Binding="{Binding IsAmenityWashingSelected}"
+                                                TargetType="Border"
+                                                Value="True">
+                                                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}" />
+                                                <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                                            </DataTrigger>
+                                        </Border.Triggers>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer
+                                                Command="{Binding ToggleAmenityFilterCommand}"
+                                                CommandParameter="washing" />
+                                        </Border.GestureRecognizers>
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6" VerticalOptions="Center">
+                                            <Label
+                                                Grid.Column="0"
+                                                FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                                FontSize="16"
+                                                Text="{x:Static f:FluentUI.washer_20_regular}"
+                                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                                VerticalOptions="Center" />
+                                            <Label
+                                                Grid.Column="1"
+                                                FontFamily="OpenSansSemibold"
+                                                FontSize="12"
+                                                LineBreakMode="TailTruncation"
+                                                MaxLines="1"
+                                                Text="{loc:Translate Filter_Amenity_Washing}"
+                                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                                VerticalOptions="Center" />
+                                            <Border
+                                                Grid.Column="2"
+                                                Padding="0"
+                                                BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                                HeightRequest="16"
+                                                IsVisible="{Binding IsAmenityWashingSelected}"
+                                                StrokeShape="RoundRectangle 8"
+                                                StrokeThickness="0"
+                                                VerticalOptions="Center"
+                                                WidthRequest="16">
+                                                <Label
+                                                    FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                                    FontSize="10"
+                                                    HorizontalOptions="Center"
+                                                    Text="{x:Static f:FluentUI.checkmark_16_regular}"
+                                                    TextColor="{StaticResource White}"
+                                                    VerticalOptions="Center" />
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 6. Kitchen -->
+                                    <Border
+                                        Grid.Row="2"
+                                        Grid.Column="1"
+                                        Padding="12,9"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                        StrokeShape="RoundRectangle 20"
+                                        StrokeThickness="1.2">
+                                        <Border.Triggers>
+                                            <DataTrigger
+                                                Binding="{Binding IsAmenityKitchenSelected}"
+                                                TargetType="Border"
+                                                Value="True">
+                                                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}" />
+                                                <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                                            </DataTrigger>
+                                        </Border.Triggers>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer
+                                                Command="{Binding ToggleAmenityFilterCommand}"
+                                                CommandParameter="kitchen" />
+                                        </Border.GestureRecognizers>
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6" VerticalOptions="Center">
+                                            <Label
+                                                Grid.Column="0"
+                                                FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                                FontSize="16"
+                                                Text="{x:Static f:FluentUI.food_20_regular}"
+                                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                                VerticalOptions="Center" />
+                                            <Label
+                                                Grid.Column="1"
+                                                FontFamily="OpenSansSemibold"
+                                                FontSize="12"
+                                                LineBreakMode="TailTruncation"
+                                                MaxLines="1"
+                                                Text="{loc:Translate Filter_Amenity_Kitchen}"
+                                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                                VerticalOptions="Center" />
+                                            <Border
+                                                Grid.Column="2"
+                                                Padding="0"
+                                                BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                                HeightRequest="16"
+                                                IsVisible="{Binding IsAmenityKitchenSelected}"
+                                                StrokeShape="RoundRectangle 8"
+                                                StrokeThickness="0"
+                                                VerticalOptions="Center"
+                                                WidthRequest="16">
+                                                <Label
+                                                    FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                                    FontSize="10"
+                                                    HorizontalOptions="Center"
+                                                    Text="{x:Static f:FluentUI.checkmark_16_regular}"
+                                                    TextColor="{StaticResource White}"
+                                                    VerticalOptions="Center" />
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </ScrollView>
+
+                    <!-- 3. Sticky Footer: Reset All + Show Results (Count) -->
+                    <VerticalStackLayout
+                        Grid.Row="2"
+                        Padding="20,10,20,14"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                        Spacing="10">
+                        <BoxView
+                            HeightRequest="1"
+                            Color="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" />
+
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16" VerticalOptions="Center">
+                            <!-- Reset All Button -->
+                            <Border
+                                Grid.Column="0"
+                                Padding="12,10"
+                                BackgroundColor="Transparent"
+                                MinimumHeightRequest="44"
+                                StrokeThickness="0"
+                                VerticalOptions="Center">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding ResetFiltersCommand}" />
+                                </Border.GestureRecognizers>
+                                <Label
+                                    FontAttributes="Bold"
+                                    FontFamily="OpenSansSemibold"
+                                    FontSize="14.5"
+                                    Text="{loc:Translate Filter_ResetAll}"
+                                    TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                    VerticalOptions="Center" />
                             </Border>
-                        </DataTemplate>
-                    </BindableLayout.ItemTemplate>
-                </VerticalStackLayout>
+
+                            <!-- Show Results Primary CTA Button -->
+                            <Border
+                                Grid.Column="1"
+                                Padding="16,12"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                MinimumHeightRequest="48"
+                                StrokeShape="RoundRectangle 16"
+                                StrokeThickness="0"
+                                VerticalOptions="Center">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding ApplyFilterSheetCommand}" />
+                                </Border.GestureRecognizers>
+                                <Label
+                                    FontAttributes="Bold"
+                                    FontFamily="OpenSansSemibold"
+                                    FontSize="15"
+                                    HorizontalOptions="Center"
+                                    Text="{Binding FilterShowResultsText}"
+                                    TextColor="{StaticResource White}"
+                                    VerticalOptions="Center" />
+                            </Border>
+                        </Grid>
+                    </VerticalStackLayout>
+
+                </Grid>
             </Border>
         </Grid>
     </Grid>

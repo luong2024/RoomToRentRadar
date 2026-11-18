@@ -269,7 +269,7 @@
                     <Border
                         Padding="20"
                         BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
-                        IsVisible="{Binding HasLandlordContact}"
+                        IsVisible="{Binding HasRoom}"
                         Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
                         StrokeShape="RoundRectangle 18"
                         StrokeThickness="1">
@@ -323,8 +323,8 @@
                                     TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}"
                                     VerticalOptions="Center">
                                     <Label.Triggers>
-                                        <DataTrigger Binding="{Binding IsUnavailable}" TargetType="Label" Value="True">
-                                            <Setter Property="Text" Value="Quyết Thắng, Thái Nguyên City (full address temporarily hidden)" />
+                                        <DataTrigger Binding="{Binding IsAddressHidden}" TargetType="Label" Value="True">
+                                            <Setter Property="Text" Value="Địa chỉ tạm thời được ẩn" />
                                         </DataTrigger>
                                     </Label.Triggers>
                                 </Label>
@@ -681,7 +681,16 @@
                                                 StrokeShape="RoundRectangle 10"
                                                 StrokeThickness="0"
                                                 WidthRequest="88">
-                                                <Image Aspect="AspectFill" Source="{Binding ThumbnailUrl}" />
+                                                <Grid>
+                                                    <Label
+                                                        FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                                        FontSize="28"
+                                                        HorizontalOptions="Center"
+                                                        Text="{x:Static f:FluentUI.building_24_regular}"
+                                                        TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
+                                                        VerticalOptions="Center" />
+                                                    <Image Aspect="AspectFill" Source="{Binding ThumbnailUrl}" />
+                                                </Grid>
                                             </Border>
 
                                             <!-- Info -->

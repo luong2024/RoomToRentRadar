@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using RoomToRentRadar.Adapters.Inbound.WebApi.Contracts;
 using RoomToRentRadar.Adapters.Inbound.WebApi.RateLimiting;
 using RoomToRentRadar.Application.DTOs;
+using RoomToRentRadar.Application.Exceptions;
 using RoomToRentRadar.Application.Ports.Inbound;
 
 namespace RoomToRentRadar.Adapters.Inbound.WebApi.Controllers;
@@ -112,9 +113,14 @@ public sealed class AuthController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> Logout(
-        [FromBody] LogoutRequest request,
+        [FromBody] LogoutRequest? request,
         CancellationToken cancellationToken)
     {
+        if (request is null || string.IsNullOrWhiteSpace(request.RefreshToken))
+        {
+            throw new RequestValidationException("refreshToken", "Refresh token is required.");
+        }
+
         await _logoutUseCase.ExecuteAsync(
             new LogoutCommand(request.RefreshToken),
             cancellationToken);

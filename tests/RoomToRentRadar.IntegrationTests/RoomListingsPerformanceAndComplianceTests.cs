@@ -295,6 +295,12 @@ public class RoomListingsApplicationPerformanceTests
             _rooms.Add(roomListing);
             return Task.CompletedTask;
         }
+
+        public Task DeleteAsync(string roomId, string campusId, CancellationToken cancellationToken = default)
+        {
+            _rooms.RemoveAll(room => room.Id == roomId && room.CampusId == campusId);
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeCampusRepository : ICampusRepository

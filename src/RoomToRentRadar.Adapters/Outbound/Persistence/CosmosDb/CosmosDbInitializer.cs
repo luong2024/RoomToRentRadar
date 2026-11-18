@@ -52,6 +52,14 @@ public sealed class CosmosDbInitializer
                 new ContainerProperties(roomsContainerName, "/id"),
                 cancellationToken: cancellationToken);
 
+            var syncOutboxContainerName = string.IsNullOrWhiteSpace(_settings.RoomProjectionSyncOutboxContainerName)
+                ? "RoomProjectionSyncOutbox"
+                : _settings.RoomProjectionSyncOutboxContainerName;
+            _logger.LogInformation("Creating container '{SyncOutboxContainerName}' (/id)...", syncOutboxContainerName);
+            await database.CreateContainerIfNotExistsAsync(
+                new ContainerProperties(syncOutboxContainerName, "/id"),
+                cancellationToken: cancellationToken);
+
             var listingsContainerName = string.IsNullOrWhiteSpace(_settings.ContainerName) ? "RoomListings" : _settings.ContainerName;
             _logger.LogInformation("Creating container '{ListingsContainerName}' (/campusId)...", listingsContainerName);
             var roomsContainerResponse = await database.CreateContainerIfNotExistsAsync(
@@ -229,7 +237,7 @@ public sealed class CosmosDbInitializer
 
                         // Map to RoomListingDocument and perform data parity verification / upsert
                         var isVerified = ((int?)doc["verificationStatus"] == 2) || ((bool?)doc["isVerified"] == true);
-                        var status = (int?)doc["status"] == 0 ? 0 : 1;
+                        var status = MapLegacyStatusToListingStatus((int?)doc["status"]);
 
                         var listingDoc = new RoomListingDocument
                         {
@@ -716,31 +724,12 @@ public sealed class CosmosDbInitializer
             var page = await iterator.ReadNextAsync(cancellationToken);
             foreach (var listing in page)
             {
-                var detail = new RoomDocument
-                {
-                    Id = listing.Id,
-                    Title = listing.Title,
-                    Description = listing.Description,
-                    Price = listing.MonthlyRentAmount,
-                    Area = listing.AreaSquareMeters,
-                    Address = listing.Address,
-                    ThumbnailUrl = listing.ThumbnailUrl,
-                    ImageUrls = string.IsNullOrWhiteSpace(listing.ThumbnailUrl) ? [] : [listing.ThumbnailUrl],
-                    IsVerified = listing.VerificationStatus == 2,
-                    Status = listing.Status,
-                    Deposit = 0,
-                    RoomType = string.Empty,
-                    Amenities = [],
-                    HouseRules = [],
-                    LandlordPhone = string.Empty,
-                    LastUpdatedDate = listing.CreatedAtUtc,
-                    Latitude = listing.Latitude,
-                    Longitude = listing.Longitude,
-                    Location = new CosmosPoint
-                    {
-                        Coordinates = [listing.Longitude, listing.Latitude]
-                    }
-                };
+                var existingDetail = await ReadItemOrNullAsync<RoomDocument>(
+                    roomsContainer,
+                    listing.Id,
+                    new PartitionKey(listing.Id),
+                    cancellationToken);
+                var detail = RoomDocument.MergeListingFields(listing, existingDetail);
 
                 await roomsContainer.UpsertItemAsync(detail, new PartitionKey(detail.Id), cancellationToken: cancellationToken);
                 synchronizedCount++;
@@ -749,4 +738,13 @@ public sealed class CosmosDbInitializer
 
         _logger.LogInformation("Synchronized {Count} room detail records from Cosmos listings.", synchronizedCount);
     }
+
+    private static int MapLegacyStatusToListingStatus(int? legacyStatus) => legacyStatus switch
+    {
+        0 => 0, // Available -> Available
+        1 => 1, // Rented -> Occupied
+        2 => 2, // Pending -> Reserved
+        3 => 3, // UnderMaintenance -> Hidden
+        _ => 3  // Unknown legacy state must not become bookable.
+    };
 }

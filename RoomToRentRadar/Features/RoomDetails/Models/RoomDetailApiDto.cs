@@ -27,7 +27,7 @@ public class RoomDetailApiDto
     public DateTime? LastUpdatedDate { get; set; }
     public bool IsVerified { get; set; }
     public string Status { get; set; } = string.Empty;
-    public bool IsAvailable { get; set; } = true;
+    public bool? IsAvailable { get; set; }
     public string? UnavailableMessage { get; set; }
     public List<SimilarRoomApiDto> SimilarRooms { get; set; } = [];
 }
@@ -44,6 +44,7 @@ public class SimilarRoomApiDto
     public double Area { get; set; }
     public string FormattedArea { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
+    public string? ThumbnailUrl { get; set; }
     public string RoomType { get; set; } = string.Empty;
     public bool IsVerified { get; set; }
 }

@@ -33,8 +33,12 @@ public sealed class RoomDetailService : IRoomDetailService
         return detail?.SimilarRooms ?? [];
     }
 
-    private static RoomDetailModel MapDtoToModel(RoomDetailApiDto dto) => new()
+    private static RoomDetailModel MapDtoToModel(RoomDetailApiDto dto)
     {
+        var status = ParseStatus(dto.Status, dto.IsAvailable);
+
+        return new RoomDetailModel
+        {
         Id = dto.Id,
         Title = dto.Title,
         Description = dto.Description,
@@ -45,10 +49,10 @@ public sealed class RoomDetailService : IRoomDetailService
         Bedrooms = dto.Bedrooms,
         Bathrooms = dto.Bathrooms,
         Address = dto.Address,
-        Status = ParseStatus(dto.Status, dto.IsAvailable),
+        Status = status,
         LastUpdated = dto.LastUpdatedDate,
         IsVerified = dto.IsVerified,
-        IsAvailable = dto.IsAvailable,
+        IsAvailable = status == ListingStatus.Available,
         UnavailableMessage = dto.UnavailableMessage,
         ImageUrls = dto.ImageUrls ?? [],
         LandlordPhone = dto.LandlordPhone,
@@ -65,17 +69,35 @@ public sealed class RoomDetailService : IRoomDetailService
             Price = similar.Price,
             AreaSquareMeters = similar.Area,
             Address = similar.Address,
+            ThumbnailUrl = similar.ThumbnailUrl,
             RoomType = similar.RoomType,
             IsVerified = similar.IsVerified
         }).ToList()
-    };
+        };
+    }
 
-    private static ListingStatus ParseStatus(string? status, bool isAvailable) =>
-        isAvailable
+    private static ListingStatus ParseStatus(string? status, bool? isAvailable)
+    {
+        if (string.Equals(status, "Available", StringComparison.OrdinalIgnoreCase))
+        {
+            return ListingStatus.Available;
+        }
+
+        if (string.Equals(status, "Rented", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(status, "Occupied", StringComparison.OrdinalIgnoreCase))
+        {
+            return ListingStatus.Rented;
+        }
+
+        if (string.Equals(status, "Unavailable", StringComparison.OrdinalIgnoreCase))
+        {
+            return ListingStatus.Unavailable;
+        }
+
+        return isAvailable is true
             ? ListingStatus.Available
-            : string.Equals(status, "Rented", StringComparison.OrdinalIgnoreCase)
-                ? ListingStatus.Rented
-                : ListingStatus.Unavailable;
+            : ListingStatus.Unavailable;
+    }
 
     private static string ResolveAmenityGlyph(string amenity)
     {

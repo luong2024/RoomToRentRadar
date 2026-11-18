@@ -42,8 +42,8 @@ public class GetRoomDetailsUseCase : IGetRoomDetailsUseCase
             Area = room.Area,
             FormattedArea = $"{room.Area} m²",
             Address = isAvailable ? room.Address : string.Empty,
-            ThumbnailUrl = room.ThumbnailUrl,
-            ImageUrls = room.ImageUrls ?? [],
+            ThumbnailUrl = isAvailable ? room.ThumbnailUrl : null,
+            ImageUrls = isAvailable ? room.ImageUrls ?? [] : [],
             RoomType = room.RoomType,
             Bedrooms = room.Bedrooms,
             Bathrooms = room.Bathrooms,
@@ -76,6 +76,7 @@ public class GetRoomDetailsUseCase : IGetRoomDetailsUseCase
                     Area = r.Area,
                     FormattedArea = $"{r.Area} m²",
                     Address = r.Address,
+                    ThumbnailUrl = r.ThumbnailUrl,
                     RoomType = r.RoomType,
                     IsVerified = r.IsVerified
                 })

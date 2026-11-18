@@ -38,7 +38,7 @@ public class CosmosRoomRepository : IRoomRepository
                 partitionKey: new PartitionKey(id),
                 cancellationToken: cancellationToken);
 
-            return response.Resource?.ToDomain();
+            return response.Resource is { IsDeleted: false } document ? document.ToDomain() : null;
         }
         catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
@@ -54,7 +54,7 @@ public class CosmosRoomRepository : IRoomRepository
         var maxArea = area * 1.3;
 
         var query = new QueryDefinition(
-            "SELECT TOP 5 * FROM c WHERE c.id != @roomId AND c.status = 0 AND c.price >= @minPrice AND c.price <= @maxPrice AND c.area >= @minArea AND c.area <= @maxArea")
+            "SELECT TOP 5 * FROM c WHERE c.id != @roomId AND c.status = 0 AND (NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false) AND c.price >= @minPrice AND c.price <= @maxPrice AND c.area >= @minArea AND c.area <= @maxArea")
             .WithParameter("@roomId", roomId)
             .WithParameter("@minPrice", minPrice)
             .WithParameter("@maxPrice", maxPrice)
@@ -88,7 +88,8 @@ public class CosmosRoomRepository : IRoomRepository
         var whereClauses = new List<string>
         {
             "c.status = 0",
-            "c.isVerified = true"
+            "c.isVerified = true",
+            "(NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false)"
         };
 
         if (query.MinPrice.HasValue)
