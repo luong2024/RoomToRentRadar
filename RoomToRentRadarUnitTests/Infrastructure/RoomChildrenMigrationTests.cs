@@ -237,6 +237,8 @@ public class RoomChildrenMigrationTests
 
     private static void InsertUser(SqliteConnection connection, string userId)
     {
+        InsertIctuCampus(connection);
+
         using var command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO Users (Id, Email, NormalizedEmail, FullName, Role, AuthProvider, IsVerified, FailedLoginCount, CreatedAtUtc, UpdatedAtUtc, SelectedCampusId, PreferredLanguage, Version)
@@ -245,6 +247,16 @@ public class RoomChildrenMigrationTests
         command.Parameters.AddWithValue("@id", userId);
         command.Parameters.AddWithValue("@email", $"{userId}@example.com");
         command.Parameters.AddWithValue("@normalizedEmail", $"{userId.ToUpperInvariant()}@EXAMPLE.COM");
+        command.ExecuteNonQuery();
+    }
+
+    private static void InsertIctuCampus(SqliteConnection connection)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT OR IGNORE INTO Campuses (Id, Name, ShortName, Latitude, Longitude, IsDefault, SortOrder)
+            VALUES ('ICTU', 'Trường Đại học Công nghệ Thông tin và Truyền thông', 'ICTU', 21.5851, 105.8066, 1, 1);
+            """;
         command.ExecuteNonQuery();
     }
 

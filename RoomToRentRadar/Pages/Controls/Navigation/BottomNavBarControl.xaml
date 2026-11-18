@@ -1,0 +1,300 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:fonts="clr-namespace:Fonts"
+             xmlns:nav="clr-namespace:RoomToRentRadar.Pages.Controls.Navigation"
+             xmlns:loc="clr-namespace:RoomToRentRadar.Resources.Strings"
+             x:Class="RoomToRentRadar.Pages.Controls.Navigation.BottomNavBarControl"
+             x:Name="ThisControl"
+             x:DataType="nav:BottomNavBarControl">
+
+    <Border Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+            StrokeThickness="1"
+            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+            Shadow="{StaticResource Elevation1Shadow}"
+            HeightRequest="64"
+            VerticalOptions="End"
+            Padding="0">
+        <Border.StrokeShape>
+            <RoundRectangle CornerRadius="0" />
+        </Border.StrokeShape>
+
+        <Grid ColumnDefinitions="*, *, *, *, *"
+              VerticalOptions="Fill"
+              HorizontalOptions="Fill">
+
+            <!-- TAB 1: EXPLORE -->
+            <Grid Grid.Column="0"
+                  RowDefinitions="3, *, Auto"
+                  Padding="0,0,0,6"
+                  SemanticProperties.Description="{Binding NavExploreText, Source={x:Reference ThisControl}}"
+                  SemanticProperties.Hint="{Binding NavHintExploreText, Source={x:Reference ThisControl}}">
+                <Grid.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding SelectTabCommand, Source={x:Reference ThisControl}}"
+                                          CommandParameter="{x:Static nav:BottomNavTab.Explore}" />
+                </Grid.GestureRecognizers>
+
+                <!-- Top indicator pill -->
+                <Border Grid.Row="0"
+                        WidthRequest="32"
+                        HeightRequest="3"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Start"
+                        StrokeThickness="0"
+                        BackgroundColor="{StaticResource Teal500}"
+                        IsVisible="{Binding IsExploreSelected, Source={x:Reference ThisControl}}">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="1.5" />
+                    </Border.StrokeShape>
+                </Border>
+
+                <!-- Icon -->
+                <Image Grid.Row="1"
+                       WidthRequest="24"
+                       HeightRequest="24"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center">
+                    <Image.Source>
+                        <FontImageSource Glyph="{x:Static fonts:FluentUI.compass_northwest_24_regular}"
+                                         FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                         Size="24"
+                                         Color="{Binding ExploreColor, Source={x:Reference ThisControl}}" />
+                    </Image.Source>
+                </Image>
+
+                <!-- Label -->
+                <Label Grid.Row="2"
+                       Text="{Binding NavExploreText, Source={x:Reference ThisControl}}"
+                       FontSize="{StaticResource FontSizeCaption}"
+                       FontAttributes="{Binding ExploreFontAttributes, Source={x:Reference ThisControl}}"
+                       TextColor="{Binding ExploreColor, Source={x:Reference ThisControl}}"
+                       HorizontalOptions="Center"
+                       VerticalOptions="End" />
+            </Grid>
+
+            <!-- TAB 2: MAP -->
+            <Grid Grid.Column="1"
+                  RowDefinitions="3, *, Auto"
+                  Padding="0,0,0,6"
+                  SemanticProperties.Description="{Binding NavMapText, Source={x:Reference ThisControl}}"
+                  SemanticProperties.Hint="{Binding NavHintMapText, Source={x:Reference ThisControl}}">
+                <Grid.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding SelectTabCommand, Source={x:Reference ThisControl}}"
+                                          CommandParameter="{x:Static nav:BottomNavTab.Map}" />
+                </Grid.GestureRecognizers>
+
+                <!-- Top indicator pill -->
+                <Border Grid.Row="0"
+                        WidthRequest="32"
+                        HeightRequest="3"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Start"
+                        StrokeThickness="0"
+                        BackgroundColor="{StaticResource Teal500}"
+                        IsVisible="{Binding IsMapSelected, Source={x:Reference ThisControl}}">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="1.5" />
+                    </Border.StrokeShape>
+                </Border>
+
+                <!-- Icon -->
+                <Image Grid.Row="1"
+                       WidthRequest="24"
+                       HeightRequest="24"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center">
+                    <Image.Source>
+                        <FontImageSource Glyph="{x:Static fonts:FluentUI.map_24_regular}"
+                                         FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                         Size="24"
+                                         Color="{Binding MapColor, Source={x:Reference ThisControl}}" />
+                    </Image.Source>
+                </Image>
+
+                <!-- Label -->
+                <Label Grid.Row="2"
+                       Text="{Binding NavMapText, Source={x:Reference ThisControl}}"
+                       FontSize="{StaticResource FontSizeCaption}"
+                       FontAttributes="{Binding MapFontAttributes, Source={x:Reference ThisControl}}"
+                       TextColor="{Binding MapColor, Source={x:Reference ThisControl}}"
+                       HorizontalOptions="Center"
+                       VerticalOptions="End" />
+            </Grid>
+
+            <!-- TAB 3: SAVED -->
+            <Grid Grid.Column="2"
+                  RowDefinitions="3, *, Auto"
+                  Padding="0,0,0,6"
+                  SemanticProperties.Description="{Binding NavSavedText, Source={x:Reference ThisControl}}"
+                  SemanticProperties.Hint="{Binding NavHintSavedText, Source={x:Reference ThisControl}}">
+                <Grid.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding SelectTabCommand, Source={x:Reference ThisControl}}"
+                                          CommandParameter="{x:Static nav:BottomNavTab.Saved}" />
+                </Grid.GestureRecognizers>
+
+                <!-- Top indicator pill -->
+                <Border Grid.Row="0"
+                        WidthRequest="32"
+                        HeightRequest="3"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Start"
+                        StrokeThickness="0"
+                        BackgroundColor="{StaticResource Teal500}"
+                        IsVisible="{Binding IsSavedSelected, Source={x:Reference ThisControl}}">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="1.5" />
+                    </Border.StrokeShape>
+                </Border>
+
+                <!-- Icon -->
+                <Image Grid.Row="1"
+                       WidthRequest="24"
+                       HeightRequest="24"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center">
+                    <Image.Source>
+                        <FontImageSource Glyph="{x:Static fonts:FluentUI.heart_24_regular}"
+                                         FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                         Size="24"
+                                         Color="{Binding SavedColor, Source={x:Reference ThisControl}}" />
+                    </Image.Source>
+                </Image>
+
+                <!-- Label -->
+                <Label Grid.Row="2"
+                       Text="{Binding NavSavedText, Source={x:Reference ThisControl}}"
+                       FontSize="{StaticResource FontSizeCaption}"
+                       FontAttributes="{Binding SavedFontAttributes, Source={x:Reference ThisControl}}"
+                       TextColor="{Binding SavedColor, Source={x:Reference ThisControl}}"
+                       HorizontalOptions="Center"
+                       VerticalOptions="End" />
+            </Grid>
+
+            <!-- TAB 4: MESSAGES -->
+            <Grid Grid.Column="3"
+                  RowDefinitions="3, *, Auto"
+                  Padding="0,0,0,6"
+                  SemanticProperties.Description="{Binding NavMessagesText, Source={x:Reference ThisControl}}"
+                  SemanticProperties.Hint="{Binding NavHintMessagesText, Source={x:Reference ThisControl}}">
+                <Grid.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding SelectTabCommand, Source={x:Reference ThisControl}}"
+                                          CommandParameter="{x:Static nav:BottomNavTab.Messages}" />
+                </Grid.GestureRecognizers>
+
+                <!-- Top indicator pill -->
+                <Border Grid.Row="0"
+                        WidthRequest="32"
+                        HeightRequest="3"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Start"
+                        StrokeThickness="0"
+                        BackgroundColor="{StaticResource Teal500}"
+                        IsVisible="{Binding IsMessagesSelected, Source={x:Reference ThisControl}}">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="1.5" />
+                    </Border.StrokeShape>
+                </Border>
+
+                <!-- Icon Container with Red Badge -->
+                <Grid Grid.Row="1"
+                      WidthRequest="36"
+                      HeightRequest="28"
+                      HorizontalOptions="Center"
+                      VerticalOptions="Center">
+
+                    <!-- Chat Icon -->
+                    <Image WidthRequest="24"
+                           HeightRequest="24"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center">
+                        <Image.Source>
+                            <FontImageSource Glyph="{x:Static fonts:FluentUI.chat_24_regular}"
+                                             FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                             Size="24"
+                                             Color="{Binding MessagesColor, Source={x:Reference ThisControl}}" />
+                        </Image.Source>
+                    </Image>
+
+                    <!-- Unread Count Badge -->
+                    <Border WidthRequest="18"
+                            HeightRequest="18"
+                            HorizontalOptions="End"
+                            VerticalOptions="Start"
+                            StrokeThickness="0"
+                            BackgroundColor="{StaticResource StatusDangerLight}"
+                            IsVisible="{Binding HasUnreadMessages, Source={x:Reference ThisControl}}">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="9" />
+                        </Border.StrokeShape>
+
+                        <Label Text="{Binding UnreadMessagesCount, Source={x:Reference ThisControl}}"
+                               TextColor="White"
+                               FontSize="10"
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center" />
+                    </Border>
+                </Grid>
+
+                <!-- Label -->
+                <Label Grid.Row="2"
+                       Text="{Binding NavMessagesText, Source={x:Reference ThisControl}}"
+                       FontSize="{StaticResource FontSizeCaption}"
+                       FontAttributes="{Binding MessagesFontAttributes, Source={x:Reference ThisControl}}"
+                       TextColor="{Binding MessagesColor, Source={x:Reference ThisControl}}"
+                       HorizontalOptions="Center"
+                       VerticalOptions="End" />
+            </Grid>
+
+            <!-- TAB 5: ACCOUNT -->
+            <Grid Grid.Column="4"
+                  RowDefinitions="3, *, Auto"
+                  Padding="0,0,0,6"
+                  SemanticProperties.Description="{Binding NavAccountText, Source={x:Reference ThisControl}}"
+                  SemanticProperties.Hint="{Binding NavHintAccountText, Source={x:Reference ThisControl}}">
+                <Grid.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding SelectTabCommand, Source={x:Reference ThisControl}}"
+                                          CommandParameter="{x:Static nav:BottomNavTab.Account}" />
+                </Grid.GestureRecognizers>
+
+                <!-- Top indicator pill -->
+                <Border Grid.Row="0"
+                        WidthRequest="32"
+                        HeightRequest="3"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Start"
+                        StrokeThickness="0"
+                        BackgroundColor="{StaticResource Teal500}"
+                        IsVisible="{Binding IsAccountSelected, Source={x:Reference ThisControl}}">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="1.5" />
+                    </Border.StrokeShape>
+                </Border>
+
+                <!-- Icon -->
+                <Image Grid.Row="1"
+                       WidthRequest="24"
+                       HeightRequest="24"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center">
+                    <Image.Source>
+                        <FontImageSource Glyph="{x:Static fonts:FluentUI.person_24_regular}"
+                                         FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                         Size="24"
+                                         Color="{Binding AccountColor, Source={x:Reference ThisControl}}" />
+                    </Image.Source>
+                </Image>
+
+                <!-- Label -->
+                <Label Grid.Row="2"
+                       Text="{Binding NavAccountText, Source={x:Reference ThisControl}}"
+                       FontSize="{StaticResource FontSizeCaption}"
+                       FontAttributes="{Binding AccountFontAttributes, Source={x:Reference ThisControl}}"
+                       TextColor="{Binding AccountColor, Source={x:Reference ThisControl}}"
+                       HorizontalOptions="Center"
+                       VerticalOptions="End" />
+            </Grid>
+
+        </Grid>
+    </Border>
+</ContentView>

@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- Bottom Navigation Bar -->
+  <data name="Nav_Explore" xml:space="preserve">
+    <value>Khám phá</value>
+  </data>
+  <data name="Nav_Map" xml:space="preserve">
+    <value>Bản đồ</value>
+  </data>
+  <data name="Nav_Saved" xml:space="preserve">
+    <value>Đã lưu</value>
+  </data>
+  <data name="Nav_Messages" xml:space="preserve">
+    <value>Tin nhắn</value>
+  </data>
+  <data name="Nav_Account" xml:space="preserve">
+    <value>Tài khoản</value>
+  </data>
+  <data name="Nav_Hint_Explore" xml:space="preserve">
+    <value>Xem danh sách phòng trọ sinh viên gần ICTU</value>
+  </data>
+  <data name="Nav_Hint_Map" xml:space="preserve">
+    <value>Xem phòng trọ trên bản đồ tương tác gần trường</value>
+  </data>
+  <data name="Nav_Hint_Saved" xml:space="preserve">
+    <value>Xem danh sách phòng đã lưu và thông báo tìm kiếm</value>
+  </data>
+  <data name="Nav_Hint_Messages" xml:space="preserve">
+    <value>Trò chuyện với chủ trọ đã xác minh</value>
+  </data>
+  <data name="Nav_Hint_Account" xml:space="preserve">
+    <value>Xem hồ sơ tài khoản và cài đặt ứng dụng</value>
+  </data>
+
+  <!-- Account Screen -->
+  <data name="Account_Title" xml:space="preserve">
+    <value>Tài khoản</value>
+  </data>
+  <data name="Account_Guest_WelcomeTitle" xml:space="preserve">
+    <value>Chào mừng đến với RoomToRentRadar</value>
+  </data>
+  <data name="Account_Guest_WelcomeMessage" xml:space="preserve">
+    <value>Đăng nhập để lưu phòng yêu thích, nhận thông báo giá tức thì và trò chuyện với chủ trọ đã xác minh.</value>
+  </data>
+  <data name="Account_Guest_SignIn" xml:space="preserve">
+    <value>Đăng nhập</value>
+  </data>
+  <data name="Account_Guest_Register" xml:space="preserve">
+    <value>Đăng ký</value>
+  </data>
+  <data name="Account_Item_MyCampus" xml:space="preserve">
+    <value>Trường của tôi</value>
+  </data>
+  <data name="Account_Item_Language" xml:space="preserve">
+    <value>Ngôn ngữ</value>
+  </data>
+  <data name="Account_Item_PersonalDetails" xml:space="preserve">
+    <value>Thông tin cá nhân</value>
+  </data>
+  <data name="Account_Item_SavedSearches" xml:space="preserve">
+    <value>Tìm kiếm đã lưu</value>
+  </data>
+  <data name="Account_Item_Notifications" xml:space="preserve">
+    <value>Thông báo</value>
+  </data>
+  <data name="Account_Item_Help" xml:space="preserve">
+    <value>Trợ giúp, điều khoản &amp; quyền riêng tư</value>
+  </data>
+  <data name="Account_Item_PushNotifications" xml:space="preserve">
+    <value>Thông báo đẩy</value>
+  </data>
+  <data name="Account_Item_SignOut" xml:space="preserve">
+    <value>Đăng xuất</value>
+  </data>
+  <data name="Account_Footer_Copyright" xml:space="preserve">
+    <value>RoomToRentRadar 1.0 · Nhóm 2, ICTU</value>
+  </data>
+  <data name="Account_Language_PromptTitle" xml:space="preserve">
+    <value>Chọn ngôn ngữ / Select Language</value>
+  </data>
+  <data name="Account_Language_PromptCancel" xml:space="preserve">
+    <value>Hủy</value>
+  </data>
+
+  <!-- Role Badges -->
+  <data name="Role_Guest" xml:space="preserve">
+    <value>Khách · chưa đăng nhập</value>
+  </data>
+  <data name="Role_Landlord_Verified" xml:space="preserve">
+    <value>Chủ trọ · đã xác minh</value>
+  </data>
+  <data name="Role_Landlord_Pending" xml:space="preserve">
+    <value>Chủ trọ · chờ xác minh</value>
+  </data>
+  <data name="Role_Student_IctuSso" xml:space="preserve">
+    <value>Sinh viên · đăng nhập qua ICTU</value>
+  </data>
+  <data name="Role_Student_VerifiedEmail" xml:space="preserve">
+    <value>Sinh viên · đã xác minh email</value>
+  </data>
+  <data name="Role_Admin" xml:space="preserve">
+    <value>Quản trị viên · ICTU Radar</value>
+  </data>
+
+  <!-- Auth -->
+  <data name="Auth_ContinueAsGuest" xml:space="preserve">
+    <value>Tiếp tục với tư cách Khách (Duyệt phòng)</value>
+  </data>
+  <data name="Auth_DontHaveAccount" xml:space="preserve">
+    <value>Chưa có tài khoản?</value>
+  </data>
+  <data name="Auth_SignUpNow" xml:space="preserve">
+    <value>Đăng ký ngay</value>
+  </data>
+
+  <!-- Map Screen -->
+  <data name="Map_Title" xml:space="preserve">
+    <value>Bản đồ tìm phòng</value>
+  </data>
+  <data name="Map_Subtitle" xml:space="preserve">
+    <value>Bản đồ tương tác khu vực gần ICTU</value>
+  </data>
+  <data name="Map_EmptyTitle" xml:space="preserve">
+    <value>Bản đồ tương tác</value>
+  </data>
+  <data name="Map_EmptyMessage" xml:space="preserve">
+    <value>Tìm phòng trên bản đồ tương tác hiển thị khoảng cách đi bộ và lái xe đến ICTU. Tính năng bản đồ sẽ ra mắt trong Sprint Task T01.3.</value>
+  </data>
+  <data name="Map_EmptyAction" xml:space="preserve">
+    <value>Khám phá phòng trọ</value>
+  </data>
+
+  <!-- Messages Screen -->
+  <data name="Messages_Title" xml:space="preserve">
+    <value>Tin nhắn</value>
+  </data>
+  <data name="Messages_Subtitle" xml:space="preserve">
+    <value>Kênh trò chuyện Radar</value>
+  </data>
+  <data name="Messages_UnreadBannerTitle" xml:space="preserve">
+    <value>Bạn có 2 tin nhắn chưa đọc</value>
+  </data>
+  <data name="Messages_UnreadBannerSubtitle" xml:space="preserve">
+    <value>Từ các chủ trọ đã xác minh phản hồi về các câu hỏi thuê phòng gần ICTU.</value>
+  </data>
+  <data name="Messages_EmptyTitle" xml:space="preserve">
+    <value>Trò chuyện trực tiếp</value>
+  </data>
+  <data name="Messages_EmptyMessage" xml:space="preserve">
+    <value>Trò chuyện trực tiếp với chủ trọ, đặt lịch hẹn xem phòng và hỏi đáp trước khi thuê. Tính năng trò chuyện SignalR đầy đủ sẽ ra mắt trong US14.</value>
+  </data>
+
+  <!-- Saved Screen -->
+  <data name="Saved_Title" xml:space="preserve">
+    <value>Phòng đã lưu</value>
+  </data>
+  <data name="Saved_Subtitle" xml:space="preserve">
+    <value>Yêu thích &amp; Thông báo tìm kiếm</value>
+  </data>
+  <data name="Saved_EmptyTitle" xml:space="preserve">
+    <value>Chưa có phòng nào được lưu</value>
+  </data>
+  <data name="Saved_EmptyMessage" xml:space="preserve">
+    <value>Nhấn vào biểu tượng trái tim trên bất kỳ phòng nào tại trang Khám phá để lưu lại, theo dõi biến động giá và so sánh phòng (US10).</value>
+  </data>
+
+  <!-- Common & Dialogs -->
+  <data name="Common_Ok" xml:space="preserve">
+    <value>Đồng ý</value>
+  </data>
+  <data name="Account_Alert_CampusTitle" xml:space="preserve">
+    <value>Trường của tôi</value>
+  </data>
+  <data name="Account_Alert_CampusMessage" xml:space="preserve">
+    <value>ICTU (Trường Đại học Công nghệ Thông tin &amp; Truyền thông) là cơ sở mặc định của bạn.</value>
+  </data>
+  <data name="Account_Alert_PersonalDetailsTitle" xml:space="preserve">
+    <value>Thông tin cá nhân</value>
+  </data>
+  <data name="Account_Alert_PersonalDetailsMessage" xml:space="preserve">
+    <value>Họ và tên: {0}&#10;Email: {1}&#10;Vai trò: {2}</value>
+  </data>
+  <data name="Account_Alert_HelpTitle" xml:space="preserve">
+    <value>Trợ giúp &amp; Quyền riêng tư</value>
+  </data>
+  <data name="Account_Alert_HelpMessage" xml:space="preserve">
+    <value>RoomToRentRadar 1.0&#10;Dự án Radar Phòng trọ Sinh viên ICTU - Nhóm 2.</value>
+  </data>
+</root>

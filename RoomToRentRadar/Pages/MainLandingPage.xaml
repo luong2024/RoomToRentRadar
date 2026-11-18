@@ -4,11 +4,12 @@
              xmlns:vm="clr-namespace:RoomToRentRadar.PageModels"
              xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
              xmlns:inputs="clr-namespace:RoomToRentRadar.Pages.Controls.Inputs"
+             xmlns:nav="clr-namespace:RoomToRentRadar.Pages.Controls.Navigation"
              x:Class="RoomToRentRadar.Pages.MainLandingPage"
              x:DataType="vm:MainLandingPageModel"
              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCanvasLight}, Dark={StaticResource SurfaceCanvasDark}}">
 
-    <Grid RowDefinitions="Auto, *">
+    <Grid RowDefinitions="Auto, *, Auto">
         <!-- Top App Bar -->
         <common:PageHeaderBar Grid.Row="0"
                                Title="RoomToRentRadar"
@@ -83,6 +84,10 @@
 
             </VerticalStackLayout>
         </ScrollView>
+
+        <!-- Bottom Navigation Bar -->
+        <nav:BottomNavBarControl Grid.Row="2"
+                                 ActiveTab="Explore" />
     </Grid>
 </ContentPage>
 
