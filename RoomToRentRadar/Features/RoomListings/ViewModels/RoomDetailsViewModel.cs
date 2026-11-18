@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Core.Interfaces;
+using RoomToRentRadar.Core.Localization;
 using RoomToRentRadar.Features.RoomListings.Models;
 using RoomToRentRadar.Features.RoomListings.Services;
 
@@ -30,6 +31,17 @@ public partial class RoomDetailsViewModel : ObservableObject
         _roomListingsService = roomListingsService;
         _errorHandler = errorHandler;
         _navigateAsync = navigateAsync;
+
+        UpdateLocalizedStrings();
+        LocalizationResourceManager.Instance.PropertyChanged += (_, _) => UpdateLocalizedStrings();
+    }
+
+    private void UpdateLocalizedStrings()
+    {
+        if (Room is null)
+        {
+            Title = LocalizationResourceManager.Instance["RoomDetails_Title"];
+        }
     }
 
     [ObservableProperty]
