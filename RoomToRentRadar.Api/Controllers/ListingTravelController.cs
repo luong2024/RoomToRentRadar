@@ -1,0 +1,47 @@
+using Microsoft.AspNetCore.Mvc;
+using RoomToRentRadar.Api.Features.Travel;
+using RoomToRentRadar.Shared.Travel;
+
+namespace RoomToRentRadar.Api.Controllers;
+
+[ApiController]
+[Route("api/v1/listings/{listingId:guid}/travel")]
+public sealed class ListingTravelController(TravelEstimatesService travelEstimatesService) : ControllerBase
+{
+    [HttpGet]
+    [ProducesResponseType(typeof(ListingTravelEstimatesDto), StatusCodes.Status200OK, "application/json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError, "application/problem+json")]
+    public async Task<ActionResult<ListingTravelEstimatesDto>> GetEstimates(
+        Guid listingId,
+        [FromQuery] TravelQueryParameters parameters,
+        CancellationToken cancellationToken)
+    {
+        if (!TravelDestinationValidator.TryValidate(
+                parameters.ToLat,
+                parameters.ToLng,
+                out var lat,
+                out var lng,
+                out var problem))
+        {
+            return ToProblem(problem!);
+        }
+
+        var result = await travelEstimatesService.GetEstimatesAsync(
+            listingId,
+            lat,
+            lng,
+            cancellationToken);
+
+        return result.IsSuccess ? Ok(result.Value) : ToProblem(result.Problem!);
+    }
+
+    private ObjectResult ToProblem(ProblemDetails problem)
+        => Problem(
+            statusCode: problem.Status,
+            title: problem.Title,
+            detail: problem.Detail,
+            type: problem.Type,
+            extensions: problem.Extensions);
+}

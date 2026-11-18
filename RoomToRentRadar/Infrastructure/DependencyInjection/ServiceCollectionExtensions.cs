@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Storage;
 using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Interfaces;
@@ -34,6 +35,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<AuthService>();
         services.AddSingleton<IErrorHandler, ModalErrorHandler>();
         services.AddSingleton<IPreferences>(Preferences.Default);
+        services.AddSingleton<ICampusSelectionStore, PreferencesCampusSelectionStore>();
+        services.AddSingleton<ILauncher>(Launcher.Default);
+        services.AddSingleton<IMapsDirectionsLauncher, MapsDirectionsLauncher>();
+        services.AddSingleton<ITravelEstimatesClient>(_ => new TravelEstimatesClient(new HttpClient
+        {
+            BaseAddress = new Uri(ApiConstants.BaseAddress),
+            Timeout = TimeSpan.FromSeconds(15)
+        }));
         services.AddSingleton<ISavedAreaSearchStore>(provider => new FileSavedAreaSearchStore(
             FileSystem.AppDataDirectory, provider.GetRequiredService<IPreferences>()));
         services.AddSingleton<INavigationService, ShellNavigationService>();
@@ -46,6 +55,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<HomeViewModel>();
         services.AddTransient<HomePage>();
         services.AddTransient<RoomDetailViewModel>();
+        services.AddTransient<RoomDetailTravelViewModel>();
         services.AddTransient<RoomDetailPage>();
         services.AddTransient<LoginViewModel>();
         services.AddTransient<LoginPage>();

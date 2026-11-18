@@ -123,6 +123,67 @@
                     </VerticalStackLayout>
                 </VerticalStackLayout>
 
+                <Border x:Name="TravelSection"
+                        x:DataType="viewModels:RoomDetailTravelViewModel"
+                        Padding="18" StrokeShape="RoundRectangle 20"
+                        BackgroundColor="{StaticResource SoftSurface}" StrokeThickness="0"
+                        AutomationId="RoomDetailTravelSection">
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="DI CHUYỂN TỪ KHU VỰC CỦA BẠN" Style="{StaticResource Eyebrow}" />
+                        <Picker Title="Chọn khu vực của bạn"
+                                ItemsSource="{Binding CampusNames}"
+                                SelectedItem="{Binding SelectedCampusName, Mode=TwoWay}"
+                                SemanticProperties.Description="Chọn khu vực học tập để tính thời gian di chuyển" />
+
+                        <Label Text="Chọn khu vực của bạn để xem thời gian di chuyển tới phòng này."
+                               IsVisible="{Binding IsNoCampusVisible}"
+                               Style="{StaticResource Caption}" />
+
+                        <ActivityIndicator IsRunning="{Binding IsLoadingVisible}"
+                                           IsVisible="{Binding IsLoadingVisible}"
+                                           HorizontalOptions="Start"
+                                           SemanticProperties.Description="Đang tính thời gian di chuyển" />
+
+                        <VerticalStackLayout Spacing="8" IsVisible="{Binding IsLoadedVisible}">
+                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Estimates}" Spacing="6">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="viewModels:TravelModeEstimateItem">
+                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                            <Label Text="{Binding ModeLabel}"
+                                                   FontFamily="OpenSansSemibold" FontSize="14" />
+                                            <Label Grid.Column="1"
+                                                   Text="{Binding ValueText}"
+                                                   FontSize="14"
+                                                   HorizontalTextAlignment="End"
+                                                   SemanticProperties.Description="{Binding AccessibilityText}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+                            <Label Text="Chưa lấy được lộ trình nên đang hiển thị khoảng cách đường thẳng ước tính."
+                                   IsVisible="{Binding HasFallbackNote}"
+                                   Style="{StaticResource Caption}" />
+                        </VerticalStackLayout>
+
+                        <Button Text="Chỉ đường"
+                                Command="{Binding OpenDirectionsCommand}"
+                                HorizontalOptions="Start"
+                                AutomationId="TravelDirectionsButton"
+                                SemanticProperties.Description="Mở chỉ đường tới phòng bằng Google Maps"
+                                SemanticProperties.Hint="Mở ứng dụng bản đồ với toạ độ của phòng" />
+
+                        <VerticalStackLayout Spacing="8" IsVisible="{Binding IsErrorVisible}">
+                            <Label Text="Chưa tải được thời gian di chuyển. Kiểm tra kết nối mạng rồi thử lại nhé."
+                                   Style="{StaticResource Caption}" />
+                            <Button Text="Thử lại"
+                                    Command="{Binding LoadCommand}"
+                                    HorizontalOptions="Start"
+                                    SemanticProperties.Description="Thử tải lại thời gian di chuyển"
+                                    SemanticProperties.Hint="Tải lại thời gian di chuyển tới phòng này" />
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
                 <Border Padding="22" StrokeShape="RoundRectangle 24" BackgroundColor="{StaticResource AccentSoft}" StrokeThickness="0">
                     <VerticalStackLayout Spacing="12">
                         <Label Text="KẾT NỐI CHỦ PHÒNG" Style="{StaticResource Eyebrow}" TextColor="{StaticResource Accent}" />

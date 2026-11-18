@@ -18,6 +18,7 @@ using RoomToRentRadar.Api.Features.Notifications;
 using RoomToRentRadar.Api.Features.Photos;
 using RoomToRentRadar.Api.Features.Reports;
 using RoomToRentRadar.Api.Features.SavedSearches;
+using RoomToRentRadar.Api.Features.Travel;
 using RoomToRentRadar.Shared.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -159,6 +160,22 @@ builder.Services.AddScoped<ListingReportsService>();
 builder.Services.AddScoped<ModerationQueueService>();
 builder.Services.AddScoped<ModerationActionsService>();
 builder.Services.AddHostedService<SavedSearchAlertWorker>();
+builder.Services.AddMemoryCache();
+builder.Services.Configure<TravelOptions>(
+    builder.Configuration.GetSection(TravelOptions.SectionName));
+builder.Services
+    .AddHttpClient<IRoutingEstimatesProvider, GoogleRoutesEstimatesProvider>(client =>
+    {
+        client.BaseAddress = new Uri("https://routes.googleapis.com/");
+        client.Timeout = TimeSpan.FromSeconds(10);
+    })
+    .AddStandardResilienceHandler(resilience =>
+    {
+        resilience.AttemptTimeout.Timeout = TimeSpan.FromSeconds(3);
+        resilience.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(8);
+        resilience.Retry.MaxRetryAttempts = 1;
+    });
+builder.Services.AddScoped<TravelEstimatesService>();
 
 var app = builder.Build();
 
