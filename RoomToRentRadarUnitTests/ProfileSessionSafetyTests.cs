@@ -165,6 +165,71 @@ public class ProfileSessionSafetyTests
         });
     }
 
+    [Test]
+    public async Task SaveAsync_WhenEarlierLoadCompletesAfterSave_DoesNotOverwriteSavedProfile()
+    {
+        var user = new AuthUser(Guid.NewGuid(), "user@example.com", "STUDENT", "LOCAL", true);
+        var profiles = new InterleavedProfileService(new ProfileApiDto { UserId = user.Id, Role = "STUDENT", FullName = "Initial profile" });
+        var viewModel = new ProfileViewModel(profiles, new NoOpErrorHandler(), new FakeSession(user));
+
+        await viewModel.LoadAsync();
+        var staleLoad = viewModel.LoadAsync();
+        await profiles.LoadStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        viewModel.FullName = "Saved profile";
+        var save = viewModel.SaveAsync();
+        await profiles.SaveStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        profiles.CompleteSave(new ProfileApiDto { UserId = user.Id, Role = "STUDENT", FullName = "Saved profile" });
+        await save;
+        profiles.CompleteLoad(new ProfileApiDto { UserId = user.Id, Role = "STUDENT", FullName = "Stale profile" });
+        await staleLoad;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.FullName, Is.EqualTo("Saved profile"));
+            Assert.That(viewModel.StatusMessage, Is.EqualTo("Profile saved successfully."));
+        });
+    }
+
+    [Test]
+    public async Task ShouldLoadOnAppearing_WhenProfileHasUnsavedEdits_ReturnsFalse()
+    {
+        var user = new AuthUser(Guid.NewGuid(), "user@example.com", "STUDENT", "LOCAL", true);
+        var viewModel = new ProfileViewModel(
+            new StaticProfileService(new ProfileApiDto { UserId = user.Id, Role = "STUDENT", FullName = "Initial profile" }),
+            new NoOpErrorHandler(),
+            new FakeSession(user));
+
+        await viewModel.LoadAsync();
+        viewModel.FullName = "Unsaved profile";
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsDirty, Is.True);
+            Assert.That(viewModel.ShouldLoadOnAppearing, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task SaveAsync_WhenCalledTwiceBeforeFirstResponse_SendsOnlyOneUpdate()
+    {
+        var user = new AuthUser(Guid.NewGuid(), "user@example.com", "STUDENT", "LOCAL", true);
+        var profiles = new InterleavedProfileService(new ProfileApiDto { UserId = user.Id, Role = "STUDENT", FullName = "Initial profile" });
+        var viewModel = new ProfileViewModel(profiles, new NoOpErrorHandler(), new FakeSession(user));
+
+        await viewModel.LoadAsync();
+        viewModel.FullName = "Saved profile";
+        var firstSave = viewModel.SaveAsync();
+        await profiles.SaveStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        var secondSave = viewModel.SaveAsync();
+
+        Assert.That(profiles.UpdateCallCount, Is.EqualTo(1));
+
+        profiles.CompleteSave(new ProfileApiDto { UserId = user.Id, Role = "STUDENT", FullName = "Saved profile" });
+        await Task.WhenAll(firstSave, secondSave);
+        Assert.That(viewModel.FullName, Is.EqualTo("Saved profile"));
+    }
+
     private sealed class CapturingApiClient : IApiClient
     {
         public object? PutRequest { get; private set; }
@@ -182,6 +247,7 @@ public class ProfileSessionSafetyTests
     private sealed class FakeSession(AuthUser? user) : IAuthenticationSessionService
     {
         public bool IsAuthenticated => CurrentUser is not null;
+        public bool IsInitialized => true;
         public AuthUser? CurrentUser { get; private set; } = user;
         public event EventHandler<AuthUser?>? CurrentUserChanged;
         public Task SaveSessionAsync(string accessToken, string refreshToken, AuthUser user, CancellationToken cancellationToken = default)
@@ -195,6 +261,12 @@ public class ProfileSessionSafetyTests
         public Task<string?> GetRefreshTokenAsync(CancellationToken cancellationToken = default) => Task.FromResult<string?>(null);
         public Task<bool> TryRestoreSessionAsync(CancellationToken cancellationToken = default) => Task.FromResult(IsAuthenticated);
         public Task<bool> RefreshTokenAsync(CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public async Task<LogoutResult> LogoutAsync(CancellationToken cancellationToken = default)
+        {
+            await ClearSessionAsync(cancellationToken);
+            return new LogoutResult(LocalSessionCleared: true, ServerRevoked: true);
+        }
+        public Task EnsureInitializedAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task ClearSessionAsync(CancellationToken cancellationToken = default)
         {
             CurrentUser = null;
@@ -258,6 +330,38 @@ public class ProfileSessionSafetyTests
             started.SetResult(true);
             return response.Task;
         }
+    }
+
+    private sealed class InterleavedProfileService(ProfileApiDto initialProfile) : IProfileService
+    {
+        private readonly TaskCompletionSource<ProfileApiDto?> _pendingLoad = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<ProfileApiDto?> _pendingSave = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _getCallCount;
+
+        public TaskCompletionSource<bool> LoadStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<bool> SaveStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public int UpdateCallCount { get; private set; }
+
+        public Task<ProfileApiDto?> GetMyProfileAsync(CancellationToken cancellationToken = default)
+        {
+            if (Interlocked.Increment(ref _getCallCount) == 1)
+            {
+                return Task.FromResult<ProfileApiDto?>(initialProfile);
+            }
+
+            LoadStarted.TrySetResult(true);
+            return _pendingLoad.Task;
+        }
+
+        public Task<ProfileApiDto?> UpdateAsync(ProfileApiDto profile, string? newAvatarData, CancellationToken cancellationToken = default)
+        {
+            UpdateCallCount++;
+            SaveStarted.TrySetResult(true);
+            return _pendingSave.Task;
+        }
+
+        public void CompleteLoad(ProfileApiDto profile) => _pendingLoad.SetResult(profile);
+        public void CompleteSave(ProfileApiDto profile) => _pendingSave.SetResult(profile);
     }
 
     private sealed class SwitchingProfileService(ProfileApiDto firstProfile) : IProfileService

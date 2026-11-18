@@ -17,8 +17,12 @@ public partial class ProfileViewModel : ObservableObject
     private readonly PendingProfileAvatar _pendingAvatar;
     private Guid? _loadedProfileUserId;
     private long _loadVersion;
+    private bool _isSynchronizingProfile;
+    private bool _isSaving;
+    private bool _hasLoadedProfile;
 
     [ObservableProperty] private bool _isBusy;
+    [ObservableProperty] private bool _isDirty;
     [ObservableProperty] private string _statusMessage = string.Empty;
     [ObservableProperty] private string _accountEmail = string.Empty;
     [ObservableProperty] private string _role = string.Empty;
@@ -42,6 +46,19 @@ public partial class ProfileViewModel : ObservableObject
     public bool IsLandlord => string.Equals(Role, "LANDLORD", StringComparison.OrdinalIgnoreCase);
     public bool IsAdmin => string.Equals(Role, "ADMIN", StringComparison.OrdinalIgnoreCase);
     public string RoleDisplay => IsStudent ? "Student" : IsLandlord ? "Landlord" : IsAdmin ? "Administrator" : Role;
+    public bool ShouldLoadOnAppearing
+    {
+        get
+        {
+            var currentUser = _sessionService.CurrentUser;
+            return !_isSaving &&
+                   !IsBusy &&
+                   !IsDirty &&
+                   currentUser is not null &&
+                   _sessionService.IsAuthenticated &&
+                   (!_hasLoadedProfile || _loadedProfileUserId != currentUser.Id);
+        }
+    }
 
     public ProfileViewModel(
         IProfileService profileService,
@@ -98,6 +115,7 @@ public partial class ProfileViewModel : ObservableObject
             // profile details are then loaded only from the protected /me endpoint.
             ClearProfile(clearPendingAvatar: _loadedProfileUserId != currentUser.Id);
             _loadedProfileUserId = currentUser.Id;
+            _hasLoadedProfile = false;
             AccountEmail = currentUser.Email;
             Role = currentUser.Role;
             var profile = await _profileService.GetMyProfileAsync();
@@ -199,6 +217,7 @@ public partial class ProfileViewModel : ObservableObject
 
             _pendingAvatar.Set(selectingUser.Id, $"data:{contentType};base64,{Convert.ToBase64String(bytes)}");
             AvatarPreview = ImageSource.FromStream(() => new MemoryStream(bytes));
+            IsDirty = true;
             StatusMessage = "Avatar selected. Save changes to upload it.";
         }
         catch (Exception ex)
@@ -211,6 +230,11 @@ public partial class ProfileViewModel : ObservableObject
     [RelayCommand]
     public async Task SaveAsync()
     {
+        if (_isSaving)
+        {
+            return;
+        }
+
         Guid? requestedUserId = null;
         if (string.IsNullOrWhiteSpace(FullName))
         {
@@ -248,12 +272,15 @@ public partial class ProfileViewModel : ObservableObject
             }
 
             requestedUserId = currentUser.Id;
+            var saveVersion = Interlocked.Increment(ref _loadVersion);
+            _isSaving = true;
             IsBusy = true;
             var pendingAvatarData = _pendingAvatar.GetFor(currentUser.Id);
             var saved = await _profileService.UpdateAsync(BuildProfile(string.IsNullOrWhiteSpace(MaxBudgetText) ? null : maxBudget), pendingAvatarData);
             if (saved is null) throw new InvalidOperationException("The profile update returned no data.");
 
-            if (!ProfileSessionGuard.CanApplyProfile(_sessionService, currentUser, saved))
+            if (saveVersion != Volatile.Read(ref _loadVersion) ||
+                !ProfileSessionGuard.CanApplyProfile(_sessionService, currentUser, saved))
             {
                 return;
             }
@@ -272,7 +299,11 @@ public partial class ProfileViewModel : ObservableObject
             StatusMessage = "Unable to save your profile. Please check your details and try again.";
             _errorHandler.HandleError(ex);
         }
-        finally { IsBusy = false; }
+        finally
+        {
+            _isSaving = false;
+            IsBusy = false;
+        }
     }
 
     partial void OnRoleChanged(string value)
@@ -280,6 +311,19 @@ public partial class ProfileViewModel : ObservableObject
         OnPropertyChanged(nameof(IsStudent)); OnPropertyChanged(nameof(IsLandlord));
         OnPropertyChanged(nameof(IsAdmin)); OnPropertyChanged(nameof(RoleDisplay));
     }
+
+    partial void OnFullNameChanged(string value) => MarkDirty();
+    partial void OnPhoneNumberChanged(string? value) => MarkDirty();
+    partial void OnBioChanged(string? value) => MarkDirty();
+    partial void OnStudentIdChanged(string? value) => MarkDirty();
+    partial void OnUniversityChanged(string? value) => MarkDirty();
+    partial void OnFacultyChanged(string? value) => MarkDirty();
+    partial void OnMaxBudgetTextChanged(string? value) => MarkDirty();
+    partial void OnBusinessNameChanged(string? value) => MarkDirty();
+    partial void OnAddressChanged(string? value) => MarkDirty();
+    partial void OnStaffCodeChanged(string? value) => MarkDirty();
+    partial void OnDepartmentChanged(string? value) => MarkDirty();
+    partial void OnJobTitleChanged(string? value) => MarkDirty();
 
     private void OnCurrentUserChanged(object? sender, Core.Models.Authentication.AuthUser? user)
     {
@@ -315,36 +359,56 @@ public partial class ProfileViewModel : ObservableObject
 
     private void Apply(ProfileApiDto profile)
     {
-        Role = profile.Role; FullName = profile.FullName; PhoneNumber = profile.PhoneNumber; Bio = profile.Bio; AvatarUrl = profile.AvatarUrl;
-        StudentId = profile.Tenant?.StudentId; University = profile.Tenant?.University; Faculty = profile.Tenant?.Faculty;
-        MaxBudgetText = profile.Tenant?.MaxBudget?.ToString(); BusinessName = profile.Landlord?.BusinessName;
-        Address = profile.Landlord?.Address; VerificationStatus = profile.Landlord?.VerificationStatus;
-        StaffCode = profile.Admin?.StaffCode; Department = profile.Admin?.Department; JobTitle = profile.Admin?.Title;
-        AvatarPreview = ToImageSource(profile.AvatarUrl);
+        _isSynchronizingProfile = true;
+        try
+        {
+            Role = profile.Role; FullName = profile.FullName; PhoneNumber = profile.PhoneNumber; Bio = profile.Bio; AvatarUrl = profile.AvatarUrl;
+            StudentId = profile.Tenant?.StudentId; University = profile.Tenant?.University; Faculty = profile.Tenant?.Faculty;
+            MaxBudgetText = profile.Tenant?.MaxBudget?.ToString(); BusinessName = profile.Landlord?.BusinessName;
+            Address = profile.Landlord?.Address; VerificationStatus = profile.Landlord?.VerificationStatus;
+            StaffCode = profile.Admin?.StaffCode; Department = profile.Admin?.Department; JobTitle = profile.Admin?.Title;
+            AvatarPreview = ToImageSource(profile.AvatarUrl);
+            _hasLoadedProfile = true;
+        }
+        finally
+        {
+            _isSynchronizingProfile = false;
+            IsDirty = false;
+        }
     }
 
     private void ClearProfile(bool clearPendingAvatar = false)
     {
-        if (clearPendingAvatar)
+        _isSynchronizingProfile = true;
+        try
         {
-            _pendingAvatar.Clear();
-        }
+            if (clearPendingAvatar)
+            {
+                _pendingAvatar.Clear();
+            }
 
-        FullName = string.Empty;
-        PhoneNumber = null;
-        Bio = null;
-        AvatarUrl = null;
-        AvatarPreview = null;
-        StudentId = null;
-        University = null;
-        Faculty = null;
-        MaxBudgetText = null;
-        BusinessName = null;
-        Address = null;
-        VerificationStatus = null;
-        StaffCode = null;
-        Department = null;
-        JobTitle = null;
+            FullName = string.Empty;
+            PhoneNumber = null;
+            Bio = null;
+            AvatarUrl = null;
+            AvatarPreview = null;
+            StudentId = null;
+            University = null;
+            Faculty = null;
+            MaxBudgetText = null;
+            BusinessName = null;
+            Address = null;
+            VerificationStatus = null;
+            StaffCode = null;
+            Department = null;
+            JobTitle = null;
+        }
+        finally
+        {
+            _isSynchronizingProfile = false;
+            _hasLoadedProfile = false;
+            IsDirty = false;
+        }
     }
 
     private void RestorePendingAvatarPreview(Guid userId)
@@ -353,6 +417,14 @@ public partial class ProfileViewModel : ObservableObject
         if (!string.IsNullOrWhiteSpace(pendingAvatar))
         {
             AvatarPreview = ToImageSource(pendingAvatar);
+        }
+    }
+
+    private void MarkDirty()
+    {
+        if (!_isSynchronizingProfile)
+        {
+            IsDirty = true;
         }
     }
 
