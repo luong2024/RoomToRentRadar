@@ -312,7 +312,7 @@
                         BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}"
                         MinimumHeightRequest="44"
                         MinimumWidthRequest="44"
-                        SemanticProperties.Description="Xem chi tiết phòng trọ"
+                        SemanticProperties.Description="View room details"
                         Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
                         StrokeShape="RoundRectangle 12"
                         StrokeThickness="1"
