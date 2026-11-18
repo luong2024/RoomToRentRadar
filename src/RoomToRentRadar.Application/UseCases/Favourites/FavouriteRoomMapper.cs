@@ -19,14 +19,17 @@ internal static class FavouriteRoomMapper
                 Description = string.Empty,
                 Price = 0m,
                 FormattedPrice = "0 VND",
-                Deposit = 0m,
-                FormattedDeposit = "0 VND",
+                Deposit = null,
+                FormattedDeposit = null,
                 Area = 0d,
                 AreaSqm = 0d,
                 FormattedArea = "0 m²",
                 Address = string.Empty,
                 RoomType = string.Empty,
+                Bedrooms = null,
+                Bathrooms = null,
                 Amenities = [],
+                ImageUrls = [],
                 ThumbnailUrl = null,
                 Latitude = null,
                 Longitude = null,
@@ -35,13 +38,20 @@ internal static class FavouriteRoomMapper
                 IsAvailable = false,
                 IsDeleted = true,
                 UnavailableMessage = "This room listing has been removed or is no longer available.",
-                LastUpdatedDate = favourite.CreatedAtUtc.UtcDateTime,
+                LastUpdatedDate = null,
                 FavouritedAtUtc = favourite.CreatedAtUtc
             };
         }
 
         // Strict fail-closed availability check: must be both Available and Verified
         var isAvailable = room.Status == RoomStatus.Available && room.IsVerified;
+        var imageUrls = (room.ImageUrls ?? [])
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .Select(url => url.Trim())
+            .ToList();
+        var thumbnailUrl = !string.IsNullOrWhiteSpace(room.ThumbnailUrl)
+            ? room.ThumbnailUrl.Trim()
+            : imageUrls.FirstOrDefault();
 
         return new FavouriteRoomItemDto
         {
@@ -52,14 +62,17 @@ internal static class FavouriteRoomMapper
             Price = room.Price,
             FormattedPrice = $"{room.Price:N0} VND",
             Deposit = room.Deposit,
-            FormattedDeposit = $"{room.Deposit:N0} VND",
+            FormattedDeposit = room.Deposit.HasValue ? $"{room.Deposit.Value:N0} VND" : null,
             Area = room.Area,
             AreaSqm = room.Area,
             FormattedArea = $"{room.Area} m²",
             Address = room.Address ?? string.Empty,
             RoomType = room.RoomType ?? string.Empty,
+            Bedrooms = room.Bedrooms,
+            Bathrooms = room.Bathrooms,
             Amenities = room.Amenities ?? [],
-            ThumbnailUrl = room.ThumbnailUrl,
+            ImageUrls = imageUrls,
+            ThumbnailUrl = thumbnailUrl,
             Latitude = room.Latitude,
             Longitude = room.Longitude,
             IsVerified = room.IsVerified,

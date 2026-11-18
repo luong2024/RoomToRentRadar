@@ -85,6 +85,7 @@ public class InMemoryRoomRepository : IRoomRepository
         var similar = _rooms.Values
             .Where(r => !string.Equals(r.Id, roomId, StringComparison.OrdinalIgnoreCase) &&
                         r.Status == RoomStatus.Available &&
+                        r.IsVerified &&
                         r.Price >= minPrice && r.Price <= maxPrice &&
                         r.Area >= minArea && r.Area <= maxArea)
             .Take(5)

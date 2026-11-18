@@ -18,7 +18,10 @@ builder.Services
 var app = builder.Build();
 
 app.UseExceptionHandler();
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();

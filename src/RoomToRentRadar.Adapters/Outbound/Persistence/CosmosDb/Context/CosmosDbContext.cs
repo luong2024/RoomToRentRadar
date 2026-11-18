@@ -210,6 +210,11 @@ public sealed class CosmosDbContext : ICosmosDbContext
         var listingsContainerName = string.IsNullOrWhiteSpace(_options.ContainerName) ? "RoomListings" : _options.ContainerName;
         await database.CreateContainerIfNotExistsAsync(listingsContainerName, "/campusId", cancellationToken: cancellationToken);
 
+        var syncOutboxContainerName = string.IsNullOrWhiteSpace(_options.RoomProjectionSyncOutboxContainerName)
+            ? "RoomProjectionSyncOutbox"
+            : _options.RoomProjectionSyncOutboxContainerName;
+        await database.CreateContainerIfNotExistsAsync(syncOutboxContainerName, PartitionKeyPath, cancellationToken: cancellationToken);
+
         var roomDetailsContainerName = string.IsNullOrWhiteSpace(_options.RoomDetailsContainerName) ? "RoomDetails" : _options.RoomDetailsContainerName;
         await database.CreateContainerIfNotExistsAsync(roomDetailsContainerName, PartitionKeyPath, cancellationToken: cancellationToken);
         var usersContainerProperties = new ContainerProperties(_options.UsersContainerName, PartitionKeyPath);

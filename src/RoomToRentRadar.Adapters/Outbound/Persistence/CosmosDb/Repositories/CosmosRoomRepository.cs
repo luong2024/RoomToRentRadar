@@ -40,9 +40,14 @@ public class CosmosRoomRepository : IRoomRepository
                 partitionKey: new PartitionKey(trimmedId),
                 cancellationToken: cancellationToken);
 
-            if (response?.Resource is not null)
+            if (response?.Resource is { IsDeleted: false } document)
             {
-                return response.Resource.ToDomain();
+                return document.ToDomain();
+            }
+
+            if (response?.Resource is { IsDeleted: true })
+            {
+                return null;
             }
         }
         catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
@@ -51,7 +56,7 @@ public class CosmosRoomRepository : IRoomRepository
         }
 
         var fallbackQuery = new QueryDefinition(
-            "SELECT TOP 1 * FROM c WHERE STRINGEQUALS(c.id, @id, true)")
+            "SELECT TOP 1 * FROM c WHERE STRINGEQUALS(c.id, @id, true) AND (NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false)")
             .WithParameter("@id", trimmedId);
 
         using var iterator = _container.GetItemQueryIterator<RoomDocument>(
@@ -66,7 +71,7 @@ public class CosmosRoomRepository : IRoomRepository
         while (iterator.HasMoreResults)
         {
             var page = await iterator.ReadNextAsync(cancellationToken);
-            var match = page.FirstOrDefault();
+            var match = page.FirstOrDefault(d => !d.IsDeleted);
             if (match is not null)
             {
                 return match.ToDomain();
@@ -94,7 +99,8 @@ public class CosmosRoomRepository : IRoomRepository
             return Array.Empty<Room>();
         }
 
-        var query = new QueryDefinition("SELECT * FROM c WHERE ARRAY_CONTAINS(@ids, c.id)")
+        var query = new QueryDefinition(
+            "SELECT * FROM c WHERE ARRAY_CONTAINS(@ids, c.id) AND (NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false)")
             .WithParameter("@ids", distinctIds);
 
         var requestOptions = new QueryRequestOptions
@@ -114,7 +120,7 @@ public class CosmosRoomRepository : IRoomRepository
                     var response = await iterator.ReadNextAsync(cancellationToken);
                     foreach (var doc in response)
                     {
-                        if (foundIds.Add(doc.Id))
+                        if (!doc.IsDeleted && foundIds.Add(doc.Id))
                         {
                             results.Add(doc.ToDomain());
                         }
@@ -135,7 +141,7 @@ public class CosmosRoomRepository : IRoomRepository
                 clauses.Add($"STRINGEQUALS(c.id, @id{i}, true)");
             }
 
-            var fallbackSql = $"SELECT * FROM c WHERE {string.Join(" OR ", clauses)}";
+            var fallbackSql = $"SELECT * FROM c WHERE ({string.Join(" OR ", clauses)}) AND (NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false)";
             var fallbackQuery = new QueryDefinition(fallbackSql);
             for (var i = 0; i < unmatchedIds.Length; i++)
             {
@@ -153,7 +159,7 @@ public class CosmosRoomRepository : IRoomRepository
                     var response = await fallbackIterator.ReadNextAsync(cancellationToken);
                     foreach (var doc in response)
                     {
-                        if (foundIds.Add(doc.Id))
+                        if (!doc.IsDeleted && foundIds.Add(doc.Id))
                         {
                             results.Add(doc.ToDomain());
                         }
@@ -173,7 +179,7 @@ public class CosmosRoomRepository : IRoomRepository
         var maxArea = area * 1.3;
 
         var query = new QueryDefinition(
-            "SELECT TOP 5 * FROM c WHERE c.id != @roomId AND c.status = 0 AND c.price >= @minPrice AND c.price <= @maxPrice AND c.area >= @minArea AND c.area <= @maxArea")
+            "SELECT TOP 5 * FROM c WHERE c.id != @roomId AND c.status = 0 AND c.isVerified = true AND (NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false) AND c.price >= @minPrice AND c.price <= @maxPrice AND c.area >= @minArea AND c.area <= @maxArea")
             .WithParameter("@roomId", roomId)
             .WithParameter("@minPrice", minPrice)
             .WithParameter("@maxPrice", maxPrice)
@@ -207,7 +213,8 @@ public class CosmosRoomRepository : IRoomRepository
         var whereClauses = new List<string>
         {
             "c.status = 0",
-            "c.isVerified = true"
+            "c.isVerified = true",
+            "(NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false)"
         };
 
         if (query.MinPrice.HasValue)

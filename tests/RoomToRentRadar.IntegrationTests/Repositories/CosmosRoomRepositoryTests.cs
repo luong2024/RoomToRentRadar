@@ -263,13 +263,14 @@ public class CosmosRoomRepositoryTests
             Status = RoomStatus.Rented
         };
 
-        var matchingRoom1 = new Room { Id = $"match1-{testBatchId}", Title = "Phòng tương tự chuẩn 1", Price = 15500000m, Area = 155.0, Status = RoomStatus.Available };
-        var matchingRoom2 = new Room { Id = $"match2-{testBatchId}", Title = "Phòng tương tự chuẩn 2", Price = 14000000m, Area = 140.0, Status = RoomStatus.Available };
-        var areaTooSmallRoom = new Room { Id = $"small-area-{testBatchId}", Title = "Phòng diện tích quá nhỏ", Price = targetPrice, Area = 90.0, Status = RoomStatus.Available };
-        var areaTooLargeRoom = new Room { Id = $"large-area-{testBatchId}", Title = "Phòng diện tích quá lớn", Price = targetPrice, Area = 210.0, Status = RoomStatus.Available };
-        var priceTooCheapRoom = new Room { Id = $"cheap-price-{testBatchId}", Title = "Phòng giá quá rẻ", Price = 9000000m, Area = targetArea, Status = RoomStatus.Available };
-        var priceTooExpensiveRoom = new Room { Id = $"expensive-price-{testBatchId}", Title = "Phòng giá quá đắt", Price = 22000000m, Area = targetArea, Status = RoomStatus.Available };
-        var nonAvailableRoom = new Room { Id = $"rented-{testBatchId}", Title = "Phòng đã cho thuê", Price = targetPrice, Area = targetArea, Status = RoomStatus.Rented };
+        var matchingRoom1 = new Room { Id = $"match1-{testBatchId}", Title = "Phòng tương tự chuẩn 1", Price = 15500000m, Area = 155.0, Status = RoomStatus.Available, IsVerified = true };
+        var matchingRoom2 = new Room { Id = $"match2-{testBatchId}", Title = "Phòng tương tự chuẩn 2", Price = 14000000m, Area = 140.0, Status = RoomStatus.Available, IsVerified = true };
+        var areaTooSmallRoom = new Room { Id = $"small-area-{testBatchId}", Title = "Phòng diện tích quá nhỏ", Price = targetPrice, Area = 90.0, Status = RoomStatus.Available, IsVerified = true };
+        var areaTooLargeRoom = new Room { Id = $"large-area-{testBatchId}", Title = "Phòng diện tích quá lớn", Price = targetPrice, Area = 210.0, Status = RoomStatus.Available, IsVerified = true };
+        var priceTooCheapRoom = new Room { Id = $"cheap-price-{testBatchId}", Title = "Phòng giá quá rẻ", Price = 9000000m, Area = targetArea, Status = RoomStatus.Available, IsVerified = true };
+        var priceTooExpensiveRoom = new Room { Id = $"expensive-price-{testBatchId}", Title = "Phòng giá quá đắt", Price = 22000000m, Area = targetArea, Status = RoomStatus.Available, IsVerified = true };
+        var nonAvailableRoom = new Room { Id = $"rented-{testBatchId}", Title = "Phòng đã cho thuê", Price = targetPrice, Area = targetArea, Status = RoomStatus.Rented, IsVerified = true };
+        var unverifiedRoom = new Room { Id = $"unverified-{testBatchId}", Title = "Phòng chưa xác minh", Price = targetPrice, Area = targetArea, Status = RoomStatus.Available, IsVerified = false };
 
         await _repository!.CreateAsync(targetRoom);
         await _repository.CreateAsync(matchingRoom1);
@@ -279,6 +280,7 @@ public class CosmosRoomRepositoryTests
         await _repository.CreateAsync(priceTooCheapRoom);
         await _repository.CreateAsync(priceTooExpensiveRoom);
         await _repository.CreateAsync(nonAvailableRoom);
+        await _repository.CreateAsync(unverifiedRoom);
 
         var similarRooms = await _repository.GetSimilarRoomsAsync(targetRoomId, price: targetPrice, area: targetArea);
 
@@ -295,6 +297,7 @@ public class CosmosRoomRepositoryTests
             Assert.That(similarIds, Does.Not.Contain(priceTooCheapRoom.Id));
             Assert.That(similarIds, Does.Not.Contain(priceTooExpensiveRoom.Id));
             Assert.That(similarIds, Does.Not.Contain(nonAvailableRoom.Id));
+            Assert.That(similarIds, Does.Not.Contain(unverifiedRoom.Id), "Phòng chưa xác minh (IsVerified = false) phải bị loại khỏi phòng tương tự.");
         });
     }
 

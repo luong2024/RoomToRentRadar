@@ -18,9 +18,9 @@ public sealed class FavouriteRoomItemDto
 
     public string FormattedPrice { get; init; } = string.Empty;
 
-    public decimal Deposit { get; init; }
+    public decimal? Deposit { get; init; }
 
-    public string FormattedDeposit { get; init; } = string.Empty;
+    public string? FormattedDeposit { get; init; }
 
     public double Area { get; init; }
 
@@ -32,7 +32,13 @@ public sealed class FavouriteRoomItemDto
 
     public string RoomType { get; init; } = string.Empty;
 
+    public int? Bedrooms { get; init; }
+
+    public int? Bathrooms { get; init; }
+
     public IReadOnlyList<string> Amenities { get; init; } = [];
+
+    public IReadOnlyList<string> ImageUrls { get; init; } = [];
 
     public string? ThumbnailUrl { get; init; }
 
@@ -53,7 +59,7 @@ public sealed class FavouriteRoomItemDto
 
     public string? UnavailableMessage { get; init; }
 
-    public DateTime LastUpdatedDate { get; init; }
+    public DateTime? LastUpdatedDate { get; init; }
 
     public DateTimeOffset FavouritedAtUtc { get; init; }
 }

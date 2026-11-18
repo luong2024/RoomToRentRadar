@@ -3,7 +3,7 @@ namespace RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Documents;
 using Newtonsoft.Json;
 using Microsoft.Azure.Cosmos.Spatial;
 
-public sealed class RoomListingDocument
+public sealed class RoomListingDocument : IProjectionVersionedDocument
 {
     [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
@@ -49,4 +49,13 @@ public sealed class RoomListingDocument
 
     [JsonProperty("createdAtUtc")]
     public DateTime CreatedAtUtc { get; set; }
+
+    [JsonProperty("projectionVersion")]
+    public long ProjectionVersion { get; set; }
+
+    [JsonProperty("isDeleted")]
+    public bool IsDeleted { get; set; }
+
+    [JsonProperty("_etag")]
+    public string? ETag { get; set; }
 }

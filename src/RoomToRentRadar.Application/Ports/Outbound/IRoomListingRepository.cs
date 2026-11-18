@@ -24,4 +24,13 @@ public interface IRoomListingRepository
     Task AddAsync(
         RoomListing roomListing,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Removes a listing and its detail projection. Both records must be removed
+    /// together so a deleted listing cannot remain available in room details.
+    /// </summary>
+    Task DeleteAsync(
+        string roomId,
+        string campusId,
+        CancellationToken cancellationToken = default);
 }
