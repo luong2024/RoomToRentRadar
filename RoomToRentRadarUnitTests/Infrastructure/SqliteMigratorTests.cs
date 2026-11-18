@@ -12,14 +12,14 @@ public class SqliteMigratorTests
 {
     private static readonly string[] BaselineTableNames =
     [
-        "AuditLogs", "Campuses", "Rooms", "UserRefreshTokens", "Users"
+        "AuditLogs", "Campuses", "HouseRuleVersions", "RoomAmenities", "RoomSafetyFeatures", "Rooms", "UserRefreshTokens", "Users"
     ];
 
     private static readonly string[] BaselineIndexNames =
     [
         "IX_AuditLogs_Action", "IX_AuditLogs_TimestampUtc", "IX_AuditLogs_UserId",
-        "IX_Rooms_LandlordId", "IX_Rooms_NeedsReReview", "IX_Rooms_Status_Lat_Lng",
-        "IX_Rooms_Status_PublishedAtUtc", "IX_Rooms_Status_Rent",
+        "IX_HouseRuleVersions_RoomId", "IX_Rooms_LandlordId", "IX_Rooms_NeedsReReview",
+        "IX_Rooms_Status_Lat_Lng", "IX_Rooms_Status_PublishedAtUtc", "IX_Rooms_Status_Rent",
         "IX_UserRefreshTokens_UserId", "IX_Users_NormalizedEmail"
     ];
 
@@ -44,7 +44,7 @@ public class SqliteMigratorTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(applied, Is.EqualTo(new[] { 1, 2 }));
+            Assert.That(applied, Is.EqualTo(new[] { 1, 2, 3 }));
             Assert.That(ReadNames(connection, "table"), Is.EquivalentTo(BaselineTableNames));
             Assert.That(ReadNames(connection, "index"), Is.EquivalentTo(BaselineIndexNames));
 
@@ -211,13 +211,13 @@ public class SqliteMigratorTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(applied, Is.EqualTo(new[] { 2 }));
+            Assert.That(applied, Is.EqualTo(new[] { 2, 3 }));
             Assert.That(ReadScalarLong(connection, "SELECT COUNT(1) FROM Users;"), Is.EqualTo(1));
             Assert.That(ReadScalarLong(connection, "SELECT COUNT(1) FROM UserRefreshTokens;"), Is.EqualTo(1));
             Assert.That(ReadScalarText(connection, "SELECT SelectedCampusId FROM Users WHERE Id = 'user-old';"), Is.EqualTo("ICTU"));
             Assert.That(ReadScalarText(connection, "SELECT PreferredLanguage FROM Users WHERE Id = 'user-old';"), Is.EqualTo("en"));
             Assert.That(ReadScalarLong(connection, "SELECT Version FROM Users WHERE Id = 'user-old';"), Is.EqualTo(1));
-            Assert.That(ReadUserVersion(connection), Is.EqualTo(2));
+            Assert.That(ReadUserVersion(connection), Is.EqualTo(3));
         });
     }
 
