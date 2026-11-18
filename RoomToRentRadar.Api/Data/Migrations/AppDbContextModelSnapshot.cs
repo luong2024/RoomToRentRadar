@@ -175,7 +175,7 @@ namespace RoomToRentRadar.Api.Data.Migrations
 
                             t.HasCheckConstraint("ck_listings_room_type", "room_type IN ('single_room', 'shared_room', 'studio', 'apartment', 'house')");
 
-                            t.HasCheckConstraint("ck_listings_status", "status IN ('draft', 'published', 'hidden', 'removed')");
+                            t.HasCheckConstraint("ck_listings_status", "status IN ('draft', 'pending_review', 'published', 'hidden', 'removed')");
                         });
                 });
 

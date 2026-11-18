@@ -16,6 +16,7 @@ public sealed class ListingStatusConverter : ValueConverter<ListingStatus, strin
     public static string ToWireValue(ListingStatus status) => status switch
     {
         ListingStatus.Draft => "draft",
+        ListingStatus.PendingReview => "pending_review",
         ListingStatus.Published => "published",
         ListingStatus.Hidden => "hidden",
         ListingStatus.Removed => "removed",
@@ -25,6 +26,7 @@ public sealed class ListingStatusConverter : ValueConverter<ListingStatus, strin
     public static ListingStatus FromWireValue(string value) => value switch
     {
         "draft" => ListingStatus.Draft,
+        "pending_review" => ListingStatus.PendingReview,
         "published" => ListingStatus.Published,
         "hidden" => ListingStatus.Hidden,
         "removed" => ListingStatus.Removed,
