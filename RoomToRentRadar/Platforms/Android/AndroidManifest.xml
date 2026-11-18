@@ -9,7 +9,7 @@
 		android:networkSecurityConfig="@xml/network_security_config">
 		<meta-data
 			android:name="com.google.android.geo.API_KEY"
-			android:value="PASTE-YOUR-API-KEY-HERE" />
+			android:value="${GoogleMapsApiKey}" />
 	</application>
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 	<uses-permission android:name="android.permission.INTERNET" />

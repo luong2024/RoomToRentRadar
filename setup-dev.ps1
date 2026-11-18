@@ -7,7 +7,7 @@ Write-Host ""
 # 1. Cai dat User Secrets
 Write-Host "[1/3] Cai dat User Secrets cho Backend (.NET Secrets)..." -ForegroundColor Yellow
 dotnet user-secrets set "Jwt:Secret" "RoomToRentRadar_Local_Dev_Secret_Key_At_Least_32_Bytes_Long_2026!" --project src/RoomToRentRadar.Bootstrap
-dotnet user-secrets set "CosmosDb:AccountEndpoint" "in-memory" --project src/RoomToRentRadar.Bootstrap
+dotnet user-secrets set "CosmosDb:RoomsContainerName" "RoomDetails" --project src/RoomToRentRadar.Bootstrap
 Write-Host "      -> Da luu secrets cuc bo tren may cua ban (Khong bi day len Git)." -ForegroundColor Green
 
 # 2. Thiet lap adb reverse

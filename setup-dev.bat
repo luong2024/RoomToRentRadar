@@ -7,7 +7,7 @@ echo ========================================================
 echo.
 echo [1/3] Cai dat User Secrets cho Backend (.NET Secrets)...
 dotnet user-secrets set "Jwt:Secret" "RoomToRentRadar_Local_Dev_Secret_Key_At_Least_32_Bytes_Long_2026!" --project src/RoomToRentRadar.Bootstrap
-dotnet user-secrets set "CosmosDb:AccountEndpoint" "RoomToRentRadarDb" --project src/RoomToRentRadar.Bootstrap
+dotnet user-secrets set "CosmosDb:RoomsContainerName" "RoomDetails" --project src/RoomToRentRadar.Bootstrap
 echo       -> Da luu secrets cuc bo tren may cua ban (Khong bi day len Git).
 echo.
 echo [2/3] Kiem tra va thiet lap cau noi USB cho thiet bi Android (adb reverse)...
