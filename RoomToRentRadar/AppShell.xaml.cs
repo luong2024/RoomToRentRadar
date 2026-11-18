@@ -64,8 +64,11 @@ namespace RoomToRentRadar
             }
             catch
             {
-                deferral.Complete();
-                return;
+                // Fail-closed: cancel navigation and redirect to a safe fallback route when guard check throws
+                decision = new RouteGuardDecision(
+                    RouteAccessStatus.RequiresAuthentication,
+                    IsAllowed: false,
+                    RedirectRoute: $"//{AppRoutes.Home}");
             }
 
             if (decision.IsAllowed)

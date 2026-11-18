@@ -82,38 +82,52 @@ public class RouteGuardService : IRouteGuardService
         string? routeUri,
         CancellationToken cancellationToken = default)
     {
-        if (_sessionService != null)
+        try
         {
-            await _sessionService.EnsureInitializedAsync(cancellationToken);
+            if (_sessionService != null)
+            {
+                await _sessionService.EnsureInitializedAsync(cancellationToken);
+            }
+
+            var currentUser = _sessionService?.CurrentUser;
+            var status = EvaluateRouteAccess(routeUri, currentUser);
+
+            return status switch
+            {
+                RouteAccessStatus.Allowed => new RouteGuardDecision(
+                    RouteAccessStatus.Allowed,
+                    IsAllowed: true),
+
+                RouteAccessStatus.RequiresAuthentication => new RouteGuardDecision(
+                    RouteAccessStatus.RequiresAuthentication,
+                    IsAllowed: false,
+                    RedirectRoute: BuildLoginRedirectRoute(routeUri)),
+
+                RouteAccessStatus.RedirectGuestOnlyToHome => new RouteGuardDecision(
+                    RouteAccessStatus.RedirectGuestOnlyToHome,
+                    IsAllowed: false,
+                    RedirectRoute: $"//{AppRoutes.Home}"),
+
+                RouteAccessStatus.AccessDeniedRoleMismatch => new RouteGuardDecision(
+                    RouteAccessStatus.AccessDeniedRoleMismatch,
+                    IsAllowed: false,
+                    RedirectRoute: $"//{AppRoutes.Home}",
+                    AlertMessage: RoleMismatchAlertMessage),
+
+                _ => new RouteGuardDecision(
+                    RouteAccessStatus.RequiresAuthentication,
+                    IsAllowed: false,
+                    RedirectRoute: $"//{AppRoutes.Home}")
+            };
         }
-
-        var currentUser = _sessionService?.CurrentUser;
-        var status = EvaluateRouteAccess(routeUri, currentUser);
-
-        return status switch
+        catch
         {
-            RouteAccessStatus.Allowed => new RouteGuardDecision(
-                RouteAccessStatus.Allowed,
-                IsAllowed: true),
-
-            RouteAccessStatus.RequiresAuthentication => new RouteGuardDecision(
+            // Fail-closed: cancel navigation and redirect to a safe fallback route when guard check fails
+            return new RouteGuardDecision(
                 RouteAccessStatus.RequiresAuthentication,
                 IsAllowed: false,
-                RedirectRoute: BuildLoginRedirectRoute(routeUri)),
-
-            RouteAccessStatus.RedirectGuestOnlyToHome => new RouteGuardDecision(
-                RouteAccessStatus.RedirectGuestOnlyToHome,
-                IsAllowed: false,
-                RedirectRoute: $"//{AppRoutes.Home}"),
-
-            RouteAccessStatus.AccessDeniedRoleMismatch => new RouteGuardDecision(
-                RouteAccessStatus.AccessDeniedRoleMismatch,
-                IsAllowed: false,
-                RedirectRoute: $"//{AppRoutes.Home}",
-                AlertMessage: RoleMismatchAlertMessage),
-
-            _ => new RouteGuardDecision(RouteAccessStatus.Allowed, IsAllowed: true)
-        };
+                RedirectRoute: $"//{AppRoutes.Home}");
+        }
     }
 
     public string ResolvePostLoginRedirectRoute(string? returnUrl, AuthUser? authenticatedUser)
@@ -123,25 +137,25 @@ public class RouteGuardService : IRouteGuardService
             return $"//{AppRoutes.Home}";
         }
 
-        var decoded = UnescapeSafely(returnUrl.Trim());
-        if (string.IsNullOrWhiteSpace(decoded) || IsExternalOrInvalidUri(decoded))
+        var candidate = returnUrl.Trim();
+        if (string.IsNullOrWhiteSpace(candidate) || IsExternalOrInvalidUri(candidate))
         {
             return $"//{AppRoutes.Home}";
         }
 
-        var normalizedBase = NormalizeRoute(decoded);
+        var normalizedBase = NormalizeRoute(candidate);
         if (string.IsNullOrEmpty(normalizedBase) || IsGuestOnlyRoute(normalizedBase))
         {
             return $"//{AppRoutes.Home}";
         }
 
-        var accessStatus = EvaluateRouteAccess(decoded, authenticatedUser);
+        var accessStatus = EvaluateRouteAccess(candidate, authenticatedUser);
         if (accessStatus != RouteAccessStatus.Allowed)
         {
             return $"//{AppRoutes.Home}";
         }
 
-        return FormatInternalNavigationRoute(decoded, normalizedBase);
+        return FormatInternalNavigationRoute(candidate, normalizedBase);
     }
 
     public static string BuildLoginRedirectRoute(string? targetRouteUri)
@@ -227,22 +241,15 @@ public class RouteGuardService : IRouteGuardService
 
     private static bool IsExternalOrInvalidUri(string candidate)
     {
+        var queryIndex = candidate.IndexOf('?');
+        var pathSegment = queryIndex >= 0 ? candidate[..queryIndex] : candidate;
+
         return candidate.Contains("://", StringComparison.OrdinalIgnoreCase) ||
                candidate.StartsWith("http:", StringComparison.OrdinalIgnoreCase) ||
                candidate.StartsWith("https:", StringComparison.OrdinalIgnoreCase) ||
-               candidate.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string UnescapeSafely(string input)
-    {
-        try
-        {
-            return Uri.UnescapeDataString(input);
-        }
-        catch
-        {
-            return input;
-        }
+               candidate.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase) ||
+               pathSegment.Contains(':', StringComparison.Ordinal) ||
+               pathSegment.Contains('%', StringComparison.Ordinal);
     }
 
     private static bool IsGuestOnlyRoute(string normalizedRoute)

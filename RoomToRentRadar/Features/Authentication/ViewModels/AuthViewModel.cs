@@ -134,6 +134,9 @@ public partial class AuthViewModel : ObservableObject
 
     public Func<AuthUser, Task>? OnAuthenticationSuccessHandler { get; set; }
 
+    /// <summary>
+    /// Single decode point for the inbound returnUrl query parameter.
+    /// </summary>
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
         if (query is null)
@@ -148,7 +151,19 @@ public partial class AuthViewModel : ObservableObject
             var rawString = rawReturnUrl.ToString();
             ReturnUrl = string.IsNullOrWhiteSpace(rawString)
                 ? null
-                : Uri.UnescapeDataString(rawString.Trim());
+                : UnescapeQueryParameterOnce(rawString.Trim());
+        }
+    }
+
+    private static string UnescapeQueryParameterOnce(string value)
+    {
+        try
+        {
+            return Uri.UnescapeDataString(value);
+        }
+        catch
+        {
+            return value;
         }
     }
 
