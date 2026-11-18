@@ -1,0 +1,179 @@
+using System.Text.RegularExpressions;
+using RoomToRentRadar.Domain.Enums;
+using RoomToRentRadar.Domain.Exceptions;
+
+namespace RoomToRentRadar.Domain.Entities;
+
+/// <summary>
+/// An immutable versioned record of house rules for a room listing (<c>docs/erd.md</c> §4.7, BR-HR-01..02).
+/// Invariants enforce BR-HR-01 field length and time format rules.
+/// </summary>
+public sealed class HouseRuleVersion
+{
+    private static readonly Regex TimePattern = new(
+        @"^([01]\d|2[0-3]):[0-5]\d$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    public const int ParkingRulesMaxLength = 300;
+    public const int OtherRulesMaxLength = 1000;
+
+    public string Id { get; }
+    public string RoomId { get; }
+    public int VersionNumber { get; }
+    public string? QuietHoursStart { get; }
+    public string? QuietHoursEnd { get; }
+    public string? CurfewTime { get; }
+    public GuestPolicy GuestPolicy { get; }
+    public string? GuestPolicyNote { get; }
+    public CookingPolicy CookingPolicy { get; }
+    public bool ParkingAvailable { get; }
+    public string? ParkingRules { get; }
+    public bool PetsAllowed { get; }
+    public bool SmokingAllowed { get; }
+    public string? OtherRules { get; }
+    public string CreatedByUserId { get; }
+    public DateTime CreatedAtUtc { get; }
+
+    public HouseRuleVersion(
+        string id,
+        string roomId,
+        int versionNumber,
+        GuestPolicy guestPolicy,
+        CookingPolicy cookingPolicy,
+        bool parkingAvailable,
+        bool petsAllowed,
+        bool smokingAllowed,
+        string createdByUserId,
+        DateTime createdAtUtc,
+        string? quietHoursStart = null,
+        string? quietHoursEnd = null,
+        string? curfewTime = null,
+        string? guestPolicyNote = null,
+        string? parkingRules = null,
+        string? otherRules = null)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            throw new DomainValidationException("House rule version Id is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(roomId))
+        {
+            throw new DomainValidationException("Room Id is required.");
+        }
+
+        if (versionNumber < 1)
+        {
+            throw new DomainValidationException("Version number must be at least 1.");
+        }
+
+        if (!Enum.IsDefined(guestPolicy))
+        {
+            throw new DomainValidationException($"Guest policy '{(int)guestPolicy}' is not recognized.");
+        }
+
+        if (!Enum.IsDefined(cookingPolicy))
+        {
+            throw new DomainValidationException($"Cooking policy '{(int)cookingPolicy}' is not recognized.");
+        }
+
+        if (string.IsNullOrWhiteSpace(createdByUserId))
+        {
+            throw new DomainValidationException("CreatedByUserId is required.");
+        }
+
+        ValidateTimeFormat(quietHoursStart, nameof(QuietHoursStart));
+        ValidateTimeFormat(quietHoursEnd, nameof(QuietHoursEnd));
+        ValidateTimeFormat(curfewTime, nameof(CurfewTime));
+
+        if (parkingRules != null && parkingRules.Length > ParkingRulesMaxLength)
+        {
+            throw new DomainValidationException(
+                $"Parking rules must not exceed {ParkingRulesMaxLength} characters.",
+                "PARKING_RULES_TOO_LONG");
+        }
+
+        if (otherRules != null && otherRules.Length > OtherRulesMaxLength)
+        {
+            throw new DomainValidationException(
+                $"Other rules must not exceed {OtherRulesMaxLength} characters.",
+                "OTHER_RULES_TOO_LONG");
+        }
+
+        Id = id.Trim();
+        RoomId = roomId.Trim();
+        VersionNumber = versionNumber;
+        QuietHoursStart = quietHoursStart?.Trim();
+        QuietHoursEnd = quietHoursEnd?.Trim();
+        CurfewTime = curfewTime?.Trim();
+        GuestPolicy = guestPolicy;
+        GuestPolicyNote = string.IsNullOrWhiteSpace(guestPolicyNote) ? null : guestPolicyNote.Trim();
+        CookingPolicy = cookingPolicy;
+        ParkingAvailable = parkingAvailable;
+        ParkingRules = string.IsNullOrWhiteSpace(parkingRules) ? null : parkingRules.Trim();
+        PetsAllowed = petsAllowed;
+        SmokingAllowed = smokingAllowed;
+        OtherRules = string.IsNullOrWhiteSpace(otherRules) ? null : otherRules.Trim();
+        CreatedByUserId = createdByUserId.Trim();
+        CreatedAtUtc = AsUtc(createdAtUtc);
+    }
+
+    public static HouseRuleVersion Create(
+        string roomId,
+        int versionNumber,
+        GuestPolicy guestPolicy,
+        CookingPolicy cookingPolicy,
+        bool parkingAvailable,
+        bool petsAllowed,
+        bool smokingAllowed,
+        string createdByUserId,
+        string? quietHoursStart = null,
+        string? quietHoursEnd = null,
+        string? curfewTime = null,
+        string? guestPolicyNote = null,
+        string? parkingRules = null,
+        string? otherRules = null,
+        DateTime? utcNow = null)
+    {
+        return new HouseRuleVersion(
+            id: Guid.NewGuid().ToString("N"),
+            roomId: roomId,
+            versionNumber: versionNumber,
+            guestPolicy: guestPolicy,
+            cookingPolicy: cookingPolicy,
+            parkingAvailable: parkingAvailable,
+            petsAllowed: petsAllowed,
+            smokingAllowed: smokingAllowed,
+            createdByUserId: createdByUserId,
+            createdAtUtc: utcNow ?? DateTime.UtcNow,
+            quietHoursStart: quietHoursStart,
+            quietHoursEnd: quietHoursEnd,
+            curfewTime: curfewTime,
+            guestPolicyNote: guestPolicyNote,
+            parkingRules: parkingRules,
+            otherRules: otherRules);
+    }
+
+    private static void ValidateTimeFormat(string? time, string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(time))
+        {
+            return;
+        }
+
+        if (!TimePattern.IsMatch(time.Trim()))
+        {
+            throw new DomainValidationException(
+                $"{fieldName} '{time}' must be in 'HH:mm' 24-hour format (e.g. '22:00').",
+                "INVALID_TIME_FORMAT");
+        }
+    }
+
+    private static DateTime AsUtc(DateTime instant) =>
+        instant.Kind switch
+        {
+            DateTimeKind.Utc => instant,
+            DateTimeKind.Local => instant.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(instant, DateTimeKind.Utc)
+        };
+}
