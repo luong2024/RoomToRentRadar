@@ -10,6 +10,8 @@ namespace RoomToRentRadar.Features.RoomListings.Services;
 /// </summary>
 public sealed class RoomListingsService : IRoomListingsService
 {
+    public const string DefaultCampusId = "campus-ictu";
+
     private static readonly Dictionary<string, string[]> AmenityKeywords = new(StringComparer.OrdinalIgnoreCase)
     {
         ["aircon"] = ["Điều hòa", "Air conditioner", "aircon"],
@@ -45,9 +47,9 @@ public sealed class RoomListingsService : IRoomListingsService
         ArgumentOutOfRangeException.ThrowIfLessThan(page, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(pageSize, 1);
 
-        var sortQuery = GetSortQueryValue(sortBy);
+        var (sortByParam, sortOrderParam) = GetSortParameters(sortBy);
         var searchTerm = search?.Trim();
-        var endpoint = $"api/rooms?page={page}&pageSize={pageSize}&sortBy={sortQuery}";
+        var endpoint = $"api/v1/rooms?campusId={DefaultCampusId}&page={page}&pageSize={pageSize}&sortBy={sortByParam}&sortOrder={sortOrderParam}";
         if (!string.IsNullOrEmpty(searchTerm))
         {
             endpoint += $"&search={Uri.EscapeDataString(searchTerm)}";
@@ -86,11 +88,24 @@ public sealed class RoomListingsService : IRoomListingsService
 
         try
         {
-            var response = await _apiClient.GetAsync<PagedResponse<RoomListItemModel>>(
+            var response = await _apiClient.GetAsync<PagedResponse<RoomListingApiDto>>(
                 endpoint,
                 cancellationToken);
 
-            return response ?? new PagedResponse<RoomListItemModel>([], page, pageSize, 0);
+            if (response is null)
+            {
+                return new PagedResponse<RoomListItemModel>([], page, pageSize, 0);
+            }
+
+            var mappedItems = (response.Items ?? [])
+                .Select(MapDtoToModel)
+                .ToList();
+
+            return new PagedResponse<RoomListItemModel>(
+                Items: mappedItems,
+                Page: response.Page > 0 ? response.Page : page,
+                PageSize: response.PageSize > 0 ? response.PageSize : pageSize,
+                TotalCount: response.TotalCount);
         }
         catch (Exception ex) when (
             _enableDebugFallback &&
@@ -112,7 +127,8 @@ public sealed class RoomListingsService : IRoomListingsService
 
         try
         {
-            return await _apiClient.GetAsync<RoomListItemModel>(endpoint, cancellationToken);
+            var dto = await _apiClient.GetAsync<RoomListingApiDto>(endpoint, cancellationToken);
+            return dto is null ? null : MapDtoToModel(dto);
         }
         catch (Exception ex) when (
             _enableDebugFallback &&
@@ -124,14 +140,39 @@ public sealed class RoomListingsService : IRoomListingsService
         }
     }
 
-    private static string GetSortQueryValue(RoomSortOption sortBy) =>
+    private static (string SortBy, string SortOrder) GetSortParameters(RoomSortOption sortBy) =>
         sortBy switch
         {
-            RoomSortOption.PriceAsc => "price_asc",
-            RoomSortOption.PriceDesc => "price_desc",
-            RoomSortOption.DistanceAsc => "distance_asc",
-            _ => "newest"
+            RoomSortOption.PriceAsc => ("price", "asc"),
+            RoomSortOption.PriceDesc => ("price", "desc"),
+            RoomSortOption.DistanceAsc => ("distance", "asc"),
+            _ => ("distance", "asc")
         };
+
+    private static RoomListItemModel MapDtoToModel(RoomListingApiDto dto)
+    {
+        var price = dto.MonthlyRent > 0 ? dto.MonthlyRent : (dto.Price ?? 0m);
+        var area = dto.AreaSquareMeters > 0
+            ? dto.AreaSquareMeters
+            : (dto.AreaSqm ?? dto.Area ?? 0d);
+
+        return new RoomListItemModel
+        {
+            Id = dto.Id,
+            Title = dto.Title,
+            Price = price,
+            AreaSqm = area,
+            Address = dto.Address,
+            RoomType = !string.IsNullOrWhiteSpace(dto.RoomType) ? dto.RoomType : "private",
+            District = !string.IsNullOrWhiteSpace(dto.District) ? dto.District : "TP. Thái Nguyên",
+            DistanceToCampusKm = dto.DistanceToCampusKm,
+            ThumbnailUrl = dto.ThumbnailUrl,
+            IsVerified = dto.IsVerified,
+            IsAvailable = dto.IsAvailable ?? true,
+            CreatedAt = dto.CreatedAt ?? DateTimeOffset.UtcNow,
+            Amenities = dto.Amenities is { Count: > 0 } ? dto.Amenities : []
+        };
+    }
 
     private static PagedResponse<RoomListItemModel> GetFallbackMockPage(
         int page,
