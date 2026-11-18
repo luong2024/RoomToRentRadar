@@ -74,6 +74,12 @@
                      Color="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
                      Size="20" />
 
+    <FontImageSource x:Key="IconNavMap"
+                     Glyph="{x:Static f:FluentUI.map_24_regular}"
+                     FontFamily="{x:Static f:FluentUI.FontFamily}"
+                     Color="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                     Size="20" />
+
     <FontImageSource x:Key="IconMeta"
                      Glyph="{x:Static f:FluentUI.info_24_regular}"
                      FontFamily="{x:Static f:FluentUI.FontFamily}"

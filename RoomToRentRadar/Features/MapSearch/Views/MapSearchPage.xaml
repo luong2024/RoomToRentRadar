@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:maps="clr-namespace:Microsoft.Maui.Controls.Maps;assembly=Microsoft.Maui.Controls.Maps"
+             xmlns:vm="clr-namespace:RoomToRentRadar.Features.MapSearch.ViewModels"
+             x:Class="RoomToRentRadar.Features.MapSearch.Views.MapSearchPage"
+             x:DataType="vm:MapSearchViewModel"
+             Title="Map Search"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{AppThemeBinding Light=#F8FAFC, Dark=#0F172A}">
+
+    <Grid IgnoreSafeArea="True">
+        <!-- Layer 0: Base Google Map (Edge-to-edge tràn viền) -->
+        <maps:Map x:Name="SearchMap"
+                  IsShowingUser="True"
+                  MapType="Street"
+                  HorizontalOptions="Fill"
+                  VerticalOptions="Fill" />
+
+        <!-- Layer 1: GraphicsView bắt cảm ứng vuốt vẽ hoặc kéo thả điểm neo ở chế độ Edit -->
+        <GraphicsView x:Name="CanvasView"
+                      IsVisible="{Binding IsInteractingMode}"
+                      InputTransparent="False"
+                      StartInteraction="OnCanvasStart"
+                      DragInteraction="OnCanvasDrag"
+                      EndInteraction="OnCanvasEnd"
+                      HorizontalOptions="Fill"
+                      VerticalOptions="Fill"
+                      BackgroundColor="#0A2563EB" />
+
+        <!-- ============================================================== -->
+        <!-- FLOATING TOP BAR (Modern White Card with Shadow & Back Button) -->
+        <!-- ============================================================== -->
+        <Grid VerticalOptions="Start"
+              Margin="16,40,16,0"
+              ColumnDefinitions="Auto,*,Auto">
+
+            <!-- Left: Back / Menu Button -->
+            <Border Grid.Column="0"
+                    StrokeThickness="1"
+                    Stroke="{AppThemeBinding Light=#E2E8F0, Dark=#334155}"
+                    BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E293B}"
+                    Padding="10,8"
+                    StrokeShape="RoundRectangle 20"
+                    VerticalOptions="Center"
+                    Shadow="{Shadow Brush='#1E3A8A', Offset='0,4', Radius=16, Opacity=0.10}">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding HandleBackCommand}" />
+                </Border.GestureRecognizers>
+                <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                    <Label Text="←"
+                           FontSize="15"
+                           FontFamily="SegoeSemibold"
+                           TextColor="{AppThemeBinding Light=#0F172A, Dark=#F8FAFC}"
+                           VerticalOptions="Center" />
+                    <Label Text="{Binding IsInteractingMode, Converter={x:Null}}"
+                           TextTransform="None">
+                        <Label.Triggers>
+                            <DataTrigger TargetType="Label" Binding="{Binding IsInteractingMode}" Value="True">
+                                <Setter Property="Text" Value="Back" />
+                            </DataTrigger>
+                            <DataTrigger TargetType="Label" Binding="{Binding IsInteractingMode}" Value="False">
+                                <Setter Property="Text" Value="Home" />
+                            </DataTrigger>
+                        </Label.Triggers>
+                    </Label>
+                </HorizontalStackLayout>
+            </Border>
+
+            <!-- Center: Title Card (Hiển thị khi đang ở chế độ Edit hoặc Draw) -->
+            <Border Grid.Column="1"
+                    IsVisible="{Binding IsInteractingMode}"
+                    StrokeThickness="1"
+                    Stroke="{AppThemeBinding Light=#E2E8F0, Dark=#334155}"
+                    BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E293B}"
+                    Padding="14,8"
+                    Margin="8,0"
+                    StrokeShape="RoundRectangle 20"
+                    HorizontalOptions="Center"
+                    VerticalOptions="Center"
+                    Shadow="{Shadow Brush='#1E3A8A', Offset='0,4', Radius=16, Opacity=0.10}">
+                <Label Text="{Binding StatusMessage}"
+                       FontSize="12"
+                       FontFamily="SegoeSemibold"
+                       TextColor="{AppThemeBinding Light=#2563EB, Dark=#60A5FA}"
+                       HorizontalTextAlignment="Center"
+                       VerticalOptions="Center" />
+            </Border>
+
+            <!-- Right: Done Button (khi đang ở chế độ Edit) -->
+            <Border Grid.Column="2"
+                    IsVisible="{Binding IsEditingMode}"
+                    StrokeThickness="0"
+                    Background="{StaticResource PrimaryBrandGradient}"
+                    Padding="14,8"
+                    StrokeShape="RoundRectangle 20"
+                    VerticalOptions="Center"
+                    Shadow="{Shadow Brush='#1E3A8A', Offset='0,4', Radius=16, Opacity=0.15}">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding FinishEditingCommand}" />
+                </Border.GestureRecognizers>
+                <Label Text="Done"
+                       FontSize="13"
+                       FontFamily="SegoeSemibold"
+                       TextColor="White"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center" />
+            </Border>
+        </Grid>
+
+        <!-- ============================================================== -->
+        <!-- FLOATING BOTTOM TOOLBAR (Rightmove & Auth Card Modern Style)   -->
+        <!-- ============================================================== -->
+        
+        <!-- TRẠNG THÁI 1: Chưa vẽ đa giác -> Nút 'Draw area' lớn nổi bật -->
+        <Border VerticalOptions="End"
+                HorizontalOptions="Center"
+                Margin="20,0,20,32"
+                IsVisible="{Binding CanStartDrawing}"
+                StrokeThickness="0"
+                StrokeShape="RoundRectangle 28"
+                Shadow="{Shadow Brush='#1E3A8A', Offset='0,10', Radius=24, Opacity=0.20}">
+            <Button Text="✏  Draw area"
+                    Command="{Binding StartDrawingCommand}"
+                    Background="{StaticResource PrimaryBrandGradient}"
+                    TextColor="White"
+                    CornerRadius="28"
+                    Padding="26,0"
+                    HeightRequest="50"
+                    FontFamily="SegoeSemibold"
+                    FontSize="15" />
+        </Border>
+
+        <!-- TRẠNG THÁI 2: Đã vẽ xong đa giác -> Thanh công cụ nổi chuẩn Rightmove -->
+        <Border VerticalOptions="End"
+                HorizontalOptions="Center"
+                Margin="16,0,16,28"
+                Padding="8,6"
+                IsVisible="{Binding ShowCompletedToolbar}"
+                StrokeShape="RoundRectangle 30"
+                Stroke="{AppThemeBinding Light=#E2E8F0, Dark=#334155}"
+                BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E293B}">
+            
+            <Border.Shadow>
+                <Shadow Brush="#1E3A8A" Offset="0,10" Radius="26" Opacity="0.14" />
+            </Border.Shadow>
+
+            <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                <!-- Nút 1: Draw again -->
+                <Button Text="↺ Draw again"
+                        Command="{Binding DrawAgainCommand}"
+                        BackgroundColor="{AppThemeBinding Light=#F8FAFC, Dark=#1E293B}"
+                        TextColor="{AppThemeBinding Light=#334155, Dark=#E2E8F0}"
+                        BorderColor="{AppThemeBinding Light=#CBD5E1, Dark=#475569}"
+                        BorderWidth="1"
+                        CornerRadius="24"
+                        Padding="14,0"
+                        HeightRequest="44"
+                        FontFamily="SegoeSemibold"
+                        FontSize="13" />
+
+                <!-- Nút 2: Edit area (Tinh chỉnh các point) -->
+                <Button Text="⚲ Edit area"
+                        Command="{Binding StartEditingCommand}"
+                        BackgroundColor="{AppThemeBinding Light=#F1F5F9, Dark=#334155}"
+                        TextColor="{AppThemeBinding Light=#1E293B, Dark=#F8FAFC}"
+                        BorderColor="{AppThemeBinding Light=#CBD5E1, Dark=#475569}"
+                        BorderWidth="1"
+                        CornerRadius="24"
+                        Padding="14,0"
+                        HeightRequest="44"
+                        FontFamily="SegoeSemibold"
+                        FontSize="13" />
+
+                <!-- Nút 3: View properties (Bắt đầu tìm kiếm trong vùng) -->
+                <Button Text="View properties →"
+                        Background="{StaticResource PrimaryBrandGradient}"
+                        TextColor="White"
+                        CornerRadius="24"
+                        Padding="18,0"
+                        HeightRequest="44"
+                        FontFamily="SegoeSemibold"
+                        FontSize="13" />
+
+                <!-- Nút 4: Clear icon nhỏ gọn bên cạnh -->
+                <Button Text="🗑"
+                        Command="{Binding ClearPolygonCommand}"
+                        BackgroundColor="#FEF2F2"
+                        TextColor="#DC2626"
+                        CornerRadius="22"
+                        WidthRequest="44"
+                        HeightRequest="44"
+                        Padding="0"
+                        FontSize="14" />
+            </HorizontalStackLayout>
+        </Border>
+    </Grid>
+</ContentPage>

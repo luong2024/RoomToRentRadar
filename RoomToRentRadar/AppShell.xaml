@@ -9,6 +9,7 @@
     xmlns:authViews="clr-namespace:RoomToRentRadar.Features.Authentication.Views"
     xmlns:roomViews="clr-namespace:RoomToRentRadar.Features.RoomListings.Views"
     xmlns:profileViews="clr-namespace:RoomToRentRadar.Features.Profile.Views"
+    xmlns:mapViews="clr-namespace:RoomToRentRadar.Features.MapSearch.Views"
     Title="Trọ ICTU"
     FlyoutBackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource DesktopRailBackgroundDark}}"
     FlyoutVerticalScrollMode="{OnPlatform WinUI=Disabled, Default=Auto}"
@@ -207,6 +208,14 @@
         Route="rooms"
         SemanticProperties.Description="{loc:Translate Nav_Rooms}"
         SemanticProperties.Hint="{loc:Translate Nav_Rooms_Hint}" />
+
+    <ShellContent
+        Title="Map Search"
+        ContentTemplate="{DataTemplate mapViews:MapSearchPage}"
+        Icon="{StaticResource IconNavMap}"
+        Route="map"
+        SemanticProperties.Description="Search room listings on map"
+        SemanticProperties.Hint="Navigate to map to draw search area" />
 
     <FlyoutItem Title="Sign In / Register" Route="auth" Icon="{StaticResource IconProjects}">
         <ShellContent
