@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
+using RoomToRentRadar.Api.Domain;
 
 namespace RoomToRentRadar.Api.Features.Auth;
 
@@ -45,7 +46,8 @@ public sealed class BearerTokenAuthenticationHandler(
         [
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Name, user.DisplayName),
-            new Claim(ClaimTypes.Email, user.Email)
+            new Claim(ClaimTypes.Email, user.Email),
+            new Claim(ClaimTypes.Role, UserRoleWire.ToWireValue(user.Role))
         ], SchemeName);
         var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName);
 
@@ -57,6 +59,16 @@ public sealed class BearerTokenAuthenticationHandler(
         Response.StatusCode = StatusCodes.Status401Unauthorized;
         await Response.WriteAsJsonAsync(
             AuthProblemFactory.UnauthorizedProblem(),
+            options: null,
+            contentType: "application/problem+json",
+            Context.RequestAborted);
+    }
+
+    protected override async Task HandleForbiddenAsync(AuthenticationProperties properties)
+    {
+        Response.StatusCode = StatusCodes.Status403Forbidden;
+        await Response.WriteAsJsonAsync(
+            AuthProblemFactory.ForbiddenProblem(),
             options: null,
             contentType: "application/problem+json",
             Context.RequestAborted);

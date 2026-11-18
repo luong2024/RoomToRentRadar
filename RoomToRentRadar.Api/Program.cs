@@ -6,10 +6,13 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.OpenApi;
 using RoomToRentRadar.Api.Data;
 using RoomToRentRadar.Api.Data.Seed;
+using RoomToRentRadar.Api.Domain;
 using RoomToRentRadar.Api.Features.Auth;
 using RoomToRentRadar.Api.Features.Listings;
+using RoomToRentRadar.Api.Features.Moderation;
 using RoomToRentRadar.Api.Features.Notifications;
 using RoomToRentRadar.Api.Features.Photos;
+using RoomToRentRadar.Api.Features.Reports;
 using RoomToRentRadar.Api.Features.SavedSearches;
 using RoomToRentRadar.Shared.Serialization;
 
@@ -81,7 +84,12 @@ builder.Services
     .AddScheme<AuthenticationSchemeOptions, BearerTokenAuthenticationHandler>(
         BearerTokenAuthenticationHandler.SchemeName,
         _ => { });
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(AuthPolicies.ModeratorOrAdmin, policy => policy
+        .RequireAuthenticatedUser()
+        .RequireRole(UserRoleWire.Moderator, UserRoleWire.Admin));
+});
 builder.Services.AddSingleton(serviceProvider => PhotoStorageOptions.Resolve(
     serviceProvider.GetRequiredService<IConfiguration>()[PhotoStorageOptions.ConfigKey],
     serviceProvider.GetRequiredService<IHostEnvironment>().ContentRootPath));
@@ -94,6 +102,9 @@ builder.Services.Configure<AlertsOptions>(
 builder.Services.AddScoped<SavedSearchService>();
 builder.Services.AddScoped<SavedSearchAlertEvaluator>();
 builder.Services.AddScoped<NotificationsService>();
+builder.Services.AddScoped<ListingReportsService>();
+builder.Services.AddScoped<ModerationQueueService>();
+builder.Services.AddScoped<ModerationActionsService>();
 builder.Services.AddHostedService<SavedSearchAlertWorker>();
 
 var app = builder.Build();

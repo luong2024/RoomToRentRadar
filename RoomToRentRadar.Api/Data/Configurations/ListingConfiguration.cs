@@ -48,6 +48,7 @@ public sealed class ListingConfiguration : IEntityTypeConfiguration<Listing>
             .IsRequired();
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+        builder.Property(x => x.Version).HasColumnName("version").HasDefaultValue(0L);
         builder.Property(x => x.OwnerId).HasColumnName("owner_id");
         builder.Property(x => x.LandlordName).HasColumnName("landlord_name").HasMaxLength(120).IsRequired();
         builder.Property(x => x.LandlordPhone).HasColumnName("landlord_phone").HasMaxLength(20).IsRequired();

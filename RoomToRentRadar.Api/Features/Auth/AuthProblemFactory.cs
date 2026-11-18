@@ -7,6 +7,7 @@ public static class AuthProblemFactory
     public const string InvalidLoginRequest = "invalid_login_request";
     public const string InvalidCredentials = "invalid_credentials";
     public const string Unauthorized = "unauthorized";
+    public const string Forbidden = "forbidden";
 
     public static ProblemDetails InvalidLoginRequestProblem()
     {
@@ -44,6 +45,19 @@ public static class AuthProblemFactory
             Detail = "A valid bearer token is required to access this resource."
         };
         problem.Extensions["code"] = Unauthorized;
+        return problem;
+    }
+
+    public static ProblemDetails ForbiddenProblem()
+    {
+        var problem = new ProblemDetails
+        {
+            Type = "https://tools.ietf.org/html/rfc9110#section-15.5.4",
+            Status = StatusCodes.Status403Forbidden,
+            Title = "Forbidden",
+            Detail = "The current account does not have permission to access this resource."
+        };
+        problem.Extensions["code"] = Forbidden;
         return problem;
     }
 }

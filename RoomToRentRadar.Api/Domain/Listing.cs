@@ -18,6 +18,7 @@ public sealed class Listing
     public ListingStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    public long Version { get; set; }
     public Guid? OwnerId { get; set; }
     public string LandlordName { get; set; } = string.Empty;
     public string LandlordPhone { get; set; } = string.Empty;

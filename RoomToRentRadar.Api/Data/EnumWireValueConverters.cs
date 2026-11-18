@@ -1,5 +1,8 @@
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using RoomToRentRadar.Api.Domain;
 using RoomToRentRadar.Shared.Listings;
+using RoomToRentRadar.Shared.Moderation;
+using RoomToRentRadar.Shared.Reports;
 using RoomToRentRadar.Shared.SavedSearches;
 
 namespace RoomToRentRadar.Api.Data;
@@ -90,6 +93,56 @@ public sealed class SavedSearchAlertStateConverter : ValueConverter<SavedSearchA
         "paused" => SavedSearchAlertState.Paused,
         _ => throw new InvalidOperationException($"Unknown saved search alert state '{value}'.")
     };
+}
+
+public sealed class UserRoleConverter : ValueConverter<UserRole, string>
+{
+    public UserRoleConverter()
+        : base(
+            value => UserRoleWire.ToWireValue(value),
+            value => UserRoleWire.FromWireValue(value))
+    {
+    }
+}
+
+public sealed class ListingReportReasonConverter : ValueConverter<ListingReportReason, string>
+{
+    public ListingReportReasonConverter()
+        : base(
+            value => ListingReportReasonWire.ToWireValue(value),
+            value => ListingReportReasonWire.FromWireValue(value))
+    {
+    }
+}
+
+public sealed class ListingReportStatusConverter : ValueConverter<ListingReportStatus, string>
+{
+    public ListingReportStatusConverter()
+        : base(
+            value => ListingReportStatusWire.ToWireValue(value),
+            value => ListingReportStatusWire.FromWireValue(value))
+    {
+    }
+}
+
+public sealed class ModerationAuditActionConverter : ValueConverter<ModerationAuditAction, string>
+{
+    public ModerationAuditActionConverter()
+        : base(
+            value => ModerationAuditActionWire.ToWireValue(value),
+            value => ModerationAuditActionWire.FromWireValue(value))
+    {
+    }
+}
+
+public sealed class ModerationResolutionActionConverter : ValueConverter<ModerationResolutionAction, string>
+{
+    public ModerationResolutionActionConverter()
+        : base(
+            value => ModerationResolutionActionWire.ToWireValue(value),
+            value => ModerationResolutionActionWire.FromWireValue(value))
+    {
+    }
 }
 
 public sealed class AmenityCodeConverter : ValueConverter<AmenityCode, string>
