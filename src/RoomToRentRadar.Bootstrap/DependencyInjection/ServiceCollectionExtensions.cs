@@ -16,6 +16,7 @@ using RoomToRentRadar.Adapters.Outbound.Authentication;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Configurations;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Context;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Repositories;
+using RoomToRentRadar.Adapters.Outbound.Routing;
 using RoomToRentRadar.Application.Ports.Outbound;
 using RoomToRentRadar.Application.UseCases;
 using RoomToRentRadar.Application.UseCases.Authentication;
@@ -36,6 +37,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRoomListingCacheInvalidator>(sp => sp.GetRequiredService<GetRoomListingsUseCase>());
         services.AddScoped<IGetRoomDetailsUseCase, GetRoomDetailsUseCase>();
         services.AddScoped<ISearchRoomsUseCase, SearchRoomsUseCase>();
+        services.AddScoped<IRoutingService, RoutingService>();
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<IRegisterUserUseCase, RegisterUserUseCase>();
         services.AddScoped<ILoginWithEmailUseCase, LoginWithEmailUseCase>();
@@ -50,6 +52,17 @@ public static class ServiceCollectionExtensions
     {
         services.AddCachingAdapters();
         services.AddCosmosDbPersistence(configuration);
+        services
+            .AddOptions<RoutingOptions>()
+            .Bind(configuration.GetSection(RoutingOptions.SectionName))
+            .Validate(options => Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out _), "Routing:BaseUrl must be an absolute URL.")
+            .Validate(options => options.TimeoutSeconds is >= 1 and <= 120, "Routing:TimeoutSeconds must be between 1 and 120.");
+        services.AddHttpClient<IRoutingProvider, OsrmRoutingProvider>((serviceProvider, client) =>
+        {
+            var options = serviceProvider.GetRequiredService<IOptions<RoutingOptions>>().Value;
+            client.BaseAddress = new Uri(options.BaseUrl, UriKind.Absolute);
+            client.Timeout = Timeout.InfiniteTimeSpan;
+        });
         services.AddSingleton<IValidateOptions<JwtOptions>, JwtOptionsValidator>();
         services
             .AddOptions<JwtOptions>()

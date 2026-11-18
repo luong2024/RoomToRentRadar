@@ -14,13 +14,16 @@ public class RoomsController : ControllerBase
 {
     private readonly IGetRoomDetailsUseCase _getRoomDetailsUseCase;
     private readonly ISearchRoomsUseCase _searchRoomsUseCase;
+    private readonly IRoutingService _routingService;
 
     public RoomsController(
         IGetRoomDetailsUseCase getRoomDetailsUseCase,
-        ISearchRoomsUseCase searchRoomsUseCase)
+        ISearchRoomsUseCase searchRoomsUseCase,
+        IRoutingService routingService)
     {
         _getRoomDetailsUseCase = getRoomDetailsUseCase ?? throw new ArgumentNullException(nameof(getRoomDetailsUseCase));
         _searchRoomsUseCase = searchRoomsUseCase ?? throw new ArgumentNullException(nameof(searchRoomsUseCase));
+        _routingService = routingService ?? throw new ArgumentNullException(nameof(routingService));
     }
 
     /// <summary>
@@ -78,5 +81,29 @@ public class RoomsController : ControllerBase
                 Detail = ex.Message
             });
         }
+    }
+
+    /// <summary>
+    /// Calculates driving distance, estimated travel time, and route geometry from a stored room to a destination.
+    /// </summary>
+    [HttpGet("{id}/travel-time")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(RouteResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status504GatewayTimeout)]
+    public async Task<IActionResult> GetTravelTime(
+        string id,
+        [FromQuery] double? destinationLatitude,
+        [FromQuery] double? destinationLongitude,
+        CancellationToken cancellationToken)
+    {
+        var route = await _routingService.GetRouteForRoomAsync(
+            id,
+            destinationLatitude,
+            destinationLongitude,
+            cancellationToken);
+        return Ok(route);
     }
 }

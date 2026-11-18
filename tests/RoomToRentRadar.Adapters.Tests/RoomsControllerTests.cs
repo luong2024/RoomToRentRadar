@@ -14,13 +14,15 @@ public class RoomsControllerTests
 {
     private readonly Mock<IGetRoomDetailsUseCase> _mockUseCase;
     private readonly Mock<ISearchRoomsUseCase> _mockSearchUseCase;
+    private readonly Mock<IRoutingService> _mockRoutingService;
     private readonly RoomsController _controller;
 
     public RoomsControllerTests()
     {
         _mockUseCase = new Mock<IGetRoomDetailsUseCase>();
         _mockSearchUseCase = new Mock<ISearchRoomsUseCase>();
-        _controller = new RoomsController(_mockUseCase.Object, _mockSearchUseCase.Object);
+        _mockRoutingService = new Mock<IRoutingService>();
+        _controller = new RoomsController(_mockUseCase.Object, _mockSearchUseCase.Object, _mockRoutingService.Object);
     }
 
     [Fact]
@@ -152,5 +154,25 @@ public class RoomsControllerTests
         var problem = Assert.IsType<ProblemDetails>(badRequestResult.Value);
         Assert.Equal(StatusCodes.Status400BadRequest, problem.Status);
         Assert.Contains("MinPrice", problem.Detail);
+    }
+
+    [Fact]
+    public async Task GetTravelTime_WhenDestinationIsValid_ShouldReturnRouteForStoredRoom()
+    {
+        var expectedRoute = new RouteResponse(
+            2.5,
+            6,
+            [new RouteCoordinate(21.0285, 105.8542), new RouteCoordinate(21.0368, 105.8342)]);
+        _mockRoutingService
+            .Setup(service => service.GetRouteForRoomAsync("room-01", 21.0368, 105.8342, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedRoute);
+
+        var result = await _controller.GetTravelTime("room-01", 21.0368, 105.8342, CancellationToken.None);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Same(expectedRoute, okResult.Value);
+        _mockRoutingService.Verify(
+            service => service.GetRouteForRoomAsync("room-01", 21.0368, 105.8342, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }
