@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
+             xmlns:feedback="clr-namespace:RoomToRentRadar.Pages.Controls.Feedback"
+             xmlns:nav="clr-namespace:RoomToRentRadar.Pages.Controls.Navigation"
+             xmlns:fonts="clr-namespace:Fonts"
+             xmlns:loc="clr-namespace:RoomToRentRadar.Resources.Strings"
+             xmlns:local="clr-namespace:RoomToRentRadar.Pages"
+             x:Class="RoomToRentRadar.Pages.MessagesPlaceholderPage"
+             x:DataType="local:MessagesPlaceholderPage"
+             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCanvasLight}, Dark={StaticResource SurfaceCanvasDark}}">
+
+    <Grid RowDefinitions="Auto, *, Auto">
+        <!-- Top App Bar -->
+        <common:PageHeaderBar Grid.Row="0"
+                               Title="{Binding PageTitle}"
+                               Subtitle="{Binding PageSubtitle}"
+                               CanGoBack="False" />
+
+        <!-- Content Area: Chat list or preview -->
+        <ScrollView Grid.Row="1" Padding="{StaticResource ScreenMargin}">
+            <VerticalStackLayout Spacing="16" MaximumWidthRequest="640" HorizontalOptions="Center">
+
+                <!-- Unread Messages Notice Banner -->
+                <Border StrokeShape="RoundRectangle 12"
+                        StrokeThickness="1"
+                        Stroke="{StaticResource Teal500}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+                        Padding="16"
+                        Shadow="{StaticResource Elevation1Shadow}">
+                    <Grid ColumnDefinitions="Auto, *" ColumnSpacing="12" VerticalOptions="Center">
+                        <Border Grid.Column="0"
+                                WidthRequest="40"
+                                HeightRequest="40"
+                                StrokeShape="RoundRectangle 20"
+                                StrokeThickness="0"
+                                BackgroundColor="{StaticResource Teal500}"
+                                HorizontalOptions="Center"
+                                VerticalOptions="Center">
+                            <Image WidthRequest="20"
+                                   HeightRequest="20"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="{x:Static fonts:FluentUI.chat_24_regular}"
+                                                     FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                     Size="20"
+                                                     Color="White" />
+                                </Image.Source>
+                            </Image>
+                        </Border>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                            <Label Text="{Binding UnreadBannerTitle}"
+                                   Style="{StaticResource TextH3}" />
+                            <Label Text="{Binding UnreadBannerSubtitle}"
+                                   Style="{StaticResource TextCaption}" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+
+                <!-- Conversations Empty/Placeholder state -->
+                <feedback:EmptyStateView
+                    IconGlyph="{x:Static fonts:FluentUI.chat_24_regular}"
+                    Title="{Binding EmptyTitle}"
+                    Message="{Binding EmptyMessage}"
+                    HasAction="False" />
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- Bottom Navigation Bar -->
+        <nav:BottomNavBarControl Grid.Row="2"
+                                 ActiveTab="Messages" />
+    </Grid>
+</ContentPage>

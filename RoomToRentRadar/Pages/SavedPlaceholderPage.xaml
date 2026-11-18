@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
+             xmlns:feedback="clr-namespace:RoomToRentRadar.Pages.Controls.Feedback"
+             xmlns:nav="clr-namespace:RoomToRentRadar.Pages.Controls.Navigation"
+             xmlns:fonts="clr-namespace:Fonts"
+             xmlns:loc="clr-namespace:RoomToRentRadar.Resources.Strings"
+             xmlns:local="clr-namespace:RoomToRentRadar.Pages"
+             x:Class="RoomToRentRadar.Pages.SavedPlaceholderPage"
+             x:DataType="local:SavedPlaceholderPage"
+             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCanvasLight}, Dark={StaticResource SurfaceCanvasDark}}">
+
+    <Grid RowDefinitions="Auto, *, Auto">
+        <!-- Top App Bar -->
+        <common:PageHeaderBar Grid.Row="0"
+                               Title="{Binding PageTitle}"
+                               Subtitle="{Binding PageSubtitle}"
+                               CanGoBack="False" />
+
+        <!-- Content Area: Saved Rooms Empty State -->
+        <ScrollView Grid.Row="1" Padding="{StaticResource ScreenMargin}">
+            <VerticalStackLayout Spacing="24" MaximumWidthRequest="640" HorizontalOptions="Center" VerticalOptions="Center">
+                <feedback:EmptyStateView
+                    IconGlyph="{x:Static fonts:FluentUI.heart_24_regular}"
+                    Title="{Binding EmptyTitle}"
+                    Message="{Binding EmptyMessage}"
+                    HasAction="False" />
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- Bottom Navigation Bar -->
+        <nav:BottomNavBarControl Grid.Row="2"
+                                 ActiveTab="Saved" />
+    </Grid>
+</ContentPage>

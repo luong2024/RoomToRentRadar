@@ -1,18 +1,20 @@
 using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
+using RoomToRentRadar.Client.Adapters.Abstractions;
 using Font = Microsoft.Maui.Font;
 
 namespace RoomToRentRadar
 {
     public partial class AppShell : Shell
     {
-        public AppShell()
-        {
-            InitializeComponent();
-            var currentTheme = Microsoft.Maui.Controls.Application.Current!.RequestedTheme;
-            ThemeSegmentedControl.SelectedIndex = currentTheme == AppTheme.Light ? 0 : 1;
+        private readonly ISessionStore? _sessionStore;
 
-            // Register modal/push routes (Routes defined directly in ShellContent like 'login' must NOT be registered here to avoid duplicate route errors)
+        public AppShell(ISessionStore? sessionStore = null)
+        {
+            _sessionStore = sessionStore;
+            InitializeComponent();
+
+            // Register modal/push routes
             Routing.RegisterRoute("register", typeof(Pages.RegisterPage));
             Routing.RegisterRoute("roleselection", typeof(Pages.RoleSelectionPage));
 
@@ -23,10 +25,40 @@ namespace RoomToRentRadar
                 Items.Remove(UiCatalogContent);
             }
 #endif
+
+            Loaded += OnAppShellLoaded;
         }
+
+        private async void OnAppShellLoaded(object? sender, EventArgs e)
+        {
+            Loaded -= OnAppShellLoaded;
+            await CheckInitialSessionAsync();
+        }
+
+        private async Task CheckInitialSessionAsync()
+        {
+            if (_sessionStore == null) return;
+
+            try
+            {
+                // App starts at //main (Explore) by default to support Guest Browsing (docs/ui-ux-spec.md §1 Principle 7).
+                // If the user already has a valid token, we stay on //main.
+                // If on login route with a valid token, redirect to //main.
+                bool hasValid = await _sessionStore.HasValidTokenAsync();
+                if (hasValid && CurrentState?.Location?.ToString()?.Contains("login") == true)
+                {
+                    await GoToAsync("//main");
+                }
+            }
+            catch
+            {
+                // Silently keep current route
+            }
+        }
+
         public static async Task DisplaySnackbarAsync(string message)
         {
-            CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+            var cancellationTokenSource = new CancellationTokenSource();
 
             var snackbarOptions = new SnackbarOptions
             {
@@ -39,25 +71,17 @@ namespace RoomToRentRadar
             };
 
             var snackbar = Snackbar.Make(message, visualOptions: snackbarOptions);
-
             await snackbar.Show(cancellationTokenSource.Token);
         }
 
         public static async Task DisplayToastAsync(string message)
         {
-            // Toast is currently not working in MCT on Windows
             if (OperatingSystem.IsWindows())
                 return;
 
             var toast = Toast.Make(message, textSize: 18);
-
             var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             await toast.Show(cts.Token);
-        }
-
-        private void SfSegmentedControl_SelectionChanged(object? sender, Syncfusion.Maui.Toolkit.SegmentedControl.SelectionChangedEventArgs e)
-        {
-            Microsoft.Maui.Controls.Application.Current!.UserAppTheme = e.NewIndex == 0 ? AppTheme.Light : AppTheme.Dark;
         }
     }
 }

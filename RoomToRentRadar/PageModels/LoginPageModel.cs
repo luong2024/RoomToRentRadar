@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Client.Adapters.Abstractions;
 using RoomToRentRadar.Ports.Contracts.Requests.Auth;
+using RoomToRentRadar.Resources.Strings;
 
 namespace RoomToRentRadar.PageModels;
 
@@ -44,12 +45,23 @@ public partial class LoginPageModel : ObservableObject
     public bool IsSsoVisible => false;
 #endif
 
+    public string DontHaveAccountText => AppResources.GetString("Auth_DontHaveAccount");
+    public string SignUpNowText => AppResources.GetString("Auth_SignUpNow");
+    public string ContinueAsGuestText => AppResources.GetString("Auth_ContinueAsGuest");
+
     public LoginPageModel(
         IAuthGateway authGateway,
         ISessionStore sessionStore)
     {
         _authGateway = authGateway ?? throw new ArgumentNullException(nameof(authGateway));
         _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
+
+        LocalizedStrings.Instance.PropertyChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(DontHaveAccountText));
+            OnPropertyChanged(nameof(SignUpNowText));
+            OnPropertyChanged(nameof(ContinueAsGuestText));
+        };
     }
 
     [RelayCommand]
@@ -217,6 +229,15 @@ public partial class LoginPageModel : ObservableObject
                 "Forgot Password",
                 "Password recovery via email is currently under maintenance. Please contact the ICTU Radar administrator.",
                 "OK");
+        }
+    }
+
+    [RelayCommand]
+    private async Task ContinueAsGuestAsync()
+    {
+        if (Shell.Current != null)
+        {
+            await Shell.Current.GoToAsync("//main");
         }
     }
 
