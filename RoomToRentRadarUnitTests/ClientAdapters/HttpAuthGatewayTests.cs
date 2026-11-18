@@ -250,7 +250,7 @@ public class HttpAuthGatewayTests
     }
 
     [Test]
-    public void RevokeTokenAsync_WhenNullRequest_ThrowsArgumentNullException()
+    public async Task RevokeTokenAsync_WhenNullRequest_ThrowsArgumentNullException()
     {
         var handler = new MockHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.NoContent));
         var client = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:5000") };
@@ -258,10 +258,11 @@ public class HttpAuthGatewayTests
 
         Assert.ThrowsAsync<ArgumentNullException>(async () =>
             await gateway.RevokeTokenAsync(null!));
+        await Task.CompletedTask;
     }
 
     [Test]
-    public void RevokeTokenAsync_WhenServerReturns401_ThrowsApiException()
+    public async Task RevokeTokenAsync_WhenServerReturns401_ThrowsApiException()
     {
         var problem = new
         {
@@ -285,6 +286,7 @@ public class HttpAuthGatewayTests
 
         var ex = Assert.ThrowsAsync<ApiException>(async () =>
             await gateway.RevokeTokenAsync(new RevokeTokenRequest("invalid-refresh-token"), bearerToken: "expired-token"));
+        await Task.CompletedTask;
 
         Assert.That(ex, Is.Not.Null);
         Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));

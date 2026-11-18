@@ -1,8 +1,6 @@
 using System.Windows.Input;
 using RoomToRentRadar.Resources.Strings;
 
-using RoomToRentRadar.Resources.Strings;
-
 namespace RoomToRentRadar.Pages.Controls.Navigation;
 
 public partial class BottomNavBarControl : ContentView
