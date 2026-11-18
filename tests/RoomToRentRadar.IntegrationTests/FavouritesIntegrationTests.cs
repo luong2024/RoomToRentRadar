@@ -2,8 +2,14 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.Cosmos;
 using RoomToRentRadar.Adapters.Inbound.WebApi.Contracts;
+using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Configurations;
+using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Context;
+using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Repositories;
 using RoomToRentRadar.Application.DTOs;
+using RoomToRentRadar.Application.Ports.Outbound;
+using RoomToRentRadar.Application.UseCases.Favourites;
 using RoomToRentRadar.Domain.Entities;
 using RoomDetailsStatus = RoomToRentRadar.Domain.Entities.RoomStatus;
 
@@ -256,6 +262,66 @@ public class FavouritesIntegrationTests
     }
 
     [Test]
+    public async Task ConcurrentAddAndSyncRequests_WhenUserNearMaxQuota200_ShouldNeverExceedMaxFavouritesLimit()
+    {
+        const int maxQuota = AddFavouriteUseCase.MaxFavouritesPerUser; // 200
+        const int initialCount = 195;
+        const int concurrentExtraCount = 20;
+
+        for (var i = 1; i <= initialCount + concurrentExtraCount; i++)
+        {
+            SeedRoom($"room-quota-{i:D3}", RoomDetailsStatus.Available, isVerified: true);
+        }
+
+        var token = await RegisterAndLoginStudentAsync("student.concurrent.quota@ictu.edu.vn");
+
+        // Seed 195 favourites via two sync batches (100 + 95)
+        var batch1 = Enumerable.Range(1, 100).Select(i => (string?)$"room-quota-{i:D3}").ToList();
+        var batch2 = Enumerable.Range(101, 95).Select(i => (string?)$"room-quota-{i:D3}").ToList();
+
+        using (var s1 = CreateAuthorizedRequest(HttpMethod.Post, "/api/v1/favourites/sync", token))
+        {
+            s1.Content = JsonContent.Create(new SyncFavouritesRequest(batch1));
+            var r1 = await _client.SendAsync(s1);
+            Assert.That(r1.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        }
+        using (var s2 = CreateAuthorizedRequest(HttpMethod.Post, "/api/v1/favourites/sync", token))
+        {
+            s2.Content = JsonContent.Create(new SyncFavouritesRequest(batch2));
+            var r2 = await _client.SendAsync(s2);
+            Assert.That(r2.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        }
+
+        // Fire 20 concurrent PUT requests for distinct rooms (196..215) at the same time
+        var concurrentTasks = Enumerable.Range(196, concurrentExtraCount).Select(async i =>
+        {
+            using var req = CreateAuthorizedRequest(HttpMethod.Put, $"/api/v1/favourites/room-quota-{i:D3}", token);
+            return await _client.SendAsync(req);
+        }).ToArray();
+
+        var responses = await Task.WhenAll(concurrentTasks);
+        var okCount = responses.Count(r => r.StatusCode == HttpStatusCode.OK);
+        var badRequestCount = responses.Count(r => r.StatusCode == HttpStatusCode.BadRequest);
+
+        foreach (var resp in responses)
+        {
+            resp.Dispose();
+        }
+
+        using var getIdsReq = CreateAuthorizedRequest(HttpMethod.Get, "/api/v1/favourites/ids", token);
+        var getIdsRes = await _client.SendAsync(getIdsReq);
+        var idsDto = await getIdsRes.Content.ReadFromJsonAsync<FavouriteIdsResultDto>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(okCount, Is.EqualTo(5), "Exactly 5 concurrent requests should succeed to reach the 200 limit.");
+            Assert.That(badRequestCount, Is.EqualTo(15), "Remaining 15 concurrent requests must be rejected with 400 Bad Request.");
+            Assert.That(idsDto!.TotalCount, Is.EqualTo(maxQuota), "Total favourites count must never exceed 200.");
+            Assert.That(idsDto.RoomIds, Has.Count.EqualTo(maxQuota));
+        });
+    }
+
+    [Test]
     public async Task MultiUserIsolation_UserAShouldNeverSeeOrModifyUserBFavourites()
     {
         SeedRoom("room-shared-01", RoomDetailsStatus.Available, isVerified: true);
@@ -300,6 +366,116 @@ public class FavouritesIntegrationTests
             Assert.That(idsA!.RoomIds, Is.EqualTo(new[] { "room-shared-01" }));
             Assert.That(idsB!.RoomIds, Is.EqualTo(new[] { "room-shared-02" }));
         });
+    }
+
+    [Test]
+    public async Task LiveCosmosEmulator_CaseInsensitiveRoomLookupAndMultiInstanceQuota_ShouldSucceed()
+    {
+        const string endpoint = "https://localhost:8081";
+        const string authKey = "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";
+        var dbName = $"RoomToRentRadarDb_FavTest_{Guid.NewGuid():N}"[..36];
+
+        var options = new CosmosDbOptions
+        {
+            AccountEndpoint = endpoint,
+            AuthKey = authKey,
+            DatabaseName = dbName,
+            RoomsContainerName = "Rooms",
+            FavouritesContainerName = "Favourites",
+            ConnectionMode = "Gateway",
+            IsEmulator = true
+        };
+
+        using var dbContext = new CosmosDbContext(options);
+
+        try
+        {
+            await dbContext.EnsureDatabaseAndContainersAsync();
+        }
+        catch (Exception ex) when (
+            ex is HttpRequestException ||
+            ex is System.Net.Sockets.SocketException ||
+            ex.InnerException is HttpRequestException ||
+            ex.InnerException is System.Net.Sockets.SocketException ||
+            (ex is CosmosException ce && (ce.StatusCode == 0 || (int)ce.StatusCode >= 500)) ||
+            ex.Message.Contains("Connection refused", StringComparison.OrdinalIgnoreCase) ||
+            ex.Message.Contains("No connection could be made", StringComparison.OrdinalIgnoreCase))
+        {
+            Assert.Ignore($"Cosmos DB Emulator is not reachable at {endpoint}. Skipping live Cosmos DB verification.");
+            return;
+        }
+
+        try
+        {
+            var cosmosRoomRepo = new CosmosRoomRepository(dbContext.RoomsContainer!);
+            await cosmosRoomRepo.CreateAsync(new Room
+            {
+                Id = "Room-Cosmos-001",
+                Title = "Cosmos Room 1",
+                Price = 1800000m,
+                Area = 22.0,
+                Status = RoomDetailsStatus.Available,
+                IsVerified = true
+            });
+            await cosmosRoomRepo.CreateAsync(new Room
+            {
+                Id = "Room-Cosmos-002",
+                Title = "Cosmos Room 2",
+                Price = 2000000m,
+                Area = 24.0,
+                Status = RoomDetailsStatus.Available,
+                IsVerified = true
+            });
+
+            // 1. Verify [P1] on real Cosmos DB: case-insensitive GetByIdAsync and GetByIdsAsync
+            var singleRoom = await cosmosRoomRepo.GetByIdAsync("room-cosmos-001");
+            var batchRooms = await cosmosRoomRepo.GetByIdsAsync(new[] { "room-cosmos-001", "ROOM-COSMOS-002" });
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(singleRoom, Is.Not.Null);
+                Assert.That(singleRoom!.Id, Is.EqualTo("Room-Cosmos-001"));
+                Assert.That(batchRooms, Has.Count.EqualTo(2));
+                Assert.That(batchRooms.Select(r => r.Id), Is.EquivalentTo(new[] { "Room-Cosmos-001", "Room-Cosmos-002" }));
+            });
+
+            // 2. Verify [P2] on real Cosmos DB: multi-instance concurrent quota enforcement
+            var userId = Guid.NewGuid();
+            const int maxQuota = 5;
+            var now = DateTimeOffset.UtcNow;
+
+            var tasks = Enumerable.Range(1, 12).Select(i => Task.Run(async () =>
+            {
+                var repoInstance = new CosmosFavouriteRepository(dbContext);
+                var fav = FavouriteRoom.Create(userId, $"Room-Cosmos-Quota-{i:D2}", now.AddMilliseconds(i));
+                return await repoInstance.TryAddWithQuotaAsync(fav, maxQuota);
+            })).ToArray();
+
+            var results = await Task.WhenAll(tasks);
+            var verifyRepo = new CosmosFavouriteRepository(dbContext);
+            var stored = await verifyRepo.GetByUserIdAsync(userId);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(results.Count(r => r.Status == FavouriteAddStatus.Created), Is.EqualTo(maxQuota));
+                Assert.That(results.Count(r => r.Status == FavouriteAddStatus.QuotaExceeded), Is.EqualTo(12 - maxQuota));
+                Assert.That(stored, Has.Count.EqualTo(maxQuota));
+            });
+        }
+        finally
+        {
+            if (dbContext.Client is not null)
+            {
+                try
+                {
+                    await dbContext.Client.GetDatabase(dbName).DeleteAsync();
+                }
+                catch
+                {
+                    // Ignore cleanup errors
+                }
+            }
+        }
     }
 
     private void SeedRoom(
