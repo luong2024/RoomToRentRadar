@@ -22,15 +22,31 @@ public sealed class RoomsController : ControllerBase
     [ActivatorUtilitiesConstructor]
     public RoomsController(
         ISearchRoomsUseCase searchRoomsUseCase,
-        IGetRoomDetailUseCase? getRoomDetailUseCase = null,
-        IGetSimilarRoomsUseCase? getSimilarRoomsUseCase = null)
+        IGetRoomDetailUseCase getRoomDetailUseCase,
+        IGetSimilarRoomsUseCase getSimilarRoomsUseCase)
     {
         ArgumentNullException.ThrowIfNull(searchRoomsUseCase);
+        ArgumentNullException.ThrowIfNull(getRoomDetailUseCase);
+        ArgumentNullException.ThrowIfNull(getSimilarRoomsUseCase);
         _searchRoomsUseCase = searchRoomsUseCase;
         _getRoomDetailUseCase = getRoomDetailUseCase;
         _getSimilarRoomsUseCase = getSimilarRoomsUseCase;
     }
 
+    /// <summary>
+    /// Test helper constructor for SearchRooms test suite (T01.1/T04.1).
+    /// </summary>
+    public RoomsController(ISearchRoomsUseCase searchRoomsUseCase)
+    {
+        ArgumentNullException.ThrowIfNull(searchRoomsUseCase);
+        _searchRoomsUseCase = searchRoomsUseCase;
+        _getRoomDetailUseCase = null;
+        _getSimilarRoomsUseCase = null;
+    }
+
+    /// <summary>
+    /// Test helper constructor for RoomDetail test suite.
+    /// </summary>
     public RoomsController(
         IGetRoomDetailUseCase getRoomDetailUseCase,
         IGetSimilarRoomsUseCase? getSimilarRoomsUseCase = null)
@@ -79,18 +95,18 @@ public sealed class RoomsController : ControllerBase
     /// getRoomDetail: Returns full room details per docs/api/openapi.yaml, US02, and BR-AUTH-07.
     /// Supports ETag caching and If-None-Match per ADR-004 and ADR-012.
     /// </summary>
-    [HttpGet("{id}")]
+    [HttpGet("{roomId}")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(RoomDetailDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status304NotModified)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetRoomById(
-        string id,
+        string roomId,
         CancellationToken ct = default,
         [FromQuery] string? campusId = null)
     {
-        if (string.IsNullOrWhiteSpace(id))
+        if (string.IsNullOrWhiteSpace(roomId))
         {
             var invalidProblem = new ProblemDetails
             {
@@ -107,13 +123,13 @@ public sealed class RoomsController : ControllerBase
             return StatusCode(StatusCodes.Status501NotImplemented);
         }
 
-        var result = await _getRoomDetailUseCase.ExecuteAsync(id, campusId, ct);
+        var result = await _getRoomDetailUseCase.ExecuteAsync(roomId, campusId, ct);
         if (result == null)
         {
             var notFoundProblem = new ProblemDetails
             {
                 Title = "Room not found",
-                Detail = $"Room listing with ID '{id}' was not found.",
+                Detail = $"Room listing with ID '{roomId}' was not found.",
                 Status = StatusCodes.Status404NotFound
             };
             notFoundProblem.Extensions["errorCode"] = "ROOM_NOT_FOUND";
@@ -175,17 +191,17 @@ public sealed class RoomsController : ControllerBase
     /// <summary>
     /// getSimilarRooms: Returns up to 5 similar available rooms nearby per docs/api/openapi.yaml and BR-LST-10.
     /// </summary>
-    [HttpGet("{id}/similar")]
+    [HttpGet("{roomId}/similar")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(IReadOnlyList<RoomCardDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetSimilarRooms(
-        string id,
+        string roomId,
         CancellationToken ct = default,
         [FromQuery] string? campusId = null)
     {
-        if (string.IsNullOrWhiteSpace(id))
+        if (string.IsNullOrWhiteSpace(roomId))
         {
             var invalidProblem = new ProblemDetails
             {
@@ -202,13 +218,13 @@ public sealed class RoomsController : ControllerBase
             return StatusCode(StatusCodes.Status501NotImplemented);
         }
 
-        var similarRooms = await _getSimilarRoomsUseCase.ExecuteAsync(id, campusId, ct);
+        var similarRooms = await _getSimilarRoomsUseCase.ExecuteAsync(roomId, campusId, ct);
         if (similarRooms == null)
         {
             var notFoundProblem = new ProblemDetails
             {
                 Title = "Room not found",
-                Detail = $"Room listing with ID '{id}' was not found.",
+                Detail = $"Room listing with ID '{roomId}' was not found.",
                 Status = StatusCodes.Status404NotFound
             };
             notFoundProblem.Extensions["errorCode"] = "ROOM_NOT_FOUND";
