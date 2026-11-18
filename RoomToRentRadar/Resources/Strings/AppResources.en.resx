@@ -124,4 +124,6 @@
   <data name="Filter_Amenity_Kitchen" xml:space="preserve"><value>Kitchen</value></data>
   <data name="Filter_ResetAll" xml:space="preserve"><value>Reset All</value></data>
   <data name="Filter_ShowResults_Format" xml:space="preserve"><value>Show Results ({0})</value></data>
+  <data name="CreateListing_PageTitle" xml:space="preserve"><value>Post a Room Listing</value></data>
+  <data name="Nav_CreateListing" xml:space="preserve"><value>Post Listing</value></data>
 </root>

@@ -1,0 +1,865 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="RoomToRentRadar.Features.RoomListings.Views.CreateListingPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:f="clr-namespace:Fonts"
+    xmlns:converters="clr-namespace:RoomToRentRadar.Shared.Converters"
+    xmlns:loc="clr-namespace:RoomToRentRadar.Core.Localization"
+    xmlns:models="clr-namespace:RoomToRentRadar.Features.RoomListings.Models"
+    xmlns:vm="clr-namespace:RoomToRentRadar.Features.RoomListings.ViewModels"
+    x:Name="ThisPage"
+    Title="Đăng tin cho thuê"
+    x:DataType="vm:CreateListingViewModel"
+    BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}"
+    Shell.NavBarIsVisible="False">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <converters:StringHasValueConverter x:Key="StringHasValueConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="*,Auto">
+        <!-- Main Scrollable Form Area -->
+        <ScrollView Grid.Row="0">
+            <VerticalStackLayout
+                Padding="{OnIdiom Phone='16,14,16,24', Tablet='24,20,24,32', Desktop='24,20,24,32'}"
+                HorizontalOptions="Fill"
+                MaximumWidthRequest="880"
+                Spacing="18">
+
+                <!-- 1. Navigation Header Bar -->
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" VerticalOptions="Center">
+                    <Border
+                        Grid.Column="0"
+                        Padding="12,8"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                        StrokeShape="RoundRectangle 12"
+                        StrokeThickness="1"
+                        VerticalOptions="Center">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding GoBackCommand}" />
+                        </Border.GestureRecognizers>
+                        <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                            <Label
+                                FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                FontSize="18"
+                                Text="{x:Static f:FluentUI.arrow_left_20_regular}"
+                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                VerticalOptions="Center" />
+                            <Label
+                                FontAttributes="Bold"
+                                FontSize="13"
+                                Text="Quay lại"
+                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                    </Border>
+
+                    <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                        <Label
+                            FontAttributes="Bold"
+                            FontSize="18"
+                            Text="Đăng tin cho thuê phòng"
+                            TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                        <Label
+                            FontSize="12.5"
+                            Text="Điền đầy đủ thông tin phòng trọ để gửi ban quản trị phê duyệt"
+                            TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+                    </VerticalStackLayout>
+                </Grid>
+
+                <!-- 2. Global Status Messages (Banners) -->
+                <!-- Error Banner -->
+                <Border
+                    IsVisible="{Binding HasError}"
+                    BackgroundColor="#FEF2F2"
+                    Stroke="#FCA5A5"
+                    StrokeThickness="1"
+                    Padding="14,10"
+                    StrokeShape="RoundRectangle 12">
+                    <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+                        <Label
+                            FontFamily="{x:Static f:FluentUI.FontFamily}"
+                            FontSize="18"
+                            Text="{x:Static f:FluentUI.warning_20_regular}"
+                            TextColor="#DC2626"
+                            VerticalOptions="Center" />
+                        <Label
+                            Text="{Binding ErrorMessage}"
+                            TextColor="#DC2626"
+                            FontSize="13"
+                            LineBreakMode="WordWrap"
+                            VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                </Border>
+
+                <!-- Success Banner -->
+                <Border
+                    IsVisible="{Binding IsSuccess}"
+                    BackgroundColor="#F0FDF4"
+                    Stroke="#86EFAC"
+                    StrokeThickness="1"
+                    Padding="14,10"
+                    StrokeShape="RoundRectangle 12">
+                    <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+                        <Label
+                            FontFamily="{x:Static f:FluentUI.FontFamily}"
+                            FontSize="18"
+                            Text="{x:Static f:FluentUI.checkmark_circle_20_regular}"
+                            TextColor="#16A34A"
+                            VerticalOptions="Center" />
+                        <Label
+                            Text="{Binding SuccessMessage}"
+                            TextColor="#16A34A"
+                            FontSize="13"
+                            FontAttributes="Bold"
+                            LineBreakMode="WordWrap"
+                            VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                </Border>
+
+                <!-- 3. THẺ 1: THÔNG TIN CƠ BẢN -->
+                <Border
+                    Padding="16"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                    StrokeShape="RoundRectangle 16"
+                    StrokeThickness="1">
+                    <VerticalStackLayout Spacing="14">
+                        <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                            <Label
+                                FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                FontSize="18"
+                                Text="{x:Static f:FluentUI.info_24_regular}"
+                                TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                VerticalOptions="Center" />
+                            <Label
+                                FontAttributes="Bold"
+                                FontSize="15"
+                                Text="1. Thông tin cơ bản"
+                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+
+                        <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" />
+
+                        <!-- Tiêu đề tin đăng -->
+                        <VerticalStackLayout Spacing="5">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label
+                                    Text="Tiêu đề bài đăng *"
+                                    FontSize="13"
+                                    FontAttributes="Bold"
+                                    TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                <Label
+                                    Grid.Column="1"
+                                    Text="{Binding TitleCharacterCountText}"
+                                    FontSize="11.5"
+                                    TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                            </Grid>
+
+                            <Border
+                                Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                StrokeThickness="1.5"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}"
+                                HeightRequest="48"
+                                Padding="12,0"
+                                StrokeShape="RoundRectangle 12">
+                                <Entry
+                                    Text="{Binding Title, Mode=TwoWay}"
+                                    Placeholder="Ví dụ: Phòng trọ khép kín mới xây gần cổng trường ICTU"
+                                    PlaceholderColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
+                                    FontSize="14"
+                                    TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                    VerticalTextAlignment="Center" />
+                            </Border>
+
+                            <Label
+                                Text="{Binding TitleError}"
+                                IsVisible="{Binding TitleError, Converter={StaticResource StringHasValueConverter}}"
+                                TextColor="#DC2626"
+                                FontSize="12" />
+                        </VerticalStackLayout>
+
+                        <!-- Loại phòng -->
+                        <VerticalStackLayout Spacing="6">
+                            <Label
+                                Text="Loại hình cho thuê *"
+                                FontSize="13"
+                                FontAttributes="Bold"
+                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+
+                            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="10">
+                                <!-- Boarding Room -->
+                                <Border
+                                    Grid.Row="0" Grid.Column="0"
+                                    Padding="10,12"
+                                    StrokeShape="RoundRectangle 12"
+                                    StrokeThickness="1.5"
+                                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}">
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding IsBoardingRoomSelected}" Value="True">
+                                            <Setter Property="Stroke" Value="{StaticResource PrimaryBrand}" />
+                                            <Setter Property="StrokeThickness" Value="2" />
+                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding SelectRoomTypeCommand}" CommandParameter="BoardingRoom" />
+                                    </Border.GestureRecognizers>
+                                    <VerticalStackLayout Spacing="3" HorizontalOptions="Center">
+                                        <Label Text="🏠" FontSize="20" HorizontalOptions="Center" />
+                                        <Label Text="Phòng trọ" FontAttributes="Bold" FontSize="13" HorizontalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                        <Label Text="Dãy trọ sinh viên" FontSize="11" HorizontalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                    </VerticalStackLayout>
+                                </Border>
+
+                                <!-- Mini Apartment -->
+                                <Border
+                                    Grid.Row="0" Grid.Column="1"
+                                    Padding="10,12"
+                                    StrokeShape="RoundRectangle 12"
+                                    StrokeThickness="1.5"
+                                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}">
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding IsMiniApartmentSelected}" Value="True">
+                                            <Setter Property="Stroke" Value="{StaticResource PrimaryBrand}" />
+                                            <Setter Property="StrokeThickness" Value="2" />
+                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding SelectRoomTypeCommand}" CommandParameter="MiniApartment" />
+                                    </Border.GestureRecognizers>
+                                    <VerticalStackLayout Spacing="3" HorizontalOptions="Center">
+                                        <Label Text="🏢" FontSize="20" HorizontalOptions="Center" />
+                                        <Label Text="Chung cư mini" FontAttributes="Bold" FontSize="13" HorizontalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                        <Label Text="Khép kín hiện đại" FontSize="11" HorizontalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                    </VerticalStackLayout>
+                                </Border>
+
+                                <!-- Whole House -->
+                                <Border
+                                    Grid.Row="1" Grid.Column="0"
+                                    Padding="10,12"
+                                    StrokeShape="RoundRectangle 12"
+                                    StrokeThickness="1.5"
+                                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}">
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding IsWholeHouseSelected}" Value="True">
+                                            <Setter Property="Stroke" Value="{StaticResource PrimaryBrand}" />
+                                            <Setter Property="StrokeThickness" Value="2" />
+                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding SelectRoomTypeCommand}" CommandParameter="WholeHouse" />
+                                    </Border.GestureRecognizers>
+                                    <VerticalStackLayout Spacing="3" HorizontalOptions="Center">
+                                        <Label Text="🏡" FontSize="20" HorizontalOptions="Center" />
+                                        <Label Text="Nhà nguyên căn" FontAttributes="Bold" FontSize="13" HorizontalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                        <Label Text="Ở nhóm bạn bè" FontSize="11" HorizontalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                    </VerticalStackLayout>
+                                </Border>
+
+                                <!-- Dormitory -->
+                                <Border
+                                    Grid.Row="1" Grid.Column="1"
+                                    Padding="10,12"
+                                    StrokeShape="RoundRectangle 12"
+                                    StrokeThickness="1.5"
+                                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}">
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding IsDormitorySelected}" Value="True">
+                                            <Setter Property="Stroke" Value="{StaticResource PrimaryBrand}" />
+                                            <Setter Property="StrokeThickness" Value="2" />
+                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding SelectRoomTypeCommand}" CommandParameter="Dormitory" />
+                                    </Border.GestureRecognizers>
+                                    <VerticalStackLayout Spacing="3" HorizontalOptions="Center">
+                                        <Label Text="🛏️" FontSize="20" HorizontalOptions="Center" />
+                                        <Label Text="Ký túc xá" FontAttributes="Bold" FontSize="13" HorizontalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                        <Label Text="Giường tầng, ghép" FontSize="11" HorizontalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                    </VerticalStackLayout>
+                                </Border>
+                            </Grid>
+
+                            <Label
+                                Text="{Binding RoomTypeError}"
+                                IsVisible="{Binding RoomTypeError, Converter={StaticResource StringHasValueConverter}}"
+                                TextColor="#DC2626"
+                                FontSize="12" />
+                        </VerticalStackLayout>
+
+                        <!-- Diện tích phòng -->
+                        <VerticalStackLayout Spacing="5">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label
+                                    Text="Diện tích phòng * (m²)"
+                                    FontSize="13"
+                                    FontAttributes="Bold"
+                                    TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                <Label
+                                    Grid.Column="1"
+                                    Text="{Binding FormattedAreaPreview}"
+                                    FontSize="12"
+                                    FontAttributes="Bold"
+                                    TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                            </Grid>
+
+                            <Border
+                                Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                StrokeThickness="1.5"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}"
+                                HeightRequest="48"
+                                Padding="12,0"
+                                StrokeShape="RoundRectangle 12">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                    <Label
+                                        FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                        FontSize="18"
+                                        Text="{x:Static f:FluentUI.ruler_24_regular}"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
+                                        VerticalOptions="Center" />
+                                    <Entry
+                                        Grid.Column="1"
+                                        Text="{Binding AreaText, Mode=TwoWay}"
+                                        Placeholder="Từ 5 đến 200 m² (ví dụ: 25)"
+                                        PlaceholderColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
+                                        Keyboard="Numeric"
+                                        FontSize="14"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                        VerticalTextAlignment="Center" />
+                                    <Label
+                                        Grid.Column="2"
+                                        Text="m²"
+                                        FontSize="13"
+                                        FontAttributes="Bold"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
+                                        VerticalOptions="Center" />
+                                </Grid>
+                            </Border>
+
+                            <Label
+                                Text="{Binding AreaError}"
+                                IsVisible="{Binding AreaError, Converter={StaticResource StringHasValueConverter}}"
+                                TextColor="#DC2626"
+                                FontSize="12" />
+                        </VerticalStackLayout>
+
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- 4. THẺ 2: THÔNG TIN ĐỊA CHỈ -->
+                <Border
+                    Padding="16"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                    StrokeShape="RoundRectangle 16"
+                    StrokeThickness="1">
+                    <VerticalStackLayout Spacing="14">
+                        <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                            <Label
+                                FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                FontSize="18"
+                                Text="{x:Static f:FluentUI.location_24_regular}"
+                                TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                VerticalOptions="Center" />
+                            <Label
+                                FontAttributes="Bold"
+                                FontSize="15"
+                                Text="2. Địa chỉ phòng trọ"
+                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+
+                        <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" />
+
+                        <VerticalStackLayout Spacing="5">
+                            <Label
+                                Text="Địa chỉ chi tiết *"
+                                FontSize="13"
+                                FontAttributes="Bold"
+                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+
+                            <Border
+                                Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                StrokeThickness="1.5"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}"
+                                HeightRequest="48"
+                                Padding="12,0"
+                                StrokeShape="RoundRectangle 12">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                    <Label
+                                        FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                        FontSize="18"
+                                        Text="{x:Static f:FluentUI.location_24_regular}"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
+                                        VerticalOptions="Center" />
+                                    <Entry
+                                        Grid.Column="1"
+                                        Text="{Binding Address, Mode=TwoWay}"
+                                        Placeholder="Số nhà, ngõ/ngách, tên đường, xã/phường (TP. Thái Nguyên)"
+                                        PlaceholderColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
+                                        FontSize="14"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                        VerticalTextAlignment="Center" />
+                                </Grid>
+                            </Border>
+
+                            <Label
+                                Text="{Binding AddressError}"
+                                IsVisible="{Binding AddressError, Converter={StaticResource StringHasValueConverter}}"
+                                TextColor="#DC2626"
+                                FontSize="12" />
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- 5. THẺ 3: CHI PHÍ THUÊ & ĐẶT CỌC -->
+                <Border
+                    Padding="16"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                    StrokeShape="RoundRectangle 16"
+                    StrokeThickness="1">
+                    <VerticalStackLayout Spacing="14">
+                        <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                            <Label
+                                FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                FontSize="18"
+                                Text="{x:Static f:FluentUI.money_24_regular}"
+                                TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                VerticalOptions="Center" />
+                            <Label
+                                FontAttributes="Bold"
+                                FontSize="15"
+                                Text="3. Giá thuê và Tiền cọc"
+                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+
+                        <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" />
+
+                        <!-- Giá thuê hàng tháng -->
+                        <VerticalStackLayout Spacing="5">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label
+                                    Text="Giá thuê hàng tháng * (VND)"
+                                    FontSize="13"
+                                    FontAttributes="Bold"
+                                    TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                <Label
+                                    Grid.Column="1"
+                                    Text="{Binding FormattedPricePreview}"
+                                    FontSize="12"
+                                    FontAttributes="Bold"
+                                    TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                            </Grid>
+
+                            <Border
+                                Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                StrokeThickness="1.5"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}"
+                                HeightRequest="48"
+                                Padding="12,0"
+                                StrokeShape="RoundRectangle 12">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                    <Label
+                                        FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                        FontSize="18"
+                                        Text="{x:Static f:FluentUI.money_24_regular}"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
+                                        VerticalOptions="Center" />
+                                    <Entry
+                                        Grid.Column="1"
+                                        Text="{Binding PriceText, Mode=TwoWay}"
+                                        Placeholder="100.000 đến 50.000.000 (ví dụ: 1500000)"
+                                        PlaceholderColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
+                                        Keyboard="Numeric"
+                                        FontSize="14"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                        VerticalTextAlignment="Center" />
+                                    <Label
+                                        Grid.Column="2"
+                                        Text="₫/tháng"
+                                        FontSize="13"
+                                        FontAttributes="Bold"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
+                                        VerticalOptions="Center" />
+                                </Grid>
+                            </Border>
+
+                            <Label
+                                Text="{Binding PriceError}"
+                                IsVisible="{Binding PriceError, Converter={StaticResource StringHasValueConverter}}"
+                                TextColor="#DC2626"
+                                FontSize="12" />
+                        </VerticalStackLayout>
+
+                        <!-- Tiền đặt cọc -->
+                        <VerticalStackLayout Spacing="5">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label
+                                    Text="Tiền đặt cọc * (VND - Nhập 0 nếu không cần cọc)"
+                                    FontSize="13"
+                                    FontAttributes="Bold"
+                                    TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                <Label
+                                    Grid.Column="1"
+                                    Text="{Binding FormattedDepositPreview}"
+                                    FontSize="12"
+                                    FontAttributes="Bold"
+                                    TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                            </Grid>
+
+                            <Border
+                                Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                StrokeThickness="1.5"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}"
+                                HeightRequest="48"
+                                Padding="12,0"
+                                StrokeShape="RoundRectangle 12">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                    <Label
+                                        FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                        FontSize="18"
+                                        Text="{x:Static f:FluentUI.shield_keyhole_24_regular}"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
+                                        VerticalOptions="Center" />
+                                    <Entry
+                                        Grid.Column="1"
+                                        Text="{Binding DepositText, Mode=TwoWay}"
+                                        Placeholder="Từ 0 đến 3 lần tiền thuê (ví dụ: 1000000)"
+                                        PlaceholderColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
+                                        Keyboard="Numeric"
+                                        FontSize="14"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                        VerticalTextAlignment="Center" />
+                                    <Label
+                                        Grid.Column="2"
+                                        Text="₫"
+                                        FontSize="13"
+                                        FontAttributes="Bold"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
+                                        VerticalOptions="Center" />
+                                </Grid>
+                            </Border>
+
+                            <Label
+                                Text="{Binding DepositError}"
+                                IsVisible="{Binding DepositError, Converter={StaticResource StringHasValueConverter}}"
+                                TextColor="#DC2626"
+                                FontSize="12" />
+                        </VerticalStackLayout>
+
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- 6. THẺ 4: HÌNH ẢNH PHÒNG TRỌ -->
+                <Border
+                    Padding="16"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                    StrokeShape="RoundRectangle 16"
+                    StrokeThickness="1">
+                    <VerticalStackLayout Spacing="14">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                                <Label
+                                    FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                    FontSize="18"
+                                    Text="{x:Static f:FluentUI.image_add_24_regular}"
+                                    TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                    VerticalOptions="Center" />
+                                <Label
+                                    FontAttributes="Bold"
+                                    FontSize="15"
+                                    Text="4. Hình ảnh phòng trọ *"
+                                    TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                    VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+
+                            <!-- Badge đếm ảnh -->
+                            <Border
+                                Grid.Column="1"
+                                Padding="8,4"
+                                StrokeThickness="0"
+                                StrokeShape="RoundRectangle 8">
+                                <Border.Triggers>
+                                    <DataTrigger TargetType="Border" Binding="{Binding HasMinimumPhotos}" Value="False">
+                                        <Setter Property="BackgroundColor" Value="#FEF3C7" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Border" Binding="{Binding HasMinimumPhotos}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="#DCFCE7" />
+                                    </DataTrigger>
+                                </Border.Triggers>
+                                <Label
+                                    Text="{Binding PhotosCountText}"
+                                    FontSize="11.5"
+                                    FontAttributes="Bold">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding HasMinimumPhotos}" Value="False">
+                                            <Setter Property="TextColor" Value="#D97706" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="Label" Binding="{Binding HasMinimumPhotos}" Value="True">
+                                            <Setter Property="TextColor" Value="#15803D" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                            </Border>
+                        </Grid>
+
+                        <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" />
+
+                        <!-- Nút chọn ảnh từ máy -->
+                        <Border
+                            Padding="16,20"
+                            Stroke="{StaticResource PrimaryBrand}"
+                            StrokeDashArray="4,4"
+                            StrokeThickness="1.5"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}"
+                            StrokeShape="RoundRectangle 14">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding PickPhotosCommand}" />
+                            </Border.GestureRecognizers>
+                            <VerticalStackLayout HorizontalOptions="Center" Spacing="6">
+                                <Label
+                                    FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                    FontSize="30"
+                                    HorizontalOptions="Center"
+                                    Text="{x:Static f:FluentUI.image_add_24_regular}"
+                                    TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                                <Label
+                                    FontAttributes="Bold"
+                                    FontSize="14"
+                                    HorizontalOptions="Center"
+                                    Text="Chọn ảnh từ thiết bị"
+                                    TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                                <Label
+                                    FontSize="11.5"
+                                    HorizontalOptions="Center"
+                                    Text="Hỗ trợ JPG, PNG (tối đa 10 MB/ảnh, chọn từ 3 đến 20 ảnh)"
+                                    TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <!-- Lưới ảnh xem trước -->
+                        <FlexLayout
+                            BindableLayout.ItemsSource="{Binding Photos}"
+                            Direction="Row"
+                            Wrap="Wrap"
+                            AlignItems="Start"
+                            JustifyContent="Start">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="models:ListingPhotoItem">
+                                    <Border
+                                        Margin="4"
+                                        WidthRequest="110"
+                                        HeightRequest="110"
+                                        StrokeThickness="1"
+                                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                        StrokeShape="RoundRectangle 12"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}">
+                                        <Grid>
+                                            <!-- Preview Image -->
+                                            <Image
+                                                Aspect="AspectFill"
+                                                Source="{Binding FilePath}" />
+
+                                            <!-- Cover Badge -->
+                                            <Border
+                                                HorizontalOptions="Start"
+                                                VerticalOptions="Start"
+                                                Margin="4"
+                                                Padding="6,2"
+                                                BackgroundColor="#2563EB"
+                                                StrokeThickness="0"
+                                                StrokeShape="RoundRectangle 6"
+                                                IsVisible="{Binding IsCover}">
+                                                <Label
+                                                    Text="Bìa"
+                                                    TextColor="White"
+                                                    FontSize="10"
+                                                    FontAttributes="Bold" />
+                                            </Border>
+
+                                            <!-- Delete Button -->
+                                            <Border
+                                                HorizontalOptions="End"
+                                                VerticalOptions="Start"
+                                                Margin="4"
+                                                WidthRequest="26"
+                                                HeightRequest="26"
+                                                BackgroundColor="#EF4444"
+                                                StrokeThickness="0"
+                                                StrokeShape="RoundRectangle 13">
+                                                <Border.GestureRecognizers>
+                                                    <TapGestureRecognizer
+                                                        Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.RemovePhotoCommand}"
+                                                        CommandParameter="{Binding .}" />
+                                                </Border.GestureRecognizers>
+                                                <Label
+                                                    FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                                    FontSize="14"
+                                                    Text="{x:Static f:FluentUI.delete_24_regular}"
+                                                    TextColor="White"
+                                                    HorizontalOptions="Center"
+                                                    VerticalOptions="Center" />
+                                            </Border>
+
+                                            <!-- File size footer -->
+                                            <Border
+                                                HorizontalOptions="Fill"
+                                                VerticalOptions="End"
+                                                Padding="4,2"
+                                                BackgroundColor="#CC000000"
+                                                StrokeThickness="0">
+                                                <Label
+                                                    Text="{Binding FormattedFileSize}"
+                                                    TextColor="White"
+                                                    FontSize="9"
+                                                    HorizontalOptions="Center" />
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </FlexLayout>
+
+                        <Label
+                            Text="{Binding PhotosError}"
+                            IsVisible="{Binding PhotosError, Converter={StaticResource StringHasValueConverter}}"
+                            TextColor="#DC2626"
+                            FontSize="12" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- 7. THẺ 5: MÔ TẢ CHI TIẾT (TÙY CHỌN) -->
+                <Border
+                    Padding="16"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                    StrokeShape="RoundRectangle 16"
+                    StrokeThickness="1">
+                    <VerticalStackLayout Spacing="14">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                                <Label
+                                    FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                    FontSize="18"
+                                    Text="{x:Static f:FluentUI.text_field_24_regular}"
+                                    TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                    VerticalOptions="Center" />
+                                <Label
+                                    FontAttributes="Bold"
+                                    FontSize="15"
+                                    Text="5. Mô tả chi tiết (Tùy chọn)"
+                                    TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                    VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                            <Label
+                                Grid.Column="1"
+                                Text="{Binding DescriptionCharacterCountText}"
+                                FontSize="11.5"
+                                TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                        </Grid>
+
+                        <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" />
+
+                        <Border
+                            Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                            StrokeThickness="1.5"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}"
+                            Padding="12"
+                            StrokeShape="RoundRectangle 12">
+                            <Editor
+                                Text="{Binding Description, Mode=TwoWay}"
+                                Placeholder="Thông tin thêm về tiện ích (điều hòa, nóng lạnh, wifi), giờ giấc, nội quy phòng..."
+                                PlaceholderColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
+                                HeightRequest="110"
+                                FontSize="14"
+                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                AutoSize="Disabled" />
+                        </Border>
+
+                        <Label
+                            Text="{Binding DescriptionError}"
+                            IsVisible="{Binding DescriptionError, Converter={StaticResource StringHasValueConverter}}"
+                            TextColor="#DC2626"
+                            FontSize="12" />
+                    </VerticalStackLayout>
+                </Border>
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- 8. BOTTOM STICKY ACTION BAR -->
+        <Border
+            Grid.Row="1"
+            Padding="{OnIdiom Phone='16,12', Tablet='24,14', Desktop='24,14'}"
+            BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+            Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+            StrokeThickness="1,0,0,0">
+            <Border.Shadow>
+                <Shadow
+                    Brush="{StaticResource Black}"
+                    Offset="0,-4"
+                    Opacity="0.06"
+                    Radius="12" />
+            </Border.Shadow>
+
+            <Grid
+                ColumnDefinitions="Auto,*"
+                ColumnSpacing="12"
+                HorizontalOptions="Fill"
+                MaximumWidthRequest="880">
+
+                <!-- Cancel / Back Button -->
+                <Button
+                    Grid.Column="0"
+                    Text="Hủy"
+                    Command="{Binding GoBackCommand}"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}"
+                    TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                    FontAttributes="Bold"
+                    FontSize="14"
+                    HeightRequest="48"
+                    Padding="20,0"
+                    CornerRadius="12" />
+
+                <!-- Submit Button -->
+                <Button
+                    Grid.Column="1"
+                    Text="Gửi duyệt bài đăng ➔"
+                    Command="{Binding SubmitListingCommand}"
+                    IsEnabled="{Binding CanSubmit}"
+                    BackgroundColor="{StaticResource PrimaryBrand}"
+                    TextColor="White"
+                    FontAttributes="Bold"
+                    FontSize="15"
+                    HeightRequest="48"
+                    CornerRadius="12"
+                    Shadow="{Shadow Brush='#2563EB', Offset='0,4', Radius=10, Opacity=0.25}">
+                    <Button.Triggers>
+                        <DataTrigger TargetType="Button" Binding="{Binding IsSubmitting}" Value="True">
+                            <Setter Property="Text" Value="Đang gửi duyệt..." />
+                            <Setter Property="Opacity" Value="0.7" />
+                        </DataTrigger>
+                    </Button.Triggers>
+                </Button>
+            </Grid>
+        </Border>
+    </Grid>
+
+</ContentPage>

@@ -225,6 +225,15 @@
         SemanticProperties.Description="View and edit your profile"
         SemanticProperties.Hint="Open your profile" />
 
+    <ShellContent
+        x:Name="CreateListingShellContent"
+        Title="Đăng tin cho thuê"
+        ContentTemplate="{DataTemplate roomViews:CreateListingPage}"
+        Icon="{StaticResource IconAdd}"
+        Route="rooms/create"
+        SemanticProperties.Description="Tạo tin đăng cho thuê phòng trọ"
+        SemanticProperties.Hint="Mở form tạo tin đăng cho thuê phòng" />
+
     <Shell.FlyoutFooter>
         <VerticalStackLayout
             x:Name="FlyoutFooterExpandedPanel"

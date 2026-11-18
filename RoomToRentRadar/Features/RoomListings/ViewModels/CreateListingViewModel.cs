@@ -100,7 +100,10 @@ public partial class CreateListingViewModel : ObservableObject
     public partial bool IsLoading { get; set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanSubmit))]
     public partial bool IsSubmitting { get; set; }
+
+    public bool CanSubmit => !IsSubmitting;
 
     [ObservableProperty]
     public partial bool HasError { get; set; }

@@ -34,6 +34,7 @@ namespace RoomToRentRadar
             _routeGuardService = routeGuardService;
             Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(Features.RoomDetails.Views.RoomDetailPage));
             Routing.RegisterRoute(AppRoutes.RoomDetails, typeof(RoomDetailsPage));
+            Routing.RegisterRoute(AppRoutes.CreateListing, typeof(CreateListingPage));
 
             UpdateLanguageButtonStyles();
             LocalizationResourceManager.Instance.PropertyChanged += (_, _) => UpdateLanguageButtonStyles();
@@ -63,6 +64,7 @@ namespace RoomToRentRadar
 
             Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(Features.RoomDetails.Views.RoomDetailPage));
             Routing.RegisterRoute(AppRoutes.RoomDetails, typeof(RoomDetailsPage));
+            Routing.RegisterRoute(AppRoutes.CreateListing, typeof(CreateListingPage));
 
             UpdateLanguageButtonStyles();
             LocalizationResourceManager.Instance.PropertyChanged += (_, _) => UpdateLanguageButtonStyles();

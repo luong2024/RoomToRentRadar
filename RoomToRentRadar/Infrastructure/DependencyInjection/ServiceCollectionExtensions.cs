@@ -61,6 +61,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IProfileService, ProfileService>();
         services.AddSingleton<IProfileUiThreadDispatcher, MauiProfileUiThreadDispatcher>();
         services.AddSingleton<IRoomDetailService, RoomDetailService>();
+        services.AddSingleton<IMediaPickerService, MediaPickerService>();
         return services;
     }
 
@@ -81,6 +82,9 @@ public static class ServiceCollectionExtensions
 
         services.AddTransient<RoomDetailViewModel>();
         services.AddTransient<RoomDetailPage>();
+        services.AddTransient<ICreateListingService, CreateListingService>();
+        services.AddTransient<CreateListingViewModel>();
+        services.AddTransient<CreateListingPage>();
         return services;
     }
 }

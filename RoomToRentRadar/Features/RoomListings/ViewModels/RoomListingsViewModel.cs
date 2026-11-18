@@ -471,6 +471,15 @@ public partial class RoomListingsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    public async Task OpenCreateListingAsync()
+    {
+        if (Shell.Current != null)
+        {
+            await Shell.Current.GoToAsync(Core.Constants.AppRoutes.CreateListing);
+        }
+    }
+
+    [RelayCommand]
     public async Task InitializeAsync()
     {
         if (_isInitialized)

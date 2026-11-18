@@ -88,6 +88,36 @@
 
                     <!-- Header Actions: Notification & Profile (44x44 Touch Targets) -->
                     <HorizontalStackLayout Grid.Column="2" Spacing="8" VerticalOptions="Center">
+                        <!-- Create Listing Action Button -->
+                        <Border
+                            Padding="10,0"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                            HeightRequest="44"
+                            MinimumHeightRequest="44"
+                            SemanticProperties.Description="Đăng tin cho thuê"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 14"
+                            VerticalOptions="Center">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenCreateListingCommand}" />
+                            </Border.GestureRecognizers>
+                            <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+                                <Label
+                                    FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                    FontSize="16"
+                                    HorizontalOptions="Center"
+                                    Text="{x:Static f:FluentUI.add_32_regular}"
+                                    TextColor="White"
+                                    VerticalOptions="Center" />
+                                <Label
+                                    FontAttributes="Bold"
+                                    FontSize="12"
+                                    Text="Đăng tin"
+                                    TextColor="White"
+                                    VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                        </Border>
+
                         <!-- Notification Action Button -->
                         <Border
                             Padding="0"
