@@ -14,12 +14,12 @@ public sealed class RoomListingsService : IRoomListingsService
 
     private static readonly Dictionary<string, string[]> AmenityKeywords = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["aircon"] = ["Điều hòa", "Air conditioner", "aircon"],
+        ["aircon"] = ["Air conditioner", "Air conditioning", "aircon", "Điều hòa"],
         ["wifi"] = ["Wifi", "Wi-Fi"],
-        ["parking"] = ["để xe", "gửi xe", "giữ xe", "Parking", "parking"],
-        ["bathroom"] = ["khép kín", "Nóng lạnh", "Private bathroom", "bathroom"],
-        ["washing"] = ["Máy giặt", "Washing machine", "washing"],
-        ["kitchen"] = ["Bếp", "Kitchen", "kitchen"]
+        ["parking"] = ["Parking", "parking", "Free parking", "để xe", "gửi xe", "giữ xe"],
+        ["bathroom"] = ["Private bathroom", "bathroom", "Water heater", "khép kín", "Nóng lạnh"],
+        ["washing"] = ["Washing machine", "washing", "Máy giặt"],
+        ["kitchen"] = ["Kitchen", "kitchen", "Private kitchen", "Bếp"]
     };
 
     private readonly IApiClient _apiClient;
@@ -39,7 +39,7 @@ public sealed class RoomListingsService : IRoomListingsService
     public async Task<PagedResponse<RoomListItemModel>> GetRoomListingsAsync(
         int page,
         int pageSize,
-        RoomSortOption sortBy = RoomSortOption.Newest,
+        RoomSortOption sortBy = RoomSortOption.DistanceAsc,
         string? search = null,
         RoomFilterCriteria? filter = null,
         CancellationToken cancellationToken = default)
@@ -164,12 +164,11 @@ public sealed class RoomListingsService : IRoomListingsService
             AreaSqm = area,
             Address = dto.Address,
             RoomType = !string.IsNullOrWhiteSpace(dto.RoomType) ? dto.RoomType : "private",
-            District = !string.IsNullOrWhiteSpace(dto.District) ? dto.District : "TP. Thái Nguyên",
+            District = !string.IsNullOrWhiteSpace(dto.District) ? dto.District : "Thai Nguyen City",
             DistanceToCampusKm = dto.DistanceToCampusKm,
             ThumbnailUrl = dto.ThumbnailUrl,
             IsVerified = dto.IsVerified,
             IsAvailable = dto.IsAvailable ?? true,
-            CreatedAt = dto.CreatedAt ?? DateTimeOffset.UtcNow,
             Amenities = dto.Amenities is { Count: > 0 } ? dto.Amenities : []
         };
     }
@@ -199,7 +198,7 @@ public sealed class RoomListingsService : IRoomListingsService
             RoomSortOption.PriceAsc => query.OrderBy(r => r.Price).ThenBy(r => r.Id),
             RoomSortOption.PriceDesc => query.OrderByDescending(r => r.Price).ThenBy(r => r.Id),
             RoomSortOption.DistanceAsc => query.OrderBy(r => r.DistanceToCampusKm).ThenBy(r => r.Id),
-            _ => query.OrderByDescending(r => r.CreatedAt).ThenBy(r => r.Id)
+            _ => query.OrderBy(r => r.DistanceToCampusKm).ThenBy(r => r.Id)
         };
 
         var ordered = query.ToList();
@@ -277,186 +276,172 @@ public sealed class RoomListingsService : IRoomListingsService
         new()
         {
             Id = "room-ictu-001",
-            Title = "Phòng trọ khép kín mới xây sát cổng chính ĐH CNTT&TT (ICTU)",
+            Title = "Newly built private room right next to ICTU main gate",
             Price = 1_800_000m,
             AreaSqm = 22,
-            Address = "Ngõ 12 Đường Z115, Xã Quyết Thắng, TP. Thái Nguyên",
+            Address = "Alley 12 Z115 Street, Quyet Thang, Thai Nguyen City",
             DistanceToCampusKm = 0.3,
             ThumbnailUrl = "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&q=80",
             IsVerified = false,
-            CreatedAt = new DateTimeOffset(2026, 11, 10, 8, 0, 0, TimeSpan.FromHours(7)),
-            Amenities = ["Điều hòa", "Nóng lạnh", "Giờ giấc tự do", "Khóa vân tay"]
+            Amenities = ["Air conditioner", "Water heater", "Private bathroom", "Fingerprint lock"]
         },
         new()
         {
             Id = "room-ictu-002",
-            Title = "Studio ban công thoáng mát khu tập thể giảng viên Quyết Thắng",
+            Title = "Breezy balcony studio in Quyet Thang faculty residential area",
             Price = 2_300_000m,
             AreaSqm = 28,
-            Address = "Đường Z115, Xóm Gốc Mít, Quyết Thắng, TP. Thái Nguyên",
+            Address = "Z115 Street, Goc Mit, Quyet Thang, Thai Nguyen City",
             DistanceToCampusKm = 0.6,
             ThumbnailUrl = "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&q=80",
             IsVerified = false,
-            CreatedAt = new DateTimeOffset(2026, 11, 9, 14, 30, 0, TimeSpan.FromHours(7)),
-            Amenities = ["Full nội thất", "Ban công", "Máy giặt chung"]
+            Amenities = ["Full furniture", "Balcony", "Washing machine"]
         },
         new()
         {
             Id = "room-ictu-003",
-            Title = "Phòng trọ sinh viên giá tiết kiệm, có gác xép rộng rãi",
+            Title = "Budget student room with spacious mezzanine",
             Price = 1_200_000m,
             AreaSqm = 18,
-            Address = "Xóm Tân Đức, Xã Quyết Thắng, TP. Thái Nguyên",
+            Address = "Tan Duc, Quyet Thang, Thai Nguyen City",
             DistanceToCampusKm = 0.8,
             ThumbnailUrl = "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?w=600&q=80",
             IsVerified = false,
-            CreatedAt = new DateTimeOffset(2026, 11, 9, 9, 15, 0, TimeSpan.FromHours(7)),
-            Amenities = ["Gác xép", "Nóng lạnh", "Chỗ để xe rộng"]
+            Amenities = ["Mezzanine", "Water heater", "Parking"]
         },
         new()
         {
             Id = "room-ictu-004",
-            Title = "Căn hộ mini 1 ngủ 1 khách gần ngã ba Điểm Hẹn",
+            Title = "1-bedroom mini apartment near Diem Hen junction",
             Price = 2_800_000m,
             AreaSqm = 32,
-            Address = "Phường Tân Thịnh, TP. Thái Nguyên",
+            Address = "Tan Thinh Ward, Thai Nguyen City",
             DistanceToCampusKm = 1.2,
             ThumbnailUrl = "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=600&q=80",
             IsVerified = false,
-            CreatedAt = new DateTimeOffset(2026, 11, 8, 18, 0, 0, TimeSpan.FromHours(7)),
-            Amenities = ["Điều hòa", "Tủ lạnh", "Bếp tách riêng"]
+            Amenities = ["Air conditioner", "Fridge", "Private kitchen"]
         },
         new()
         {
             Id = "room-ictu-005",
-            Title = "Phòng trọ an ninh có camera 24/7 sau ký túc xá ICTU",
+            Title = "Secure student room with 24/7 CCTV behind ICTU dorms",
             Price = 1_500_000m,
             AreaSqm = 20,
-            Address = "Ngõ 45 Đường Z115, Quyết Thắng, TP. Thái Nguyên",
+            Address = "Alley 45 Z115 Street, Quyet Thang, Thai Nguyen City",
             DistanceToCampusKm = 0.4,
             ThumbnailUrl = "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=600&q=80",
             IsVerified = false,
-            CreatedAt = new DateTimeOffset(2026, 11, 8, 10, 0, 0, TimeSpan.FromHours(7)),
-            Amenities = ["Camera 24/7", "Nóng lạnh", "Wifi tốc độ cao"]
+            Amenities = ["24/7 CCTV", "Water heater", "Wi-Fi"]
         },
         new()
         {
             Id = "room-ictu-006",
-            Title = "Phòng đôi rộng rãi ở ghép 2–3 bạn gần ĐH Nông Lâm & ICTU",
+            Title = "Spacious shared double room for 2–3 students near ICTU",
             Price = 2_000_000m,
             AreaSqm = 26,
-            Address = "Tổ 5, Phường Tân Thịnh, TP. Thái Nguyên",
+            Address = "Group 5, Tan Thinh Ward, Thai Nguyen City",
             RoomType = "shared",
             DistanceToCampusKm = 1.5,
             ThumbnailUrl = "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=600&q=80",
             IsVerified = false,
-            CreatedAt = new DateTimeOffset(2026, 11, 7, 16, 45, 0, TimeSpan.FromHours(7)),
-            Amenities = ["2 giường", "Điều hòa", "Bàn học đôi"]
+            Amenities = ["2 beds", "Air conditioner", "Double study desk"]
         },
         new()
         {
             Id = "room-ictu-007",
-            Title = "Phòng khép kín tầng 2 thoáng sáng, điện nước giá dân",
+            Title = "Bright 2nd-floor en-suite room with standard utility rates",
             Price = 1_650_000m,
             AreaSqm = 21,
-            Address = "Đường Z115, Xã Quyết Thắng, TP. Thái Nguyên",
+            Address = "Z115 Street, Quyet Thang, Thai Nguyen City",
             DistanceToCampusKm = 0.5,
             ThumbnailUrl = "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=600&q=80",
             IsVerified = false,
-            CreatedAt = new DateTimeOffset(2026, 11, 7, 8, 20, 0, TimeSpan.FromHours(7)),
-            Amenities = ["Điện nước giá dân", "Nóng lạnh", "Cửa sổ lớn"]
+            Amenities = ["Private bathroom", "Water heater", "Large window"]
         },
         new()
         {
             Id = "room-ictu-008",
-            Title = "Phòng trọ mới sơn sửa sạch đẹp, cách cổng phụ ICTU 300m",
+            Title = "Freshly renovated clean room 300m from ICTU side gate",
             Price = 1_400_000m,
             AreaSqm = 19,
-            Address = "Xóm Hồng Thái, Quyết Thắng, TP. Thái Nguyên",
+            Address = "Hong Thai, Quyet Thang, Thai Nguyen City",
             DistanceToCampusKm = 0.3,
             ThumbnailUrl = "https://images.unsplash.com/photo-1540518614846-7ede433c4573?w=600&q=80",
             IsVerified = false,
-            CreatedAt = new DateTimeOffset(2026, 11, 6, 15, 0, 0, TimeSpan.FromHours(7)),
-            Amenities = ["Giường tủ", "Nóng lạnh", "Không chung chủ"]
+            Amenities = ["Bed & wardrobe", "Water heater", "Independent access"]
         },
         new()
         {
             Id = "room-ictu-009",
-            Title = "Studio cao cấp có thang máy gần hồ điều hòa Tân Thịnh",
+            Title = "Premium studio with elevator near Tan Thinh lake",
             Price = 2_600_000m,
             AreaSqm = 30,
-            Address = "Tổ 8, Phường Tân Thịnh, TP. Thái Nguyên",
+            Address = "Group 8, Tan Thinh Ward, Thai Nguyen City",
             DistanceToCampusKm = 1.4,
             ThumbnailUrl = "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&q=80",
             IsVerified = false,
-            CreatedAt = new DateTimeOffset(2026, 11, 5, 11, 30, 0, TimeSpan.FromHours(7)),
-            Amenities = ["Thang máy", "Điều hòa", "Tủ lạnh", "Khóa từ"]
+            Amenities = ["Elevator", "Air conditioner", "Fridge", "Keycard access"]
         },
         new()
         {
             Id = "room-ictu-010",
-            Title = "Phòng trọ đơn yên tĩnh phù hợp sinh viên năm cuối làm đồ án",
+            Title = "Quiet single room ideal for senior students",
             Price = 1_350_000m,
             AreaSqm = 17,
-            Address = "Ngõ 88 Đường Z115, Quyết Thắng, TP. Thái Nguyên",
+            Address = "Alley 88 Z115 Street, Quyet Thang, Thai Nguyen City",
             DistanceToCampusKm = 0.7,
             ThumbnailUrl = "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?w=600&q=80",
             IsVerified = false,
-            CreatedAt = new DateTimeOffset(2026, 11, 4, 19, 10, 0, TimeSpan.FromHours(7)),
-            Amenities = ["Khu yên tĩnh", "Bàn làm việc", "Nóng lạnh"]
+            Amenities = ["Quiet area", "Study desk", "Water heater"]
         },
         new()
         {
             Id = "room-ictu-011",
-            Title = "Phòng trọ có sân phơi riêng và kệ bếp nấu ăn thoải mái",
+            Title = "Student room with private drying yard and kitchen counter",
             Price = 1_750_000m,
             AreaSqm = 23,
-            Address = "Đường Quang Trung kéo dài, Phường Thịnh Đán, TP. Thái Nguyên",
+            Address = "Extended Quang Trung Road, Thinh Dan Ward, Thai Nguyen City",
             DistanceToCampusKm = 1.9,
             ThumbnailUrl = "https://images.unsplash.com/photo-1536376072261-38c75010e6c9?w=600&q=80",
             IsVerified = false,
-            CreatedAt = new DateTimeOffset(2026, 11, 3, 13, 0, 0, TimeSpan.FromHours(7)),
-            Amenities = ["Bếp riêng", "Sân phơi", "Điều hòa"]
+            Amenities = ["Private kitchen", "Drying yard", "Air conditioner"]
         },
         new()
         {
             Id = "room-ictu-012",
-            Title = "Phòng khép kín đầy đủ điều hòa, giường tủ sát chợ sinh viên",
+            Title = "En-suite room with AC and furniture next to student market",
             Price = 1_900_000m,
             AreaSqm = 24,
-            Address = "Chợ sinh viên Z115, Quyết Thắng, TP. Thái Nguyên",
+            Address = "Z115 Student Market, Quyet Thang, Thai Nguyen City",
             DistanceToCampusKm = 0.5,
             ThumbnailUrl = "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=600&q=80",
             IsVerified = false,
-            CreatedAt = new DateTimeOffset(2026, 11, 2, 9, 0, 0, TimeSpan.FromHours(7)),
-            Amenities = ["Điều hòa", "Nóng lạnh", "Gần chợ & bến buýt"]
+            Amenities = ["Air conditioner", "Water heater", "Near market & bus stop"]
         },
         new()
         {
             Id = "room-ictu-013",
-            Title = "Phòng trọ giá rẻ cho tân sinh viên ICTU, miễn phí giữ xe",
+            Title = "Affordable room for ICTU freshmen with free parking",
             Price = 1_100_000m,
             AreaSqm = 16,
-            Address = "Xóm Gốc Mít, Xã Quyết Thắng, TP. Thái Nguyên",
+            Address = "Goc Mit, Quyet Thang, Thai Nguyen City",
             DistanceToCampusKm = 0.9,
             ThumbnailUrl = "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&q=80",
             IsVerified = false,
-            CreatedAt = new DateTimeOffset(2026, 11, 1, 10, 0, 0, TimeSpan.FromHours(7)),
-            Amenities = ["Miễn phí gửi xe", "Wifi", "Vệ sinh khép kín"]
+            Amenities = ["Free parking", "Wi-Fi", "Private bathroom"]
         },
         new()
         {
             Id = "room-ictu-014",
-            Title = "Căn hộ dịch vụ 2 giường đơn gần ĐH Khoa Học & ICTU",
+            Title = "Serviced twin room near University of Sciences & ICTU",
             Price = 2_450_000m,
             AreaSqm = 29,
-            Address = "Phường Tân Thịnh, TP. Thái Nguyên",
+            Address = "Tan Thinh Ward, Thai Nguyen City",
             RoomType = "shared",
             DistanceToCampusKm = 1.6,
             ThumbnailUrl = "https://images.unsplash.com/photo-1560185127-6ed189bf02f4?w=600&q=80",
             IsVerified = false,
-            CreatedAt = new DateTimeOffset(2026, 10, 31, 17, 0, 0, TimeSpan.FromHours(7)),
-            Amenities = ["Full nội thất", "Máy giặt", "Khóa vân tay"]
+            Amenities = ["Full furniture", "Washing machine", "Fingerprint lock"]
         }
     ];
 }

@@ -1,5 +1,6 @@
 namespace RoomToRentRadar.Application.UseCases.RoomListings;
 
+using System.Globalization;
 using RoomToRentRadar.Application.DTOs;
 using RoomToRentRadar.Application.Exceptions;
 using RoomToRentRadar.Application.Ports.Inbound;
@@ -50,8 +51,18 @@ public sealed class GetRoomListingsUseCase : IGetRoomListingsUseCase, IRoomListi
         // AC3: Cache-aside pattern with campus versioning for instant invalidation
         var normalizedSortBy = string.IsNullOrWhiteSpace(query.SortBy) ? "distance" : query.SortBy.Trim().ToLowerInvariant();
         var normalizedSortOrder = string.IsNullOrWhiteSpace(query.SortOrder) ? "asc" : query.SortOrder.Trim().ToLowerInvariant();
+        var normalizedSearch = string.IsNullOrWhiteSpace(query.Search) ? null : query.Search.Trim();
+        var normalizedRoomType = string.IsNullOrWhiteSpace(query.RoomType) ? null : query.RoomType.Trim().ToLowerInvariant();
+        var parsedAmenities = ParseAmenities(query.Amenities);
+
         var campusVersion = await GetCampusCacheVersionAsync(query.CampusId, cancellationToken);
-        var cacheKey = $"rooms:campus:{query.CampusId}:v{campusVersion}:p{query.Page}:s{query.PageSize}:sort{normalizedSortBy}_{normalizedSortOrder}";
+        var filterCacheSuffix = BuildFilterCacheSuffix(
+            normalizedSearch,
+            query.MinPrice,
+            query.MaxPrice,
+            normalizedRoomType,
+            parsedAmenities);
+        var cacheKey = $"rooms:campus:{query.CampusId}:v{campusVersion}:p{query.Page}:s{query.PageSize}:sort{normalizedSortBy}_{normalizedSortOrder}{filterCacheSuffix}";
 
         var cachedResult = await _cacheService.GetAsync<PagedResult<RoomListingDto>>(cacheKey, cancellationToken);
         if (cachedResult is not null)
@@ -65,7 +76,7 @@ public sealed class GetRoomListingsUseCase : IGetRoomListingsUseCase, IRoomListi
             throw new CampusNotFoundException(query.CampusId);
         }
 
-        // AC4: Only listings with status Available and Verified
+        // AC4: Only listings with status Available and Verified, with optional search and filter criteria
         var listingsPage = await _roomListingRepository.GetAvailableVerifiedRoomsByCampusAsync(
             query.CampusId,
             campus.Location,
@@ -73,7 +84,12 @@ public sealed class GetRoomListingsUseCase : IGetRoomListingsUseCase, IRoomListi
             query.PageSize,
             normalizedSortBy,
             normalizedSortOrder == "desc",
-            cancellationToken);
+            cancellationToken,
+            normalizedSearch,
+            query.MinPrice,
+            query.MaxPrice,
+            normalizedRoomType,
+            parsedAmenities.Length > 0 ? parsedAmenities : null);
 
         // Enforce domain rule filter in application layer for verification
         var eligibleListings = listingsPage.Items.Where(l => l.IsDisplayable).ToList();
@@ -92,7 +108,9 @@ public sealed class GetRoomListingsUseCase : IGetRoomListingsUseCase, IRoomListi
                 IsVerified: listing.VerificationStatus == VerificationStatus.Verified,
                 Address: listing.Address,
                 ThumbnailUrl: listing.ThumbnailUrl,
-                CampusId: listing.CampusId);
+                CampusId: listing.CampusId,
+                RoomType: listing.RoomType,
+                Amenities: listing.Amenities);
             return (Dto: dto, ExactDistance: exactDistance);
         }).ToList();
 
@@ -112,6 +130,44 @@ public sealed class GetRoomListingsUseCase : IGetRoomListingsUseCase, IRoomListi
         await _cacheService.SetAsync(cacheKey, result, CacheTtl, cancellationToken);
 
         return result;
+    }
+
+    private static string[] ParseAmenities(string? rawAmenities)
+    {
+        if (string.IsNullOrWhiteSpace(rawAmenities))
+        {
+            return [];
+        }
+
+        return rawAmenities
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(a => !string.IsNullOrWhiteSpace(a))
+            .Select(a => a.ToLowerInvariant())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(a => a, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static string BuildFilterCacheSuffix(
+        string? search,
+        decimal? minPrice,
+        decimal? maxPrice,
+        string? roomType,
+        string[] amenities)
+    {
+        if (search is null &&
+            !minPrice.HasValue &&
+            !maxPrice.HasValue &&
+            roomType is null &&
+            amenities.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        var minStr = minPrice?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+        var maxStr = maxPrice?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+        var amStr = string.Join(',', amenities);
+        return $":q{search?.ToLowerInvariant()}:min{minStr}:max{maxStr}:rt{roomType}:am{amStr}";
     }
 
     private static long _invalidationSequence;
@@ -171,6 +227,21 @@ public sealed class GetRoomListingsUseCase : IGetRoomListingsUseCase, IRoomListi
         if (!string.IsNullOrWhiteSpace(query.SortOrder) && !AllowedSortOrder.Contains(query.SortOrder.Trim()))
         {
             throw new ValidationException("SortOrder", "SortOrder must be either 'asc' or 'desc'.");
+        }
+
+        if (query.MinPrice.HasValue && query.MinPrice.Value < 0)
+        {
+            throw new ValidationException("MinPrice", "MinPrice cannot be negative.");
+        }
+
+        if (query.MaxPrice.HasValue && query.MaxPrice.Value < 0)
+        {
+            throw new ValidationException("MaxPrice", "MaxPrice cannot be negative.");
+        }
+
+        if (query.MinPrice.HasValue && query.MaxPrice.HasValue && query.MinPrice.Value > query.MaxPrice.Value)
+        {
+            throw new ValidationException("MinPrice", "MinPrice cannot be greater than MaxPrice.");
         }
     }
 }

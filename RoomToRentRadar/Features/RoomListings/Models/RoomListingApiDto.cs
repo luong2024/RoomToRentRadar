@@ -38,7 +38,5 @@ public sealed class RoomListingApiDto
 
     public string? District { get; set; }
 
-    public DateTimeOffset? CreatedAt { get; set; }
-
     public List<string>? Amenities { get; set; }
 }

@@ -86,7 +86,7 @@ public class RoomListingsServiceTests
 
         // Act & Assert
         Assert.ThrowsAsync<HttpRequestException>(() =>
-            service.GetRoomListingsAsync(1, 6, RoomSortOption.Newest));
+            service.GetRoomListingsAsync(1, 6, RoomSortOption.DistanceAsc));
     }
 
     [Test]
@@ -116,7 +116,7 @@ public class RoomListingsServiceTests
         var service = new RoomListingsService(fakeApiClient, enableDebugFallback: true);
 
         // Act
-        var page = await service.GetRoomListingsAsync(1, 50, RoomSortOption.Newest);
+        var page = await service.GetRoomListingsAsync(1, 50, RoomSortOption.DistanceAsc);
 
         // Assert
         Assert.Multiple(() =>
@@ -139,11 +139,11 @@ public class RoomListingsServiceTests
         var service = new RoomListingsService(fakeApiClient, enableDebugFallback: false);
 
         // Act
-        await service.GetRoomListingsAsync(1, 6, RoomSortOption.Newest, search: "  điều hòa & gác  ");
+        await service.GetRoomListingsAsync(1, 6, RoomSortOption.DistanceAsc, search: "  air conditioner & loft  ");
 
         // Assert
         Assert.That(capturedEndpoint, Is.EqualTo(
-            "api/v1/rooms?campusId=campus-ictu&page=1&pageSize=6&sortBy=distance&sortOrder=asc&search=" + Uri.EscapeDataString("điều hòa & gác")));
+            "api/v1/rooms?campusId=campus-ictu&page=1&pageSize=6&sortBy=distance&sortOrder=asc&search=" + Uri.EscapeDataString("air conditioner & loft")));
     }
 
     [TestCase(null)]
@@ -161,7 +161,7 @@ public class RoomListingsServiceTests
         var service = new RoomListingsService(fakeApiClient, enableDebugFallback: false);
 
         // Act
-        await service.GetRoomListingsAsync(1, 6, RoomSortOption.Newest, search);
+        await service.GetRoomListingsAsync(1, 6, RoomSortOption.DistanceAsc, search);
 
         // Assert
         Assert.That(capturedEndpoint, Is.EqualTo("api/v1/rooms?campusId=campus-ictu&page=1&pageSize=6&sortBy=distance&sortOrder=asc"));
@@ -175,8 +175,8 @@ public class RoomListingsServiceTests
         var service = new RoomListingsService(fakeApiClient, enableDebugFallback: true);
 
         // Act: page size 1 forces matches beyond the first page to be reachable only via paging
-        var page1 = await service.GetRoomListingsAsync(1, 1, RoomSortOption.Newest, "Điều hòa");
-        var page2 = await service.GetRoomListingsAsync(2, 1, RoomSortOption.Newest, "Điều hòa");
+        var page1 = await service.GetRoomListingsAsync(1, 1, RoomSortOption.DistanceAsc, "Air conditioner");
+        var page2 = await service.GetRoomListingsAsync(2, 1, RoomSortOption.DistanceAsc, "Air conditioner");
 
         // Assert
         Assert.Multiple(() =>
@@ -186,9 +186,9 @@ public class RoomListingsServiceTests
             Assert.That(page2.Items, Has.Count.EqualTo(1));
             Assert.That(page2.Items[0].Id, Is.Not.EqualTo(page1.Items[0].Id));
             Assert.That(page1.Items.Concat(page2.Items).All(r =>
-                r.Title.Contains("Điều hòa", StringComparison.OrdinalIgnoreCase) ||
-                r.Address.Contains("Điều hòa", StringComparison.OrdinalIgnoreCase) ||
-                r.Amenities.Any(a => a.Contains("Điều hòa", StringComparison.OrdinalIgnoreCase))), Is.True);
+                r.Title.Contains("Air conditioner", StringComparison.OrdinalIgnoreCase) ||
+                r.Address.Contains("Air conditioner", StringComparison.OrdinalIgnoreCase) ||
+                r.Amenities.Any(a => a.Contains("Air conditioner", StringComparison.OrdinalIgnoreCase))), Is.True);
         });
     }
 
@@ -247,11 +247,10 @@ public class RoomListingsServiceTests
             Assert.That(allFilteredItems.All(r =>
                 r.Price is >= 1_000_000m and <= 2_000_000m &&
                 string.Equals(r.RoomType, "private", StringComparison.OrdinalIgnoreCase) &&
-                r.Amenities.Any(a => a.Contains("Điều hòa", StringComparison.OrdinalIgnoreCase))), Is.True);
+                r.Amenities.Any(a => a.Contains("Air conditioner", StringComparison.OrdinalIgnoreCase))), Is.True);
         });
     }
 
-    [TestCase(RoomSortOption.Newest, "distance", "asc")]
     [TestCase(RoomSortOption.DistanceAsc, "distance", "asc")]
     [TestCase(RoomSortOption.PriceAsc, "price", "asc")]
     [TestCase(RoomSortOption.PriceDesc, "price", "desc")]

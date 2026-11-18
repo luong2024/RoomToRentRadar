@@ -19,7 +19,12 @@ public interface IRoomListingRepository
         int pageSize,
         string sortBy,
         bool descending,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        string? search = null,
+        decimal? minPrice = null,
+        decimal? maxPrice = null,
+        string? roomType = null,
+        IReadOnlyList<string>? amenities = null);
 
     Task AddAsync(
         RoomListing roomListing,

@@ -255,6 +255,8 @@ public sealed class CosmosDbInitializer
                             Status = status,
                             VerificationStatus = isVerified ? 2 : 0, // 2 = Verified (AC4 requirement)
                             ThumbnailUrl = doc["thumbnailUrl"]?.ToString(),
+                            RoomType = doc["roomType"]?.ToString(),
+                            Amenities = doc["amenities"]?.ToObject<List<string>>(),
                             CreatedAtUtc = (DateTime?)doc["createdAtUtc"] ?? (DateTime?)doc["lastUpdatedDate"] ?? DateTime.UtcNow
                         };
 

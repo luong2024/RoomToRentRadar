@@ -83,7 +83,7 @@ public class RoomDetailsViewModelTests
         public Task<PagedResponse<RoomListItemModel>> GetRoomListingsAsync(
             int page,
             int pageSize,
-            RoomSortOption sortBy = RoomSortOption.Newest,
+            RoomSortOption sortBy = RoomSortOption.DistanceAsc,
             string? search = null,
             RoomFilterCriteria? filter = null,
             CancellationToken cancellationToken = default) =>

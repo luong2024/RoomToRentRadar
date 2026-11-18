@@ -21,6 +21,8 @@ public sealed class RoomListing
     public string CampusId { get; private set; }
     public string? ThumbnailUrl { get; private set; }
     public DateTime CreatedAtUtc { get; }
+    public string RoomType { get; private set; }
+    public IReadOnlyList<string> Amenities { get; private set; }
 
     /// <summary>
     /// Business rule (AC4): Only listings with status Available and Verified are displayed to students.
@@ -39,7 +41,9 @@ public sealed class RoomListing
         VerificationStatus verificationStatus,
         string campusId,
         string? thumbnailUrl = null,
-        DateTime? createdAtUtc = null)
+        DateTime? createdAtUtc = null,
+        string? roomType = null,
+        IEnumerable<string>? amenities = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
@@ -63,6 +67,11 @@ public sealed class RoomListing
         CampusId = campusId;
         ThumbnailUrl = thumbnailUrl;
         CreatedAtUtc = createdAtUtc ?? DateTime.UtcNow;
+        RoomType = string.IsNullOrWhiteSpace(roomType) ? "private" : roomType.Trim();
+        Amenities = amenities?
+            .Where(a => !string.IsNullOrWhiteSpace(a))
+            .Select(a => a.Trim())
+            .ToArray() ?? [];
     }
 
     public void UpdateStatus(ListingRoomStatus newStatus)
