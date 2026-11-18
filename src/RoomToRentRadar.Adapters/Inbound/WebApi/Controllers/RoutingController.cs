@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using RoomToRentRadar.Adapters.Inbound.WebApi.RateLimiting;
 using RoomToRentRadar.Application.DTOs;
 using RoomToRentRadar.Application.Ports.Inbound;
 
@@ -9,6 +11,7 @@ namespace RoomToRentRadar.Adapters.Inbound.WebApi.Controllers;
 [ApiController]
 [Route("api/routing")]
 [Produces("application/json")]
+[EnableRateLimiting(RateLimitingPolicies.Routing)]
 public sealed class RoutingController : ControllerBase
 {
     private readonly IRoutingService _routingService;
@@ -28,6 +31,7 @@ public sealed class RoutingController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status504GatewayTimeout)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> CalculateRoute([FromBody] RouteRequest? request, CancellationToken cancellationToken)
     {
         var route = await _routingService.GetRouteAsync(request, cancellationToken);

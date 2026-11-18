@@ -51,6 +51,27 @@ public class OsrmRoutingProviderTests
     }
 
     [Test]
+    public async Task GetRouteAsync_WhenOsrmReturnsEmptyRoutes_ShouldReturnNull()
+    {
+        using var client = CreateClient((_, _) => Task.FromResult(JsonResponse("""{"code":"Ok","routes":[]}""")));
+        var provider = CreateProvider(client);
+
+        var result = await provider.GetRouteAsync(Origin, Destination);
+
+        Assert.That(result, Is.Null);
+    }
+
+    [TestCase("""{"code":"Ok"}""")]
+    [TestCase("""{"code":"Ok","routes":{}}""")]
+    public void GetRouteAsync_WhenOsrmReturnsInvalidRoutes_ShouldThrowUnavailableException(string json)
+    {
+        using var client = CreateClient((_, _) => Task.FromResult(JsonResponse(json)));
+        var provider = CreateProvider(client);
+
+        Assert.ThrowsAsync<RoutingProviderUnavailableException>(() => provider.GetRouteAsync(Origin, Destination));
+    }
+
+    [Test]
     public void GetRouteAsync_WhenOsrmReturnsHttpError_ShouldThrowUnavailableException()
     {
         using var client = CreateClient((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)));

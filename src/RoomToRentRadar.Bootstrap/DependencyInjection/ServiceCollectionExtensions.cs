@@ -171,6 +171,28 @@ public static class ServiceCollectionExtensions
                         AutoReplenishment = true
                     });
             });
+
+            limiterOptions.AddPolicy(RateLimitingPolicies.Routing, httpContext =>
+            {
+                var rateOptions = httpContext.RequestServices
+                    .GetRequiredService<IOptions<RateLimitingOptions>>()
+                    .Value;
+
+                var permitLimit = rateOptions.RoutingPermitLimit > 0 ? rateOptions.RoutingPermitLimit : 60;
+                var windowSeconds = rateOptions.RoutingWindowSeconds > 0 ? rateOptions.RoutingWindowSeconds : 60;
+                var partitionKey = httpContext.Connection.RemoteIpAddress?.ToString() ?? "local-client";
+
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey,
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = permitLimit,
+                        Window = TimeSpan.FromSeconds(windowSeconds),
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                        AutoReplenishment = true
+                    });
+            });
         });
 
         services

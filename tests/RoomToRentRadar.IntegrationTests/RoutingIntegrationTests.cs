@@ -56,7 +56,9 @@ public class RoutingIntegrationTests
         {
             Id = "routing-room",
             Latitude = 21.0285,
-            Longitude = 105.8542
+            Longitude = 105.8542,
+            Status = RoomStatus.Available,
+            IsVerified = true
         });
         _factory.RoutingProvider.Result = new RoutingProviderResult(1000, 60, Array.Empty<RouteCoordinate>());
 
@@ -70,6 +72,51 @@ public class RoutingIntegrationTests
             Assert.That(route, Is.Not.Null);
             Assert.That(route!.DistanceKm, Is.EqualTo(1));
             Assert.That(route.DurationMinutes, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task GetTravelTime_WhenRoomIsNotPublic_ShouldReturnNotFoundWithoutRouting()
+    {
+        _factory.RoomRepository.Upsert(new Room
+        {
+            Id = "hidden-routing-room",
+            Latitude = 21.0285,
+            Longitude = 105.8542,
+            Status = RoomStatus.Pending,
+            IsVerified = false
+        });
+
+        var response = await _client.GetAsync(
+            "/api/rooms/hidden-routing-room/travel-time?destinationLatitude=21.0368&destinationLongitude=105.8342");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+    }
+
+    [Test]
+    public async Task RoutingEndpoints_WhenSharedIpExceedsPermitLimit_ShouldReturnTooManyRequests()
+    {
+        using var rateLimitedFactory = new AuthWebApplicationFactory(routingPermitLimit: 1);
+        using var rateLimitedClient = rateLimitedFactory.CreateClient();
+        rateLimitedFactory.RoomRepository.Upsert(new Room
+        {
+            Id = "rate-limited-routing-room",
+            Latitude = 21.0285,
+            Longitude = 105.8542,
+            Status = RoomStatus.Available,
+            IsVerified = true
+        });
+
+        var firstResponse = await rateLimitedClient.PostAsJsonAsync(
+            "/api/routing",
+            new RouteRequest(21.0285, 105.8542, 21.0368, 105.8342));
+        var throttledResponse = await rateLimitedClient.GetAsync(
+            "/api/rooms/rate-limited-routing-room/travel-time?destinationLatitude=21.0368&destinationLongitude=105.8342");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(firstResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(throttledResponse.StatusCode, Is.EqualTo(HttpStatusCode.TooManyRequests));
         });
     }
 

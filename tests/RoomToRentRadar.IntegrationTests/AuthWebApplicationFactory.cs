@@ -19,6 +19,7 @@ public sealed class AuthWebApplicationFactory : WebApplicationFactory<Program>
     public const string TestAudience = "RoomToRentRadar.Client";
 
     private readonly int _authPermitLimit;
+    private readonly int _routingPermitLimit;
 
     public StubGoogleIdentityVerifier GoogleVerifier { get; } = new();
 
@@ -28,9 +29,10 @@ public sealed class AuthWebApplicationFactory : WebApplicationFactory<Program>
 
     public StubRoutingProvider RoutingProvider { get; } = new();
 
-    public AuthWebApplicationFactory(int authPermitLimit = 100)
+    public AuthWebApplicationFactory(int authPermitLimit = 100, int routingPermitLimit = 100)
     {
         _authPermitLimit = authPermitLimit;
+        _routingPermitLimit = routingPermitLimit;
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -50,6 +52,8 @@ public sealed class AuthWebApplicationFactory : WebApplicationFactory<Program>
                 ["GoogleAuth:ClientId"] = "test-google-client-id.apps.googleusercontent.com",
                 ["RateLimiting:AuthPermitLimit"] = _authPermitLimit.ToString(),
                 ["RateLimiting:AuthWindowSeconds"] = "60",
+                ["RateLimiting:RoutingPermitLimit"] = _routingPermitLimit.ToString(),
+                ["RateLimiting:RoutingWindowSeconds"] = "60",
                 ["KycStorage:AccountName"] = "devstoreaccount1",
                 ["KycStorage:AccountKey"] = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
                 ["KycStorage:ContainerName"] = "kyc",

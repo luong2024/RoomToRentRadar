@@ -87,7 +87,12 @@ public sealed class OsrmRoutingProvider : IRoutingProvider
             throw new JsonException($"OSRM returned status '{code}'.");
         }
 
-        if (!root.TryGetProperty("routes", out var routesElement) || routesElement.ValueKind != JsonValueKind.Array || routesElement.GetArrayLength() == 0)
+        if (!root.TryGetProperty("routes", out var routesElement) || routesElement.ValueKind != JsonValueKind.Array)
+        {
+            throw new JsonException("OSRM response did not include a valid routes array.");
+        }
+
+        if (routesElement.GetArrayLength() == 0)
         {
             return null;
         }

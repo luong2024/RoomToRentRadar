@@ -73,9 +73,34 @@ public class RoutingServiceTests
     [Test]
     public void GetRouteForRoomAsync_WhenRoomHasNoCoordinates_ShouldThrowValidationException()
     {
-        _roomRepository.Room = new Room { Id = "room-1" };
+        _roomRepository.Room = new Room
+        {
+            Id = "room-1",
+            Status = RoomStatus.Available,
+            IsVerified = true
+        };
 
         Assert.ThrowsAsync<ValidationException>(() => _service.GetRouteForRoomAsync("room-1", 21.0368, 105.8342));
+    }
+
+    [TestCase(RoomStatus.Pending, true)]
+    [TestCase(RoomStatus.UnderMaintenance, true)]
+    [TestCase(RoomStatus.Available, false)]
+    public void GetRouteForRoomAsync_WhenRoomIsNotPublic_ShouldHideItAndSkipRoutingProvider(
+        RoomStatus status,
+        bool isVerified)
+    {
+        _roomRepository.Room = new Room
+        {
+            Id = "room-1",
+            Latitude = 21.0285,
+            Longitude = 105.8542,
+            Status = status,
+            IsVerified = isVerified
+        };
+
+        Assert.ThrowsAsync<NotFoundException>(() => _service.GetRouteForRoomAsync("room-1", 21.0368, 105.8342));
+        Assert.That(_routingProvider.CallCount, Is.Zero);
     }
 
     [Test]
@@ -95,9 +120,11 @@ public class RoutingServiceTests
         public Exception? Exception { get; set; }
         public GeoLocation? Origin { get; private set; }
         public GeoLocation? Destination { get; private set; }
+        public int CallCount { get; private set; }
 
         public Task<RoutingProviderResult?> GetRouteAsync(GeoLocation origin, GeoLocation destination, CancellationToken cancellationToken = default)
         {
+            CallCount++;
             Origin = origin;
             Destination = destination;
             if (Exception is not null)

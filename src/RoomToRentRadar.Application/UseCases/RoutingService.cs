@@ -2,6 +2,7 @@ using RoomToRentRadar.Application.DTOs;
 using RoomToRentRadar.Application.Exceptions;
 using RoomToRentRadar.Application.Ports.Inbound;
 using RoomToRentRadar.Application.Ports.Outbound;
+using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.ValueObjects;
 
 namespace RoomToRentRadar.Application.UseCases;
@@ -42,6 +43,11 @@ public sealed class RoutingService : IRoutingService
 
         var room = await _roomRepository.GetByIdAsync(roomId.Trim(), cancellationToken)
             ?? throw new NotFoundException($"Room with ID '{roomId.Trim()}' was not found.");
+
+        if (room.Status != RoomStatus.Available || !room.IsVerified)
+        {
+            throw new NotFoundException("Room is not available for routing.");
+        }
 
         var origin = CreateLocation(room.Latitude, room.Longitude, "room");
         var destination = CreateLocation(destinationLatitude, destinationLongitude, "destination");
