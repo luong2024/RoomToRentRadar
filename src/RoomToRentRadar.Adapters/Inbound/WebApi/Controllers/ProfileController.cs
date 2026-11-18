@@ -85,7 +85,11 @@ public sealed class ProfileController : ControllerBase
             request.FullName, request.PhoneNumber, request.AvatarUrl, request.Bio,
             request.StudentId, request.University, request.Faculty, request.DateOfBirth,
             request.Gender, request.EmergencyContactName, request.EmergencyContactPhone,
-            request.MaxBudget);
+            request.MaxBudget,
+            request.IsStudentIdSpecified,
+            request.IsUniversitySpecified,
+            request.IsFacultySpecified,
+            request.IsMaxBudgetSpecified);
 
         var result = await _updateTenantProfileUseCase.ExecuteAsync(userId, command, cancellationToken);
         return Ok(result);

@@ -8,6 +8,7 @@ using RoomToRentRadar.Core.Localization;
 using RoomToRentRadar.Core.Models.Authentication;
 using RoomToRentRadar.Features.Authentication.Views;
 using RoomToRentRadar.Features.Home.Views;
+using RoomToRentRadar.Features.Profile.Views;
 using RoomToRentRadar.Features.RoomListings.Views;
 using RoomToRentRadar.Infrastructure.Services;
 using Font = Microsoft.Maui.Font;
@@ -16,7 +17,7 @@ namespace RoomToRentRadar
 {
     public partial class AppShell : Shell
     {
-        private readonly IAuthenticationSessionService? _sessionService;
+        private IAuthenticationSessionService? _sessionService;
         private readonly IRouteGuardService? _routeGuardService;
         private bool _isRedirecting;
 
@@ -31,7 +32,6 @@ namespace RoomToRentRadar
             InitializeComponent();
             _sessionService = sessionService;
             _routeGuardService = routeGuardService;
-
             Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(Features.RoomDetails.Views.RoomDetailPage));
             Routing.RegisterRoute(AppRoutes.RoomDetails, typeof(RoomDetailsPage));
 
@@ -48,8 +48,9 @@ namespace RoomToRentRadar
             HomePage homePage,
             RoomListingsPage roomListingsPage,
             AuthPage authPage,
-            IAuthenticationSessionService? sessionService = null,
-            IRouteGuardService? routeGuardService = null)
+            ProfilePage profilePage,
+            IAuthenticationSessionService sessionService,
+            IRouteGuardService routeGuardService)
         {
             InitializeComponent();
             _sessionService = sessionService;
@@ -58,6 +59,7 @@ namespace RoomToRentRadar
             HomeShellContent.Content = homePage;
             RoomListingsShellContent.Content = roomListingsPage;
             AuthShellContent.Content = authPage;
+            ProfileShellContent.Content = profilePage;
 
             Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(Features.RoomDetails.Views.RoomDetailPage));
             Routing.RegisterRoute(AppRoutes.RoomDetails, typeof(RoomDetailsPage));
@@ -154,13 +156,15 @@ namespace RoomToRentRadar
 
         private void OnCurrentUserChanged(object? sender, AuthUser? user)
         {
-            if (user != null || _routeGuardService == null)
-            {
-                return;
-            }
-
             MainThread.BeginInvokeOnMainThread(async () =>
             {
+                UpdateProfileVisibility();
+
+                if (user != null || _routeGuardService == null)
+                {
+                    return;
+                }
+
                 if (_isRedirecting || Current?.CurrentState?.Location == null)
                 {
                     return;
@@ -257,6 +261,23 @@ namespace RoomToRentRadar
                 VietnameseCheckmark.IsVisible = false;
             }
         }
+
+        public void ConfigureSession(IAuthenticationSessionService sessionService)
+        {
+            if (ReferenceEquals(_sessionService, sessionService)) return;
+
+            if (_sessionService is not null)
+            {
+                _sessionService.CurrentUserChanged -= OnCurrentUserChanged;
+            }
+
+            _sessionService = sessionService;
+            _sessionService.CurrentUserChanged += OnCurrentUserChanged;
+            UpdateProfileVisibility();
+        }
+
+        private void UpdateProfileVisibility() =>
+            ProfileShellContent.IsVisible = _sessionService?.IsAuthenticated == true;
 
         public void UpdateDesktopPaneCompactState(bool isCompact)
         {

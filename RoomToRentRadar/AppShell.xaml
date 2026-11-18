@@ -8,6 +8,7 @@
     xmlns:loc="clr-namespace:RoomToRentRadar.Core.Localization"
     xmlns:authViews="clr-namespace:RoomToRentRadar.Features.Authentication.Views"
     xmlns:roomViews="clr-namespace:RoomToRentRadar.Features.RoomListings.Views"
+    xmlns:profileViews="clr-namespace:RoomToRentRadar.Features.Profile.Views"
     Title="Trọ ICTU"
     FlyoutBackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource DesktopRailBackgroundDark}}"
     FlyoutVerticalScrollMode="{OnPlatform WinUI=Disabled, Default=Auto}"
@@ -215,6 +216,14 @@
             SemanticProperties.Description="Sign In and Sign Up"
             SemanticProperties.Hint="Navigate to authentication" />
     </FlyoutItem>
+
+    <ShellContent
+        x:Name="ProfileShellContent"
+        Title="Hồ sơ"
+        Icon="{StaticResource IconProjects}"
+        Route="profile"
+        SemanticProperties.Description="View and edit your profile"
+        SemanticProperties.Hint="Open your profile" />
 
     <Shell.FlyoutFooter>
         <VerticalStackLayout

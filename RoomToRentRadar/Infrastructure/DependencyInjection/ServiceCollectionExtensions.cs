@@ -9,6 +9,9 @@ using RoomToRentRadar.Features.RoomDetails.Views;
 using RoomToRentRadar.Features.RoomListings.Services;
 using RoomToRentRadar.Features.RoomListings.ViewModels;
 using RoomToRentRadar.Features.RoomListings.Views;
+using RoomToRentRadar.Features.Profile.Services;
+using RoomToRentRadar.Features.Profile.ViewModels;
+using RoomToRentRadar.Features.Profile.Views;
 using RoomToRentRadar.Infrastructure.Adapters;
 using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Infrastructure.Services;
@@ -55,6 +58,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IRouteGuardService, RouteGuardService>();
 
         services.AddSingleton<IGoogleAuthAdapter, GoogleAuthAdapter>();
+        services.AddSingleton<IProfileService, ProfileService>();
+        services.AddSingleton<IProfileUiThreadDispatcher, MauiProfileUiThreadDispatcher>();
         services.AddSingleton<IRoomDetailService, RoomDetailService>();
         return services;
     }
@@ -71,6 +76,8 @@ public static class ServiceCollectionExtensions
         services.AddTransient<RoomListingsPage>();
         services.AddTransient<RoomDetailsViewModel>();
         services.AddTransient<RoomDetailsPage>();
+        services.AddTransient<ProfileViewModel>();
+        services.AddTransient<ProfilePage>();
 
         services.AddTransient<RoomDetailViewModel>();
         services.AddTransient<RoomDetailPage>();

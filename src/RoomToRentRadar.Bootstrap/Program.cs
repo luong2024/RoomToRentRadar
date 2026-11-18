@@ -18,6 +18,10 @@ builder.Services
 var app = builder.Build();
 
 app.UseExceptionHandler();
+// Android emulators access the development host through 10.0.2.2. Redirecting
+// HTTP to the localhost development certificate changes that host and breaks the
+// TLS handshake. Keep HTTPS mandatory outside Development, while allowing the
+// explicitly configured HTTP development endpoint (port 49966).
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
