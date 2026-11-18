@@ -192,4 +192,86 @@ public class RoomDetailEndpointIntegrationTests
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.That(body.RootElement.GetProperty("errorCode").GetString(), Is.EqualTo("ROOM_NOT_FOUND"));
     }
+
+    [Test]
+    public async Task GetRoomById_WhenRoomIsPendingReview_EnforcesOwnershipAccess()
+    {
+        // Arrange (BR-LST-04a / anti-IDOR)
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<RoomToRentRadar.Datastore.Sqlite.Context.SqliteDbContext>();
+            var conn = db.CreateOpenConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "UPDATE Rooms SET Status = 'PendingReview' WHERE Id = 'seed-z115';";
+            cmd.ExecuteNonQuery();
+        }
+
+        // Act 1: Anonymous caller receives 404
+        var anonResponse = await _client.GetAsync("/api/rooms/seed-z115");
+        Assert.That(anonResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        using (var body = JsonDocument.Parse(await anonResponse.Content.ReadAsStringAsync()))
+        {
+            Assert.That(body.RootElement.GetProperty("errorCode").GetString(), Is.EqualTo("ROOM_NOT_FOUND"));
+        }
+
+        // Act 2: Owner caller receives 200
+        var ownerToken = GenerateJwt("seed-landlord", role: "Landlord");
+        var ownerRequest = new HttpRequestMessage(HttpMethod.Get, "/api/rooms/seed-z115");
+        ownerRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ownerToken);
+        var ownerResponse = await _client.SendAsync(ownerRequest);
+
+        // Assert
+        Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        // Cleanup
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<RoomToRentRadar.Datastore.Sqlite.Context.SqliteDbContext>();
+            var conn = db.CreateOpenConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "UPDATE Rooms SET Status = 'Available' WHERE Id = 'seed-z115';";
+            cmd.ExecuteNonQuery();
+        }
+    }
+
+    [Test]
+    public async Task GetSimilarRooms_WhenTargetRoomIsPendingReview_EnforcesOwnershipAccess()
+    {
+        // Arrange (BR-LST-04a / anti-IDOR)
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<RoomToRentRadar.Datastore.Sqlite.Context.SqliteDbContext>();
+            var conn = db.CreateOpenConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "UPDATE Rooms SET Status = 'PendingReview' WHERE Id = 'seed-z115';";
+            cmd.ExecuteNonQuery();
+        }
+
+        // Act 1: Anonymous caller receives 404
+        var anonResponse = await _client.GetAsync("/api/rooms/seed-z115/similar");
+        Assert.That(anonResponse.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        using (var body = JsonDocument.Parse(await anonResponse.Content.ReadAsStringAsync()))
+        {
+            Assert.That(body.RootElement.GetProperty("errorCode").GetString(), Is.EqualTo("ROOM_NOT_FOUND"));
+        }
+
+        // Act 2: Owner caller receives 200
+        var ownerToken = GenerateJwt("seed-landlord", role: "Landlord");
+        var ownerRequest = new HttpRequestMessage(HttpMethod.Get, "/api/rooms/seed-z115/similar");
+        ownerRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ownerToken);
+        var ownerResponse = await _client.SendAsync(ownerRequest);
+
+        // Assert
+        Assert.That(ownerResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        // Cleanup
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<RoomToRentRadar.Datastore.Sqlite.Context.SqliteDbContext>();
+            var conn = db.CreateOpenConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "UPDATE Rooms SET Status = 'Available' WHERE Id = 'seed-z115';";
+            cmd.ExecuteNonQuery();
+        }
+    }
 }

@@ -202,6 +202,50 @@ public class GetRoomDetailUseCaseTests
         Assert.That(ex!.ErrorCode, Is.EqualTo(ProblemCodes.RoomNotFound));
     }
 
+    [TestCase(ListingStatus.PendingReview)]
+    [TestCase(ListingStatus.Rejected)]
+    [TestCase(ListingStatus.Suspended)]
+    public async Task ExecuteAsync_WhenRoomIsNonPublicAndCallerIsOwner_ReturnsRoomDetails(ListingStatus hiddenStatus)
+    {
+        // Arrange (BR-LST-04a: Owner can view their own non-public listing)
+        var room = CreateSampleRoom(status: hiddenStatus);
+        var landlord = CreateSampleLandlord();
+        _roomRepository.GetByIdAsync("room-001", Arg.Any<CancellationToken>()).Returns(room);
+        _userRepository.GetByIdAsync("landlord-001", Arg.Any<CancellationToken>()).Returns(landlord);
+        _currentUserContext.IsAuthenticated.Returns(true);
+        _currentUserContext.UserId.Returns(room.LandlordId);
+        _currentUserContext.Role.Returns("Landlord");
+
+        // Act
+        var result = await _sut.ExecuteAsync("room-001");
+
+        // Assert
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result.Status, Is.EqualTo(hiddenStatus));
+    }
+
+    [TestCase(ListingStatus.PendingReview)]
+    [TestCase(ListingStatus.Rejected)]
+    [TestCase(ListingStatus.Suspended)]
+    public async Task ExecuteAsync_WhenRoomIsNonPublicAndCallerIsAdmin_ReturnsRoomDetails(ListingStatus hiddenStatus)
+    {
+        // Arrange (BR-LST-04a: Admin can view non-public listing)
+        var room = CreateSampleRoom(status: hiddenStatus);
+        var landlord = CreateSampleLandlord();
+        _roomRepository.GetByIdAsync("room-001", Arg.Any<CancellationToken>()).Returns(room);
+        _userRepository.GetByIdAsync("landlord-001", Arg.Any<CancellationToken>()).Returns(landlord);
+        _currentUserContext.IsAuthenticated.Returns(true);
+        _currentUserContext.UserId.Returns("admin-999");
+        _currentUserContext.Role.Returns("Admin");
+
+        // Act
+        var result = await _sut.ExecuteAsync("room-001");
+
+        // Assert
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result.Status, Is.EqualTo(hiddenStatus));
+    }
+
     [Test]
     public void ExecuteAsync_WhenRoomDoesNotExist_ThrowsRoomNotFound()
     {
