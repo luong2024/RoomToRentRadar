@@ -736,11 +736,26 @@ public sealed class CosmosDbInitializer
                     listing.Id,
                     new PartitionKey(listing.Id),
                     cancellationToken);
-                if (existingDetail is not null &&
-                    (existingDetail.IsDeleted || existingDetail.ProjectionVersion > listing.ProjectionVersion))
+                if (existingDetail is not null)
                 {
-                    _logger.LogDebug("Skipped stale listing {RoomId} during startup synchronization.", listing.Id);
-                    continue;
+                    if (existingDetail.IsDeleted)
+                    {
+                        _logger.LogDebug("Skipped deleted room {RoomId} during startup synchronization.", listing.Id);
+                        continue;
+                    }
+
+                    if (existingDetail.ProjectionVersion > listing.ProjectionVersion)
+                    {
+                        _logger.LogDebug("Skipped stale listing {RoomId} during startup synchronization.", listing.Id);
+                        continue;
+                    }
+
+                    if (existingDetail.ProjectionVersion == listing.ProjectionVersion &&
+                        !HasListingFieldsDiverged(listing, existingDetail))
+                    {
+                        _logger.LogDebug("Skipped up-to-date room {RoomId} with matching projection version {Version}.", listing.Id, listing.ProjectionVersion);
+                        continue;
+                    }
                 }
 
                 var detail = RoomDocument.MergeListingFields(listing, existingDetail);
@@ -773,6 +788,22 @@ public sealed class CosmosDbInitializer
         }
 
         _logger.LogInformation("Synchronized {Count} room detail records from Cosmos listings.", synchronizedCount);
+    }
+
+    private static bool HasListingFieldsDiverged(RoomListingDocument listing, RoomDocument detail)
+    {
+        if (!string.Equals(detail.Title, listing.Title, StringComparison.Ordinal)) return true;
+        if (!string.Equals(detail.Description, listing.Description, StringComparison.Ordinal)) return true;
+        if (detail.Price != listing.MonthlyRentAmount) return true;
+        if (detail.Area != listing.AreaSquareMeters) return true;
+        if (!string.Equals(detail.Address, listing.Address, StringComparison.Ordinal)) return true;
+        if (!string.Equals(detail.ThumbnailUrl, listing.ThumbnailUrl, StringComparison.Ordinal)) return true;
+        if (detail.IsVerified != (listing.VerificationStatus == 2)) return true;
+        if (detail.Status != listing.Status) return true;
+        if (detail.Latitude != listing.Latitude) return true;
+        if (detail.Longitude != listing.Longitude) return true;
+
+        return false;
     }
 
     private static int MapLegacyStatusToListingStatus(int? legacyStatus) => legacyStatus switch
