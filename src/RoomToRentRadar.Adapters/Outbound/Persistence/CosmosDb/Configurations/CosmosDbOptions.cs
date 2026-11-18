@@ -32,6 +32,8 @@ public sealed class CosmosDbOptions
 
     public string UserProfilesContainerName { get; set; } = "UserProfiles";
 
+    public string FavouritesContainerName { get; set; } = "Favourites";
+
     private string _roomsContainerName = "Rooms";
     private string? _containerName;
 

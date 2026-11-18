@@ -2,12 +2,17 @@ using System.Text;
 using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Core.Models.Authentication;
+using RoomToRentRadar.Infrastructure.Services;
 
 namespace RoomToRentRadar.Features.Authentication.ViewModels;
 
 public partial class AuthViewModel : ObservableObject
+#if ANDROID || IOS || MACCATALYST || WINDOWS
+    , IQueryAttributable
+#endif
 {
     private static readonly Regex EmailRegex = new(
         @"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$",
@@ -16,15 +21,18 @@ public partial class AuthViewModel : ObservableObject
     private readonly IAuthenticationPort _authenticationPort;
     private readonly IGoogleAuthAdapter _googleAuthAdapter;
     private readonly IAuthenticationSessionService _sessionService;
+    private readonly IRouteGuardService _routeGuardService;
 
     public AuthViewModel(
         IAuthenticationPort authenticationPort,
         IGoogleAuthAdapter googleAuthAdapter,
-        IAuthenticationSessionService sessionService)
+        IAuthenticationSessionService sessionService,
+        IRouteGuardService? routeGuardService = null)
     {
         _authenticationPort = authenticationPort;
         _googleAuthAdapter = googleAuthAdapter;
         _sessionService = sessionService;
+        _routeGuardService = routeGuardService ?? new RouteGuardService(sessionService);
     }
 
     [ObservableProperty]
@@ -47,6 +55,9 @@ public partial class AuthViewModel : ObservableObject
 
     [ObservableProperty]
     public partial string? SuccessMessage { get; set; }
+
+    [ObservableProperty]
+    public partial string? ReturnUrl { get; set; }
 
     // Login fields
     [ObservableProperty]
@@ -117,9 +128,47 @@ public partial class AuthViewModel : ObservableObject
 
     public Func<Task>? NavigateToHomeHandler { get; set; }
 
+    public Func<string, Task>? NavigateToRouteHandler { get; set; }
+
     public Func<Task>? FlipToLoginHandler { get; set; }
 
     public Func<AuthUser, Task>? OnAuthenticationSuccessHandler { get; set; }
+
+    /// <summary>
+    /// Single decode point for the inbound returnUrl query parameter.
+    /// </summary>
+    public void ApplyQueryAttributes(IDictionary<string, object> query)
+    {
+        if (query is null)
+        {
+            return;
+        }
+
+        if ((query.TryGetValue("returnUrl", out var rawReturnUrl) ||
+             query.TryGetValue("redirect", out rawReturnUrl)) &&
+            rawReturnUrl is not null)
+        {
+            var rawString = rawReturnUrl.ToString();
+            ReturnUrl = string.IsNullOrWhiteSpace(rawString)
+                ? null
+                : UnescapeQueryParameterOnce(rawString.Trim());
+        }
+    }
+
+    private static string UnescapeQueryParameterOnce(string value)
+    {
+        try
+        {
+            return Uri.UnescapeDataString(value);
+        }
+        catch
+        {
+            return value;
+        }
+    }
+
+    public string GetPostLoginRedirectRoute(AuthUser user) =>
+        _routeGuardService.ResolvePostLoginRedirectRoute(ReturnUrl, user);
 
     [RelayCommand]
     public void ToggleForm()
@@ -144,9 +193,14 @@ public partial class AuthViewModel : ObservableObject
     [RelayCommand]
     public async Task SkipAuthAsync()
     {
+        ReturnUrl = null;
         if (NavigateToHomeHandler != null)
         {
             await NavigateToHomeHandler.Invoke();
+        }
+        else if (NavigateToRouteHandler != null)
+        {
+            await NavigateToRouteHandler.Invoke($"//{AppRoutes.Home}");
         }
     }
 
@@ -207,9 +261,9 @@ public partial class AuthViewModel : ObservableObject
 
                 SetSuccess("Signed in successfully!");
 
-                if (OnAuthenticationSuccessHandler != null && result.User != null)
+                if (result.User != null)
                 {
-                    await OnAuthenticationSuccessHandler.Invoke(result.User);
+                    await HandlePostAuthenticationNavigationAsync(result.User);
                 }
             }
             else
@@ -304,9 +358,9 @@ public partial class AuthViewModel : ObservableObject
 
                 SetSuccess("Google sign-in successful!");
 
-                if (OnAuthenticationSuccessHandler != null && result.User != null)
+                if (result.User != null)
                 {
-                    await OnAuthenticationSuccessHandler.Invoke(result.User);
+                    await HandlePostAuthenticationNavigationAsync(result.User);
                 }
             }
             else if (result.RequiresRoleSelection || !string.IsNullOrWhiteSpace(result.PendingGoogleIdToken))
@@ -369,9 +423,9 @@ public partial class AuthViewModel : ObservableObject
 
                 SetSuccess("Account created and signed in with Google!");
 
-                if (OnAuthenticationSuccessHandler != null && result.User != null)
+                if (result.User != null)
                 {
-                    await OnAuthenticationSuccessHandler.Invoke(result.User);
+                    await HandlePostAuthenticationNavigationAsync(result.User);
                 }
             }
             else
@@ -386,6 +440,22 @@ public partial class AuthViewModel : ObservableObject
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    private async Task HandlePostAuthenticationNavigationAsync(AuthUser user)
+    {
+        var destinationRoute = GetPostLoginRedirectRoute(user);
+        ReturnUrl = null;
+
+        if (NavigateToRouteHandler != null)
+        {
+            await NavigateToRouteHandler.Invoke(destinationRoute);
+        }
+
+        if (OnAuthenticationSuccessHandler != null)
+        {
+            await OnAuthenticationSuccessHandler.Invoke(user);
         }
     }
 

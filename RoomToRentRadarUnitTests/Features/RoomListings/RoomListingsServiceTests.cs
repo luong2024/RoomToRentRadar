@@ -326,5 +326,8 @@ public class RoomListingsServiceTests
             var result = handler(endpoint);
             return Task.FromResult((TResponse?)result);
         }
+
+        public Task<TResponse?> PutAsync<TRequest, TResponse>(string endpoint, TRequest request, CancellationToken cancellationToken = default) =>
+            Task.FromResult<TResponse?>(default);
     }
 }

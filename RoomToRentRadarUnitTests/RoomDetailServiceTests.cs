@@ -198,5 +198,8 @@ public class RoomDetailServiceTests
     {
         public Task<TResponse?> GetAsync<TResponse>(string endpoint, CancellationToken cancellationToken = default)
             => Task.FromResult((TResponse?)handler(endpoint));
+
+        public Task<TResponse?> PutAsync<TRequest, TResponse>(string endpoint, TRequest request, CancellationToken cancellationToken = default)
+            => Task.FromResult<TResponse?>(default);
     }
 }

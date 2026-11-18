@@ -31,19 +31,144 @@ public class CosmosRoomRepository : IRoomRepository
             return null;
         }
 
+        var trimmedId = id.Trim();
+
         try
         {
             ItemResponse<RoomDocument> response = await _container.ReadItemAsync<RoomDocument>(
-                id: id,
-                partitionKey: new PartitionKey(id),
+                id: trimmedId,
+                partitionKey: new PartitionKey(trimmedId),
                 cancellationToken: cancellationToken);
 
-            return response.Resource is { IsDeleted: false } document ? document.ToDomain() : null;
+            if (response?.Resource is { IsDeleted: false } document)
+            {
+                return document.ToDomain();
+            }
+
+            if (response?.Resource is { IsDeleted: true })
+            {
+                return null;
+            }
         }
         catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
+            // Fall through to case-insensitive lookup when exact-case point read misses
+        }
+
+        var fallbackQuery = new QueryDefinition(
+            "SELECT TOP 1 * FROM c WHERE STRINGEQUALS(c.id, @id, true) AND (NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false)")
+            .WithParameter("@id", trimmedId);
+
+        using var iterator = _container.GetItemQueryIterator<RoomDocument>(
+            fallbackQuery,
+            requestOptions: new QueryRequestOptions { MaxItemCount = 1 });
+
+        if (iterator is null)
+        {
             return null;
         }
+
+        while (iterator.HasMoreResults)
+        {
+            var page = await iterator.ReadNextAsync(cancellationToken);
+            var match = page.FirstOrDefault(d => !d.IsDeleted);
+            if (match is not null)
+            {
+                return match.ToDomain();
+            }
+        }
+
+        return null;
+    }
+
+    public async Task<IReadOnlyList<Room>> GetByIdsAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default)
+    {
+        if (ids is null || ids.Count == 0)
+        {
+            return Array.Empty<Room>();
+        }
+
+        var distinctIds = ids
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => id.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (distinctIds.Length == 0)
+        {
+            return Array.Empty<Room>();
+        }
+
+        var query = new QueryDefinition(
+            "SELECT * FROM c WHERE ARRAY_CONTAINS(@ids, c.id) AND (NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false)")
+            .WithParameter("@ids", distinctIds);
+
+        var requestOptions = new QueryRequestOptions
+        {
+            MaxItemCount = distinctIds.Length
+        };
+
+        var results = new List<Room>(distinctIds.Length);
+        var foundIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        using (var iterator = _container.GetItemQueryIterator<RoomDocument>(query, requestOptions: requestOptions))
+        {
+            if (iterator is not null)
+            {
+                while (iterator.HasMoreResults)
+                {
+                    var response = await iterator.ReadNextAsync(cancellationToken);
+                    foreach (var doc in response)
+                    {
+                        if (!doc.IsDeleted && foundIds.Add(doc.Id))
+                        {
+                            results.Add(doc.ToDomain());
+                        }
+                    }
+                }
+            }
+        }
+
+        var unmatchedIds = distinctIds
+            .Where(id => !foundIds.Contains(id))
+            .ToArray();
+
+        if (unmatchedIds.Length > 0)
+        {
+            var clauses = new List<string>(unmatchedIds.Length);
+            for (var i = 0; i < unmatchedIds.Length; i++)
+            {
+                clauses.Add($"STRINGEQUALS(c.id, @id{i}, true)");
+            }
+
+            var fallbackSql = $"SELECT * FROM c WHERE ({string.Join(" OR ", clauses)}) AND (NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false)";
+            var fallbackQuery = new QueryDefinition(fallbackSql);
+            for (var i = 0; i < unmatchedIds.Length; i++)
+            {
+                fallbackQuery = fallbackQuery.WithParameter($"@id{i}", unmatchedIds[i]);
+            }
+
+            using var fallbackIterator = _container.GetItemQueryIterator<RoomDocument>(
+                fallbackQuery,
+                requestOptions: new QueryRequestOptions { MaxItemCount = unmatchedIds.Length });
+
+            if (fallbackIterator is not null)
+            {
+                while (fallbackIterator.HasMoreResults)
+                {
+                    var response = await fallbackIterator.ReadNextAsync(cancellationToken);
+                    foreach (var doc in response)
+                    {
+                        if (!doc.IsDeleted && foundIds.Add(doc.Id))
+                        {
+                            results.Add(doc.ToDomain());
+                        }
+                    }
+                }
+            }
+        }
+
+        return results;
     }
 
     public async Task<IReadOnlyList<Room>> GetSimilarRoomsAsync(string roomId, decimal price, double area, CancellationToken cancellationToken = default)

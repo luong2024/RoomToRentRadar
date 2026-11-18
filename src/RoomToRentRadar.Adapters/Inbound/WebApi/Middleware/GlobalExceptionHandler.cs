@@ -63,6 +63,12 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                 validationEx.Message,
                 new Dictionary<string, object?> { ["errors"] = validationEx.Errors }),
 
+            ValidationException queryValidationEx => (
+                StatusCodes.Status400BadRequest,
+                "Validation Failed",
+                queryValidationEx.Message,
+                new Dictionary<string, object?> { ["errors"] = queryValidationEx.Errors }),
+
             InvalidEmailException emailEx => (
                 StatusCodes.Status400BadRequest,
                 "Invalid Email Address",
@@ -133,6 +139,12 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                 StatusCodes.Status401Unauthorized,
                 "Account Inactive",
                 inactiveEx.Message,
+                null),
+
+            NotFoundException resourceNotFoundEx => (
+                StatusCodes.Status404NotFound,
+                "Resource Not Found",
+                resourceNotFoundEx.Message,
                 null),
 
             ProfileNotFoundException notFoundEx => (

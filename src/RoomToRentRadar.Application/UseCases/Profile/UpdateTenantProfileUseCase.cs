@@ -22,6 +22,8 @@ public sealed class UpdateTenantProfileUseCase : IUpdateTenantProfileUseCase
 
     public async Task<UserProfileDto> ExecuteAsync(Guid userId, UpdateTenantCommand command, CancellationToken cancellationToken = default)
     {
+        UserProfile.ValidateAvatarUrl(command.AvatarUrl);
+
         var now = _timeProvider.GetUtcNow();
         var existingProfile = await _repository.GetByUserIdAsync(
             userId,
@@ -38,9 +40,12 @@ public sealed class UpdateTenantProfileUseCase : IUpdateTenantProfileUseCase
         var phone = PhoneNumber.CreateOptional(command.PhoneNumber);
         profile.UpdateBasicInfo(command.FullName, phone, command.AvatarUrl, command.Bio, now);
 
-        var emergencyPhone = PhoneNumber.CreateOptional(command.EmergencyContactPhone);
+        var existingTenant = profile.Tenant;
+        var emergencyPhone = command.EmergencyContactPhone is null
+            ? existingTenant?.EmergencyContactPhone
+            : PhoneNumber.CreateOptional(command.EmergencyContactPhone);
 
-        var gender = Gender.Unspecified;
+        var gender = existingTenant?.Gender ?? Gender.Unspecified;
         if (!string.IsNullOrWhiteSpace(command.Gender))
         {
             if (Enum.TryParse<Gender>(command.Gender, true, out var g) && Enum.IsDefined(typeof(Gender), g))
@@ -68,14 +73,14 @@ public sealed class UpdateTenantProfileUseCase : IUpdateTenantProfileUseCase
         }
 
         var tenantDetails = new TenantDetails(
-            command.StudentId,
-            command.University ?? "ICTU",
-            command.Faculty,
-            command.DateOfBirth,
+            ResolveOptional(command.StudentId, command.IsStudentIdSpecified, existingTenant?.StudentId),
+            ResolveOptional(command.University, command.IsUniversitySpecified, existingTenant?.University ?? "ICTU"),
+            ResolveOptional(command.Faculty, command.IsFacultySpecified, existingTenant?.Faculty),
+            command.DateOfBirth ?? existingTenant?.DateOfBirth,
             gender,
-            command.EmergencyContactName,
+            command.EmergencyContactName ?? existingTenant?.EmergencyContactName,
             emergencyPhone,
-            command.MaxBudget);
+            ResolveOptional(command.MaxBudget, command.IsMaxBudgetSpecified, existingTenant?.MaxBudget));
 
         profile.UpdateTenantDetails(tenantDetails, now);
 
@@ -93,4 +98,10 @@ public sealed class UpdateTenantProfileUseCase : IUpdateTenantProfileUseCase
 
         return GetMyProfileUseCase.MapToDto(profile);
     }
+
+    private static T? ResolveOptional<T>(T? value, bool isSpecified, T? existingValue)
+        where T : class => isSpecified || value is not null ? value : existingValue;
+
+    private static decimal? ResolveOptional(decimal? value, bool isSpecified, decimal? existingValue) =>
+        isSpecified || value.HasValue ? value : existingValue;
 }

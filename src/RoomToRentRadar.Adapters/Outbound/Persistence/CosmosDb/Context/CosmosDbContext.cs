@@ -12,15 +12,19 @@ public sealed class CosmosDbContext : ICosmosDbContext
     private readonly CosmosDbOptions _options;
     private readonly bool _isInMemory;
     private readonly bool _ownsCosmosClient;
+    private readonly SemaphoreSlim _favouritesInitLock = new(1, 1);
+    private volatile bool _favouritesContainerEnsured;
 
     private readonly ICosmosContainer<UserDocument> _usersContainer;
     private readonly ICosmosContainer<RefreshTokenDocument> _refreshTokensContainer;
     private readonly ICosmosContainer<EmailIndexDocument> _emailIndexContainer;
     private readonly ICosmosContainer<ExternalLoginIndexDocument> _externalLoginIndexContainer;
     private readonly ICosmosContainer<UserProfileDocument> _userProfilesContainer;
+    private readonly ICosmosContainer<FavouriteDocument> _favouritesContainer;
     private readonly Container? _roomsCosmosContainer;
 
     public const string PartitionKeyPath = "/id";
+    public const string FavouritesPartitionKeyPath = "/userId";
     public const string UniqueTokenHashPath = "/tokenHash";
 
     public CosmosDbContext(IOptions<CosmosDbOptions> options)
@@ -49,7 +53,9 @@ public sealed class CosmosDbContext : ICosmosDbContext
             _emailIndexContainer = new InMemoryCosmosContainer<EmailIndexDocument>();
             _externalLoginIndexContainer = new InMemoryCosmosContainer<ExternalLoginIndexDocument>();
             _userProfilesContainer = new InMemoryCosmosContainer<UserProfileDocument>();
+            _favouritesContainer = new InMemoryCosmosContainer<FavouriteDocument>();
             _roomsCosmosContainer = null;
+            _favouritesContainerEnsured = true;
         }
         else
         {
@@ -114,11 +120,16 @@ public sealed class CosmosDbContext : ICosmosDbContext
 
             _cosmosClient = sharedCosmosClient ?? new CosmosClient(options.AccountEndpoint, authKey, clientOptions);
             _ownsCosmosClient = sharedCosmosClient is null;
+            var favouritesContainerName = string.IsNullOrWhiteSpace(options.FavouritesContainerName)
+                ? "Favourites"
+                : options.FavouritesContainerName;
+
             var usersCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.UsersContainerName);
             var refreshTokensCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.RefreshTokensContainerName);
             var emailIndexCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.EmailIndexContainerName);
             var externalLoginIndexCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.ExternalLoginIndexContainerName);
             var userProfilesCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.UserProfilesContainerName);
+            var favouritesCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, favouritesContainerName);
             _roomsCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.RoomsContainerName);
 
             _usersContainer = new CosmosContainer<UserDocument>(usersCosmosContainer);
@@ -126,6 +137,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
             _emailIndexContainer = new CosmosContainer<EmailIndexDocument>(emailIndexCosmosContainer);
             _externalLoginIndexContainer = new CosmosContainer<ExternalLoginIndexDocument>(externalLoginIndexCosmosContainer);
             _userProfilesContainer = new CosmosContainer<UserProfileDocument>(userProfilesCosmosContainer);
+            _favouritesContainer = new CosmosContainer<FavouriteDocument>(favouritesCosmosContainer);
         }
     }
 
@@ -139,6 +151,8 @@ public sealed class CosmosDbContext : ICosmosDbContext
 
     public ICosmosContainer<UserProfileDocument> UserProfiles => _userProfilesContainer;
 
+    public ICosmosContainer<FavouriteDocument> Favourites => _favouritesContainer;
+
     public Container? RoomsContainer => _roomsCosmosContainer;
 
     public CosmosClient? Client => _cosmosClient;
@@ -150,6 +164,34 @@ public sealed class CosmosDbContext : ICosmosDbContext
             AccountEndpoint = "in-memory",
             DatabaseName = "RoomToRentRadarDb"
         });
+    }
+
+    public async Task EnsureFavouritesContainerAsync(CancellationToken cancellationToken = default)
+    {
+        if (_isInMemory || _cosmosClient is null || _favouritesContainerEnsured)
+        {
+            return;
+        }
+
+        await _favouritesInitLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (_favouritesContainerEnsured)
+            {
+                return;
+            }
+
+            var databaseResponse = await _cosmosClient.CreateDatabaseIfNotExistsAsync(
+                _options.DatabaseName,
+                cancellationToken: cancellationToken);
+
+            await EnsureFavouritesContainerOnDatabaseAsync(databaseResponse.Database, cancellationToken);
+            _favouritesContainerEnsured = true;
+        }
+        finally
+        {
+            _favouritesInitLock.Release();
+        }
     }
 
     public async Task EnsureDatabaseAndContainersAsync(CancellationToken cancellationToken = default)
@@ -229,6 +271,9 @@ public sealed class CosmosDbContext : ICosmosDbContext
 
         await EnsureUserProfileCompositeIndexesAsync(userProfilesResponse.Container, userProfilesResponse.Resource, cancellationToken);
 
+        await EnsureFavouritesContainerOnDatabaseAsync(database, cancellationToken);
+        _favouritesContainerEnsured = true;
+
         var roomsContainerName = string.IsNullOrWhiteSpace(_options.RoomsContainerName) ? "Rooms" : _options.RoomsContainerName;
         var roomsContainerProperties = new ContainerProperties(roomsContainerName, PartitionKeyPath);
         roomsContainerProperties.IndexingPolicy.SpatialIndexes.Add(new SpatialPath
@@ -247,6 +292,42 @@ public sealed class CosmosDbContext : ICosmosDbContext
             cancellationToken: cancellationToken);
 
         await EnsureRoomsSpatialIndexesAsync(roomsResponse.Container, roomsResponse.Resource, cancellationToken);
+    }
+
+    private async Task EnsureFavouritesContainerOnDatabaseAsync(
+        Database database,
+        CancellationToken cancellationToken)
+    {
+        var favouritesContainerName = string.IsNullOrWhiteSpace(_options.FavouritesContainerName)
+            ? "Favourites"
+            : _options.FavouritesContainerName;
+
+        var favouritesContainerProperties = new ContainerProperties(favouritesContainerName, FavouritesPartitionKeyPath)
+        {
+            UniqueKeyPolicy = new UniqueKeyPolicy
+            {
+                UniqueKeys =
+                {
+                    new UniqueKey { Paths = { "/userId", "/roomId" } }
+                }
+            },
+            IndexingPolicy = new IndexingPolicy
+            {
+                CompositeIndexes =
+                {
+                    new Collection<CompositePath>
+                    {
+                        new CompositePath { Path = "/userId", Order = CompositePathSortOrder.Ascending },
+                        new CompositePath { Path = "/createdAtUtc", Order = CompositePathSortOrder.Descending },
+                        new CompositePath { Path = "/roomId", Order = CompositePathSortOrder.Ascending }
+                    }
+                }
+            }
+        };
+
+        await database.CreateContainerIfNotExistsAsync(
+            favouritesContainerProperties,
+            cancellationToken: cancellationToken);
     }
 
     private static async Task EnsureRoomsSpatialIndexesAsync(
@@ -316,6 +397,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
 
     public void Dispose()
     {
+        _favouritesInitLock.Dispose();
         if (_ownsCosmosClient)
         {
             _cosmosClient?.Dispose();

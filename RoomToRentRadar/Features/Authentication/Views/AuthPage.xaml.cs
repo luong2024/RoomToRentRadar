@@ -1,3 +1,4 @@
+using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Features.Authentication.ViewModels;
 
 namespace RoomToRentRadar.Features.Authentication.Views;
@@ -25,14 +26,14 @@ public partial class AuthPage : ContentPage
         {
             if (Shell.Current != null)
             {
-                await Shell.Current.GoToAsync("//home");
+                await Shell.Current.GoToAsync($"//{AppRoutes.Home}");
             }
         };
-        viewModel.OnAuthenticationSuccessHandler = async (user) =>
+        viewModel.NavigateToRouteHandler = async (targetRoute) =>
         {
-            if (Shell.Current != null)
+            if (Shell.Current != null && !string.IsNullOrWhiteSpace(targetRoute))
             {
-                await Shell.Current.GoToAsync("//home");
+                await Shell.Current.GoToAsync(targetRoute);
             }
         };
         viewModel.FlipToLoginHandler = async () =>
