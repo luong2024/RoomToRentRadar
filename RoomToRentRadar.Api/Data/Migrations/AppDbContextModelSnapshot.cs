@@ -181,7 +181,7 @@ namespace RoomToRentRadar.Api.Data.Migrations
 
                             t.HasCheckConstraint("ck_listings_room_type", "room_type IN ('single_room', 'shared_room', 'studio', 'apartment', 'house')");
 
-                            t.HasCheckConstraint("ck_listings_status", "status IN ('draft', 'published', 'hidden', 'removed')");
+                            t.HasCheckConstraint("ck_listings_status", "status IN ('draft', 'pending_review', 'published', 'hidden', 'removed')");
                         });
                 });
 
@@ -434,7 +434,7 @@ namespace RoomToRentRadar.Api.Data.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("previous_report_status");
 
-                    b.Property<Guid>("ReportId")
+                    b.Property<Guid?>("ReportId")
                         .HasColumnType("TEXT")
                         .HasColumnName("report_id");
 
@@ -455,7 +455,7 @@ namespace RoomToRentRadar.Api.Data.Migrations
 
                     b.ToTable("moderation_audit_logs", null, t =>
                         {
-                            t.HasCheckConstraint("ck_moderation_audit_logs_action", "action IN ('claim', 'release', 'resolve')");
+                            t.HasCheckConstraint("ck_moderation_audit_logs_action", "action IN ('claim', 'release', 'resolve', 'approve')");
 
                             t.HasCheckConstraint("ck_moderation_audit_logs_next_status", "next_report_status IS NULL OR next_report_status IN ('open', 'in_review', 'resolved', 'dismissed')");
 
@@ -736,8 +736,7 @@ namespace RoomToRentRadar.Api.Data.Migrations
                     b.HasOne("RoomToRentRadar.Api.Domain.ListingReport", null)
                         .WithMany()
                         .HasForeignKey("ReportId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("RoomToRentRadar.Api.Domain.Notification", b =>

@@ -1,5 +1,9 @@
+using System.Reflection;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.FileProviders;
@@ -66,6 +70,53 @@ builder.Services.AddOpenApi(options =>
             };
         }
 
+        document.Components ??= new OpenApiComponents();
+        document.Components.SecuritySchemes = new Dictionary<string, IOpenApiSecurityScheme>
+        {
+            ["Bearer"] = new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "opaque",
+                Description = "Send the access token returned by POST /api/v1/auth/login."
+            }
+        };
+
+        foreach (var description in context.DescriptionGroups.SelectMany(group => group.Items))
+        {
+            if (!RequiresAuthorization(description)
+                || string.IsNullOrEmpty(description.RelativePath)
+                || description.HttpMethod is null)
+            {
+                continue;
+            }
+
+            var path = "/" + description.RelativePath.TrimStart('/');
+            document.Paths.TryGetValue(path, out var pathItem);
+            if (pathItem is null)
+            {
+                continue;
+            }
+
+            var operations = pathItem.Operations;
+            if (operations is null)
+            {
+                continue;
+            }
+
+            operations.TryGetValue(new HttpMethod(description.HttpMethod), out var operation);
+            if (operation is null)
+            {
+                continue;
+            }
+
+            operation.Security ??= [];
+            operation.Security.Add(new OpenApiSecurityRequirement
+            {
+                [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+            });
+        }
+
         return Task.CompletedTask;
     });
 });
@@ -78,6 +129,7 @@ builder.Services.AddCors(options =>
 });
 builder.Services.AddScoped<ListingsQueryService>();
 builder.Services.AddScoped<ListingCandidatePageBuilder>();
+builder.Services.AddScoped<ListingManagementService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services
     .AddAuthentication(BearerTokenAuthenticationHandler.SchemeName)
@@ -95,6 +147,7 @@ builder.Services.AddSingleton(serviceProvider => PhotoStorageOptions.Resolve(
     serviceProvider.GetRequiredService<IHostEnvironment>().ContentRootPath));
 builder.Services.AddSingleton<PhotoStorage>();
 builder.Services.AddSingleton<PhotoProcessor>();
+builder.Services.AddSingleton<ListingPhotoWriter>();
 builder.Services.AddScoped<ListingPhotosService>();
 builder.Services.AddScoped<AreaSearchQueryService>();
 builder.Services.Configure<AlertsOptions>(
@@ -157,5 +210,16 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+static bool RequiresAuthorization(ApiDescription description)
+{
+    if (description.ActionDescriptor is not ControllerActionDescriptor action)
+    {
+        return false;
+    }
+
+    return action.MethodInfo.GetCustomAttributes(inherit: true).OfType<IAuthorizeData>().Any()
+        || action.ControllerTypeInfo.GetCustomAttributes(inherit: true).OfType<IAuthorizeData>().Any();
+}
 
 public partial class Program;

@@ -14,7 +14,7 @@ public sealed class ModerationAuditLogConfiguration : IEntityTypeConfiguration<M
         {
             table.HasCheckConstraint(
                 "ck_moderation_audit_logs_action",
-                "action IN ('claim', 'release', 'resolve')");
+                "action IN ('claim', 'release', 'resolve', 'approve')");
             table.HasCheckConstraint(
                 "ck_moderation_audit_logs_resolution_action",
                 "resolution_action IS NULL OR resolution_action IN "
@@ -65,10 +65,12 @@ public sealed class ModerationAuditLogConfiguration : IEntityTypeConfiguration<M
             .WithMany()
             .HasForeignKey(x => x.ListingId)
             .OnDelete(DeleteBehavior.Restrict);
+        // Listing approval happens without a report, so the report link is optional.
         builder.HasOne<ListingReport>()
             .WithMany()
             .HasForeignKey(x => x.ReportId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Restrict)
+            .IsRequired(false);
         builder.HasOne<User>()
             .WithMany()
             .HasForeignKey(x => x.ActorUserId)

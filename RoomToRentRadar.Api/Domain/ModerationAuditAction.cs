@@ -4,7 +4,8 @@ public enum ModerationAuditAction
 {
     Claim,
     Release,
-    Resolve
+    Resolve,
+    Approve
 }
 
 /// <summary>Wire values for <see cref="ModerationAuditAction"/>.</summary>
@@ -13,8 +14,9 @@ public static class ModerationAuditActionWire
     public const string Claim = "claim";
     public const string Release = "release";
     public const string Resolve = "resolve";
+    public const string Approve = "approve";
 
-    public static readonly IReadOnlyList<string> All = [Claim, Release, Resolve];
+    public static readonly IReadOnlyList<string> All = [Claim, Release, Resolve, Approve];
 
     public static bool TryParse(string? value, out ModerationAuditAction action)
     {
@@ -29,6 +31,9 @@ public static class ModerationAuditActionWire
             case Resolve:
                 action = ModerationAuditAction.Resolve;
                 return true;
+            case Approve:
+                action = ModerationAuditAction.Approve;
+                return true;
             default:
                 action = default;
                 return false;
@@ -40,6 +45,7 @@ public static class ModerationAuditActionWire
         ModerationAuditAction.Claim => Claim,
         ModerationAuditAction.Release => Release,
         ModerationAuditAction.Resolve => Resolve,
+        ModerationAuditAction.Approve => Approve,
         _ => throw new ArgumentOutOfRangeException(nameof(action), action, null)
     };
 

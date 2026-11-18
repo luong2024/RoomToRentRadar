@@ -16,23 +16,9 @@ public sealed class ListingStatusConverter : ValueConverter<ListingStatus, strin
     {
     }
 
-    public static string ToWireValue(ListingStatus status) => status switch
-    {
-        ListingStatus.Draft => "draft",
-        ListingStatus.Published => "published",
-        ListingStatus.Hidden => "hidden",
-        ListingStatus.Removed => "removed",
-        _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
-    };
+    public static string ToWireValue(ListingStatus status) => ListingStatusWire.ToWireValue(status);
 
-    public static ListingStatus FromWireValue(string value) => value switch
-    {
-        "draft" => ListingStatus.Draft,
-        "published" => ListingStatus.Published,
-        "hidden" => ListingStatus.Hidden,
-        "removed" => ListingStatus.Removed,
-        _ => throw new InvalidOperationException($"Unknown listing status '{value}'.")
-    };
+    public static ListingStatus FromWireValue(string value) => ListingStatusWire.FromWireValue(value);
 }
 
 public sealed class RoomTypeConverter : ValueConverter<RoomType, string>

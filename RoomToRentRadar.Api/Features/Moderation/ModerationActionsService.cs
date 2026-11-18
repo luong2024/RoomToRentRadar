@@ -277,6 +277,60 @@ public sealed class ModerationActionsService(AppDbContext dbContext)
         return ModerationActionOutcome.Success;
     }
 
+    public async Task<ModerationActionOutcome> ApproveListingAsync(
+        Guid listingId,
+        Guid actorId,
+        CancellationToken cancellationToken)
+    {
+        var listing = await dbContext.Listings
+            .AsNoTracking()
+            .Where(candidate => candidate.Id == listingId)
+            .Select(candidate => new { candidate.Version, candidate.Status })
+            .SingleOrDefaultAsync(cancellationToken);
+        if (listing is null)
+        {
+            return ModerationActionOutcome.ListingNotFound;
+        }
+
+        if (listing.Status == ListingStatus.Published)
+        {
+            return ModerationActionOutcome.Success;
+        }
+
+        if (listing.Status != ListingStatus.PendingReview)
+        {
+            return ModerationActionOutcome.InvalidListingTransition;
+        }
+
+        var now = DateTime.UtcNow;
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+        var listingUpdated = await dbContext.Listings
+            .Where(candidate => candidate.Id == listingId && candidate.Version == listing.Version)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(candidate => candidate.Status, ListingStatus.Published)
+                    .SetProperty(candidate => candidate.UpdatedAt, now)
+                    .SetProperty(candidate => candidate.Version, candidate => candidate.Version + 1),
+                cancellationToken);
+        if (listingUpdated == 0)
+        {
+            return ModerationActionOutcome.ResolutionConflict;
+        }
+
+        dbContext.ModerationAuditLogs.Add(new ModerationAuditLog
+        {
+            Id = Guid.NewGuid(),
+            ActorUserId = actorId,
+            Action = ModerationAuditAction.Approve,
+            ListingId = listingId,
+            CreatedAt = now
+        });
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return ModerationActionOutcome.Success;
+    }
+
     private IQueryable<ListingReport> ActiveReports(Guid listingId)
         => dbContext.ListingReports.Where(report => report.ListingId == listingId
             && (report.Status == ListingReportStatus.Open

@@ -7,6 +7,12 @@ namespace RoomToRentRadar.Api.Data.Configurations;
 
 public sealed class ListingConfiguration : IEntityTypeConfiguration<Listing>
 {
+    public const int MaximumTitleLength = 200;
+    public const int MaximumDescriptionLength = 4000;
+    public const int MaximumAddressLength = 300;
+    public const int MaximumLandlordNameLength = 120;
+    public const int MaximumLandlordPhoneLength = 20;
+
     public void Configure(EntityTypeBuilder<Listing> builder)
     {
         builder.ToTable("listings", table =>
@@ -16,7 +22,7 @@ public sealed class ListingConfiguration : IEntityTypeConfiguration<Listing>
             table.HasCheckConstraint("ck_listings_bedrooms_non_negative", "bedrooms >= 0");
             table.HasCheckConstraint(
                 "ck_listings_status",
-                "status IN ('draft', 'published', 'hidden', 'removed')");
+                "status IN ('draft', 'pending_review', 'published', 'hidden', 'removed')");
             table.HasCheckConstraint(
                 "ck_listings_room_type",
                 "room_type IN ("
@@ -27,8 +33,11 @@ public sealed class ListingConfiguration : IEntityTypeConfiguration<Listing>
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasColumnName("id");
 
-        builder.Property(x => x.Title).HasColumnName("title").HasMaxLength(200).IsRequired();
-        builder.Property(x => x.Description).HasColumnName("description").HasMaxLength(4000).IsRequired();
+        builder.Property(x => x.Title).HasColumnName("title").HasMaxLength(MaximumTitleLength).IsRequired();
+        builder.Property(x => x.Description)
+            .HasColumnName("description")
+            .HasMaxLength(MaximumDescriptionLength)
+            .IsRequired();
         builder.Property(x => x.Price).HasColumnName("price");
         builder.Property(x => x.Deposit).HasColumnName("deposit");
         builder.Property(x => x.AreaM2).HasColumnName("area_m2");
@@ -38,7 +47,10 @@ public sealed class ListingConfiguration : IEntityTypeConfiguration<Listing>
             .HasMaxLength(30)
             .HasConversion<RoomTypeConverter>()
             .IsRequired();
-        builder.Property(x => x.Address).HasColumnName("address").HasMaxLength(300).IsRequired();
+        builder.Property(x => x.Address)
+            .HasColumnName("address")
+            .HasMaxLength(MaximumAddressLength)
+            .IsRequired();
         builder.Property(x => x.Lat).HasColumnName("lat");
         builder.Property(x => x.Lng).HasColumnName("lng");
         builder.Property(x => x.Status)
@@ -50,8 +62,14 @@ public sealed class ListingConfiguration : IEntityTypeConfiguration<Listing>
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
         builder.Property(x => x.Version).HasColumnName("version").HasDefaultValue(0L);
         builder.Property(x => x.OwnerId).HasColumnName("owner_id");
-        builder.Property(x => x.LandlordName).HasColumnName("landlord_name").HasMaxLength(120).IsRequired();
-        builder.Property(x => x.LandlordPhone).HasColumnName("landlord_phone").HasMaxLength(20).IsRequired();
+        builder.Property(x => x.LandlordName)
+            .HasColumnName("landlord_name")
+            .HasMaxLength(MaximumLandlordNameLength)
+            .IsRequired();
+        builder.Property(x => x.LandlordPhone)
+            .HasColumnName("landlord_phone")
+            .HasMaxLength(MaximumLandlordPhoneLength)
+            .IsRequired();
 
         // Each index matches one whitelisted sort: equality on status, then the
         // sort key in the requested direction, then id as the unique tie-breaker.

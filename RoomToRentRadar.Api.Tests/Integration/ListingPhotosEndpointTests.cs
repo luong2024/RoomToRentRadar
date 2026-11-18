@@ -6,8 +6,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using RoomToRentRadar.Api.Data;
 using RoomToRentRadar.Api.Domain;
+using RoomToRentRadar.Api.Features.Auth;
 using RoomToRentRadar.Api.Features.Photos;
 using RoomToRentRadar.Api.Tests.Infrastructure;
+using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.Shared.Listings;
 using RoomToRentRadar.Shared.Serialization;
 
@@ -18,6 +20,7 @@ public sealed class ListingPhotosEndpointTests
 {
     private ListingsApiFactory _factory = null!;
     private HttpClient _client = null!;
+    private string _token = null!;
 
     [OneTimeSetUp]
     public async Task OneTimeSetUp()
@@ -34,6 +37,10 @@ public sealed class ListingPhotosEndpointTests
         await using var scope = _factory.Services.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await TestListingsSeed.SeedAsync(dbContext);
+        var owner = await TestUsersSeed.SeedAsync(dbContext);
+        await dbContext.Listings.ExecuteUpdateAsync(
+            setters => setters.SetProperty(listing => listing.OwnerId, owner.Id));
+        _token = await LoginAsync(TestUsersSeed.Email, TestUsersSeed.Password);
     }
 
     [OneTimeTearDown]
@@ -197,6 +204,75 @@ public sealed class ListingPhotosEndpointTests
     }
 
     [Test]
+    public async Task GetGallery_DraftListingAnonymous_ReturnsListingUnavailableProblem()
+    {
+        var listingId = TestListingsSeed.IdFor(20);
+
+        var response = await GetGalleryAsync(listingId, token: null);
+
+        var problem = await ReadProblemAsync(response, HttpStatusCode.Gone);
+        Assert.That(
+            problem.GetProperty("code").GetString(),
+            Is.EqualTo(PhotoProblemFactory.ListingUnavailable));
+    }
+
+    [Test]
+    public async Task GetGallery_HiddenListingAnonymous_ReturnsListingUnavailableProblem()
+    {
+        var listingId = TestListingsSeed.IdFor(22);
+
+        var response = await GetGalleryAsync(listingId, token: null);
+
+        var problem = await ReadProblemAsync(response, HttpStatusCode.Gone);
+        Assert.That(
+            problem.GetProperty("code").GetString(),
+            Is.EqualTo(PhotoProblemFactory.ListingUnavailable));
+    }
+
+    [Test]
+    public async Task GetGallery_DraftListingForOwner_ReturnsPhotos()
+    {
+        var listingId = TestListingsSeed.IdFor(20);
+
+        var response = await GetGalleryAsync(listingId, _token);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var photos = await ReadPhotosAsync(response);
+        Assert.That(photos, Has.Count.EqualTo(1));
+    }
+
+    [Test]
+    public async Task Upload_Anonymous_ReturnsUnauthorizedProblem()
+    {
+        using var multipart = CreateMultipart(
+            (TestImageFactory.CreateJpeg(400, 300), "image/jpeg", "a.jpg"));
+
+        var response = await PostPhotosAsync(TestListingsSeed.IdFor(1), multipart, token: null);
+
+        var problem = await ReadProblemAsync(response, HttpStatusCode.Unauthorized);
+        Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo("unauthorized"));
+    }
+
+    [Test]
+    public async Task Upload_ByNonOwner_ReturnsListingNotFoundProblem()
+    {
+        var listingId = TestListingsSeed.IdFor(1);
+        var otherToken = await SeedSecondUserAndLoginAsync();
+        using var multipart = CreateMultipart(
+            (TestImageFactory.CreateJpeg(400, 300), "image/jpeg", "a.jpg"));
+
+        var response = await PostPhotosAsync(listingId, multipart, otherToken);
+
+        var problem = await ReadProblemAsync(response, HttpStatusCode.NotFound);
+        var rows = await GetPhotoRowsAsync(listingId);
+        Assert.Multiple(() =>
+        {
+            Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo(PhotoProblemFactory.ListingNotFound));
+            Assert.That(rows, Is.Empty);
+        });
+    }
+
+    [Test]
     public async Task Upload_UnknownListing_ReturnsListingNotFoundProblem()
     {
         var response = await UploadAsync(
@@ -216,7 +292,7 @@ public sealed class ListingPhotosEndpointTests
             { new StringContent("photo"), "kind" }
         };
 
-        var response = await _client.PostAsync($"/api/v1/listings/{listingId}/photos", multipart);
+        var response = await PostPhotosAsync(listingId, multipart, _token);
 
         var problem = await ReadProblemAsync(response, HttpStatusCode.BadRequest);
         Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo(PhotoProblemFactory.EmptyUpload));
@@ -301,7 +377,7 @@ public sealed class ListingPhotosEndpointTests
         params (byte[] Content, string ContentType, string FileName)[] files)
     {
         using var multipart = CreateMultipart(files);
-        return await _client.PostAsync($"/api/v1/listings/{listingId}/photos", multipart);
+        return await PostPhotosAsync(listingId, multipart, _token);
     }
 
     private async Task<HttpResponseMessage> UploadWithKindAsync(
@@ -311,7 +387,74 @@ public sealed class ListingPhotosEndpointTests
     {
         using var multipart = CreateMultipart(files);
         multipart.Add(new StringContent(kind), "kind");
-        return await _client.PostAsync($"/api/v1/listings/{listingId}/photos", multipart);
+        return await PostPhotosAsync(listingId, multipart, _token);
+    }
+
+    private async Task<HttpResponseMessage> PostPhotosAsync(
+        Guid listingId,
+        HttpContent content,
+        string? token)
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"/api/v1/listings/{listingId}/photos")
+        {
+            Content = content
+        };
+
+        if (token is not null)
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+
+        return await _client.SendAsync(request);
+    }
+
+    private async Task<HttpResponseMessage> GetGalleryAsync(Guid listingId, string? token)
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/api/v1/listings/{listingId}/photos");
+
+        if (token is not null)
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+
+        return await _client.SendAsync(request);
+    }
+
+    private async Task<string> LoginAsync(string email, string password)
+    {
+        var response = await _client.PostAsJsonAsync(
+            "/api/v1/auth/login",
+            new LoginRequest(email, password),
+            ApiJson.Options);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        var login = await response.Content.ReadFromJsonAsync<LoginResponse>(ApiJson.Options);
+        Assert.That(login, Is.Not.Null);
+        return login!.AccessToken;
+    }
+
+    private async Task<string> SeedSecondUserAndLoginAsync()
+    {
+        const string email = "other@example.test";
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var (hash, salt) = PasswordHasher.Hash(TestUsersSeed.Password);
+        dbContext.Users.Add(new User
+        {
+            Id = Guid.NewGuid(),
+            Email = email,
+            DisplayName = "Other Landlord",
+            PasswordHash = hash,
+            PasswordSalt = salt,
+            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+        });
+        await dbContext.SaveChangesAsync();
+
+        return await LoginAsync(email, TestUsersSeed.Password);
     }
 
     private static MultipartFormDataContent CreateMultipart(
