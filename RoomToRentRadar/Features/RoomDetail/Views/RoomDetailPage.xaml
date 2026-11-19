@@ -7,12 +7,31 @@
              xmlns:cards="clr-namespace:Syncfusion.Maui.Toolkit.Cards;assembly=Syncfusion.Maui.Toolkit"
              xmlns:progressBar="clr-namespace:Syncfusion.Maui.Toolkit.ProgressBar;assembly=Syncfusion.Maui.Toolkit"
              xmlns:shimmer="clr-namespace:Syncfusion.Maui.Toolkit.Shimmer;assembly=Syncfusion.Maui.Toolkit"
+             xmlns:sheet="clr-namespace:Syncfusion.Maui.Toolkit.BottomSheet;assembly=Syncfusion.Maui.Toolkit"
+             xmlns:report="clr-namespace:RoomToRentRadar.Features.RoomReport.ViewModels"
              x:Class="RoomToRentRadar.Features.RoomDetail.Views.RoomDetailPage"
              x:DataType="viewModels:RoomDetailViewModel"
              Title="Chi tiết phòng"
              Shell.NavBarIsVisible="False"
              SafeAreaEdges="All">
 
+    <sheet:SfBottomSheet x:Name="ReportSheet"
+                         IsOpen="{Binding Report.IsOpen, Mode=TwoWay}"
+                         AllowedState="FullExpanded"
+                         FullExpandedRatio="0.94"
+                         IsModal="True"
+                         ShowGrabber="True"
+                         GrabberWidth="40"
+                         GrabberHeight="4"
+                         GrabberAreaHeight="20"
+                         EnableSwiping="True"
+                         SwipeFromHeaderOnly="True"
+                         CollapseOnOverlayTap="True"
+                         CornerRadius="26,26,0,0"
+                         ContentPadding="0"
+                         AnimationDuration="200"
+                         Background="{AppThemeBinding Light={StaticResource SurfaceBrush}, Dark={StaticResource SurfaceDarkBrush}}">
+        <sheet:SfBottomSheet.Content>
     <Grid RowDefinitions="*,Auto" RowSpacing="0">
         <!-- Skeleton Loading State -->
         <shimmer:SfShimmer IsVisible="{Binding IsLoadingVisible}"
@@ -293,6 +312,14 @@
                     </VerticalStackLayout>
                 </Border>
 
+                <buttons:SfButton Text="Báo cáo tin đăng"
+                                  Command="{Binding OpenReportCommand}"
+                                  Style="{StaticResource TextActionButton}"
+                                  HorizontalOptions="Center"
+                                  AutomationId="ReportListingAction"
+                                  SemanticProperties.Description="Báo cáo tin đăng này với kiểm duyệt viên"
+                                  SemanticProperties.Hint="Mở biểu mẫu báo cáo tin đăng" />
+
                 <Label Text="Đăng nhập để xem số điện thoại và trao đổi trực tiếp với chủ phòng."
                        IsVisible="{Binding IsSignInPromptVisible}" Style="{StaticResource Caption}"
                        HorizontalTextAlignment="Center" Margin="0,2,0,6" />
@@ -419,4 +446,199 @@
             </VerticalStackLayout>
         </cards:SfCardView>
     </Grid>
+        </sheet:SfBottomSheet.Content>
+
+        <sheet:SfBottomSheet.BottomSheetContent>
+            <Grid BindingContext="{Binding Report}"
+                  SafeAreaEdges="All">
+                <Grid x:Name="ReportSheetRoot"
+                      x:DataType="report:RoomReportViewModel"
+                      RowDefinitions="Auto,*,Auto">
+                    <Grid Padding="20,0,16,12"
+                          ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout Spacing="3"
+                                             VerticalOptions="Center">
+                            <Label Text="Báo cáo tin đăng"
+                                   Style="{StaticResource ScreenTitle}" />
+                            <Label Text="{Binding ListingTitle}"
+                                   Style="{StaticResource Caption}"
+                                   FontSize="12"
+                                   LineBreakMode="TailTruncation"
+                                   MaxLines="1" />
+                        </VerticalStackLayout>
+                        <buttons:SfButton Grid.Column="1"
+                                          Command="{Binding CloseCommand}"
+                                          Style="{StaticResource IconActionButton}"
+                                          SemanticProperties.Description="Đóng biểu mẫu báo cáo">
+                            <buttons:SfButton.Content>
+                                <DataTemplate x:DataType="report:RoomReportViewModel">
+                                    <Image Source="close_icon.png"
+                                           WidthRequest="22"
+                                           HeightRequest="22"
+                                           InputTransparent="True" />
+                                </DataTemplate>
+                            </buttons:SfButton.Content>
+                        </buttons:SfButton>
+                    </Grid>
+
+                    <ScrollView Grid.Row="1">
+                        <VerticalStackLayout Padding="20,4,20,20"
+                                             Spacing="18">
+                            <VerticalStackLayout Spacing="16"
+                                                 IsVisible="{Binding IsFormVisible}">
+                                <VerticalStackLayout Spacing="4">
+                                    <Label Text="Vì sao bạn báo cáo tin này?"
+                                           Style="{StaticResource SectionTitle}" />
+                                    <Label Text="Chọn lý do phù hợp nhất với vấn đề bạn gặp."
+                                           Style="{StaticResource Caption}"
+                                           FontSize="12" />
+                                </VerticalStackLayout>
+
+                                <VerticalStackLayout Spacing="8"
+                                                     BindableLayout.ItemsSource="{Binding Reasons}">
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate x:DataType="report:ReportReasonOption">
+                                            <Border Padding="14,11"
+                                                    StrokeThickness="1"
+                                                    Stroke="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}"
+                                                    StrokeShape="RoundRectangle 14"
+                                                    BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}"
+                                                    SemanticProperties.Description="{Binding Label}">
+                                                <Border.GestureRecognizers>
+                                                    <TapGestureRecognizer
+                                                        Command="{Binding BindingContext.SelectReasonCommand, Source={x:Reference ReportSheetRoot}}"
+                                                        CommandParameter="{Binding .}" />
+                                                </Border.GestureRecognizers>
+                                                <Border.Triggers>
+                                                    <DataTrigger TargetType="Border"
+                                                                 Binding="{Binding IsSelected}"
+                                                                 Value="True">
+                                                        <Setter Property="Stroke"
+                                                                Value="{StaticResource AccentBrush}" />
+                                                        <Setter Property="StrokeThickness"
+                                                                Value="2" />
+                                                        <Setter Property="BackgroundColor"
+                                                                Value="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}" />
+                                                    </DataTrigger>
+                                                </Border.Triggers>
+                                                <Grid ColumnDefinitions="*,Auto"
+                                                      ColumnSpacing="10">
+                                                    <VerticalStackLayout Spacing="2">
+                                                        <Label Text="{Binding Label}"
+                                                               FontFamily="OpenSansSemibold"
+                                                               FontSize="14" />
+                                                        <Label Text="{Binding Description}"
+                                                               Style="{StaticResource Caption}"
+                                                               FontSize="12" />
+                                                    </VerticalStackLayout>
+                                                    <Label Grid.Column="1"
+                                                           Text="✓"
+                                                           IsVisible="{Binding IsSelected}"
+                                                           FontFamily="OpenSansSemibold"
+                                                           TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}"
+                                                           VerticalOptions="Center" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </VerticalStackLayout>
+
+                                <VerticalStackLayout Spacing="6">
+                                    <Label Text="Ghi chú thêm (không bắt buộc)"
+                                           FontFamily="OpenSansSemibold"
+                                           FontSize="13" />
+                                    <Border StrokeThickness="1"
+                                            Stroke="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}"
+                                            StrokeShape="RoundRectangle 14"
+                                            Padding="10,4"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+                                        <Editor Text="{Binding Note}"
+                                                AutomationId="ReportNote"
+                                                HeightRequest="110"
+                                                FontSize="14"
+                                                AutoSize="Disabled"
+                                                Placeholder="Mô tả ngắn giúp kiểm duyệt viên xử lý nhanh hơn"
+                                                SemanticProperties.Description="Ghi chú thêm cho báo cáo, tối đa 1000 ký tự" />
+                                    </Border>
+                                    <Label Text="{Binding NoteLengthText}"
+                                           Style="{StaticResource Caption}"
+                                           FontSize="11"
+                                           HorizontalOptions="End" />
+                                </VerticalStackLayout>
+
+                                <Border IsVisible="{Binding HasStatusMessage}"
+                                        Padding="12"
+                                        StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 12"
+                                        BackgroundColor="{StaticResource DangerSoft}">
+                                    <Label Text="{Binding StatusMessage}"
+                                           FontSize="13"
+                                           TextColor="{StaticResource Danger}"
+                                           SemanticProperties.Description="{Binding StatusMessage}" />
+                                </Border>
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Spacing="12"
+                                                 IsVisible="{Binding IsSignInRequiredVisible}">
+                                <Label Text="Đăng nhập để gửi báo cáo"
+                                       Style="{StaticResource SectionTitle}" />
+                                <Label Text="Báo cáo được gắn với tài khoản của bạn để kiểm duyệt viên liên hệ khi cần."
+                                       Style="{StaticResource Caption}" />
+                                <Border IsVisible="{Binding HasStatusMessage}"
+                                        Padding="12"
+                                        StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 12"
+                                        BackgroundColor="{StaticResource DangerSoft}">
+                                    <Label Text="{Binding StatusMessage}"
+                                           FontSize="13"
+                                           TextColor="{StaticResource Danger}" />
+                                </Border>
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </ScrollView>
+
+                    <Border Grid.Row="2"
+                            StrokeShape="Rectangle"
+                            Padding="20,12,20,16"
+                            StrokeThickness="0">
+                        <Grid RowDefinitions="Auto,Auto"
+                              RowSpacing="8">
+                            <Grid ColumnDefinitions="Auto,*"
+                                  ColumnSpacing="16"
+                                  IsVisible="{Binding IsFormVisible}">
+                                <buttons:SfButton Text="Hủy"
+                                                  Command="{Binding CloseCommand}"
+                                                  Style="{StaticResource TextActionButton}"
+                                                  Padding="4,0"
+                                                  SemanticProperties.Description="Đóng biểu mẫu, không gửi báo cáo" />
+                                <buttons:SfButton Grid.Column="1"
+                                                  Text="{Binding SubmitButtonText}"
+                                                  Command="{Binding SubmitCommand}"
+                                                  IsEnabled="{Binding CanSubmit}"
+                                                  Style="{StaticResource PrimaryActionButton}"
+                                                  AutomationId="SubmitListingReport"
+                                                  SemanticProperties.Description="Gửi báo cáo tới kiểm duyệt viên" />
+                            </Grid>
+                            <Grid Grid.Row="1"
+                                  ColumnDefinitions="Auto,*"
+                                  ColumnSpacing="16"
+                                  IsVisible="{Binding IsSignInRequiredVisible}">
+                                <buttons:SfButton Text="Để sau"
+                                                  Command="{Binding CloseCommand}"
+                                                  Style="{StaticResource TextActionButton}"
+                                                  Padding="4,0"
+                                                  SemanticProperties.Description="Đóng biểu mẫu, không đăng nhập" />
+                                <buttons:SfButton Grid.Column="1"
+                                                  Text="Đăng nhập"
+                                                  Command="{Binding SignInCommand}"
+                                                  Style="{StaticResource PrimaryActionButton}"
+                                                  AutomationId="ReportSignIn"
+                                                  SemanticProperties.Description="Đăng nhập để gửi báo cáo" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+        </sheet:SfBottomSheet.BottomSheetContent>
+    </sheet:SfBottomSheet>
 </ContentPage>
