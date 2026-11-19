@@ -35,16 +35,14 @@ public class LocalizedStrings : INotifyPropertyChanged
 #if !UNIT_TESTS
 [ContentProperty(nameof(Key))]
 [AcceptEmptyServiceProvider]
-public class LocalizedStringsExtension : IMarkupExtension<string>
+public class LocalizedStringsExtension : IMarkupExtension<BindingBase>
 {
     public string Key { get; set; } = string.Empty;
 
-    public string ProvideValue(IServiceProvider serviceProvider)
+    public BindingBase ProvideValue(IServiceProvider serviceProvider)
     {
-        if (string.IsNullOrWhiteSpace(Key))
-            return string.Empty;
-
-        return AppResources.GetString(Key);
+        var path = string.IsNullOrWhiteSpace(Key) ? "." : $"[{Key}]";
+        return new Binding(path, source: LocalizedStrings.Instance);
     }
 
     object IMarkupExtension.ProvideValue(IServiceProvider serviceProvider)
