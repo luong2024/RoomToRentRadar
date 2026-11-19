@@ -1,6 +1,7 @@
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Features.Home.ViewModels;
 using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Services;
@@ -13,6 +14,7 @@ public enum RoomDetailTravelState
     NoCampus,
     Loading,
     Loaded,
+    ListingGone,
     Error
 }
 
@@ -28,6 +30,7 @@ public partial class RoomDetailTravelViewModel : ObservableObject
     private readonly ITravelEstimatesClient _travelClient;
     private readonly ICampusSelectionStore _campusStore;
     private readonly IMapsDirectionsLauncher _mapsLauncher;
+    private readonly IErrorHandler _errorHandler;
 
     private CancellationTokenSource? _loadCancellation;
     private Guid? _listingId;
@@ -39,11 +42,13 @@ public partial class RoomDetailTravelViewModel : ObservableObject
     public RoomDetailTravelViewModel(
         ITravelEstimatesClient travelClient,
         ICampusSelectionStore campusStore,
-        IMapsDirectionsLauncher mapsLauncher)
+        IMapsDirectionsLauncher mapsLauncher,
+        IErrorHandler errorHandler)
     {
         _travelClient = travelClient;
         _campusStore = campusStore;
         _mapsLauncher = mapsLauncher;
+        _errorHandler = errorHandler;
     }
 
     public IReadOnlyList<string> CampusNames { get; } =
@@ -53,6 +58,7 @@ public partial class RoomDetailTravelViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsNoCampusVisible))]
     [NotifyPropertyChangedFor(nameof(IsLoadingVisible))]
     [NotifyPropertyChangedFor(nameof(IsLoadedVisible))]
+    [NotifyPropertyChangedFor(nameof(IsListingGoneVisible))]
     [NotifyPropertyChangedFor(nameof(IsErrorVisible))]
     public partial RoomDetailTravelState State { get; set; }
 
@@ -68,6 +74,8 @@ public partial class RoomDetailTravelViewModel : ObservableObject
     public bool IsLoadingVisible => State == RoomDetailTravelState.Loading;
 
     public bool IsLoadedVisible => State == RoomDetailTravelState.Loaded;
+
+    public bool IsListingGoneVisible => State == RoomDetailTravelState.ListingGone;
 
     public bool IsErrorVisible => State == RoomDetailTravelState.Error;
 
@@ -125,66 +133,89 @@ public partial class RoomDetailTravelViewModel : ObservableObject
             return;
         }
 
-        await _mapsLauncher.OpenAsync(latitude, longitude, _destinationLabel);
+        if (!await _mapsLauncher.OpenAsync(latitude, longitude, _destinationLabel))
+        {
+            _errorHandler.HandleError(new InvalidOperationException(
+                "Không mở được ứng dụng bản đồ. Anh/Chị thử lại sau nhé."));
+        }
     }
 
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task LoadAsync()
     {
         _loadCancellation?.Cancel();
-        _loadCancellation?.Dispose();
         var cancellation = new CancellationTokenSource();
         _loadCancellation = cancellation;
 
-        var campus = HomeFilterOptions.Campuses.FirstOrDefault(
-            option => string.Equals(option.Name, SelectedCampusName, StringComparison.Ordinal));
-
-        if (_listingId is not { } listingId || campus is null)
-        {
-            Estimates = [];
-            State = RoomDetailTravelState.NoCampus;
-            return;
-        }
-
-        State = RoomDetailTravelState.Loading;
-
         try
         {
-            var result = await _travelClient.GetEstimatesAsync(
-                listingId,
-                campus.Lat,
-                campus.Lng,
-                cancellation.Token);
+            var campus = HomeFilterOptions.Campuses.FirstOrDefault(
+                option => string.Equals(option.Name, SelectedCampusName, StringComparison.Ordinal));
 
-            if (cancellation.IsCancellationRequested)
-            {
-                return;
-            }
-
-            if (result.Outcome == TravelEstimatesFetchOutcome.NotFound || result.Estimates is null)
+            if (_listingId is not { } listingId || campus is null)
             {
                 Estimates = [];
-                State = RoomDetailTravelState.Error;
+                State = RoomDetailTravelState.NoCampus;
                 return;
             }
 
-            Estimates = result.Estimates.Modes.Select(ToItem).ToList();
-            State = RoomDetailTravelState.Loaded;
-        }
-        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
-        {
-            // A newer request or a page exit replaced this one.
-        }
-        catch (Exception)
-        {
-            if (cancellation.IsCancellationRequested)
+            State = RoomDetailTravelState.Loading;
+
+            try
             {
-                return;
+                var result = await _travelClient.GetEstimatesAsync(
+                    listingId,
+                    campus.Lat,
+                    campus.Lng,
+                    cancellation.Token);
+
+                if (cancellation.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                if (result.Outcome == TravelEstimatesFetchOutcome.NotFound)
+                {
+                    Estimates = [];
+                    State = RoomDetailTravelState.ListingGone;
+                    return;
+                }
+
+                if (result.Estimates is null)
+                {
+                    Estimates = [];
+                    State = RoomDetailTravelState.Error;
+                    return;
+                }
+
+                Estimates = result.Estimates.Modes.Select(ToItem).ToList();
+                State = RoomDetailTravelState.Loaded;
+            }
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+            {
+                // A newer request or a page exit replaced this one.
+            }
+            catch (Exception)
+            {
+                if (cancellation.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                // The provider guarantees a fallback, so this only reflects an unreachable API.
+                Estimates = [];
+                State = RoomDetailTravelState.Error;
+            }
+        }
+        finally
+        {
+            // Disposing here guarantees the request that owns this source has finished.
+            if (ReferenceEquals(_loadCancellation, cancellation))
+            {
+                _loadCancellation = null;
             }
 
-            // The provider guarantees a fallback, so this only reflects an unreachable API.
-            Estimates = [];
-            State = RoomDetailTravelState.Error;
+            cancellation.Dispose();
         }
     }
 

@@ -172,6 +172,10 @@
                                 SemanticProperties.Description="Mở chỉ đường tới phòng bằng Google Maps"
                                 SemanticProperties.Hint="Mở ứng dụng bản đồ với toạ độ của phòng" />
 
+                        <Label Text="Phòng này không còn khả dụng nên không thể tính thời gian di chuyển."
+                               IsVisible="{Binding IsListingGoneVisible}"
+                               Style="{StaticResource Caption}" />
+
                         <VerticalStackLayout Spacing="8" IsVisible="{Binding IsErrorVisible}">
                             <Label Text="Chưa tải được thời gian di chuyển. Kiểm tra kết nối mạng rồi thử lại nhé."
                                    Style="{StaticResource Caption}" />

@@ -1,4 +1,5 @@
 using Microsoft.Maui.Storage;
+using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Features.RoomDetail.ViewModels;
 using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Services;
@@ -123,7 +124,7 @@ public class RoomDetailTravelViewModelTests
     }
 
     [Test]
-    public async Task LoadAsync_WhenListingIsGone_ShowsErrorState()
+    public async Task LoadAsync_WhenListingIsGone_ShowsListingGoneState()
     {
         var client = new FakeTravelEstimatesClient
         {
@@ -136,7 +137,9 @@ public class RoomDetailTravelViewModelTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(viewModel.State, Is.EqualTo(RoomDetailTravelState.Error));
+            Assert.That(viewModel.State, Is.EqualTo(RoomDetailTravelState.ListingGone));
+            Assert.That(viewModel.IsListingGoneVisible, Is.True);
+            Assert.That(viewModel.IsErrorVisible, Is.False);
             Assert.That(viewModel.Estimates, Is.Empty);
         });
     }
@@ -327,28 +330,39 @@ public class RoomDetailTravelViewModelTests
     }
 
     [Test]
-    public async Task OpenDirections_WhenLauncherCannotOpen_DoesNotThrow()
+    public async Task OpenDirections_WhenLauncherCannotOpen_NotifiesTheUser()
     {
         var client = new FakeTravelEstimatesClient { Result = FoundResult(RouteEstimate()) };
         var launcher = new FakeMapsDirectionsLauncher { Result = false };
+        var errorHandler = new FakeErrorHandler();
         var viewModel = CreateViewModel(
             client,
             new FakeCampusSelectionStore { SelectedCampus = "KHTN" },
-            launcher);
+            launcher,
+            errorHandler);
 
         viewModel.Initialize(ListingId, DestinationLat, DestinationLng, DestinationTitle);
         await AwaitAutoStartedLoadAsync(viewModel);
 
         await viewModel.OpenDirectionsCommand.ExecuteAsync(null);
 
-        Assert.That(launcher.Calls, Has.Count.EqualTo(1));
+        Assert.Multiple(() =>
+        {
+            Assert.That(launcher.Calls, Has.Count.EqualTo(1));
+            Assert.That(errorHandler.Errors, Has.Count.EqualTo(1));
+        });
     }
 
     private static RoomDetailTravelViewModel CreateViewModel(
         FakeTravelEstimatesClient client,
         FakeCampusSelectionStore store,
-        FakeMapsDirectionsLauncher? launcher = null)
-        => new(client, store, launcher ?? new FakeMapsDirectionsLauncher());
+        FakeMapsDirectionsLauncher? launcher = null,
+        FakeErrorHandler? errorHandler = null)
+        => new(
+            client,
+            store,
+            launcher ?? new FakeMapsDirectionsLauncher(),
+            errorHandler ?? new FakeErrorHandler());
 
     private static TravelEstimateDto RouteEstimate()
         => new(TravelMode.Motorbike, TravelSource.Route, 6200, 1080);
@@ -420,6 +434,13 @@ public class RoomDetailTravelViewModelTests
         }
 
         public sealed record Call(double Latitude, double Longitude, string? Label);
+    }
+
+    private sealed class FakeErrorHandler : IErrorHandler
+    {
+        public List<Exception> Errors { get; } = [];
+
+        public void HandleError(Exception ex) => Errors.Add(ex);
     }
 }
 

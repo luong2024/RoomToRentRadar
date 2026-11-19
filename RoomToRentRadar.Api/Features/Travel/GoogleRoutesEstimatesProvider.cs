@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
+using Polly.Timeout;
 using RoomToRentRadar.Shared.Travel;
 
 namespace RoomToRentRadar.Api.Features.Travel;
@@ -58,9 +59,24 @@ public sealed class GoogleRoutesEstimatesProvider(
         {
             throw;
         }
-        catch (Exception exception)
+        catch (OperationCanceledException exception)
         {
-            logger.LogWarning(exception, "Routes provider call failed.");
+            logger.LogWarning(exception, "Routes provider call timed out.");
+            return null;
+        }
+        catch (TimeoutRejectedException exception)
+        {
+            logger.LogWarning(exception, "Routes provider call timed out.");
+            return null;
+        }
+        catch (HttpRequestException exception)
+        {
+            logger.LogWarning(exception, "Routes provider request failed.");
+            return null;
+        }
+        catch (JsonException exception)
+        {
+            logger.LogWarning(exception, "Routes provider returned invalid JSON.");
             return null;
         }
     }

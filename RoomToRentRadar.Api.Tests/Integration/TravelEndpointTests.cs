@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using RoomToRentRadar.Api.Data;
@@ -45,6 +46,7 @@ public sealed class TravelEndpointTests
         await using var scope = _factory.Services.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await TestListingsSeed.SeedAsync(dbContext);
+        (_factory.Services.GetRequiredService<IMemoryCache>() as MemoryCache)?.Clear();
         _provider.Reset();
     }
 
@@ -321,6 +323,7 @@ public sealed class TravelEndpointFallbackWithoutKeyTests
         await using var scope = _factory.Services.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await TestListingsSeed.SeedAsync(dbContext);
+        (_factory.Services.GetRequiredService<IMemoryCache>() as MemoryCache)?.Clear();
     }
 
     [OneTimeTearDown]
@@ -352,5 +355,69 @@ public sealed class TravelEndpointFallbackWithoutKeyTests
             Assert.That(payload.Modes.Select(x => x.DurationS), Is.All.Null);
             Assert.That(payload.Modes.Select(x => x.DistanceM), Is.All.EqualTo(expectedDistanceM));
         });
+    }
+}
+
+[TestFixture]
+public sealed class TravelRateLimitTests
+{
+    private static readonly Guid PublishedListingId = TestListingsSeed.IdFor(3);
+
+    private ListingsApiFactory _factory = null!;
+    private HttpClient _client = null!;
+
+    [OneTimeSetUp]
+    public async Task OneTimeSetUp()
+    {
+        _factory = new ListingsApiFactory(services =>
+            services.Configure<TravelOptions>(options => options.RateLimitPerMinute = 2));
+        await _factory.InitializeDatabaseAsync();
+        _client = _factory.CreateClient();
+    }
+
+    [SetUp]
+    public async Task SetUp()
+    {
+        await _factory.ResetDataAsync();
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await TestListingsSeed.SeedAsync(dbContext);
+        (_factory.Services.GetRequiredService<IMemoryCache>() as MemoryCache)?.Clear();
+    }
+
+    [OneTimeTearDown]
+    public void OneTimeTearDown()
+    {
+        _client.Dispose();
+        _factory.Dispose();
+    }
+
+    [Test]
+    public async Task GetTravel_ExceedingPerIpLimit_Returns429Problem()
+    {
+        var url = FormattableString.Invariant(
+            $"/api/v1/listings/{PublishedListingId}/travel?to_lat=10.7503&to_lng=106.6803");
+
+        var first = await _client.GetAsync(url);
+        var second = await _client.GetAsync(url);
+        var third = await _client.GetAsync(url);
+        var code = await ReadProblemCodeAsync(third);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(third.StatusCode, Is.EqualTo(HttpStatusCode.TooManyRequests));
+            Assert.That(code, Is.EqualTo(TravelProblemFactory.RateLimited));
+            Assert.That(third.Headers.Contains("Retry-After"), Is.True);
+        });
+    }
+
+    private static async Task<string?> ReadProblemCodeAsync(HttpResponseMessage response)
+    {
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return document.RootElement.TryGetProperty("code", out var code)
+            ? code.GetString()
+            : null;
     }
 }

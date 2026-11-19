@@ -152,6 +152,24 @@ public sealed class GoogleRoutesEstimatesProviderTests
         Assert.That(estimate, Is.Null);
     }
 
+    [Test]
+    public async Task GetEstimateAsync_UnexpectedException_Propagates()
+    {
+        var handler = new StubHttpMessageHandler((_, _) =>
+            throw new InvalidOperationException("unexpected"));
+        var provider = CreateProvider(handler, apiKey: "test-key");
+
+        Assert.That(
+            async () => await provider.GetEstimateAsync(
+                10.7,
+                106.7,
+                10.77,
+                106.65,
+                TravelMode.Walking,
+                CancellationToken.None),
+            Throws.TypeOf<InvalidOperationException>());
+    }
+
     private static GoogleRoutesEstimatesProvider CreateProvider(HttpMessageHandler handler, string? apiKey)
     {
         var client = new HttpClient(handler)

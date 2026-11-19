@@ -1,12 +1,16 @@
+using System.Globalization;
 using System.Reflection;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
 using RoomToRentRadar.Api.Data;
 using RoomToRentRadar.Api.Data.Seed;
@@ -160,7 +164,11 @@ builder.Services.AddScoped<ListingReportsService>();
 builder.Services.AddScoped<ModerationQueueService>();
 builder.Services.AddScoped<ModerationActionsService>();
 builder.Services.AddHostedService<SavedSearchAlertWorker>();
-builder.Services.AddMemoryCache();
+builder.Services.AddMemoryCache(cache =>
+{
+    cache.SizeLimit = 10_000;
+    cache.CompactionPercentage = 0.1;
+});
 builder.Services.Configure<TravelOptions>(
     builder.Configuration.GetSection(TravelOptions.SectionName));
 builder.Services
@@ -176,8 +184,50 @@ builder.Services
         resilience.Retry.MaxRetryAttempts = 1;
     });
 builder.Services.AddScoped<TravelEstimatesService>();
+builder.Services.AddRateLimiter(rateLimiter =>
+{
+    rateLimiter.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    rateLimiter.AddPolicy(TravelRateLimitPolicy.Name, context =>
+    {
+        var travelOptions = context.RequestServices
+            .GetRequiredService<IOptions<TravelOptions>>()
+            .Value;
+        return RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = Math.Max(1, travelOptions.RateLimitPerMinute),
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            });
+    });
+    rateLimiter.OnRejected = async (context, cancellationToken) =>
+    {
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+        {
+            context.HttpContext.Response.Headers.RetryAfter =
+                ((int)retryAfter.TotalSeconds).ToString(CultureInfo.InvariantCulture);
+        }
+
+        var problem = TravelProblemFactory.RateLimitedProblem();
+        context.HttpContext.Response.StatusCode = problem.Status!.Value;
+        await context.HttpContext.Response.WriteAsJsonAsync(
+            problem,
+            ApiJson.Options,
+            "application/problem+json",
+            cancellationToken);
+    };
+});
 
 var app = builder.Build();
+
+if (string.IsNullOrWhiteSpace(app.Configuration["Travel:GoogleRoutesApiKey"]))
+{
+    app.Logger.LogWarning(
+        "Travel:GoogleRoutesApiKey is not configured; travel estimates fall back to straight-line distances. " +
+        "Configure it with 'dotnet user-secrets set \"Travel:GoogleRoutesApiKey\" \"<key>\" --project RoomToRentRadar.Api' " +
+        "or the Travel__GoogleRoutesApiKey environment variable.");
+}
 
 await SqliteDatabaseSetup.EnableWalAsync(connectionString);
 
@@ -223,6 +273,7 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapControllers();
 

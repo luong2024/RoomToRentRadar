@@ -53,47 +53,47 @@ public sealed class TravelEstimatesService(
         TravelMode mode,
         CancellationToken cancellationToken)
     {
+        // Coordinates are rounded to three decimals (~110 m) on purpose: nearby
+        // requests share an estimate and the coarse key keeps the cache small.
         var cacheKey = FormattableString.Invariant(
             $"travel:{fromLat:F3}:{fromLng:F3}:{toLat:F3}:{toLng:F3}:{mode}");
 
-        if (cache.TryGetValue(cacheKey, out TravelEstimateDto? cached) && cached is not null)
+        var estimate = await cache.GetOrCreateAsync(cacheKey, async entry =>
         {
-            return cached;
-        }
+            entry.Size = 1;
 
-        var estimate = await routingProvider.GetEstimateAsync(
-            fromLat,
-            fromLng,
-            toLat,
-            toLng,
-            mode,
-            cancellationToken);
-
-        if (estimate is not null)
-        {
-            var routed = new TravelEstimateDto(
+            var routed = await routingProvider.GetEstimateAsync(
+                fromLat,
+                fromLng,
+                toLat,
+                toLng,
                 mode,
-                TravelSource.Route,
-                estimate.DistanceM,
-                estimate.DurationS);
-            cache.Set(cacheKey, routed, TimeSpan.FromMinutes(options.Value.CacheMinutes));
-            return routed;
-        }
+                cancellationToken);
 
-        var fallback = new TravelEstimateDto(
-            mode,
-            TravelSource.Fallback,
-            (int)Math.Round(
-                GeoDistance.HaversineKm(fromLat, fromLng, toLat, toLng) * 1000d,
-                MidpointRounding.AwayFromZero),
-            null);
+            if (routed is not null)
+            {
+                entry.AbsoluteExpirationRelativeToNow =
+                    TimeSpan.FromMinutes(Math.Max(1, options.Value.CacheMinutes));
+                return new TravelEstimateDto(
+                    mode,
+                    TravelSource.Route,
+                    routed.DistanceM,
+                    routed.DurationS);
+            }
 
-        // Negative cache: keep repeated requests from hammering a failing provider.
-        if (options.Value.FallbackCacheSeconds > 0)
-        {
-            cache.Set(cacheKey, fallback, TimeSpan.FromSeconds(options.Value.FallbackCacheSeconds));
-        }
+            // Short-lived negative cache: a failing provider is not retried on every request.
+            entry.AbsoluteExpirationRelativeToNow =
+                TimeSpan.FromSeconds(Math.Max(1, options.Value.FallbackCacheSeconds));
 
-        return fallback;
+            return new TravelEstimateDto(
+                mode,
+                TravelSource.Fallback,
+                (int)Math.Round(
+                    GeoDistance.HaversineKm(fromLat, fromLng, toLat, toLng) * 1000d,
+                    MidpointRounding.AwayFromZero),
+                null);
+        });
+
+        return estimate!;
     }
 }

@@ -38,11 +38,15 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ICampusSelectionStore, PreferencesCampusSelectionStore>();
         services.AddSingleton<ILauncher>(Launcher.Default);
         services.AddSingleton<IMapsDirectionsLauncher, MapsDirectionsLauncher>();
-        services.AddSingleton<ITravelEstimatesClient>(_ => new TravelEstimatesClient(new HttpClient
+        services.AddSingleton<ITravelEstimatesClient>(serviceProvider =>
         {
-            BaseAddress = new Uri(ApiConstants.BaseAddress),
-            Timeout = TimeSpan.FromSeconds(15)
-        }));
+            var handler = serviceProvider.GetRequiredService<AuthenticatedHttpMessageHandler>();
+            return new TravelEstimatesClient(new HttpClient(handler)
+            {
+                BaseAddress = new Uri(ApiConstants.BaseAddress),
+                Timeout = TimeSpan.FromSeconds(15)
+            });
+        });
         services.AddSingleton<ISavedAreaSearchStore>(provider => new FileSavedAreaSearchStore(
             FileSystem.AppDataDirectory, provider.GetRequiredService<IPreferences>()));
         services.AddSingleton<INavigationService, ShellNavigationService>();
