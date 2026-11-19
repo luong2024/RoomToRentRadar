@@ -104,6 +104,7 @@ public class LocalizedStringsTests
         Assert.That(LocalizedStrings.Instance["RoomDetail_MonthlyCosts"], Is.EqualTo("Monthly costs"));
         Assert.That(LocalizedStrings.Instance["RoomDetail_ContactDisabled"], Is.EqualTo("Contact is disabled for unavailable rooms"));
         Assert.That(LocalizedStrings.Instance["RoomDetail_SimilarRoomsNearby"], Is.EqualTo("Similar rooms nearby"));
+        Assert.That(LocalizedStrings.Instance["RoomDetail_SignInToContact"], Is.EqualTo("Sign in to contact"));
 
         LocalizedStrings.Instance.SetCulture(new CultureInfo("vi-VN"));
         Assert.That(LocalizedStrings.Instance["RoomDetail_Title"], Is.EqualTo("Chi tiết phòng"));
@@ -111,6 +112,7 @@ public class LocalizedStringsTests
         Assert.That(LocalizedStrings.Instance["RoomDetail_MonthlyCosts"], Is.EqualTo("Chi phí hàng tháng"));
         Assert.That(LocalizedStrings.Instance["RoomDetail_ContactDisabled"], Is.EqualTo("Tính năng liên hệ bị tắt đối với phòng đã hết"));
         Assert.That(LocalizedStrings.Instance["RoomDetail_SimilarRoomsNearby"], Is.EqualTo("Phòng tương tự gần đây"));
+        Assert.That(LocalizedStrings.Instance["RoomDetail_SignInToContact"], Is.EqualTo("Đăng nhập để liên hệ"));
     }
 
     [Test]

@@ -572,6 +572,9 @@
   <data name="RoomDetail_SignInAction" xml:space="preserve">
     <value>Sign In</value>
   </data>
+  <data name="RoomDetail_SignInToContact" xml:space="preserve">
+    <value>Sign in to contact</value>
+  </data>
   <data name="RoomDetail_UnavailableBanner" xml:space="preserve">
     <value>This room is no longer available. It was marked as rented {0}.</value>
   </data>

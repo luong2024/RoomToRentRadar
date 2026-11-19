@@ -853,6 +853,48 @@ public class RoomDetailPageModelTests
         Assert.That(_sut.StatusBadgeText, Is.EqualTo("Verified · Available"));
     }
 
+    [Test]
+    public void IsGuest_WhenSignedInChanges_UpdatesCorrectly()
+    {
+        // Assert initial guest state
+        Assert.That(_sut.IsSignedIn, Is.False);
+        Assert.That(_sut.IsGuest, Is.True);
+
+        // Act & Assert when user is signed in
+        _sut.IsSignedIn = true;
+        Assert.That(_sut.IsGuest, Is.False);
+
+        // Act & Assert when user signs out
+        _sut.IsSignedIn = false;
+        Assert.That(_sut.IsGuest, Is.True);
+    }
+
+    [Test]
+    public async Task PromptSignInAsync_WhenAccepted_NavigatesToLogin()
+    {
+        // Arrange
+        bool alertPrompted = false;
+        string? navigatedRoute = null;
+
+        _sut.DisplayAlertOverride = (title, message, accept, cancel) =>
+        {
+            alertPrompted = true;
+            return Task.FromResult(true);
+        };
+        _sut.NavigateOverride = route =>
+        {
+            navigatedRoute = route;
+            return Task.CompletedTask;
+        };
+
+        // Act
+        await _sut.PromptSignInAsync();
+
+        // Assert
+        Assert.That(alertPrompted, Is.True);
+        Assert.That(navigatedRoute, Is.EqualTo("//login"));
+    }
+
     private static RoomDetailDto CreateSampleRoom(
         ListingStatus status,
         bool isVerified,

@@ -75,7 +75,10 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
     public partial bool IsUnavailable { get; set; } = false;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsGuest))]
     public partial bool IsSignedIn { get; set; } = false;
+
+    public bool IsGuest => !IsSignedIn;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(FavouriteIconGlyph))]
@@ -1014,7 +1017,8 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
 #endif
     }
 
-    private async Task PromptSignInAsync()
+    [RelayCommand]
+    public async Task PromptSignInAsync()
     {
         bool proceed = false;
         if (DisplayAlertOverride != null)

@@ -573,6 +573,9 @@
   <data name="RoomDetail_SignInAction" xml:space="preserve">
     <value>Đăng nhập</value>
   </data>
+  <data name="RoomDetail_SignInToContact" xml:space="preserve">
+    <value>Đăng nhập để liên hệ</value>
+  </data>
   <data name="RoomDetail_UnavailableBanner" xml:space="preserve">
     <value>Phòng này không còn khả dụng. Đã được đánh dấu đã thuê {0}.</value>
   </data>

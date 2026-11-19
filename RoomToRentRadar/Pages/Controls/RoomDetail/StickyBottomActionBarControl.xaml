@@ -35,8 +35,9 @@
                            TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
                 </VerticalStackLayout>
 
-                <!-- Right: Action Buttons Group (Call, Zalo, Message) -->
+                <!-- Right (Signed-In): Action Buttons Group (Call, Zalo, Message) (BR-CNT-01) -->
                 <HorizontalStackLayout Grid.Column="1"
+                                       IsVisible="{Binding IsSignedIn}"
                                        Spacing="8"
                                        VerticalOptions="Center">
                     <!-- Phone Call Button (Touch Target 48x48) -->
@@ -105,6 +106,35 @@
                         </HorizontalStackLayout>
                     </Border>
                 </HorizontalStackLayout>
+
+                <!-- Right (Guest): Single Primary 'Sign in to contact' Button (BR-CNT-01, docs/ui-ux-spec.md §4) -->
+                <Border Grid.Column="1"
+                        IsVisible="{Binding IsGuest}"
+                        StrokeShape="RoundRectangle 8"
+                        StrokeThickness="0"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}"
+                        HeightRequest="48"
+                        Padding="16,0"
+                        SemanticProperties.Description="Sign in to contact landlord">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding PromptSignInCommand}" />
+                    </Border.GestureRecognizers>
+                    <HorizontalStackLayout Spacing="6"
+                                           VerticalOptions="Center"
+                                           HorizontalOptions="Center">
+                        <Label Text="{x:Static fonts:FluentUI.person_20_regular}"
+                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                               FontSize="18"
+                               TextColor="White"
+                               VerticalTextAlignment="Center" />
+                        <Label Text="{loc:LocalizedStrings RoomDetail_SignInToContact}"
+                               FontFamily="{StaticResource FontFamilySemibold}"
+                               FontSize="{StaticResource FontSizeBodyMedium}"
+                               FontAttributes="Bold"
+                               TextColor="White"
+                               VerticalTextAlignment="Center" />
+                    </HorizontalStackLayout>
+                </Border>
             </Grid>
 
             <!-- 2. UNAVAILABLE STATE: Disabled Contact Notice Button (AC3) -->
