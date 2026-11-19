@@ -1,8 +1,13 @@
+using RoomToRentRadar.Abstractions.Auth;
+using RoomToRentRadar.Models;
+
 namespace RoomToRentRadar.Api.Endpoints
 {
     /// <summary>
     /// TASK OWNER: T01.1 (Nguyễn Đăng Quang — US01: Build ASP.NET Core Identity &amp; JWT Token API).
     /// Only T01.1 edits this file. Do NOT edit Program.cs.
+    /// Minimal API over <see cref="IAuthService"/>: POST /api/auth/register and POST /api/auth/login.
+    /// No token is issued yet (JWT needs the JwtBearer package, pending @architect approval).
     /// </summary>
     public static class AuthEndpoints
     {
@@ -10,9 +15,80 @@ namespace RoomToRentRadar.Api.Endpoints
         {
             var group = app.MapGroup("/api/auth");
 
-            // TODO [T01.1 - Quang]: Map POST /api/auth/login and POST /api/auth/register using IAuthService
+            // POST /api/auth/register → 201 Created | 400 Bad Request
+            group.MapPost("/register", async (RegisterRequest request, IAuthService auth) =>
+            {
+                if (request is null
+                    || string.IsNullOrWhiteSpace(request.FullName)
+                    || string.IsNullOrWhiteSpace(request.Email)
+                    || string.IsNullOrWhiteSpace(request.Phone))
+                {
+                    return Results.BadRequest(new AuthErrorResponse("Vui lòng nhập đầy đủ họ tên, email và số điện thoại."));
+                }
+
+                if (string.IsNullOrEmpty(request.Password) || request.Password.Length < MinPasswordLength)
+                {
+                    return Results.BadRequest(new AuthErrorResponse($"Mật khẩu phải có ít nhất {MinPasswordLength} ký tự."));
+                }
+
+                // Admin accounts are never self-registered; only Student or Landlord.
+                var role = NormalizeSelfRegisterRole(request.Role);
+                if (role is null)
+                {
+                    return Results.BadRequest(new AuthErrorResponse("Vai trò chỉ được là Student hoặc Landlord."));
+                }
+
+                var user = await auth.RegisterAsync(request.FullName, request.Email, request.Password, request.Phone, role);
+
+                // The contract returns null for invalid data or an email that is already used.
+                return user is null
+                    ? Results.BadRequest(new AuthErrorResponse("Không thể đăng ký: email không hợp lệ hoặc đã được sử dụng."))
+                    : Results.Created($"/api/auth/users/{user.Id}", ToResponse(user));
+            })
+            .WithName("Register");
+
+            // POST /api/auth/login → 200 OK | 400 Bad Request | 401 Unauthorized
+            group.MapPost("/login", async (LoginRequest request, IAuthService auth) =>
+            {
+                if (request is null || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrEmpty(request.Password))
+                {
+                    return Results.BadRequest(new AuthErrorResponse("Vui lòng nhập email và mật khẩu."));
+                }
+
+                var user = await auth.LoginAsync(request.Email, request.Password);
+
+                // Same 401 for "unknown email" and "wrong password" so callers cannot probe which emails exist.
+                return user is null
+                    ? Results.Json(new AuthErrorResponse("Email hoặc mật khẩu không đúng."), statusCode: StatusCodes.Status401Unauthorized)
+                    : Results.Ok(ToResponse(user));
+            })
+            .WithName("Login");
 
             return app;
         }
+
+        private const int MinPasswordLength = 6;
+
+        private static string? NormalizeSelfRegisterRole(string? role)
+        {
+            string[] allowed = [Constants.UserRoles.Student, Constants.UserRoles.Landlord];
+            return allowed.FirstOrDefault(r => string.Equals(r, role?.Trim(), StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <summary>Maps the domain user to a safe response: PasswordHash is never sent to the client.</summary>
+        private static AuthUserResponse ToResponse(UserAccount user) =>
+            new(user.Id, user.FullName, user.Email, user.Phone, user.Role, user.SelectedCampus);
     }
+
+    /// <summary>Body of POST /api/auth/register.</summary>
+    public sealed record RegisterRequest(string FullName, string Email, string Password, string Phone, string Role);
+
+    /// <summary>Body of POST /api/auth/login.</summary>
+    public sealed record LoginRequest(string Email, string Password);
+
+    /// <summary>User data returned to the client (no password hash).</summary>
+    public sealed record AuthUserResponse(int Id, string FullName, string Email, string Phone, string Role, string SelectedCampus);
+
+    /// <summary>Error body with a Vietnamese message ready for the UI.</summary>
+    public sealed record AuthErrorResponse(string Message);
 }
