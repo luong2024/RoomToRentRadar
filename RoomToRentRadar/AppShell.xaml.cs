@@ -38,6 +38,7 @@ namespace RoomToRentRadar
             UpdateAuthVisibility();
             Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(Features.RoomDetails.Views.RoomDetailPage));
             Routing.RegisterRoute(AppRoutes.RoomDetails, typeof(RoomDetailsPage));
+            Routing.RegisterRoute(AppRoutes.CreateListing, typeof(CreateListingPage));
 
             if (_sessionService != null)
             {
@@ -67,6 +68,7 @@ namespace RoomToRentRadar
 
             Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(Features.RoomDetails.Views.RoomDetailPage));
             Routing.RegisterRoute(AppRoutes.RoomDetails, typeof(RoomDetailsPage));
+            Routing.RegisterRoute(AppRoutes.CreateListing, typeof(CreateListingPage));
 
             if (_sessionService != null)
             {
@@ -79,13 +81,14 @@ namespace RoomToRentRadar
         {
             base.OnNavigating(args);
 
-            if (_isRedirecting || _routeGuardService == null || _sessionService == null)
+            if (_isRedirecting || _routeGuardService == null || _sessionService == null
+                || args.Source == ShellNavigationSource.Pop || args.Source == ShellNavigationSource.PopToRoot)
             {
                 return;
             }
 
             var targetUri = args.Target?.Location?.OriginalString;
-            if (string.IsNullOrWhiteSpace(targetUri))
+            if (string.IsNullOrWhiteSpace(targetUri) || targetUri == "..")
             {
                 return;
             }
@@ -233,6 +236,15 @@ namespace RoomToRentRadar
             if (LogoutMenuItem != null)
             {
                 Shell.SetFlyoutItemIsVisible(LogoutMenuItem, isAuthenticated);
+            }
+
+            if (CreateListingShellContent != null)
+            {
+                var role = _sessionService?.CurrentUser?.Role;
+                var isLandlordOrAdmin = string.Equals(role, UserRoleConstants.Landlord, StringComparison.OrdinalIgnoreCase)
+                                        || string.Equals(role, UserRoleConstants.Admin, StringComparison.OrdinalIgnoreCase);
+                CreateListingShellContent.IsVisible = isLandlordOrAdmin;
+                Shell.SetFlyoutItemIsVisible(CreateListingShellContent, isLandlordOrAdmin);
             }
         }
 

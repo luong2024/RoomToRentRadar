@@ -1,6 +1,9 @@
 using System.Globalization;
+using Moq;
+using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Core.Localization;
+using RoomToRentRadar.Core.Models.Authentication;
 using RoomToRentRadar.Features.RoomListings.Models;
 using RoomToRentRadar.Features.RoomListings.Services;
 using RoomToRentRadar.Features.RoomListings.ViewModels;
@@ -603,6 +606,67 @@ public class RoomListingsViewModelTests
             Assert.That(vm.ErrorMessage, Is.EqualTo("Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng."));
             Assert.That(vm.EmptyStateMessage, Is.EqualTo("Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng."));
         });
+    }
+
+    [Test]
+    public void IsLandlord_WhenNoSessionService_IsFalse()
+    {
+        var vm = CreateViewModel(pageSize: 6);
+        Assert.That(vm.IsLandlord, Is.False);
+    }
+
+    [Test]
+    public void IsLandlord_WhenCurrentUserIsLandlord_IsTrue()
+    {
+        var mockSessionService = new Mock<IAuthenticationSessionService>();
+        var landlord = new AuthUser(Guid.NewGuid(), "landlord@example.com", UserRoleConstants.Landlord, "LOCAL", true);
+        mockSessionService.Setup(s => s.CurrentUser).Returns(landlord);
+
+        var vm = new RoomListingsViewModel(_fakeService, _fakeErrorHandler, mockSessionService.Object);
+
+        Assert.That(vm.IsLandlord, Is.True);
+    }
+
+    [Test]
+    public void IsLandlord_WhenCurrentUserIsStudent_IsFalse()
+    {
+        var mockSessionService = new Mock<IAuthenticationSessionService>();
+        var student = new AuthUser(Guid.NewGuid(), "student@example.com", UserRoleConstants.Student, "LOCAL", true);
+        mockSessionService.Setup(s => s.CurrentUser).Returns(student);
+
+        var vm = new RoomListingsViewModel(_fakeService, _fakeErrorHandler, mockSessionService.Object);
+
+        Assert.That(vm.IsLandlord, Is.False);
+    }
+
+    [Test]
+    public void IsLandlord_WhenCurrentUserChangedToLandlord_UpdatesToTrue()
+    {
+        var mockSessionService = new Mock<IAuthenticationSessionService>();
+        mockSessionService.Setup(s => s.CurrentUser).Returns((AuthUser?)null);
+
+        var vm = new RoomListingsViewModel(_fakeService, _fakeErrorHandler, mockSessionService.Object);
+        Assert.That(vm.IsLandlord, Is.False);
+
+        var landlord = new AuthUser(Guid.NewGuid(), "landlord@example.com", UserRoleConstants.Landlord, "LOCAL", true);
+        mockSessionService.Raise(s => s.CurrentUserChanged += null, mockSessionService.Object, landlord);
+
+        Assert.That(vm.IsLandlord, Is.True);
+    }
+
+    [Test]
+    public void IsLandlord_WhenLandlordLogsOut_UpdatesToFalse()
+    {
+        var mockSessionService = new Mock<IAuthenticationSessionService>();
+        var landlord = new AuthUser(Guid.NewGuid(), "landlord@example.com", UserRoleConstants.Landlord, "LOCAL", true);
+        mockSessionService.Setup(s => s.CurrentUser).Returns(landlord);
+
+        var vm = new RoomListingsViewModel(_fakeService, _fakeErrorHandler, mockSessionService.Object);
+        Assert.That(vm.IsLandlord, Is.True);
+
+        mockSessionService.Raise(s => s.CurrentUserChanged += null, mockSessionService.Object, (AuthUser?)null);
+
+        Assert.That(vm.IsLandlord, Is.False);
     }
 
     private RoomListingsViewModel CreateViewModel(int pageSize) =>
