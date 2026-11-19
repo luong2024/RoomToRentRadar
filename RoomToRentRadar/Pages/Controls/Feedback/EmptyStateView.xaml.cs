@@ -10,7 +10,7 @@ public partial class EmptyStateView : ContentView
     private string _defaultActionText = string.Empty;
 
     public static readonly BindableProperty IconGlyphProperty =
-        BindableProperty.Create(nameof(IconGlyph), typeof(string), typeof(EmptyStateView), string.Empty);
+        BindableProperty.Create(nameof(IconGlyph), typeof(string), typeof(EmptyStateView), Fonts.FluentUI.search_24_regular);
 
     public static readonly BindableProperty TitleProperty =
         BindableProperty.Create(nameof(Title), typeof(string), typeof(EmptyStateView), string.Empty);

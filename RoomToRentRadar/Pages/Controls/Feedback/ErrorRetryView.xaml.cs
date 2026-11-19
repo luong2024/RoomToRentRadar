@@ -89,19 +89,19 @@ public partial class ErrorRetryView : ContentView
     // Only refresh values the caller has not overridden, so explicit texts survive language switches (US15).
     private void ApplyLocalizedDefaults()
     {
-        if (Title == _defaultTitle)
+        if (string.IsNullOrEmpty(Title) || Title == _defaultTitle)
         {
             _defaultTitle = LocalizedStrings.Instance["State_Error_Title"];
             Title = _defaultTitle;
         }
 
-        if (ErrorMessage == _defaultErrorMessage)
+        if (string.IsNullOrEmpty(ErrorMessage) || ErrorMessage == _defaultErrorMessage)
         {
             _defaultErrorMessage = LocalizedStrings.Instance["State_Error_Message"];
             ErrorMessage = _defaultErrorMessage;
         }
 
-        if (RetryText == _defaultRetryText)
+        if (string.IsNullOrEmpty(RetryText) || RetryText == _defaultRetryText)
         {
             _defaultRetryText = LocalizedStrings.Instance["State_Retry"];
             RetryText = _defaultRetryText;
