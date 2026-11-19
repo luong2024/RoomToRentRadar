@@ -318,6 +318,7 @@ namespace RoomToRentRadar.Services
 
         /// <summary>
         /// AC3: Generates image payload for sharing comparison table.
+        /// Produces a beautifully styled SVG vector image with full room details, badges, and comparison metrics.
         /// </summary>
         public virtual ComparisonSharePayload GenerateComparisonImage(
             IReadOnlyList<RoomListing> rooms,
@@ -325,17 +326,128 @@ namespace RoomToRentRadar.Services
         {
             var matrix = BuildComparisonMatrix(rooms);
             var opt = options ?? new ComparisonExportOptions();
-
             var summaryText = GenerateComparisonTextSummary(rooms);
 
-            // Baseline SVG image for Phase 1
-            var svg = $@"<svg xmlns=""http://www.w3.org/2000/svg"" width=""800"" height=""600"" viewBox=""0 0 800 600"">
-  <rect width=""100%"" height=""100%"" fill=""#F8FAFC""/>
-  <text x=""40"" y=""50"" font-family=""sans-serif"" font-size=""22"" font-weight=""bold"" fill=""#1E293B"">{opt.Title}</text>
-  <text x=""40"" y=""80"" font-family=""sans-serif"" font-size=""14"" fill=""#64748B"">Số phòng so sánh: {matrix.RoomCount} | Ngày tạo: {DateTime.UtcNow:dd/MM/yyyy HH:mm}</text>
-</svg>";
+            const int canvasWidth = 960;
+            const int marginX = 24;
+            const int labelColWidth = 220;
+            int roomColCount = Math.Max(1, matrix.Columns.Count);
+            int roomColWidth = (canvasWidth - (marginX * 2) - labelColWidth) / roomColCount;
 
-            var bytes = Encoding.UTF8.GetBytes(svg);
+            const int headerHeight = 120;
+            const int roomCardsHeight = 130;
+            const int rowHeight = 38;
+            const int footerHeight = 70;
+            int totalHeight = headerHeight + roomCardsHeight + (Math.Max(1, matrix.Rows.Count) * rowHeight) + footerHeight;
+
+            var sb = new StringBuilder();
+            sb.AppendLine($@"<svg xmlns=""http://www.w3.org/2000/svg"" width=""{canvasWidth}"" height=""{totalHeight}"" viewBox=""0 0 {canvasWidth} {totalHeight}"">");
+            sb.AppendLine("  <defs>");
+            sb.AppendLine(@"    <linearGradient id=""headerGrad"" x1=""0%"" y1=""0%"" x2=""100%"" y2=""100%"">");
+            sb.AppendLine(@"      <stop offset=""0%"" stop-color=""#0284C7""/>");
+            sb.AppendLine(@"      <stop offset=""100%"" stop-color=""#0369A1""/>");
+            sb.AppendLine("    </linearGradient>");
+            sb.AppendLine("  </defs>");
+
+            // Background
+            sb.AppendLine($@"  <rect width=""100%"" height=""100%"" fill=""#F8FAFC""/>");
+
+            // Header Banner
+            sb.AppendLine($@"  <rect x=""{marginX}"" y=""20"" width=""{canvasWidth - (marginX * 2)}"" height=""85"" rx=""12"" fill=""url(#headerGrad)""/>");
+            sb.AppendLine($@"  <text x=""{marginX + 20}"" y=""54"" font-family=""Arial, Helvetica, sans-serif"" font-size=""20"" font-weight=""bold"" fill=""#FFFFFF"">{EscapeXml(opt.Title)}</text>");
+            sb.AppendLine($@"  <text x=""{marginX + 20}"" y=""80"" font-family=""Arial, Helvetica, sans-serif"" font-size=""13"" fill=""#E0F2FE"">Trường ĐH Công nghệ Thông tin &amp; Truyền thông (ICTU) • {DateTime.UtcNow:dd/MM/yyyy HH:mm} UTC</text>");
+
+            int currentY = 120;
+
+            if (matrix.IsEmpty)
+            {
+                sb.AppendLine($@"  <rect x=""{marginX}"" y=""{currentY}"" width=""{canvasWidth - (marginX * 2)}"" height=""120"" rx=""8"" fill=""#FFFFFF"" stroke=""#E2E8F0""/>");
+                sb.AppendLine($@"  <text x=""{canvasWidth / 2}"" y=""{currentY + 65}"" font-family=""Arial, Helvetica, sans-serif"" font-size=""16"" fill=""#64748B"" text-anchor=""middle"">Chưa có phòng nào được chọn để so sánh (Tối đa 3 phòng).</text>");
+            }
+            else
+            {
+                // Room Cards Header
+                for (int col = 0; col < matrix.Columns.Count; col++)
+                {
+                    var c = matrix.Columns[col];
+                    int cardX = marginX + labelColWidth + (col * roomColWidth);
+
+                    sb.AppendLine($@"  <g transform=""translate({cardX}, {currentY})"">");
+                    sb.AppendLine($@"    <rect width=""{roomColWidth - 8}"" height=""{roomCardsHeight - 10}"" rx=""10"" fill=""#FFFFFF"" stroke=""#CBD5E1"" stroke-width=""1.5""/>");
+
+                    var displayTitle = c.Title.Length > 24 ? c.Title[..21] + "..." : c.Title;
+                    sb.AppendLine($@"    <text x=""12"" y=""26"" font-family=""Arial, Helvetica, sans-serif"" font-size=""14"" font-weight=""bold"" fill=""#0F172A"">{EscapeXml(displayTitle)}</text>");
+                    sb.AppendLine($@"    <text x=""12"" y=""50"" font-family=""Arial, Helvetica, sans-serif"" font-size=""16"" font-weight=""bold"" fill=""#0284C7"">{EscapeXml(c.FormattedRent)}</text>");
+                    sb.AppendLine($@"    <text x=""12"" y=""72"" font-family=""Arial, Helvetica, sans-serif"" font-size=""12"" fill=""#64748B"">Cọc: {EscapeXml(c.FormattedDeposit)} | {c.FormattedArea}</text>");
+                    sb.AppendLine($@"    <text x=""12"" y=""92"" font-family=""Arial, Helvetica, sans-serif"" font-size=""12"" fill=""#475569"">Cách ICTU: {EscapeXml(c.FormattedDistance)}</text>");
+
+                    if (c.RoomId == matrix.BestValueRoomId)
+                    {
+                        sb.AppendLine($@"    <rect x=""12"" y=""100"" width=""88"" height=""16"" rx=""4"" fill=""#DCFCE7""/>");
+                        sb.AppendLine($@"    <text x=""16"" y=""112"" font-family=""Arial, Helvetica, sans-serif"" font-size=""10"" font-weight=""bold"" fill=""#15803D"">★ Giá tốt nhất</text>");
+                    }
+                    else if (c.RoomId == matrix.ClosestToCampusRoomId)
+                    {
+                        sb.AppendLine($@"    <rect x=""12"" y=""100"" width=""88"" height=""16"" rx=""4"" fill=""#E0F2FE""/>");
+                        sb.AppendLine($@"    <text x=""16"" y=""112"" font-family=""Arial, Helvetica, sans-serif"" font-size=""10"" font-weight=""bold"" fill=""#0369A1"">★ Gần ICTU nhất</text>");
+                    }
+
+                    sb.AppendLine("  </g>");
+                }
+
+                currentY += roomCardsHeight;
+
+                // Comparison Metrics Rows
+                for (int r = 0; r < matrix.Rows.Count; r++)
+                {
+                    var row = matrix.Rows[r];
+                    var rowBg = r % 2 == 0 ? "#FFFFFF" : "#F8FAFC";
+
+                    sb.AppendLine($@"  <rect x=""{marginX}"" y=""{currentY}"" width=""{canvasWidth - (marginX * 2)}"" height=""{rowHeight}"" fill=""{rowBg}"" stroke=""#E2E8F0"" stroke-width=""0.5""/>");
+                    sb.AppendLine($@"  <text x=""{marginX + 12}"" y=""{currentY + 24}"" font-family=""Arial, Helvetica, sans-serif"" font-size=""12.5"" font-weight=""600"" fill=""#334155"">{EscapeXml(row.MetricName)}</text>");
+
+                    for (int col = 0; col < matrix.Columns.Count; col++)
+                    {
+                        int cellX = marginX + labelColWidth + (col * roomColWidth);
+                        var val = col < row.Values.Count ? row.Values[col] : string.Empty;
+                        bool isBest = col == row.BestColumnIndex;
+
+                        if (isBest && opt.HighlightBestValues)
+                        {
+                            sb.AppendLine($@"  <rect x=""{cellX}"" y=""{currentY + 2}"" width=""{roomColWidth - 8}"" height=""{rowHeight - 4}"" rx=""6"" fill=""#DCFCE7"" fill-opacity=""0.7""/>");
+                            sb.AppendLine($@"  <text x=""{cellX + 12}"" y=""{currentY + 24}"" font-family=""Arial, Helvetica, sans-serif"" font-size=""12.5"" font-weight=""bold"" fill=""#166534"">{EscapeXml(val)}</text>");
+                        }
+                        else if (val.Contains("✓"))
+                        {
+                            sb.AppendLine($@"  <text x=""{cellX + 12}"" y=""{currentY + 24}"" font-family=""Arial, Helvetica, sans-serif"" font-size=""12.5"" font-weight=""bold"" fill=""#16A34A"">{EscapeXml(val)}</text>");
+                        }
+                        else if (val.Contains("—"))
+                        {
+                            sb.AppendLine($@"  <text x=""{cellX + 12}"" y=""{currentY + 24}"" font-family=""Arial, Helvetica, sans-serif"" font-size=""12.5"" fill=""#94A3B8"">{EscapeXml(val)}</text>");
+                        }
+                        else
+                        {
+                            sb.AppendLine($@"  <text x=""{cellX + 12}"" y=""{currentY + 24}"" font-family=""Arial, Helvetica, sans-serif"" font-size=""12.5"" fill=""#1E293B"">{EscapeXml(val)}</text>");
+                        }
+                    }
+
+                    currentY += rowHeight;
+                }
+            }
+
+            // Footer
+            currentY += 15;
+            sb.AppendLine($@"  <line x1=""{marginX}"" y1=""{currentY}"" x2=""{canvasWidth - marginX}"" y2=""{currentY}"" stroke=""#CBD5E1"" stroke-width=""1""/>");
+            sb.AppendLine($@"  <text x=""{marginX}"" y=""{currentY + 24}"" font-family=""Arial, Helvetica, sans-serif"" font-size=""11.5"" fill=""#64748B"">RoomToRentRadar • So sánh phòng trọ sinh viên ICTU • Điểm đích: 21.5850° N, 105.8064° E</text>");
+            if (!string.IsNullOrWhiteSpace(matrix.OverallVerdict))
+            {
+                var verdictDisplay = matrix.OverallVerdict.Length > 90 ? matrix.OverallVerdict[..87] + "..." : matrix.OverallVerdict;
+                sb.AppendLine($@"  <text x=""{marginX}"" y=""{currentY + 42}"" font-family=""Arial, Helvetica, sans-serif"" font-size=""11.5"" font-weight=""bold"" fill=""#0369A1"">Đánh giá: {EscapeXml(verdictDisplay)}</text>");
+            }
+            sb.AppendLine("</svg>");
+
+            var svgString = sb.ToString();
+            var bytes = Encoding.UTF8.GetBytes(svgString);
             var base64 = Convert.ToBase64String(bytes);
 
             return new ComparisonSharePayload
@@ -347,6 +459,17 @@ namespace RoomToRentRadar.Services
                 ShareTextSummary = summaryText,
                 GeneratedAt = DateTime.UtcNow
             };
+        }
+
+        private static string EscapeXml(string? input)
+        {
+            if (string.IsNullOrEmpty(input)) return string.Empty;
+            return input
+                .Replace("&", "&amp;")
+                .Replace("<", "&lt;")
+                .Replace(">", "&gt;")
+                .Replace("\"", "&quot;")
+                .Replace("'", "&apos;");
         }
 
         /// <summary>
