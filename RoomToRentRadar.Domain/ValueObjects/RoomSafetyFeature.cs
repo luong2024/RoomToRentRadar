@@ -25,4 +25,10 @@ public sealed record RoomSafetyFeature
 
     public RoomSafetyFeature WithConfirmed(bool isConfirmed) =>
         new(Feature, isConfirmed);
+
+    public static implicit operator RoomSafetyFeatureEntry(RoomSafetyFeature feature) =>
+        new(feature.Feature, feature.IsConfirmed);
+
+    public static implicit operator RoomSafetyFeature(RoomSafetyFeatureEntry entry) =>
+        new(entry.Feature, entry.IsConfirmed);
 }

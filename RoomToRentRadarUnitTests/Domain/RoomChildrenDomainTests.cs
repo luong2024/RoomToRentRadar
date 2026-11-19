@@ -125,6 +125,31 @@ public class RoomChildrenDomainTests
     }
 
     [Test]
+    public void Room_ConfirmSafetyFeatures_WhenReconfirmedWithFewerFeatures_RevokesUnconfirmedFeaturesAndDecreasesSafetyScore()
+    {
+        var room = CreateTestRoom();
+        room.DeclareSafetyFeatures(new[] { SafetyFeature.FireSafety, SafetyFeature.Cctv, SafetyFeature.SecureEntrance });
+
+        // Admin initial confirmation: confirms FireSafety and SecureEntrance
+        room.ConfirmSafetyFeatures(new[] { SafetyFeature.FireSafety, SafetyFeature.SecureEntrance }, "admin-1", FixedNow);
+        Assert.That(room.SafetyScore, Is.EqualTo(2));
+
+        // Admin re-reviews/re-moderates: revokes SecureEntrance, only confirms FireSafety (Idempotent test)
+        room.ConfirmSafetyFeatures(new[] { SafetyFeature.FireSafety }, "admin-2", FixedNow.AddDays(1));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(room.IsSafetyVerified, Is.True);
+            Assert.That(room.SafetyScore, Is.EqualTo(1), "Score decreases to 1 when SecureEntrance is revoked");
+            var confirmed = room.SafetyFeatures.Where(f => f.IsConfirmed).Select(f => f.Feature);
+            Assert.That(confirmed, Is.EquivalentTo(new[] { SafetyFeature.FireSafety }));
+            var unconfirmed = room.SafetyFeatures.Where(f => !f.IsConfirmed).Select(f => f.Feature);
+            Assert.That(unconfirmed, Is.EquivalentTo(new[] { SafetyFeature.Cctv, SafetyFeature.SecureEntrance }));
+            Assert.That(room.VerifiedByUserId, Is.EqualTo("admin-2"));
+        });
+    }
+
+    [Test]
     public void Room_DeclareSafetyFeatures_WhenListingAlreadyAvailable_FlagsNeedsReReview()
     {
         var room = CreateTestRoom();
@@ -230,6 +255,19 @@ public class RoomChildrenDomainTests
                 createdByUserId: "landlord-1",
                 otherRules: longOther));
         Assert.That(otherEx!.ErrorCode, Is.EqualTo("OTHER_RULES_TOO_LONG"));
+
+        // 4. Guest policy note exceeds 200 chars (Low finding 1 / openapi.yaml#L1489)
+        var longNote = new string('C', 201);
+        var noteEx = Assert.Throws<DomainValidationException>(() =>
+            room.AddHouseRuleVersion(
+                guestPolicy: GuestPolicy.Allowed,
+                cookingPolicy: CookingPolicy.Allowed,
+                parkingAvailable: true,
+                petsAllowed: false,
+                smokingAllowed: false,
+                createdByUserId: "landlord-1",
+                guestPolicyNote: longNote));
+        Assert.That(noteEx!.ErrorCode, Is.EqualTo("GUEST_POLICY_NOTE_TOO_LONG"));
     }
 
     [Test]
