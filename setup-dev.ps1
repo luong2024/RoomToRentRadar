@@ -15,7 +15,7 @@ dotnet user-secrets set "Jwt:Secret" "$generatedJwtSecret" --project src/RoomToR
 dotnet user-secrets set "CosmosDb:RoomsContainerName" "RoomDetails" --project src/RoomToRentRadar.Bootstrap
 Write-Host "      -> Da tao ngau nhien JWT Secret (32 bytes cryptographically secure) va luu secrets cuc bo." -ForegroundColor Green
 
-# 2. Thiet lap adb reverse
+# 2. Thiet lap adb reverse cho Backend (port 49966)
 Write-Host ""
 Write-Host "[2/3] Kiem tra va thiet lap cau noi USB cho thiet bi Android (adb reverse)..." -ForegroundColor Yellow
 $adbCommand = Get-Command adb -ErrorAction SilentlyContinue
@@ -25,12 +25,22 @@ if (-not $adbPath -and (Test-Path "C:\Program Files (x86)\Android\android-sdk\pl
 }
 
 if ($adbPath) {
-    & $adbPath reverse tcp:5000 tcp:5000 2>$null
-    & $adbPath reverse tcp:5000 tcp:49966 2>$null
-    & $adbPath reverse tcp:49966 tcp:49966 2>$null
-    Write-Host "      -> Da thiet lap cau noi qua adb port 5000 va 49966." -ForegroundColor Green
+    $devicesOutput = & $adbPath devices 2>&1
+    $connectedDevices = $devicesOutput | Where-Object { $_ -match "\s+(device|emulator)$" }
+
+    if ($connectedDevices) {
+        & $adbPath reverse tcp:49966 tcp:49966 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "      -> Da thiet lap cau noi qua adb port 49966 thanh cong." -ForegroundColor Green
+        } else {
+            Write-Host "      -> Lenh 'adb reverse' that bai voi ma loi $LASTEXITCODE." -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "      -> Khong tim thay thiet bi Android nao dang ket noi qua ADB." -ForegroundColor Yellow
+        Write-Host "         (Luu y: Khi chay app tren may that/may ao, hay chay lenh: adb reverse tcp:49966 tcp:49966)" -ForegroundColor Gray
+    }
 } else {
-    Write-Host "      -> Chua phat hien adb (Neu chay tren Windows thi khong can buoc nay)." -ForegroundColor Gray
+    Write-Host "      -> Chua phat hien adb tren he thong (Neu chi chay tren Windows thi khong can buoc nay)." -ForegroundColor Gray
 }
 
 # 3. Kiem tra cau hinh

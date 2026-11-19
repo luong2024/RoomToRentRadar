@@ -62,6 +62,40 @@ public partial class MapSearchPage : ContentPage
             new Location(MapSearchViewModel.DefaultLatitude, MapSearchViewModel.DefaultLongitude),
             Distance.FromKilometers(MapSearchViewModel.DefaultDistanceKm));
         SearchMap.MoveToRegion(initialSpan);
+
+        _ = InitializeUserLocationAsync();
+    }
+
+    private async Task InitializeUserLocationAsync()
+    {
+        try
+        {
+            var status = await Permissions.CheckStatusAsync<Permissions.LocationWhenInUse>();
+            if (status != PermissionStatus.Granted)
+            {
+                status = await Permissions.RequestAsync<Permissions.LocationWhenInUse>();
+            }
+
+            if (status == PermissionStatus.Granted)
+            {
+                var request = new GeolocationRequest(GeolocationAccuracy.Medium, TimeSpan.FromSeconds(5));
+                var location = await Geolocation.Default.GetLocationAsync(request);
+                if (location is not null)
+                {
+                    MainThread.BeginInvokeOnMainThread(() =>
+                    {
+                        var userSpan = MapSpan.FromCenterAndRadius(
+                            location,
+                            Distance.FromKilometers(MapSearchViewModel.DefaultDistanceKm));
+                        SearchMap.MoveToRegion(userSpan);
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to retrieve user location: {ex.Message}");
+        }
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -195,15 +229,25 @@ public partial class MapSearchPage : ContentPage
         double width = CanvasView.Width;
         double height = CanvasView.Height;
 
+        double topLat = centerLat + (latSpan / 2.0);
+        double bottomLat = centerLat - (latSpan / 2.0);
+        double topMercatorY = MapSearchViewModel.LatitudeToMercatorY(topLat);
+        double bottomMercatorY = MapSearchViewModel.LatitudeToMercatorY(bottomLat);
+        double mercatorSpanY = topMercatorY - bottomMercatorY;
+
+        if (Math.Abs(mercatorSpanY) <= 0.0000001)
+            return geoPoints;
+
         foreach (var pt in screenPoints)
         {
             double relX = (pt.X / width) - 0.5;
-            double relY = 0.5 - (pt.Y / height);
+            double tY = pt.Y / height;
 
-            double lat = centerLat + (relY * latSpan);
+            double mercatorY = topMercatorY - (tY * mercatorSpanY);
+            double lat = MapSearchViewModel.MercatorYToLatitude(mercatorY);
             double lon = centerLon + (relX * lonSpan);
 
-            lat = Math.Clamp(lat, -89.9999, 89.9999);
+            lat = Math.Clamp(lat, -85.0511, 85.0511);
             lon = Math.Clamp(lon, -179.9999, 179.9999);
 
             geoPoints.Add(new GeoCoordinate(lat, lon));
@@ -221,13 +265,23 @@ public partial class MapSearchPage : ContentPage
         if (region.LatitudeDegrees <= 0.0000001 || region.LongitudeDegrees <= 0.0000001)
             return new GeoCoordinate(region.Center.Latitude, region.Center.Longitude);
 
-        double relX = (pt.X / CanvasView.Width) - 0.5;
-        double relY = 0.5 - (pt.Y / CanvasView.Height);
+        double width = CanvasView.Width;
+        double height = CanvasView.Height;
 
-        double lat = region.Center.Latitude + (relY * region.LatitudeDegrees);
+        double topLat = region.Center.Latitude + (region.LatitudeDegrees / 2.0);
+        double bottomLat = region.Center.Latitude - (region.LatitudeDegrees / 2.0);
+        double topMercatorY = MapSearchViewModel.LatitudeToMercatorY(topLat);
+        double bottomMercatorY = MapSearchViewModel.LatitudeToMercatorY(bottomLat);
+        double mercatorSpanY = topMercatorY - bottomMercatorY;
+
+        double relX = (pt.X / width) - 0.5;
+        double tY = pt.Y / height;
+
+        double mercatorY = topMercatorY - (tY * mercatorSpanY);
+        double lat = MapSearchViewModel.MercatorYToLatitude(mercatorY);
         double lon = region.Center.Longitude + (relX * region.LongitudeDegrees);
 
-        lat = Math.Clamp(lat, -89.9999, 89.9999);
+        lat = Math.Clamp(lat, -85.0511, 85.0511);
         lon = Math.Clamp(lon, -179.9999, 179.9999);
 
         return new GeoCoordinate(lat, lon);
@@ -251,13 +305,23 @@ public partial class MapSearchPage : ContentPage
         double width = CanvasView.Width;
         double height = CanvasView.Height;
 
+        double topLat = centerLat + (latSpan / 2.0);
+        double bottomLat = centerLat - (latSpan / 2.0);
+        double topMercatorY = MapSearchViewModel.LatitudeToMercatorY(topLat);
+        double bottomMercatorY = MapSearchViewModel.LatitudeToMercatorY(bottomLat);
+        double mercatorSpanY = topMercatorY - bottomMercatorY;
+
+        if (Math.Abs(mercatorSpanY) <= 0.0000001)
+            return screenPoints;
+
         foreach (var c in coords)
         {
-            double relY = (c.Latitude - centerLat) / latSpan;
+            double pointMercatorY = MapSearchViewModel.LatitudeToMercatorY(c.Latitude);
+            double tY = (topMercatorY - pointMercatorY) / mercatorSpanY;
             double relX = (c.Longitude - centerLon) / lonSpan;
 
             float x = (float)((relX + 0.5) * width);
-            float y = (float)((0.5 - relY) * height);
+            float y = (float)(tY * height);
 
             if (!float.IsNaN(x) && !float.IsNaN(y))
             {

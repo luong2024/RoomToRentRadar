@@ -392,4 +392,95 @@ public class MapSearchViewModelTests
         // Assert
         Assert.That(area, Is.EqualTo(0.00005).Within(1e-9));
     }
+
+    [Test]
+    public async Task ConfirmArea_WhenPolygonIsValid_ShouldSetIsAreaConfirmedAndShowAlert()
+    {
+        // Arrange
+        var testPoints = new List<GeoCoordinate>
+        {
+            new(21.5855, 105.8075),
+            new(21.5950, 105.8075),
+            new(21.5950, 105.8200)
+        };
+        _viewModel.CompleteDrawing(testPoints);
+
+        bool alertCalled = false;
+        _viewModel.AlertHandler = (title, message, cancel) =>
+        {
+            alertCalled = true;
+            Assert.That(title, Is.EqualTo("Search Area Confirmed"));
+            Assert.That(message, Does.Contain("3 vertices"));
+            Assert.That(message, Does.Contain("T05.2"));
+            return Task.CompletedTask;
+        };
+
+        // Act
+        await _viewModel.ConfirmAreaCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.That(alertCalled, Is.True);
+        Assert.That(_viewModel.IsAreaConfirmed, Is.True);
+        Assert.That(_viewModel.StatusMessage, Does.Contain("Area confirmed"));
+    }
+
+    [Test]
+    public async Task ConfirmArea_WhenNoPolygon_ShouldRejectAndNotConfirm()
+    {
+        // Arrange
+        bool alertCalled = false;
+        _viewModel.AlertHandler = (_, _, _) =>
+        {
+            alertCalled = true;
+            return Task.CompletedTask;
+        };
+
+        // Act
+        await _viewModel.ConfirmAreaCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.That(alertCalled, Is.False);
+        Assert.That(_viewModel.IsAreaConfirmed, Is.False);
+        Assert.That(_viewModel.StatusMessage, Does.Contain("Please draw a valid area"));
+    }
+
+    [Test]
+    public void LatitudeToMercatorY_AtEquator_ShouldReturnZero()
+    {
+        // Act
+        double y = MapSearchViewModel.LatitudeToMercatorY(0.0);
+
+        // Assert
+        Assert.That(y, Is.EqualTo(0.0).Within(1e-9));
+    }
+
+    [TestCase(0.0)]
+    [TestCase(21.5855)]
+    [TestCase(-33.8688)]
+    [TestCase(51.5074)]
+    [TestCase(80.0)]
+    public void MercatorProjection_RoundTrip_ShouldPreserveLatitude(double inputLat)
+    {
+        // Act
+        double mercatorY = MapSearchViewModel.LatitudeToMercatorY(inputLat);
+        double roundTripLat = MapSearchViewModel.MercatorYToLatitude(mercatorY);
+
+        // Assert
+        Assert.That(roundTripLat, Is.EqualTo(inputLat).Within(1e-7));
+    }
+
+    [Test]
+    public void LatitudeToMercatorY_HigherLatitude_ShouldStretchNonLinearly()
+    {
+        // In Mercator projection, distance from 0 to 30 deg is smaller than 30 to 60 deg
+        double y0 = MapSearchViewModel.LatitudeToMercatorY(0.0);
+        double y30 = MapSearchViewModel.LatitudeToMercatorY(30.0);
+        double y60 = MapSearchViewModel.LatitudeToMercatorY(60.0);
+
+        double delta1 = y30 - y0;
+        double delta2 = y60 - y30;
+
+        // Assert non-linear stretch
+        Assert.That(delta2, Is.GreaterThan(delta1));
+    }
 }

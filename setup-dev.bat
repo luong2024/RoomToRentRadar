@@ -12,21 +12,35 @@ dotnet user-secrets set "CosmosDb:RoomsContainerName" "RoomDetails" --project sr
 echo       -> Da tao ngau nhien JWT Secret (32 bytes) va luu secrets cuc bo (Khong bi day len Git).
 echo.
 echo [2/3] Kiem tra va thiet lap cau noi USB cho thiet bi Android (adb reverse)...
+set "ADB_EXE=adb"
 where adb >nul 2>nul
-if %ERRORLEVEL% EQU 0 (
-    adb reverse tcp:5000 tcp:5000 >nul 2>nul
-    adb reverse tcp:5000 tcp:49966 >nul 2>nul
-    adb reverse tcp:49966 tcp:49966 >nul 2>nul
-    echo       -> Da thiet lap cau noi qua adb port 5000 va 49966.
-) else (
+if %ERRORLEVEL% NEQ 0 (
     if exist "C:\Program Files (x86)\Android\android-sdk\platform-tools\adb.exe" (
-        "C:\Program Files (x86)\Android\android-sdk\platform-tools\adb.exe" reverse tcp:5000 tcp:5000 >nul 2>nul
-        "C:\Program Files (x86)\Android\android-sdk\platform-tools\adb.exe" reverse tcp:5000 tcp:49966 >nul 2>nul
-        "C:\Program Files (x86)\Android\android-sdk\platform-tools\adb.exe" reverse tcp:49966 tcp:49966 >nul 2>nul
-        echo       -> Da thiet lap cau noi qua Android SDK platform-tools.
+        set "ADB_EXE=C:\Program Files (x86)\Android\android-sdk\platform-tools\adb.exe"
     ) else (
-        echo       -> Chua phat hien adb (Neu chay tren Windows thi khong can buoc nay).
+        set "ADB_EXE="
     )
+)
+
+if defined ADB_EXE (
+    set "DEVICE_FOUND="
+    for /f "tokens=1,2" %%A in ('"%ADB_EXE%" devices 2^>nul') do (
+        if "%%B"=="device" set "DEVICE_FOUND=1"
+        if "%%B"=="emulator" set "DEVICE_FOUND=1"
+    )
+    if defined DEVICE_FOUND (
+        "%ADB_EXE%" reverse tcp:49966 tcp:49966 >nul 2>nul
+        if %ERRORLEVEL% EQU 0 (
+            echo       -^> Da thiet lap cau noi qua adb port 49966 thanh cong.
+        ) else (
+            echo       -^> Lenh 'adb reverse' that bai ^(ma loi %ERRORLEVEL%^).
+        )
+    ) else (
+        echo       -^> Khong tim thay thiet bi hoac may ao Android nao dang ket noi qua ADB.
+        echo          ^(Luu y: Khi chay app tren may that, hay chay lenh: adb reverse tcp:49966 tcp:49966^)
+    )
+) else (
+    echo       -^> Chua phat hien adb tren he thong ^(Neu chi chay tren Windows thi khong can buoc nay^).
 )
 echo.
 echo [3/3] Kiem tra cau hinh User Secrets da luu:

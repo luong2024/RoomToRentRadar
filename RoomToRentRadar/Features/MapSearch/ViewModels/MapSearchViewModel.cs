@@ -45,6 +45,9 @@ public partial class MapSearchViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = "Tap 'Draw area' to search rooms by neighbourhood";
 
+    [ObservableProperty]
+    private bool _isAreaConfirmed;
+
     public DrawnPolygonArea CurrentArea { get; } = new();
 
     public ObservableCollection<GeoCoordinate> PolygonCoordinates { get; } = new();
@@ -122,6 +125,7 @@ public partial class MapSearchViewModel : ObservableObject
         HasDrawnPolygon = false;
         IsDrawingMode = false;
         IsEditingMode = false;
+        IsAreaConfirmed = false;
         VertexCount = 0;
         StatusMessage = "Tap 'Draw area' to search rooms by neighbourhood";
     }
@@ -134,36 +138,42 @@ public partial class MapSearchViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Confirms the defined search area boundary and transitions to room listings.
-    /// Note: Full polygon geo-spatial backend filtering query will be connected in task T05.2.
+    /// Confirms the defined search area boundary.
+    /// Note: Room filtering within this polygon will be implemented in task T05.2.
     /// </summary>
     [RelayCommand]
-    public async Task ViewPropertiesAsync()
+    public async Task ConfirmAreaAsync()
     {
         if (!HasDrawnPolygon || PolygonCoordinates.Count < 3)
         {
-            StatusMessage = "Please draw a valid area before viewing properties.";
+            StatusMessage = "Please draw a valid area before confirming.";
             return;
         }
 
-        StatusMessage = $"Area confirmed with {VertexCount} vertices. Transitioning to listings...";
+        IsAreaConfirmed = true;
+        StatusMessage = $"Area confirmed with {VertexCount} vertices. Ready for search integration (T05.2).";
 
         if (AlertHandler != null)
         {
             await AlertHandler.Invoke(
                 "Search Area Confirmed",
-                $"Selected boundary with {VertexCount} vertices has been recorded.\n\nRoom search within this polygon will be executed in task T05.2.",
+                $"Search boundary with {VertexCount} vertices has been recorded.\n\nRoom filtering within this polygon will be implemented in task T05.2.",
                 "OK");
         }
         else if (Shell.Current is not null)
         {
             await Shell.Current.DisplayAlertAsync(
                 "Search Area Confirmed",
-                $"Selected boundary with {VertexCount} vertices has been recorded.\n\nRoom search within this polygon will be executed in task T05.2.",
+                $"Search boundary with {VertexCount} vertices has been recorded.\n\nRoom filtering within this polygon will be implemented in task T05.2.",
                 "OK");
-            await Shell.Current.GoToAsync("//rooms");
         }
     }
+
+    /// <summary>
+    /// Alias for backwards compatibility with ViewProperties command.
+    /// </summary>
+    [RelayCommand]
+    public Task ViewPropertiesAsync() => ConfirmAreaAsync();
 
     public void CompleteDrawing(IEnumerable<GeoCoordinate> geoPoints)
     {
@@ -391,5 +401,27 @@ public partial class MapSearchViewModel : ObservableObject
             }
         }
         return result;
+    }
+
+    /// <summary>
+    /// Converts latitude in degrees to Spherical Mercator Y coordinate (EPSG:3857).
+    /// Used for non-linear screen-to-map projection matching Google Maps.
+    /// </summary>
+    public static double LatitudeToMercatorY(double latDegrees)
+    {
+        double clampedLat = Math.Clamp(latDegrees, -85.0511, 85.0511);
+        double rad = clampedLat * Math.PI / 180.0;
+        return Math.Log(Math.Tan((Math.PI / 4.0) + (rad / 2.0)));
+    }
+
+    /// <summary>
+    /// Converts Spherical Mercator Y coordinate back to latitude in degrees (EPSG:3857).
+    /// Used for non-linear screen-to-map projection matching Google Maps.
+    /// </summary>
+    public static double MercatorYToLatitude(double mercatorY)
+    {
+        double rad = (2.0 * Math.Atan(Math.Exp(mercatorY))) - (Math.PI / 2.0);
+        double deg = rad * 180.0 / Math.PI;
+        return Math.Clamp(deg, -85.0511, 85.0511);
     }
 }

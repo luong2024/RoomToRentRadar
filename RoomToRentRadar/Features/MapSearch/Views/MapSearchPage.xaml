@@ -166,9 +166,9 @@
                         FontFamily="SegoeSemibold"
                         FontSize="13" />
 
-                <!-- Action 3: View properties (Search confirmation button) -->
-                <Button Text="View properties →"
-                        Command="{Binding ViewPropertiesCommand}"
+                <!-- Action 3: Confirm Area (Boundary confirmation button) -->
+                <Button Text="Confirm Area ✓"
+                        Command="{Binding ConfirmAreaCommand}"
                         Background="{StaticResource PrimaryBrandGradient}"
                         TextColor="White"
                         CornerRadius="24"
