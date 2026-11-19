@@ -104,39 +104,13 @@ public class RoomListingsControllerTests
         Assert.That(notFoundResult.Value, Is.InstanceOf<ProblemDetails>());
     }
 
-    [Test]
-    public async Task GetRoomsAsync_WithSearchAndFilters_ShouldForwardCompleteQueryToUseCase()
-    {
-        var query = new GetRoomListingsQuery(
-            CampusId: "campus-ictu",
-            Page: 2,
-            PageSize: 6,
-            SortBy: "price",
-            SortOrder: "asc",
-            Search: "Z115",
-            MinPrice: 1_000_000m,
-            MaxPrice: 2_000_000m,
-            RoomType: "private",
-            Amenities: "aircon,wifi");
-
-        var actionResult = await _controller.GetRoomsAsync(query, CancellationToken.None);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(actionResult, Is.InstanceOf<OkObjectResult>());
-            Assert.That(_useCase.LastReceivedQuery, Is.EqualTo(query));
-        });
-    }
-
     private sealed class FakeGetRoomListingsUseCase : IGetRoomListingsUseCase
     {
         public PagedResult<RoomListingDto>? ResultToReturn { get; set; }
         public Exception? ExceptionToThrow { get; set; }
-        public GetRoomListingsQuery? LastReceivedQuery { get; private set; }
 
         public Task<PagedResult<RoomListingDto>> ExecuteAsync(GetRoomListingsQuery query, CancellationToken cancellationToken = default)
         {
-            LastReceivedQuery = query;
             if (ExceptionToThrow is not null)
             {
                 throw ExceptionToThrow;

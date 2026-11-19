@@ -8,9 +8,4 @@ public sealed record GetRoomListingsQuery(
     int Page = 1,
     int PageSize = 20,
     string? SortBy = "distance",
-    string? SortOrder = "asc",
-    string? Search = null,
-    decimal? MinPrice = null,
-    decimal? MaxPrice = null,
-    string? RoomType = null,
-    string? Amenities = null);
+    string? SortOrder = "asc");

@@ -47,12 +47,6 @@ public sealed class RoomListingDocument : IProjectionVersionedDocument
     [JsonProperty("thumbnailUrl")]
     public string? ThumbnailUrl { get; set; }
 
-    [JsonProperty("roomType")]
-    public string? RoomType { get; set; }
-
-    [JsonProperty("amenities")]
-    public List<string>? Amenities { get; set; }
-
     [JsonProperty("createdAtUtc")]
     public DateTime CreatedAtUtc { get; set; }
 

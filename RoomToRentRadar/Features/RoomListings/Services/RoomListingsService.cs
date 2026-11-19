@@ -47,49 +47,39 @@ public sealed class RoomListingsService : IRoomListingsService
         ArgumentOutOfRangeException.ThrowIfLessThan(page, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(pageSize, 1);
 
-        var (sortByParam, sortOrderParam) = GetSortParameters(sortBy);
         var searchTerm = search?.Trim();
-        var endpoint = $"api/v1/rooms?campusId={DefaultCampusId}&page={page}&pageSize={pageSize}&sortBy={sortByParam}&sortOrder={sortOrderParam}";
-        if (!string.IsNullOrEmpty(searchTerm))
-        {
-            endpoint += $"&search={Uri.EscapeDataString(searchTerm)}";
-        }
-
-        if (filter is not null)
-        {
-            if (filter.MinPrice.HasValue)
-            {
-                endpoint += $"&minPrice={filter.MinPrice.Value.ToString(CultureInfo.InvariantCulture)}";
-            }
-
-            if (filter.MaxPrice.HasValue)
-            {
-                endpoint += $"&maxPrice={filter.MaxPrice.Value.ToString(CultureInfo.InvariantCulture)}";
-            }
-
-            if (!string.IsNullOrWhiteSpace(filter.RoomType))
-            {
-                endpoint += $"&roomType={Uri.EscapeDataString(filter.RoomType.Trim())}";
-            }
-
-            if (filter.Amenities is { Count: > 0 })
-            {
-                var normalizedAmenities = filter.Amenities
-                    .Where(a => !string.IsNullOrWhiteSpace(a))
-                    .Select(a => Uri.EscapeDataString(a.Trim()))
-                    .ToArray();
-
-                if (normalizedAmenities.Length > 0)
-                {
-                    endpoint += $"&amenities={string.Join(",", normalizedAmenities)}";
-                }
-            }
-        }
+        var hasSearchOrFilter = !string.IsNullOrEmpty(searchTerm) || (filter is not null && filter.HasActiveFilters);
 
         try
         {
+            if (hasSearchOrFilter)
+            {
+                var searchEndpoint = BuildSearchRoomsEndpoint(page, pageSize, searchTerm, filter);
+                var searchResponse = await _apiClient.GetAsync<SearchRoomsApiResponse>(
+                    searchEndpoint,
+                    cancellationToken);
+
+                if (searchResponse is null)
+                {
+                    return new PagedResponse<RoomListItemModel>([], page, pageSize, 0);
+                }
+
+                var mappedSearchItems = ApplySort(
+                    (searchResponse.Items ?? []).Select(MapDtoToModel),
+                    sortBy).ToList();
+
+                return new PagedResponse<RoomListItemModel>(
+                    Items: mappedSearchItems,
+                    Page: searchResponse.CurrentPage > 0 ? searchResponse.CurrentPage : page,
+                    PageSize: pageSize,
+                    TotalCount: searchResponse.TotalCount);
+            }
+
+            var (sortByParam, sortOrderParam) = GetSortParameters(sortBy);
+            var browseEndpoint = $"api/v1/rooms?campusId={DefaultCampusId}&page={page}&pageSize={pageSize}&sortBy={sortByParam}&sortOrder={sortOrderParam}";
+
             var response = await _apiClient.GetAsync<PagedResponse<RoomListingApiDto>>(
-                endpoint,
+                browseEndpoint,
                 cancellationToken);
 
             if (response is null)
@@ -115,6 +105,64 @@ public sealed class RoomListingsService : IRoomListingsService
             return GetFallbackMockPage(page, pageSize, sortBy, searchTerm, filter);
         }
     }
+
+    private static string BuildSearchRoomsEndpoint(
+        int page,
+        int pageSize,
+        string? searchTerm,
+        RoomFilterCriteria? filter)
+    {
+        var endpoint = $"api/rooms?pageNumber={page}&pageSize={pageSize}";
+
+        var effectiveKeyword = searchTerm;
+        if (string.IsNullOrEmpty(effectiveKeyword) && filter?.Amenities is { Count: > 0 })
+        {
+            var normalizedAmenities = filter.Amenities
+                .Where(a => !string.IsNullOrWhiteSpace(a))
+                .Select(a => a.Trim())
+                .ToArray();
+
+            if (normalizedAmenities.Length > 0)
+            {
+                effectiveKeyword = string.Join(" ", normalizedAmenities);
+            }
+        }
+
+        if (!string.IsNullOrEmpty(effectiveKeyword))
+        {
+            endpoint += $"&keyword={Uri.EscapeDataString(effectiveKeyword)}";
+        }
+
+        if (filter is not null)
+        {
+            if (filter.MinPrice.HasValue)
+            {
+                endpoint += $"&minPrice={filter.MinPrice.Value.ToString(CultureInfo.InvariantCulture)}";
+            }
+
+            if (filter.MaxPrice.HasValue)
+            {
+                endpoint += $"&maxPrice={filter.MaxPrice.Value.ToString(CultureInfo.InvariantCulture)}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(filter.RoomType))
+            {
+                endpoint += $"&roomType={Uri.EscapeDataString(filter.RoomType.Trim())}";
+            }
+        }
+
+        return endpoint;
+    }
+
+    private static IEnumerable<RoomListItemModel> ApplySort(
+        IEnumerable<RoomListItemModel> items,
+        RoomSortOption sortBy) =>
+        sortBy switch
+        {
+            RoomSortOption.PriceAsc => items.OrderBy(r => r.Price).ThenBy(r => r.Id, StringComparer.Ordinal),
+            RoomSortOption.PriceDesc => items.OrderByDescending(r => r.Price).ThenBy(r => r.Id, StringComparer.Ordinal),
+            _ => items.OrderBy(r => r.DistanceToCampusKm).ThenBy(r => r.Id, StringComparer.Ordinal)
+        };
 
     public async Task<RoomListItemModel?> GetRoomByIdAsync(
         string roomId,
@@ -156,6 +204,10 @@ public sealed class RoomListingsService : IRoomListingsService
             ? dto.AreaSquareMeters
             : (dto.AreaSqm ?? dto.Area ?? 0d);
 
+        var distance = dto.DistanceToCampusKm > 0
+            ? dto.DistanceToCampusKm
+            : (dto.DistanceInKm ?? 0d);
+
         return new RoomListItemModel
         {
             Id = dto.Id,
@@ -165,7 +217,7 @@ public sealed class RoomListingsService : IRoomListingsService
             Address = dto.Address,
             RoomType = !string.IsNullOrWhiteSpace(dto.RoomType) ? dto.RoomType : "private",
             District = !string.IsNullOrWhiteSpace(dto.District) ? dto.District : "Thai Nguyen City",
-            DistanceToCampusKm = dto.DistanceToCampusKm,
+            DistanceToCampusKm = distance,
             ThumbnailUrl = dto.ThumbnailUrl,
             IsVerified = dto.IsVerified,
             IsAvailable = dto.IsAvailable ?? true,

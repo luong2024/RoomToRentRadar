@@ -13,6 +13,4 @@ public sealed record RoomListingDto(
     bool IsVerified,
     string Address,
     string? ThumbnailUrl,
-    string CampusId,
-    string? RoomType = null,
-    IReadOnlyList<string>? Amenities = null);
+    string CampusId);

@@ -22,9 +22,7 @@ public static class CosmosMappingExtensions
             verificationStatus: (VerificationStatus)doc.VerificationStatus,
             campusId: doc.CampusId,
             thumbnailUrl: doc.ThumbnailUrl,
-            createdAtUtc: doc.CreatedAtUtc,
-            roomType: doc.RoomType,
-            amenities: doc.Amenities);
+            createdAtUtc: doc.CreatedAtUtc);
     }
 
     public static RoomListingDocument ToDocument(this RoomListing entity)
@@ -45,8 +43,6 @@ public static class CosmosMappingExtensions
             Status = (int)entity.Status,
             VerificationStatus = (int)entity.VerificationStatus,
             ThumbnailUrl = entity.ThumbnailUrl,
-            RoomType = entity.RoomType,
-            Amenities = entity.Amenities.ToList(),
             CreatedAtUtc = entity.CreatedAtUtc
         };
     }

@@ -275,117 +275,6 @@ public class GetRoomListingsUseCaseTests
     }
 
     [Test]
-    public async Task ExecuteAsync_WithSearchAndFilters_ShouldFilterByKeywordPriceRoomTypeAndAmenities()
-    {
-        var matchingRoom = new RoomListing(
-            "room-match",
-            "Z115 Private Studio",
-            "Sunny room near main gate",
-            new Money(1_800_000m),
-            22.0,
-            "12 Z115 Street, Quyet Thang",
-            new GeoLocation(21.5860, 105.8074),
-            ListingRoomStatus.Available,
-            VerificationStatus.Verified,
-            "campus-ictu",
-            roomType: "private",
-            amenities: ["Air Conditioner", "Wi-Fi"]);
-
-        var expensiveRoom = new RoomListing(
-            "room-expensive",
-            "Z115 Luxury Apartment",
-            "Luxury apartment",
-            new Money(3_500_000m),
-            35.0,
-            "Z115 Street",
-            new GeoLocation(21.5860, 105.8074),
-            ListingRoomStatus.Available,
-            VerificationStatus.Verified,
-            "campus-ictu",
-            roomType: "private",
-            amenities: ["Air Conditioner", "Wi-Fi"]);
-
-        var sharedRoom = new RoomListing(
-            "room-shared",
-            "Z115 Shared Room",
-            "Shared student room",
-            new Money(1_500_000m),
-            26.0,
-            "Z115 Street",
-            new GeoLocation(21.5860, 105.8074),
-            ListingRoomStatus.Available,
-            VerificationStatus.Verified,
-            "campus-ictu",
-            roomType: "shared",
-            amenities: ["Air Conditioner", "Wi-Fi"]);
-
-        var noWifiRoom = new RoomListing(
-            "room-nowifi",
-            "Z115 Basic Room",
-            "Basic room",
-            new Money(1_600_000m),
-            20.0,
-            "Z115 Street",
-            new GeoLocation(21.5860, 105.8074),
-            ListingRoomStatus.Available,
-            VerificationStatus.Verified,
-            "campus-ictu",
-            roomType: "private",
-            amenities: ["Air Conditioner"]);
-
-        await _roomRepository.AddAsync(matchingRoom);
-        await _roomRepository.AddAsync(expensiveRoom);
-        await _roomRepository.AddAsync(sharedRoom);
-        await _roomRepository.AddAsync(noWifiRoom);
-
-        var query = new GetRoomListingsQuery(
-            CampusId: "campus-ictu",
-            Page: 1,
-            PageSize: 10,
-            SortBy: "price",
-            SortOrder: "asc",
-            Search: "Z115",
-            MinPrice: 1_000_000m,
-            MaxPrice: 2_000_000m,
-            RoomType: "private",
-            Amenities: "aircon,wifi");
-
-        var result = await _useCase.ExecuteAsync(query);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.TotalCount, Is.EqualTo(1));
-            Assert.That(result.Items, Has.Count.EqualTo(1));
-            Assert.That(result.Items[0].Id, Is.EqualTo("room-match"));
-            Assert.That(result.Items[0].RoomType, Is.EqualTo("private"));
-            Assert.That(result.Items[0].Amenities, Is.EqualTo(new[] { "Air Conditioner", "Wi-Fi" }));
-        });
-    }
-
-    [Test]
-    public void ExecuteAsync_WhenMinPriceGreaterThanMaxPrice_ShouldThrowValidationException()
-    {
-        var query = new GetRoomListingsQuery(
-            CampusId: "campus-ictu",
-            MinPrice: 3_000_000m,
-            MaxPrice: 1_000_000m);
-
-        var ex = Assert.ThrowsAsync<ValidationException>(() => _useCase.ExecuteAsync(query));
-        Assert.That(ex!.Errors.ContainsKey("MinPrice"), Is.True);
-    }
-
-    [Test]
-    public void ExecuteAsync_WhenMinPriceIsNegative_ShouldThrowValidationException()
-    {
-        var query = new GetRoomListingsQuery(
-            CampusId: "campus-ictu",
-            MinPrice: -100m);
-
-        var ex = Assert.ThrowsAsync<ValidationException>(() => _useCase.ExecuteAsync(query));
-        Assert.That(ex!.Errors.ContainsKey("MinPrice"), Is.True);
-    }
-
-    [Test]
     public async Task ExecuteAsync_WhenValuesEqual_TieBreakerEnsuresStablePaginationOrder()
     {
         // 3 rooms with the exact same price
@@ -425,77 +314,13 @@ public class GetRoomListingsUseCaseTests
 
     private sealed class FakeRoomListingRepository : IRoomListingRepository
     {
-        private static readonly Dictionary<string, string[]> AmenitySynonyms = new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["aircon"] = ["aircon", "air condition", "điều hòa"],
-            ["wifi"] = ["wifi", "wi-fi"],
-            ["parking"] = ["parking", "để xe", "gửi xe", "giữ xe"],
-            ["bathroom"] = ["bathroom", "private bath", "water heater", "khép kín", "nóng lạnh"],
-            ["washing"] = ["washing", "máy giặt"],
-            ["kitchen"] = ["kitchen", "bếp"]
-        };
-
         private readonly List<RoomListing> _items = [];
         public int GetCallCount { get; private set; }
 
-        public Task<PagedResult<RoomListing>> GetAvailableVerifiedRoomsByCampusAsync(
-            string campusId,
-            GeoLocation campusLocation,
-            int page,
-            int pageSize,
-            string sortBy,
-            bool descending,
-            CancellationToken cancellationToken = default,
-            string? search = null,
-            decimal? minPrice = null,
-            decimal? maxPrice = null,
-            string? roomType = null,
-            IReadOnlyList<string>? amenities = null)
+        public Task<PagedResult<RoomListing>> GetAvailableVerifiedRoomsByCampusAsync(string campusId, GeoLocation campusLocation, int page, int pageSize, string sortBy, bool descending, CancellationToken cancellationToken = default)
         {
             GetCallCount++;
-            var results = _items.Where(r =>
-                r.CampusId == campusId &&
-                r.Status == ListingRoomStatus.Available &&
-                r.VerificationStatus == VerificationStatus.Verified);
-
-            if (minPrice.HasValue)
-            {
-                results = results.Where(r => r.MonthlyRent.Amount >= minPrice.Value);
-            }
-
-            if (maxPrice.HasValue)
-            {
-                results = results.Where(r => r.MonthlyRent.Amount <= maxPrice.Value);
-            }
-
-            if (!string.IsNullOrWhiteSpace(roomType))
-            {
-                results = results.Where(r => string.Equals(r.RoomType, roomType.Trim(), StringComparison.OrdinalIgnoreCase));
-            }
-
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                var term = search.Trim();
-                results = results.Where(r =>
-                    r.Title.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                    r.Description.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                    r.Address.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                    r.Amenities.Any(a => a.Contains(term, StringComparison.OrdinalIgnoreCase)));
-            }
-
-            if (amenities is { Count: > 0 })
-            {
-                foreach (var amenity in amenities)
-                {
-                    var terms = AmenitySynonyms.TryGetValue(amenity, out var synonyms) ? synonyms : [amenity];
-                    results = results.Where(r =>
-                        terms.Any(t =>
-                            r.Title.Contains(t, StringComparison.OrdinalIgnoreCase) ||
-                            r.Description.Contains(t, StringComparison.OrdinalIgnoreCase) ||
-                            r.Amenities.Any(a => a.Contains(t, StringComparison.OrdinalIgnoreCase))));
-                }
-            }
-
+            var results = _items.Where(r => r.CampusId == campusId && r.Status == ListingRoomStatus.Available && r.VerificationStatus == VerificationStatus.Verified);
             results = sortBy switch
             {
                 "price" => descending ? results.OrderByDescending(r => r.MonthlyRent.Amount).ThenBy(r => r.Id) : results.OrderBy(r => r.MonthlyRent.Amount).ThenBy(r => r.Id),

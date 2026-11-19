@@ -57,16 +57,6 @@ public sealed class CosmosRoomListingRepository : IRoomListingRepository
         _logger = logger ?? NullLogger<CosmosRoomListingRepository>.Instance;
     }
 
-    private static readonly Dictionary<string, string[]> AmenitySearchTerms = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["aircon"] = ["aircon", "air condition", "điều hòa"],
-        ["wifi"] = ["wifi", "wi-fi"],
-        ["parking"] = ["parking", "để xe", "gửi xe", "giữ xe"],
-        ["bathroom"] = ["bathroom", "private bath", "water heater", "khép kín", "nóng lạnh"],
-        ["washing"] = ["washing", "máy giặt"],
-        ["kitchen"] = ["kitchen", "bếp"]
-    };
-
     public async Task<PagedResult<RoomListing>> GetAvailableVerifiedRoomsByCampusAsync(
         string campusId,
         GeoLocation campusLocation,
@@ -74,121 +64,14 @@ public sealed class CosmosRoomListingRepository : IRoomListingRepository
         int pageSize,
         string sortBy,
         bool descending,
-        CancellationToken cancellationToken = default,
-        string? search = null,
-        decimal? minPrice = null,
-        decimal? maxPrice = null,
-        string? roomType = null,
-        IReadOnlyList<string>? amenities = null)
+        CancellationToken cancellationToken = default)
     {
         var totalRu = 0.0;
-        var filterClauses = new List<string>
-        {
-            "c.campusId = @campusId",
-            "c.status = @status",
-            "c.verificationStatus = @verificationStatus",
-            "(NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false)"
-        };
-
-        if (minPrice.HasValue)
-        {
-            filterClauses.Add("c.monthlyRentAmount >= @minPrice");
-        }
-
-        if (maxPrice.HasValue)
-        {
-            filterClauses.Add("c.monthlyRentAmount <= @maxPrice");
-        }
-
-        var normalizedRoomType = string.IsNullOrWhiteSpace(roomType) ? null : roomType.Trim().ToLowerInvariant();
-        if (normalizedRoomType is not null)
-        {
-            if (string.Equals(normalizedRoomType, "private", StringComparison.OrdinalIgnoreCase))
-            {
-                filterClauses.Add("(NOT IS_DEFINED(c.roomType) OR IS_NULL(c.roomType) OR c.roomType = '' OR STRINGEQUALS(c.roomType, @roomType, true))");
-            }
-            else
-            {
-                filterClauses.Add("(IS_DEFINED(c.roomType) AND NOT IS_NULL(c.roomType) AND STRINGEQUALS(c.roomType, @roomType, true))");
-            }
-        }
-
-        var normalizedSearch = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
-        if (normalizedSearch is not null)
-        {
-            filterClauses.Add(
-                "(CONTAINS(c.title, @search, true) OR CONTAINS(c.description, @search, true) OR CONTAINS(c.address, @search, true) " +
-                "OR (IS_DEFINED(c.amenities) AND IS_ARRAY(c.amenities) AND EXISTS(SELECT VALUE a FROM a IN c.amenities WHERE CONTAINS(a, @search, true))))");
-        }
-
-        var amenityParameterValues = new List<(string ParamName, string Term)>();
-        if (amenities is { Count: > 0 })
-        {
-            var paramIndex = 0;
-            foreach (var rawAmenity in amenities)
-            {
-                if (string.IsNullOrWhiteSpace(rawAmenity))
-                {
-                    continue;
-                }
-
-                var key = rawAmenity.Trim();
-                var terms = AmenitySearchTerms.TryGetValue(key, out var mappedTerms)
-                    ? mappedTerms
-                    : [key];
-
-                var termClauses = new List<string>(terms.Length);
-                foreach (var term in terms)
-                {
-                    var paramName = $"@amenity_{paramIndex++}";
-                    amenityParameterValues.Add((paramName, term));
-                    termClauses.Add(
-                        $"CONTAINS(c.title, {paramName}, true) OR CONTAINS(c.description, {paramName}, true) " +
-                        $"OR (IS_DEFINED(c.amenities) AND IS_ARRAY(c.amenities) AND EXISTS(SELECT VALUE a FROM a IN c.amenities WHERE CONTAINS(a, {paramName}, true)))");
-                }
-
-                filterClauses.Add($"({string.Join(" OR ", termClauses)})");
-            }
-        }
-
-        var filter = string.Join(" AND ", filterClauses);
-
-        QueryDefinition ApplyFilterParameters(QueryDefinition definition)
-        {
-            var configured = definition
-                .WithParameter("@campusId", campusId)
-                .WithParameter("@status", (int)ListingRoomStatus.Available)
-                .WithParameter("@verificationStatus", (int)VerificationStatus.Verified);
-
-            if (minPrice.HasValue)
-            {
-                configured = configured.WithParameter("@minPrice", minPrice.Value);
-            }
-
-            if (maxPrice.HasValue)
-            {
-                configured = configured.WithParameter("@maxPrice", maxPrice.Value);
-            }
-
-            if (normalizedRoomType is not null)
-            {
-                configured = configured.WithParameter("@roomType", normalizedRoomType);
-            }
-
-            if (normalizedSearch is not null)
-            {
-                configured = configured.WithParameter("@search", normalizedSearch);
-            }
-
-            foreach (var (paramName, term) in amenityParameterValues)
-            {
-                configured = configured.WithParameter(paramName, term);
-            }
-
-            return configured;
-        }
-
-        var countDefinition = ApplyFilterParameters(new QueryDefinition($"SELECT VALUE COUNT(1) FROM c WHERE {filter}"));
+        var filter = "c.campusId = @campusId AND c.status = @status AND c.verificationStatus = @verificationStatus AND (NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false)";
+        var countDefinition = new QueryDefinition($"SELECT VALUE COUNT(1) FROM c WHERE {filter}")
+            .WithParameter("@campusId", campusId)
+            .WithParameter("@status", (int)ListingRoomStatus.Available)
+            .WithParameter("@verificationStatus", (int)VerificationStatus.Verified);
         using var countIterator = _listingsContainer.GetItemQueryIterator<int>(countDefinition, requestOptions: new QueryRequestOptions
         {
             PartitionKey = new PartitionKey(campusId)
@@ -220,8 +103,11 @@ public sealed class CosmosRoomListingRepository : IRoomListingRepository
         };
 
         var offset = checked((long)(page - 1) * pageSize);
-        var queryDefinition = ApplyFilterParameters(new QueryDefinition(
-            $"SELECT * FROM c WHERE {filter} {orderByClause} OFFSET @offset LIMIT @limit"))
+        var queryDefinition = new QueryDefinition(
+            $"SELECT * FROM c WHERE {filter} {orderByClause} OFFSET @offset LIMIT @limit")
+            .WithParameter("@campusId", campusId)
+            .WithParameter("@status", (int)ListingRoomStatus.Available)
+            .WithParameter("@verificationStatus", (int)VerificationStatus.Verified)
             .WithParameter("@offset", offset)
             .WithParameter("@limit", pageSize);
         if (requiresLocationParam)
