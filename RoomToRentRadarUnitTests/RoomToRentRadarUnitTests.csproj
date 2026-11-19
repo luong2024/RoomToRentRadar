@@ -35,6 +35,10 @@
     <Compile Include="..\RoomToRentRadar\PageModels\AccountPageModel.cs" Link="PageModels\AccountPageModel.cs" />
     <Compile Include="..\RoomToRentRadar\Resources\Strings\AppResources.cs" Link="Resources\Strings\AppResources.cs" />
     <Compile Include="..\RoomToRentRadar\Resources\Strings\LocalizedStrings.cs" Link="Resources\Strings\LocalizedStrings.cs" />
+    <Compile Include="..\RoomToRentRadar\Services\Navigation\Core\*.cs" Link="Services\Navigation\Core\%(Filename)%(Extension)" />
+    <Compile Include="..\RoomToRentRadar\PageModels\Base\*.cs" Link="PageModels\Base\%(Filename)%(Extension)" />
+    <Compile Include="..\RoomToRentRadar\PageModels\MainLandingPageModel.cs" Link="PageModels\MainLandingPageModel.cs" />
+    <Compile Include="..\RoomToRentRadar\Pages\Controls\Cards\Models\*.cs" Link="Pages\Controls\Cards\Models\%(Filename)%(Extension)" />
     <EmbeddedResource Include="..\RoomToRentRadar\Resources\Strings\AppResources.resx" Link="Resources\Strings\AppResources.resx">
       <LogicalName>RoomToRentRadar.Resources.Strings.AppResources.resources</LogicalName>
     </EmbeddedResource>

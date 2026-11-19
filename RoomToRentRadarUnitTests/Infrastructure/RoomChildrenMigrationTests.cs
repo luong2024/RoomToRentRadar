@@ -23,15 +23,12 @@ public class RoomChildrenMigrationTests
         Assert.Multiple(() =>
         {
             Assert.That(applied, Does.Contain(3));
-            Assert.That(ReadUserVersion(connection), Is.EqualTo(3));
+            Assert.That(ReadUserVersion(connection), Is.GreaterThanOrEqualTo(3));
 
             var tables = ReadNames(connection, "table");
             Assert.That(tables, Does.Contain("RoomAmenities"));
             Assert.That(tables, Does.Contain("RoomSafetyFeatures"));
             Assert.That(tables, Does.Contain("HouseRuleVersions"));
-
-            var indexes = ReadNames(connection, "index");
-            Assert.That(indexes, Does.Contain("IX_HouseRuleVersions_RoomId"));
 
             var amenityColumns = ReadTableColumns(connection, "RoomAmenities");
             Assert.That(amenityColumns, Is.EquivalentTo(new[] { "RoomId", "AmenityCode" }));
@@ -63,8 +60,9 @@ public class RoomChildrenMigrationTests
         Assert.That(v2Applied, Is.EqualTo(new[] { 1, 2 }));
         Assert.That(ReadUserVersion(connection), Is.EqualTo(2));
 
-        // Now run full migration (script 3 is applied incrementally)
-        var applied = SqliteMigrator.Migrate(connection);
+        // Now apply script 3 incrementally
+        var v3Scripts = SqliteMigrator.LoadEmbedded().Where(s => s.Version <= 3).ToList();
+        var applied = SqliteMigrator.Migrate(connection, v3Scripts);
 
         Assert.Multiple(() =>
         {

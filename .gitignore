@@ -75,6 +75,10 @@ GoogleService-Info.plist
 .env
 appsettings.*.local.json
 
+# Runtime-generated media uploads (ADR-008)
+/media/
+RoomToRentRadar.Api/media/
+
 # OS generated files
 .DS_Store
 Thumbs.db

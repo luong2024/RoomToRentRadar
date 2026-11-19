@@ -3,24 +3,27 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:feedback="clr-namespace:RoomToRentRadar.Pages.Controls.Feedback"
              xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
+             xmlns:fonts="clr-namespace:Fonts"
              x:Class="RoomToRentRadar.Pages.Controls.Feedback.EmptyStateView"
              x:Name="RootEmptyView">
 
     <VerticalStackLayout HorizontalOptions="Center"
                          VerticalOptions="Center"
-                         Spacing="16"
+                         Spacing="12"
                          Padding="32">
 
         <!-- Context Illustration Icon Container -->
-        <Border StrokeShape="RoundRectangle 9999"
+        <Border StrokeShape="RoundRectangle 20"
                 StrokeThickness="0"
-                WidthRequest="80"
-                HeightRequest="80"
+                WidthRequest="72"
+                HeightRequest="72"
                 HorizontalOptions="Center"
                 BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}">
 
             <Label Text="{Binding Source={x:Reference RootEmptyView}, Path=IconGlyph}"
-                   FontSize="36"
+                   FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                   FontSize="34"
+                   TextColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}"
                    HorizontalTextAlignment="Center"
                    VerticalTextAlignment="Center" />
         </Border>
@@ -37,14 +40,15 @@
             <Label Text="{Binding Source={x:Reference RootEmptyView}, Path=Message}"
                    FontFamily="{StaticResource FontFamilyRegular}"
                    FontSize="{StaticResource FontSizeBodyMedium}"
-                   TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+                   TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"
                    HorizontalTextAlignment="Center"
                    MaximumWidthRequest="320" />
         </VerticalStackLayout>
 
         <!-- Recovery CTA Button -->
         <common:RadaButton Text="{Binding Source={x:Reference RootEmptyView}, Path=ActionText}"
-                           Variant="Secondary"
+                           Variant="Primary"
+                           ButtonHeight="48"
                            Command="{Binding Source={x:Reference RootEmptyView}, Path=ActionCommand}"
                            CommandParameter="{Binding Source={x:Reference RootEmptyView}, Path=ActionCommandParameter}"
                            IsVisible="{Binding Source={x:Reference RootEmptyView}, Path=HasAction}"

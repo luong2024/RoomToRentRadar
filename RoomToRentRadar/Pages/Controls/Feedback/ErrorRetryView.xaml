@@ -7,50 +7,99 @@
              x:Class="RoomToRentRadar.Pages.Controls.Feedback.ErrorRetryView"
              x:Name="RootErrorView">
 
-    <VerticalStackLayout HorizontalOptions="Center"
-                         VerticalOptions="Center"
-                         Spacing="16"
-                         Padding="32">
+    <Grid>
+        <!-- Full-area variant: first-load failures -->
+        <VerticalStackLayout x:Name="FullLayout"
+                             HorizontalOptions="Center"
+                             VerticalOptions="Center"
+                             Spacing="16"
+                             Padding="32">
 
-        <!-- Error Illustration Icon Container -->
-        <Border StrokeShape="RoundRectangle 9999"
-                StrokeThickness="0"
-                WidthRequest="80"
-                HeightRequest="80"
-                HorizontalOptions="Center"
-                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}">
+            <!-- Error Illustration Icon Container -->
+            <Border StrokeShape="RoundRectangle 9999"
+                    StrokeThickness="0"
+                    WidthRequest="80"
+                    HeightRequest="80"
+                    HorizontalOptions="Center"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}">
 
-            <Label Text="{x:Static fonts:FluentUI.warning_24_regular}"
-                   FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                   FontSize="36"
-                   TextColor="{AppThemeBinding Light={StaticResource StatusDangerLight}, Dark={StaticResource StatusDangerDark}}"
-                   HorizontalTextAlignment="Center"
-                   VerticalTextAlignment="Center" />
-        </Border>
+                <Label Text="{x:Static fonts:FluentUI.warning_24_regular}"
+                       FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                       FontSize="36"
+                       TextColor="{AppThemeBinding Light={StaticResource StatusDangerLight}, Dark={StaticResource StatusDangerDark}}"
+                       HorizontalTextAlignment="Center"
+                       VerticalTextAlignment="Center" />
+            </Border>
 
-        <!-- Descriptive Title & Explanation -->
-        <VerticalStackLayout Spacing="6" HorizontalOptions="Center">
-            <Label Text="{Binding Source={x:Reference RootErrorView}, Path=Title}"
-                   FontFamily="{StaticResource FontFamilySemibold}"
-                   FontSize="{StaticResource FontSizeH2}"
-                   FontAttributes="Bold"
-                   TextColor="{AppThemeBinding Light={StaticResource StatusDangerLight}, Dark={StaticResource StatusDangerDark}}"
-                   HorizontalTextAlignment="Center" />
+            <!-- Descriptive Title & Explanation -->
+            <VerticalStackLayout Spacing="6" HorizontalOptions="Center">
+                <Label Text="{Binding Source={x:Reference RootErrorView}, Path=Title}"
+                       FontFamily="{StaticResource FontFamilySemibold}"
+                       FontSize="{StaticResource FontSizeH2}"
+                       FontAttributes="Bold"
+                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+                       HorizontalTextAlignment="Center" />
 
-            <Label Text="{Binding Source={x:Reference RootErrorView}, Path=ErrorMessage}"
-                   FontFamily="{StaticResource FontFamilyRegular}"
-                   FontSize="{StaticResource FontSizeBodyMedium}"
-                   TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
-                   HorizontalTextAlignment="Center"
-                   MaximumWidthRequest="320" />
+                <Label Text="{Binding Source={x:Reference RootErrorView}, Path=ErrorMessage}"
+                       FontFamily="{StaticResource FontFamilyRegular}"
+                       FontSize="{StaticResource FontSizeBodyMedium}"
+                       TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"
+                       HorizontalTextAlignment="Center"
+                       MaximumWidthRequest="320" />
+            </VerticalStackLayout>
+
+            <!-- Retry Button -->
+            <common:RadaButton Text="{Binding Source={x:Reference RootErrorView}, Path=RetryText}"
+                               Variant="Outline"
+                               ButtonHeight="48"
+                               Command="{Binding Source={x:Reference RootErrorView}, Path=RetryCommand}"
+                               HorizontalOptions="Center"
+                               Margin="0,8,0,0" />
         </VerticalStackLayout>
 
-        <!-- Retry Button (Vietnamese CTA) -->
-        <common:RadaButton Text="{Binding Source={x:Reference RootErrorView}, Path=RetryText}"
-                           Variant="Primary"
-                           Command="{Binding Source={x:Reference RootErrorView}, Path=RetryCommand}"
-                           HorizontalOptions="Center"
-                           Margin="0,8,0,0" />
-    </VerticalStackLayout>
-</ContentView>
+        <!-- Compact variant: inline card shown below already-loaded content -->
+        <Border x:Name="CompactLayout"
+                IsVisible="False"
+                StrokeShape="RoundRectangle 12"
+                StrokeThickness="1"
+                Stroke="{AppThemeBinding Light={StaticResource StatusDangerBorderLight}, Dark={StaticResource StatusDangerBorderDark}}"
+                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+                Padding="12">
 
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Label Grid.Column="0"
+                       Text="{x:Static fonts:FluentUI.warning_24_regular}"
+                       FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                       FontSize="22"
+                       TextColor="{AppThemeBinding Light={StaticResource StatusWarningLight}, Dark={StaticResource StatusWarningDark}}"
+                       VerticalTextAlignment="Center" />
+
+                <VerticalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
+                    <Label Text="{Binding Source={x:Reference RootErrorView}, Path=Title}"
+                           FontFamily="{StaticResource FontFamilySemibold}"
+                           FontSize="{StaticResource FontSizeBodyMedium}"
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+
+                    <Label Text="{Binding Source={x:Reference RootErrorView}, Path=ErrorMessage}"
+                           FontFamily="{StaticResource FontFamilyRegular}"
+                           FontSize="13"
+                           TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                </VerticalStackLayout>
+
+                <common:RadaButton Grid.Column="2"
+                                   Text="{Binding Source={x:Reference RootErrorView}, Path=RetryText}"
+                                   Variant="Outline"
+                                   ButtonHeight="48"
+                                   Command="{Binding Source={x:Reference RootErrorView}, Path=RetryCommand}"
+                                   VerticalOptions="Center" />
+            </Grid>
+        </Border>
+    </Grid>
+</ContentView>

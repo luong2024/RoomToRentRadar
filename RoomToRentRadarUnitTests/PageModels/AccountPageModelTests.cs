@@ -6,6 +6,7 @@ using RoomToRentRadar.Client.Adapters.Abstractions;
 using RoomToRentRadar.PageModels;
 using RoomToRentRadar.Ports.Contracts.Requests.Auth;
 using RoomToRentRadar.Ports.Contracts.Responses.Auth;
+using RoomToRentRadar.Services.Navigation.Core;
 
 namespace RoomToRentRadarUnitTests.PageModels;
 
@@ -113,8 +114,9 @@ public class AccountPageModelTests
     }
 
     [Test]
-    public async Task SignOutAsync_WhenCalled_RevokesTokenOnBackendAndClearsSessionAndNavigatesToLogin()
+    public async Task SignOutAsync_WhenCalled_RevokesTokenOnBackendAndClearsSessionAndNavigatesToExplore()
     {
+        // T00.15 AC-4: sign-out returns to the guest tab set //explore (previously //login).
         // Arrange
         _sessionStore.GetRefreshTokenAsync().Returns("sample-refresh-token");
         _sessionStore.GetAccessTokenAsync().Returns("sample-access-token");
@@ -138,13 +140,13 @@ public class AccountPageModelTests
             "sample-access-token");
 
         await _sessionStore.Received(1).ClearSessionAsync();
-        Assert.That(navigatedRoute, Is.EqualTo("//login"));
+        Assert.That(navigatedRoute, Is.EqualTo("//explore"));
         Assert.That(model.IsGuest, Is.True);
         Assert.That(model.DisplayName, Is.Empty);
     }
 
     [Test]
-    public async Task SignOutAsync_WhenBackendThrowsException_StillClearsSessionAndNavigatesToLogin()
+    public async Task SignOutAsync_WhenBackendThrowsException_StillClearsSessionAndNavigatesToExplore()
     {
         // Arrange
         _sessionStore.GetRefreshTokenAsync().Returns("sample-refresh-token");
@@ -168,8 +170,48 @@ public class AccountPageModelTests
 
         // Assert
         await _sessionStore.Received(1).ClearSessionAsync();
-        Assert.That(navigatedRoute, Is.EqualTo("//login"));
+        Assert.That(navigatedRoute, Is.EqualTo("//explore"));
         Assert.That(model.IsGuest, Is.True);
+    }
+
+    [Test]
+    public async Task SignOutAsync_WithNavigationService_CallsSignOutToGuest()
+    {
+        // Arrange
+        _sessionStore.GetRefreshTokenAsync().Returns("sample-refresh-token");
+        _sessionStore.GetAccessTokenAsync().Returns("sample-access-token");
+        var navigation = Substitute.For<INavigationService>();
+
+        var model = new AccountPageModel(_authGateway, _sessionStore, navigation);
+
+        // Act
+        await model.SignOutCommand.ExecuteAsync(null);
+
+        // Assert
+        await navigation.Received(1).SignOutToGuestAsync();
+        await _sessionStore.Received(1).ClearSessionAsync();
+        Assert.That(model.IsGuest, Is.True);
+    }
+
+    [Test]
+    public async Task Account_NoNavigationService_StillUsesNavigateOverride()
+    {
+        // Arrange
+        string? navigatedRoute = null;
+        var model = new AccountPageModel(_authGateway, _sessionStore)
+        {
+            NavigateOverride = route =>
+            {
+                navigatedRoute = route;
+                return Task.CompletedTask;
+            }
+        };
+
+        // Act
+        await model.NavigateSavedSearchesCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.That(navigatedRoute, Is.EqualTo("saved-searches"));
     }
 
     [Test]

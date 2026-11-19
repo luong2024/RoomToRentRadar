@@ -1,14 +1,13 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.PageModels"
              xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
              xmlns:feedback="clr-namespace:RoomToRentRadar.Pages.Controls.Feedback"
              xmlns:nav="clr-namespace:RoomToRentRadar.Pages.Controls.Navigation"
              xmlns:fonts="clr-namespace:Fonts"
-             xmlns:loc="clr-namespace:RoomToRentRadar.Resources.Strings"
-             xmlns:local="clr-namespace:RoomToRentRadar.Pages"
              x:Class="RoomToRentRadar.Pages.SavedPlaceholderPage"
-             x:DataType="local:SavedPlaceholderPage"
+             x:DataType="vm:SavedPageModel"
              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCanvasLight}, Dark={StaticResource SurfaceCanvasDark}}">
 
     <Grid RowDefinitions="Auto, *, Auto">
@@ -18,19 +17,38 @@
                                Subtitle="{Binding PageSubtitle}"
                                CanGoBack="False" />
 
-        <!-- Content Area: Saved Rooms Empty State -->
         <ScrollView Grid.Row="1" Padding="{StaticResource ScreenMargin}">
             <VerticalStackLayout Spacing="24" MaximumWidthRequest="640" HorizontalOptions="Center" VerticalOptions="Center">
+
+                <!-- Guest sign-in invitation (BR-AUTH-07) -->
+                <VerticalStackLayout Spacing="8" IsVisible="{Binding IsPromptVisible}">
+                    <feedback:EmptyStateView
+                        IconGlyph="{x:Static fonts:FluentUI.heart_24_regular}"
+                        Title="{Binding PromptTitle}"
+                        Message="{Binding PromptMessage}"
+                        ActionText="{Binding PromptSignInText}"
+                        HasAction="True"
+                        ActionCommand="{Binding SignInCommand}" />
+
+                    <common:RadaButton Text="{Binding PromptNotNowText}"
+                                       Variant="Ghost"
+                                       ButtonHeight="48"
+                                       HorizontalOptions="Center"
+                                       Command="{Binding DismissPromptCommand}" />
+                </VerticalStackLayout>
+
+                <!-- Saved Rooms Empty State (signed-in, or guest after "Not now") -->
                 <feedback:EmptyStateView
                     IconGlyph="{x:Static fonts:FluentUI.heart_24_regular}"
                     Title="{Binding EmptyTitle}"
                     Message="{Binding EmptyMessage}"
-                    HasAction="False" />
+                    HasAction="False"
+                    IsVisible="{Binding IsContentVisible}" />
             </VerticalStackLayout>
         </ScrollView>
 
         <!-- Bottom Navigation Bar -->
         <nav:BottomNavBarControl Grid.Row="2"
-                                 ActiveTab="Saved" />
+                                 ActiveRoute="saved" />
     </Grid>
 </ContentPage>

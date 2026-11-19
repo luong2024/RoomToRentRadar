@@ -28,3 +28,8 @@ Listings need 3–20 photos and up to 3 panoramas (≤ 10 MB JPG/PNG). Students 
 
 ## Compliance
 Upload tests with real JPEG/PNG headers and a fake extension (GUARDRAILS 1.5.5); size limit tests; EXIF-stripped assertion.
+
+## Amendment - 2026-11-16 (T08.2 MVP waiver)
+- **Decision:** T08.2 stores the EXIF-stripped original once and serves the same file as `mediumUrl` and `thumbUrl`. The 400 px `thumb` and 1280 px `medium` renditions above are deferred to a follow-up task (to be confirmed at the next report meeting) because the task owner approved a zero-NuGet upload pipeline for this increment.
+- **Unchanged:** EXIF/GPS stripping, magic-byte validation and the 10 MB limit (BR-MED-02/04) still apply.
+- **Consequence:** lists and galleries may download originals (up to 10 MB each) until the follow-up lands. `IPhotoStoragePort`/`IImageProcessorPort` stay in place, so a resizer can be added without changing the API contract.

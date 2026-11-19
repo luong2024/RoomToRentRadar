@@ -38,7 +38,7 @@ flowchart LR
 | Mobile app | .NET MAUI 10, CommunityToolkit.Mvvm, MAUI Maps, SQLite cache | UI, navigation, offline cache, device features (secure storage, share, dialer, push token). |
 | API | ASP.NET Core 10 controllers, JWT bearer, SignalR hub, BackgroundServices | Business use cases, auth/RBAC, moderation, search, alerts, chat, media serving. |
 | Database | SQLite file (`roomtorentradar.db`, WAL) | All server data ([erd.md](erd.md)). |
-| Media store | Local disk folder behind `IPhotoStoragePort` | Photo originals and renditions ([ADR-008](adr/adr-008-media-storage-and-360-viewer.md)). |
+| Media store | Local disk folder behind `IPhotoStoragePort` | Photo originals (MVP); renditions deferred ([ADR-008](adr/adr-008-media-storage-and-360-viewer.md) amendment). |
 | Demo hosting | Team laptop + Microsoft Dev Tunnels (HTTPS for physical phones) | No public server in course scope; Docker/Caddy/VM is a documented upgrade path only ([ADR-013](adr/adr-013-hosting-and-environments.md)). |
 
 ## 3. Solution structure (target)
@@ -79,7 +79,7 @@ RoomToRentRadar.slnx
 │       ├── Adapters/Security/   JWT, PBKDF2, ICTU SSO verifier, security audit logger
 │       ├── Adapters/Routing/    OpenRouteServiceTravelTimeAdapter          (new folder)
 │       ├── Adapters/Push/       FcmPushNotificationAdapter                 (new folder)
-│       ├── Adapters/Media/      LocalDiskPhotoStorageAdapter, SkiaImageProcessorAdapter (new folder)
+│       ├── Adapters/Media/      LocalDiskPhotoStorageAdapter, ByteLevelImageProcessorAdapter (MVP)
 │       ├── Adapters/Mocks/      Mock* + InMemory* (tests/Development only)
 │       └── DependencyInjection.cs   AddInfrastructure()
 ├── 3. Driving Adapters
@@ -219,7 +219,7 @@ RoomsController.Search(query) → ISearchRoomsUseCase.ExecuteAsync(RoomSearchReq
 - PII: phone only to signed-in users (BR-AUTH-07); logs never contain tokens/passwords.
 
 ### 7.2 Error model
-`application/problem+json` with `errorCode` — [ADR-012](adr/adr-012-api-contract-and-error-model.md). Every error response uses this shape. `ProblemDetailsMiddleware` catches all exceptions and maps them through one table (`ExceptionProblemMap`, rows below, first matching row wins). Framework-generated errors are covered by `ApiBehaviorOptions.InvalidModelStateResponseFactory` (model-binding 400 → `VALIDATION_FAILED` + `errors`, keys in camelCase) and `UseStatusCodePages` (bare 401/403/404/415 → `UNAUTHORIZED` / `FORBIDDEN` / `NOT_FOUND` / `UNSUPPORTED_MEDIA_TYPE`; the `WWW-Authenticate` header is kept). Other bare status codes such as 405 are not covered. The rate limiter's `OnRejected` (429 → `RATE_LIMITED`) is added by its own task. Unhandled exceptions return 500 `INTERNAL_ERROR` with a fixed `detail`: no stack trace and no exception message is ever sent (the stack goes to the log only). Domain exceptions → HTTP:
+`application/problem+json` with `errorCode` — [ADR-012](adr/adr-012-api-contract-and-error-model.md). Every error response uses this shape. `ProblemDetailsMiddleware` catches all exceptions and maps them through one table (`ExceptionProblemMap`, rows below, first matching row wins). Framework-generated errors are covered by `ApiBehaviorOptions.InvalidModelStateResponseFactory` (model-binding 400 → `VALIDATION_FAILED` + `errors`, keys in camelCase) and `UseStatusCodePages` (bare 401/403/404/413/415 → `UNAUTHORIZED` / `FORBIDDEN` / `NOT_FOUND` / `FILE_TOO_LARGE` / `UNSUPPORTED_MEDIA_TYPE`; the `WWW-Authenticate` header is kept). Other bare status codes such as 405 are not covered. The rate limiter's `OnRejected` (429 → `RATE_LIMITED`) is added by its own task. Unhandled exceptions return 500 `INTERNAL_ERROR` with a fixed `detail`: no stack trace and no exception message is ever sent (the stack goes to the log only). Domain exceptions → HTTP:
 
 | Exception | Status | errorCode (examples) |
 |---|---|---|
@@ -232,13 +232,13 @@ RoomsController.Search(query) → ISearchRoomsUseCase.ExecuteAsync(RoomSearchReq
 | `EntityNotFoundException` | 404 | its own code, e.g. `ROOM_NOT_FOUND` |
 | `DuplicateEmailException`, `ConcurrencyConflictException`, `InvalidStateTransitionException`, `LimitExceededException` | 409 | `EMAIL_TAKEN`, `CONCURRENCY_CONFLICT`, `INVALID_STATE_TRANSITION`, `LIMIT_EXCEEDED`; the last two accept their own code, e.g. `LISTING_NOT_AVAILABLE`, `ALREADY_REPORTED` |
 | any other exception | 500 | `INTERNAL_ERROR` |
-| bare 401 / 403 / 404 / 415 (status code pages) | 401 / 403 / 404 / 415 | `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `UNSUPPORTED_MEDIA_TYPE` |
+| bare 401 / 403 / 404 / 413 / 415 (status code pages) | 401 / 403 / 404 / 413 / 415 | `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `FILE_TOO_LARGE`, `UNSUPPORTED_MEDIA_TYPE` |
 | precondition failures | 412 / 428 | `ETAG_MISMATCH`, `IF_MATCH_REQUIRED` |
 | `FileTooLargeException` (> 10 MB, BR-MED-02) | 413 | `FILE_TOO_LARGE` |
 | `UnsupportedMediaTypeException` (not JPEG/PNG by magic bytes) | 415 | `UNSUPPORTED_MEDIA_TYPE` |
 | rate limiter | 429 | `RATE_LIMITED` |
 
-Rows for 412/428, 413, exception-based 415 and 429 are added by T00.11, the upload task and the rate limiter task; until then no code path produces them.
+The rate limiter row (429) is added by its own task; until then no code path produces it.
 
 ### 7.3 Concurrency & idempotency
 `Version` columns + `If-Match` ([ADR-012](adr/adr-012-api-contract-and-error-model.md)); idempotent PUT/DELETE for favourites and devices; `clientMessageId` for chat; `(SavedSearchId, RoomId)` for alerts.
