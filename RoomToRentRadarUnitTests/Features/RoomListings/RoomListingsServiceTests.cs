@@ -12,16 +12,19 @@ public class RoomListingsServiceTests
     {
         // Arrange
         string? capturedEndpoint = null;
-        var expectedResponse = new PagedResponse<RoomListItemModel>(
+        var expectedResponse = new PagedResponse<RoomListingApiDto>(
             Items:
             [
-                new RoomListItemModel
+                new RoomListingApiDto
                 {
                     Id = "api-room-1",
                     Title = "Phòng từ API",
-                    Price = 1_700_000m,
-                    AreaSqm = 22,
-                    Address = "Z115 Quyết Thắng"
+                    MonthlyRent = 1_700_000m,
+                    AreaSquareMeters = 22,
+                    Address = "Z115 Quyết Thắng",
+                    DistanceToCampusKm = 0.5,
+                    CampusId = "campus-ictu",
+                    IsVerified = true
                 }
             ],
             Page: 2,
@@ -42,9 +45,12 @@ public class RoomListingsServiceTests
         // Assert
         Assert.Multiple(() =>
         {
-            Assert.That(capturedEndpoint, Is.EqualTo("api/rooms?page=2&pageSize=6&sortBy=price_asc"));
+            Assert.That(capturedEndpoint, Is.EqualTo("api/v1/rooms?campusId=campus-ictu&page=2&pageSize=6&sortBy=price&sortOrder=asc"));
             Assert.That(result.Items, Has.Count.EqualTo(1));
             Assert.That(result.Items[0].Id, Is.EqualTo("api-room-1"));
+            Assert.That(result.Items[0].Price, Is.EqualTo(1_700_000m));
+            Assert.That(result.Items[0].AreaSqm, Is.EqualTo(22));
+            Assert.That(result.Items[0].IsVerified, Is.True);
             Assert.That(result.TotalCount, Is.EqualTo(10));
         });
     }
@@ -80,7 +86,7 @@ public class RoomListingsServiceTests
 
         // Act & Assert
         Assert.ThrowsAsync<HttpRequestException>(() =>
-            service.GetRoomListingsAsync(1, 6, RoomSortOption.Newest));
+            service.GetRoomListingsAsync(1, 6, RoomSortOption.DistanceAsc));
     }
 
     [Test]
@@ -110,7 +116,7 @@ public class RoomListingsServiceTests
         var service = new RoomListingsService(fakeApiClient, enableDebugFallback: true);
 
         // Act
-        var page = await service.GetRoomListingsAsync(1, 50, RoomSortOption.Newest);
+        var page = await service.GetRoomListingsAsync(1, 50, RoomSortOption.DistanceAsc);
 
         // Assert
         Assert.Multiple(() =>
@@ -121,23 +127,23 @@ public class RoomListingsServiceTests
     }
 
     [Test]
-    public async Task GetRoomListingsAsync_WhenSearchProvided_AppendsEscapedSearchQuery()
+    public async Task GetRoomListingsAsync_WhenSearchProvided_CallsV1RoomsWithSupportedListingContractOnly()
     {
         // Arrange
         string? capturedEndpoint = null;
         var fakeApiClient = new FakeApiClient(endpoint =>
         {
             capturedEndpoint = endpoint;
-            return new PagedResponse<RoomListItemModel>([], 1, 6, 0);
+            return new PagedResponse<RoomListingApiDto>([], 1, 6, 0);
         });
         var service = new RoomListingsService(fakeApiClient, enableDebugFallback: false);
 
         // Act
-        await service.GetRoomListingsAsync(1, 6, RoomSortOption.Newest, search: "  điều hòa & gác  ");
+        await service.GetRoomListingsAsync(1, 6, RoomSortOption.DistanceAsc, search: "  air conditioner & loft  ");
 
         // Assert
         Assert.That(capturedEndpoint, Is.EqualTo(
-            "api/rooms?page=1&pageSize=6&sortBy=newest&search=" + Uri.EscapeDataString("điều hòa & gác")));
+            "api/v1/rooms?campusId=campus-ictu&page=1&pageSize=6&sortBy=distance&sortOrder=asc"));
     }
 
     [TestCase(null)]
@@ -150,15 +156,15 @@ public class RoomListingsServiceTests
         var fakeApiClient = new FakeApiClient(endpoint =>
         {
             capturedEndpoint = endpoint;
-            return new PagedResponse<RoomListItemModel>([], 1, 6, 0);
+            return new PagedResponse<RoomListingApiDto>([], 1, 6, 0);
         });
         var service = new RoomListingsService(fakeApiClient, enableDebugFallback: false);
 
         // Act
-        await service.GetRoomListingsAsync(1, 6, RoomSortOption.Newest, search);
+        await service.GetRoomListingsAsync(1, 6, RoomSortOption.DistanceAsc, search);
 
         // Assert
-        Assert.That(capturedEndpoint, Is.EqualTo("api/rooms?page=1&pageSize=6&sortBy=newest"));
+        Assert.That(capturedEndpoint, Is.EqualTo("api/v1/rooms?campusId=campus-ictu&page=1&pageSize=6&sortBy=distance&sortOrder=asc"));
     }
 
     [Test]
@@ -169,8 +175,8 @@ public class RoomListingsServiceTests
         var service = new RoomListingsService(fakeApiClient, enableDebugFallback: true);
 
         // Act: page size 1 forces matches beyond the first page to be reachable only via paging
-        var page1 = await service.GetRoomListingsAsync(1, 1, RoomSortOption.Newest, "Điều hòa");
-        var page2 = await service.GetRoomListingsAsync(2, 1, RoomSortOption.Newest, "Điều hòa");
+        var page1 = await service.GetRoomListingsAsync(1, 1, RoomSortOption.DistanceAsc, "Air conditioner");
+        var page2 = await service.GetRoomListingsAsync(2, 1, RoomSortOption.DistanceAsc, "Air conditioner");
 
         // Assert
         Assert.Multiple(() =>
@@ -180,21 +186,29 @@ public class RoomListingsServiceTests
             Assert.That(page2.Items, Has.Count.EqualTo(1));
             Assert.That(page2.Items[0].Id, Is.Not.EqualTo(page1.Items[0].Id));
             Assert.That(page1.Items.Concat(page2.Items).All(r =>
-                r.Title.Contains("Điều hòa", StringComparison.OrdinalIgnoreCase) ||
-                r.Address.Contains("Điều hòa", StringComparison.OrdinalIgnoreCase) ||
-                r.Amenities.Any(a => a.Contains("Điều hòa", StringComparison.OrdinalIgnoreCase))), Is.True);
+                r.Title.Contains("Air conditioner", StringComparison.OrdinalIgnoreCase) ||
+                r.Address.Contains("Air conditioner", StringComparison.OrdinalIgnoreCase) ||
+                r.Amenities.Any(a => a.Contains("Air conditioner", StringComparison.OrdinalIgnoreCase))), Is.True);
         });
     }
 
     [Test]
-    public async Task GetRoomListingsAsync_WhenFilterProvided_AppendsFilterQueryParametersToEndpoint()
+    public async Task GetRoomListingsAsync_WhenFilterProvided_CallsV1RoomsWithSupportedListingContractAndPreservesServerOrder()
     {
         // Arrange
         string? capturedEndpoint = null;
         var fakeApiClient = new FakeApiClient(endpoint =>
         {
             capturedEndpoint = endpoint;
-            return new PagedResponse<RoomListItemModel>([], 1, 6, 0);
+            return new PagedResponse<RoomListingApiDto>(
+                Items:
+                [
+                    new RoomListingApiDto { Id = "room-1", Title = "Room 1", MonthlyRent = 1_400_000m, AreaSquareMeters = 18, DistanceToCampusKm = 0.4, IsVerified = true },
+                    new RoomListingApiDto { Id = "room-2", Title = "Room 2", MonthlyRent = 1_900_000m, AreaSquareMeters = 20, DistanceToCampusKm = 0.9, IsVerified = true }
+                ],
+                Page: 1,
+                PageSize: 6,
+                TotalCount: 2);
         });
         var service = new RoomListingsService(fakeApiClient, enableDebugFallback: false);
         var filter = new RoomFilterCriteria
@@ -206,12 +220,17 @@ public class RoomListingsServiceTests
         };
 
         // Act
-        await service.GetRoomListingsAsync(1, 6, RoomSortOption.PriceAsc, search: "z115", filter: filter);
+        var result = await service.GetRoomListingsAsync(1, 6, RoomSortOption.PriceAsc, search: "z115", filter: filter);
 
         // Assert
-        Assert.That(
-            capturedEndpoint,
-            Is.EqualTo("api/rooms?page=1&pageSize=6&sortBy=price_asc&search=z115&minPrice=1000000&maxPrice=2000000&roomType=private&amenities=aircon,wifi"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                capturedEndpoint,
+                Is.EqualTo("api/v1/rooms?campusId=campus-ictu&page=1&pageSize=6&sortBy=price&sortOrder=asc"));
+            Assert.That(result.Items.Select(r => r.Id), Is.EqualTo(new[] { "room-1", "room-2" }));
+            Assert.That(result.TotalCount, Is.EqualTo(2));
+        });
     }
 
     [Test]
@@ -241,7 +260,75 @@ public class RoomListingsServiceTests
             Assert.That(allFilteredItems.All(r =>
                 r.Price is >= 1_000_000m and <= 2_000_000m &&
                 string.Equals(r.RoomType, "private", StringComparison.OrdinalIgnoreCase) &&
-                r.Amenities.Any(a => a.Contains("Điều hòa", StringComparison.OrdinalIgnoreCase))), Is.True);
+                r.Amenities.Any(a => a.Contains("Air conditioner", StringComparison.OrdinalIgnoreCase))), Is.True);
+        });
+    }
+
+    [TestCase(RoomSortOption.DistanceAsc, "distance", "asc")]
+    [TestCase(RoomSortOption.PriceAsc, "price", "asc")]
+    [TestCase(RoomSortOption.PriceDesc, "price", "desc")]
+    public async Task GetRoomListingsAsync_WithSortOption_MapsToExpectedSortByAndSortOrder(
+        RoomSortOption sortOption,
+        string expectedSortBy,
+        string expectedSortOrder)
+    {
+        // Arrange
+        string? capturedEndpoint = null;
+        var fakeApiClient = new FakeApiClient(endpoint =>
+        {
+            capturedEndpoint = endpoint;
+            return new PagedResponse<RoomListingApiDto>([], 1, 6, 0);
+        });
+        var service = new RoomListingsService(fakeApiClient, enableDebugFallback: false);
+
+        // Act
+        await service.GetRoomListingsAsync(1, 6, sortOption);
+
+        // Assert
+        Assert.That(
+            capturedEndpoint,
+            Is.EqualTo($"api/v1/rooms?campusId=campus-ictu&page=1&pageSize=6&sortBy={expectedSortBy}&sortOrder={expectedSortOrder}"));
+    }
+
+    [Test]
+    public async Task GetRoomByIdAsync_WhenApiSucceeds_MapsDtoToModel()
+    {
+        // Arrange
+        string? capturedEndpoint = null;
+        var dto = new RoomListingApiDto
+        {
+            Id = "room-v1-99",
+            Title = "Phòng trọ sinh viên chất lượng cao",
+            MonthlyRent = 2_100_000m,
+            AreaSquareMeters = 25,
+            DistanceToCampusKm = 0.4,
+            Address = "Đường Z115, Quyết Thắng",
+            ThumbnailUrl = "https://example.com/room99.jpg",
+            IsVerified = true,
+            Amenities = ["Điều hòa", "Nóng lạnh"]
+        };
+
+        var fakeApiClient = new FakeApiClient(endpoint =>
+        {
+            capturedEndpoint = endpoint;
+            return dto;
+        });
+        var service = new RoomListingsService(fakeApiClient, enableDebugFallback: false);
+
+        // Act
+        var result = await service.GetRoomByIdAsync("room-v1-99");
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(capturedEndpoint, Is.EqualTo("api/rooms/room-v1-99"));
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result!.Id, Is.EqualTo("room-v1-99"));
+            Assert.That(result.Price, Is.EqualTo(2_100_000m));
+            Assert.That(result.AreaSqm, Is.EqualTo(25));
+            Assert.That(result.DistanceToCampusKm, Is.EqualTo(0.4));
+            Assert.That(result.IsVerified, Is.True);
+            Assert.That(result.Amenities, Is.EqualTo(new[] { "Điều hòa", "Nóng lạnh" }));
         });
     }
 

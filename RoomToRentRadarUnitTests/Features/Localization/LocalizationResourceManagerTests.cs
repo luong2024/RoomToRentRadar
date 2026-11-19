@@ -38,7 +38,7 @@ public class LocalizationResourceManagerTests
             Assert.That(manager.IsVietnamese, Is.True);
             Assert.That(manager.IsEnglish, Is.False);
             Assert.That(manager.CurrentLanguageCode, Is.EqualTo("vi"));
-            Assert.That(manager["App_Name"], Is.EqualTo("Smart Rent"));
+            Assert.That(manager["App_Name"], Is.EqualTo("RoomToRentRadar"));
             Assert.That(manager["Title_ExploreRooms"], Is.EqualTo("Khám phá phòng trọ"));
             Assert.That(manager["Action_Retry"], Is.EqualTo("Thử lại"));
             Assert.That(manager["Nav_Home"], Is.EqualTo("Trang chủ"));
@@ -56,7 +56,7 @@ public class LocalizationResourceManagerTests
             Assert.That(manager.IsVietnamese, Is.False);
             Assert.That(manager.IsEnglish, Is.True);
             Assert.That(manager.CurrentLanguageCode, Is.EqualTo("en"));
-            Assert.That(manager["App_Name"], Is.EqualTo("Smart Rent"));
+            Assert.That(manager["App_Name"], Is.EqualTo("RoomToRentRadar"));
             Assert.That(manager["Title_ExploreRooms"], Is.EqualTo("Explore Rooms"));
             Assert.That(manager["Action_Retry"], Is.EqualTo("Retry"));
             Assert.That(manager["Nav_Home"], Is.EqualTo("Home"));
