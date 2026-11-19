@@ -12,17 +12,14 @@
              x:DataType="vm:MainLandingPageModel"
              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCanvasLight}, Dark={StaticResource SurfaceCanvasDark}}">
 
-    <Grid RowDefinitions="Auto, Auto, *, Auto">
+    <Grid RowDefinitions="Auto, *, Auto">
         <!-- Top App Bar -->
         <common:PageHeaderBar Grid.Row="0"
                                Title="RoomToRentRadar"
                                Subtitle="ICTU Student Rentals"
                                CanGoBack="False" />
 
-        <!-- Debug scenario strip host: populated only in DEBUG builds, stays empty in Release -->
-        <VerticalStackLayout x:Name="DebugStripHost" Grid.Row="1" />
-
-        <feedback:StateView Grid.Row="2"
+        <feedback:StateView Grid.Row="1"
                             State="{Binding State}"
                             HasContent="{Binding HasContent}"
                             ErrorMessage="{Binding ErrorMessage}"
@@ -109,7 +106,7 @@
         </feedback:StateView>
 
         <!-- Bottom Navigation Bar -->
-        <nav:BottomNavBarControl Grid.Row="3"
+        <nav:BottomNavBarControl Grid.Row="2"
                                  ActiveRoute="explore" />
     </Grid>
 </ContentPage>
