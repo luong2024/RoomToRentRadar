@@ -1,3 +1,7 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using RoomToRentRadar.Services;
+
 namespace RoomToRentRadar.Features.Reports
 {
     /// <summary>
@@ -8,7 +12,8 @@ namespace RoomToRentRadar.Features.Reports
         public static IServiceCollection AddReportsFeature(this IServiceCollection services)
         {
             // T13.1 (Hieu): services.AddSingleton<IListingReportRepository, ListingReportRepository>();
-            // T13.2 (Thuy): services.AddTransientWithShellRoute<ReportListingModalPage, ReportListingPageModel>(Constants.Routes.ReportListing);
+            services.TryAddSingleton<IListingReportService, ListingReportService>();
+            services.AddTransient<ReportListingPageModel>();
             return services;
         }
     }
