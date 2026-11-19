@@ -626,7 +626,7 @@ public class DirectionsUrlBuilderTests
         Assert.That(
             url,
             Is.EqualTo(
-                "https://www.google.com/maps/dir/?api=1&origin=10.7626,106.6822&destination=10.703,106.703"));
+                "https://maps.google.com/maps?saddr=10.7626,106.6822&daddr=10.703,106.703&output=embed"));
     }
 
     [Test]
@@ -636,6 +636,17 @@ public class DirectionsUrlBuilderTests
 
         Assert.That(
             url,
-            Is.EqualTo("https://www.google.com/maps/dir/?api=1&destination=10.5,106.25"));
+            Is.EqualTo("https://maps.google.com/maps?daddr=10.5,106.25&output=embed"));
+    }
+
+    [Test]
+    public void BuildPage_WrapsTheEmbedUrlInAnIframe()
+    {
+        var html = DirectionsUrlBuilder.BuildPage(10.703, 106.703, 10.7626, 106.6822);
+
+        Assert.That(
+            html,
+            Does.Contain(
+                "<iframe src=\"https://maps.google.com/maps?saddr=10.7626,106.6822&amp;daddr=10.703,106.703&amp;output=embed\""));
     }
 }

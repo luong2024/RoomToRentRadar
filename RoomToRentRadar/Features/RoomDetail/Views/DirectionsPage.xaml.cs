@@ -21,11 +21,14 @@ public partial class DirectionsPage : ContentPage, IQueryAttributable
         double? originLat = TryReadCoordinate(query, "from_lat", out var fromLat) ? fromLat : null;
         double? originLng = TryReadCoordinate(query, "from_lng", out var fromLng) ? fromLng : null;
 
-        MapWebView.Source = DirectionsUrlBuilder.Build(
-            destinationLat,
-            destinationLng,
-            originLat,
-            originLng);
+        MapWebView.Source = new HtmlWebViewSource
+        {
+            Html = DirectionsUrlBuilder.BuildPage(
+                destinationLat,
+                destinationLng,
+                originLat,
+                originLng),
+        };
     }
 
     private static bool TryReadCoordinate(IDictionary<string, object> query, string key, out double value)
@@ -40,7 +43,20 @@ public partial class DirectionsPage : ContentPage, IQueryAttributable
                 out value);
     }
 
-    private void OnNavigating(object? sender, WebNavigatingEventArgs e) => SetLoading(true);
+    private static readonly string[] AppSchemes =
+        ["intent:", "geo:", "market:", "tel:", "mailto:", "sms:", "whatsapp:"];
+
+    private void OnNavigating(object? sender, WebNavigatingEventArgs e)
+    {
+        if (e.Url is { } url
+            && AppSchemes.Any(scheme => url.StartsWith(scheme, StringComparison.OrdinalIgnoreCase)))
+        {
+            e.Cancel = true;
+            return;
+        }
+
+        SetLoading(true);
+    }
 
     private void OnNavigated(object? sender, WebNavigatedEventArgs e) => SetLoading(false);
 
