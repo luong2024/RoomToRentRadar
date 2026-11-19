@@ -33,6 +33,13 @@ public sealed class ListingsApiFactory : WebApplicationFactory<Program>
         "RoomToRentRadarTests",
         Guid.NewGuid().ToString("N"));
 
+    private readonly Action<IServiceCollection>? _configureTestServices;
+
+    public ListingsApiFactory(Action<IServiceCollection>? configureTestServices = null)
+    {
+        _configureTestServices = configureTestServices;
+    }
+
     public QueryCountingInterceptor QueryCounter { get; } = new();
 
     public string DatabasePath => Path.Combine(_directory, "test.db");
@@ -50,6 +57,7 @@ public sealed class ListingsApiFactory : WebApplicationFactory<Program>
         builder.ConfigureTestServices(services =>
         {
             services.AddSingleton<DbCommandInterceptor>(QueryCounter);
+            _configureTestServices?.Invoke(services);
         });
     }
 

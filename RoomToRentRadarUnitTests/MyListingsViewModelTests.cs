@@ -318,6 +318,13 @@ public class MyListingsViewModelTests
             return Task.CompletedTask;
         }
 
+        public Task GoToDirectionsAsync(
+            double destinationLat,
+            double destinationLng,
+            double? originLat,
+            double? originLng)
+            => throw new NotSupportedException("My listings does not open directions.");
+
         public Task GoBackAsync()
         {
             BackRequests++;

@@ -9,4 +9,6 @@ public static class AppRoutes
     public const string Login = "login";
 
     public const string ListingEditor = "listing-editor";
+
+    public const string Directions = "directions";
 }

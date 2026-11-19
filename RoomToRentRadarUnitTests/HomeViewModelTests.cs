@@ -689,6 +689,13 @@ public partial class HomeViewModelTests
 
         public Task GoToListingEditorAsync(Guid? listingId = null) => Task.CompletedTask;
 
+        public Task GoToDirectionsAsync(
+            double destinationLat,
+            double destinationLng,
+            double? originLat,
+            double? originLng)
+            => throw new NotSupportedException("The home screen does not open directions.");
+
         public Task GoBackAsync() => Task.CompletedTask;
     }
 }

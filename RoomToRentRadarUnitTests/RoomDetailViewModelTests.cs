@@ -703,6 +703,13 @@ public class RoomDetailViewModelTests
 
         public Task GoToListingEditorAsync(Guid? listingId = null) => Task.CompletedTask;
 
+        public Task GoToDirectionsAsync(
+            double destinationLat,
+            double destinationLng,
+            double? originLat,
+            double? originLng)
+            => throw new NotSupportedException("The room detail screen does not open directions directly.");
+
         public Task GoBackAsync()
         {
             GoBackCount++;

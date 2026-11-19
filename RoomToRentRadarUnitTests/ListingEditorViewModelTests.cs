@@ -522,6 +522,13 @@ public class ListingEditorViewModelTests
 
         public Task GoToListingEditorAsync(Guid? listingId = null) => Task.CompletedTask;
 
+        public Task GoToDirectionsAsync(
+            double destinationLat,
+            double destinationLng,
+            double? originLat,
+            double? originLng)
+            => throw new NotSupportedException("The listing editor does not open directions.");
+
         public Task GoBackAsync()
         {
             BackRequests++;
