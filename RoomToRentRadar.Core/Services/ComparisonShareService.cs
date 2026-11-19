@@ -65,12 +65,24 @@ namespace RoomToRentRadar.Services
     /// </summary>
     public class ComparisonMatrixModel
     {
-        public string Title { get; set; } = "So sánh phòng trọ";
+        public string Title { get; set; } = "Bảng so sánh phòng trọ";
         public DateTime GeneratedAt { get; set; } = DateTime.UtcNow;
         public int RoomCount => Columns.Count;
         public bool IsEmpty => Columns.Count == 0;
+        public int BestValueRoomId { get; set; }
+        public int ClosestToCampusRoomId { get; set; }
+        public string OverallVerdict { get; set; } = string.Empty;
         public IReadOnlyList<ComparisonItemColumn> Columns { get; set; } = Array.Empty<ComparisonItemColumn>();
         public IReadOnlyList<ComparisonMetricRow> Rows { get; set; } = Array.Empty<ComparisonMetricRow>();
+
+        /// <summary>
+        /// Filters rows to show only metrics where values differ among the compared rooms.
+        /// </summary>
+        public IReadOnlyList<ComparisonMetricRow> GetDifferencesOnly()
+        {
+            if (Columns.Count <= 1) return Rows;
+            return Rows.Where(r => r.Values.Distinct(StringComparer.OrdinalIgnoreCase).Count() > 1).ToList();
+        }
     }
 
     /// <summary>
@@ -119,6 +131,7 @@ namespace RoomToRentRadar.Services
 
         /// <summary>
         /// AC1 &amp; AC2: Builds side-by-side comparison matrix for up to 3 rooms.
+        /// Compares rent, deposit, area, distance to ICTU, amenities, security, and house rules.
         /// </summary>
         public virtual ComparisonMatrixModel BuildComparisonMatrix(IReadOnlyList<RoomListing> rooms)
         {
@@ -129,54 +142,175 @@ namespace RoomToRentRadar.Services
 
             // AC1: Limit to maximum 3 distinct rooms
             var selectedRooms = rooms
+                .Where(r => r != null)
                 .GroupBy(r => r.Id)
                 .Select(g => g.First())
                 .Take(MaxComparisonRooms)
                 .ToList();
 
+            if (selectedRooms.Count == 0)
+            {
+                return new ComparisonMatrixModel();
+            }
+
             var columns = selectedRooms.Select(MapToColumn).ToList();
             var rows = new List<ComparisonMetricRow>();
 
-            // Baseline rows (to be fully fleshed out in Phase 2)
+            // AC2: 1. Chi phí (Rent & Deposit)
+            var minRent = columns.Min(c => c.MonthlyRent);
+            var bestRentIndices = columns.Select((c, idx) => c.MonthlyRent == minRent ? idx : -1).Where(i => i >= 0).ToList();
             rows.Add(new ComparisonMetricRow
             {
                 MetricName = "Giá thuê",
                 Category = "Chi phí",
-                Values = columns.Select(c => c.FormattedRent).ToList()
+                Values = columns.Select(c => c.FormattedRent).ToList(),
+                BestColumnIndex = bestRentIndices.Count == 1 ? bestRentIndices[0] : -1,
+                HighlightNote = bestRentIndices.Count == 1 ? "Giá tốt nhất" : string.Empty
             });
 
+            var minDeposit = columns.Min(c => c.Deposit);
+            var bestDepositIndices = columns.Select((c, idx) => c.Deposit == minDeposit ? idx : -1).Where(i => i >= 0).ToList();
             rows.Add(new ComparisonMetricRow
             {
-                MetricName = "Tiền cọc",
+                MetricName = "Tiền đặt cọc",
                 Category = "Chi phí",
-                Values = columns.Select(c => c.FormattedDeposit).ToList()
+                Values = columns.Select(c => c.FormattedDeposit).ToList(),
+                BestColumnIndex = bestDepositIndices.Count == 1 ? bestDepositIndices[0] : -1,
+                HighlightNote = bestDepositIndices.Count == 1 ? "Cọc thấp nhất" : string.Empty
             });
 
+            // AC2: 2. Quy mô & Vị trí tới ICTU (Area, Distance & Travel Times)
+            var maxArea = columns.Max(c => c.Area);
+            var bestAreaIndices = columns.Select((c, idx) => c.Area == maxArea ? idx : -1).Where(i => i >= 0).ToList();
             rows.Add(new ComparisonMetricRow
             {
                 MetricName = "Diện tích",
-                Category = "Quy mô",
-                Values = columns.Select(c => c.FormattedArea).ToList()
+                Category = "Không gian",
+                Values = columns.Select(c => c.FormattedArea).ToList(),
+                BestColumnIndex = bestAreaIndices.Count == 1 ? bestAreaIndices[0] : -1,
+                HighlightNote = bestAreaIndices.Count == 1 ? "Rộng rãi nhất" : string.Empty
             });
 
+            var minDist = columns.Min(c => c.DistanceToCampusKm);
+            var bestDistIndices = columns.Select((c, idx) => c.DistanceToCampusKm == minDist ? idx : -1).Where(i => i >= 0).ToList();
             rows.Add(new ComparisonMetricRow
             {
                 MetricName = "Khoảng cách tới ICTU",
                 Category = "Vị trí",
-                Values = columns.Select(c => c.FormattedDistance).ToList()
+                Values = columns.Select(c => c.FormattedDistance).ToList(),
+                BestColumnIndex = bestDistIndices.Count == 1 ? bestDistIndices[0] : -1,
+                HighlightNote = bestDistIndices.Count == 1 ? "Gần trường nhất" : string.Empty
+            });
+
+            var minMoto = columns.Min(c => c.MotorbikeMinutes);
+            var bestMotoIndices = columns.Select((c, idx) => c.MotorbikeMinutes == minMoto ? idx : -1).Where(i => i >= 0).ToList();
+            rows.Add(new ComparisonMetricRow
+            {
+                MetricName = "Đi xe máy tới ICTU",
+                Category = "Đi lại",
+                Values = columns.Select(c => $"{c.MotorbikeMinutes} phút").ToList(),
+                BestColumnIndex = bestMotoIndices.Count == 1 ? bestMotoIndices[0] : -1,
+                HighlightNote = bestMotoIndices.Count == 1 ? "Nhanh nhất" : string.Empty
             });
 
             rows.Add(new ComparisonMetricRow
             {
-                MetricName = "Điểm an ninh",
-                Category = "An ninh",
-                Values = columns.Select(c => c.FormattedSecurityScore).ToList()
+                MetricName = "Đi bộ tới ICTU",
+                Category = "Đi lại",
+                Values = columns.Select(c => $"{c.WalkMinutes} phút").ToList()
             });
+
+            // AC2: 3. Điểm An Ninh & Tiện Ích
+            var maxSecurity = columns.Max(c => c.SecurityScore);
+            var bestSecIndices = columns.Select((c, idx) => c.SecurityScore == maxSecurity ? idx : -1).Where(i => i >= 0).ToList();
+            rows.Add(new ComparisonMetricRow
+            {
+                MetricName = "Điểm an ninh",
+                Category = "An ninh & An toàn",
+                Values = columns.Select(c => c.FormattedSecurityScore).ToList(),
+                BestColumnIndex = bestSecIndices.Count == 1 ? bestSecIndices[0] : -1,
+                HighlightNote = bestSecIndices.Count == 1 ? "An ninh tốt nhất" : string.Empty
+            });
+
+            var maxAmenitiesCount = columns.Max(c => c.Amenities.Count);
+            var bestAmenitiesIndices = columns.Select((c, idx) => c.Amenities.Count == maxAmenitiesCount ? idx : -1).Where(i => i >= 0).ToList();
+            rows.Add(new ComparisonMetricRow
+            {
+                MetricName = "Số lượng tiện ích",
+                Category = "Tiện nghi",
+                Values = columns.Select(c => $"{c.Amenities.Count} tiện ích").ToList(),
+                BestColumnIndex = bestAmenitiesIndices.Count == 1 ? bestAmenitiesIndices[0] : -1,
+                HighlightNote = bestAmenitiesIndices.Count == 1 ? "Đầy đủ tiện nghi nhất" : string.Empty
+            });
+
+            // Detailed checklist for individual amenities
+            var standardAmenities = new[] { "Điều hòa", "Nóng lạnh", "Máy giặt", "WiFi", "Tủ lạnh", "Gác xép", "Ban công", "WC khép kín" };
+            var allAmenities = standardAmenities
+                .Union(columns.SelectMany(c => c.Amenities), StringComparer.OrdinalIgnoreCase)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            foreach (var amenity in allAmenities)
+            {
+                var rowValues = columns.Select(c =>
+                    c.Amenities.Any(a => a.Equals(amenity, StringComparison.OrdinalIgnoreCase))
+                        ? "✓ Có"
+                        : "— Chưa có").ToList();
+
+                rows.Add(new ComparisonMetricRow
+                {
+                    MetricName = $"Tiện ích: {amenity}",
+                    Category = "Chi tiết tiện nghi",
+                    Values = rowValues
+                });
+            }
+
+            // AC2: 4. Nội quy & Thông tin chung
+            rows.Add(new ComparisonMetricRow
+            {
+                MetricName = "Giờ giới nghiêm",
+                Category = "Nội quy",
+                Values = columns.Select(c => string.IsNullOrWhiteSpace(c.QuietHours) ? "Tự do" : c.QuietHours).ToList()
+            });
+
+            rows.Add(new ComparisonMetricRow
+            {
+                MetricName = "Nấu ăn trong phòng",
+                Category = "Nội quy",
+                Values = columns.Select(c => string.IsNullOrWhiteSpace(c.CookingRules) ? "Theo thỏa thuận" : c.CookingRules).ToList()
+            });
+
+            rows.Add(new ComparisonMetricRow
+            {
+                MetricName = "Khu vực / Phường",
+                Category = "Địa chỉ",
+                Values = columns.Select(c => string.IsNullOrWhiteSpace(c.Ward) ? c.Address : $"Phường {c.Ward}").ToList()
+            });
+
+            rows.Add(new ComparisonMetricRow
+            {
+                MetricName = "Loại phòng",
+                Category = "Thông tin chung",
+                Values = columns.Select(c => c.RoomType).ToList()
+            });
+
+            // Calculate overall recommendations
+            var bestValueColumn = columns.OrderBy(c => c.MonthlyRent).ThenByDescending(c => c.SecurityScore).First();
+            var closestColumn = columns.OrderBy(c => c.DistanceToCampusKm).First();
+
+            var verdict = columns.Count switch
+            {
+                1 => $"Phòng [{columns[0].Title}]: {columns[0].FormattedRent}, cách ICTU {columns[0].FormattedDistance}.",
+                _ => $"Phòng '{bestValueColumn.Title}' có giá thuê tốt nhất ({bestValueColumn.FormattedRent}). Phòng '{closestColumn.Title}' gần ICTU nhất ({closestColumn.FormattedDistance})."
+            };
 
             return new ComparisonMatrixModel
             {
                 Title = "Bảng so sánh phòng trọ",
                 GeneratedAt = DateTime.UtcNow,
+                BestValueRoomId = bestValueColumn.RoomId,
+                ClosestToCampusRoomId = closestColumn.RoomId,
+                OverallVerdict = verdict,
                 Columns = columns,
                 Rows = rows
             };
