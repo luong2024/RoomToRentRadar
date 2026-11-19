@@ -536,6 +536,49 @@ public class RoomDetailViewModelTests
     }
 
     [Test]
+    public async Task RefreshFavouriteCommand_WhenAccountGainedFavourite_FillsHeart()
+    {
+        var favouritesService = new FakeFavouritesService();
+        var viewModel = CreateViewModel(
+            new FakeApiClient(new ListingDetailFetchResult(ListingDetailFetchOutcome.Found, CreateDetail(DateTime.UtcNow))),
+            new FakeErrorHandler(),
+            new FakeNavigationService(),
+            favouritesService);
+        ApplyListingId(viewModel, ListingId);
+        await AwaitAutoStartedLoadAsync(viewModel);
+        Assert.That(viewModel.IsFavourite, Is.False);
+
+        // Another device saved this room under the same account.
+        favouritesService.CachedItems.Add(CreateFavourite(ListingId));
+
+        await viewModel.RefreshFavouriteCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsFavourite, Is.True);
+            Assert.That(viewModel.FavouriteGlyph, Is.EqualTo("♥"));
+        });
+    }
+
+    [Test]
+    public async Task RefreshFavouriteCommand_WhenContentIsNotLoaded_SkipsRefresh()
+    {
+        var favouritesService = new FakeFavouritesService();
+        var viewModel = CreateViewModel(
+            new FakeApiClient(new ListingDetailFetchResult(ListingDetailFetchOutcome.NotFound, null)),
+            new FakeErrorHandler(),
+            new FakeNavigationService(),
+            favouritesService);
+        ApplyListingId(viewModel, ListingId);
+        await AwaitAutoStartedLoadAsync(viewModel);
+        favouritesService.CachedItems.Add(CreateFavourite(ListingId));
+
+        await viewModel.RefreshFavouriteCommand.ExecuteAsync(null);
+
+        Assert.That(viewModel.IsFavourite, Is.False);
+    }
+
+    [Test]
     public async Task ToggleFavouriteCommand_WhenNotFavourite_AddsAndFillsHeart()
     {
         var favouritesService = new FakeFavouritesService();

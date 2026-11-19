@@ -309,6 +309,17 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     }
 
     [RelayCommand(AllowConcurrentExecutions = false)]
+    private async Task RefreshFavouriteAsync(CancellationToken cancellationToken)
+    {
+        // Returning to a cached detail page must reflect changes made under the
+        // same account elsewhere, e.g. after signing in or on another device.
+        if (_listingId is not { } listingId || State != RoomDetailState.Content)
+            return;
+
+        await RefreshFavouriteStateAsync(listingId, cancellationToken);
+    }
+
+    [RelayCommand(AllowConcurrentExecutions = false)]
     private async Task OpenSimilarRoomAsync(ListingSummaryDto listing)
     {
         try
