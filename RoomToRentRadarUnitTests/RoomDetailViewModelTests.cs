@@ -53,8 +53,15 @@ public class RoomDetailViewModelTests
             Assert.That(viewModel.RoomTypeText, Is.EqualTo("Apartment"));
             Assert.That(viewModel.AmenityLabels, Is.EqualTo(new[] { "Wi-Fi", "Air conditioning" }));
             Assert.That(viewModel.Rules, Is.EqualTo(new[] { "No smoking", "Quiet hours after 22:00" }));
+            Assert.That(viewModel.HouseRules, Is.Not.Null);
+            Assert.That(viewModel.HouseRules?.QuietHours, Is.EqualTo("22:00 - 06:00"));
+            Assert.That(viewModel.HouseRules?.GuestPolicy, Is.EqualTo("Guests leave before 22:00"));
+            Assert.That(viewModel.HouseRules?.CookingRules, Is.EqualTo("Cook in the shared kitchen"));
+            Assert.That(viewModel.HouseRules?.ParkingRules, Is.EqualTo("Park on the ground floor"));
+            Assert.That(viewModel.HouseRules?.Version, Is.EqualTo(2));
             Assert.That(viewModel.HasAmenities, Is.True);
             Assert.That(viewModel.HasRules, Is.True);
+            Assert.That(viewModel.HasHouseRules, Is.True);
             Assert.That(viewModel.LandlordPhone, Is.Empty);
             Assert.That(viewModel.IsPhoneVisible, Is.False);
             Assert.That(viewModel.IsSignInPromptVisible, Is.True);
@@ -69,6 +76,26 @@ public class RoomDetailViewModelTests
             Assert.That(apiClient.RequestedContactIds[0], Is.EqualTo(ListingId));
             Assert.That(apiClient.RequestedSimilarIds, Is.Empty);
             Assert.That(errorHandler.HandledExceptions, Is.Empty);
+        });
+    }
+
+    [Test]
+    public async Task LoadAsync_WhenListingHasNoHouseRules_HidesSection()
+    {
+        var detail = CreateDetail(DateTime.UtcNow) with { HouseRules = null };
+        var viewModel = new RoomDetailViewModel(
+            new FakeApiClient(new ListingDetailFetchResult(ListingDetailFetchOutcome.Found, detail)),
+            new FakeErrorHandler(),
+            new FakeNavigationService());
+        ApplyListingId(viewModel, ListingId);
+
+        await AwaitAutoStartedLoadAsync(viewModel);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.State, Is.EqualTo(RoomDetailState.Content));
+            Assert.That(viewModel.HouseRules, Is.Null);
+            Assert.That(viewModel.HasHouseRules, Is.False);
         });
     }
 
@@ -506,6 +533,13 @@ public class RoomDetailViewModelTests
             createdAt.AddDays(2),
             new[] { AmenityCode.Wifi, AmenityCode.AirConditioner },
             new[] { "No smoking", "Quiet hours after 22:00" },
+            new HouseRulesDto(
+                "22:00 - 06:00",
+                "Guests leave before 22:00",
+                "Cook in the shared kitchen",
+                "Park on the ground floor",
+                2,
+                createdAt.AddDays(1)),
             "Landlord An");
 
     private static ListingSummaryDto CreateSummary(Guid id, string title)
