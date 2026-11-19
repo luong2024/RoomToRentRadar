@@ -4,11 +4,19 @@ using RoomToRentRadar.Models;
 namespace RoomToRentRadar.Data
 {
     // ============================================================================
-    // TASK OWNER: T05.1 (US05 — Build Multi-Filter Search Service)
+    // TASK OWNER: T05.1 (US05 — Build search API with price, area, and distance filters)
     // Only T05.1 may edit this file. Override SearchAsync(RoomFilterCriteria criteria).
+    // Acceptance Criteria:
+    //   AC1: Filters include price range, area range, room type, and maximum distance to campus.
+    //   AC2: Filters can be combined and results update within 1.5 seconds.
+    //   AC3: The result count and active filters are always visible.
     // ============================================================================
     public partial class RoomListingRepository
     {
+        /// <summary>
+        /// T05.1 (US05 / Phase 2): Multi-filter search query against SQLite database.
+        /// Fulfills AC1 (price, area, room type, distance to ICTU filters) and AC2 (combinable filters, fast execution).
+        /// </summary>
         public override async Task<List<RoomListing>> SearchAsync(RoomFilterCriteria criteria)
         {
             if (Database is null)
@@ -59,7 +67,7 @@ namespace RoomToRentRadar.Data
                 cmd.Parameters.AddWithValue("@MaxArea", criteria.MaxArea.Value);
             }
 
-            if (!string.IsNullOrWhiteSpace(criteria.RoomType))
+            if (!string.IsNullOrWhiteSpace(criteria.RoomType) && !string.Equals(criteria.RoomType, "Tất cả", StringComparison.OrdinalIgnoreCase))
             {
                 whereClauses.Add("RoomType = @RoomType COLLATE NOCASE");
                 cmd.Parameters.AddWithValue("@RoomType", criteria.RoomType.Trim());
