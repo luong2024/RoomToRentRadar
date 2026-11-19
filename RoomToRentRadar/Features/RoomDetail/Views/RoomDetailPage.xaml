@@ -43,12 +43,28 @@
                                    SemanticProperties.Description="Quay lại danh sách phòng" />
                         </Border>
 
-                        <Border Margin="12" Padding="11,6" HorizontalOptions="End" VerticalOptions="Start"
-                                StrokeThickness="0" StrokeShape="RoundRectangle 10"
-                                BackgroundColor="#F2FFFFFF">
-                            <Label Text="{Binding StatusDisplayText}" FontSize="11" FontFamily="OpenSansSemibold"
-                                   TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
-                        </Border>
+                        <HorizontalStackLayout Margin="12" Spacing="8"
+                                               HorizontalOptions="End" VerticalOptions="Start">
+                            <Border Padding="11,6" VerticalOptions="Center"
+                                    StrokeThickness="0" StrokeShape="RoundRectangle 10"
+                                    BackgroundColor="#F2FFFFFF">
+                                <Label Text="{Binding StatusDisplayText}" FontSize="11" FontFamily="OpenSansSemibold"
+                                       TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
+                            </Border>
+
+                            <Button Text="{Binding FavouriteGlyph}"
+                                    Command="{Binding ToggleFavouriteCommand}"
+                                    AutomationId="FavouriteToggle"
+                                    FontSize="22"
+                                    Padding="0"
+                                    WidthRequest="42" HeightRequest="42"
+                                    MinimumHeightRequest="42"
+                                    CornerRadius="21"
+                                    BackgroundColor="#F2FFFFFF"
+                                    TextColor="{StaticResource Accent}"
+                                    SemanticProperties.Description="Lưu phòng vào yêu thích"
+                                    SemanticProperties.Hint="Thêm hoặc bỏ phòng khỏi danh sách yêu thích" />
+                        </HorizontalStackLayout>
 
                         <Border Margin="0,0,0,20" Padding="20,8" HorizontalOptions="Center" VerticalOptions="End"
                                 StrokeThickness="0" StrokeShape="RoundRectangle 12"
