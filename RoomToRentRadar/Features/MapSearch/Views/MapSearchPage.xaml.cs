@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Microsoft.Maui.Controls.Maps;
 using Microsoft.Maui.Maps;
 using RoomToRentRadar.Features.MapSearch.Models;
@@ -10,15 +11,16 @@ public partial class MapSearchPage : ContentPage
     private readonly DrawingCanvasDrawable _drawable = new();
     private Microsoft.Maui.Controls.Maps.Polygon? _activeMapPolygon;
     private int _draggedAnchorIndex = -1;
+    private MapSearchViewModel? _viewModel;
 
     public MapSearchPage(MapSearchViewModel viewModel)
     {
         InitializeComponent();
+        _viewModel = viewModel;
         BindingContext = viewModel;
 
         viewModel.OnNavigateBackRequested = async () =>
         {
-            // Trở về trang trước đó hoặc về Trang chủ
             if (Shell.Current is not null)
             {
                 await Shell.Current.GoToAsync("//home");
@@ -27,74 +29,88 @@ public partial class MapSearchPage : ContentPage
 
         CanvasView.Drawable = _drawable;
 
-        // Định vị vùng khởi tạo trên Map (quanh trường ICTU)
-        SearchMap.Loaded += (_, _) =>
-        {
-            var initialSpan = MapSpan.FromCenterAndRadius(
-                new Location(MapSearchViewModel.DefaultLatitude, MapSearchViewModel.DefaultLongitude),
-                Distance.FromKilometers(MapSearchViewModel.DefaultDistanceKm));
-            SearchMap.MoveToRegion(initialSpan);
-        };
+        SearchMap.Loaded += OnSearchMapLoaded;
+        viewModel.PropertyChanged += OnViewModelPropertyChanged;
+    }
 
-        // Lắng nghe thay đổi trạng thái ViewModel
-        viewModel.PropertyChanged += (s, e) =>
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        // Cancel active interactions when navigating away
+        if (_viewModel is not null)
         {
-            if (e.PropertyName == nameof(MapSearchViewModel.IsEditingMode))
+            if (_viewModel.IsDrawingMode || _viewModel.IsEditingMode)
             {
-                OnEditingModeChanged(viewModel.IsEditingMode);
+                _viewModel.CancelDrawingCommand.Execute(null);
             }
-            else if (e.PropertyName == nameof(MapSearchViewModel.HasDrawnPolygon) && !viewModel.HasDrawnPolygon)
+        }
+    }
+
+    private void OnSearchMapLoaded(object? sender, EventArgs e)
+    {
+        var initialSpan = MapSpan.FromCenterAndRadius(
+            new Location(MapSearchViewModel.DefaultLatitude, MapSearchViewModel.DefaultLongitude),
+            Distance.FromKilometers(MapSearchViewModel.DefaultDistanceKm));
+        SearchMap.MoveToRegion(initialSpan);
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (_viewModel is null) return;
+
+        if (e.PropertyName == nameof(MapSearchViewModel.IsEditingMode))
+        {
+            OnEditingModeChanged(_viewModel.IsEditingMode);
+        }
+        else if (e.PropertyName == nameof(MapSearchViewModel.HasDrawnPolygon) && !_viewModel.HasDrawnPolygon)
+        {
+            if (_activeMapPolygon is not null && SearchMap.MapElements.Contains(_activeMapPolygon))
             {
-                // Khi Clear polygon
-                if (_activeMapPolygon is not null && SearchMap.MapElements.Contains(_activeMapPolygon))
-                {
-                    SearchMap.MapElements.Remove(_activeMapPolygon);
-                    _activeMapPolygon = null;
-                }
-                _drawable.Clear();
-                _drawable.SetAnchors(Enumerable.Empty<PointF>());
-                CanvasView.Invalidate();
+                SearchMap.MapElements.Remove(_activeMapPolygon);
             }
-        };
+            _activeMapPolygon = null;
+            _drawable.Clear();
+            _drawable.SetAnchors(Enumerable.Empty<PointF>());
+            CanvasView.Invalidate();
+        }
     }
 
     private void OnEditingModeChanged(bool isEditing)
     {
         _drawable.IsEditingMode = isEditing;
-        if (isEditing && BindingContext is MapSearchViewModel vm)
+        if (isEditing && _viewModel is not null)
         {
-            // Ẩn polygon map tạm thời, chuyển các đỉnh sang toạ độ màn hình để vẽ chốt neo trên canvas
-            if (_activeMapPolygon is not null)
+            // Temporarily hide map polygon and transfer vertices to screen anchors on canvas
+            if (_activeMapPolygon is not null && SearchMap.MapElements.Contains(_activeMapPolygon))
             {
                 SearchMap.MapElements.Remove(_activeMapPolygon);
             }
 
-            var screenPoints = ConvertGeoLocationsToScreenPoints(vm.PolygonCoordinates);
+            var screenPoints = ConvertGeoLocationsToScreenPoints(_viewModel.PolygonCoordinates);
             _drawable.SetAnchors(screenPoints);
             CanvasView.Invalidate();
         }
-        else if (!isEditing && BindingContext is MapSearchViewModel vmDone)
+        else if (!isEditing && _viewModel is not null)
         {
-            // Hoàn tất chỉnh sửa -> render lại polygon trên map
+            // Finish editing -> re-render polygon on map
             _drawable.SetAnchors(Enumerable.Empty<PointF>());
             CanvasView.Invalidate();
-            RenderPolygonOnMap(vmDone.PolygonCoordinates);
+            RenderPolygonOnMap(_viewModel.PolygonCoordinates);
         }
     }
 
     private void OnCanvasStart(object? sender, TouchEventArgs e)
     {
-        var pt = e.Touches.FirstOrDefault();
-        if (BindingContext is not MapSearchViewModel vm) return;
+        if (e.Touches.Length == 0 || _viewModel is null) return;
+        var pt = e.Touches[0];
 
-        if (vm.IsEditingMode)
+        if (_viewModel.IsEditingMode)
         {
-            // Kiểm tra xem ngón tay có chạm trúng điểm neo nào không
             _draggedAnchorIndex = _drawable.HitTestAnchor(pt, radius: 36f);
             _drawable.DraggingAnchorIndex = _draggedAnchorIndex;
             CanvasView.Invalidate();
         }
-        else if (vm.IsDrawingMode)
+        else if (_viewModel.IsDrawingMode)
         {
             _drawable.Clear();
             _drawable.AddPoint(pt);
@@ -104,20 +120,18 @@ public partial class MapSearchPage : ContentPage
 
     private void OnCanvasDrag(object? sender, TouchEventArgs e)
     {
-        var pt = e.Touches.FirstOrDefault();
-        if (BindingContext is not MapSearchViewModel vm) return;
+        if (e.Touches.Length == 0 || _viewModel is null) return;
+        var pt = e.Touches[0];
 
-        if (vm.IsEditingMode && _draggedAnchorIndex >= 0)
+        if (_viewModel.IsEditingMode && _draggedAnchorIndex >= 0)
         {
-            // Kéo điểm neo theo ngón tay
             _drawable.UpdateAnchor(_draggedAnchorIndex, pt);
             CanvasView.Invalidate();
 
-            // Cập nhật toạ độ địa lý tương ứng trong ViewModel
             var newGeo = ConvertSingleScreenPointToGeo(pt);
-            vm.UpdateAnchorPosition(_draggedAnchorIndex, newGeo);
+            _viewModel.UpdateAnchorPosition(_draggedAnchorIndex, newGeo);
         }
-        else if (vm.IsDrawingMode)
+        else if (_viewModel.IsDrawingMode)
         {
             _drawable.AddPoint(pt);
             CanvasView.Invalidate();
@@ -126,26 +140,26 @@ public partial class MapSearchPage : ContentPage
 
     private void OnCanvasEnd(object? sender, TouchEventArgs e)
     {
-        if (BindingContext is not MapSearchViewModel vm) return;
+        if (_viewModel is null) return;
 
-        if (vm.IsEditingMode)
+        if (_viewModel.IsEditingMode)
         {
             _draggedAnchorIndex = -1;
             _drawable.DraggingAnchorIndex = -1;
             CanvasView.Invalidate();
         }
-        else if (vm.IsDrawingMode)
+        else if (_viewModel.IsDrawingMode)
         {
             var points = _drawable.GetPoints();
             if (points.Count >= 3)
             {
                 var geoLocations = ConvertScreenPointsToGeoLocations(points);
-                vm.CompleteDrawing(geoLocations);
-                RenderPolygonOnMap(vm.PolygonCoordinates);
+                _viewModel.CompleteDrawing(geoLocations);
+                RenderPolygonOnMap(_viewModel.PolygonCoordinates);
             }
             else
             {
-                vm.CompleteDrawing(Enumerable.Empty<GeoCoordinate>());
+                _viewModel.CompleteDrawing(Enumerable.Empty<GeoCoordinate>());
             }
 
             _drawable.Clear();
@@ -165,6 +179,9 @@ public partial class MapSearchPage : ContentPage
         double latSpan = region.LatitudeDegrees;
         double lonSpan = region.LongitudeDegrees;
 
+        if (latSpan <= 0.0000001 || lonSpan <= 0.0000001)
+            return geoPoints;
+
         double width = CanvasView.Width;
         double height = CanvasView.Height;
 
@@ -175,6 +192,9 @@ public partial class MapSearchPage : ContentPage
 
             double lat = centerLat + (relY * latSpan);
             double lon = centerLon + (relX * lonSpan);
+
+            lat = Math.Clamp(lat, -89.9999, 89.9999);
+            lon = Math.Clamp(lon, -179.9999, 179.9999);
 
             geoPoints.Add(new GeoCoordinate(lat, lon));
         }
@@ -188,11 +208,17 @@ public partial class MapSearchPage : ContentPage
             return new GeoCoordinate(MapSearchViewModel.DefaultLatitude, MapSearchViewModel.DefaultLongitude);
 
         var region = SearchMap.VisibleRegion;
+        if (region.LatitudeDegrees <= 0.0000001 || region.LongitudeDegrees <= 0.0000001)
+            return new GeoCoordinate(region.Center.Latitude, region.Center.Longitude);
+
         double relX = (pt.X / CanvasView.Width) - 0.5;
         double relY = 0.5 - (pt.Y / CanvasView.Height);
 
         double lat = region.Center.Latitude + (relY * region.LatitudeDegrees);
         double lon = region.Center.Longitude + (relX * region.LongitudeDegrees);
+
+        lat = Math.Clamp(lat, -89.9999, 89.9999);
+        lon = Math.Clamp(lon, -179.9999, 179.9999);
 
         return new GeoCoordinate(lat, lon);
     }
@@ -209,6 +235,9 @@ public partial class MapSearchPage : ContentPage
         double latSpan = region.LatitudeDegrees;
         double lonSpan = region.LongitudeDegrees;
 
+        if (latSpan <= 0.0000001 || lonSpan <= 0.0000001)
+            return screenPoints;
+
         double width = CanvasView.Width;
         double height = CanvasView.Height;
 
@@ -220,7 +249,10 @@ public partial class MapSearchPage : ContentPage
             float x = (float)((relX + 0.5) * width);
             float y = (float)((0.5 - relY) * height);
 
-            screenPoints.Add(new PointF(x, y));
+            if (!float.IsNaN(x) && !float.IsNaN(y))
+            {
+                screenPoints.Add(new PointF(x, y));
+            }
         }
 
         return screenPoints;

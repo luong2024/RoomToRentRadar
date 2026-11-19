@@ -1,12 +1,12 @@
 namespace RoomToRentRadar.Features.MapSearch.Models;
 
 /// <summary>
-/// Đại diện cho một điểm toạ độ địa lý (kinh độ, vĩ độ)
+/// Represents a geographical coordinate (latitude, longitude) on the map.
 /// </summary>
 public record GeoCoordinate(double Latitude, double Longitude);
 
 /// <summary>
-/// Điểm neo có thể kéo thả để tinh chỉnh đa giác ở chế độ Edit
+/// Represents an editable anchor pin that can be dragged to adjust polygon vertices in edit mode.
 /// </summary>
 public class EditableAnchorPin
 {
@@ -27,7 +27,7 @@ public class EditableAnchorPin
 }
 
 /// <summary>
-/// Đại diện cho vùng đa giác đã vẽ và trạng thái khép kín
+/// Represents a drawn polygon area enclosed by a list of geo-coordinates.
 /// </summary>
 public class DrawnPolygonArea
 {

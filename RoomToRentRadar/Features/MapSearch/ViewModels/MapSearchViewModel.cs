@@ -7,7 +7,7 @@ namespace RoomToRentRadar.Features.MapSearch.ViewModels;
 
 public partial class MapSearchViewModel : ObservableObject
 {
-    // Toạ độ mặc định: Trường ĐH CNTT & TT Thái Nguyên (ICTU)
+    // Default initial location: ICTU Campus (Thai Nguyen University of Information and Communication Technology)
     public const double DefaultLatitude = 21.5855;
     public const double DefaultLongitude = 105.8075;
     public const double DefaultDistanceKm = 2.0;
@@ -16,12 +16,14 @@ public partial class MapSearchViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(CanStartDrawing))]
     [NotifyPropertyChangedFor(nameof(IsInteractingMode))]
     [NotifyPropertyChangedFor(nameof(ShowCompletedToolbar))]
+    [NotifyPropertyChangedFor(nameof(BackButtonText))]
     private bool _isDrawingMode;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanStartDrawing))]
     [NotifyPropertyChangedFor(nameof(IsInteractingMode))]
     [NotifyPropertyChangedFor(nameof(ShowCompletedToolbar))]
+    [NotifyPropertyChangedFor(nameof(BackButtonText))]
     private bool _isEditingMode;
 
     [ObservableProperty]
@@ -32,6 +34,7 @@ public partial class MapSearchViewModel : ObservableObject
     public bool CanStartDrawing => !IsDrawingMode && !IsEditingMode && !HasDrawnPolygon;
     public bool IsInteractingMode => IsDrawingMode || IsEditingMode;
     public bool ShowCompletedToolbar => HasDrawnPolygon && !IsDrawingMode && !IsEditingMode;
+    public string BackButtonText => IsInteractingMode ? "Back" : "Home";
 
     [ObservableProperty]
     private int _vertexCount;
@@ -44,6 +47,8 @@ public partial class MapSearchViewModel : ObservableObject
     public ObservableCollection<GeoCoordinate> PolygonCoordinates { get; } = new();
 
     public ObservableCollection<EditableAnchorPin> EditAnchorPins { get; } = new();
+
+    public Action? OnNavigateBackRequested { get; set; }
 
     public MapSearchViewModel()
     {
@@ -76,8 +81,6 @@ public partial class MapSearchViewModel : ObservableObject
         StatusMessage = "Boundary updated";
     }
 
-    public Action? OnNavigateBackRequested { get; set; }
-
     [RelayCommand]
     public void HandleBack()
     {
@@ -101,7 +104,7 @@ public partial class MapSearchViewModel : ObservableObject
         IsDrawingMode = false;
         IsEditingMode = false;
         StatusMessage = HasDrawnPolygon
-            ? "Search area drawn successfully"
+            ? "Search area defined"
             : "Tap 'Draw area' to search rooms by neighbourhood";
     }
 
@@ -133,7 +136,7 @@ public partial class MapSearchViewModel : ObservableObject
         var pointsList = geoPoints.ToList();
         if (pointsList.Count >= 3)
         {
-            // Tự động rút gọn số đỉnh để hình đa giác gọn và tối ưu (Rightmove style)
+            // Simplify freehand polygon to a clean set of key anchor vertices (Rightmove style)
             var simplified = SimplifyPolygon(pointsList, 16);
 
             foreach (var pt in simplified)
@@ -144,7 +147,7 @@ public partial class MapSearchViewModel : ObservableObject
 
             HasDrawnPolygon = true;
             VertexCount = simplified.Count;
-            StatusMessage = $"Area bounded successfully ({VertexCount} points)";
+            StatusMessage = $"Search area defined ({VertexCount} points)";
         }
         else
         {
@@ -153,7 +156,6 @@ public partial class MapSearchViewModel : ObservableObject
             StatusMessage = "Area is too small. Please draw at least 3 points to form a polygon.";
         }
 
-        // Tắt chế độ vẽ sau khi đã cập nhật HasDrawnPolygon để kích hoạt ShowCompletedToolbar
         IsDrawingMode = false;
     }
 
@@ -165,6 +167,11 @@ public partial class MapSearchViewModel : ObservableObject
             if (index < CurrentArea.Vertices.Count)
             {
                 CurrentArea.Vertices[index] = newCoord;
+            }
+            if (index < EditAnchorPins.Count)
+            {
+                EditAnchorPins[index].Latitude = newCoord.Latitude;
+                EditAnchorPins[index].Longitude = newCoord.Longitude;
             }
         }
     }
@@ -180,9 +187,9 @@ public partial class MapSearchViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Rút gọn số điểm vuốt tự do (80+ điểm) về một số lượng đỉnh chốt hợp lý (~12-16 điểm)
+    /// Simplifies freehand touch points (80+ points) down to a balanced vertex count (~12-16 points).
     /// </summary>
-    private static List<GeoCoordinate> SimplifyPolygon(List<GeoCoordinate> points, int targetCount)
+    public static List<GeoCoordinate> SimplifyPolygon(List<GeoCoordinate> points, int targetCount)
     {
         if (points.Count <= targetCount)
             return points;
