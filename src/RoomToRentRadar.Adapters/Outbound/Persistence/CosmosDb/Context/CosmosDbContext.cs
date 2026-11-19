@@ -208,7 +208,23 @@ public sealed class CosmosDbContext : ICosmosDbContext
         var database = databaseResponse.Database;
 
         var listingsContainerName = string.IsNullOrWhiteSpace(_options.ContainerName) ? "RoomListings" : _options.ContainerName;
-        await database.CreateContainerIfNotExistsAsync(listingsContainerName, "/campusId", cancellationToken: cancellationToken);
+        var listingsContainerProperties = new ContainerProperties(listingsContainerName, "/campusId");
+        listingsContainerProperties.IndexingPolicy.SpatialIndexes.Add(new SpatialPath
+        {
+            Path = "/location/*",
+            SpatialTypes = { SpatialType.Point }
+        });
+        listingsContainerProperties.IndexingPolicy.SpatialIndexes.Add(new SpatialPath
+        {
+            Path = "/Location/*",
+            SpatialTypes = { SpatialType.Point }
+        });
+
+        var listingsResponse = await database.CreateContainerIfNotExistsAsync(
+            listingsContainerProperties,
+            cancellationToken: cancellationToken);
+
+        await EnsureSpatialIndexesAsync(listingsResponse.Container, listingsResponse.Resource, cancellationToken);
 
         var syncOutboxContainerName = string.IsNullOrWhiteSpace(_options.RoomProjectionSyncOutboxContainerName)
             ? "RoomProjectionSyncOutbox"
@@ -332,12 +348,12 @@ public sealed class CosmosDbContext : ICosmosDbContext
                 {
                     new Collection<CompositePath>
                     {
-                        new CompositePath { Path = "/userId", Order = CompositePathSortOrder.Ascending },
                         new CompositePath { Path = "/createdAtUtc", Order = CompositePathSortOrder.Descending },
                         new CompositePath { Path = "/roomId", Order = CompositePathSortOrder.Ascending }
                     },
                     new Collection<CompositePath>
                     {
+                        new CompositePath { Path = "/userId", Order = CompositePathSortOrder.Ascending },
                         new CompositePath { Path = "/createdAtUtc", Order = CompositePathSortOrder.Descending },
                         new CompositePath { Path = "/roomId", Order = CompositePathSortOrder.Ascending }
                     }
@@ -380,6 +396,44 @@ public sealed class CosmosDbContext : ICosmosDbContext
                 new() { Path = "/roomId", Order = CompositePathSortOrder.Ascending }
             });
             modified = true;
+        }
+
+        if (modified)
+        {
+            await container.ReplaceContainerAsync(properties, cancellationToken: cancellationToken);
+        }
+    }
+
+    private static async Task EnsureSpatialIndexesAsync(
+        Container container,
+        ContainerProperties properties,
+        CancellationToken cancellationToken)
+    {
+        var indexingPolicy = properties.IndexingPolicy ?? new IndexingPolicy();
+        properties.IndexingPolicy = indexingPolicy;
+
+        var requiredPaths = new[] { "/location/*", "/Location/*" };
+        var modified = false;
+
+        foreach (var path in requiredPaths)
+        {
+            var existing = indexingPolicy.SpatialIndexes.FirstOrDefault(sp =>
+                string.Equals(sp.Path, path, StringComparison.Ordinal));
+
+            if (existing is null)
+            {
+                indexingPolicy.SpatialIndexes.Add(new SpatialPath
+                {
+                    Path = path,
+                    SpatialTypes = { SpatialType.Point }
+                });
+                modified = true;
+            }
+            else if (!existing.SpatialTypes.Contains(SpatialType.Point))
+            {
+                existing.SpatialTypes.Add(SpatialType.Point);
+                modified = true;
+            }
         }
 
         if (modified)

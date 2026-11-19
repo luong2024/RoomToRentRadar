@@ -239,6 +239,15 @@
         SemanticProperties.Description="View and edit your profile"
         SemanticProperties.Hint="Open your profile" />
 
+    <ShellContent
+        x:Name="CreateListingShellContent"
+        Title="Post Rental Listing"
+        Icon="ic_create_listing.png"
+        ContentTemplate="{DataTemplate roomViews:CreateListingPage}"
+        Route="create-listing"
+        SemanticProperties.Description="Post rental room listing"
+        SemanticProperties.Hint="Open rental listing creation form" />
+
     <MenuItem
         x:Name="LogoutMenuItem"
         Text="{loc:Translate Nav_Logout}"

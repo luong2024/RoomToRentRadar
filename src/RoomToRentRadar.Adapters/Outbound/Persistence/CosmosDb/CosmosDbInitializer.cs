@@ -84,8 +84,19 @@ public sealed class CosmosDbInitializer
 
             var listingsContainerName = string.IsNullOrWhiteSpace(_settings.ContainerName) ? "RoomListings" : _settings.ContainerName;
             _logger.LogInformation("Creating container '{ListingsContainerName}' (/campusId)...", listingsContainerName);
+            var listingsContainerProperties = new ContainerProperties(listingsContainerName, "/campusId");
+            listingsContainerProperties.IndexingPolicy.SpatialIndexes.Add(new SpatialPath
+            {
+                Path = "/location/*",
+                SpatialTypes = { SpatialType.Point }
+            });
+            listingsContainerProperties.IndexingPolicy.SpatialIndexes.Add(new SpatialPath
+            {
+                Path = "/Location/*",
+                SpatialTypes = { SpatialType.Point }
+            });
             var roomsContainerResponse = await database.CreateContainerIfNotExistsAsync(
-                new ContainerProperties(listingsContainerName, "/campusId"),
+                listingsContainerProperties,
                 cancellationToken: cancellationToken);
 
             var effectiveContainer = roomsContainerResponse.Container;
@@ -505,22 +516,26 @@ public sealed class CosmosDbInitializer
         properties.IndexingPolicy = indexingPolicy;
         var modified = false;
 
-        var locationIndex = indexingPolicy.SpatialIndexes.FirstOrDefault(index =>
-            index.Path.Equals("/location/*", StringComparison.Ordinal));
+        var requiredPaths = new[] { "/location/*", "/Location/*" };
+        foreach (var path in requiredPaths)
+        {
+            var spatialIndex = indexingPolicy.SpatialIndexes.FirstOrDefault(index =>
+                index.Path.Equals(path, StringComparison.Ordinal));
 
-        if (locationIndex is null)
-        {
-            indexingPolicy.SpatialIndexes.Add(new SpatialPath
+            if (spatialIndex is null)
             {
-                Path = "/location/*",
-                SpatialTypes = { SpatialType.Point }
-            });
-            modified = true;
-        }
-        else if (!locationIndex.SpatialTypes.Contains(SpatialType.Point))
-        {
-            locationIndex.SpatialTypes.Add(SpatialType.Point);
-            modified = true;
+                indexingPolicy.SpatialIndexes.Add(new SpatialPath
+                {
+                    Path = path,
+                    SpatialTypes = { SpatialType.Point }
+                });
+                modified = true;
+            }
+            else if (!spatialIndex.SpatialTypes.Contains(SpatialType.Point))
+            {
+                spatialIndex.SpatialTypes.Add(SpatialType.Point);
+                modified = true;
+            }
         }
 
         if (!HasCompositeIndex(indexingPolicy, "/monthlyRentAmount", "/id"))

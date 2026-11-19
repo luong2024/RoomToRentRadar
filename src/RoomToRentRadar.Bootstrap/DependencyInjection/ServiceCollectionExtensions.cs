@@ -16,6 +16,7 @@ using RoomToRentRadar.Adapters.Outbound.Authentication;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Configurations;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Context;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Repositories;
+using RoomToRentRadar.Adapters.Outbound.Routing;
 using RoomToRentRadar.Application.Ports.Outbound;
 using RoomToRentRadar.Application.UseCases;
 using RoomToRentRadar.Application.UseCases.Authentication;
@@ -36,6 +37,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRoomListingCacheInvalidator>(sp => sp.GetRequiredService<GetRoomListingsUseCase>());
         services.AddScoped<IGetRoomDetailsUseCase, GetRoomDetailsUseCase>();
         services.AddScoped<ISearchRoomsUseCase, SearchRoomsUseCase>();
+        services.AddScoped<ISearchRoomsInPolygonUseCase, SearchRoomsInPolygonUseCase>();
+        services.AddScoped<IRoutingService, RoutingService>();
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<IRegisterUserUseCase, RegisterUserUseCase>();
         services.AddScoped<ILoginWithEmailUseCase, LoginWithEmailUseCase>();
@@ -50,6 +53,18 @@ public static class ServiceCollectionExtensions
     {
         services.AddCachingAdapters();
         services.AddCosmosDbPersistence(configuration);
+        services
+            .AddOptions<RoutingOptions>()
+            .Bind(configuration.GetSection(RoutingOptions.SectionName))
+            .Validate(IsSupportedRoutingBaseUrl, "Routing:BaseUrl must be an absolute HTTP(S) URL.")
+            .Validate(options => options.TimeoutSeconds is >= 1 and <= 120, "Routing:TimeoutSeconds must be between 1 and 120.")
+            .ValidateOnStart();
+        services.AddHttpClient<IRoutingProvider, OsrmRoutingProvider>((serviceProvider, client) =>
+        {
+            var options = serviceProvider.GetRequiredService<IOptions<RoutingOptions>>().Value;
+            client.BaseAddress = CreateRoutingBaseAddress(options.BaseUrl);
+            client.Timeout = Timeout.InfiniteTimeSpan;
+        });
         services.AddSingleton<IValidateOptions<JwtOptions>, JwtOptionsValidator>();
         services
             .AddOptions<JwtOptions>()
@@ -129,7 +144,7 @@ public static class ServiceCollectionExtensions
                 {
                     Status = StatusCodes.Status429TooManyRequests,
                     Title = "Too Many Requests",
-                    Detail = "Rate limit exceeded for authentication requests. Please try again later.",
+                    Detail = "Rate limit exceeded. Please try again later.",
                     Instance = context.HttpContext.Request.Path
                 };
 
@@ -158,6 +173,28 @@ public static class ServiceCollectionExtensions
                         AutoReplenishment = true
                     });
             });
+
+            limiterOptions.AddPolicy(RateLimitingPolicies.Routing, httpContext =>
+            {
+                var rateOptions = httpContext.RequestServices
+                    .GetRequiredService<IOptions<RateLimitingOptions>>()
+                    .Value;
+
+                var permitLimit = rateOptions.RoutingPermitLimit > 0 ? rateOptions.RoutingPermitLimit : 60;
+                var windowSeconds = rateOptions.RoutingWindowSeconds > 0 ? rateOptions.RoutingWindowSeconds : 60;
+                var partitionKey = httpContext.Connection.RemoteIpAddress?.ToString() ?? "local-client";
+
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey,
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = permitLimit,
+                        Window = TimeSpan.FromSeconds(windowSeconds),
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                        AutoReplenishment = true
+                    });
+            });
         });
 
         services
@@ -165,5 +202,17 @@ public static class ServiceCollectionExtensions
             .AddApplicationPart(typeof(HealthController).Assembly);
 
         return services;
+    }
+
+    private static bool IsSupportedRoutingBaseUrl(RoutingOptions options) =>
+        Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out var baseUri) &&
+        (baseUri.Scheme == Uri.UriSchemeHttp || baseUri.Scheme == Uri.UriSchemeHttps);
+
+    private static Uri CreateRoutingBaseAddress(string baseUrl)
+    {
+        var baseUri = new Uri(baseUrl, UriKind.Absolute);
+        return baseUri.AbsolutePath.EndsWith("/", StringComparison.Ordinal)
+            ? baseUri
+            : new Uri($"{baseUri.GetLeftPart(UriPartial.Path)}/", UriKind.Absolute);
     }
 }

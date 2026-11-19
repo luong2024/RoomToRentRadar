@@ -141,6 +141,24 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                 inactiveEx.Message,
                 null),
 
+            RouteNotFoundException routeNotFoundEx => (
+                StatusCodes.Status404NotFound,
+                "Route Not Found",
+                routeNotFoundEx.Message,
+                null),
+
+            RoutingProviderUnavailableException routingUnavailableEx => (
+                StatusCodes.Status502BadGateway,
+                "Routing Provider Unavailable",
+                routingUnavailableEx.Message,
+                null),
+
+            RoutingProviderTimeoutException routingTimeoutEx => (
+                StatusCodes.Status504GatewayTimeout,
+                "Routing Provider Timeout",
+                routingTimeoutEx.Message,
+                null),
+
             NotFoundException resourceNotFoundEx => (
                 StatusCodes.Status404NotFound,
                 "Resource Not Found",

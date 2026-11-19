@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Core.Localization;
+using RoomToRentRadar.Core.Models.Authentication;
 using RoomToRentRadar.Features.RoomListings.Models;
 using RoomToRentRadar.Features.RoomListings.Services;
 
@@ -24,6 +25,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
 
     private readonly IRoomListingsService _roomListingsService;
     private readonly IErrorHandler _errorHandler;
+    private readonly IAuthenticationSessionService? _sessionService;
     private readonly Func<string, Task>? _navigateAsync;
     private readonly Dictionary<string, RoomListItemModel> _favoriteRoomsById = new(StringComparer.Ordinal);
     private readonly List<RoomListItemModel> _exploreSnapshot = [];
@@ -32,9 +34,21 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
     private bool _isInitialized;
     private bool _suppressAutoSortReload;
 
+    [ObservableProperty]
+    public partial bool IsLandlord { get; set; }
+
     public RoomListingsViewModel(
         IRoomListingsService roomListingsService,
         IErrorHandler errorHandler,
+        Func<string, Task>? navigateAsync = null)
+        : this(roomListingsService, errorHandler, null, navigateAsync)
+    {
+    }
+
+    public RoomListingsViewModel(
+        IRoomListingsService roomListingsService,
+        IErrorHandler errorHandler,
+        IAuthenticationSessionService? sessionService,
         Func<string, Task>? navigateAsync = null)
         : base(roomListingsService)
     {
@@ -43,6 +57,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
 
         _roomListingsService = roomListingsService;
         _errorHandler = errorHandler;
+        _sessionService = sessionService;
         _navigateAsync = navigateAsync;
         SortOptions = RoomSortOptionItem.CreateDefaults();
         PrimarySortOptions = SortOptions
@@ -64,6 +79,25 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
 
         UpdateLocalizedStrings();
         LocalizationResourceManager.Instance.PropertyChanged += (_, _) => UpdateLocalizedStrings();
+
+        UpdateLandlordStatus();
+        if (_sessionService != null)
+        {
+            _sessionService.CurrentUserChanged += OnCurrentUserChanged;
+        }
+    }
+
+    private void OnCurrentUserChanged(object? sender, AuthUser? user)
+    {
+        IsLandlord = string.Equals(user?.Role, UserRoleConstants.Landlord, StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(user?.Role, UserRoleConstants.Admin, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void UpdateLandlordStatus()
+    {
+        var currentUser = _sessionService?.CurrentUser;
+        IsLandlord = string.Equals(currentUser?.Role, UserRoleConstants.Landlord, StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(currentUser?.Role, UserRoleConstants.Admin, StringComparison.OrdinalIgnoreCase);
     }
 
     private void UpdateLocalizedStrings()
@@ -444,8 +478,33 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
     }
 
     [RelayCommand]
+    public async Task OpenCreateListingAsync()
+    {
+        if (Shell.Current != null)
+        {
+            try
+            {
+                await Shell.Current.GoToAsync(Core.Constants.AppRoutes.CreateListing);
+            }
+            catch
+            {
+                await Shell.Current.GoToAsync("//create-listing");
+            }
+        }
+    }
+
+    [RelayCommand]
     public async Task InitializeAsync()
     {
+        if (_sessionService != null)
+        {
+            if (!_sessionService.IsInitialized)
+            {
+                await _sessionService.EnsureInitializedAsync();
+            }
+            UpdateLandlordStatus();
+        }
+
         if (_isInitialized)
         {
             return;

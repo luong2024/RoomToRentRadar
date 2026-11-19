@@ -88,6 +88,42 @@
 
                     <!-- Header Actions: Notification & Profile (44x44 Touch Targets) -->
                     <HorizontalStackLayout Grid.Column="2" Spacing="8" VerticalOptions="Center">
+                        <!-- Create Listing Action Button -->
+                        <Border
+                            IsVisible="{Binding IsLandlord}"
+                            Padding="10,0"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                            HeightRequest="44"
+                            MinimumHeightRequest="44"
+                            SemanticProperties.Description="Post Rental Listing"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 14"
+                            VerticalOptions="Center">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenCreateListingCommand}" />
+                            </Border.GestureRecognizers>
+                            <HorizontalStackLayout
+                                Spacing="6"
+                                VerticalOptions="Center"
+                                InputTransparent="True"
+                                CascadeInputTransparent="True">
+                                <Image
+                                    Source="ic_create_listing.png"
+                                    HeightRequest="22"
+                                    WidthRequest="22"
+                                    Aspect="AspectFit"
+                                    VerticalOptions="Center"
+                                    InputTransparent="True" />
+                                <Label
+                                    FontAttributes="Bold"
+                                    FontSize="12"
+                                    InputTransparent="True"
+                                    Text="Post Listing"
+                                    TextColor="White"
+                                    VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                        </Border>
+
                         <!-- Notification Action Button -->
                         <Border
                             Padding="0"

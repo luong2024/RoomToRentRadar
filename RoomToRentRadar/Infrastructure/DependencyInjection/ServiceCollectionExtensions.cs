@@ -61,6 +61,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IProfileService, ProfileService>();
         services.AddSingleton<IProfileUiThreadDispatcher, MauiProfileUiThreadDispatcher>();
         services.AddSingleton<IRoomDetailService, RoomDetailService>();
+        services.AddSingleton<IMediaPickerService, MediaPickerService>();
         return services;
     }
 
@@ -83,6 +84,9 @@ public static class ServiceCollectionExtensions
         services.AddTransient<RoomDetailPage>();
         services.AddTransient<RoomToRentRadar.Features.MapSearch.ViewModels.MapSearchViewModel>();
         services.AddTransient<RoomToRentRadar.Features.MapSearch.Views.MapSearchPage>();
+        services.AddTransient<ICreateListingService, CreateListingService>();
+        services.AddTransient<CreateListingViewModel>();
+        services.AddTransient<CreateListingPage>();
         return services;
     }
 }

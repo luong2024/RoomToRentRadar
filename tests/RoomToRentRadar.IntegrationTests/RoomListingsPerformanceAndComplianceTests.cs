@@ -301,6 +301,16 @@ public class RoomListingsApplicationPerformanceTests
             _rooms.RemoveAll(room => room.Id == roomId && room.CampusId == campusId);
             return Task.CompletedTask;
         }
+
+        public Task<PagedResult<RoomListing>> SearchByPolygonAsync(
+            GeoPolygon polygon,
+            RoomSearchFilter filter,
+            int pageIndex,
+            int pageSize,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new PagedResult<RoomListing>([], pageIndex, pageSize, 0));
+        }
     }
 
     private sealed class FakeCampusRepository : ICampusRepository
@@ -494,6 +504,7 @@ public class CosmosRoomListingPerformanceIntegrationTests
         }
         catch (Exception ex) when (ex is HttpRequestException ||
                                   ex is System.Net.Sockets.SocketException ||
+                                  ex is CosmosException ||
                                   ex.InnerException is HttpRequestException ||
                                   ex.InnerException is System.Net.Sockets.SocketException ||
                                   ex.Message.Contains("Connection refused", StringComparison.OrdinalIgnoreCase))
