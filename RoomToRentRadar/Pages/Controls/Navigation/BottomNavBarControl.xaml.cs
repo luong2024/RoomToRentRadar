@@ -163,12 +163,12 @@ public partial class BottomNavBarControl : ContentView
 
         string route = tab switch
         {
-            BottomNavTab.Explore => "//main",
+            BottomNavTab.Explore => "//explore",
             BottomNavTab.Map => "//map",
             BottomNavTab.Saved => "//saved",
             BottomNavTab.Messages => "//messages",
             BottomNavTab.Account => "//account",
-            _ => "//main"
+            _ => "//explore"
         };
 
         if (Shell.Current != null)

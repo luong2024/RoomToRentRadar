@@ -3,6 +3,9 @@ using Microsoft.Extensions.Logging;
 using RoomToRentRadar.Client.Adapters;
 using RoomToRentRadar.Client.Adapters.Abstractions;
 using RoomToRentRadar.DeviceAdapters;
+using RoomToRentRadar.Services;
+using RoomToRentRadar.Services.Navigation;
+using RoomToRentRadar.Services.Navigation.Core;
 using Syncfusion.Maui.Toolkit.Hosting;
 
 namespace RoomToRentRadar
@@ -42,29 +45,11 @@ namespace RoomToRentRadar
             builder.Services.AddClientAdapters(ApiOptionsFactory.Create());
 
             // Core UI & Device Services
-            builder.Services.AddSingleton<ModalErrorHandler>();
             builder.Services.AddSingleton<ISessionStore, MauiSecureSessionStore>();
+            builder.Services.AddSingleton<IAppSession, AppSession>();
+            builder.Services.AddSingleton<INavigationService, NavigationService>();
 
-            // Main Landing Page & Authenticated Tabs
-            builder.Services.AddTransient<PageModels.MainLandingPageModel>();
-            builder.Services.AddTransient<Pages.MainLandingPage>();
-            builder.Services.AddTransient<PageModels.AccountPageModel>();
-            builder.Services.AddTransient<Pages.AccountPlaceholderPage>();
-            builder.Services.AddTransient<Pages.MapPlaceholderPage>();
-            builder.Services.AddTransient<Pages.SavedPlaceholderPage>();
-            builder.Services.AddTransient<Pages.MessagesPlaceholderPage>();
-
-            // UI Design System Catalog
-            builder.Services.AddSingleton<PageModels.UiCatalogPageModel>();
-            builder.Services.AddTransient<Pages.UiCatalogPage>();
-
-            // Auth Flow Services & Pages
-            builder.Services.AddTransient<PageModels.LoginPageModel>();
-            builder.Services.AddTransient<Pages.LoginPage>();
-            builder.Services.AddTransient<PageModels.RegisterPageModel>();
-            builder.Services.AddTransient<Pages.RegisterPage>();
-            builder.Services.AddTransient<PageModels.RoleSelectionPageModel>();
-            builder.Services.AddTransient<Pages.RoleSelectionPage>();
+            builder.Services.AddAppPages();
 
             return builder.Build();
         }

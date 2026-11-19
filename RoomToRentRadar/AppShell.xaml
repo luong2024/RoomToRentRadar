@@ -12,7 +12,7 @@
     <ShellContent
         Title="Explore"
         ContentTemplate="{DataTemplate pages:MainLandingPage}"
-        Route="main"
+        Route="explore"
         Shell.NavBarIsVisible="False"
         SemanticProperties.Description="Explore verified student rooms"
         SemanticProperties.Hint="Browse student rental properties near ICTU" />

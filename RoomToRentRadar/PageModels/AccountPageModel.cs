@@ -5,6 +5,7 @@ using RoomToRentRadar.Client.Adapters.Utilities;
 using RoomToRentRadar.Ports.Contracts.Requests.Auth;
 using RoomToRentRadar.Ports.Contracts.Responses.Auth;
 using RoomToRentRadar.Resources.Strings;
+using RoomToRentRadar.Services.Navigation.Core;
 
 namespace RoomToRentRadar.PageModels;
 
@@ -12,6 +13,7 @@ public partial class AccountPageModel : ObservableObject
 {
     private readonly IAuthGateway _authGateway;
     private readonly ISessionStore _sessionStore;
+    private readonly INavigationService? _navigation;
 
     [ObservableProperty]
     public partial string DisplayName { get; set; } = string.Empty;
@@ -74,10 +76,12 @@ public partial class AccountPageModel : ObservableObject
 
     public AccountPageModel(
         IAuthGateway authGateway,
-        ISessionStore sessionStore)
+        ISessionStore sessionStore,
+        INavigationService? navigation = null)
     {
         _authGateway = authGateway ?? throw new ArgumentNullException(nameof(authGateway));
         _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
+        _navigation = navigation;
 
         LocalizedStrings.Instance.PropertyChanged += (_, _) =>
         {
@@ -197,21 +201,28 @@ public partial class AccountPageModel : ObservableObject
                 : "Guest · not signed in";
             IsBusy = false;
 
-            // 4. Navigate back to Login Page (hiding Bottom Navigation Bar)
-            await NavigateToRouteAsync("//login");
+            // 4. Return to the guest tab set (T00.15 AC-4: //explore)
+            if (_navigation != null)
+            {
+                await _navigation.SignOutToGuestAsync();
+            }
+            else
+            {
+                await NavigateToRouteAsync("//" + AppRoutes.Explore);
+            }
         }
     }
 
     [RelayCommand]
     private async Task SignInAsync()
     {
-        await NavigateToRouteAsync("//login");
+        await NavigateToRouteAsync("//" + AppRoutes.Login);
     }
 
     [RelayCommand]
     private async Task RegisterAsync()
     {
-        await NavigateToRouteAsync("roleselection");
+        await NavigateToRouteAsync(AppRoutes.RoleSelection);
     }
 
     [RelayCommand]
@@ -284,13 +295,13 @@ public partial class AccountPageModel : ObservableObject
     [RelayCommand]
     private async Task NavigateSavedSearchesAsync()
     {
-        await NavigateToRouteAsync("//saved");
+        await NavigateToRouteAsync(AppRoutes.SavedSearches);
     }
 
     [RelayCommand]
     private async Task NavigateNotificationsAsync()
     {
-        await NavigateToRouteAsync("//messages");
+        await NavigateToRouteAsync(AppRoutes.Notifications);
     }
 
     [RelayCommand]
@@ -325,12 +336,10 @@ public partial class AccountPageModel : ObservableObject
             return;
         }
 
-#if !UNIT_TESTS
-        if (Microsoft.Maui.Controls.Shell.Current != null)
+        if (_navigation != null)
         {
-            await Microsoft.Maui.Controls.Shell.Current.GoToAsync(route);
+            await _navigation.GoToAsync(route);
         }
-#endif
     }
 
     private async Task ShowAlertAsync(string title, string message, string cancel)
