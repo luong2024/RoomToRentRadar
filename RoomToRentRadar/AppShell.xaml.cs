@@ -50,6 +50,7 @@ namespace RoomToRentRadar
             RoomListingsPage roomListingsPage,
             AuthPage authPage,
             ProfilePage profilePage,
+            CreateListingPage createListingPage,
             IAuthenticationSessionService sessionService,
             IRouteGuardService routeGuardService)
         {
@@ -61,6 +62,7 @@ namespace RoomToRentRadar
             RoomListingsShellContent.Content = roomListingsPage;
             AuthShellContent.Content = authPage;
             ProfileShellContent.Content = profilePage;
+            CreateListingShellContent.Content = createListingPage;
 
             Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(Features.RoomDetails.Views.RoomDetailPage));
             Routing.RegisterRoute(AppRoutes.RoomDetails, typeof(RoomDetailsPage));

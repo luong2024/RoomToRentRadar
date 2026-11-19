@@ -232,7 +232,8 @@ public class RouteGuardService : IRouteGuardService
 
         // Relative detail routes (room-detail and rooms/details) are pushed onto the stack without leading "//"
         if (normalizedBase == AppRoutes.RoomDetail.ToLowerInvariant() ||
-            normalizedBase == AppRoutes.RoomDetails.ToLowerInvariant())
+            normalizedBase == AppRoutes.RoomDetails.ToLowerInvariant() ||
+            normalizedBase == AppRoutes.CreateListing.ToLowerInvariant())
         {
             return $"{normalizedBase}{querySuffix}";
         }
@@ -268,7 +269,9 @@ public class RouteGuardService : IRouteGuardService
         return normalizedRoute == AppRoutes.Home.ToLowerInvariant()
                || normalizedRoute == AppRoutes.RoomListings.ToLowerInvariant()
                || normalizedRoute == AppRoutes.RoomDetail.ToLowerInvariant()
-               || normalizedRoute == AppRoutes.RoomDetails.ToLowerInvariant();
+               || normalizedRoute == AppRoutes.RoomDetails.ToLowerInvariant()
+               || normalizedRoute == AppRoutes.CreateListing.ToLowerInvariant()
+               || normalizedRoute == "create-listing";
     }
 
     private static bool IsProfileRoute(string normalizedRoute)

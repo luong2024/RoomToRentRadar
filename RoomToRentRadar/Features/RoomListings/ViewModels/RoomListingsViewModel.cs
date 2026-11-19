@@ -475,7 +475,14 @@ public partial class RoomListingsViewModel : ObservableObject
     {
         if (Shell.Current != null)
         {
-            await Shell.Current.GoToAsync(Core.Constants.AppRoutes.CreateListing);
+            try
+            {
+                await Shell.Current.GoToAsync(Core.Constants.AppRoutes.CreateListing);
+            }
+            catch
+            {
+                await Shell.Current.GoToAsync("//create-listing");
+            }
         }
     }
 
