@@ -1,3 +1,4 @@
+using RoomToRentRadar.Shared.Campuses;
 using RoomToRentRadar.Shared.Listings;
 
 namespace RoomToRentRadar.Features.Home.ViewModels;
@@ -6,11 +7,9 @@ public sealed record CampusOption(string Name, double Lat, double Lng);
 
 public static class HomeFilterOptions
 {
-    public static readonly IReadOnlyList<CampusOption> Campuses =
-    [
-        new("Bách Khoa", 10.7721, 106.6579),
-        new("KHTN", 10.7626, 106.6822)
-    ];
+    public static readonly IReadOnlyList<CampusOption> Campuses = CampusCatalog.All
+        .Select(campus => new CampusOption(campus.Name, campus.Lat, campus.Lng))
+        .ToList();
 
     public static readonly IReadOnlyList<int> DistanceKilometres = [1, 2, 3, 5];
 
