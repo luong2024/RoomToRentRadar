@@ -1,6 +1,8 @@
 using System.Globalization;
 using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
+using CommunityToolkit.Maui.Extensions;
+using CommunityToolkit.Maui.Views;
 using Fonts;
 using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Interfaces;
@@ -238,13 +240,25 @@ namespace RoomToRentRadar
         {
             FlyoutIsPresented = false;
 
-            var confirmTitle = LocalizationResourceManager.Instance["Logout_Confirm_Title"] ?? "Log Out";
-            var confirmMessage = LocalizationResourceManager.Instance["Logout_Confirm_Message"] ?? "Are you sure you want to log out?";
-            var confirmYes = LocalizationResourceManager.Instance["Logout_Confirm_Yes"] ?? "Log Out";
-            var confirmNo = LocalizationResourceManager.Instance["Logout_Confirm_No"] ?? "Cancel";
+            bool shouldLogout = false;
+            try
+            {
+                var popup = new LogoutConfirmationPopup();
+                var targetPage = CurrentPage ?? (Page)this;
+                targetPage.ShowPopup(popup);
+                shouldLogout = await popup.WaitForDecisionAsync();
+            }
+            catch
+            {
+                var confirmTitle = LocalizationResourceManager.Instance["Logout_Confirm_Title"] ?? "Log Out";
+                var confirmMessage = LocalizationResourceManager.Instance["Logout_Confirm_Message"] ?? "Are you sure you want to log out?";
+                var confirmYes = LocalizationResourceManager.Instance["Logout_Confirm_Yes"] ?? "Log Out";
+                var confirmNo = LocalizationResourceManager.Instance["Logout_Confirm_No"] ?? "Cancel";
 
-            var page = CurrentPage ?? this;
-            bool shouldLogout = await page.DisplayAlertAsync(confirmTitle, confirmMessage, confirmYes, confirmNo);
+                var page = CurrentPage ?? this;
+                shouldLogout = await page.DisplayAlertAsync(confirmTitle, confirmMessage, confirmYes, confirmNo);
+            }
+
             if (!shouldLogout)
             {
                 return;
