@@ -542,6 +542,286 @@ public class RoomDetailPageModelTests
         Assert.That(_sut.HouseRulesList[1].Title, Is.EqualTo("Giờ giới nghiêm"));
     }
 
+    [Test]
+    public async Task PopulateMonthlyCosts_WithVariousUnits_FormatsWaterAndElectricityCorrectly()
+    {
+        // Arrange
+        var testRoom = CreateSampleRoom(
+            status: ListingStatus.Available,
+            isVerified: true,
+            monthlyRent: 2000000,
+            deposit: 2000000,
+            areaM2: 20.0,
+            maxOccupants: 1,
+            furnishing: Furnishing.Basic,
+            availableFrom: null,
+            distanceKm: 1.0,
+            landlordPhone: null) with
+        {
+            Utilities = new UtilitiesView(
+                ElectricityPriceVndPerKwh: null,
+                WaterPriceVnd: 15000,
+                WaterPriceUnit: WaterPriceUnit.PerM3,
+                InternetFeeVnd: 50000,
+                ParkingFeeVnd: null,
+                OtherFeesNote: null,
+                EstimatedMonthlyTotalVnd: 2200000)
+        };
+
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+
+        // Act
+        await _sut.InitializeAsync();
+
+        // Assert
+        Assert.That(_sut.CostBreakdownRows[1].ValueFormatted, Is.EqualTo("Included")); // Electricity null -> Included
+        Assert.That(_sut.CostBreakdownRows[2].ValueFormatted, Is.EqualTo("15,000 đ / m³")); // Water per m3
+        Assert.That(_sut.CostBreakdownRows[3].ValueFormatted, Is.EqualTo("50,000 đ")); // Internet
+        Assert.That(_sut.CostBreakdownRows[4].ValueFormatted, Is.EqualTo("Free")); // Parking null -> Free
+    }
+
+    [Test]
+    public async Task PopulateSafety_WithUnverifiedAndPartialFeatures_FormatsScoreAndChecklist()
+    {
+        // Arrange
+        var testRoom = CreateSampleRoom(
+            status: ListingStatus.Available,
+            isVerified: false,
+            monthlyRent: 2000000,
+            deposit: 2000000,
+            areaM2: 20.0,
+            maxOccupants: 1,
+            furnishing: Furnishing.Basic,
+            availableFrom: null,
+            distanceKm: 1.0,
+            landlordPhone: null) with
+        {
+            Safety = new SafetyDto(2, false, [SafetyFeature.Cctv, SafetyFeature.FireSafety])
+        };
+
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+
+        // Act
+        await _sut.InitializeAsync();
+
+        // Assert
+        Assert.That(_sut.SafetyScoreFormatted, Is.EqualTo("2/5 · Unverified"));
+        Assert.That(_sut.SafetyChecklist, Has.Count.EqualTo(5));
+        Assert.That(_sut.SafetyChecklist[0].IsVerified, Is.True); // CCTV
+        Assert.That(_sut.SafetyChecklist[1].IsVerified, Is.False); // Secure entrance
+        Assert.That(_sut.SafetyChecklist[2].IsVerified, Is.True); // Fire safety
+    }
+
+    [Test]
+    public async Task PopulateHouseRules_WhenNullOrPartial_HandlesGracefully()
+    {
+        // Arrange
+        var testRoom = CreateSampleRoom(
+            status: ListingStatus.Available,
+            isVerified: true,
+            monthlyRent: 2000000,
+            deposit: 2000000,
+            areaM2: 20.0,
+            maxOccupants: 1,
+            furnishing: Furnishing.Basic,
+            availableFrom: null,
+            distanceKm: 1.0,
+            landlordPhone: null) with
+        {
+            HouseRules = null
+        };
+
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+
+        // Act
+        await _sut.InitializeAsync();
+
+        // Assert
+        Assert.That(_sut.HasHouseRules, Is.False);
+        Assert.That(_sut.HouseRulesList, Is.Empty);
+    }
+
+    [Test]
+    public async Task HeroGallery_PhotoNavigationAnd360Indicator()
+    {
+        // Arrange
+        var testRoom = CreateSampleRoom(
+            status: ListingStatus.Available,
+            isVerified: true,
+            monthlyRent: 2000000,
+            deposit: 2000000,
+            areaM2: 20.0,
+            maxOccupants: 1,
+            furnishing: Furnishing.Basic,
+            availableFrom: null,
+            distanceKm: 1.0,
+            landlordPhone: null);
+
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+
+        // Act
+        await _sut.InitializeAsync();
+
+        // Assert
+        Assert.That(_sut.HasPhotos, Is.True);
+        Assert.That(_sut.Is360Available, Is.True);
+        Assert.That(_sut.PhotoCounterText, Is.EqualTo("1 / 2"));
+        Assert.That(_sut.HeroCoverUrl, Is.EqualTo("orig1.jpg"));
+    }
+
+    [Test]
+    public async Task Open360ViewAsync_WhenTapped_InvokesToastOverride()
+    {
+        // Arrange
+        string? toastMessage = null;
+        _sut.ToastOverride = msg =>
+        {
+            toastMessage = msg;
+            return Task.CompletedTask;
+        };
+
+        // Act
+        await _sut.Open360ViewAsync();
+
+        // Assert
+        Assert.That(toastMessage, Is.EqualTo(AppResources.GetString("RoomDetail_360View")));
+    }
+
+    [Test]
+    public async Task ShareListingAsync_WhenTapped_InvokesShareOverrideWithTitleAndPrice()
+    {
+        // Arrange
+        var testRoom = CreateSampleRoom(
+            status: ListingStatus.Available,
+            isVerified: true,
+            monthlyRent: 2500000,
+            deposit: 2500000,
+            areaM2: 25.0,
+            maxOccupants: 2,
+            furnishing: Furnishing.Full,
+            availableFrom: null,
+            distanceKm: 1.0,
+            landlordPhone: null);
+
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        await _sut.InitializeAsync();
+
+        string? sharedText = null;
+        _sut.ShareOverride = text =>
+        {
+            sharedText = text;
+            return Task.CompletedTask;
+        };
+
+        // Act
+        await _sut.ShareListingAsync();
+
+        // Assert
+        Assert.That(sharedText, Does.Contain("Private room with balcony near ICTU"));
+        Assert.That(sharedText, Does.Contain("2,500,000 đ"));
+    }
+
+    [Test]
+    public async Task GoBackAsync_WhenTapped_NavigatesBack()
+    {
+        // Arrange
+        string? backRoute = null;
+        _sut.NavigateOverride = route =>
+        {
+            backRoute = route;
+            return Task.CompletedTask;
+        };
+
+        // Act
+        await _sut.GoBackAsync();
+
+        // Assert
+        Assert.That(backRoute, Is.EqualTo(".."));
+    }
+
+    [Test]
+    public async Task MessageLandlordAsync_WhenSignedIn_NavigatesToMessagesRoute()
+    {
+        // Arrange
+        _sessionStore.HasValidTokenAsync().Returns(true);
+
+        var testRoom = CreateSampleRoom(
+            status: ListingStatus.Available,
+            isVerified: true,
+            monthlyRent: 2500000,
+            deposit: 2500000,
+            areaM2: 25.0,
+            maxOccupants: 2,
+            furnishing: Furnishing.Full,
+            availableFrom: null,
+            distanceKm: 1.0,
+            landlordPhone: "0912345678");
+
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        await _sut.InitializeAsync();
+
+        string? messageRoute = null;
+        _sut.NavigateOverride = route =>
+        {
+            messageRoute = route;
+            return Task.CompletedTask;
+        };
+
+        // Act
+        await _sut.MessageLandlordAsync();
+
+        // Assert
+        Assert.That(messageRoute, Is.EqualTo("//messages?roomId=room-test-1&landlordId=landlord-1"));
+    }
+
+    [Test]
+    public async Task MessageLandlordAsync_WhenGuest_PromptsSignIn()
+    {
+        // Arrange
+        var testRoom = CreateSampleRoom(
+            status: ListingStatus.Available,
+            isVerified: true,
+            monthlyRent: 2500000,
+            deposit: 2500000,
+            areaM2: 25.0,
+            maxOccupants: 2,
+            furnishing: Furnishing.Full,
+            availableFrom: null,
+            distanceKm: 1.0,
+            landlordPhone: null);
+
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        await _sut.InitializeAsync();
+
+        bool alertPrompted = false;
+        _sut.DisplayAlertOverride = (_, _, _, _) =>
+        {
+            alertPrompted = true;
+            return Task.FromResult(false);
+        };
+
+        // Act
+        await _sut.MessageLandlordAsync();
+
+        // Assert
+        Assert.That(alertPrompted, Is.True);
+    }
+
+    [Test]
+    public async Task EmptyRoomId_SetsIsNotFoundImmediately()
+    {
+        // Arrange
+        _sut.RoomId = "   ";
+
+        // Act
+        await _sut.InitializeAsync();
+
+        // Assert
+        Assert.That(_sut.IsNotFound, Is.True);
+        Assert.That(_sut.IsLoading, Is.False);
+        Assert.That(_sut.IsContentVisible, Is.False);
+    }
+
     private static RoomDetailDto CreateSampleRoom(
         ListingStatus status,
         bool isVerified,
