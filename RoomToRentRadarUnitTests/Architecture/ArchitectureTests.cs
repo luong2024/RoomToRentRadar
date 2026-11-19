@@ -21,7 +21,9 @@ public class ArchitectureTests
     private static bool IsCandidateClass(Type t) =>
         t.IsClass &&
         !t.IsAbstract &&
-        !t.Name.StartsWith("<>") &&
+        // C# compiler-generated names start with '<' — including nested async-lambda state machines
+        // such as "<<ExecuteAsync>b__1>d", not only the "<=...>" pattern.
+        !t.Name.StartsWith('<') &&
         !t.IsDefined(typeof(CompilerGeneratedAttribute), false);
 
     [Test]

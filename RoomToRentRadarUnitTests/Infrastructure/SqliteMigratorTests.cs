@@ -12,12 +12,14 @@ public class SqliteMigratorTests
 {
     private static readonly string[] BaselineTableNames =
     [
-        "AuditLogs", "Campuses", "Rooms", "UserRefreshTokens", "Users"
+        "AuditLogs", "Campuses", "HouseRuleVersions", "RoomAmenities", "RoomPhotos",
+        "RoomSafetyFeatures", "Rooms", "UserRefreshTokens", "Users"
     ];
 
     private static readonly string[] BaselineIndexNames =
     [
         "IX_AuditLogs_Action", "IX_AuditLogs_TimestampUtc", "IX_AuditLogs_UserId",
+        "IX_RoomPhotos_RoomId_SortOrder", "IX_RoomPhotos_UploadedByUserId_AttachedAtUtc",
         "IX_Rooms_LandlordId", "IX_Rooms_NeedsReReview", "IX_Rooms_Status_Lat_Lng",
         "IX_Rooms_Status_PublishedAtUtc", "IX_Rooms_Status_Rent",
         "IX_UserRefreshTokens_UserId", "IX_Users_NormalizedEmail"
@@ -32,6 +34,13 @@ public class SqliteMigratorTests
         "VerifiedByUserId", "PublishedAtUtc", "LastUpdatedAtUtc", "CreatedAtUtc", "Version"
     ];
 
+    /// <summary>ERD §4.8 RoomPhotos columns (14) including the nullable attach bookkeeping columns.</summary>
+    private static readonly string[] RoomPhotoColumnNames =
+    [
+        "Id", "RoomId", "UploadedByUserId", "Kind", "ContentType", "SizeBytes", "Width", "Height",
+        "OriginalPath", "MediumPath", "ThumbPath", "SortOrder", "CreatedAtUtc", "AttachedAtUtc"
+    ];
+
     [OneTimeSetUp]
     public void InitializeSqliteProvider() => SQLitePCL.Batteries_V2.Init();
 
@@ -44,9 +53,11 @@ public class SqliteMigratorTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(applied, Is.EqualTo(new[] { 1, 2 }));
+            Assert.That(applied, Is.EqualTo(new[] { 1, 2, 3, 4 }));
             Assert.That(ReadNames(connection, "table"), Is.EquivalentTo(BaselineTableNames));
             Assert.That(ReadNames(connection, "index"), Is.EquivalentTo(BaselineIndexNames));
+            Assert.That(ReadScalarLong(connection, "SELECT COUNT(1) FROM pragma_foreign_key_check;"), Is.Zero,
+                "Sau migrate mới, toàn bộ khoá ngoại phải hợp lệ.");
 
             var columns = ReadRoomColumns(connection);
             Assert.That(columns, Has.Count.EqualTo(32));
@@ -54,6 +65,43 @@ public class SqliteMigratorTests
             Assert.That(columns, Does.Not.Contain("ConcurrencyToken"),
                 "ConcurrencyToken là Version.ToString() (ERD §1) — không được lưu thành cột riêng.");
             Assert.That(ReadUserVersion(connection), Is.EqualTo(LatestVersion));
+        });
+    }
+
+    [Test]
+    public void Migrate_FreshDatabase_CreatesEveryErd48RoomPhotosColumn()
+    {
+        using var connection = OpenMemoryConnection();
+        SqliteMigrator.Migrate(connection);
+
+        var columns = ReadColumns(connection, "RoomPhotos");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(columns, Has.Count.EqualTo(14));
+            Assert.That(columns, Is.EquivalentTo(RoomPhotoColumnNames));
+            Assert.That(columns, Does.Not.Contain("Version"),
+                "RoomPhoto là entity không có Version (ERD §3) — attach dùng conditional UPDATE.");
+        });
+    }
+
+    [Test]
+    public void Migrate_FreshDatabase_RoomChildrenTablesHaveTheirErdColumns()
+    {
+        using var connection = OpenMemoryConnection();
+        SqliteMigrator.Migrate(connection);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ReadColumns(connection, "RoomAmenities"), Is.EquivalentTo(new[] { "RoomId", "AmenityCode" }));
+            Assert.That(ReadColumns(connection, "RoomSafetyFeatures"),
+                Is.EquivalentTo(new[] { "RoomId", "FeatureCode", "IsConfirmed" }));
+            Assert.That(ReadColumns(connection, "HouseRuleVersions"), Is.EquivalentTo(new[]
+            {
+                "Id", "RoomId", "VersionNumber", "QuietHoursStart", "QuietHoursEnd", "CurfewTime",
+                "GuestPolicy", "GuestPolicyNote", "CookingPolicy", "ParkingAvailable", "ParkingRules",
+                "PetsAllowed", "SmokingAllowed", "OtherRules", "CreatedByUserId", "CreatedAtUtc"
+            }));
         });
     }
 
@@ -211,13 +259,13 @@ public class SqliteMigratorTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(applied, Is.EqualTo(new[] { 2 }));
+            Assert.That(applied, Is.EqualTo(new[] { 2, 3, 4 }));
             Assert.That(ReadScalarLong(connection, "SELECT COUNT(1) FROM Users;"), Is.EqualTo(1));
             Assert.That(ReadScalarLong(connection, "SELECT COUNT(1) FROM UserRefreshTokens;"), Is.EqualTo(1));
             Assert.That(ReadScalarText(connection, "SELECT SelectedCampusId FROM Users WHERE Id = 'user-old';"), Is.EqualTo("ICTU"));
             Assert.That(ReadScalarText(connection, "SELECT PreferredLanguage FROM Users WHERE Id = 'user-old';"), Is.EqualTo("en"));
             Assert.That(ReadScalarLong(connection, "SELECT Version FROM Users WHERE Id = 'user-old';"), Is.EqualTo(1));
-            Assert.That(ReadUserVersion(connection), Is.EqualTo(2));
+            Assert.That(ReadUserVersion(connection), Is.EqualTo(LatestVersion));
         });
     }
 
@@ -380,10 +428,12 @@ public class SqliteMigratorTests
         return names;
     }
 
-    private static List<string> ReadRoomColumns(SqliteConnection connection)
+    private static List<string> ReadRoomColumns(SqliteConnection connection) => ReadColumns(connection, "Rooms");
+
+    private static List<string> ReadColumns(SqliteConnection connection, string tableName)
     {
         using var command = connection.CreateCommand();
-        command.CommandText = "PRAGMA table_info(Rooms);";
+        command.CommandText = "PRAGMA table_info(" + tableName + ");";
 
         var columns = new List<string>();
         using var reader = command.ExecuteReader();

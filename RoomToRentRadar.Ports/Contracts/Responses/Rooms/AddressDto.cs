@@ -4,5 +4,5 @@ namespace RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 public sealed record AddressDto(
     string AddressLine,
     string Ward,
-    string District
+    string District = "TP. Thái Nguyên"
 );

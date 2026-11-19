@@ -1,6 +1,8 @@
 using System.Globalization;
+using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.Exceptions;
+using RoomToRentRadar.Domain.ValueObjects;
 
 namespace RoomToRentRadar.Domain.Aggregates;
 
@@ -18,6 +20,18 @@ public sealed class Room
     public const int DepositMonthsMultiplier = 3;
     public const double AreaMinM2 = 5.0;
     public const double AreaMaxM2 = 200.0;
+
+    /// <summary>BR-LST-01: the pin must stay inside Thái Nguyên province.</summary>
+    public const double ThaiNguyenMinLat = 21.30;
+    public const double ThaiNguyenMaxLat = 22.05;
+    public const double ThaiNguyenMinLng = 105.45;
+    public const double ThaiNguyenMaxLng = 106.25;
+
+    public const int DescriptionMaxLength = 2000;
+    public const int AddressLineMaxLength = 200;
+    public const int WardMaxLength = 100;
+    public const int DistrictMaxLength = 100;
+    public const int OtherFeesNoteMaxLength = 200;
 
     public string Id { get; private set; }
     public string LandlordId { get; private set; }
@@ -41,6 +55,9 @@ public sealed class Room
     public long? InternetFeeVnd { get; private set; }
     public long? ParkingFeeVnd { get; private set; }
     public string? OtherFeesNote { get; private set; }
+    public IReadOnlyList<Amenity> Amenities { get; private set; } = Array.Empty<Amenity>();
+    public IReadOnlyList<RoomSafetyFeatureEntry> SafetyFeatures { get; private set; } = Array.Empty<RoomSafetyFeatureEntry>();
+    public HouseRuleVersion? CurrentHouseRules { get; private set; }
     public ListingStatus Status { get; private set; }
     public string? StatusReason { get; private set; }
     public bool NeedsReReview { get; private set; }
@@ -249,7 +266,10 @@ public sealed class Room
         bool isSafetyVerified = false,
         DateTime? verifiedAtUtc = null,
         string? verifiedByUserId = null,
-        DateTime? publishedAtUtc = null)
+        DateTime? publishedAtUtc = null,
+        IReadOnlyList<Amenity>? amenities = null,
+        IReadOnlyList<RoomSafetyFeatureEntry>? safetyFeatures = null,
+        HouseRuleVersion? currentHouseRules = null)
     {
         if (string.IsNullOrWhiteSpace(id))
         {
@@ -303,11 +323,173 @@ public sealed class Room
                 ? ConcurrencyTokenFor(version)
                 : concurrencyToken);
 
+        room.SetChildren(amenities, safetyFeatures, currentHouseRules);
         room.EnsureInvariants();
         return room;
     }
 
     public bool IsPubliclyVisible => Status == ListingStatus.Available;
+
+    // ----------------------------------------------------------------- children & landlord edits
+
+    /// <summary>
+    /// Assigns the child collections loaded from storage (or supplied when creating a listing).
+    /// Validates every enum, removes duplicates keeping the first occurrence and a stable order, and
+    /// deliberately does not <see cref="Touch"/>: creating a room already starts at version 1.
+    /// </summary>
+    public void SetChildren(
+        IEnumerable<Amenity>? amenities,
+        IEnumerable<RoomSafetyFeatureEntry>? safetyFeatures,
+        HouseRuleVersion? currentHouseRules = null)
+    {
+        Amenities = NormalizeEnumList(amenities, "Amenity", "INVALID_AMENITY"); // GUARDRAILS 1.5.1 whitelist
+        SafetyFeatures = NormalizeSafetyFeatureEntries(safetyFeatures);
+        CurrentHouseRules = currentHouseRules;
+    }
+
+    /// <summary>
+    /// Applies a landlord edit (BR-LST-05, BR-LST-09, ERD §4.6). Status rules:
+    /// <list type="bullet">
+    /// <item><c>Rejected</c> → back to <c>PendingReview</c> with the reason cleared.</item>
+    /// <item><c>Available</c>/<c>Rented</c>/<c>Unpublished</c> → keep the status; a material change
+    /// (address, pin, room type, newly added photos or safety feature) raises <see cref="NeedsReReview"/>.</item>
+    /// <item><c>PendingReview</c> → keep the status, no re-review needed.</item>
+    /// <item><c>Suspended</c> → untouched until the landlord calls <see cref="Resubmit"/>.</item>
+    /// </list>
+    /// Confirmed safety features stay confirmed; a newly declared feature starts unconfirmed.
+    /// </summary>
+    public void UpdateDetails(RoomDetails details)
+    {
+        ArgumentNullException.ThrowIfNull(details);
+
+        var requestedAmenities = NormalizeEnumList(details.Amenities, "Amenity", "INVALID_AMENITY");
+        var requestedSafetyFeatures = NormalizeEnumList(details.SafetyFeatures, "Safety feature", "INVALID_SAFETY_FEATURE"); // BR-LST-08
+
+        var confirmedByFeature = SafetyFeatures.ToDictionary(entry => entry.Feature, entry => entry.IsConfirmed);
+        var isMaterialChange =
+            !string.Equals(AddressLine, details.AddressLine, StringComparison.Ordinal) || // BR-LST-05
+            !string.Equals(Ward, details.Ward, StringComparison.Ordinal) ||
+            !string.Equals(District, details.District, StringComparison.Ordinal) ||
+            RoomType != details.RoomType ||
+            !Latitude.Equals(details.Latitude) ||
+            !Longitude.Equals(details.Longitude) ||
+            details.HasAddedNewPhotos ||
+            requestedSafetyFeatures.Any(feature => !confirmedByFeature.ContainsKey(feature));
+
+        Title = (details.Title ?? string.Empty).Trim();
+        Description = details.Description;
+        RoomType = details.RoomType;
+        MonthlyRentVnd = details.MonthlyRentVnd;
+        DepositVnd = details.DepositVnd;
+        AreaM2 = details.AreaM2;
+        MaxOccupants = details.MaxOccupants;
+        Furnishing = details.Furnishing;
+        AvailableFrom = details.AvailableFrom;
+        AddressLine = details.AddressLine;
+        Ward = details.Ward;
+        District = details.District;
+        Latitude = details.Latitude;
+        Longitude = details.Longitude;
+        ElectricityPriceVndPerKwh = details.ElectricityPriceVndPerKwh;
+        WaterPriceVnd = details.WaterPriceVnd;
+        WaterPriceUnit = details.WaterPriceUnit;
+        InternetFeeVnd = details.InternetFeeVnd;
+        ParkingFeeVnd = details.ParkingFeeVnd;
+        OtherFeesNote = details.OtherFeesNote;
+        Amenities = requestedAmenities;
+        SafetyFeatures = requestedSafetyFeatures
+            .Select(feature => new RoomSafetyFeatureEntry(
+                feature,
+                confirmedByFeature.TryGetValue(feature, out var isConfirmed) && isConfirmed))
+            .ToArray();
+
+        if (Status == ListingStatus.Rejected)
+        {
+            Status = ListingStatus.PendingReview;
+            StatusReason = null;
+            NeedsReReview = false;
+        }
+        else if (Status is ListingStatus.Available or ListingStatus.Rented or ListingStatus.Unpublished)
+        {
+            if (isMaterialChange)
+            {
+                NeedsReReview = true;
+            }
+        }
+        else if (Status == ListingStatus.PendingReview)
+        {
+            NeedsReReview = false;
+        }
+
+        EnsureInvariants();
+        Touch();
+    }
+
+    // Amenities and safety features share the same whitelist + de-duplicate + keep-order loop.
+    private static IReadOnlyList<TEnum> NormalizeEnumList<TEnum>(
+        IEnumerable<TEnum>? values,
+        string label,
+        string errorCode)
+        where TEnum : struct, Enum
+    {
+        if (values is null)
+        {
+            return Array.Empty<TEnum>();
+        }
+
+        var seen = new HashSet<TEnum>();
+        var result = new List<TEnum>();
+        foreach (var value in values)
+        {
+            if (!Enum.IsDefined(value))
+            {
+                // GUARDRAILS 1.5.1 whitelist / BR-LST-08
+                throw new DomainValidationException(
+                    $"{label} '{Convert.ToInt32(value)}' is not a recognized {label.ToLowerInvariant()}.",
+                    errorCode);
+            }
+
+            if (seen.Add(value))
+            {
+                result.Add(value);
+            }
+        }
+
+        return result;
+    }
+
+    private static IReadOnlyList<RoomSafetyFeatureEntry> NormalizeSafetyFeatureEntries(
+        IEnumerable<RoomSafetyFeatureEntry>? safetyFeatures)
+    {
+        if (safetyFeatures is null)
+        {
+            return Array.Empty<RoomSafetyFeatureEntry>();
+        }
+
+        var seen = new HashSet<SafetyFeature>();
+        var result = new List<RoomSafetyFeatureEntry>();
+        foreach (var entry in safetyFeatures)
+        {
+            if (entry is null)
+            {
+                throw new DomainValidationException("Safety feature entry is required.");
+            }
+
+            if (!Enum.IsDefined(entry.Feature))
+            {
+                throw new DomainValidationException(
+                    $"Safety feature '{(int)entry.Feature}' is not a recognized safety feature.", // BR-LST-08
+                    "INVALID_SAFETY_FEATURE");
+            }
+
+            if (seen.Add(entry.Feature))
+            {
+                result.Add(entry);
+            }
+        }
+
+        return result;
+    }
 
     // ----------------------------------------------------------------- ADR-011 state machine
 
@@ -509,19 +691,108 @@ public sealed class Room
             throw new DomainValidationException("Room district is required.");
         }
 
-        if (!double.IsFinite(Latitude) || Latitude < -90 || Latitude > 90)
+        if (Description is { Length: > DescriptionMaxLength })
         {
-            throw new DomainValidationException("Room latitude must be finite and between -90 and 90.");
+            throw new DomainValidationException(
+                $"Room description must be at most {DescriptionMaxLength} characters.", // BR-LST-02
+                "INVALID_DESCRIPTION");
         }
 
-        if (!double.IsFinite(Longitude) || Longitude < -180 || Longitude > 180)
+        if (AddressLine.Length > AddressLineMaxLength)
         {
-            throw new DomainValidationException("Room longitude must be finite and between -180 and 180.");
+            throw new DomainValidationException(
+                $"Room address line must be at most {AddressLineMaxLength} characters.", // BR-LST-01
+                "INVALID_ADDRESS");
+        }
+
+        if (Ward.Length > WardMaxLength)
+        {
+            throw new DomainValidationException(
+                $"Room ward must be at most {WardMaxLength} characters.", // BR-LST-01
+                "INVALID_WARD");
+        }
+
+        if (District.Length > DistrictMaxLength)
+        {
+            throw new DomainValidationException(
+                $"Room district must be at most {DistrictMaxLength} characters.", // BR-LST-01
+                "INVALID_DISTRICT");
+        }
+
+        if (OtherFeesNote is { Length: > OtherFeesNoteMaxLength })
+        {
+            throw new DomainValidationException(
+                $"Other fees note must be at most {OtherFeesNoteMaxLength} characters.", // BR-LST-03
+                "INVALID_OTHER_FEES_NOTE");
+        }
+
+        if (!double.IsFinite(Latitude) || Latitude < ThaiNguyenMinLat || Latitude > ThaiNguyenMaxLat)
+        {
+            throw new DomainValidationException(
+                $"Room latitude must be finite and inside Thái Nguyên province [{ThaiNguyenMinLat}, {ThaiNguyenMaxLat}].", // BR-LST-01
+                "INVALID_LOCATION");
+        }
+
+        if (!double.IsFinite(Longitude) || Longitude < ThaiNguyenMinLng || Longitude > ThaiNguyenMaxLng)
+        {
+            throw new DomainValidationException(
+                $"Room longitude must be finite and inside Thái Nguyên province [{ThaiNguyenMinLng}, {ThaiNguyenMaxLng}].", // BR-LST-01
+                "INVALID_LOCATION");
         }
 
         if (ElectricityPriceVndPerKwh is < 0 or > 10_000)
         {
             throw new DomainValidationException("Electricity price must be between 0 and 10,000 VND per kWh."); // BR-LST-03
         }
+
+        if (WaterPriceVnd is < 0)
+        {
+            throw new DomainValidationException("Water price must be zero or greater."); // BR-LST-03
+        }
+
+        if (InternetFeeVnd is < 0)
+        {
+            throw new DomainValidationException("Internet fee must be zero or greater."); // BR-LST-03
+        }
+
+        if (ParkingFeeVnd is < 0)
+        {
+            throw new DomainValidationException("Parking fee must be zero or greater."); // BR-LST-03
+        }
+
+        if (Furnishing is not null && !IsDefinedName<Furnishing>(Furnishing))
+        {
+            throw new DomainValidationException(
+                $"Furnishing '{Furnishing}' is not a recognized furnishing level.", // GUARDRAILS 1.5.1
+                "INVALID_FURNISHING");
+        }
+
+        if (WaterPriceUnit is not null && !IsDefinedName<WaterPriceUnit>(WaterPriceUnit))
+        {
+            throw new DomainValidationException(
+                $"Water price unit '{WaterPriceUnit}' is not a recognized water price unit.", // GUARDRAILS 1.5.1
+                "INVALID_WATER_PRICE_UNIT");
+        }
+
+        foreach (var amenity in Amenities)
+        {
+            if (!Enum.IsDefined(amenity))
+            {
+                throw new DomainValidationException($"Amenity '{(int)amenity}' is not a recognized amenity.");
+            }
+        }
+
+        foreach (var safetyFeature in SafetyFeatures)
+        {
+            if (!Enum.IsDefined(safetyFeature.Feature))
+            {
+                throw new DomainValidationException(
+                    $"Safety feature '{(int)safetyFeature.Feature}' is not a recognized safety feature.");
+            }
+        }
     }
+
+    /// <summary>Whitelist of enum names (GUARDRAILS 1.5.1): rejects numbers and combined names.</summary>
+    private static bool IsDefinedName<TEnum>(string value) where TEnum : struct, Enum =>
+        Enum.GetNames<TEnum>().Contains(value, StringComparer.Ordinal);
 }

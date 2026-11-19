@@ -67,7 +67,7 @@ public class DomainExceptionsTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(exceptionTypes, Has.Length.EqualTo(12));
+            Assert.That(exceptionTypes, Has.Length.EqualTo(16)); // 12 existing + 4 US08 preconditions/media exceptions
             Assert.That(exceptionTypes.Select(t => t.Namespace), Is.All.EqualTo("RoomToRentRadar.Domain.Exceptions"));
         });
     }
