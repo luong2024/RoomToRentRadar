@@ -10,6 +10,7 @@
        Shell.BackgroundColor="{StaticResource Surface}">
     <TabBar>
         <ShellContent x:Name="ExploreTab" Title="Khám phá phòng" Route="home" />
+        <ShellContent x:Name="FavouritesTab" Title="Yêu thích" Route="favourites" />
         <ShellContent x:Name="MapTab" Title="Bản đồ" Route="map" />
     </TabBar>
 </Shell>

@@ -48,9 +48,26 @@
                                    VerticalOptions="Center" />
                         </FlexLayout>
 
-                        <Label Text="{Binding Listing.Title}"
-                               FontSize="25" FontFamily="OpenSansSemibold" CharacterSpacing="-0.4"
-                               SemanticProperties.HeadingLevel="Level1" />
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <Label Text="{Binding Listing.Title}"
+                                   FontSize="25" FontFamily="OpenSansSemibold" CharacterSpacing="-0.4"
+                                   VerticalOptions="Center"
+                                   SemanticProperties.HeadingLevel="Level1" />
+                            <Button Grid.Column="1"
+                                    Text="{Binding FavouriteGlyph}"
+                                    Command="{Binding ToggleFavouriteCommand}"
+                                    AutomationId="FavouriteToggle"
+                                    FontSize="24"
+                                    Padding="0"
+                                    WidthRequest="46" HeightRequest="46"
+                                    MinimumHeightRequest="46"
+                                    CornerRadius="23"
+                                    BackgroundColor="{StaticResource SoftSurface}"
+                                    TextColor="{StaticResource Accent}"
+                                    VerticalOptions="Center"
+                                    SemanticProperties.Description="Lưu phòng vào yêu thích"
+                                    SemanticProperties.Hint="Thêm hoặc bỏ phòng khỏi danh sách yêu thích" />
+                        </Grid>
                         <Border Padding="16,14" BackgroundColor="{StaticResource AccentSoft}"
                                 StrokeThickness="0" StrokeShape="RoundRectangle 18">
                             <VerticalStackLayout Spacing="5">

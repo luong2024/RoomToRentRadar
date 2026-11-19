@@ -3,6 +3,8 @@ using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Storage;
 using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Interfaces;
+using RoomToRentRadar.Features.Favourites.ViewModels;
+using RoomToRentRadar.Features.Favourites.Views;
 using RoomToRentRadar.Features.Home.ViewModels;
 using RoomToRentRadar.Features.Home.Views;
 using RoomToRentRadar.Features.Login.ViewModels;
@@ -32,6 +34,18 @@ public static class ServiceCollectionExtensions
                 Timeout = TimeSpan.FromSeconds(15)
             });
         });
+        services.AddSingleton<IFavouritesApiClient>(serviceProvider =>
+        {
+            var handler = serviceProvider.GetRequiredService<AuthenticatedHttpMessageHandler>();
+            return new FavouritesApiClient(new HttpClient(handler)
+            {
+                BaseAddress = new Uri(ApiConstants.BaseAddress),
+                Timeout = TimeSpan.FromSeconds(15)
+            });
+        });
+        services.AddSingleton<IFavouritesService, FavouritesService>();
+        services.AddSingleton<IUndoPrompt, SnackbarUndoPrompt>();
+        services.AddSingleton<IUndoService, UndoService>();
         services.AddSingleton<AuthService>();
         services.AddSingleton<IErrorHandler, ModalErrorHandler>();
         services.AddSingleton<IPreferences>(Preferences.Default);
@@ -59,6 +73,8 @@ public static class ServiceCollectionExtensions
         services.AddTransient<RoomDetailViewModel>();
         services.AddTransient<RoomDetailTravelViewModel>();
         services.AddTransient<RoomDetailPage>();
+        services.AddTransient<FavouritesViewModel>();
+        services.AddTransient<FavouritesPage>();
         services.AddTransient<DirectionsPage>();
         services.AddTransient<LoginViewModel>();
         services.AddTransient<LoginPage>();
