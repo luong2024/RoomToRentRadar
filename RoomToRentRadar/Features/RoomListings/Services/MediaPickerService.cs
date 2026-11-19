@@ -59,7 +59,9 @@ public class MediaPickerService : IMediaPickerService
                 {
                     FilePath = file.FullPath,
                     FileName = file.FileName,
-                    FileSizeBytes = sizeBytes
+                    FileSizeBytes = sizeBytes,
+                    ContentType = file.ContentType ?? "image/jpeg",
+                    StreamOpener = () => file.OpenReadAsync()
                 });
             }
 

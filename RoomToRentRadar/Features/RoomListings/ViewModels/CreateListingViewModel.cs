@@ -290,8 +290,6 @@ public partial class CreateListingViewModel : ObservableObject
             TryParseDeposit(DepositText, out var deposit);
             TryParseArea(AreaText, out var area);
 
-            var photoPaths = Photos.Select(p => p.FilePath).ToList();
-
             var request = new CreateListingRequest(
                 Title: Title.Trim(),
                 Address: Address.Trim(),
@@ -300,7 +298,7 @@ public partial class CreateListingViewModel : ObservableObject
                 AreaM2: area,
                 RoomType: SelectedRoomType!,
                 Description: string.IsNullOrWhiteSpace(Description) ? null : Description.Trim(),
-                PhotoFilePaths: photoPaths);
+                Photos: Photos.ToList());
 
             var result = await _createListingService.CreateListingAsync(request, cancellationToken);
 

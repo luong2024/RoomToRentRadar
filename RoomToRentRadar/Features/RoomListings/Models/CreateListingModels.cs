@@ -23,6 +23,9 @@ public sealed class ListingPhotoItem
     public required string FilePath { get; init; }
     public required string FileName { get; init; }
     public long FileSizeBytes { get; init; }
+    public string ContentType { get; init; } = "image/jpeg";
+    public byte[]? ContentBytes { get; init; }
+    public Func<Task<Stream>>? StreamOpener { get; init; }
     public bool IsCover { get; set; }
 
     public string FormattedFileSize
@@ -36,10 +39,30 @@ public sealed class ListingPhotoItem
             return $"{FileSizeBytes / (1024.0 * 1024.0):F1} MB";
         }
     }
+
+    public async Task<Stream> OpenReadStreamAsync()
+    {
+        if (StreamOpener != null)
+        {
+            return await StreamOpener();
+        }
+
+        if (ContentBytes != null)
+        {
+            return new MemoryStream(ContentBytes);
+        }
+
+        if (File.Exists(FilePath))
+        {
+            return File.OpenRead(FilePath);
+        }
+
+        return Stream.Null;
+    }
 }
 
 /// <summary>
-/// Data transfer object holding validated listing submission payload.
+/// Data transfer object holding validated listing submission payload with actual photo streams.
 /// </summary>
 public sealed record CreateListingRequest(
     string Title,
@@ -49,7 +72,8 @@ public sealed record CreateListingRequest(
     double AreaM2,
     string RoomType,
     string? Description,
-    IReadOnlyList<string> PhotoFilePaths);
+    IReadOnlyList<ListingPhotoItem> Photos,
+    IReadOnlyList<string>? PhotoUrls = null);
 
 /// <summary>
 /// Result returned after submitting a listing creation request.
