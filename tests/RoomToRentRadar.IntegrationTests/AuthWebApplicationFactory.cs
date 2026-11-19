@@ -5,7 +5,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Context;
 using RoomToRentRadar.Adapters.Outbound.Persistence.InMemory;
+using RoomToRentRadar.Application.DTOs;
 using RoomToRentRadar.Application.Ports.Outbound;
+using RoomToRentRadar.Domain.ValueObjects;
 using RoomToRentRadar.IntegrationTests.TestControllers;
 
 namespace RoomToRentRadar.IntegrationTests;
@@ -17,6 +19,7 @@ public sealed class AuthWebApplicationFactory : WebApplicationFactory<Program>
     public const string TestAudience = "RoomToRentRadar.Client";
 
     private readonly int _authPermitLimit;
+    private readonly int _routingPermitLimit;
 
     public StubGoogleIdentityVerifier GoogleVerifier { get; } = new();
 
@@ -24,9 +27,12 @@ public sealed class AuthWebApplicationFactory : WebApplicationFactory<Program>
 
     public InMemoryRoomRepository RoomRepository { get; } = new();
 
-    public AuthWebApplicationFactory(int authPermitLimit = 100)
+    public StubRoutingProvider RoutingProvider { get; } = new();
+
+    public AuthWebApplicationFactory(int authPermitLimit = 100, int routingPermitLimit = 100)
     {
         _authPermitLimit = authPermitLimit;
+        _routingPermitLimit = routingPermitLimit;
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -46,6 +52,8 @@ public sealed class AuthWebApplicationFactory : WebApplicationFactory<Program>
                 ["GoogleAuth:ClientId"] = "test-google-client-id.apps.googleusercontent.com",
                 ["RateLimiting:AuthPermitLimit"] = _authPermitLimit.ToString(),
                 ["RateLimiting:AuthWindowSeconds"] = "60",
+                ["RateLimiting:RoutingPermitLimit"] = _routingPermitLimit.ToString(),
+                ["RateLimiting:RoutingWindowSeconds"] = "60",
                 ["KycStorage:AccountName"] = "devstoreaccount1",
                 ["KycStorage:AccountKey"] = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
                 ["KycStorage:ContainerName"] = "kyc",
@@ -63,6 +71,9 @@ public sealed class AuthWebApplicationFactory : WebApplicationFactory<Program>
             services.RemoveAll<IRoomRepository>();
             services.AddSingleton<IRoomRepository>(RoomRepository);
 
+            services.RemoveAll<IRoutingProvider>();
+            services.AddSingleton<IRoutingProvider>(RoutingProvider);
+
             services.RemoveAll<IGoogleIdentityVerifier>();
             services.AddSingleton<IGoogleIdentityVerifier>(GoogleVerifier);
 
@@ -79,6 +90,28 @@ public sealed class AuthWebApplicationFactory : WebApplicationFactory<Program>
         {
             CosmosDb.Dispose();
         }
+    }
+}
+
+public sealed class StubRoutingProvider : IRoutingProvider
+{
+    public RoutingProviderResult? Result { get; set; } = new(0, 0, Array.Empty<RouteCoordinate>());
+
+    public Exception? ExceptionToThrow { get; set; }
+
+    public Task<RoutingProviderResult?> GetRouteAsync(
+        GeoLocation origin,
+        GeoLocation destination,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (ExceptionToThrow is not null)
+        {
+            return Task.FromException<RoutingProviderResult?>(ExceptionToThrow);
+        }
+
+        return Task.FromResult(Result);
     }
 }
 
