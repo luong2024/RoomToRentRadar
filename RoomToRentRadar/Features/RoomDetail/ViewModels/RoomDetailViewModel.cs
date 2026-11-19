@@ -42,6 +42,24 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
             [AmenityCode.PetAllowed] = "Pets allowed"
         };
 
+    private static readonly IReadOnlyDictionary<AmenityCode, string> VietnameseAmenityLabelsByCode =
+        new Dictionary<AmenityCode, string>
+        {
+            [AmenityCode.Wifi] = "Wi-Fi tốc độ cao",
+            [AmenityCode.AirConditioner] = "Điều hòa",
+            [AmenityCode.Parking] = "Chỗ để xe",
+            [AmenityCode.WashingMachine] = "Máy giặt",
+            [AmenityCode.Refrigerator] = "Tủ lạnh",
+            [AmenityCode.Kitchen] = "Khu vực bếp",
+            [AmenityCode.PrivateBathroom] = "WC riêng",
+            [AmenityCode.Balcony] = "Ban công",
+            [AmenityCode.Elevator] = "Thang máy",
+            [AmenityCode.Security] = "An ninh 24/7",
+            [AmenityCode.Gym] = "Phòng gym",
+            [AmenityCode.Pool] = "Hồ bơi",
+            [AmenityCode.PetAllowed] = "Cho nuôi thú cưng"
+        };
+
     private readonly IApiClient _apiClient;
     private readonly IErrorHandler _errorHandler;
     private readonly INavigationService _navigationService;
@@ -71,6 +89,21 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
 
     [ObservableProperty]
     public partial string RoomTypeText { get; set; }
+
+    [ObservableProperty]
+    public partial string StatusDisplayText { get; set; }
+
+    [ObservableProperty]
+    public partial string RoomTypeDisplayText { get; set; }
+
+    [ObservableProperty]
+    public partial string BedroomsText { get; set; }
+
+    [ObservableProperty]
+    public partial string PhotoSource { get; set; }
+
+    [ObservableProperty]
+    public partial IReadOnlyList<string> AmenityDisplayLabels { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasAmenities))]
@@ -103,7 +136,11 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         UpdatedOnText = string.Empty;
         StatusText = string.Empty;
         RoomTypeText = string.Empty;
+        StatusDisplayText = string.Empty;
+        RoomTypeDisplayText = string.Empty;
+        PhotoSource = "room_1.png";
         AmenityLabels = [];
+        AmenityDisplayLabels = [];
         Rules = [];
         LandlordPhone = string.Empty;
         SimilarStatusMessage = string.Empty;
@@ -263,6 +300,27 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         };
         AmenityLabels = detail.Amenities
             .Select(code => AmenityLabelsByCode.TryGetValue(code, out var label) ? label : code.ToString())
+            .ToList();
+        StatusDisplayText = detail.Status switch
+        {
+            ListingStatus.Draft => "Bản nháp",
+            ListingStatus.Published => "●  Còn trống",
+            ListingStatus.Hidden => "Đã ẩn",
+            ListingStatus.Removed => "Đã gỡ",
+            _ => "●  Còn trống"
+        };
+        RoomTypeDisplayText = detail.RoomType switch
+        {
+            RoomType.Studio => "Phòng Studio",
+            RoomType.House => "Nhà nguyên căn",
+            RoomType.SharedRoom => "Ở ghép",
+            RoomType.SingleRoom => "Phòng đơn",
+            _ => "Căn hộ"
+        };
+        BedroomsText = detail.Bedrooms > 0 ? $"{detail.Bedrooms} PN" : "Studio";
+        PhotoSource = $"room_{detail.Id.ToByteArray()[0] % 3 + 1}.png";
+        AmenityDisplayLabels = detail.Amenities
+            .Select(code => VietnameseAmenityLabelsByCode.TryGetValue(code, out var label) ? label : code.ToString())
             .ToList();
         Rules = detail.Rules.ToList();
         LandlordPhone = string.Empty;

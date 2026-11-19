@@ -85,7 +85,7 @@ public partial class ListingEditorPage : ContentPage
         pin.Styles.Add(new SymbolStyle
         {
             SymbolScale = 0.8,
-            Fill = new Mapsui.Styles.Brush(new Mapsui.Styles.Color(35, 79, 64)),
+            Fill = new Mapsui.Styles.Brush(new Mapsui.Styles.Color(121, 84, 119)),
             Outline = new Pen(Mapsui.Styles.Color.White, 2)
         });
         _locationLayer.Features = new[] { pin };
