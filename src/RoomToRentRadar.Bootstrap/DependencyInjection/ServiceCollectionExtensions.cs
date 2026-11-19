@@ -55,12 +55,13 @@ public static class ServiceCollectionExtensions
         services
             .AddOptions<RoutingOptions>()
             .Bind(configuration.GetSection(RoutingOptions.SectionName))
-            .Validate(options => Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out _), "Routing:BaseUrl must be an absolute URL.")
-            .Validate(options => options.TimeoutSeconds is >= 1 and <= 120, "Routing:TimeoutSeconds must be between 1 and 120.");
+            .Validate(IsSupportedRoutingBaseUrl, "Routing:BaseUrl must be an absolute HTTP(S) URL.")
+            .Validate(options => options.TimeoutSeconds is >= 1 and <= 120, "Routing:TimeoutSeconds must be between 1 and 120.")
+            .ValidateOnStart();
         services.AddHttpClient<IRoutingProvider, OsrmRoutingProvider>((serviceProvider, client) =>
         {
             var options = serviceProvider.GetRequiredService<IOptions<RoutingOptions>>().Value;
-            client.BaseAddress = new Uri(options.BaseUrl, UriKind.Absolute);
+            client.BaseAddress = CreateRoutingBaseAddress(options.BaseUrl);
             client.Timeout = Timeout.InfiniteTimeSpan;
         });
         services.AddSingleton<IValidateOptions<JwtOptions>, JwtOptionsValidator>();
@@ -142,7 +143,7 @@ public static class ServiceCollectionExtensions
                 {
                     Status = StatusCodes.Status429TooManyRequests,
                     Title = "Too Many Requests",
-                    Detail = "Rate limit exceeded for authentication requests. Please try again later.",
+                    Detail = "Rate limit exceeded. Please try again later.",
                     Instance = context.HttpContext.Request.Path
                 };
 
@@ -200,5 +201,17 @@ public static class ServiceCollectionExtensions
             .AddApplicationPart(typeof(HealthController).Assembly);
 
         return services;
+    }
+
+    private static bool IsSupportedRoutingBaseUrl(RoutingOptions options) =>
+        Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out var baseUri) &&
+        (baseUri.Scheme == Uri.UriSchemeHttp || baseUri.Scheme == Uri.UriSchemeHttps);
+
+    private static Uri CreateRoutingBaseAddress(string baseUrl)
+    {
+        var baseUri = new Uri(baseUrl, UriKind.Absolute);
+        return baseUri.AbsolutePath.EndsWith("/", StringComparison.Ordinal)
+            ? baseUri
+            : new Uri($"{baseUri.GetLeftPart(UriPartial.Path)}/", UriKind.Absolute);
     }
 }

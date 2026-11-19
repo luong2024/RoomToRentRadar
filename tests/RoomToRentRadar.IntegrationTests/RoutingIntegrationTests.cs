@@ -112,11 +112,14 @@ public class RoutingIntegrationTests
             new RouteRequest(21.0285, 105.8542, 21.0368, 105.8342));
         var throttledResponse = await rateLimitedClient.GetAsync(
             "/api/rooms/rate-limited-routing-room/travel-time?destinationLatitude=21.0368&destinationLongitude=105.8342");
+        var problem = await throttledResponse.Content.ReadFromJsonAsync<ProblemDetails>();
 
         Assert.Multiple(() =>
         {
             Assert.That(firstResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             Assert.That(throttledResponse.StatusCode, Is.EqualTo(HttpStatusCode.TooManyRequests));
+            Assert.That(problem, Is.Not.Null);
+            Assert.That(problem!.Detail, Is.EqualTo("Rate limit exceeded. Please try again later."));
         });
     }
 
