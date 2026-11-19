@@ -49,6 +49,12 @@
 		<AndroidManifestPlaceholders>GoogleMapsApiKey=$(GoogleMapsApiKey)</AndroidManifestPlaceholders>
 	</PropertyGroup>
 
+	<!-- Validate Google Maps API Key on Android builds to prevent silent blank maps -->
+	<Target Name="ValidateGoogleMapsApiKey" BeforeTargets="BeforeBuild" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<Warning Condition="'$(GoogleMapsApiKey)' == '' or '$(GoogleMapsApiKey)' == 'NO_KEY' or '$(GoogleMapsApiKey)' == 'YOUR-ACTUAL-GOOGLE-MAPS-API-KEY-HERE'"
+		         Text="GoogleMapsApiKey is missing or set to placeholder in secrets.props! Google Maps tiles will not load on Android. Please configure 'secrets.props' with a valid key." />
+	</Target>
+
 	<ItemGroup>
 		<InternalsVisibleTo Include="RoomToRentRadarUnitTests" />
 	</ItemGroup>

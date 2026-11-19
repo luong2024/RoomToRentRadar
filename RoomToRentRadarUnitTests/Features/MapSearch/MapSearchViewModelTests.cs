@@ -483,4 +483,107 @@ public class MapSearchViewModelTests
         // Assert non-linear stretch
         Assert.That(delta2, Is.GreaterThan(delta1));
     }
+
+    [Test]
+    public void CompleteDrawing_WithClosedSquare_ShouldStripClosingDuplicateAndBeValid()
+    {
+        // Arrange: A -> B -> C -> D -> A (square of side 0.01 deg)
+        var square = new List<GeoCoordinate>
+        {
+            new(21.5800, 105.8000),
+            new(21.5900, 105.8000),
+            new(21.5900, 105.8100),
+            new(21.5800, 105.8100),
+            new(21.5800, 105.8000) // closing point identical to start
+        };
+
+        // Act
+        _viewModel.CompleteDrawing(square);
+
+        // Assert
+        Assert.That(_viewModel.HasDrawnPolygon, Is.True);
+        Assert.That(_viewModel.VertexCount, Is.EqualTo(4));
+        Assert.That(_viewModel.PolygonCoordinates.Count, Is.EqualTo(4));
+    }
+
+    [Test]
+    public void CompleteDrawing_WithDegenerateDuplicateVertices_ShouldRejectPolygon()
+    {
+        // Arrange: A -> B -> A (3 points in list, but only 2 distinct vertices)
+        var degenerate = new List<GeoCoordinate>
+        {
+            new(21.5800, 105.8000),
+            new(21.5900, 105.8000),
+            new(21.5800, 105.8000)
+        };
+
+        // Act
+        _viewModel.CompleteDrawing(degenerate);
+
+        // Assert
+        Assert.That(_viewModel.HasDrawnPolygon, Is.False);
+        Assert.That(_viewModel.VertexCount, Is.EqualTo(0));
+        Assert.That(_viewModel.StatusMessage, Does.Contain("too small").Or.Contain("too flat"));
+    }
+
+    [Test]
+    public void CompleteDrawing_WithCollinearPointsAndClosedLoop_ShouldRejectDueToZeroArea()
+    {
+        // Arrange: points on a straight line going back and forth
+        var lineLoop = new List<GeoCoordinate>
+        {
+            new(21.5800, 105.8000),
+            new(21.5850, 105.8050),
+            new(21.5900, 105.8100),
+            new(21.5850, 105.8050),
+            new(21.5800, 105.8000)
+        };
+
+        // Act
+        _viewModel.CompleteDrawing(lineLoop);
+
+        // Assert
+        Assert.That(_viewModel.HasDrawnPolygon, Is.False);
+        Assert.That(_viewModel.VertexCount, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void NormalizePolygonPoints_ShouldStripClosingDuplicatePoint()
+    {
+        // Arrange
+        var points = new List<GeoCoordinate>
+        {
+            new(21.0, 105.0),
+            new(21.1, 105.0),
+            new(21.1, 105.1),
+            new(21.0, 105.0) // duplicate closing point
+        };
+
+        // Act
+        var normalized = MapSearchViewModel.NormalizePolygonPoints(points);
+
+        // Assert
+        Assert.That(normalized.Count, Is.EqualTo(3));
+        Assert.That(normalized[0], Is.EqualTo(points[0]));
+        Assert.That(normalized[2], Is.EqualTo(points[2]));
+    }
+
+    [Test]
+    public void GetDistinctVertices_ShouldFilterNearDuplicatePoints()
+    {
+        // Arrange
+        var points = new List<GeoCoordinate>
+        {
+            new(21.0, 105.0),
+            new(21.0000001, 105.0000001), // within 1e-6 tolerance
+            new(21.1, 105.0),
+            new(21.1, 105.1)
+        };
+
+        // Act
+        var distinct = MapSearchViewModel.GetDistinctVertices(points, 1e-6);
+
+        // Assert
+        Assert.That(distinct.Count, Is.EqualTo(3));
+    }
 }

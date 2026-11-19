@@ -182,11 +182,12 @@ public partial class MapSearchViewModel : ObservableObject
 
         var pointsList = geoPoints.ToList();
 
-        // 1. Remove consecutive near-duplicate points (jitter reduction)
-        var cleanedPoints = DeduplicatePoints(pointsList);
+        // 1. Normalize points: remove consecutive near-duplicates and strip duplicate closing vertex
+        var cleanedPoints = NormalizePolygonPoints(pointsList);
 
-        // 2. Validate basic vertex count
-        if (cleanedPoints.Count < 3)
+        // 2. Validate distinct vertex count
+        var distinctOriginal = GetDistinctVertices(cleanedPoints);
+        if (distinctOriginal.Count < 3)
         {
             HasDrawnPolygon = false;
             VertexCount = 0;
@@ -196,8 +197,8 @@ public partial class MapSearchViewModel : ObservableObject
         }
 
         // 3. Check polygon geometric area using Shoelace formula
-        double area = CalculatePolygonArea(cleanedPoints);
-        if (area < MinimumPolygonAreaThreshold)
+        double initialArea = CalculatePolygonArea(cleanedPoints);
+        if (initialArea < MinimumPolygonAreaThreshold)
         {
             HasDrawnPolygon = false;
             VertexCount = 0;
@@ -209,16 +210,20 @@ public partial class MapSearchViewModel : ObservableObject
         // 4. Simplify points using the Ramer-Douglas-Peucker (RDP) algorithm
         var simplified = SimplifyPolygon(cleanedPoints, targetMaxCount: 16);
 
-        if (simplified.Count >= 3)
+        // 5. Post-RDP validation: ensure at least 3 distinct vertices and non-degenerate area
+        var distinctSimplified = GetDistinctVertices(simplified);
+        double simplifiedArea = CalculatePolygonArea(distinctSimplified);
+
+        if (distinctSimplified.Count >= 3 && simplifiedArea >= MinimumPolygonAreaThreshold)
         {
-            foreach (var pt in simplified)
+            foreach (var pt in distinctSimplified)
             {
                 PolygonCoordinates.Add(pt);
                 CurrentArea.Vertices.Add(pt);
             }
 
             HasDrawnPolygon = true;
-            VertexCount = simplified.Count;
+            VertexCount = distinctSimplified.Count;
             StatusMessage = $"Search area defined ({VertexCount} points)";
         }
         else
@@ -282,9 +287,54 @@ public partial class MapSearchViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Checks whether two geographic coordinates represent the same location within a tolerance.
+    /// </summary>
+    public static bool IsSameLocation(GeoCoordinate a, GeoCoordinate b, double tolerance = 1e-6)
+    {
+        return Math.Abs(a.Latitude - b.Latitude) <= tolerance &&
+               Math.Abs(a.Longitude - b.Longitude) <= tolerance;
+    }
+
+    /// <summary>
+    /// Normalizes raw drawn polygon points by removing consecutive jitter duplicates
+    /// and stripping any duplicate closing vertex (matching start point).
+    /// </summary>
+    public static List<GeoCoordinate> NormalizePolygonPoints(List<GeoCoordinate> points, double tolerance = 1e-6)
+    {
+        if (points == null || points.Count == 0)
+            return new List<GeoCoordinate>();
+
+        var result = DeduplicatePoints(points, tolerance);
+
+        // Strip duplicate closing point if start and end coincide
+        if (result.Count >= 2 && IsSameLocation(result[0], result[^1], tolerance))
+        {
+            result.RemoveAt(result.Count - 1);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Returns the subset of distinct vertices based on geometric proximity tolerance.
+    /// </summary>
+    public static List<GeoCoordinate> GetDistinctVertices(IEnumerable<GeoCoordinate> points, double tolerance = 1e-6)
+    {
+        var distinct = new List<GeoCoordinate>();
+        foreach (var pt in points)
+        {
+            if (!distinct.Any(d => IsSameLocation(d, pt, tolerance)))
+            {
+                distinct.Add(pt);
+            }
+        }
+        return distinct;
+    }
+
+    /// <summary>
     /// Calculates the enclosed geographic area using the Shoelace (Gauss) formula.
     /// </summary>
-    public static double CalculatePolygonArea(List<GeoCoordinate> points)
+    public static double CalculatePolygonArea(IReadOnlyList<GeoCoordinate> points)
     {
         if (points.Count < 3)
             return 0.0;
@@ -305,30 +355,32 @@ public partial class MapSearchViewModel : ObservableObject
     /// </summary>
     public static List<GeoCoordinate> SimplifyPolygon(List<GeoCoordinate> points, int targetMaxCount = 16)
     {
-        if (points.Count <= targetMaxCount)
-            return new List<GeoCoordinate>(points);
+        var normalized = NormalizePolygonPoints(points);
+        if (normalized.Count <= targetMaxCount)
+            return new List<GeoCoordinate>(normalized);
 
         // Adaptive tolerance: start with ~0.00008 deg (~9m) and adjust if needed
         double epsilon = 0.00008;
-        var simplified = RamerDouglasPeucker(points, epsilon);
+        var simplified = RamerDouglasPeucker(normalized, epsilon);
 
         // If still too many points for comfortable touch pin manipulation, gradually increase epsilon
         int iterations = 0;
         while (simplified.Count > targetMaxCount && iterations < 5)
         {
             epsilon *= 1.5;
-            simplified = RamerDouglasPeucker(points, epsilon);
+            simplified = RamerDouglasPeucker(normalized, epsilon);
             iterations++;
         }
 
-        // Guarantee minimum 3 vertices if original polygon had at least 3 vertices
-        if (simplified.Count < 3 && points.Count >= 3)
+        // Guarantee minimum 3 distinct vertices if original polygon had at least 3 distinct vertices
+        var distinctSimplified = GetDistinctVertices(simplified);
+        if (distinctSimplified.Count < 3 && normalized.Count >= 3)
         {
             // Pick evenly spaced points to maintain triangular/quad base
-            return PickEvenlySpaced(points, Math.Min(targetMaxCount, Math.Max(3, points.Count)));
+            return PickEvenlySpaced(normalized, Math.Min(targetMaxCount, Math.Max(3, normalized.Count)));
         }
 
-        return simplified;
+        return distinctSimplified;
     }
 
     /// <summary>
