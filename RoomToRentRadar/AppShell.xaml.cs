@@ -285,23 +285,24 @@ namespace RoomToRentRadar
             if (ProfileShellContent != null)
             {
                 ProfileShellContent.IsVisible = isAuthenticated;
+                Shell.SetFlyoutItemIsVisible(ProfileShellContent, isAuthenticated);
             }
 
             if (AuthFlyoutItem != null)
             {
                 AuthFlyoutItem.IsVisible = !isAuthenticated;
+                Shell.SetFlyoutItemIsVisible(AuthFlyoutItem, !isAuthenticated);
             }
 
             if (AuthShellContent != null)
             {
                 AuthShellContent.IsVisible = !isAuthenticated;
+                Shell.SetFlyoutItemIsVisible(AuthShellContent, !isAuthenticated);
             }
 
-            var logoutItem = (LogoutMenuItem?.Parent as BaseShellItem)
-                ?? Items.FirstOrDefault(i => i.GetType().Name == "MenuShellItem");
-            if (logoutItem != null)
+            if (LogoutMenuItem != null)
             {
-                logoutItem.IsVisible = isAuthenticated;
+                Shell.SetFlyoutItemIsVisible(LogoutMenuItem, isAuthenticated);
             }
         }
 

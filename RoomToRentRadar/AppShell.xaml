@@ -264,6 +264,7 @@
 
     <ShellContent
         x:Name="ProfileShellContent"
+        Shell.FlyoutItemIsVisible="False"
         Title="{loc:Translate Profile_Title}"
         Icon="{StaticResource IconProjects}"
         Route="profile"
@@ -274,6 +275,7 @@
         x:Name="LogoutMenuItem"
         Text="{loc:Translate Nav_Logout}"
         IconImageSource="{StaticResource IconLogout}"
+        Shell.FlyoutItemIsVisible="False"
         Clicked="OnLogoutMenuItemClicked" />
 
     <Shell.FlyoutFooter>
