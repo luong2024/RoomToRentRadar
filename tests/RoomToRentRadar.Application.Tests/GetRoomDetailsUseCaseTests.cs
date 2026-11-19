@@ -88,6 +88,8 @@ public class GetRoomDetailsUseCaseTests
             Price = 2000000m,
             Area = 22,
             Address = "789 Kim Mã",
+            ThumbnailUrl = "https://cdn.example.test/unavailable-thumbnail.jpg",
+            ImageUrls = ["https://cdn.example.test/unavailable-image.jpg"],
             LandlordPhone = "0987654321",
             Status = RoomStatus.Rented,
             IsVerified = true
@@ -100,6 +102,7 @@ public class GetRoomDetailsUseCaseTests
             Title = "Phòng tương tự",
             Price = 2100000m,
             Area = 20,
+            ThumbnailUrl = "https://cdn.example.test/room-04.jpg",
             Address = "790 Kim Mã",
             Status = RoomStatus.Available,
             IsVerified = true
@@ -114,8 +117,11 @@ public class GetRoomDetailsUseCaseTests
             Assert.That(result.UnavailableMessage, Is.EqualTo("Phòng này hiện không khả dụng."));
             Assert.That(result.Address, Is.Empty);
             Assert.That(result.LandlordPhone, Is.Empty);
+            Assert.That(result.ThumbnailUrl, Is.Null);
+            Assert.That(result.ImageUrls, Is.Empty);
             Assert.That(result.SimilarRooms, Has.Count.EqualTo(1));
             Assert.That(result.SimilarRooms[0].Id, Is.EqualTo("room-04"));
+            Assert.That(result.SimilarRooms[0].ThumbnailUrl, Is.EqualTo("https://cdn.example.test/room-04.jpg"));
         });
     }
 

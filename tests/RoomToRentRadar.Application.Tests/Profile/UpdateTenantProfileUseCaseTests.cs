@@ -5,6 +5,7 @@ using RoomToRentRadar.Application.UseCases.Profile;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.Exceptions;
+using RoomToRentRadar.Domain.ValueObjects;
 
 namespace RoomToRentRadar.Application.Tests.Profile;
 
@@ -55,6 +56,85 @@ public class UpdateTenantProfileUseCaseTests
     }
 
     [Test]
+    public async Task ExecuteAsync_WhenScreenOmitsPrivateTenantFields_PreservesExistingValues()
+    {
+        var userId = Guid.NewGuid();
+        var existing = UserProfile.CreateDefault(userId, UserRole.Student, FixedNow);
+        existing.SetVersion("\"tenant-etag\"");
+        existing.UpdateTenantDetails(new TenantDetails(
+            "SV001", "ICTU", "CNTT", new DateOnly(2002, 2, 3), Gender.Female,
+            "Emergency contact", PhoneNumber.Create("0987654321"), 2_000_000m), FixedNow);
+        var repo = new TrackingUserProfileRepository(existing);
+        var useCase = new UpdateTenantProfileUseCase(repo, new FixedTimeProvider(FixedNow));
+
+        var command = new UpdateTenantCommand(
+            "Nguyen Van Updated", "0912345678", null, "Updated bio", "SV002", "ICTU", "KTPM",
+            null, null, null, null, 2_500_000m);
+
+        await useCase.ExecuteAsync(userId, command);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(repo.LastUpdatedProfile?.Tenant?.DateOfBirth, Is.EqualTo(new DateOnly(2002, 2, 3)));
+            Assert.That(repo.LastUpdatedProfile?.Tenant?.Gender, Is.EqualTo(Gender.Female));
+            Assert.That(repo.LastUpdatedProfile?.Tenant?.EmergencyContactName, Is.EqualTo("Emergency contact"));
+            Assert.That(repo.LastUpdatedProfile?.Tenant?.EmergencyContactPhone?.Value, Is.EqualTo("0987654321"));
+        });
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WhenOptionalTenantFieldsAreOmitted_PreservesExistingValues()
+    {
+        var userId = Guid.NewGuid();
+        var existing = UserProfile.CreateDefault(userId, UserRole.Student, FixedNow);
+        existing.UpdateTenantDetails(new TenantDetails(
+            "SV001", "ICTU", "CNTT", null, Gender.Unspecified, null, null, 2_000_000m), FixedNow);
+        var repo = new TrackingUserProfileRepository(existing);
+        var useCase = new UpdateTenantProfileUseCase(repo, new FixedTimeProvider(FixedNow));
+
+        var command = new UpdateTenantCommand(
+            "Nguyen Van Updated", null, null, null, null, null, null, null, null, null, null, null);
+
+        await useCase.ExecuteAsync(userId, command);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(repo.LastUpdatedProfile?.Tenant?.StudentId, Is.EqualTo("SV001"));
+            Assert.That(repo.LastUpdatedProfile?.Tenant?.University, Is.EqualTo("ICTU"));
+            Assert.That(repo.LastUpdatedProfile?.Tenant?.Faculty, Is.EqualTo("CNTT"));
+            Assert.That(repo.LastUpdatedProfile?.Tenant?.MaxBudget, Is.EqualTo(2_000_000m));
+        });
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WhenOptionalTenantFieldsAreExplicitlyCleared_ClearsExistingValues()
+    {
+        var userId = Guid.NewGuid();
+        var existing = UserProfile.CreateDefault(userId, UserRole.Student, FixedNow);
+        existing.UpdateTenantDetails(new TenantDetails(
+            "SV001", "ICTU", "CNTT", null, Gender.Unspecified, null, null, 2_000_000m), FixedNow);
+        var repo = new TrackingUserProfileRepository(existing);
+        var useCase = new UpdateTenantProfileUseCase(repo, new FixedTimeProvider(FixedNow));
+
+        var command = new UpdateTenantCommand(
+            "Nguyen Van Updated", null, null, null, null, null, null, null, null, null, null, null,
+            IsStudentIdSpecified: true,
+            IsUniversitySpecified: true,
+            IsFacultySpecified: true,
+            IsMaxBudgetSpecified: true);
+
+        await useCase.ExecuteAsync(userId, command);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(repo.LastUpdatedProfile?.Tenant?.StudentId, Is.Null);
+            Assert.That(repo.LastUpdatedProfile?.Tenant?.University, Is.Null);
+            Assert.That(repo.LastUpdatedProfile?.Tenant?.Faculty, Is.Null);
+            Assert.That(repo.LastUpdatedProfile?.Tenant?.MaxBudget, Is.Null);
+        });
+    }
+
+    [Test]
     public void ExecuteAsync_WhenAddAsyncEncountersConflict_ShouldThrowConcurrencyConflictException()
     {
         var userId = Guid.NewGuid();
@@ -82,6 +162,26 @@ public class UpdateTenantProfileUseCaseTests
             await useCase.ExecuteAsync(userId, cmd));
 
         Assert.That(ex.Message, Does.Contain("Full name cannot be empty"));
+    }
+
+    [Test]
+    public void ExecuteAsync_WhenAvatarDataUriIsUnsupported_RejectsRequestBeforeReadingRepository()
+    {
+        var repo = new TrackingUserProfileRepository();
+        var useCase = new UpdateTenantProfileUseCase(repo, new FixedTimeProvider(FixedNow));
+        var command = new UpdateTenantCommand(
+            "Nguyen Van Avatar", null, "data:image/gif;base64,R0lGODlh", null,
+            null, null, null, null, null, null, null, null);
+
+        var ex = Assert.ThrowsAsync<ProfileValidationException>(() =>
+            useCase.ExecuteAsync(Guid.NewGuid(), command));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ex!.Message, Does.Contain("PNG/JPEG"));
+            Assert.That(repo.AddCallCount, Is.Zero);
+            Assert.That(repo.UpdateCallCount, Is.Zero);
+        });
     }
 
     [Test]

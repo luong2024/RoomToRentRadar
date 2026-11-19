@@ -46,7 +46,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         _navigateAsync = navigateAsync;
         SortOptions = RoomSortOptionItem.CreateDefaults();
         PrimarySortOptions = SortOptions
-            .Where(o => o.Option is RoomSortOption.Newest or RoomSortOption.DistanceAsc)
+            .Where(o => o.Option is RoomSortOption.DistanceAsc)
             .ToArray();
         PriceSortOptions = SortOptions
             .Where(o => o.Option is RoomSortOption.PriceAsc or RoomSortOption.PriceDesc)
@@ -105,7 +105,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
     public int PageSize { get; init; } = DefaultPageSize;
 
     [ObservableProperty]
-    public partial string Title { get; set; } = "Khám phá phòng trọ";
+    public partial string Title { get; set; } = "Explore Rooms";
 
     [ObservableProperty]
     public partial RoomSortOptionItem SelectedSortOptionItem { get; set; }
@@ -146,7 +146,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
     public partial int TotalCount { get; set; }
 
     [ObservableProperty]
-    public partial string EmptyStateMessage { get; set; } = "Chưa có phòng trọ nào phù hợp.";
+    public partial string EmptyStateMessage { get; set; } = "No matching rooms found.";
 
     [ObservableProperty]
     public partial string SearchQuery { get; set; } = string.Empty;
@@ -384,7 +384,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
             }
 
             EmptyStateMessage = Rooms.Count == 0
-                ? "Không tìm thấy phòng trọ nào phù hợp."
+                ? LocalizationResourceManager.Instance["Empty_NoRooms"]
                 : string.Empty;
         }
         else if (normalized == "favorites")
@@ -396,18 +396,18 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
             }
 
             EmptyStateMessage = Rooms.Count == 0
-                ? "Chưa có phòng yêu thích nào. Hãy nhấn biểu tượng trái tim trên thẻ phòng để lưu!"
+                ? "No favorite rooms yet. Tap the heart icon on any room card to save it!"
                 : string.Empty;
         }
         else if (normalized == "messages")
         {
             Rooms.Clear();
-            EmptyStateMessage = "Chưa có tin nhắn nào. Hãy chọn một phòng trọ để nhắn tin trực tiếp với chủ trọ.";
+            EmptyStateMessage = "No messages yet. Select a room to message the landlord directly.";
         }
         else if (normalized == "profile")
         {
             Rooms.Clear();
-            EmptyStateMessage = "Tài khoản sinh viên ICTU • Lưu phòng yêu thích và nhận thông báo phòng mới quanh trường.";
+            EmptyStateMessage = "ICTU Student Account • Save favorite rooms and get notified about new listings near campus.";
         }
     }
 
@@ -574,9 +574,9 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         {
             IsLoadingMore = true;
 
-            var sortOption = SelectedSortOptionItem?.Option ?? RoomSortOption.Newest;
+            var sortOption = SelectedSortOptionItem?.Option ?? RoomSortOption.DistanceAsc;
             PagedResponse<RoomListItemModel> response;
-            if ((HasActiveFilters && (MinArea.HasValue || MaxArea.HasValue || IsDistanceFilterActive)) || sortOption == RoomSortOption.DistanceAsc)
+            if (HasActiveFilters && (MinArea.HasValue || MaxArea.HasValue || IsDistanceFilterActive))
             {
                 var criteria = CreateSearchCriteria(
                     pageNumber: nextPage,
@@ -656,7 +656,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
             return;
         }
 
-        var targetRoute = $"{AppRoutes.RoomDetails}?id={Uri.EscapeDataString(room.Id)}";
+        var targetRoute = $"{AppRoutes.RoomDetail}?id={Uri.EscapeDataString(room.Id)}";
 
         try
         {
@@ -709,11 +709,11 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
 
             IsLoadingMore = false;
 
-            var sortOption = SelectedSortOptionItem?.Option ?? RoomSortOption.Newest;
+            var sortOption = SelectedSortOptionItem?.Option ?? RoomSortOption.DistanceAsc;
 
             // Search and filter are executed server-side so results cover the whole catalog and stay paginated.
             PagedResponse<RoomListItemModel> response;
-            if ((HasActiveFilters && (MinArea.HasValue || MaxArea.HasValue || IsDistanceFilterActive)) || sortOption == RoomSortOption.DistanceAsc)
+            if (HasActiveFilters && (MinArea.HasValue || MaxArea.HasValue || IsDistanceFilterActive))
             {
                 var criteria = CreateSearchCriteria(
                     pageNumber: 1,
@@ -909,7 +909,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
                 Rooms.Remove(room);
                 if (Rooms.Count == 0)
                 {
-                    EmptyStateMessage = "Chưa có phòng yêu thích nào. Hãy nhấn biểu tượng trái tim trên thẻ phòng để lưu!";
+                    EmptyStateMessage = "No favorite rooms yet. Tap the heart icon on any room card to save it!";
                 }
             }
         }

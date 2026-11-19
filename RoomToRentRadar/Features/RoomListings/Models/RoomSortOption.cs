@@ -8,10 +8,10 @@ namespace RoomToRentRadar.Features.RoomListings.Models;
 /// </summary>
 public enum RoomSortOption
 {
-    Newest,
+    DistanceAsc,
     PriceAsc,
     PriceDesc,
-    DistanceAsc
+    Newest
 }
 
 /// <summary>
@@ -41,19 +41,17 @@ public sealed partial class RoomSortOptionItem : ObservableObject
     {
         DisplayName = Option switch
         {
-            RoomSortOption.Newest => LocalizationResourceManager.Instance["Sort_Newest"],
+            RoomSortOption.DistanceAsc => LocalizationResourceManager.Instance["Sort_DistanceAsc"],
             RoomSortOption.PriceAsc => LocalizationResourceManager.Instance["Sort_PriceAsc"],
             RoomSortOption.PriceDesc => LocalizationResourceManager.Instance["Sort_PriceDesc"],
-            RoomSortOption.DistanceAsc => LocalizationResourceManager.Instance["Sort_DistanceAsc"],
             _ => DisplayName
         };
     }
 
     public static IReadOnlyList<RoomSortOptionItem> CreateDefaults() =>
     [
-        new(RoomSortOption.Newest, LocalizationResourceManager.Instance["Sort_Newest"], "newest", isSelected: true),
+        new(RoomSortOption.DistanceAsc, LocalizationResourceManager.Instance["Sort_DistanceAsc"], "distance_asc", isSelected: true),
         new(RoomSortOption.PriceAsc, LocalizationResourceManager.Instance["Sort_PriceAsc"], "price_asc"),
-        new(RoomSortOption.PriceDesc, LocalizationResourceManager.Instance["Sort_PriceDesc"], "price_desc"),
-        new(RoomSortOption.DistanceAsc, LocalizationResourceManager.Instance["Sort_DistanceAsc"], "distance_asc")
+        new(RoomSortOption.PriceDesc, LocalizationResourceManager.Instance["Sort_PriceDesc"], "price_desc")
     ];
 }

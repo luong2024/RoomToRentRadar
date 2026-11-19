@@ -563,7 +563,7 @@ public class SearchRoomsViewModelTests
         {
             Assert.That(modelWithDistance.DistanceToCampusKm, Is.EqualTo(1.8));
             Assert.That(modelWithDistance.HasDistance, Is.True);
-            Assert.That(modelWithDistance.FormattedDistance, Does.Contain("km tới ICTU"));
+            Assert.That(modelWithDistance.FormattedDistance, Does.Contain("km to ICTU").Or.Contain("km tới ICTU"));
             Assert.That(modelWithDistance.FormattedDistance, Does.Contain("1,8").Or.Contain("1.8"));
         });
     }

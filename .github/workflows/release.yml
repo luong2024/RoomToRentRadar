@@ -72,6 +72,10 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Restore required .NET MAUI workloads
+        run: |
+          dotnet workload restore RoomToRentRadar/RoomToRentRadar.csproj
+
       - name: Cache NuGet packages
         uses: actions/cache@v4
         with:

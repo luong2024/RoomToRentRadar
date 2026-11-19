@@ -15,4 +15,11 @@ public class ApiClient : IApiClient
     {
         return await _httpClient.GetFromJsonAsync<TResponse>(endpoint, cancellationToken);
     }
+
+    public async Task<TResponse?> PutAsync<TRequest, TResponse>(string endpoint, TRequest request, CancellationToken cancellationToken = default)
+    {
+        using var response = await _httpClient.PutAsJsonAsync(endpoint, request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<TResponse>(cancellationToken);
+    }
 }

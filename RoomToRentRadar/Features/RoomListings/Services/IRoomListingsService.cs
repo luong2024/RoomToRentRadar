@@ -3,14 +3,14 @@ using RoomToRentRadar.Features.RoomListings.Models;
 namespace RoomToRentRadar.Features.RoomListings.Services;
 
 /// <summary>
-/// Service contract for fetching paginated, sorted, and server-side searched room listings.
+/// Contract for fetching paginated room listings for the RoomListings feature.
 /// </summary>
 public interface IRoomListingsService
 {
     Task<PagedResponse<RoomListItemModel>> GetRoomListingsAsync(
         int page,
         int pageSize,
-        RoomSortOption sortBy = RoomSortOption.Newest,
+        RoomSortOption sortBy = RoomSortOption.DistanceAsc,
         string? search = null,
         RoomFilterCriteria? filter = null,
         CancellationToken cancellationToken = default);

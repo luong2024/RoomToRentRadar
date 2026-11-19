@@ -21,7 +21,7 @@
   <resheader name="version"><value>2.0</value></resheader>
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
-  <data name="App_Name" xml:space="preserve"><value>Smart Rent</value></data>
+  <data name="App_Name" xml:space="preserve"><value>RoomToRentRadar</value></data>
   <data name="Campus_Location" xml:space="preserve"><value>ICTU Campus • Thai Nguyen</value></data>
   <data name="Menu_Open" xml:space="preserve"><value>Open main menu</value></data>
   <data name="Notification_Title" xml:space="preserve"><value>Notifications</value></data>
@@ -36,7 +36,7 @@
   <data name="Language_Label" xml:space="preserve"><value>Language</value></data>
   <data name="Language_Vietnamese" xml:space="preserve"><value>Tiếng Việt</value></data>
   <data name="Language_English" xml:space="preserve"><value>English</value></data>
-  <data name="Footer_Version" xml:space="preserve"><value>Smart Rent • ICTU v1.0</value></data>
+  <data name="Footer_Version" xml:space="preserve"><value>RoomToRentRadar • ICTU v1.0</value></data>
   <data name="Title_ExploreRooms" xml:space="preserve"><value>Explore Rooms</value></data>
   <data name="Result_Summary_Format" xml:space="preserve"><value>Found {0} rooms around ICTU</value></data>
   <data name="Result_Summary_Updating" xml:space="preserve"><value>Updating room listings around ICTU</value></data>

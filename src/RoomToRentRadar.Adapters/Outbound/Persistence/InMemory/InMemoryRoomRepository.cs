@@ -27,6 +27,16 @@ public class InMemoryRoomRepository : IRoomRepository
         _rooms[room.Id] = room;
     }
 
+    public bool Remove(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return false;
+        }
+
+        return _rooms.TryRemove(id.Trim(), out _);
+    }
+
     public Task<Room?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(id))
@@ -34,8 +44,35 @@ public class InMemoryRoomRepository : IRoomRepository
             return Task.FromResult<Room?>(null);
         }
 
-        _rooms.TryGetValue(id, out var room);
+        _rooms.TryGetValue(id.Trim(), out var room);
         return Task.FromResult(room);
+    }
+
+    public Task<IReadOnlyList<Room>> GetByIdsAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default)
+    {
+        if (ids is null || ids.Count == 0)
+        {
+            return Task.FromResult<IReadOnlyList<Room>>(Array.Empty<Room>());
+        }
+
+        var results = new List<Room>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var rawId in ids)
+        {
+            if (string.IsNullOrWhiteSpace(rawId))
+            {
+                continue;
+            }
+
+            var trimmed = rawId.Trim();
+            if (seen.Add(trimmed) && _rooms.TryGetValue(trimmed, out var room))
+            {
+                results.Add(room);
+            }
+        }
+
+        return Task.FromResult<IReadOnlyList<Room>>(results);
     }
 
     public Task<IReadOnlyList<Room>> GetSimilarRoomsAsync(string roomId, decimal price, double area, CancellationToken cancellationToken = default)
@@ -48,6 +85,7 @@ public class InMemoryRoomRepository : IRoomRepository
         var similar = _rooms.Values
             .Where(r => !string.Equals(r.Id, roomId, StringComparison.OrdinalIgnoreCase) &&
                         r.Status == RoomStatus.Available &&
+                        r.IsVerified &&
                         r.Price >= minPrice && r.Price <= maxPrice &&
                         r.Area >= minArea && r.Area <= maxArea)
             .Take(5)

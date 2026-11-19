@@ -7,6 +7,8 @@ namespace RoomToRentRadar.Domain.Entities;
 
 public sealed class UserProfile
 {
+    private const int MaxAvatarBytes = 1024 * 1024;
+    private const int MaxAvatarBase64Length = ((MaxAvatarBytes + 2) / 3) * 4;
     public Guid Id { get; private set; }
     public Guid UserId { get; private set; }
     public UserRole Role { get; private set; }
@@ -57,11 +59,58 @@ public sealed class UserProfile
             throw new ProfileValidationException("Full name cannot be empty.");
         }
 
+        ValidateAvatarUrl(avatarUrl);
+
         FullName = fullName.Trim();
         PhoneNumber = phone;
         AvatarUrl = avatarUrl;
         Bio = bio;
         UpdatedAt = utcNow;
+    }
+
+    public static void ValidateAvatarUrl(string? avatarUrl)
+    {
+        if (string.IsNullOrWhiteSpace(avatarUrl))
+        {
+            return;
+        }
+
+        if (Uri.TryCreate(avatarUrl, UriKind.Absolute, out var uri) &&
+            uri.Scheme == Uri.UriSchemeHttps)
+        {
+            return;
+        }
+
+        const string pngPrefix = "data:image/png;base64,";
+        const string jpegPrefix = "data:image/jpeg;base64,";
+        var prefix = avatarUrl.StartsWith(pngPrefix, StringComparison.OrdinalIgnoreCase)
+            ? pngPrefix
+            : avatarUrl.StartsWith(jpegPrefix, StringComparison.OrdinalIgnoreCase)
+                ? jpegPrefix
+                : null;
+
+        if (prefix is null)
+        {
+            throw new ProfileValidationException("Avatar must be an HTTPS URL or a PNG/JPEG data URI.");
+        }
+
+        var base64 = avatarUrl[prefix.Length..];
+        if (base64.Length > MaxAvatarBase64Length)
+        {
+            throw new ProfileValidationException("Avatar image must be 1 MB or smaller.");
+        }
+
+        try
+        {
+            if (Convert.FromBase64String(base64).Length > MaxAvatarBytes)
+            {
+                throw new ProfileValidationException("Avatar image must be 1 MB or smaller.");
+            }
+        }
+        catch (FormatException)
+        {
+            throw new ProfileValidationException("Avatar data URI contains invalid Base64 data.");
+        }
     }
 
     public void RehydrateBasicInfo(string fullName, PhoneNumber? phone, string? avatarUrl, string? bio, DateTimeOffset utcNow)

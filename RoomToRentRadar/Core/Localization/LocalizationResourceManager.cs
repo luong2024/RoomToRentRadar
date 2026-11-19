@@ -19,10 +19,7 @@ public sealed class LocalizationResourceManager : INotifyPropertyChanged
 
     private LocalizationResourceManager()
     {
-        var savedCode = GetStoredLanguage();
-        _currentCulture = string.Equals(savedCode, "en", StringComparison.OrdinalIgnoreCase)
-            ? new CultureInfo("en")
-            : new CultureInfo("vi");
+        _currentCulture = new CultureInfo("en");
 
         ApplyCultureToThreads(_currentCulture);
     }
@@ -139,7 +136,7 @@ public sealed class LocalizationResourceManager : INotifyPropertyChanged
 
     private static readonly Dictionary<string, string> FallbackVietnamese = new(StringComparer.Ordinal)
     {
-        ["App_Name"] = "Smart Rent",
+        ["App_Name"] = "RoomToRentRadar",
         ["Campus_Location"] = "ĐH CNTT&TT (ICTU) • Thái Nguyên",
         ["Menu_Open"] = "Mở menu chính",
         ["Notification_Title"] = "Thông báo",
@@ -155,7 +152,7 @@ public sealed class LocalizationResourceManager : INotifyPropertyChanged
         ["Language_Label"] = "Ngôn ngữ / Language",
         ["Language_Vietnamese"] = "Tiếng Việt",
         ["Language_English"] = "English",
-        ["Footer_Version"] = "Smart Rent • ICTU v1.0",
+        ["Footer_Version"] = "RoomToRentRadar • ICTU v1.0",
 
         ["Title_ExploreRooms"] = "Khám phá phòng trọ",
         ["Result_Summary_Format"] = "Tìm thấy {0} phòng quanh ICTU",
@@ -257,7 +254,7 @@ public sealed class LocalizationResourceManager : INotifyPropertyChanged
 
     private static readonly Dictionary<string, string> FallbackEnglish = new(StringComparer.Ordinal)
     {
-        ["App_Name"] = "Smart Rent",
+        ["App_Name"] = "RoomToRentRadar",
         ["Campus_Location"] = "ICTU Campus • Thai Nguyen",
         ["Menu_Open"] = "Open main menu",
         ["Notification_Title"] = "Notifications",
@@ -273,7 +270,7 @@ public sealed class LocalizationResourceManager : INotifyPropertyChanged
         ["Language_Label"] = "Language",
         ["Language_Vietnamese"] = "Tiếng Việt",
         ["Language_English"] = "English",
-        ["Footer_Version"] = "Smart Rent • ICTU v1.0",
+        ["Footer_Version"] = "RoomToRentRadar • ICTU v1.0",
 
         ["Title_ExploreRooms"] = "Explore Rooms",
         ["Result_Summary_Format"] = "Found {0} rooms around ICTU",

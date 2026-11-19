@@ -1,5 +1,6 @@
 namespace RoomToRentRadar.Adapters.Tests.Persistence;
 
+using System.Reflection;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -88,6 +89,52 @@ public class CosmosLegacyMigrationTests
         _mockListingsContainer
             .Setup(c => c.ReadItemAsync<RoomListingDocument>(It.IsAny<string>(), It.IsAny<PartitionKey>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new CosmosException("Not found", System.Net.HttpStatusCode.NotFound, 0, "1", 0));
+    }
+
+    [Test]
+    public async Task SynchronizeRoomDetailsAsync_WhenDetailHasNewerTombstone_DoesNotReviveIt()
+    {
+        var listing = new RoomListingDocument
+        {
+            Id = "room-deleted",
+            CampusId = "campus-ictu",
+            ProjectionVersion = 10,
+            Status = 0
+        };
+        var page = new Mock<FeedResponse<RoomListingDocument>>();
+        page.Setup(response => response.GetEnumerator()).Returns(new List<RoomListingDocument> { listing }.GetEnumerator());
+        var iterator = new Mock<FeedIterator<RoomListingDocument>>();
+        iterator.SetupSequence(value => value.HasMoreResults).Returns(true).Returns(false);
+        iterator.Setup(value => value.ReadNextAsync(It.IsAny<CancellationToken>())).ReturnsAsync(page.Object);
+        _mockListingsContainer.Setup(container => container.GetItemQueryIterator<RoomListingDocument>(
+                It.IsAny<QueryDefinition>(), null, null))
+            .Returns(iterator.Object);
+
+        var readResponse = new Mock<ItemResponse<RoomDocument>>();
+        readResponse.SetupGet(response => response.Resource).Returns(new RoomDocument
+        {
+            Id = "room-deleted",
+            IsDeleted = true,
+            ProjectionVersion = 11
+        });
+        _mockRoomDetailsContainer.Setup(container => container.ReadItemAsync<RoomDocument>(
+                "room-deleted", It.IsAny<PartitionKey>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(readResponse.Object);
+
+        var initializer = new CosmosDbInitializer(
+            _mockClient.Object,
+            Options.Create(_options),
+            NullLogger<CosmosDbInitializer>.Instance);
+        var method = typeof(CosmosDbInitializer).GetMethod(
+            "SynchronizeRoomDetailsAsync",
+            BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+        await (Task)method.Invoke(initializer, [_mockListingsContainer.Object, _mockRoomDetailsContainer.Object, CancellationToken.None])!;
+
+        _mockRoomDetailsContainer.Verify(container => container.CreateItemAsync(
+            It.IsAny<RoomDocument>(), It.IsAny<PartitionKey?>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()), Times.Never);
+        _mockRoomDetailsContainer.Verify(container => container.ReplaceItemAsync(
+            It.IsAny<RoomDocument>(), It.IsAny<string>(), It.IsAny<PartitionKey?>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Test]
@@ -236,6 +283,45 @@ public class CosmosLegacyMigrationTests
     }
 
     [Test]
+    public async Task InitializeAsync_WhenLegacyRecordsUseKnownStatuses_PreservesEachStatusInListings()
+    {
+        var statuses = new[] { 0, 1, 2, 3 };
+        var legacyDocuments = statuses.Select(status => new JObject
+        {
+            ["id"] = $"legacy-status-{status}",
+            ["campusId"] = "campus-ictu",
+            ["price"] = 2_000_000m,
+            ["area"] = 25.0,
+            ["latitude"] = 21.5852,
+            ["longitude"] = 105.8074,
+            ["status"] = status
+        }).ToList();
+        SetupLegacyDocuments(legacyDocuments);
+
+        var capturedListings = new List<RoomListingDocument>();
+        _mockListingsContainer
+            .Setup(c => c.UpsertItemAsync(It.IsAny<RoomListingDocument>(), It.IsAny<PartitionKey?>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .Callback<RoomListingDocument, PartitionKey?, ItemRequestOptions, CancellationToken>((document, _, _, _) => capturedListings.Add(document))
+            .ReturnsAsync(new Mock<ItemResponse<RoomListingDocument>>().Object);
+
+        var initializer = new CosmosDbInitializer(
+            _mockClient.Object,
+            Options.Create(_options),
+            NullLogger<CosmosDbInitializer>.Instance);
+
+        await initializer.InitializeAsync();
+
+        Assert.That(capturedListings.ToDictionary(listing => listing.Id, listing => listing.Status), Is.EqualTo(
+            new Dictionary<string, int>
+            {
+                ["legacy-status-0"] = 0,
+                ["legacy-status-1"] = 1,
+                ["legacy-status-2"] = 2,
+                ["legacy-status-3"] = 3
+            }));
+    }
+
+    [Test]
     public async Task InitializeAsync_WhenAlreadyMigrated_ShouldBeIdempotentAndNotReWrite()
     {
         var legacyDoc = new JObject
@@ -245,7 +331,8 @@ public class CosmosLegacyMigrationTests
             ["price"] = 2000000m,
             ["area"] = 20.0,
             ["latitude"] = 21.5852,
-            ["longitude"] = 105.8074
+            ["longitude"] = 105.8074,
+            ["status"] = 1
         };
 
         SetupLegacyDocuments([legacyDoc]);
