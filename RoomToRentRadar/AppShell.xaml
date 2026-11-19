@@ -233,7 +233,7 @@
     <ShellContent
         x:Name="CreateListingShellContent"
         Title="Post Rental Listing"
-        Icon="{StaticResource IconAdd}"
+        Icon="ic_create_listing.png"
         ContentTemplate="{DataTemplate roomViews:CreateListingPage}"
         Route="create-listing"
         SemanticProperties.Description="Post rental room listing"

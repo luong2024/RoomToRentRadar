@@ -237,6 +237,13 @@ namespace RoomToRentRadar
             {
                 Shell.SetFlyoutItemIsVisible(LogoutMenuItem, isAuthenticated);
             }
+
+            if (CreateListingShellContent != null)
+            {
+                var isLandlord = string.Equals(_sessionService?.CurrentUser?.Role, UserRoleConstants.Landlord, StringComparison.OrdinalIgnoreCase);
+                CreateListingShellContent.IsVisible = isLandlord;
+                Shell.SetFlyoutItemIsVisible(CreateListingShellContent, isLandlord);
+            }
         }
 
         private async void OnLogoutMenuItemClicked(object? sender, EventArgs e)

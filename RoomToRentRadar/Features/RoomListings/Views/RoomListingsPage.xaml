@@ -90,6 +90,7 @@
                     <HorizontalStackLayout Grid.Column="2" Spacing="8" VerticalOptions="Center">
                         <!-- Create Listing Action Button -->
                         <Border
+                            IsVisible="{Binding IsLandlord}"
                             Padding="10,0"
                             BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
                             HeightRequest="44"
