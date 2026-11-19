@@ -1,7 +1,7 @@
 namespace RoomToRentRadar.Features.RoomListings.Models;
 
 /// <summary>
-/// Client-side DTO representing a room listing returned by GET api/v1/rooms or GET api/rooms.
+/// Client-side DTO representing a room listing returned by GET api/v1/rooms.
 /// Decoupled from backend assembly references.
 /// </summary>
 public sealed class RoomListingApiDto
@@ -24,8 +24,6 @@ public sealed class RoomListingApiDto
 
     public double DistanceToCampusKm { get; set; }
 
-    public double? DistanceInKm { get; set; }
-
     public bool IsVerified { get; set; }
 
     public bool? IsAvailable { get; set; }
@@ -41,18 +39,4 @@ public sealed class RoomListingApiDto
     public string? District { get; set; }
 
     public List<string>? Amenities { get; set; }
-}
-
-/// <summary>
-/// Client-side DTO representing the search response returned by GET api/rooms (SearchRoomsResult).
-/// </summary>
-public sealed class SearchRoomsApiResponse
-{
-    public List<RoomListingApiDto> Items { get; set; } = [];
-
-    public int TotalCount { get; set; }
-
-    public int TotalPages { get; set; }
-
-    public int CurrentPage { get; set; }
 }
