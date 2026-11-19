@@ -7,8 +7,8 @@ namespace RoomToRentRadar.DeviceAdapters;
 /// <summary>
 /// Builds <see cref="ApiOptions"/> from device state (ADR-003 / ADR-013). Preferences is a MAUI
 /// Essentials API, so the override is read here — Client.Adapters must not reference MAUI.
-/// Debug: Android emulator uses 10.0.2.2, desktop uses localhost. A Dev Tunnels URL can be stored
-/// under the "ApiBaseUrlOverride" Preferences key (or via SetBaseUrlOverride in debug code); it is
+/// Debug: Android emulator uses 10.0.2.2; physical Android (via adb reverse) and desktop use localhost.
+/// A Dev Tunnels URL can be stored under the "ApiBaseUrlOverride" Preferences key (or via SetBaseUrlOverride in debug code); it is
 /// read once at startup, so restart the app after changing it. On a Debug APK the key can also be
 /// written with adb run-as into shared_prefs/&lt;pkg&gt;.microsoft.maui.essentials.preferences.xml.
 /// Invalid override values are ignored and the default URL is kept.
@@ -25,7 +25,7 @@ internal static class ApiOptionsFactory
 #if DEBUG
         var options = new ApiOptions
         {
-            BaseUrl = new Uri(DeviceInfo.Platform == DevicePlatform.Android
+            BaseUrl = new Uri(DeviceInfo.Platform == DevicePlatform.Android && DeviceInfo.DeviceType == DeviceType.Virtual
                 ? ApiOptions.AndroidEmulatorBaseUrl
                 : ApiOptions.LocalhostBaseUrl),
             UseMocks = Preferences.Default.Get(UseMocksKey, false)
