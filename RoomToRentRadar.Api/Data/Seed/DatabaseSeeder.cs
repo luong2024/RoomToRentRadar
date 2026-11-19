@@ -71,6 +71,29 @@ public static class DatabaseSeeder
         "Không tổ chức tiệc tùng"
     ];
 
+    private static readonly (string QuietHours, string GuestPolicy, string CookingRules, string ParkingRules)[]
+        SampleHouseRuleSets =
+    [
+        (
+            "Giữ yên tĩnh từ 22:00 đến 06:00.",
+            "Khách đến chơi cần báo trước với chủ nhà và rời đi trước 22:00.",
+            "Nấu ăn trong bếp chung, dọn dẹp sạch sẽ sau khi sử dụng.",
+            "Gửi xe khu vực tầng trệt, xuất trình thẻ xe khi ra vào."
+        ),
+        (
+            "Giữ yên tĩnh từ 23:00 đến 05:30.",
+            "Không cho khách ở lại qua đêm.",
+            "Chỉ dùng bếp chung trong giờ hành chính, không nấu món nặng mùi trong phòng.",
+            "Xe máy gửi tại hầm B1, ô tô đăng ký gửi theo giờ."
+        ),
+        (
+            "Giữ yên tĩnh từ 21:30 đến 06:30, hạn chế tiếng ồn sau 21 giờ.",
+            "Khách đến thăm đăng ký tại quầy bảo vệ trước khi vào tòa nhà.",
+            "Bếp chung mở cửa 06:00 - 22:00, vui lòng tắt bếp sau khi nấu.",
+            "Khu gửi xe có camera giám sát, mất thẻ xe phí 50.000đ."
+        )
+    ];
+
     // Cycles through every wire value so each filter option has sample rows.
     private static readonly RoomType[] SampleRoomTypes =
     [
@@ -134,6 +157,7 @@ public static class DatabaseSeeder
         var listings = await dbContext.Listings
             .Include(listing => listing.Amenities)
             .Include(listing => listing.Rules)
+            .Include(listing => listing.HouseRules)
             .AsSplitQuery()
             .Where(listing => ids.Contains(listing.Id))
             .ToDictionaryAsync(listing => listing.Id, cancellationToken);
@@ -185,6 +209,13 @@ public static class DatabaseSeeder
                         dbContext.ListingRules.Add(rule);
                     }
 
+                    changed = true;
+                }
+
+                if (listing.HouseRules is null)
+                {
+                    AddSampleHouseRules(listing, index);
+                    dbContext.ListingHouseRules.Add(listing.HouseRules!);
                     changed = true;
                 }
             }
@@ -288,6 +319,7 @@ public static class DatabaseSeeder
 
         AddSampleAmenities(listing, index);
         AddSampleRules(listing, index);
+        AddSampleHouseRules(listing, index);
 
         return listing;
     }
@@ -403,6 +435,26 @@ public static class DatabaseSeeder
                 SortOrder = ruleIndex
             });
         }
+    }
+
+    private static void AddSampleHouseRules(Listing listing, int index)
+    {
+        if (index == NoDetailIndex)
+        {
+            return;
+        }
+
+        var set = SampleHouseRuleSets[index % SampleHouseRuleSets.Length];
+        listing.HouseRules = new ListingHouseRules
+        {
+            ListingId = listing.Id,
+            QuietHours = set.QuietHours,
+            GuestPolicy = set.GuestPolicy,
+            CookingRules = set.CookingRules,
+            ParkingRules = set.ParkingRules,
+            Version = 1,
+            UpdatedAt = listing.UpdatedAt
+        };
     }
 
     private static long GetSamplePrice(int index) =>

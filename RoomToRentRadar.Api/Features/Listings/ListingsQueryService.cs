@@ -159,6 +159,15 @@ public sealed class ListingsQueryService(
                         .ThenBy(rule => rule.Id)
                         .Select(rule => rule.Text)
                         .ToList(),
+                    x.HouseRules == null
+                        ? null
+                        : new HouseRulesDto(
+                            x.HouseRules.QuietHours,
+                            x.HouseRules.GuestPolicy,
+                            x.HouseRules.CookingRules,
+                            x.HouseRules.ParkingRules,
+                            x.HouseRules.Version,
+                            x.HouseRules.UpdatedAt),
                     x.LandlordName)
             })
             .SingleOrDefaultAsync(cancellationToken);

@@ -11,7 +11,8 @@ namespace RoomToRentRadar.Api.Controllers;
 [Authorize]
 [Route("api/v1/listings")]
 public sealed class ListingManagementController(
-    ListingManagementService listingManagementService) : ControllerBase
+    ListingManagementService listingManagementService,
+    HouseRulesService houseRulesService) : ControllerBase
 {
     private const int MinimumPhotosOnCreate = 3;
 
@@ -100,6 +101,26 @@ public sealed class ListingManagementController(
             CurrentUserId,
             id,
             input,
+            cancellationToken);
+
+        return result.IsSuccess ? Ok(result.Value) : ToProblem(result.Problem!);
+    }
+
+    [HttpPut("{id:guid}/house-rules")]
+    [ProducesResponseType(typeof(HouseRulesDto), StatusCodes.Status200OK, "application/json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError, "application/problem+json")]
+    public async Task<ActionResult<HouseRulesDto>> UpdateHouseRules(
+        Guid id,
+        [FromBody] UpdateHouseRulesRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await houseRulesService.UpdateAsync(
+            CurrentUserId,
+            id,
+            request,
             cancellationToken);
 
         return result.IsSuccess ? Ok(result.Value) : ToProblem(result.Problem!);

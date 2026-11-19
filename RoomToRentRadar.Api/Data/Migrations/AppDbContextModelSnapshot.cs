@@ -223,6 +223,124 @@ namespace RoomToRentRadar.Api.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.ListingHouseRuleVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CookingRules")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("cooking_rules");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("GuestPolicy")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("guest_policy");
+
+                    b.Property<Guid>("ListingId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("listing_id");
+
+                    b.Property<string>("ParkingRules")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("parking_rules");
+
+                    b.Property<string>("QuietHours")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("quiet_hours");
+
+                    b.Property<long>("Version")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ListingId", "Version")
+                        .IsUnique()
+                        .HasDatabaseName("ix_listing_house_rule_versions_listing_version");
+
+                    b.ToTable("listing_house_rule_versions", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_listing_house_rule_versions_version_positive", "version >= 1");
+                        });
+                });
+
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.ListingHouseRules", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CookingRules")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("cooking_rules");
+
+                    b.Property<string>("GuestPolicy")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("guest_policy");
+
+                    b.Property<Guid>("ListingId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("listing_id");
+
+                    b.Property<string>("ParkingRules")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("parking_rules");
+
+                    b.Property<string>("QuietHours")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("quiet_hours");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.Property<long>("Version")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ListingId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_listing_house_rules_listing");
+
+                    b.ToTable("listing_house_rules", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_listing_house_rules_version_positive", "version >= 1");
+                        });
+                });
+
             modelBuilder.Entity("RoomToRentRadar.Api.Domain.ListingPhoto", b =>
                 {
                     b.Property<Guid>("Id")
@@ -675,6 +793,28 @@ namespace RoomToRentRadar.Api.Data.Migrations
                     b.Navigation("Listing");
                 });
 
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.ListingHouseRuleVersion", b =>
+                {
+                    b.HasOne("RoomToRentRadar.Api.Domain.Listing", "Listing")
+                        .WithMany()
+                        .HasForeignKey("ListingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Listing");
+                });
+
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.ListingHouseRules", b =>
+                {
+                    b.HasOne("RoomToRentRadar.Api.Domain.Listing", "Listing")
+                        .WithOne("HouseRules")
+                        .HasForeignKey("RoomToRentRadar.Api.Domain.ListingHouseRules", "ListingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Listing");
+                });
+
             modelBuilder.Entity("RoomToRentRadar.Api.Domain.ListingPhoto", b =>
                 {
                     b.HasOne("RoomToRentRadar.Api.Domain.Listing", "Listing")
@@ -775,6 +915,8 @@ namespace RoomToRentRadar.Api.Data.Migrations
             modelBuilder.Entity("RoomToRentRadar.Api.Domain.Listing", b =>
                 {
                     b.Navigation("Amenities");
+
+                    b.Navigation("HouseRules");
 
                     b.Navigation("Photos");
 

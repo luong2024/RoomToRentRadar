@@ -25,4 +25,5 @@ public sealed class Listing
     public ICollection<ListingPhoto> Photos { get; set; } = [];
     public ICollection<ListingAmenity> Amenities { get; set; } = [];
     public ICollection<ListingRule> Rules { get; set; } = [];
+    public ListingHouseRules? HouseRules { get; set; }
 }

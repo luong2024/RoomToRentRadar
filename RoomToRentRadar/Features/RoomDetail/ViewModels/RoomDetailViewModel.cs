@@ -81,6 +81,10 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     public partial IReadOnlyList<string> Rules { get; set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasHouseRules))]
+    public partial HouseRulesDto? HouseRules { get; set; }
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsPhoneVisible))]
     [NotifyPropertyChangedFor(nameof(IsSignInPromptVisible))]
     public partial string LandlordPhone { get; set; }
@@ -105,6 +109,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         RoomTypeText = string.Empty;
         AmenityLabels = [];
         Rules = [];
+        HouseRules = null;
         LandlordPhone = string.Empty;
         SimilarStatusMessage = string.Empty;
     }
@@ -124,6 +129,8 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     public bool HasAmenities => AmenityLabels.Count > 0;
 
     public bool HasRules => Rules.Count > 0;
+
+    public bool HasHouseRules => HouseRules is not null;
 
     public bool IsPhoneVisible => !string.IsNullOrEmpty(LandlordPhone);
 
@@ -265,6 +272,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
             .Select(code => AmenityLabelsByCode.TryGetValue(code, out var label) ? label : code.ToString())
             .ToList();
         Rules = detail.Rules.ToList();
+        HouseRules = detail.HouseRules;
         LandlordPhone = string.Empty;
     }
 

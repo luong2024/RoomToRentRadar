@@ -13,6 +13,7 @@ public static class ListingWriteProblemFactory
     public const string PhotoLimitExceeded = "photo_limit_exceeded";
     public const string ListingNotFound = "listing_not_found";
     public const string InvalidListingTransition = "invalid_listing_transition";
+    public const string InvalidHouseRules = "invalid_house_rules";
 
     public static ProblemDetails InvalidListingProblem(IReadOnlyDictionary<string, List<string>> errors)
     {
@@ -21,6 +22,20 @@ public static class ListingWriteProblemFactory
             StatusCodes.Status400BadRequest,
             "Invalid listing",
             "One or more listing fields are invalid.");
+        problem.Extensions["errors"] = errors.ToDictionary(
+            pair => pair.Key,
+            pair => pair.Value.ToArray(),
+            StringComparer.Ordinal);
+        return problem;
+    }
+
+    public static ProblemDetails InvalidHouseRulesProblem(IReadOnlyDictionary<string, List<string>> errors)
+    {
+        var problem = Create(
+            InvalidHouseRules,
+            StatusCodes.Status400BadRequest,
+            "Invalid house rules",
+            "One or more house rule fields are invalid.");
         problem.Extensions["errors"] = errors.ToDictionary(
             pair => pair.Key,
             pair => pair.Value.ToArray(),
