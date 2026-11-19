@@ -318,4 +318,109 @@
   <data name="Placeholder_SCR-ADM-03_Title" xml:space="preserve">
     <value>Report detail</value>
   </data>
+
+  <!-- Error messages (errorCode map) -->
+  <data name="Error_VALIDATION_FAILED" xml:space="preserve">
+    <value>Please check the values you entered.</value>
+  </data>
+  <data name="Error_INVALID_SORT_OPTION" xml:space="preserve">
+    <value>That sort option is not supported.</value>
+  </data>
+  <data name="Error_INVALID_PRICE_RANGE" xml:space="preserve">
+    <value>The price range is not valid.</value>
+  </data>
+  <data name="Error_INVALID_AREA_RANGE" xml:space="preserve">
+    <value>The area range is not valid.</value>
+  </data>
+  <data name="Error_INVALID_DISTANCE_RANGE" xml:space="preserve">
+    <value>The distance filter is not valid.</value>
+  </data>
+  <data name="Error_CAMPUS_NOT_FOUND" xml:space="preserve">
+    <value>That campus could not be found.</value>
+  </data>
+  <data name="Error_INVALID_STATE_TRANSITION" xml:space="preserve">
+    <value>This action is not allowed in the current state.</value>
+  </data>
+  <data name="Error_INVALID_CREDENTIALS" xml:space="preserve">
+    <value>Invalid email or password.</value>
+  </data>
+  <data name="Error_ACCOUNT_LOCKED" xml:space="preserve">
+    <value>Your account is temporarily locked, please try again in {time}.</value>
+  </data>
+  <data name="Error_EMAIL_TAKEN" xml:space="preserve">
+    <value>This email address is already in use.</value>
+  </data>
+  <data name="Error_LANDLORD_NOT_APPROVED" xml:space="preserve">
+    <value>Landlord account is pending approval.</value>
+  </data>
+  <data name="Error_ROOM_NOT_FOUND" xml:space="preserve">
+    <value>Listing does not exist.</value>
+  </data>
+  <data name="Error_LISTING_NOT_AVAILABLE" xml:space="preserve">
+    <value>Room is no longer available.</value>
+  </data>
+  <data name="Error_ALREADY_REPORTED" xml:space="preserve">
+    <value>You have already reported this listing.</value>
+  </data>
+  <data name="Error_LIMIT_EXCEEDED" xml:space="preserve">
+    <value>Limit reached.</value>
+  </data>
+  <data name="Error_CONCURRENCY_CONFLICT" xml:space="preserve">
+    <value>Data has changed, please refresh.</value>
+  </data>
+  <data name="Error_ETAG_MISMATCH" xml:space="preserve">
+    <value>Data has changed, please refresh.</value>
+  </data>
+  <data name="Error_RATE_LIMITED" xml:space="preserve">
+    <value>Too many requests, please try again shortly.</value>
+  </data>
+  <data name="Error_NETWORK_ERROR" xml:space="preserve">
+    <value>No internet connection.</value>
+  </data>
+  <data name="Error_LockDuration" xml:space="preserve">
+    <value>15 minutes</value>
+  </data>
+  <data name="Error_Unexpected" xml:space="preserve">
+    <value>An unexpected error occurred, please try again.</value>
+  </data>
+
+  <!-- Shared state controls (EmptyStateView / ErrorRetryView / SkeletonShimmer) -->
+  <data name="State_Empty_Title" xml:space="preserve">
+    <value>No rooms found</value>
+  </data>
+  <data name="State_Empty_Message" xml:space="preserve">
+    <value>Try adjusting your filters or expanding your search radius around ICTU.</value>
+  </data>
+  <data name="State_Empty_Action" xml:space="preserve">
+    <value>Reset Filters</value>
+  </data>
+  <data name="State_Error_Title" xml:space="preserve">
+    <value>Connection Error</value>
+  </data>
+  <data name="State_Error_Message" xml:space="preserve">
+    <value>Unable to connect to the server. Please check your internet connection.</value>
+  </data>
+  <data name="State_Retry" xml:space="preserve">
+    <value>Retry</value>
+  </data>
+  <data name="State_Loading" xml:space="preserve">
+    <value>Loading</value>
+  </data>
+  <data name="State_Offline_Banner" xml:space="preserve">
+    <value>You are offline – showing saved data</value>
+  </data>
+
+  <!-- Explore screen states -->
+  <data name="Explore_Error_Title" xml:space="preserve">
+    <value>Could not load rooms</value>
+  </data>
+  <data name="Explore_Empty_Title" xml:space="preserve">
+    <value>No rooms match</value>
+  </data>
+  <data name="Explore_Empty_Message" xml:space="preserve">
+    <value>Try a larger distance or clear your filters to see more rooms.</value>
+  </data>
+  <data name="Explore_Empty_Action" xml:space="preserve">
+    <value>Clear filters</value>
+  </data>
 </root>
