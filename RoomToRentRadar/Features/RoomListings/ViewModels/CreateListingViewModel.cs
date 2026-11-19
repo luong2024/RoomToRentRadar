@@ -335,7 +335,14 @@ public partial class CreateListingViewModel : ObservableObject
         }
         else if (Shell.Current != null)
         {
-            await Shell.Current.GoToAsync("..");
+            try
+            {
+                await Shell.Current.GoToAsync("..");
+            }
+            catch
+            {
+                await Shell.Current.GoToAsync($"//{Core.Constants.AppRoutes.RoomListings}");
+            }
         }
     }
 
