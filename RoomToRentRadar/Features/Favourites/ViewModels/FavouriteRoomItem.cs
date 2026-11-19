@@ -1,4 +1,5 @@
 using System.Globalization;
+using RoomToRentRadar.Core.Media;
 using RoomToRentRadar.Shared.Favourites;
 using RoomToRentRadar.Shared.Listings;
 
@@ -17,8 +18,7 @@ public sealed record FavouriteRoomItem(
 {
     private static readonly CultureInfo Vietnamese = CultureInfo.GetCultureInfo("vi-VN");
 
-    public string PhotoSource => Uri.TryCreate(CoverPhotoUrl, UriKind.Absolute, out var photo)
-        && photo.Scheme == Uri.UriSchemeHttps ? photo.AbsoluteUri : "room_1.png";
+    public string PhotoSource => MediaUrlResolver.Resolve(CoverPhotoUrl) ?? "room_1.png";
 
     public static FavouriteRoomItem FromDto(FavouriteRoomDto favourite)
         => new(

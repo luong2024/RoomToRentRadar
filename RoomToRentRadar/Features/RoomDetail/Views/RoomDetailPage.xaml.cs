@@ -32,11 +32,14 @@ public partial class RoomDetailPage : ContentPage
         {
             _viewModel.LoadCommand.Execute(null);
         }
-        else if (_viewModel.State == RoomDetailState.Content
-                 && _viewModel.RefreshContactCommand.CanExecute(null))
+        else if (_viewModel.State == RoomDetailState.Content)
         {
-            // Returning from the sign-in page must reveal the phone without a reload.
-            _viewModel.RefreshContactCommand.Execute(null);
+            // Returning from the sign-in page must reveal the phone without a reload,
+            // and the heart must match the account's favourites on this device or another.
+            if (_viewModel.RefreshContactCommand.CanExecute(null))
+                _viewModel.RefreshContactCommand.Execute(null);
+            if (_viewModel.RefreshFavouriteCommand.CanExecute(null))
+                _viewModel.RefreshFavouriteCommand.Execute(null);
         }
         SyncTravelSection();
         AnimateContent();
