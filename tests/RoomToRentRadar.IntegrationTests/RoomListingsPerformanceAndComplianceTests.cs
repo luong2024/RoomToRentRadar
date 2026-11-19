@@ -368,7 +368,11 @@ public class CosmosRoomListingPerformanceIntegrationTests
             var database = dbResponse.Database;
 
             var containerProperties = new ContainerProperties(ContainerName, "/campusId");
-            containerProperties.IndexingPolicy.SpatialIndexes.Add(new SpatialPath { Path = "/location/*" });
+            containerProperties.IndexingPolicy.SpatialIndexes.Add(new SpatialPath
+            {
+                Path = "/location/*",
+                SpatialTypes = { SpatialType.Point }
+            });
             var containerResponse = await database.CreateContainerIfNotExistsAsync(containerProperties);
             _container = containerResponse.Container;
 
@@ -427,6 +431,7 @@ public class CosmosRoomListingPerformanceIntegrationTests
         }
         catch (Exception ex) when (ex is HttpRequestException ||
                                   ex is System.Net.Sockets.SocketException ||
+                                  ex is CosmosException ||
                                   ex.InnerException is HttpRequestException ||
                                   ex.InnerException is System.Net.Sockets.SocketException ||
                                   ex.Message.Contains("Connection refused", StringComparison.OrdinalIgnoreCase))

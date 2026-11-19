@@ -317,6 +317,11 @@ public sealed class CosmosDbContext : ICosmosDbContext
                 {
                     new Collection<CompositePath>
                     {
+                        new CompositePath { Path = "/createdAtUtc", Order = CompositePathSortOrder.Descending },
+                        new CompositePath { Path = "/roomId", Order = CompositePathSortOrder.Ascending }
+                    },
+                    new Collection<CompositePath>
+                    {
                         new CompositePath { Path = "/userId", Order = CompositePathSortOrder.Ascending },
                         new CompositePath { Path = "/createdAtUtc", Order = CompositePathSortOrder.Descending },
                         new CompositePath { Path = "/roomId", Order = CompositePathSortOrder.Ascending }
