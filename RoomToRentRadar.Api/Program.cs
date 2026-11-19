@@ -3,16 +3,21 @@ using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using RoomToRentRadar.Api.Authorization;
+using RoomToRentRadar.Api.BackgroundJobs;
 using RoomToRentRadar.Api.Binders;
 using RoomToRentRadar.Api.Errors;
 using RoomToRentRadar.Api.Middlewares;
+using RoomToRentRadar.Api.Security;
 using RoomToRentRadar.Application;
 using RoomToRentRadar.Datastore.Sqlite;
 using RoomToRentRadar.Datastore.Sqlite.Configurations;
 using RoomToRentRadar.Infrastructure;
+using RoomToRentRadar.Infrastructure.Adapters.Media;
 using RoomToRentRadar.Infrastructure.Adapters.Security;
+using RoomToRentRadar.Ports.Outbound.ExternalServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +33,8 @@ builder.Services.AddControllers(options =>
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserContextPort, HttpContextUserContextAdapter>();
 
 // ADR-012 / system-architecture §7.2: framework-generated 400s (model binding) must use the same
 // problem+json shape as domain validation errors, with a stable errorCode and an `errors` map.
@@ -67,7 +74,12 @@ if (useMockSso && !builder.Environment.IsDevelopment())
     throw new InvalidOperationException("CRITICAL: Mock SSO verifier is strictly prohibited outside the Development environment.");
 }
 
-builder.Services.AddInfrastructure(jwtSettings, useMockSsoVerifier: useMockSso);
+var mediaSettings = builder.Configuration.GetSection(MediaSettings.SectionName).Get<MediaSettings>()
+    ?? new MediaSettings();
+builder.Services.AddInfrastructure(jwtSettings, useMockSsoVerifier: useMockSso, mediaSettings: mediaSettings);
+
+// BR-MED-03: hourly sweep of uploads that were never attached to a listing.
+builder.Services.AddHostedService<PhotoCleanupService>();
 
 // ===== 5. Authentication & authorization =====
 var signingKeyBytes = Encoding.UTF8.GetBytes(jwtSettings.SigningKey);
@@ -99,6 +111,19 @@ var app = builder.Build();
 app.UseMiddleware<ProblemDetailsMiddleware>();
 // 401/403/404/415 produced without a body (auth challenge, unknown route, unsupported media type) become problem+json with a stable errorCode.
 app.UseStatusCodePages(StatusCodeProblemPages.WriteAsync);
+
+// ADR-008 / system-architecture §6.1: uploaded photos are served as immutable, year-long cacheable files.
+var mediaRootPath = Path.GetFullPath(
+    string.IsNullOrWhiteSpace(mediaSettings.RootPath) ? "media" : mediaSettings.RootPath);
+Directory.CreateDirectory(mediaRootPath);
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(mediaRootPath),
+    RequestPath = "/media",
+    OnPrepareResponse = context =>
+        context.Context.Response.Headers.CacheControl = "public, max-age=31536000, immutable"
+});
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<AuditLoggingMiddleware>();

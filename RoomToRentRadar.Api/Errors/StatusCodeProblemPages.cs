@@ -1,4 +1,4 @@
-// ADR-012, system-architecture 7.2: bodyless 401/403/404/415 become problem+json with a stable errorCode.
+// ADR-012, system-architecture 7.2: bodyless 401/403/404/413/415 become problem+json with a stable errorCode.
 // 405 and other 4xx intentionally stay bare because no errorCode exists for them.
 using System.Text.Json;
 using Microsoft.AspNetCore.Diagnostics;
@@ -46,6 +46,7 @@ public static class StatusCodeProblemPages
         StatusCodes.Status401Unauthorized => ("Unauthorized", "Authentication is required or the credentials are invalid.", ProblemCodes.Unauthorized),
         StatusCodes.Status403Forbidden => ("Forbidden", "You do not have permission to access this resource.", ProblemCodes.Forbidden),
         StatusCodes.Status404NotFound => ("Not Found", "The requested resource was not found.", ProblemCodes.NotFound),
+        StatusCodes.Status413PayloadTooLarge => ("Payload Too Large", "The uploaded file is too large.", ProblemCodes.FileTooLarge),
         StatusCodes.Status415UnsupportedMediaType => ("Unsupported Media Type", "The request content type is not supported.", ProblemCodes.UnsupportedMediaType),
         _ => null
     };

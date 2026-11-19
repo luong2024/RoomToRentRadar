@@ -250,6 +250,50 @@ public class HttpAuthGatewayTests
     }
 
     [Test]
+    public async Task RevokeTokenAsync_WhenNullRequest_ThrowsArgumentNullException()
+    {
+        var handler = new MockHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.NoContent));
+        var client = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:5000") };
+        var gateway = new HttpAuthGateway(client);
+
+        Assert.ThrowsAsync<ArgumentNullException>(async () =>
+            await gateway.RevokeTokenAsync(null!));
+        await Task.CompletedTask;
+    }
+
+    [Test]
+    public async Task RevokeTokenAsync_WhenServerReturns401_ThrowsApiException()
+    {
+        var problem = new
+        {
+            type = "about:blank",
+            title = "Unauthorized",
+            status = 401,
+            detail = "Invalid token",
+            errorCode = "UNAUTHORIZED"
+        };
+
+        var handler = new MockHttpMessageHandler(req =>
+        {
+            return new HttpResponseMessage(HttpStatusCode.Unauthorized)
+            {
+                Content = JsonContent.Create(problem)
+            };
+        });
+
+        var client = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:5000") };
+        var gateway = new HttpAuthGateway(client);
+
+        var ex = Assert.ThrowsAsync<ApiException>(async () =>
+            await gateway.RevokeTokenAsync(new RevokeTokenRequest("invalid-refresh-token"), bearerToken: "expired-token"));
+        await Task.CompletedTask;
+
+        Assert.That(ex, Is.Not.Null);
+        Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That(ex.ErrorCode, Is.EqualTo("UNAUTHORIZED"));
+    }
+
+    [Test]
     public async Task LoginWithIctuSsoAsync_ValidToken_ReturnsTokensDto()
     {
         // Arrange

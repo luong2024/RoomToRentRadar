@@ -1,4 +1,4 @@
-// ADR-012, system-architecture 7.2: every mapping row R1-R14 has a status + errorCode + title test.
+// ADR-012, system-architecture 7.2: every mapping row R1-R19 has a status + errorCode + title test.
 using System.Runtime.CompilerServices;
 using RoomToRentRadar.Api.Errors;
 using RoomToRentRadar.Domain.Exceptions;
@@ -53,6 +53,18 @@ public class ExceptionProblemMapTests
         yield return new TestCaseData(
             new LimitExceededException("Too many photos."),
             409, ProblemCodes.LimitExceeded, "Conflict").SetName("R14_LimitExceeded_409");
+        yield return new TestCaseData(
+            new IfMatchRequiredException(),
+            428, ProblemCodes.IfMatchRequired, "Precondition Required").SetName("R16_IfMatchRequired_428");
+        yield return new TestCaseData(
+            new EtagMismatchException(),
+            412, ProblemCodes.EtagMismatch, "Precondition Failed").SetName("R17_EtagMismatch_412");
+        yield return new TestCaseData(
+            new FileTooLargeException(),
+            413, ProblemCodes.FileTooLarge, "Payload Too Large").SetName("R18_FileTooLarge_413");
+        yield return new TestCaseData(
+            new UnsupportedMediaTypeException(),
+            415, ProblemCodes.UnsupportedMediaType, "Unsupported Media Type").SetName("R19_UnsupportedMediaType_415");
     }
 
     [TestCaseSource(nameof(MappingRows))]
@@ -225,7 +237,11 @@ public class ExceptionProblemMapTests
             new DuplicateEmailException("user@ictu.edu.vn"),
             new ConcurrencyConflictException(),
             new InvalidStateTransitionException("Cannot transition."),
-            new LimitExceededException("Too many photos.")
+            new LimitExceededException("Too many photos."),
+            new IfMatchRequiredException(),
+            new EtagMismatchException(),
+            new FileTooLargeException(),
+            new UnsupportedMediaTypeException()
         ];
 
         Assert.Multiple(() =>

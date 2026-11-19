@@ -7,6 +7,8 @@
              xmlns:fonts="clr-namespace:Fonts"
              x:Class="RoomToRentRadar.Pages.RegisterPage"
              x:DataType="vm:RegisterPageModel"
+             Shell.NavBarIsVisible="False"
+             Shell.TabBarIsVisible="False"
              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCanvasLight}, Dark={StaticResource SurfaceCanvasDark}}">
 
     <Grid RowDefinitions="Auto, *">

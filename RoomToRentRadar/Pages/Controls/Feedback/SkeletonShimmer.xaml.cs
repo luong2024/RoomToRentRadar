@@ -1,3 +1,5 @@
+using RoomToRentRadar.Resources.Strings;
+
 namespace RoomToRentRadar.Pages.Controls.Feedback;
 
 public partial class SkeletonShimmer : ContentView
@@ -7,19 +9,28 @@ public partial class SkeletonShimmer : ContentView
     public SkeletonShimmer()
     {
         InitializeComponent();
+        SemanticProperties.SetDescription(this, LocalizedStrings.Instance["State_Loading"]);
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
     }
 
     private void OnLoaded(object? sender, EventArgs e)
     {
+        SemanticProperties.SetDescription(this, LocalizedStrings.Instance["State_Loading"]);
+        LocalizedStrings.Instance.PropertyChanged += OnLocalizedStringsChanged;
         StartPulseAnimation();
     }
 
     private void OnUnloaded(object? sender, EventArgs e)
     {
+        LocalizedStrings.Instance.PropertyChanged -= OnLocalizedStringsChanged;
         _isAnimating = false;
         this.AbortAnimation("PulseAnimation");
+    }
+
+    private void OnLocalizedStringsChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        SemanticProperties.SetDescription(this, LocalizedStrings.Instance["State_Loading"]);
     }
 
     private void StartPulseAnimation()
@@ -33,7 +44,7 @@ public partial class SkeletonShimmer : ContentView
             { 0.5, 1.0, new Animation(v => SetPlaceholderOpacity(v), 0.35, 0.7, Easing.SinInOut) }
         };
 
-        animation.Commit(this, "PulseAnimation", length: 1400, repeat: () => _isAnimating);
+        animation.Commit(this, "PulseAnimation", length: 1200, repeat: () => _isAnimating);
     }
 
     private void SetPlaceholderOpacity(double opacity)
