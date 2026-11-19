@@ -71,6 +71,21 @@ public class OsrmRoutingProviderTests
         Assert.ThrowsAsync<RoutingProviderUnavailableException>(() => provider.GetRouteAsync(Origin, Destination));
     }
 
+    [TestCase("[]", TestName = "GetRouteAsync_WhenOsrmReturnsArrayRoot_ShouldThrowUnavailableException")]
+    [TestCase("null", TestName = "GetRouteAsync_WhenOsrmReturnsNullRoot_ShouldThrowUnavailableException")]
+    [TestCase("123", TestName = "GetRouteAsync_WhenOsrmReturnsNumberRoot_ShouldThrowUnavailableException")]
+    [TestCase("\"invalid\"", TestName = "GetRouteAsync_WhenOsrmReturnsStringRoot_ShouldThrowUnavailableException")]
+    public void GetRouteAsync_WhenOsrmReturnsNonObjectRoot_ShouldThrowUnavailableException(string json)
+    {
+        using var client = CreateClient((_, _) => Task.FromResult(JsonResponse(json)));
+        var provider = CreateProvider(client);
+
+        var exception = Assert.ThrowsAsync<RoutingProviderUnavailableException>(
+            () => provider.GetRouteAsync(Origin, Destination));
+
+        Assert.That(exception!.InnerException, Is.TypeOf<System.Text.Json.JsonException>());
+    }
+
     [TestCase("""{"code":"Ok","routes":[null]}""")]
     [TestCase("""{"code":"Ok","routes":["not-a-route"]}""")]
     public void GetRouteAsync_WhenOsrmRouteEntryIsNotObject_ShouldThrowUnavailableException(string json)

@@ -71,6 +71,11 @@ public sealed class OsrmRoutingProvider : IRoutingProvider
 
     private static RoutingProviderResult? ParseRoute(JsonElement root)
     {
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            throw new JsonException("OSRM response must be a JSON object.");
+        }
+
         if (!root.TryGetProperty("code", out var codeElement) || codeElement.ValueKind != JsonValueKind.String)
         {
             throw new JsonException("OSRM response did not include a status code.");
