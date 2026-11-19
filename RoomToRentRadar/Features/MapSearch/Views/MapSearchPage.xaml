@@ -166,8 +166,9 @@
                         FontFamily="SegoeSemibold"
                         FontSize="13" />
 
-                <!-- Action 3: View properties (Search trigger button) -->
+                <!-- Action 3: View properties (Search confirmation button) -->
                 <Button Text="View properties →"
+                        Command="{Binding ViewPropertiesCommand}"
                         Background="{StaticResource PrimaryBrandGradient}"
                         TextColor="White"
                         CornerRadius="24"

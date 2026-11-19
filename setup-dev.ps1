@@ -4,11 +4,16 @@ Write-Host "   RoomToRentRadar - Khoi Tao Moi Truong Cho Nguoi Moi   " -Foregrou
 Write-Host "========================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# 1. Cai dat User Secrets
+# 1. Cai dat User Secrets voi JWT Secret ngau nhien cho moi may
 Write-Host "[1/3] Cai dat User Secrets cho Backend (.NET Secrets)..." -ForegroundColor Yellow
-dotnet user-secrets set "Jwt:Secret" "RoomToRentRadar_Local_Dev_Secret_Key_At_Least_32_Bytes_Long_2026!" --project src/RoomToRentRadar.Bootstrap
+$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$secretBytes = New-Object byte[] 32
+$rng.GetBytes($secretBytes)
+$generatedJwtSecret = [Convert]::ToBase64String($secretBytes)
+
+dotnet user-secrets set "Jwt:Secret" "$generatedJwtSecret" --project src/RoomToRentRadar.Bootstrap
 dotnet user-secrets set "CosmosDb:RoomsContainerName" "RoomDetails" --project src/RoomToRentRadar.Bootstrap
-Write-Host "      -> Da luu secrets cuc bo tren may cua ban (Khong bi day len Git)." -ForegroundColor Green
+Write-Host "      -> Da tao ngau nhien JWT Secret (32 bytes cryptographically secure) va luu secrets cuc bo." -ForegroundColor Green
 
 # 2. Thiet lap adb reverse
 Write-Host ""

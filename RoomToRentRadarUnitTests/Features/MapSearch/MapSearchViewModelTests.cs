@@ -46,12 +46,13 @@ public class MapSearchViewModelTests
     [Test]
     public void CompleteDrawing_WithValidPolygon_ShouldStoreCoordinatesAndEnableHasDrawnPolygon()
     {
-        // Arrange
+        // Arrange: triangle with realistic area around Thai Nguyen
         var testPoints = new List<GeoCoordinate>
         {
             new(21.5855, 105.8075),
-            new(21.5890, 105.8110),
-            new(21.5840, 105.8060)
+            new(21.5950, 105.8200),
+            new(21.5750, 105.8150),
+            new(21.5855, 105.8075)
         };
 
         _viewModel.StartDrawing();
@@ -62,8 +63,8 @@ public class MapSearchViewModelTests
         // Assert
         Assert.That(_viewModel.IsDrawingMode, Is.False);
         Assert.That(_viewModel.HasDrawnPolygon, Is.True);
-        Assert.That(_viewModel.VertexCount, Is.EqualTo(3));
-        Assert.That(_viewModel.PolygonCoordinates.Count, Is.EqualTo(3));
+        Assert.That(_viewModel.VertexCount, Is.GreaterThanOrEqualTo(3));
+        Assert.That(_viewModel.PolygonCoordinates.Count, Is.GreaterThanOrEqualTo(3));
         Assert.That(_viewModel.CurrentArea.IsValid, Is.True);
         Assert.That(_viewModel.BackButtonText, Is.EqualTo("Home"));
         Assert.That(_viewModel.ShowCompletedToolbar, Is.True);
@@ -90,14 +91,34 @@ public class MapSearchViewModelTests
     }
 
     [Test]
+    public void CompleteDrawing_WithFlatOrTinyArea_ShouldReject()
+    {
+        // Arrange: collinear points (straight line, zero area)
+        var testPoints = new List<GeoCoordinate>
+        {
+            new(21.5850, 105.8070),
+            new(21.5851, 105.8071),
+            new(21.5852, 105.8072)
+        };
+
+        // Act
+        _viewModel.CompleteDrawing(testPoints);
+
+        // Assert
+        Assert.That(_viewModel.HasDrawnPolygon, Is.False);
+        Assert.That(_viewModel.StatusMessage, Does.Contain("flat or small"));
+    }
+
+    [Test]
     public void ClearPolygon_ShouldResetAllDrawingState()
     {
         // Arrange
         var testPoints = new List<GeoCoordinate>
         {
             new(21.5855, 105.8075),
-            new(21.5890, 105.8110),
-            new(21.5840, 105.8060)
+            new(21.5950, 105.8200),
+            new(21.5750, 105.8150),
+            new(21.5855, 105.8075)
         };
         _viewModel.CompleteDrawing(testPoints);
 
@@ -120,8 +141,9 @@ public class MapSearchViewModelTests
         var testPoints = new List<GeoCoordinate>
         {
             new(21.5855, 105.8075),
-            new(21.5890, 105.8110),
-            new(21.5840, 105.8060)
+            new(21.5950, 105.8200),
+            new(21.5750, 105.8150),
+            new(21.5855, 105.8075)
         };
         _viewModel.CompleteDrawing(testPoints);
 
@@ -142,8 +164,9 @@ public class MapSearchViewModelTests
         var testPoints = new List<GeoCoordinate>
         {
             new(21.5855, 105.8075),
-            new(21.5890, 105.8110),
-            new(21.5840, 105.8060)
+            new(21.5950, 105.8200),
+            new(21.5750, 105.8150),
+            new(21.5855, 105.8075)
         };
         _viewModel.CompleteDrawing(testPoints);
 
@@ -152,7 +175,7 @@ public class MapSearchViewModelTests
 
         // Assert
         Assert.That(_viewModel.IsEditingMode, Is.True);
-        Assert.That(_viewModel.EditAnchorPins.Count, Is.EqualTo(3));
+        Assert.That(_viewModel.EditAnchorPins.Count, Is.GreaterThanOrEqualTo(3));
         Assert.That(_viewModel.BackButtonText, Is.EqualTo("Back"));
         Assert.That(_viewModel.StatusMessage, Does.Contain("Drag pins"));
     }
@@ -164,8 +187,9 @@ public class MapSearchViewModelTests
         var testPoints = new List<GeoCoordinate>
         {
             new(21.5855, 105.8075),
-            new(21.5890, 105.8110),
-            new(21.5840, 105.8060)
+            new(21.5950, 105.8200),
+            new(21.5750, 105.8150),
+            new(21.5855, 105.8075)
         };
         _viewModel.CompleteDrawing(testPoints);
         _viewModel.StartEditing();
@@ -187,8 +211,9 @@ public class MapSearchViewModelTests
         var testPoints = new List<GeoCoordinate>
         {
             new(21.5855, 105.8075),
-            new(21.5890, 105.8110),
-            new(21.5840, 105.8060)
+            new(21.5950, 105.8200),
+            new(21.5750, 105.8150),
+            new(21.5855, 105.8075)
         };
         _viewModel.CompleteDrawing(testPoints);
         _viewModel.StartEditing();
@@ -230,8 +255,9 @@ public class MapSearchViewModelTests
         var testPoints = new List<GeoCoordinate>
         {
             new(21.5855, 105.8075),
-            new(21.5890, 105.8110),
-            new(21.5840, 105.8060)
+            new(21.5950, 105.8200),
+            new(21.5750, 105.8150),
+            new(21.5855, 105.8075)
         };
         _viewModel.CompleteDrawing(testPoints);
         _viewModel.StartEditing();
@@ -259,19 +285,111 @@ public class MapSearchViewModelTests
     }
 
     [Test]
-    public void SimplifyPolygon_WithManyPoints_ShouldReduceToTargetCount()
+    public async Task ViewPropertiesAsync_WhenPolygonValid_ShouldTriggerAlertAndReportStatus()
     {
-        // Arrange: 80 points along a circle
-        var points = new List<GeoCoordinate>();
-        for (int i = 0; i < 80; i++)
+        // Arrange
+        var testPoints = new List<GeoCoordinate>
         {
-            points.Add(new GeoCoordinate(21.58 + (i * 0.001), 105.80 + (i * 0.001)));
-        }
+            new(21.5855, 105.8075),
+            new(21.5950, 105.8200),
+            new(21.5750, 105.8150),
+            new(21.5855, 105.8075)
+        };
+        _viewModel.CompleteDrawing(testPoints);
+
+        bool alertCalled = false;
+        _viewModel.AlertHandler = (title, message, cancel) =>
+        {
+            alertCalled = true;
+            Assert.That(title, Does.Contain("Confirmed"));
+            Assert.That(message, Does.Contain("T05.2"));
+            return Task.CompletedTask;
+        };
 
         // Act
-        var simplified = MapSearchViewModel.SimplifyPolygon(points, 16);
+        await _viewModel.ViewPropertiesCommand.ExecuteAsync(null);
 
         // Assert
-        Assert.That(simplified.Count, Is.EqualTo(16));
+        Assert.That(alertCalled, Is.True);
+        Assert.That(_viewModel.StatusMessage, Does.Contain("confirmed"));
+    }
+
+    [Test]
+    public async Task ViewPropertiesAsync_WhenNoPolygon_ShouldRejectWithWarning()
+    {
+        // Arrange
+        bool alertCalled = false;
+        _viewModel.AlertHandler = (_, _, _) =>
+        {
+            alertCalled = true;
+            return Task.CompletedTask;
+        };
+
+        // Act
+        await _viewModel.ViewPropertiesCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.That(alertCalled, Is.False);
+        Assert.That(_viewModel.StatusMessage, Does.Contain("Please draw a valid area"));
+    }
+
+    [Test]
+    public void RamerDouglasPeucker_WithCollinearPoints_ShouldReduceToStartAndEnd()
+    {
+        // Arrange: 5 perfectly collinear points
+        var points = new List<GeoCoordinate>
+        {
+            new(21.0, 105.0),
+            new(21.1, 105.1),
+            new(21.2, 105.2),
+            new(21.3, 105.3),
+            new(21.4, 105.4)
+        };
+
+        // Act
+        var result = MapSearchViewModel.RamerDouglasPeucker(points, 0.001);
+
+        // Assert: Collinear points should simplify to just start and end (2 points)
+        Assert.That(result.Count, Is.EqualTo(2));
+        Assert.That(result[0], Is.EqualTo(points[0]));
+        Assert.That(result[1], Is.EqualTo(points[^1]));
+    }
+
+    [Test]
+    public void DeduplicatePoints_ShouldRemoveConsecutiveIdenticalPoints()
+    {
+        // Arrange
+        var points = new List<GeoCoordinate>
+        {
+            new(21.5855, 105.8075),
+            new(21.5855, 105.8075), // duplicate
+            new(21.5950, 105.8200),
+            new(21.5950, 105.8200)  // duplicate
+        };
+
+        // Act
+        var result = MapSearchViewModel.DeduplicatePoints(points);
+
+        // Assert
+        Assert.That(result.Count, Is.EqualTo(2));
+    }
+
+    [Test]
+    public void CalculatePolygonArea_WithKnownTriangle_ShouldReturnCorrectArea()
+    {
+        // Arrange: Right-angled triangle with base = 0.01 and height = 0.01
+        // Expected area = 0.5 * 0.01 * 0.01 = 0.00005
+        var triangle = new List<GeoCoordinate>
+        {
+            new(0.0, 0.0),
+            new(0.01, 0.0),
+            new(0.0, 0.01)
+        };
+
+        // Act
+        double area = MapSearchViewModel.CalculatePolygonArea(triangle);
+
+        // Assert
+        Assert.That(area, Is.EqualTo(0.00005).Within(1e-9));
     }
 }

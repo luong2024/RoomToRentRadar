@@ -13,6 +13,16 @@ public partial class MapSearchPage : ContentPage
     private int _draggedAnchorIndex = -1;
     private MapSearchViewModel? _viewModel;
 
+    /// <summary>
+    /// Parameterless constructor for Shell / DataTemplate instantiation with DI service resolution fallback.
+    /// </summary>
+    public MapSearchPage() : this(
+        Application.Current?.Handler?.MauiContext?.Services?.GetService<MapSearchViewModel>()
+        ?? IPlatformApplication.Current?.Services?.GetService<MapSearchViewModel>()
+        ?? new MapSearchViewModel())
+    {
+    }
+
     public MapSearchPage(MapSearchViewModel viewModel)
     {
         InitializeComponent();

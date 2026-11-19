@@ -6,9 +6,10 @@ echo    RoomToRentRadar - Khoi Tao Moi Truong Cho Nguoi Moi
 echo ========================================================
 echo.
 echo [1/3] Cai dat User Secrets cho Backend (.NET Secrets)...
-dotnet user-secrets set "Jwt:Secret" "RoomToRentRadar_Local_Dev_Secret_Key_At_Least_32_Bytes_Long_2026!" --project src/RoomToRentRadar.Bootstrap
+for /f "delims=" %%s in ('powershell -NoProfile -Command "$b = New-Object byte[] 32; [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [Convert]::ToBase64String($b)"') do set "JWT_SECRET=%%s"
+dotnet user-secrets set "Jwt:Secret" "%JWT_SECRET%" --project src/RoomToRentRadar.Bootstrap
 dotnet user-secrets set "CosmosDb:RoomsContainerName" "RoomDetails" --project src/RoomToRentRadar.Bootstrap
-echo       -> Da luu secrets cuc bo tren may cua ban (Khong bi day len Git).
+echo       -> Da tao ngau nhien JWT Secret (32 bytes) va luu secrets cuc bo (Khong bi day len Git).
 echo.
 echo [2/3] Kiem tra va thiet lap cau noi USB cho thiet bi Android (adb reverse)...
 where adb >nul 2>nul
