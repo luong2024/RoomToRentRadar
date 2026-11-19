@@ -94,7 +94,7 @@
                             BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
                             HeightRequest="44"
                             MinimumHeightRequest="44"
-                            SemanticProperties.Description="Đăng tin cho thuê"
+                            SemanticProperties.Description="Post Rental Listing"
                             StrokeThickness="0"
                             StrokeShape="RoundRectangle 14"
                             VerticalOptions="Center">
@@ -112,7 +112,7 @@
                                 <Label
                                     FontAttributes="Bold"
                                     FontSize="12"
-                                    Text="Đăng tin"
+                                    Text="Post Listing"
                                     TextColor="White"
                                     VerticalOptions="Center" />
                             </HorizontalStackLayout>

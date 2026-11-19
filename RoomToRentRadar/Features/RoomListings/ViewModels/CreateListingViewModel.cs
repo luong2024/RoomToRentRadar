@@ -122,7 +122,7 @@ public partial class CreateListingViewModel : ObservableObject
 
     public string DescriptionCharacterCountText => $"{Description?.Length ?? 0} / 2000";
 
-    public string PhotosCountText => $"Đã chọn: {Photos.Count} / {MinPhotosCount} ảnh tối thiểu";
+    public string PhotosCountText => $"Selected: {Photos.Count} / {MinPhotosCount} min photos";
 
     public bool HasMinimumPhotos => Photos.Count >= MinPhotosCount;
 

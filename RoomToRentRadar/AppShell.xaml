@@ -227,12 +227,12 @@
 
     <ShellContent
         x:Name="CreateListingShellContent"
-        Title="Đăng tin cho thuê"
+        Title="Post Rental Listing"
         Icon="{StaticResource IconAdd}"
         ContentTemplate="{DataTemplate roomViews:CreateListingPage}"
         Route="create-listing"
-        SemanticProperties.Description="Tạo tin đăng cho thuê phòng trọ"
-        SemanticProperties.Hint="Mở form tạo tin đăng cho thuê phòng" />
+        SemanticProperties.Description="Post rental room listing"
+        SemanticProperties.Hint="Open rental listing creation form" />
 
     <Shell.FlyoutFooter>
         <VerticalStackLayout

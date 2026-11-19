@@ -9,7 +9,7 @@
     xmlns:models="clr-namespace:RoomToRentRadar.Features.RoomListings.Models"
     xmlns:vm="clr-namespace:RoomToRentRadar.Features.RoomListings.ViewModels"
     x:Name="ThisPage"
-    Title="Đăng tin cho thuê"
+    Title="Post Rental Listing"
     x:DataType="vm:CreateListingViewModel"
     BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}"
     Shell.NavBarIsVisible="False">
@@ -52,7 +52,7 @@
                             <Label
                                 FontAttributes="Bold"
                                 FontSize="13"
-                                Text="Quay lại"
+                                Text="Back"
                                 TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
                                 VerticalOptions="Center" />
                         </HorizontalStackLayout>
@@ -62,11 +62,11 @@
                         <Label
                             FontAttributes="Bold"
                             FontSize="18"
-                            Text="Đăng tin cho thuê phòng"
+                            Text="Post Rental Listing"
                             TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
                         <Label
                             FontSize="12.5"
-                            Text="Điền đầy đủ thông tin phòng trọ để gửi ban quản trị phê duyệt"
+                            Text="Fill in complete room details to submit for administrator approval"
                             TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
                     </VerticalStackLayout>
                 </Grid>
@@ -139,7 +139,7 @@
                             <Label
                                 FontAttributes="Bold"
                                 FontSize="15"
-                                Text="1. Thông tin cơ bản"
+                                Text="1. Basic Information"
                                 TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
                                 VerticalOptions="Center" />
                         </HorizontalStackLayout>
@@ -150,7 +150,7 @@
                         <VerticalStackLayout Spacing="5">
                             <Grid ColumnDefinitions="*,Auto">
                                 <Label
-                                    Text="Tiêu đề bài đăng *"
+                                    Text="Listing Title *"
                                     FontSize="13"
                                     FontAttributes="Bold"
                                     TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
@@ -170,7 +170,7 @@
                                 StrokeShape="RoundRectangle 12">
                                 <Entry
                                     Text="{Binding Title, Mode=TwoWay}"
-                                    Placeholder="Ví dụ: Phòng trọ khép kín mới xây gần cổng trường ICTU"
+                                    Placeholder="e.g. Modern self-contained room near ICTU campus gate"
                                     PlaceholderColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
                                     FontSize="14"
                                     TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
@@ -187,7 +187,7 @@
                         <!-- Loại phòng -->
                         <VerticalStackLayout Spacing="6">
                             <Label
-                                Text="Loại hình cho thuê *"
+                                Text="Property Type *"
                                 FontSize="13"
                                 FontAttributes="Bold"
                                 TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
@@ -213,8 +213,8 @@
                                     </Border.GestureRecognizers>
                                     <VerticalStackLayout Spacing="3" HorizontalOptions="Center">
                                         <Label Text="🏠" FontSize="20" HorizontalOptions="Center" />
-                                        <Label Text="Phòng trọ" FontAttributes="Bold" FontSize="13" HorizontalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
-                                        <Label Text="Dãy trọ sinh viên" FontSize="11" HorizontalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                        <Label Text="Boarding Room" FontAttributes="Bold" FontSize="13" HorizontalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                        <Label Text="Student Boarding" FontSize="11" HorizontalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
                                     </VerticalStackLayout>
                                 </Border>
 
@@ -238,8 +238,8 @@
                                     </Border.GestureRecognizers>
                                     <VerticalStackLayout Spacing="3" HorizontalOptions="Center">
                                         <Label Text="🏢" FontSize="20" HorizontalOptions="Center" />
-                                        <Label Text="Chung cư mini" FontAttributes="Bold" FontSize="13" HorizontalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
-                                        <Label Text="Khép kín hiện đại" FontSize="11" HorizontalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                        <Label Text="Mini Apartment" FontAttributes="Bold" FontSize="13" HorizontalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                        <Label Text="Modern Studio" FontSize="11" HorizontalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
                                     </VerticalStackLayout>
                                 </Border>
 
@@ -263,8 +263,8 @@
                                     </Border.GestureRecognizers>
                                     <VerticalStackLayout Spacing="3" HorizontalOptions="Center">
                                         <Label Text="🏡" FontSize="20" HorizontalOptions="Center" />
-                                        <Label Text="Nhà nguyên căn" FontAttributes="Bold" FontSize="13" HorizontalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
-                                        <Label Text="Ở nhóm bạn bè" FontSize="11" HorizontalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                        <Label Text="Whole House" FontAttributes="Bold" FontSize="13" HorizontalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                        <Label Text="Group Sharing" FontSize="11" HorizontalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
                                     </VerticalStackLayout>
                                 </Border>
 
@@ -288,8 +288,8 @@
                                     </Border.GestureRecognizers>
                                     <VerticalStackLayout Spacing="3" HorizontalOptions="Center">
                                         <Label Text="🛏️" FontSize="20" HorizontalOptions="Center" />
-                                        <Label Text="Ký túc xá" FontAttributes="Bold" FontSize="13" HorizontalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
-                                        <Label Text="Giường tầng, ghép" FontSize="11" HorizontalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                        <Label Text="Dormitory" FontAttributes="Bold" FontSize="13" HorizontalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                        <Label Text="Bunk Bed / Shared" FontSize="11" HorizontalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
                                     </VerticalStackLayout>
                                 </Border>
                             </Grid>
@@ -305,7 +305,7 @@
                         <VerticalStackLayout Spacing="5">
                             <Grid ColumnDefinitions="*,Auto">
                                 <Label
-                                    Text="Diện tích phòng * (m²)"
+                                    Text="Room Area * (m²)"
                                     FontSize="13"
                                     FontAttributes="Bold"
                                     TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
@@ -334,7 +334,7 @@
                                     <Entry
                                         Grid.Column="1"
                                         Text="{Binding AreaText, Mode=TwoWay}"
-                                        Placeholder="Từ 5 đến 200 m² (ví dụ: 25)"
+                                        Placeholder="5 to 200 m² (e.g. 25)"
                                         PlaceholderColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
                                         Keyboard="Numeric"
                                         FontSize="14"
@@ -378,7 +378,7 @@
                             <Label
                                 FontAttributes="Bold"
                                 FontSize="15"
-                                Text="2. Địa chỉ phòng trọ"
+                                Text="2. Room Address"
                                 TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
                                 VerticalOptions="Center" />
                         </HorizontalStackLayout>
@@ -387,7 +387,7 @@
 
                         <VerticalStackLayout Spacing="5">
                             <Label
-                                Text="Địa chỉ chi tiết *"
+                                Text="Detailed Address *"
                                 FontSize="13"
                                 FontAttributes="Bold"
                                 TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
@@ -409,7 +409,7 @@
                                     <Entry
                                         Grid.Column="1"
                                         Text="{Binding Address, Mode=TwoWay}"
-                                        Placeholder="Số nhà, ngõ/ngách, tên đường, xã/phường (TP. Thái Nguyên)"
+                                        Placeholder="House number, street name, ward (Thai Nguyen City)"
                                         PlaceholderColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
                                         FontSize="14"
                                         TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
@@ -444,7 +444,7 @@
                             <Label
                                 FontAttributes="Bold"
                                 FontSize="15"
-                                Text="3. Giá thuê và Tiền cọc"
+                                Text="3. Rent &amp; Deposit"
                                 TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
                                 VerticalOptions="Center" />
                         </HorizontalStackLayout>
@@ -455,7 +455,7 @@
                         <VerticalStackLayout Spacing="5">
                             <Grid ColumnDefinitions="*,Auto">
                                 <Label
-                                    Text="Giá thuê hàng tháng * (VND)"
+                                    Text="Monthly Rent * (VND)"
                                     FontSize="13"
                                     FontAttributes="Bold"
                                     TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
@@ -484,7 +484,7 @@
                                     <Entry
                                         Grid.Column="1"
                                         Text="{Binding PriceText, Mode=TwoWay}"
-                                        Placeholder="100.000 đến 50.000.000 (ví dụ: 1500000)"
+                                        Placeholder="100,000 to 50,000,000 (e.g. 1500000)"
                                         PlaceholderColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
                                         Keyboard="Numeric"
                                         FontSize="14"
@@ -492,7 +492,7 @@
                                         VerticalTextAlignment="Center" />
                                     <Label
                                         Grid.Column="2"
-                                        Text="₫/tháng"
+                                        Text="₫/mo"
                                         FontSize="13"
                                         FontAttributes="Bold"
                                         TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
@@ -511,7 +511,7 @@
                         <VerticalStackLayout Spacing="5">
                             <Grid ColumnDefinitions="*,Auto">
                                 <Label
-                                    Text="Tiền đặt cọc * (VND - Nhập 0 nếu không cần cọc)"
+                                    Text="Deposit * (VND - Enter 0 if no deposit required)"
                                     FontSize="13"
                                     FontAttributes="Bold"
                                     TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
@@ -540,7 +540,7 @@
                                     <Entry
                                         Grid.Column="1"
                                         Text="{Binding DepositText, Mode=TwoWay}"
-                                        Placeholder="Từ 0 đến 3 lần tiền thuê (ví dụ: 1000000)"
+                                        Placeholder="0 to 3x monthly rent (e.g. 1000000)"
                                         PlaceholderColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
                                         Keyboard="Numeric"
                                         FontSize="14"
@@ -585,7 +585,7 @@
                                 <Label
                                     FontAttributes="Bold"
                                     FontSize="15"
-                                    Text="4. Hình ảnh phòng trọ *"
+                                    Text="4. Room Photos *"
                                     TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
                                     VerticalOptions="Center" />
                             </HorizontalStackLayout>
@@ -644,12 +644,12 @@
                                     FontAttributes="Bold"
                                     FontSize="14"
                                     HorizontalOptions="Center"
-                                    Text="Chọn ảnh từ thiết bị"
+                                    Text="Upload Photos from Device"
                                     TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
                                 <Label
                                     FontSize="11.5"
                                     HorizontalOptions="Center"
-                                    Text="Hỗ trợ JPG, PNG (tối đa 10 MB/ảnh, chọn từ 3 đến 20 ảnh)"
+                                    Text="Supports JPG, PNG (max 10 MB/photo, 3 to 20 photos)"
                                     TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
                             </VerticalStackLayout>
                         </Border>
@@ -688,7 +688,7 @@
                                                 StrokeShape="RoundRectangle 6"
                                                 IsVisible="{Binding IsCover}">
                                                 <Label
-                                                    Text="Bìa"
+                                                    Text="Cover"
                                                     TextColor="White"
                                                     FontSize="10"
                                                     FontAttributes="Bold" />
@@ -764,7 +764,7 @@
                                 <Label
                                     FontAttributes="Bold"
                                     FontSize="15"
-                                    Text="5. Mô tả chi tiết (Tùy chọn)"
+                                    Text="5. Detailed Description (Optional)"
                                     TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
                                     VerticalOptions="Center" />
                             </HorizontalStackLayout>
@@ -785,7 +785,7 @@
                             StrokeShape="RoundRectangle 12">
                             <Editor
                                 Text="{Binding Description, Mode=TwoWay}"
-                                Placeholder="Thông tin thêm về tiện ích (điều hòa, nóng lạnh, wifi), giờ giấc, nội quy phòng..."
+                                Placeholder="Additional info about amenities (AC, water heater, wifi), curfew, house rules..."
                                 PlaceholderColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
                                 HeightRequest="110"
                                 FontSize="14"
@@ -828,7 +828,7 @@
                 <!-- Cancel / Back Button -->
                 <Button
                     Grid.Column="0"
-                    Text="Hủy"
+                    Text="Cancel"
                     Command="{Binding GoBackCommand}"
                     BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}"
                     TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
@@ -841,7 +841,7 @@
                 <!-- Submit Button -->
                 <Button
                     Grid.Column="1"
-                    Text="Gửi duyệt bài đăng ➔"
+                    Text="Submit Listing ➔"
                     Command="{Binding SubmitListingCommand}"
                     IsEnabled="{Binding CanSubmit}"
                     BackgroundColor="{StaticResource PrimaryBrand}"
@@ -855,7 +855,7 @@
                     </Button.Shadow>
                     <Button.Triggers>
                         <DataTrigger TargetType="Button" Binding="{Binding IsSubmitting}" Value="True">
-                            <Setter Property="Text" Value="Đang gửi duyệt..." />
+                            <Setter Property="Text" Value="Submitting..." />
                             <Setter Property="Opacity" Value="0.7" />
                         </DataTrigger>
                     </Button.Triggers>
