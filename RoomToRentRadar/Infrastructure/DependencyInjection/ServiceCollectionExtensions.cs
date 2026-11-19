@@ -3,6 +3,9 @@ using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Storage;
 using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Interfaces;
+using RoomToRentRadar.Features.Comparison.Services;
+using RoomToRentRadar.Features.Comparison.ViewModels;
+using RoomToRentRadar.Features.Comparison.Views;
 using RoomToRentRadar.Features.Favourites.ViewModels;
 using RoomToRentRadar.Features.Favourites.Views;
 using RoomToRentRadar.Features.Home.ViewModels;
@@ -58,6 +61,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IErrorHandler, ModalErrorHandler>();
         services.AddSingleton<IPreferences>(Preferences.Default);
         services.AddSingleton<ICampusSelectionStore, PreferencesCampusSelectionStore>();
+        services.AddSingleton<IRoomComparisonStore, RoomComparisonStore>();
         services.AddSingleton<ITravelEstimatesClient>(serviceProvider =>
         {
             var handler = serviceProvider.GetRequiredService<AuthenticatedHttpMessageHandler>();
@@ -84,6 +88,8 @@ public static class ServiceCollectionExtensions
         services.AddTransient<FavouritesViewModel>();
         services.AddTransient<FavouritesPage>();
         services.AddTransient<DirectionsPage>();
+        services.AddTransient<ComparisonViewModel>();
+        services.AddTransient<ComparisonPage>();
         services.AddTransient<LoginViewModel>();
         services.AddTransient<LoginPage>();
         services.AddTransient<MyListingsViewModel>();

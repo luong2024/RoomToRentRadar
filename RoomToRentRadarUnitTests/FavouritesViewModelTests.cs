@@ -332,6 +332,9 @@ public class FavouritesViewModelTests
             double? originLng)
             => throw new NotSupportedException("The favourites screen does not open directions.");
 
+        public Task GoToComparisonAsync()
+            => throw new NotSupportedException("The favourites screen does not open room comparison.");
+
         public Task GoBackAsync() => throw new NotSupportedException("The favourites screen does not go back directly.");
     }
 }

@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:RoomToRentRadar.Features.Home.ViewModels"
-             x:Class="RoomToRentRadar.Features.Home.Views.HomePropertyCard" x:DataType="vm:HomeListingItem">
+             x:Class="RoomToRentRadar.Features.Home.Views.HomePropertyCard"
+             x:Name="CardRoot"
+             x:DataType="vm:HomeListingItem">
     <Border StrokeThickness="0" StrokeShape="RoundRectangle 18" Padding="0" WidthRequest="252"
             SemanticProperties.Description="{Binding Title}">
         <Border.Shadow>
@@ -15,6 +17,32 @@
                     <Border Margin="10" Padding="11,6" HorizontalOptions="Start" VerticalOptions="End" StrokeThickness="0"
                             StrokeShape="RoundRectangle 9" BackgroundColor="#BF3B332C">
                         <Label Text="{Binding PriceText}" FontSize="13.5" FontFamily="OpenSansSemibold" TextColor="White" />
+                    </Border>
+                    <Border WidthRequest="34" HeightRequest="34" Margin="10" Padding="0"
+                            HorizontalOptions="End" VerticalOptions="Start"
+                            StrokeThickness="0" StrokeShape="RoundRectangle 17"
+                            BackgroundColor="#E6FFFFFF"
+                            AutomationId="HomeCardCompare"
+                            SemanticProperties.Description="Thêm hoặc bỏ phòng khỏi bảng so sánh">
+                        <Border.Triggers>
+                            <DataTrigger TargetType="Border" Binding="{Binding IsCompared}" Value="True">
+                                <Setter Property="BackgroundColor" Value="{StaticResource Accent}" />
+                            </DataTrigger>
+                        </Border.Triggers>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer
+                                Command="{Binding CompareCommand, Source={x:Reference CardRoot}}"
+                                CommandParameter="{Binding .}" />
+                        </Border.GestureRecognizers>
+                        <Image Source="compare_icon.png" WidthRequest="18" HeightRequest="18"
+                               HorizontalOptions="Center" VerticalOptions="Center"
+                               InputTransparent="True">
+                            <Image.Triggers>
+                                <DataTrigger TargetType="Image" Binding="{Binding IsCompared}" Value="True">
+                                    <Setter Property="Source" Value="compare_icon_light.png" />
+                                </DataTrigger>
+                            </Image.Triggers>
+                        </Image>
                     </Border>
                 </Grid>
             </Border>

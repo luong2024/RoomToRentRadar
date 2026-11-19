@@ -3,6 +3,8 @@ using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Core.Interfaces;
+using RoomToRentRadar.Features.Comparison.Models;
+using RoomToRentRadar.Features.Comparison.Services;
 using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Shared.Listings;
 
@@ -17,7 +19,9 @@ public partial class HomeViewModel : ObservableObject
     private readonly IApiClient _apiClient;
     private readonly IErrorHandler _errorHandler;
     private readonly INavigationService _navigationService;
+    private readonly IRoomComparisonStore _comparisonStore;
     private CancellationTokenSource? _searchCancellation;
+    private CancellationTokenSource? _compareHintCancellation;
     private readonly HashSet<Guid> _listingIds = new();
     private string? _nextCursor;
     private int _generation;
@@ -81,11 +85,19 @@ public partial class HomeViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsTotalCountCapped { get; set; }
 
-    public HomeViewModel(IApiClient apiClient, IErrorHandler errorHandler, INavigationService navigationService)
+    [ObservableProperty]
+    public partial string CompareHint { get; set; } = string.Empty;
+
+    public HomeViewModel(
+        IApiClient apiClient,
+        IErrorHandler errorHandler,
+        INavigationService navigationService,
+        IRoomComparisonStore comparisonStore)
     {
         _apiClient = apiClient;
         _errorHandler = errorHandler;
         _navigationService = navigationService;
+        _comparisonStore = comparisonStore;
         ResultsText = "Đang tải phòng trọ…";
         EmptyMessage = "Đang tải phòng trọ…";
         ErrorMessage = string.Empty;
@@ -175,6 +187,16 @@ public partial class HomeViewModel : ObservableObject
 
     public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
 
+    public int ComparisonCount => _comparisonStore.Rooms.Count;
+
+    public bool HasComparison => ComparisonCount > 0;
+
+    public bool ShowComparisonBar => HasComparison && !IsSearchOpen;
+
+    public string ComparisonBarText => $"So sánh ({ComparisonCount})";
+
+    public bool HasCompareHint => !string.IsNullOrEmpty(CompareHint);
+
     public bool CanLoadMore => HasMore
         && _nextCursor is not null
         && !IsBusy
@@ -183,6 +205,10 @@ public partial class HomeViewModel : ObservableObject
         && Listings.Count > 0;
 
     partial void OnIsLoadingMoreChanged(bool value) => OnPropertyChanged(nameof(CanLoadMore));
+
+    partial void OnIsSearchOpenChanged(bool value) => OnPropertyChanged(nameof(ShowComparisonBar));
+
+    partial void OnCompareHintChanged(string value) => OnPropertyChanged(nameof(HasCompareHint));
 
     partial void OnIsBusyChanged(bool value)
     {
@@ -298,13 +324,20 @@ public partial class HomeViewModel : ObservableObject
     [RelayCommand(AllowConcurrentExecutions = false)]
     private async Task RefreshAsync(CancellationToken cancellationToken)
     {
-        if (IsBusy)
+        // SfPullToRefresh raises its own spinning state on pull without touching
+        // the bound property, so toggle it here to always emit a change that ends it.
+        IsRefreshing = true;
+        try
+        {
+            if (IsBusy)
+                return;
+
+            await LoadFirstPageAsync(cancellationToken);
+        }
+        finally
         {
             IsRefreshing = false;
-            return;
         }
-
-        await LoadFirstPageAsync(cancellationToken);
     }
 
     [RelayCommand(AllowConcurrentExecutions = false)]
@@ -397,6 +430,92 @@ public partial class HomeViewModel : ObservableObject
             // Clearing the selection lets the same room be tapped again.
             SelectedListing = null;
         }
+    }
+
+    [RelayCommand]
+    private void ToggleCompare(HomeListingItem? listing)
+    {
+        if (listing is null)
+        {
+            return;
+        }
+
+        if (_comparisonStore.Contains(listing.Id))
+        {
+            _comparisonStore.Remove(listing.Id);
+        }
+        else
+        {
+            var candidate = new ComparisonCandidate(
+                listing.Id,
+                listing.Title,
+                listing.CoverPhotoUrl,
+                listing.Price,
+                listing.AreaM2);
+            if (_comparisonStore.TryAdd(candidate) == RoomComparisonAddResult.LimitReached)
+            {
+                ShowCompareHint($"Chỉ so sánh được tối đa {_comparisonStore.MaxRooms} phòng.");
+                return;
+            }
+        }
+
+        listing.IsCompared = _comparisonStore.Contains(listing.Id);
+        NotifyComparisonState();
+    }
+
+    [RelayCommand]
+    private async Task OpenComparisonAsync()
+    {
+        try
+        {
+            await _navigationService.GoToComparisonAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorHandler.HandleError(ex);
+        }
+    }
+
+    public void RefreshComparisonState()
+    {
+        foreach (var listing in Listings)
+        {
+            listing.IsCompared = _comparisonStore.Contains(listing.Id);
+        }
+
+        NotifyComparisonState();
+    }
+
+    private void NotifyComparisonState()
+    {
+        OnPropertyChanged(nameof(ComparisonCount));
+        OnPropertyChanged(nameof(HasComparison));
+        OnPropertyChanged(nameof(ShowComparisonBar));
+        OnPropertyChanged(nameof(ComparisonBarText));
+    }
+
+    private void ShowCompareHint(string message)
+    {
+        CompareHint = message;
+        _compareHintCancellation?.Cancel();
+        _compareHintCancellation?.Dispose();
+        var cancellation = new CancellationTokenSource();
+        _compareHintCancellation = cancellation;
+        _ = ClearCompareHintAsync(cancellation.Token);
+    }
+
+    private async Task ClearCompareHintAsync(CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(2500, token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        CompareHint = string.Empty;
     }
 
     [RelayCommand]
@@ -809,7 +928,11 @@ public partial class HomeViewModel : ObservableObject
         foreach (var listing in listings)
         {
             if (_listingIds.Add(listing.Id))
-                Listings.Add(HomeListingItem.FromDto(listing));
+            {
+                var item = HomeListingItem.FromDto(listing);
+                item.IsCompared = _comparisonStore.Contains(item.Id);
+                Listings.Add(item);
+            }
         }
         OnPropertyChanged(nameof(CanLoadMore));
         OnPropertyChanged(nameof(ShowEmptyState));

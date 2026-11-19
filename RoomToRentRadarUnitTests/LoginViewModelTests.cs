@@ -268,6 +268,9 @@ public class LoginViewModelTests
             double? originLng)
             => throw new NotSupportedException("The login screen does not open directions.");
 
+        public Task GoToComparisonAsync()
+            => throw new NotSupportedException("The login screen does not open room comparison.");
+
         public Task GoBackAsync()
         {
             GoBackCount++;

@@ -27,6 +27,9 @@ public sealed class ShellNavigationService : INavigationService
         return GetShell().GoToAsync($"{AppRoutes.Directions}?{query}");
     }
 
+    public Task GoToComparisonAsync()
+        => GetShell().GoToAsync(AppRoutes.Comparison);
+
     public Task GoBackAsync()
         => GetShell().GoToAsync("..");
 
