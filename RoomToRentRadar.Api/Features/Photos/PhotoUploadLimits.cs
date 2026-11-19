@@ -9,12 +9,12 @@ public static class PhotoUploadLimits
     public const int MaxThumbnailEdge = 480;
     public const int OriginalJpegQuality = 85;
     public const int ThumbnailJpegQuality = 80;
-    public const long MaxRequestBodyBytes = 100L * 1024 * 1024;
+    // Reserve space for multipart headers and form fields in addition to ten full-size files.
+    public const long MaxRequestBodyBytes = MaxFilesPerRequest * MaxFileBytes + 1024 * 1024;
 
     public static readonly IReadOnlySet<string> AllowedContentTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "image/jpeg",
-        "image/png",
-        "image/webp"
+        "image/png"
     };
 }

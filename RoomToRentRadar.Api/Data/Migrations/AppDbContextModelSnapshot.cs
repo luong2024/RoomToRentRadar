@@ -223,6 +223,30 @@ namespace RoomToRentRadar.Api.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.ListingFavourite", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("user_id");
+
+                    b.Property<Guid>("ListingId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("listing_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("created_at");
+
+                    b.HasKey("UserId", "ListingId");
+
+                    b.HasIndex("ListingId");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_listing_favourites_user_created");
+
+                    b.ToTable("listing_favourites", (string)null);
+                });
+
             modelBuilder.Entity("RoomToRentRadar.Api.Domain.ListingHouseRuleVersion", b =>
                 {
                     b.Property<Guid>("Id")
@@ -791,6 +815,21 @@ namespace RoomToRentRadar.Api.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Listing");
+                });
+
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.ListingFavourite", b =>
+                {
+                    b.HasOne("RoomToRentRadar.Api.Domain.Listing", null)
+                        .WithMany()
+                        .HasForeignKey("ListingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RoomToRentRadar.Api.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("RoomToRentRadar.Api.Domain.ListingHouseRuleVersion", b =>

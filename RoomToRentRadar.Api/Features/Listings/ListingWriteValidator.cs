@@ -7,8 +7,6 @@ namespace RoomToRentRadar.Api.Features.Listings;
 
 public static class ListingWriteValidator
 {
-    // US08 caps listing-photo uploads at JPEG/PNG; the legacy /photos endpoints
-    // keep their wider WebP set.
     private static readonly IReadOnlySet<string> SupportedPhotoContentTypes =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {

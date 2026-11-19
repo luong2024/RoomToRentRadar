@@ -10,6 +10,28 @@ public sealed class ListingManagementService(
     AppDbContext dbContext,
     ListingPhotoWriter photoWriter)
 {
+    public async Task<IReadOnlyList<ManagedListingDto>> GetMineAsync(
+        Guid ownerId,
+        int limit,
+        int offset,
+        CancellationToken cancellationToken)
+    {
+        var listings = await dbContext.Listings
+            .AsNoTracking()
+            .Where(x => x.OwnerId == ownerId)
+            .OrderByDescending(x => x.UpdatedAt)
+            .ThenBy(x => x.Id)
+            .Skip(offset)
+            .Take(limit)
+            .Include(x => x.Photos)
+            .Include(x => x.Amenities)
+            .Include(x => x.Rules)
+            .AsSplitQuery()
+            .ToListAsync(cancellationToken);
+
+        return listings.Select(ToManaged).ToList();
+    }
+
     public async Task<ListingWriteResult<ManagedListingDto>> CreateAsync(
         Guid ownerId,
         string defaultLandlordName,

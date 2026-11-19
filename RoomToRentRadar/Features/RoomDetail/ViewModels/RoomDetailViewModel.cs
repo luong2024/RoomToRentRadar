@@ -42,9 +42,29 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
             [AmenityCode.PetAllowed] = "Pets allowed"
         };
 
+    private static readonly IReadOnlyDictionary<AmenityCode, string> VietnameseAmenityLabelsByCode =
+        new Dictionary<AmenityCode, string>
+        {
+            [AmenityCode.Wifi] = "Wi-Fi tốc độ cao",
+            [AmenityCode.AirConditioner] = "Điều hòa",
+            [AmenityCode.Parking] = "Chỗ để xe",
+            [AmenityCode.WashingMachine] = "Máy giặt",
+            [AmenityCode.Refrigerator] = "Tủ lạnh",
+            [AmenityCode.Kitchen] = "Khu vực bếp",
+            [AmenityCode.PrivateBathroom] = "WC riêng",
+            [AmenityCode.Balcony] = "Ban công",
+            [AmenityCode.Elevator] = "Thang máy",
+            [AmenityCode.Security] = "An ninh 24/7",
+            [AmenityCode.Gym] = "Phòng gym",
+            [AmenityCode.Pool] = "Hồ bơi",
+            [AmenityCode.PetAllowed] = "Cho nuôi thú cưng"
+        };
+
     private readonly IApiClient _apiClient;
     private readonly IErrorHandler _errorHandler;
     private readonly INavigationService _navigationService;
+    private readonly IFavouritesService _favouritesService;
+    private readonly IUndoService _undoService;
 
     private Guid? _listingId;
 
@@ -73,6 +93,21 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     public partial string RoomTypeText { get; set; }
 
     [ObservableProperty]
+    public partial string StatusDisplayText { get; set; }
+
+    [ObservableProperty]
+    public partial string RoomTypeDisplayText { get; set; }
+
+    [ObservableProperty]
+    public partial string BedroomsText { get; set; }
+
+    [ObservableProperty]
+    public partial string PhotoSource { get; set; }
+
+    [ObservableProperty]
+    public partial IReadOnlyList<string> AmenityDisplayLabels { get; set; }
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasAmenities))]
     public partial IReadOnlyList<string> AmenityLabels { get; set; }
 
@@ -98,16 +133,31 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     [NotifyPropertyChangedFor(nameof(HasSimilarStatusMessage))]
     public partial string SimilarStatusMessage { get; set; }
 
-    public RoomDetailViewModel(IApiClient apiClient, IErrorHandler errorHandler, INavigationService navigationService)
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FavouriteGlyph))]
+    public partial bool IsFavourite { get; set; }
+
+    public RoomDetailViewModel(
+        IApiClient apiClient,
+        IErrorHandler errorHandler,
+        INavigationService navigationService,
+        IFavouritesService favouritesService,
+        IUndoService undoService)
     {
         _apiClient = apiClient;
         _errorHandler = errorHandler;
         _navigationService = navigationService;
+        _favouritesService = favouritesService;
+        _undoService = undoService;
         PostedOnText = string.Empty;
         UpdatedOnText = string.Empty;
         StatusText = string.Empty;
         RoomTypeText = string.Empty;
+        StatusDisplayText = string.Empty;
+        RoomTypeDisplayText = string.Empty;
+        PhotoSource = "room_1.png";
         AmenityLabels = [];
+        AmenityDisplayLabels = [];
         Rules = [];
         HouseRules = null;
         LandlordPhone = string.Empty;
@@ -115,6 +165,8 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     }
 
     public ObservableCollection<ListingSummaryDto> SimilarRooms { get; } = [];
+
+    public string FavouriteGlyph => IsFavourite ? "♥" : "♡";
 
     public bool IsLoadingVisible => State is RoomDetailState.Initial or RoomDetailState.Loading;
 
@@ -187,6 +239,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
                         ?? throw new InvalidOperationException("The listing detail response was empty.");
                     ShowDetail(detail);
                     State = RoomDetailState.Content;
+                    await RefreshFavouriteStateAsync(listingId, cancellationToken);
                     await RefreshContactAsync(cancellationToken);
                     break;
             }
@@ -224,6 +277,37 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         try
         {
             await _navigationService.GoToLoginAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorHandler.HandleError(ex);
+        }
+    }
+
+    [RelayCommand(AllowConcurrentExecutions = false)]
+    private async Task ToggleFavouriteAsync(CancellationToken cancellationToken)
+    {
+        if (_listingId is not { } listingId)
+            return;
+
+        try
+        {
+            if (IsFavourite)
+            {
+                var removed = await _favouritesService.RemoveAsync(listingId, cancellationToken);
+                IsFavourite = false;
+
+                if (removed is not null)
+                {
+                    await _undoService.OfferRemovalUndoAsync(removed, cancellationToken);
+                    IsFavourite = _favouritesService.IsFavourite(listingId);
+                }
+            }
+            else
+            {
+                await _favouritesService.AddAsync(listingId, cancellationToken);
+                IsFavourite = true;
+            }
         }
         catch (Exception ex)
         {
@@ -271,9 +355,44 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         AmenityLabels = detail.Amenities
             .Select(code => AmenityLabelsByCode.TryGetValue(code, out var label) ? label : code.ToString())
             .ToList();
+        StatusDisplayText = detail.Status switch
+        {
+            ListingStatus.Draft => "Bản nháp",
+            ListingStatus.Published => "●  Còn trống",
+            ListingStatus.Hidden => "Đã ẩn",
+            ListingStatus.Removed => "Đã gỡ",
+            _ => "●  Còn trống"
+        };
+        RoomTypeDisplayText = detail.RoomType switch
+        {
+            RoomType.Studio => "Phòng Studio",
+            RoomType.House => "Nhà nguyên căn",
+            RoomType.SharedRoom => "Ở ghép",
+            RoomType.SingleRoom => "Phòng đơn",
+            _ => "Căn hộ"
+        };
+        BedroomsText = detail.Bedrooms > 0 ? $"{detail.Bedrooms} PN" : "Studio";
+        PhotoSource = $"room_{detail.Id.ToByteArray()[0] % 3 + 1}.png";
+        AmenityDisplayLabels = detail.Amenities
+            .Select(code => VietnameseAmenityLabelsByCode.TryGetValue(code, out var label) ? label : code.ToString())
+            .ToList();
         Rules = detail.Rules.ToList();
         HouseRules = detail.HouseRules;
         LandlordPhone = string.Empty;
+    }
+
+    private async Task RefreshFavouriteStateAsync(Guid listingId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _favouritesService.RefreshAsync(cancellationToken);
+            IsFavourite = _favouritesService.IsFavourite(listingId);
+        }
+        catch (Exception)
+        {
+            // The heart falls back to its empty state; the details stay usable.
+            IsFavourite = false;
+        }
     }
 
     private async Task LoadSimilarRoomsAsync(Guid listingId, CancellationToken cancellationToken)

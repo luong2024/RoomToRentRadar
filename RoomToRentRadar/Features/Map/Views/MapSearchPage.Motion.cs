@@ -10,6 +10,7 @@ public partial class MapSearchPage
     private bool _motionRefreshQueued;
     private bool _previewWasShown;
     private bool _savedWasShown;
+    private bool _notificationsWereShown;
     private bool _resultsWereShown;
 
     private void StartMotion()
@@ -20,6 +21,7 @@ public partial class MapSearchPage
         _motionActive = true;
         _previewWasShown = false;
         _savedWasShown = false;
+        _notificationsWereShown = false;
         _resultsWereShown = false;
         _model.PropertyChanged += OnMotionPropertyChanged;
         _ = RevealPanelAsync(HeaderPanel, -6);
@@ -31,7 +33,7 @@ public partial class MapSearchPage
         _motionActive = false;
         _motionRefreshQueued = false;
         _model.PropertyChanged -= OnMotionPropertyChanged;
-        foreach (var panel in new VisualElement[] { HeaderPanel, PreviewPanel, SavedPanel, ResultsPanel })
+        foreach (var panel in new VisualElement[] { HeaderPanel, PreviewPanel, SavedPanel, NotificationsPanel, ResultsPanel })
             ResetPanelMotion(panel);
     }
 
@@ -39,6 +41,7 @@ public partial class MapSearchPage
     {
         if (e.PropertyName is nameof(MapSearchPageModel.ShowPreviewCard)
             or nameof(MapSearchPageModel.IsSavedPanelOpen)
+            or nameof(MapSearchPageModel.IsNotificationsPanelOpen)
             or nameof(MapSearchPageModel.HasResults))
             QueueMotionRefresh();
     }
@@ -58,8 +61,9 @@ public partial class MapSearchPage
 
             UpdatePanelMotion(PreviewPanel, _model.ShowPreviewCard, ref _previewWasShown);
             UpdatePanelMotion(SavedPanel, _model.IsSavedPanelOpen, ref _savedWasShown);
+            UpdatePanelMotion(NotificationsPanel, _model.IsNotificationsPanelOpen, ref _notificationsWereShown);
             UpdatePanelMotion(ResultsPanel,
-                _model.HasResults && !_model.ShowPreviewCard && !_model.IsSavedPanelOpen,
+                _model.HasResults && !_model.ShowPreviewCard && !_model.IsSavedPanelOpen && !_model.IsNotificationsPanelOpen,
                 ref _resultsWereShown);
         });
     }

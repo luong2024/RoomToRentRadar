@@ -12,5 +12,7 @@ public interface INavigationService
         double? originLat,
         double? originLng);
 
+    Task GoToComparisonAsync();
+
     Task GoBackAsync();
 }

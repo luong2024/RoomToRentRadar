@@ -1,8 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
 using RoomToRentRadar.Core.Constants;
+using RoomToRentRadar.Features.Comparison.Views;
+using RoomToRentRadar.Features.Favourites.Views;
 using RoomToRentRadar.Features.Home.Views;
 using RoomToRentRadar.Features.Login.Views;
 using RoomToRentRadar.Features.Map.Views;
+using RoomToRentRadar.Features.ListingManagement.Views;
 using RoomToRentRadar.Features.RoomDetail.Views;
 
 namespace RoomToRentRadar;
@@ -13,9 +16,13 @@ public partial class AppShell : Shell
     {
         InitializeComponent();
         ExploreTab.ContentTemplate = new DataTemplate(() => services.GetRequiredService<HomePage>());
+        FavouritesTab.ContentTemplate = new DataTemplate(() => services.GetRequiredService<FavouritesPage>());
         MapTab.ContentTemplate = new DataTemplate(() => services.GetRequiredService<MapSearchPage>());
+        MyListingsTab.ContentTemplate = new DataTemplate(() => services.GetRequiredService<MyListingsPage>());
+        Routing.RegisterRoute("listing-editor", typeof(ListingEditorPage));
         Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(RoomDetailPage));
         Routing.RegisterRoute(AppRoutes.Login, typeof(LoginPage));
         Routing.RegisterRoute(AppRoutes.Directions, typeof(DirectionsPage));
+        Routing.RegisterRoute(AppRoutes.Comparison, typeof(ComparisonPage));
     }
 }

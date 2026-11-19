@@ -533,6 +533,63 @@ public sealed class ListingManagementEndpointTests
             Is.EqualTo(ListingWriteProblemFactory.ListingNotFound));
     }
 
+    [Test]
+    public async Task Mine_Anonymous_ReturnsUnauthorized()
+    {
+        using var response = await _client.GetAsync("/api/v1/listings/mine");
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
+    public async Task Mine_ReturnsOnlyOwnersListingsIncludingPendingAndHidden_WithPaging()
+    {
+        var token = await AccessTokenAsync();
+        var pending = await CreateListingAsync(token);
+        var hidden = await CreateListingAsync(token);
+        using var unpublish = await SendAsync(HttpMethod.Post,
+            $"/api/v1/listings/{hidden.Id}/unpublish", null, token);
+        Assert.That(unpublish.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        await CreateListingAsync(await SeedSecondUserAndLoginAsync());
+
+        using var response = await SendAsync(HttpMethod.Get, "/api/v1/listings/mine", null, token);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var mine = await response.Content.ReadFromJsonAsync<List<ManagedListingDto>>(ApiJson.Options);
+        Assert.That(mine, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(mine!.Select(x => x.Id), Is.EqualTo(new[] { hidden.Id, pending.Id }));
+            Assert.That(mine.Select(x => x.Status), Is.EqualTo(new[] { ListingStatus.Hidden, ListingStatus.PendingReview }));
+            Assert.That(mine.All(x => x.Photos.Count == 3), Is.True);
+        });
+
+        using var pageResponse = await SendAsync(HttpMethod.Get,
+            "/api/v1/listings/mine?limit=1&offset=1", null, token);
+        var page = await pageResponse.Content.ReadFromJsonAsync<List<ManagedListingDto>>(ApiJson.Options);
+        Assert.That(page!.Select(x => x.Id), Is.EqualTo(new[] { pending.Id }));
+    }
+
+    [TestCase("limit=0")]
+    [TestCase("limit=101")]
+    [TestCase("offset=-1")]
+    public async Task Mine_InvalidPagination_ReturnsBadRequest(string query)
+    {
+        using var response = await SendAsync(HttpMethod.Get,
+            $"/api/v1/listings/mine?{query}", null, await AccessTokenAsync());
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+    }
+
+    [Test]
+    public async Task Create_WebpDisguisedAsJpeg_IsRejectedWithoutSaving()
+    {
+        var photos = DefaultPhotos();
+        photos[1] = (TestImageFactory.CreateWebp(), "image/jpeg", "b.jpg");
+        using var form = CreateForm(DefaultFields(), photos);
+        using var response = await SendAsync(HttpMethod.Post, "/api/v1/listings", form, await AccessTokenAsync());
+        var problem = await ReadProblemAsync(response, HttpStatusCode.BadRequest);
+        Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo(ListingWriteProblemFactory.InvalidPhoto));
+        Assert.That(await OwnerListingCountAsync(), Is.Zero);
+    }
+
     private static (string Name, string Value)[] DefaultFields(
         string title = "Sunny room near campus",
         string price = "5000000") =>

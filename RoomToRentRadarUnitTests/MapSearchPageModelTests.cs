@@ -13,7 +13,7 @@ using RoomToRentRadar.Shared.SavedSearches;
 namespace RoomToRentRadarUnitTests;
 
 [TestFixture]
-public class MapSearchPageModelTests
+public partial class MapSearchPageModelTests
 {
     private static readonly GeoPoint A = new(10.0, 106.0);
     private static readonly GeoPoint B = new(10.0, 107.0);

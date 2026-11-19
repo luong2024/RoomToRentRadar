@@ -3,6 +3,8 @@ using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Core.Interfaces;
+using RoomToRentRadar.Features.Comparison.Models;
+using RoomToRentRadar.Features.Comparison.Services;
 using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Shared.Listings;
 
@@ -17,7 +19,9 @@ public partial class HomeViewModel : ObservableObject
     private readonly IApiClient _apiClient;
     private readonly IErrorHandler _errorHandler;
     private readonly INavigationService _navigationService;
+    private readonly IRoomComparisonStore _comparisonStore;
     private CancellationTokenSource? _searchCancellation;
+    private CancellationTokenSource? _compareHintCancellation;
     private readonly HashSet<Guid> _listingIds = new();
     private string? _nextCursor;
     private int _generation;
@@ -25,6 +29,13 @@ public partial class HomeViewModel : ObservableObject
     private RoomType? _draftRoomType;
     private CampusOption? _draftCampus;
     private int _draftDistanceKm = HomeFilterOptions.DefaultDistanceKm;
+    private bool _hasLoaded;
+
+    [ObservableProperty]
+    public partial bool IsSearchOpen { get; set; }
+
+    [ObservableProperty]
+    public partial string SearchQuery { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial bool IsBusy { get; set; }
@@ -74,11 +85,19 @@ public partial class HomeViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsTotalCountCapped { get; set; }
 
-    public HomeViewModel(IApiClient apiClient, IErrorHandler errorHandler, INavigationService navigationService)
+    [ObservableProperty]
+    public partial string CompareHint { get; set; } = string.Empty;
+
+    public HomeViewModel(
+        IApiClient apiClient,
+        IErrorHandler errorHandler,
+        INavigationService navigationService,
+        IRoomComparisonStore comparisonStore)
     {
         _apiClient = apiClient;
         _errorHandler = errorHandler;
         _navigationService = navigationService;
+        _comparisonStore = comparisonStore;
         ResultsText = "Đang tải phòng trọ…";
         EmptyMessage = "Đang tải phòng trọ…";
         ErrorMessage = string.Empty;
@@ -116,6 +135,12 @@ public partial class HomeViewModel : ObservableObject
         SelectRoomTypeChip(null);
         SelectCampusChip(null);
         SelectDistanceChip(HomeFilterOptions.DefaultDistanceKm);
+        UpdateCampusSuggestions();
+
+        PriceChips.Add(new FilterChip("Đến 2 triệu", ("", "2"), SelectPriceChip));
+        PriceChips.Add(new FilterChip("2–3 triệu", ("2", "3"), SelectPriceChip));
+        PriceChips.Add(new FilterChip("3–5 triệu", ("3", "5"), SelectPriceChip));
+        PriceChips.Add(new FilterChip("Từ 5 triệu", ("5", ""), SelectPriceChip));
     }
 
     public ObservableCollection<HomeListingItem> Listings { get; } = new();
@@ -128,6 +153,32 @@ public partial class HomeViewModel : ObservableObject
 
     public ObservableCollection<FilterChip> DistanceChips { get; } = new();
 
+    public ObservableCollection<FilterChip> PriceChips { get; } = new();
+
+    public ObservableCollection<CampusOption> CampusSuggestions { get; } = new();
+
+    public bool HasLoaded => _hasLoaded;
+
+    public int ActiveFilterCount => ActiveFilterChips.Count;
+
+    public string FilterButtonText => ActiveFilterCount > 0 ? $"Bộ lọc ({ActiveFilterCount})" : "Bộ lọc";
+
+    public string SearchDisplayText => _appliedFilters?.CampusLat is { } lat && _appliedFilters.CampusLng is { } lng
+        ? HomeFilterOptions.Campuses.FirstOrDefault(campus => campus.Lat == lat && campus.Lng == lng)?.Name ?? "Tìm phòng gần trường"
+        : "Bạn muốn ở gần trường nào?";
+
+    public bool HasSearchQuery => !string.IsNullOrWhiteSpace(SearchQuery);
+
+    public bool HasNoSuggestions => CampusSuggestions.Count == 0;
+
+    public bool HasListings => Listings.Count > 0;
+
+    public bool ShowLoadingState => IsBusy && Listings.Count == 0;
+
+    public bool ShowEmptyState => !IsBusy && !HasError && Listings.Count == 0;
+
+    public bool CanApplyFilters => !IsBusy;
+
     public bool HasActiveFilters => ActiveFilterChips.Count > 0;
 
     public bool IsDistanceEnabled => _draftCampus is not null;
@@ -135,6 +186,16 @@ public partial class HomeViewModel : ObservableObject
     public bool HasFilterError => !string.IsNullOrEmpty(FilterError);
 
     public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
+
+    public int ComparisonCount => _comparisonStore.Rooms.Count;
+
+    public bool HasComparison => ComparisonCount > 0;
+
+    public bool ShowComparisonBar => HasComparison && !IsSearchOpen;
+
+    public string ComparisonBarText => $"So sánh ({ComparisonCount})";
+
+    public bool HasCompareHint => !string.IsNullOrEmpty(CompareHint);
 
     public bool CanLoadMore => HasMore
         && _nextCursor is not null
@@ -145,9 +206,20 @@ public partial class HomeViewModel : ObservableObject
 
     partial void OnIsLoadingMoreChanged(bool value) => OnPropertyChanged(nameof(CanLoadMore));
 
+    partial void OnIsSearchOpenChanged(bool value) => OnPropertyChanged(nameof(ShowComparisonBar));
+
+    partial void OnCompareHintChanged(string value) => OnPropertyChanged(nameof(HasCompareHint));
+
     partial void OnIsBusyChanged(bool value)
     {
         OnPropertyChanged(nameof(CanLoadMore));
+        OnPropertyChanged(nameof(ShowLoadingState));
+        OnPropertyChanged(nameof(ShowEmptyState));
+        OnPropertyChanged(nameof(CanApplyFilters));
+        ApplyFiltersCommand.NotifyCanExecuteChanged();
+        ClearFiltersCommand.NotifyCanExecuteChanged();
+        foreach (var chip in ActiveFilterChips)
+            (chip.RemoveCommand as IAsyncRelayCommand)?.NotifyCanExecuteChanged();
     }
 
 
@@ -157,9 +229,88 @@ public partial class HomeViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(HasError));
         OnPropertyChanged(nameof(CanLoadMore));
+        OnPropertyChanged(nameof(ShowEmptyState));
     }
 
     partial void OnFilterErrorChanged(string value) => OnPropertyChanged(nameof(HasFilterError));
+
+    partial void OnSearchQueryChanged(string value)
+    {
+        OnPropertyChanged(nameof(HasSearchQuery));
+        UpdateCampusSuggestions();
+    }
+
+    partial void OnPriceMinTextChanged(string value) => UpdatePriceChipSelection();
+
+    partial void OnPriceMaxTextChanged(string value) => UpdatePriceChipSelection();
+
+    [RelayCommand]
+    private void OpenSearch()
+    {
+        SearchQuery = string.Empty;
+        IsSearchOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseSearch() => IsSearchOpen = false;
+
+    [RelayCommand]
+    private void ClearSearchQuery() => SearchQuery = string.Empty;
+
+    [RelayCommand(AllowConcurrentExecutions = false)]
+    private async Task SelectSearchCampusAsync(CampusOption? campus, CancellationToken cancellationToken)
+    {
+        if (campus is null || IsBusy)
+            return;
+
+        SyncDraftWithAppliedFilters();
+        SelectCampusChip(campus);
+        IsSearchOpen = false;
+        await ApplyFiltersAsync(cancellationToken);
+    }
+
+    [RelayCommand(AllowConcurrentExecutions = false)]
+    private async Task SubmitSearchAsync(CancellationToken cancellationToken)
+    {
+        // Submit only an unambiguous known campus; no fabricated backend suggestions.
+        if (CampusSuggestions.Count == 1)
+            await SelectSearchCampusAsync(CampusSuggestions[0], cancellationToken);
+    }
+
+    private void UpdateCampusSuggestions()
+    {
+        var query = SearchQuery.Trim();
+        CampusSuggestions.Clear();
+        foreach (var campus in HomeFilterOptions.Campuses)
+        {
+            if (query.Length == 0 || Vietnamese.CompareInfo.IndexOf(campus.Name, query,
+                    CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace) >= 0)
+                CampusSuggestions.Add(campus);
+        }
+        OnPropertyChanged(nameof(HasNoSuggestions));
+    }
+
+    private void SelectPriceChip(FilterChip chip)
+    {
+        if (chip.Value is not ValueTuple<string, string> range)
+            return;
+        PriceMinText = range.Item1;
+        PriceMaxText = range.Item2;
+    }
+
+    private void UpdatePriceChipSelection()
+    {
+        foreach (var chip in PriceChips)
+            chip.IsSelected = chip.Value is ValueTuple<string, string> range
+                && PriceMinText == range.Item1 && PriceMaxText == range.Item2;
+    }
+
+    [RelayCommand]
+    private void ResetDraft()
+    {
+        ResetFilterDraft();
+        FilterError = string.Empty;
+    }
 
     [RelayCommand(AllowConcurrentExecutions = false)]
     private async Task LoadAsync(CancellationToken cancellationToken)
@@ -173,13 +324,20 @@ public partial class HomeViewModel : ObservableObject
     [RelayCommand(AllowConcurrentExecutions = false)]
     private async Task RefreshAsync(CancellationToken cancellationToken)
     {
-        if (IsBusy)
+        // SfPullToRefresh raises its own spinning state on pull without touching
+        // the bound property, so toggle it here to always emit a change that ends it.
+        IsRefreshing = true;
+        try
+        {
+            if (IsBusy)
+                return;
+
+            await LoadFirstPageAsync(cancellationToken);
+        }
+        finally
         {
             IsRefreshing = false;
-            return;
         }
-
-        await LoadFirstPageAsync(cancellationToken);
     }
 
     [RelayCommand(AllowConcurrentExecutions = false)]
@@ -238,6 +396,22 @@ public partial class HomeViewModel : ObservableObject
     }
 
     [RelayCommand(AllowConcurrentExecutions = false)]
+    private async Task OpenListingAsync(HomeListingItem? listing)
+    {
+        if (listing is null)
+            return;
+
+        try
+        {
+            await _navigationService.GoToRoomDetailAsync(listing.Id);
+        }
+        catch (Exception ex)
+        {
+            _errorHandler.HandleError(ex);
+        }
+    }
+
+    [RelayCommand(AllowConcurrentExecutions = false)]
     private async Task OpenSelectedListingAsync()
     {
         if (SelectedListing is not { } listing)
@@ -259,6 +433,92 @@ public partial class HomeViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ToggleCompare(HomeListingItem? listing)
+    {
+        if (listing is null)
+        {
+            return;
+        }
+
+        if (_comparisonStore.Contains(listing.Id))
+        {
+            _comparisonStore.Remove(listing.Id);
+        }
+        else
+        {
+            var candidate = new ComparisonCandidate(
+                listing.Id,
+                listing.Title,
+                listing.CoverPhotoUrl,
+                listing.Price,
+                listing.AreaM2);
+            if (_comparisonStore.TryAdd(candidate) == RoomComparisonAddResult.LimitReached)
+            {
+                ShowCompareHint($"Chỉ so sánh được tối đa {_comparisonStore.MaxRooms} phòng.");
+                return;
+            }
+        }
+
+        listing.IsCompared = _comparisonStore.Contains(listing.Id);
+        NotifyComparisonState();
+    }
+
+    [RelayCommand]
+    private async Task OpenComparisonAsync()
+    {
+        try
+        {
+            await _navigationService.GoToComparisonAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorHandler.HandleError(ex);
+        }
+    }
+
+    public void RefreshComparisonState()
+    {
+        foreach (var listing in Listings)
+        {
+            listing.IsCompared = _comparisonStore.Contains(listing.Id);
+        }
+
+        NotifyComparisonState();
+    }
+
+    private void NotifyComparisonState()
+    {
+        OnPropertyChanged(nameof(ComparisonCount));
+        OnPropertyChanged(nameof(HasComparison));
+        OnPropertyChanged(nameof(ShowComparisonBar));
+        OnPropertyChanged(nameof(ComparisonBarText));
+    }
+
+    private void ShowCompareHint(string message)
+    {
+        CompareHint = message;
+        _compareHintCancellation?.Cancel();
+        _compareHintCancellation?.Dispose();
+        var cancellation = new CancellationTokenSource();
+        _compareHintCancellation = cancellation;
+        _ = ClearCompareHintAsync(cancellation.Token);
+    }
+
+    private async Task ClearCompareHintAsync(CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(2500, token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        CompareHint = string.Empty;
+    }
+
+    [RelayCommand]
     private void ToggleFilterPanel()
     {
         IsFilterPanelOpen = !IsFilterPanelOpen;
@@ -270,9 +530,11 @@ public partial class HomeViewModel : ObservableObject
         }
     }
 
-    [RelayCommand(AllowConcurrentExecutions = false)]
+    [RelayCommand(AllowConcurrentExecutions = false, CanExecute = nameof(CanApplyFilters))]
     private async Task ApplyFiltersAsync(CancellationToken cancellationToken)
     {
+        if (IsBusy)
+            return;
         if (!TryBuildFilters(out var filters, out var error))
         {
             FilterError = error;
@@ -290,9 +552,11 @@ public partial class HomeViewModel : ObservableObject
         await LoadFirstPageAsync(cancellationToken);
     }
 
-    [RelayCommand(AllowConcurrentExecutions = false)]
+    [RelayCommand(AllowConcurrentExecutions = false, CanExecute = nameof(CanApplyFilters))]
     private async Task ClearFiltersAsync(CancellationToken cancellationToken)
     {
+        if (IsBusy)
+            return;
         ResetFilterDraft();
         FilterError = string.Empty;
         IsFilterPanelOpen = false;
@@ -308,6 +572,7 @@ public partial class HomeViewModel : ObservableObject
     private async Task LoadFirstPageAsync(CancellationToken cancellationToken)
     {
         var generation = ++_generation;
+        _hasLoaded = true;
         _searchCancellation?.Cancel();
         _searchCancellation?.Dispose();
         var requestCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -476,10 +741,10 @@ public partial class HomeViewModel : ObservableObject
         if (_appliedFilters is { } filters)
         {
             if (DescribePrice(filters.MinPrice, filters.MaxPrice) is { } price)
-                ActiveFilterChips.Add(new FilterSummaryChip(price));
+                ActiveFilterChips.Add(CreateSummaryChip(price, "price"));
 
             if (DescribeArea(filters.MinAreaM2, filters.MaxAreaM2) is { } area)
-                ActiveFilterChips.Add(new FilterSummaryChip(area));
+                ActiveFilterChips.Add(CreateSummaryChip(area, "area"));
 
             if (filters.RoomType is { } roomType)
             {
@@ -487,7 +752,7 @@ public partial class HomeViewModel : ObservableObject
                     .Where(option => option.Value == roomType)
                     .Select(option => option.Label)
                     .FirstOrDefault() ?? RoomTypeWire.ToWireValue(roomType);
-                ActiveFilterChips.Add(new FilterSummaryChip(label));
+                ActiveFilterChips.Add(CreateSummaryChip(label, "type"));
             }
 
             if (filters.CampusLat is { } lat
@@ -497,11 +762,40 @@ public partial class HomeViewModel : ObservableObject
                 var campus = HomeFilterOptions.Campuses
                     .FirstOrDefault(option => option.Lat == lat && option.Lng == lng);
                 var name = campus?.Name ?? "Trường";
-                ActiveFilterChips.Add(new FilterSummaryChip($"{name} · {FormatNumber(maxDistanceKm)} km"));
+                ActiveFilterChips.Add(CreateSummaryChip($"{name} · {FormatNumber(maxDistanceKm)} km", "campus"));
             }
         }
 
         OnPropertyChanged(nameof(HasActiveFilters));
+        OnPropertyChanged(nameof(ActiveFilterCount));
+        OnPropertyChanged(nameof(FilterButtonText));
+        OnPropertyChanged(nameof(SearchDisplayText));
+    }
+
+    private FilterSummaryChip CreateSummaryChip(string label, string group)
+        => new(label)
+        {
+            RemoveCommand = new AsyncRelayCommand(() => RemoveFilterGroupAsync(group), () => !IsBusy)
+        };
+
+    private async Task RemoveFilterGroupAsync(string group)
+    {
+        if (_appliedFilters is not { } filters || IsBusy)
+            return;
+
+        _appliedFilters = group switch
+        {
+            "price" => filters with { MinPrice = null, MaxPrice = null },
+            "area" => filters with { MinAreaM2 = null, MaxAreaM2 = null },
+            "type" => filters with { RoomType = null },
+            "campus" => filters with { CampusLat = null, CampusLng = null, MaxDistanceKm = null },
+            _ => filters
+        };
+        if (_appliedFilters == new ActiveListingFiltersDto(null, null, null, null, null, null, null, null, null))
+            _appliedFilters = null;
+        SyncDraftWithAppliedFilters();
+        RebuildActiveFilterChips();
+        await LoadFirstPageAsync(CancellationToken.None);
     }
 
     private void SelectRoomTypeChip(RoomType? roomType)
@@ -634,8 +928,15 @@ public partial class HomeViewModel : ObservableObject
         foreach (var listing in listings)
         {
             if (_listingIds.Add(listing.Id))
-                Listings.Add(HomeListingItem.FromDto(listing));
+            {
+                var item = HomeListingItem.FromDto(listing);
+                item.IsCompared = _comparisonStore.Contains(item.Id);
+                Listings.Add(item);
+            }
         }
         OnPropertyChanged(nameof(CanLoadMore));
+        OnPropertyChanged(nameof(ShowEmptyState));
+        OnPropertyChanged(nameof(ShowLoadingState));
+        OnPropertyChanged(nameof(HasListings));
     }
 }
