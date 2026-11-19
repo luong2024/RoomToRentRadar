@@ -452,11 +452,21 @@ public abstract partial class SearchRoomsViewModel : ObservableObject
             case "RoomType":
                 SelectedRoomType = "all";
                 break;
+
+            default:
+                OnFilterRemoved(item.Key);
+                break;
         }
 
         ValidateFilters();
         await ExecuteSearchAsync();
     }
+
+    protected virtual void OnFilterRemoved(string key)
+    {
+    }
+
+    public virtual IReadOnlyList<string> GetSelectedAmenities() => [];
 
     public virtual RoomSearchCriteria CreateSearchCriteria(
         int pageNumber = 1,
@@ -465,6 +475,7 @@ public abstract partial class SearchRoomsViewModel : ObservableObject
         RoomSortOption? sortBy = null)
     {
         var hasActiveDistance = (IsDistanceFilterActive && RadiusInKm > 0) || sortBy == RoomSortOption.DistanceAsc;
+        var selectedAmenities = GetSelectedAmenities();
         return new RoomSearchCriteria
         {
             MinPrice = MinPrice,
@@ -477,6 +488,7 @@ public abstract partial class SearchRoomsViewModel : ObservableObject
             Longitude = hasActiveDistance ? IctuLongitude : null,
             Keyword = keyword,
             SortBy = sortBy,
+            Amenities = selectedAmenities.Count > 0 ? selectedAmenities : null,
             PageNumber = pageNumber,
             PageSize = pageSize
         };

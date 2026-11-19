@@ -300,4 +300,85 @@ public class InMemoryRoomRepositoryTests
             Assert.That(items[1].Id, Is.EqualTo(roomA.Id), "Room with older CreatedAt must be second even if LastUpdatedDate is newer.");
         });
     }
+
+    [Test]
+    public async Task SearchAsync_WhenAmenitiesCombinedWithAreaAndDistance_ShouldReturnOnlyRoomsMatchingAllCriteria()
+    {
+        // Arrange: ICTU coordinates: 21.5852, 105.8073
+        var matchingRoom = new Room
+        {
+            Id = "room-match",
+            Title = "Phòng trọ phù hợp",
+            Price = 2000000m,
+            Area = 25.0,
+            Latitude = 21.5860,
+            Longitude = 105.8080,
+            Status = RoomStatus.Available,
+            IsVerified = true,
+            Amenities = ["Wifi", "Aircon", "Parking"]
+        };
+
+        var roomMissingAmenity = new Room
+        {
+            Id = "room-missing-amenity",
+            Title = "Phòng thiếu tiện ích",
+            Price = 2000000m,
+            Area = 25.0,
+            Latitude = 21.5860,
+            Longitude = 105.8080,
+            Status = RoomStatus.Available,
+            IsVerified = true,
+            Amenities = ["Wifi"]
+        };
+
+        var roomOutOfArea = new Room
+        {
+            Id = "room-out-of-area",
+            Title = "Phòng quá nhỏ",
+            Price = 2000000m,
+            Area = 15.0,
+            Latitude = 21.5860,
+            Longitude = 105.8080,
+            Status = RoomStatus.Available,
+            IsVerified = true,
+            Amenities = ["Wifi", "Aircon"]
+        };
+
+        var roomTooFar = new Room
+        {
+            Id = "room-too-far",
+            Title = "Phòng quá xa",
+            Price = 2000000m,
+            Area = 25.0,
+            Latitude = 21.7000,
+            Longitude = 105.9000,
+            Status = RoomStatus.Available,
+            IsVerified = true,
+            Amenities = ["Wifi", "Aircon"]
+        };
+
+        _repository.Upsert(matchingRoom);
+        _repository.Upsert(roomMissingAmenity);
+        _repository.Upsert(roomOutOfArea);
+        _repository.Upsert(roomTooFar);
+
+        var query = new SearchRoomsQuery(
+            minArea: 20.0,
+            maxArea: 30.0,
+            latitude: 21.5852,
+            longitude: 105.8073,
+            radiusInKm: 5.0,
+            amenities: ["wifi", "aircon"]);
+
+        // Act
+        var (items, totalCount) = await _repository.SearchAsync(query);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(totalCount, Is.EqualTo(1));
+            Assert.That(items, Has.Count.EqualTo(1));
+            Assert.That(items[0].Id, Is.EqualTo("room-match"));
+        });
+    }
 }

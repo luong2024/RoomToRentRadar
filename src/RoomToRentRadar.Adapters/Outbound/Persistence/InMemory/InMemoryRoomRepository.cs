@@ -152,6 +152,25 @@ public class InMemoryRoomRepository : IRoomRepository
                 CalculateHaversineDistanceKm(userLat, userLon, r.Latitude.Value, r.Longitude.Value) <= radius);
         }
 
+        // 7. Lọc Tiện ích (Amenities) - Phòng phải chứa TẤT CẢ tiện ích được yêu cầu
+        if (query.Amenities is { Count: > 0 })
+        {
+            var requestedAmenities = query.Amenities
+                .Where(a => !string.IsNullOrWhiteSpace(a))
+                .Select(a => a.Trim())
+                .ToList();
+
+            if (requestedAmenities.Count > 0)
+            {
+                filtered = filtered.Where(r =>
+                    r.Amenities != null &&
+                    requestedAmenities.All(req =>
+                        r.Amenities.Any(amenity =>
+                            string.Equals(amenity, req, StringComparison.OrdinalIgnoreCase) ||
+                            amenity.Contains(req, StringComparison.OrdinalIgnoreCase))));
+            }
+        }
+
         // Sắp xếp (Sorting) trước khi phân trang (Pagination)
         var normalizedSort = query.SortBy?.Trim().ToLowerInvariant();
         IEnumerable<Room> ordered = normalizedSort switch

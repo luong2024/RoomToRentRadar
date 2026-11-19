@@ -588,6 +588,85 @@ public class CosmosRoomRepositoryTests
         });
     }
 
+    [Test]
+    public async Task SearchAsync_WithAmenitiesCombinedWithAreaAndDistance_ReturnsOnlyMatchingRooms()
+    {
+        var uniqueKeyword = $"amenity-test-{Guid.NewGuid():N}";
+        var matchingRoom = new Room
+        {
+            Id = $"room-amenity-match-{Guid.NewGuid():N}",
+            Title = $"{uniqueKeyword} Phòng phù hợp tiện ích",
+            Description = "Mô tả",
+            Address = "Địa chỉ gần trường",
+            Price = 2_000_000m,
+            Area = 25.0,
+            RoomType = "Khép kín",
+            Latitude = 21.5860,
+            Longitude = 105.8080,
+            Status = RoomStatus.Available,
+            IsVerified = true,
+            Amenities = ["Wifi", "Aircon"]
+        };
+
+        var roomMissingAmenity = new Room
+        {
+            Id = $"room-amenity-missing-{Guid.NewGuid():N}",
+            Title = $"{uniqueKeyword} Phòng thiếu tiện ích",
+            Description = "Mô tả",
+            Address = "Địa chỉ gần trường",
+            Price = 2_000_000m,
+            Area = 25.0,
+            RoomType = "Khép kín",
+            Latitude = 21.5860,
+            Longitude = 105.8080,
+            Status = RoomStatus.Available,
+            IsVerified = true,
+            Amenities = ["Wifi"]
+        };
+
+        var roomOutOfArea = new Room
+        {
+            Id = $"room-amenity-area-{Guid.NewGuid():N}",
+            Title = $"{uniqueKeyword} Phòng diện tích nhỏ",
+            Description = "Mô tả",
+            Address = "Địa chỉ gần trường",
+            Price = 2_000_000m,
+            Area = 15.0,
+            RoomType = "Khép kín",
+            Latitude = 21.5860,
+            Longitude = 105.8080,
+            Status = RoomStatus.Available,
+            IsVerified = true,
+            Amenities = ["Wifi", "Aircon"]
+        };
+
+        await _repository!.CreateAsync(matchingRoom);
+        await _repository.CreateAsync(roomMissingAmenity);
+        await _repository.CreateAsync(roomOutOfArea);
+
+        var query = new SearchRoomsQuery(
+            keyword: uniqueKeyword,
+            minArea: 20.0,
+            maxArea: 30.0,
+            latitude: 21.5852,
+            longitude: 105.8073,
+            radiusInKm: 5.0,
+            amenities: ["Wifi", "Aircon"],
+            pageNumber: 1,
+            pageSize: 10);
+
+        var (items, totalCount) = await _repository.SearchAsync(query);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(totalCount, Is.EqualTo(1));
+            Assert.That(items.Count, Is.EqualTo(1));
+            Assert.That(items[0].Id, Is.EqualTo(matchingRoom.Id));
+            Assert.That(items[0].Amenities, Does.Contain("Wifi"));
+            Assert.That(items[0].Amenities, Does.Contain("Aircon"));
+        });
+    }
+
     private static async Task EnsureContainerIndexesAsync(Container container, ContainerProperties properties)
     {
         var indexingPolicy = properties.IndexingPolicy ?? new IndexingPolicy();

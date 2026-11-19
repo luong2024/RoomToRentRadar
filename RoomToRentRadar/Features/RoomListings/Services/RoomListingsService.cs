@@ -244,6 +244,18 @@ public sealed class RoomListingsService : IRoomListingsService
             query = query.Where(r => (r.DistanceToCampusKm ?? double.MaxValue) <= criteria.RadiusInKm.Value);
         }
 
+        if (criteria.Amenities is { Count: > 0 })
+        {
+            foreach (var rawAmenity in criteria.Amenities)
+            {
+                if (!string.IsNullOrWhiteSpace(rawAmenity))
+                {
+                    var amenityKey = rawAmenity.Trim();
+                    query = query.Where(r => MatchesAmenity(r, amenityKey));
+                }
+            }
+        }
+
         var sortBy = criteria.SortBy ?? RoomSortOption.Newest;
         query = sortBy switch
         {

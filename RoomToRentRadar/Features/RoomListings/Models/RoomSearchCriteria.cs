@@ -27,6 +27,8 @@ public sealed record RoomSearchCriteria
 
     public RoomSortOption? SortBy { get; init; }
 
+    public IReadOnlyList<string>? Amenities { get; init; }
+
     public int PageNumber { get; init; } = 1;
 
     public int PageSize { get; init; } = 10;
@@ -38,7 +40,8 @@ public sealed record RoomSearchCriteria
         MaxArea.HasValue ||
         !string.IsNullOrWhiteSpace(RoomType) ||
         RadiusInKm.HasValue ||
-        !string.IsNullOrWhiteSpace(Keyword);
+        !string.IsNullOrWhiteSpace(Keyword) ||
+        (Amenities is { Count: > 0 });
 
     public string ToQueryString()
     {
@@ -99,6 +102,14 @@ public sealed record RoomSearchCriteria
                 _ => "Newest"
             };
             parameters.Add($"sortBy={sortValue}");
+        }
+
+        if (Amenities is { Count: > 0 })
+        {
+            foreach (var amenity in Amenities.Where(a => !string.IsNullOrWhiteSpace(a)))
+            {
+                parameters.Add($"amenities={Uri.EscapeDataString(amenity.Trim())}");
+            }
         }
 
         parameters.Add($"pageNumber={Math.Max(1, PageNumber)}");

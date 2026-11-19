@@ -390,6 +390,32 @@ public class SearchRoomsUseCaseTests
         });
     }
 
+    [Test]
+    public async Task ExecuteAsync_WhenQueryContainsAmenities_PreservesAmenitiesAndAddsToActiveFilters()
+    {
+        // Arrange
+        var room = CreateValidRoom("r1", 2000000m, 25, true, RoomStatus.Available);
+        room.Amenities = ["Wifi", "Air conditioner"];
+        _roomRepository.Add(room);
+
+        var query = new SearchRoomsQuery(
+            minArea: 20,
+            maxArea: 30,
+            amenities: ["wifi", "aircon"]);
+
+        // Act
+        var result = await _useCase.ExecuteAsync(query);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(_roomRepository.CapturedQuery?.Amenities, Is.EquivalentTo(new[] { "wifi", "aircon" }));
+            Assert.That(result.ActiveFilters, Does.Contain("Amenities"));
+            Assert.That(result.ActiveFilters, Does.Contain("MinArea"));
+            Assert.That(result.ActiveFilters, Does.Contain("MaxArea"));
+        });
+    }
+
     private static Room CreateValidRoom(
         string id,
         decimal price,

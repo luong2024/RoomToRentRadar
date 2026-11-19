@@ -252,6 +252,19 @@ public class CosmosRoomRepository : IRoomRepository
             whereClauses.Add("(ST_DISTANCE(c.location, @location) <= (@radius * 1000) OR ST_DISTANCE(c.Location, @location) <= (@radius * 1000))");
         }
 
+        if (query.Amenities is { Count: > 0 })
+        {
+            var requestedAmenities = query.Amenities
+                .Where(a => !string.IsNullOrWhiteSpace(a))
+                .Select(a => a.Trim())
+                .ToList();
+
+            for (var i = 0; i < requestedAmenities.Count; i++)
+            {
+                whereClauses.Add($"ARRAY_CONTAINS(c.amenities, @amenity{i})");
+            }
+        }
+
         var whereSql = string.Join(" AND ", whereClauses);
 
         // Cross-partition count query with explicit QueryRequestOptions
@@ -368,6 +381,19 @@ public class CosmosRoomRepository : IRoomRepository
             if (query.RadiusInKm.HasValue)
             {
                 queryDef = queryDef.WithParameter("@radius", query.RadiusInKm.Value);
+            }
+        }
+
+        if (query.Amenities is { Count: > 0 })
+        {
+            var requestedAmenities = query.Amenities
+                .Where(a => !string.IsNullOrWhiteSpace(a))
+                .Select(a => a.Trim())
+                .ToList();
+
+            for (var i = 0; i < requestedAmenities.Count; i++)
+            {
+                queryDef = queryDef.WithParameter($"@amenity{i}", requestedAmenities[i]);
             }
         }
 

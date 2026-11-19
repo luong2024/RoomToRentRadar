@@ -626,6 +626,67 @@ public class SearchRoomsViewModelTests
         });
     }
 
+    [Test]
+    public async Task ApplyFilters_WhenCombiningAreaOrDistanceWithSelectedAmenity_PreservesAmenitiesInSearchCriteria()
+    {
+        // Arrange
+        var vm = CreateViewModel();
+        vm.FilterMinAreaText = "20";
+        vm.IsDistanceFilterActive = true;
+        vm.RadiusInKm = 5.0;
+        vm.IsAmenityWifiSelected = true;
+        vm.IsAmenityAirConSelected = true;
+
+        _fakeService.SearchRoomsResultFactory = criteria => new SearchRoomsResult(
+            Items: [],
+            TotalCount: 5,
+            TotalPages: 1,
+            CurrentPage: 1,
+            ActiveFilters: ["MinArea", "Distance", "Amenities"]);
+
+        // Act
+        await vm.ApplyFiltersCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.That(_fakeService.LastSearchCriteria, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(_fakeService.LastSearchCriteria!.MinArea, Is.EqualTo(20.0));
+            Assert.That(_fakeService.LastSearchCriteria.RadiusInKm, Is.EqualTo(5.0));
+            Assert.That(_fakeService.LastSearchCriteria.Amenities, Is.Not.Null);
+            Assert.That(_fakeService.LastSearchCriteria.Amenities, Does.Contain("wifi"));
+            Assert.That(_fakeService.LastSearchCriteria.Amenities, Does.Contain("aircon"));
+        });
+    }
+
+    [Test]
+    public async Task ApplyFilters_WhenSearchReturnsZeroTotalCount_DisplaysZeroInsteadOfFallback24()
+    {
+        // Arrange
+        var vm = CreateViewModel();
+        vm.FilterMinAreaText = "100";
+
+        _fakeService.SearchRoomsResultFactory = criteria => new SearchRoomsResult(
+            Items: [],
+            TotalCount: 0,
+            TotalPages: 0,
+            CurrentPage: 1,
+            ActiveFilters: ["MinArea"]);
+
+        // Act
+        await vm.ApplyFiltersCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.TotalCount, Is.EqualTo(0));
+            Assert.That(vm.TotalResultCount, Is.EqualTo(0));
+            Assert.That(vm.FilterShowResultsText, Does.Contain("(0)"));
+            Assert.That(vm.FilterShowResultsText, Does.Not.Contain("24"));
+            Assert.That(vm.ResultSummaryText, Does.Contain("0"));
+        });
+    }
+
     #endregion
 
     private RoomListingsViewModel CreateViewModel(int pageSize = 10) =>

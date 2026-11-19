@@ -192,7 +192,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         string.Format(
             LocalizationResourceManager.Instance.CurrentCulture,
             LocalizationResourceManager.Instance["Filter_ShowResults_Format"],
-            TotalCount > 0 ? TotalCount : 24);
+            TotalCount);
 
     [ObservableProperty]
     public partial string SelectedBottomTab { get; set; } = "explore";
@@ -239,13 +239,22 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
                     LocalizationResourceManager.Instance.CurrentCulture,
                     LocalizationResourceManager.Instance["Result_Summary_Format"],
                     TotalCount)
-                : LocalizationResourceManager.Instance["Result_Summary_Updating"];
+                : HasCompletedInitialLoad
+                    ? string.Format(
+                        LocalizationResourceManager.Instance.CurrentCulture,
+                        LocalizationResourceManager.Instance["Result_Summary_Format"],
+                        0)
+                    : LocalizationResourceManager.Instance["Result_Summary_Updating"];
 
     partial void OnIsLoadingChanged(bool value) => NotifyStateProperties();
 
     partial void OnHasErrorChanged(bool value) => NotifyStateProperties();
 
-    partial void OnHasCompletedInitialLoadChanged(bool value) => NotifyStateProperties();
+    partial void OnHasCompletedInitialLoadChanged(bool value)
+    {
+        NotifyStateProperties();
+        OnPropertyChanged(nameof(ResultSummaryText));
+    }
 
     private void NotifyStateProperties()
     {
@@ -842,7 +851,101 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         };
     }
 
-    private IReadOnlyList<string> GetSelectedAmenities()
+    protected override void OnFilterRemoved(string key)
+    {
+        if (key.StartsWith("Amenity_", StringComparison.OrdinalIgnoreCase))
+        {
+            var amenity = key["Amenity_".Length..];
+            switch (amenity.ToLowerInvariant())
+            {
+                case "aircon":
+                    IsAmenityAirConSelected = false;
+                    break;
+                case "wifi":
+                    IsAmenityWifiSelected = false;
+                    break;
+                case "parking":
+                    IsAmenityParkingSelected = false;
+                    break;
+                case "bathroom":
+                    IsAmenityBathroomSelected = false;
+                    break;
+                case "washing":
+                    IsAmenityWashingSelected = false;
+                    break;
+                case "kitchen":
+                    IsAmenityKitchenSelected = false;
+                    break;
+            }
+        }
+    }
+
+    protected override void PopulateActiveFilters()
+    {
+        base.PopulateActiveFilters();
+
+        if (IsAmenityAirConSelected)
+        {
+            ActiveFilters.Add(new ActiveFilterItem
+            {
+                Key = "Amenity_aircon",
+                DisplayText = LocalizationResourceManager.Instance["Filter_Amenity_AirCon"],
+                FilterType = "amenity"
+            });
+        }
+
+        if (IsAmenityWifiSelected)
+        {
+            ActiveFilters.Add(new ActiveFilterItem
+            {
+                Key = "Amenity_wifi",
+                DisplayText = LocalizationResourceManager.Instance["Filter_Amenity_Wifi"],
+                FilterType = "amenity"
+            });
+        }
+
+        if (IsAmenityParkingSelected)
+        {
+            ActiveFilters.Add(new ActiveFilterItem
+            {
+                Key = "Amenity_parking",
+                DisplayText = LocalizationResourceManager.Instance["Filter_Amenity_Parking"],
+                FilterType = "amenity"
+            });
+        }
+
+        if (IsAmenityBathroomSelected)
+        {
+            ActiveFilters.Add(new ActiveFilterItem
+            {
+                Key = "Amenity_bathroom",
+                DisplayText = LocalizationResourceManager.Instance["Filter_Amenity_Bathroom"],
+                FilterType = "amenity"
+            });
+        }
+
+        if (IsAmenityWashingSelected)
+        {
+            ActiveFilters.Add(new ActiveFilterItem
+            {
+                Key = "Amenity_washing",
+                DisplayText = LocalizationResourceManager.Instance["Filter_Amenity_Washing"],
+                FilterType = "amenity"
+            });
+        }
+
+        if (IsAmenityKitchenSelected)
+        {
+            ActiveFilters.Add(new ActiveFilterItem
+            {
+                Key = "Amenity_kitchen",
+                DisplayText = LocalizationResourceManager.Instance["Filter_Amenity_Kitchen"],
+                FilterType = "amenity"
+            });
+        }
+    }
+
+    public override IReadOnlyList<string> GetSelectedAmenities()
     {
         var list = new List<string>(6);
         if (IsAmenityAirConSelected)

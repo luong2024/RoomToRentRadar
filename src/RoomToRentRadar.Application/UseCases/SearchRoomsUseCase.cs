@@ -163,6 +163,7 @@ public class SearchRoomsUseCase : ISearchRoomsUseCase
         if (query.Latitude.HasValue) filters.Add("Latitude");
         if (query.Longitude.HasValue) filters.Add("Longitude");
         if (query.RadiusInKm.HasValue) filters.Add("RadiusInKm");
+        if (query.Amenities is { Count: > 0 }) filters.Add("Amenities");
 
         return filters;
     }
