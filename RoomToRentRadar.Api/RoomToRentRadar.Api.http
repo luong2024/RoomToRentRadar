@@ -1,0 +1,93 @@
+### RoomToRentRadar.Api — sample requests for US01 / T01.1 (Auth)
+### 1. Start the API:  dotnet run --project RoomToRentRadar.Api --urls http://localhost:5199
+### 2. Click "Send Request" above each request (VS Code "REST Client" extension or Visual Studio).
+### Demo accounts come from IctuSeedData (password 123456).
+
+@baseUrl = http://localhost:5199
+
+### Health check (Web API + SQLite) → 200
+GET {{baseUrl}}/api/health
+
+### Login OK (student) → 200, user without password hash
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "student@ictu.edu.vn",
+  "password": "123456"
+}
+
+### Login OK (landlord) → 200
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "landlord@ictu.edu.vn",
+  "password": "123456"
+}
+
+### Login wrong password → 401
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "student@ictu.edu.vn",
+  "password": "wrong-password"
+}
+
+### Login missing fields → 400
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "",
+  "password": ""
+}
+
+### Register new student → 201 (send twice: the second time → 400, email already used)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Sinh viên Thử Nghiệm",
+  "email": "sinhvien.test@ictu.edu.vn",
+  "password": "123456",
+  "phone": "0988000111",
+  "role": "Student"
+}
+
+### Register landlord (role is case-insensitive) → 201
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Chủ Trọ Thử Nghiệm",
+  "email": "chutro.test@ictu.edu.vn",
+  "password": "123456",
+  "phone": "0912000222",
+  "role": "landlord"
+}
+
+### Register as Admin is not allowed → 400
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Hacker",
+  "email": "admin2@ictu.edu.vn",
+  "password": "123456",
+  "phone": "0900000000",
+  "role": "Admin"
+}
+
+### Register with a short password → 400
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Mật Khẩu Ngắn",
+  "email": "short.pw@ictu.edu.vn",
+  "password": "123",
+  "phone": "0900000001",
+  "role": "Student"
+}
