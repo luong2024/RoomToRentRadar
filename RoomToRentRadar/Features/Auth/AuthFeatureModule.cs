@@ -8,7 +8,9 @@ namespace RoomToRentRadar.Features.Auth
     {
         public static IServiceCollection AddAuthFeature(this IServiceCollection services)
         {
-            // T01.1 (Quang): services.AddSingleton<IAuthService, AuthService>();
+            // T01.1 (Quang): real SQLite auth; overrides the InMemoryAuthService fallback.
+            services.AddSingleton<UserRepository>();
+            services.AddSingleton<IAuthService, AuthService>(); // singleton: holds the signed-in session
             // T01.2 (Nam):   services.AddTransientWithShellRoute<LoginPage, AuthPageModel>(Constants.Routes.Login);
             //                services.AddTransientWithShellRoute<RegisterPage, AuthPageModel>(Constants.Routes.Register);
             return services;
