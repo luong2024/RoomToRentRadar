@@ -80,7 +80,11 @@
             </cards:SfCardView>
 
             <!-- Step 01: Basic Info -->
-            <cards:SfCardView Padding="18" CornerRadius="22">
+            <Border Padding="18" StrokeThickness="0" StrokeShape="RoundRectangle 22"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+                <Border.Shadow>
+                    <Shadow Brush="{StaticResource InkBrush}" Offset="0,6" Radius="18" Opacity="0.06" />
+                </Border.Shadow>
                 <VerticalStackLayout Spacing="14" IsEnabled="{Binding IsNotBusy}">
                     <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
                         <Border WidthRequest="28" HeightRequest="28" StrokeThickness="0" StrokeShape="RoundRectangle 10"
@@ -148,10 +152,14 @@
                         <Label Text="{Binding RoomTypeError}" Style="{StaticResource FieldError}" />
                     </VerticalStackLayout>
                 </VerticalStackLayout>
-            </cards:SfCardView>
+            </Border>
 
             <!-- Step 02: Location -->
-            <cards:SfCardView Padding="18" CornerRadius="22">
+            <Border Padding="18" StrokeThickness="0" StrokeShape="RoundRectangle 22"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+                <Border.Shadow>
+                    <Shadow Brush="{StaticResource InkBrush}" Offset="0,6" Radius="18" Opacity="0.06" />
+                </Border.Shadow>
                 <VerticalStackLayout Spacing="12">
                     <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
                         <Border WidthRequest="28" HeightRequest="28" StrokeThickness="0" StrokeShape="RoundRectangle 10"
@@ -186,10 +194,14 @@
                         </VerticalStackLayout>
                     </Grid>
                 </VerticalStackLayout>
-            </cards:SfCardView>
+            </Border>
 
             <!-- Step 03: Photos -->
-            <cards:SfCardView Padding="18" CornerRadius="22">
+            <Border Padding="18" StrokeThickness="0" StrokeShape="RoundRectangle 22"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+                <Border.Shadow>
+                    <Shadow Brush="{StaticResource InkBrush}" Offset="0,6" Radius="18" Opacity="0.06" />
+                </Border.Shadow>
                 <VerticalStackLayout Spacing="12">
                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
                         <Border WidthRequest="28" HeightRequest="28" StrokeThickness="0" StrokeShape="RoundRectangle 10"
@@ -211,10 +223,8 @@
                     <VerticalStackLayout BindableLayout.ItemsSource="{Binding ExistingPhotos}" Spacing="8">
                         <BindableLayout.ItemTemplate>
                             <DataTemplate x:DataType="models:ExistingListingPhoto">
-                                <cards:SfCardView Padding="10" CornerRadius="16"
-                                                  Background="{AppThemeBinding Light={StaticResource SoftSurfaceBrush}, Dark={StaticResource SoftSurfaceDarkBrush}}"
-                                                  BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}"
-                                                  BorderWidth="0">
+                                <Border Padding="10" StrokeThickness="0" StrokeShape="RoundRectangle 16"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
                                     <Grid ColumnDefinitions="96,*" ColumnSpacing="12">
                                         <Border StrokeThickness="0" StrokeShape="RoundRectangle 12" HeightRequest="76" WidthRequest="96">
                                             <Image Source="{Binding ThumbnailUrl}" Aspect="AspectFill"
@@ -223,39 +233,45 @@
                                         <Label Grid.Column="1" Text="Ảnh đã lưu trên hệ thống" Style="{StaticResource Caption}"
                                                VerticalOptions="Center" />
                                     </Grid>
-                                </cards:SfCardView>
+                                </Border>
                             </DataTemplate>
                         </BindableLayout.ItemTemplate>
                     </VerticalStackLayout>
 
-                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding SelectedPhotos}" Spacing="8">
+                    <FlexLayout BindableLayout.ItemsSource="{Binding SelectedPhotos}" Wrap="Wrap" Direction="Row"
+                                AlignItems="Start" AutomationId="SelectedPhotoGrid">
                         <BindableLayout.ItemTemplate>
                             <DataTemplate x:DataType="models:SelectedListingPhoto">
-                                <cards:SfCardView Padding="10" CornerRadius="16"
-                                                  Background="{AppThemeBinding Light={StaticResource SoftSurfaceBrush}, Dark={StaticResource SoftSurfaceDarkBrush}}"
-                                                  BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}"
-                                                  BorderWidth="0">
-                                    <Grid ColumnDefinitions="96,*,Auto" ColumnSpacing="10">
-                                        <Border StrokeThickness="0" StrokeShape="RoundRectangle 12" HeightRequest="76" WidthRequest="96">
+                                <VerticalStackLayout WidthRequest="104" Margin="0,0,10,10" Spacing="4">
+                                    <Grid HeightRequest="84">
+                                        <Border StrokeThickness="0" StrokeShape="RoundRectangle 12"
+                                                BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
                                             <Image Source="{Binding Path}" Aspect="AspectFill"
                                                    SemanticProperties.Description="Ảnh mới được chọn" />
                                         </Border>
-                                        <Label Grid.Column="1" Text="{Binding FileName}" FontSize="13" VerticalOptions="Center"
-                                               LineBreakMode="TailTruncation" />
-                                        <buttons:SfButton Grid.Column="2" Text="Bỏ" Command="{Binding RemoveCommand}"
-                                                          Style="{StaticResource DangerSoftSfButton}" FontSize="11"
-                                                          Padding="12,6" MinimumHeightRequest="36" VerticalOptions="Center"
+                                        <buttons:SfButton Text="×" Command="{Binding RemoveCommand}"
+                                                          Style="{StaticResource DangerSoftSfButton}"
+                                                          WidthRequest="28" HeightRequest="28"
+                                                          MinimumWidthRequest="28" MinimumHeightRequest="28"
+                                                          Padding="0" FontSize="14"
+                                                          HorizontalOptions="End" VerticalOptions="Start" Margin="0,4,4,0"
                                                           SemanticProperties.Description="Bỏ ảnh đã chọn" />
                                     </Grid>
-                                </cards:SfCardView>
+                                    <Label Text="{Binding FileName}" FontSize="11" LineBreakMode="TailTruncation"
+                                           HorizontalTextAlignment="Center" />
+                                </VerticalStackLayout>
                             </DataTemplate>
                         </BindableLayout.ItemTemplate>
-                    </VerticalStackLayout>
+                    </FlexLayout>
                 </VerticalStackLayout>
-            </cards:SfCardView>
+            </Border>
 
             <!-- Step 04: Optional Description -->
-            <cards:SfCardView Padding="14,12" CornerRadius="22">
+            <Border Padding="14,12" StrokeThickness="0" StrokeShape="RoundRectangle 22"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+                <Border.Shadow>
+                    <Shadow Brush="{StaticResource InkBrush}" Offset="0,6" Radius="18" Opacity="0.06" />
+                </Border.Shadow>
                 <expander:SfExpander IsExpanded="True">
                     <expander:SfExpander.Header>
                         <HorizontalStackLayout Spacing="10" Padding="4,6" VerticalOptions="Center">
@@ -278,7 +294,7 @@
                         </VerticalStackLayout>
                     </expander:SfExpander.Content>
                 </expander:SfExpander>
-            </cards:SfCardView>
+            </Border>
 
             <!-- Step 05: House Rules (edit mode only) -->
             <Border Padding="18" StrokeThickness="0" StrokeShape="RoundRectangle 22"
