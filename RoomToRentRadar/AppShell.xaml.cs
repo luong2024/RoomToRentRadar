@@ -240,9 +240,11 @@ namespace RoomToRentRadar
 
             if (CreateListingShellContent != null)
             {
-                var isLandlord = string.Equals(_sessionService?.CurrentUser?.Role, UserRoleConstants.Landlord, StringComparison.OrdinalIgnoreCase);
-                CreateListingShellContent.IsVisible = isLandlord;
-                Shell.SetFlyoutItemIsVisible(CreateListingShellContent, isLandlord);
+                var role = _sessionService?.CurrentUser?.Role;
+                var isLandlordOrAdmin = string.Equals(role, UserRoleConstants.Landlord, StringComparison.OrdinalIgnoreCase)
+                                        || string.Equals(role, UserRoleConstants.Admin, StringComparison.OrdinalIgnoreCase);
+                CreateListingShellContent.IsVisible = isLandlordOrAdmin;
+                Shell.SetFlyoutItemIsVisible(CreateListingShellContent, isLandlordOrAdmin);
             }
         }
 

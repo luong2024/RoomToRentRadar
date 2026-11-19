@@ -132,12 +132,16 @@ public class CreateListingViewModelTests
 
     [TestCase("abc")]
     [TestCase("twenty")]
+    [TestCase("NaN")]
+    [TestCase("nan")]
+    [TestCase("Infinity")]
+    [TestCase("-Infinity")]
     public void ValidateForm_InvalidAreaFormat_SetsAreaError(string areaText)
     {
         _viewModel.AreaText = areaText;
         _viewModel.ValidateForm();
 
-        Assert.That(_viewModel.AreaError, Does.Contain("định dạng số"));
+        Assert.That(_viewModel.AreaError, Does.Contain("định dạng số").Or.Contain("từ 5 m² đến 200 m²"));
     }
 
     [TestCase("4.9")]
@@ -408,6 +412,24 @@ public class CreateListingViewModelTests
         Assert.That(_viewModel.IsSuccess, Is.False);
         Assert.That(_viewModel.HasError, Is.True);
         Assert.That(_viewModel.ErrorMessage, Does.Contain("Máy chủ quá tải"));
+    }
+
+    [Test]
+    public void SubmitListing_WhenCancelled_RethrowsOperationCanceledException()
+    {
+        FillValidFormData();
+
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        _mockCreateListingService
+            .Setup(s => s.CreateListingAsync(It.IsAny<CreateListingRequest>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException(cts.Token));
+
+        Assert.ThrowsAsync<OperationCanceledException>(async () =>
+            await _viewModel.SubmitListingAsync(cts.Token));
+
+        Assert.That(_viewModel.IsSubmitting, Is.False);
     }
 
     #endregion

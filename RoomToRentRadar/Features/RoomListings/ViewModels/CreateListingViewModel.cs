@@ -245,6 +245,10 @@ public partial class CreateListingViewModel : ObservableObject
                 PhotosError = $"Vui lòng chọn ít nhất {MinPhotosCount} hình ảnh phòng.";
             }
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             PhotosError = $"Không thể tải hình ảnh: {ex.Message}";
@@ -312,6 +316,10 @@ public partial class CreateListingViewModel : ObservableObject
                 HasError = true;
                 ErrorMessage = result.ErrorMessage ?? "Không thể gửi tin đăng. Vui lòng thử lại sau.";
             }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -414,7 +422,7 @@ public partial class CreateListingViewModel : ObservableObject
             AreaError = "Diện tích phòng không đúng định dạng số.";
             isValid = false;
         }
-        else if (area < 5 || area > 200)
+        else if (!double.IsFinite(area) || area < 5 || area > 200)
         {
             AreaError = "Diện tích phòng phải từ 5 m² đến 200 m².";
             isValid = false;
@@ -562,6 +570,13 @@ public partial class CreateListingViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(input)) return false;
 
         var normalized = input.Replace(",", ".").Trim();
-        return double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out result);
+        if (double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
+            && double.IsFinite(parsed))
+        {
+            result = parsed;
+            return true;
+        }
+
+        return false;
     }
 }

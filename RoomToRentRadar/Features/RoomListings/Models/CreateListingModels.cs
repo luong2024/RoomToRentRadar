@@ -44,7 +44,12 @@ public sealed class ListingPhotoItem
     {
         if (StreamOpener != null)
         {
-            return await StreamOpener();
+            var stream = await StreamOpener();
+            if (stream == null || !stream.CanRead)
+            {
+                throw new InvalidOperationException($"Không thể mở luồng dữ liệu cho hình ảnh '{FileName}'.");
+            }
+            return stream;
         }
 
         if (ContentBytes != null)
@@ -52,12 +57,12 @@ public sealed class ListingPhotoItem
             return new MemoryStream(ContentBytes);
         }
 
-        if (File.Exists(FilePath))
+        if (!string.IsNullOrWhiteSpace(FilePath) && File.Exists(FilePath))
         {
             return File.OpenRead(FilePath);
         }
 
-        return Stream.Null;
+        throw new FileNotFoundException($"Không tìm thấy file hình ảnh: '{FilePath}'", FilePath);
     }
 }
 

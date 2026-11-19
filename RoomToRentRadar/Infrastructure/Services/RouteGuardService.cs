@@ -61,7 +61,7 @@ public class RouteGuardService : IRouteGuardService
         if (IsCreateListingRoute(normalizedRoute))
         {
             var isLandlordOrAdmin = string.Equals(currentUser.Role, UserRoleConstants.Landlord, StringComparison.OrdinalIgnoreCase)
-                                   || string.Equals(currentUser.Role, "ADMIN", StringComparison.OrdinalIgnoreCase);
+                                   || string.Equals(currentUser.Role, UserRoleConstants.Admin, StringComparison.OrdinalIgnoreCase);
 
             return isLandlordOrAdmin
                 ? RouteAccessStatus.Allowed
@@ -71,7 +71,7 @@ public class RouteGuardService : IRouteGuardService
         if (IsRoommateMatchingRoute(normalizedRoute))
         {
             var isStudentOrAdmin = string.Equals(currentUser.Role, UserRoleConstants.Student, StringComparison.OrdinalIgnoreCase)
-                                   || string.Equals(currentUser.Role, "ADMIN", StringComparison.OrdinalIgnoreCase);
+                                   || string.Equals(currentUser.Role, UserRoleConstants.Admin, StringComparison.OrdinalIgnoreCase);
 
             return isStudentOrAdmin
                 ? RouteAccessStatus.Allowed

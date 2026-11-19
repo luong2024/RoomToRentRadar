@@ -180,6 +180,95 @@ public class CreateListingServiceTests
     }
 
     [Test]
+    public void CreateListingAsync_ThrowsOperationCanceledException_WhenCancellationTokenCancelled()
+    {
+        var request = CreateSampleRequest();
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        Assert.ThrowsAsync<OperationCanceledException>(async () =>
+            await _service.CreateListingAsync(request, cts.Token));
+    }
+
+    [Test]
+    public void ListingPhotoItem_OpenReadStreamAsync_ThrowsFileNotFoundException_WhenFileDoesNotExist()
+    {
+        var photo = new ListingPhotoItem
+        {
+            FilePath = "C:/non_existent_folder/missing_photo.jpg",
+            FileName = "missing_photo.jpg"
+        };
+
+        Assert.ThrowsAsync<FileNotFoundException>(async () =>
+            await photo.OpenReadStreamAsync());
+    }
+
+    [Test]
+    public void ListingPhotoItem_OpenReadStreamAsync_ThrowsInvalidOperationException_WhenStreamOpenerReturnsNull()
+    {
+        var photo = new ListingPhotoItem
+        {
+            FilePath = "memory.jpg",
+            FileName = "memory.jpg",
+            StreamOpener = () => Task.FromResult<Stream>(null!)
+        };
+
+        Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await photo.OpenReadStreamAsync());
+    }
+
+    [Test]
+    public async Task CreateListingAsync_ReturnsFailure_WhenPhotoStreamIsEmpty()
+    {
+        var emptyPhoto = new ListingPhotoItem
+        {
+            FilePath = "empty.jpg",
+            FileName = "empty.jpg",
+            ContentBytes = Array.Empty<byte>()
+        };
+
+        var request = new CreateListingRequest(
+            Title: "Phòng trọ test",
+            Address: "Địa chỉ test",
+            MonthlyRentVnd: 1500000m,
+            DepositVnd: 1000000m,
+            AreaM2: 20,
+            RoomType: "BoardingRoom",
+            Description: null,
+            Photos: new[] { emptyPhoto });
+
+        var result = await _service.CreateListingAsync(request);
+
+        Assert.That(result.IsSuccess, Is.False);
+        Assert.That(result.ErrorMessage, Does.Contain("không có nội dung dữ liệu"));
+    }
+
+    [Test]
+    public async Task CreateListingAsync_ReturnsFailure_WhenPhotoFileNotFound()
+    {
+        var missingPhoto = new ListingPhotoItem
+        {
+            FilePath = "C:/non/existent/missing_file_123.jpg",
+            FileName = "missing_file_123.jpg"
+        };
+
+        var request = new CreateListingRequest(
+            Title: "Phòng trọ test",
+            Address: "Địa chỉ test",
+            MonthlyRentVnd: 1500000m,
+            DepositVnd: 1000000m,
+            AreaM2: 20,
+            RoomType: "BoardingRoom",
+            Description: null,
+            Photos: new[] { missingPhoto });
+
+        var result = await _service.CreateListingAsync(request);
+
+        Assert.That(result.IsSuccess, Is.False);
+        Assert.That(result.ErrorMessage, Does.Contain("Không tìm thấy file hình ảnh"));
+    }
+
+    [Test]
     public async Task CreateListingAsync_ConstructsMultipartFormDataWithActualPhotoStreams()
     {
         var photoBytes1 = Encoding.UTF8.GetBytes("fake-jpeg-data-1");

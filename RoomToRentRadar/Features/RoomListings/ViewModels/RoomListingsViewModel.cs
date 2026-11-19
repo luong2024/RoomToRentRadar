@@ -81,13 +81,15 @@ public partial class RoomListingsViewModel : ObservableObject
 
     private void OnCurrentUserChanged(object? sender, AuthUser? user)
     {
-        IsLandlord = string.Equals(user?.Role, UserRoleConstants.Landlord, StringComparison.OrdinalIgnoreCase);
+        IsLandlord = string.Equals(user?.Role, UserRoleConstants.Landlord, StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(user?.Role, UserRoleConstants.Admin, StringComparison.OrdinalIgnoreCase);
     }
 
     private void UpdateLandlordStatus()
     {
         var currentUser = _sessionService?.CurrentUser;
-        IsLandlord = string.Equals(currentUser?.Role, UserRoleConstants.Landlord, StringComparison.OrdinalIgnoreCase);
+        IsLandlord = string.Equals(currentUser?.Role, UserRoleConstants.Landlord, StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(currentUser?.Role, UserRoleConstants.Admin, StringComparison.OrdinalIgnoreCase);
     }
 
     private void UpdateLocalizedStrings()

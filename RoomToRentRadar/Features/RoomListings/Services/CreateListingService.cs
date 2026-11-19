@@ -22,6 +22,7 @@ public class CreateListingService : ICreateListingService
     public async Task<CreateListingResult> CreateListingAsync(CreateListingRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
 
         try
         {
@@ -61,6 +62,11 @@ public class CreateListingService : ICreateListingService
                 {
                     var photo = request.Photos[i];
                     var stream = await photo.OpenReadStreamAsync();
+                    if (stream == null || !stream.CanRead || (stream.CanSeek && stream.Length == 0))
+                    {
+                        throw new InvalidOperationException($"Ảnh '{photo.FileName}' không có nội dung dữ liệu hợp lệ.");
+                    }
+
                     var streamContent = new StreamContent(stream);
                     var contentType = string.IsNullOrWhiteSpace(photo.ContentType) ? "image/jpeg" : photo.ContentType;
                     streamContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
@@ -82,6 +88,10 @@ public class CreateListingService : ICreateListingService
             }
 
             return CreateListingResult.Failure(response?.Message ?? "Không nhận được mã tin đăng hợp lệ từ máy chủ.");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
