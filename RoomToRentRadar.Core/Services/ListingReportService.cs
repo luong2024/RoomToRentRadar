@@ -69,6 +69,18 @@ namespace RoomToRentRadar.Services
     }
 
     /// <summary>
+    /// Validation outcome for a listing report request.
+    /// </summary>
+    public class ReportValidationResult
+    {
+        public bool IsValid { get; set; }
+        public string? ErrorMessage { get; set; }
+
+        public static ReportValidationResult Success() => new() { IsValid = true };
+        public static ReportValidationResult Failed(string errorMessage) => new() { IsValid = false, ErrorMessage = errorMessage };
+    }
+
+    /// <summary>
     /// Contract for US13 Listing Report Service &amp; Moderation Workflow (T13.2).
     /// Acceptance Criteria:
     ///   AC1: A Report action is available on every listing detail screen.
@@ -78,6 +90,10 @@ namespace RoomToRentRadar.Services
     public interface IListingReportService
     {
         IReadOnlyList<ReportReasonOption> GetPredefinedReasons();
+
+        ReportReasonOption? GetReasonByKey(string key);
+
+        ReportValidationResult ValidateReport(SubmitReportRequest? request);
 
         Task<SubmitReportResult> SubmitReportAsync(
             SubmitReportRequest request,
@@ -108,52 +124,102 @@ namespace RoomToRentRadar.Services
         /// <summary>
         /// AC2: Returns standardized, pre-vetted report reasons tailored for ICTU students.
         /// </summary>
-        public virtual IReadOnlyList<ReportReasonOption> GetPredefinedReasons() =>
-            new List<ReportReasonOption>
+        public virtual IReadOnlyList<ReportReasonOption> GetPredefinedReasons() => PredefinedReasonsList;
+
+        private static readonly IReadOnlyList<ReportReasonOption> PredefinedReasonsList = new List<ReportReasonOption>
+        {
+            new()
             {
-                new()
-                {
-                    Key = "AlreadyRented",
-                    DisplayText = "Phòng đã cho thuê / hết phòng",
-                    Description = "Chủ trọ thông báo phòng đã có người thuê nhưng bài đăng chưa hạ xuống.",
-                    Severity = ReportSeverity.Normal
-                },
-                new()
-                {
-                    Key = "InaccuratePriceDeposit",
-                    DisplayText = "Giá thuê hoặc tiền cọc sai lệch thực tế",
-                    Description = "Giá thực tế khi đến xem phòng cao hơn mức giá niêm yết trong ứng dụng.",
-                    Severity = ReportSeverity.Warning
-                },
-                new()
-                {
-                    Key = "InaccuratePhotosAddress",
-                    DisplayText = "Địa chỉ hoặc hình ảnh phòng không đúng",
-                    Description = "Hình ảnh phòng hoặc địa chỉ sai lệch, lấy ảnh mạng hoặc không đúng thực tế.",
-                    Severity = ReportSeverity.Warning
-                },
-                new()
-                {
-                    Key = "SuspiciousScam",
-                    DisplayText = "Chủ trọ có dấu hiệu lừa đảo / yêu cầu cọc bất thường",
-                    Description = "Yêu cầu chuyển tiền đặt cọc giữ phòng trước khi xem phòng trực tiếp.",
-                    Severity = ReportSeverity.Urgent
-                },
-                new()
-                {
-                    Key = "UnreasonableRulesOrFees",
-                    DisplayText = "Nội quy hoặc chi phí sinh hoạt phát sinh vô lý",
-                    Description = "Giá điện, nước, internet hoặc giờ giấc giới nghiêm ép buộc không đúng cam kết.",
-                    Severity = ReportSeverity.Normal
-                },
-                new()
-                {
-                    Key = "Other",
-                    DisplayText = "Lý do khác",
-                    Description = "Các vấn đề khác liên quan đến an ninh, vệ sinh hoặc hành vi vi phạm.",
-                    Severity = ReportSeverity.Normal
-                }
-            };
+                Key = "AlreadyRented",
+                DisplayText = "Phòng đã cho thuê / hết phòng",
+                Description = "Chủ trọ thông báo phòng đã có người thuê nhưng bài đăng chưa hạ xuống.",
+                Severity = ReportSeverity.Normal
+            },
+            new()
+            {
+                Key = "InaccuratePriceDeposit",
+                DisplayText = "Giá thuê hoặc tiền cọc sai lệch thực tế",
+                Description = "Giá thực tế khi đến xem phòng cao hơn mức giá niêm yết trong ứng dụng.",
+                Severity = ReportSeverity.Warning
+            },
+            new()
+            {
+                Key = "InaccuratePhotosAddress",
+                DisplayText = "Địa chỉ hoặc hình ảnh phòng không đúng",
+                Description = "Hình ảnh phòng hoặc địa chỉ sai lệch, lấy ảnh mạng hoặc không đúng thực tế.",
+                Severity = ReportSeverity.Warning
+            },
+            new()
+            {
+                Key = "SuspiciousScam",
+                DisplayText = "Chủ trọ có dấu hiệu lừa đảo / yêu cầu cọc bất thường",
+                Description = "Yêu cầu chuyển tiền đặt cọc giữ phòng trước khi xem phòng trực tiếp.",
+                Severity = ReportSeverity.Urgent
+            },
+            new()
+            {
+                Key = "UnreasonableRulesOrFees",
+                DisplayText = "Nội quy hoặc chi phí sinh hoạt phát sinh vô lý",
+                Description = "Giá điện, nước, internet hoặc giờ giấc giới nghiêm ép buộc không đúng cam kết.",
+                Severity = ReportSeverity.Normal
+            },
+            new()
+            {
+                Key = "Other",
+                DisplayText = "Lý do khác",
+                Description = "Các vấn đề khác liên quan đến an ninh, vệ sinh hoặc hành vi vi phạm.",
+                Severity = ReportSeverity.Normal
+            }
+        };
+
+        /// <summary>
+        /// Looks up a predefined report reason option by its unique key or display text.
+        /// </summary>
+        public virtual ReportReasonOption? GetReasonByKey(string key)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                return null;
+            }
+
+            var trimmed = key.Trim();
+            return PredefinedReasonsList.FirstOrDefault(r =>
+                string.Equals(r.Key, trimmed, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(r.DisplayText, trimmed, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <summary>
+        /// Validates report request fields according to US13 AC2 constraints.
+        /// </summary>
+        public virtual ReportValidationResult ValidateReport(SubmitReportRequest? request)
+        {
+            if (request == null)
+            {
+                return ReportValidationResult.Failed("Yêu cầu báo cáo không được để trống.");
+            }
+
+            if (request.RoomId <= 0)
+            {
+                return ReportValidationResult.Failed("Mã phòng trọ không hợp lệ.");
+            }
+
+            if (request.ReporterUserId <= 0)
+            {
+                return ReportValidationResult.Failed("Tài khoản người dùng báo cáo không hợp lệ.");
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Reason))
+            {
+                return ReportValidationResult.Failed("Vui lòng chọn lý do báo cáo.");
+            }
+
+            if (!string.IsNullOrEmpty(request.Note) && request.Note.Trim().Length > MaxNoteLength)
+            {
+                return ReportValidationResult.Failed($"Nội dung ghi chú bổ sung không được vượt quá {MaxNoteLength} ký tự.");
+            }
+
+            return ReportValidationResult.Success();
+        }
 
         /// <summary>
         /// AC1, AC2, AC3: Validates request, checks anti-spam, and submits report to moderation queue.
@@ -162,24 +228,28 @@ namespace RoomToRentRadar.Services
             SubmitReportRequest request,
             CancellationToken cancellationToken = default)
         {
-            if (request == null)
+            var validation = ValidateReport(request);
+            if (!validation.IsValid)
             {
-                return SubmitReportResult.Failed("Yêu cầu báo cáo không hợp lệ.");
-            }
-
-            if (request.RoomId <= 0)
-            {
-                return SubmitReportResult.Failed("Mã phòng không hợp lệ.");
-            }
-
-            if (string.IsNullOrWhiteSpace(request.Reason))
-            {
-                return SubmitReportResult.Failed("Vui lòng chọn lý do báo cáo.");
+                return SubmitReportResult.Failed(validation.ErrorMessage ?? "Dữ liệu báo cáo không hợp lệ.");
             }
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            // Baseline submission for Phase 1
+            // Anti-Spam Check (AC3): Prevent duplicate pending reports from the same student for the same room
+            bool isDuplicate = await HasPendingReportAsync(request.RoomId, request.ReporterUserId, cancellationToken);
+            if (isDuplicate)
+            {
+                return SubmitReportResult.Failed("Bạn đã gửi một báo cáo vi phạm cho phòng trọ này và đang chờ Ban quản trị duyệt. Vui lòng không gửi trùng lặp.");
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // Normalize reason if matching a predefined option key
+            var reasonOption = GetReasonByKey(request.Reason);
+            string finalReason = reasonOption?.DisplayText ?? request.Reason.Trim();
+
+            // Sanitize optional note
             var sanitizedNote = (request.Note ?? string.Empty).Trim();
             if (sanitizedNote.Length > MaxNoteLength)
             {
@@ -190,7 +260,7 @@ namespace RoomToRentRadar.Services
             {
                 RoomId = request.RoomId,
                 ReporterUserId = request.ReporterUserId,
-                Reason = request.Reason.Trim(),
+                Reason = finalReason,
                 Note = sanitizedNote,
                 Status = Constants.ReportStatuses.Pending,
                 CreatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm")
@@ -198,7 +268,11 @@ namespace RoomToRentRadar.Services
 
             int reportId = await _reportRepository.SubmitReportAsync(report);
 
-            return SubmitReportResult.Succeeded(reportId, DefaultConfirmationToast);
+            string toastMessage = !string.IsNullOrWhiteSpace(request.RoomTitle)
+                ? $"Cảm ơn bạn đã phản ánh về '{request.RoomTitle.Trim()}'! Báo cáo vi phạm đã được gửi tới Ban quản trị ICTU để kiểm duyệt trong vòng 24h."
+                : DefaultConfirmationToast;
+
+            return SubmitReportResult.Succeeded(reportId, toastMessage);
         }
 
         /// <summary>
@@ -212,7 +286,10 @@ namespace RoomToRentRadar.Services
             cancellationToken.ThrowIfCancellationRequested();
 
             var pendingReports = await _reportRepository.ListPendingReportsAsync();
-            return pendingReports.Any(r => r.RoomId == roomId && r.ReporterUserId == reporterUserId);
+            return pendingReports.Any(r =>
+                r.RoomId == roomId &&
+                r.ReporterUserId == reporterUserId &&
+                string.Equals(r.Status, Constants.ReportStatuses.Pending, StringComparison.OrdinalIgnoreCase));
         }
     }
 }
