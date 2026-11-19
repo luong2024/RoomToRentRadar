@@ -1,11 +1,13 @@
 using Microsoft.Extensions.DependencyInjection;
 using RoomToRentRadar.Application.UseCases.Audit;
 using RoomToRentRadar.Application.UseCases.Auth;
+using RoomToRentRadar.Application.UseCases.Campuses;
 using RoomToRentRadar.Application.UseCases.Landlord;
 using RoomToRentRadar.Application.UseCases.Photos;
 using RoomToRentRadar.Application.UseCases.Rooms;
 using RoomToRentRadar.Ports.Inbound.UseCases.Audit;
 using RoomToRentRadar.Ports.Inbound.UseCases.Auth;
+using RoomToRentRadar.Ports.Inbound.UseCases.Campuses;
 using RoomToRentRadar.Ports.Inbound.UseCases.Landlord;
 using RoomToRentRadar.Ports.Inbound.UseCases.Photos;
 using RoomToRentRadar.Ports.Inbound.UseCases.Rooms;
@@ -41,6 +43,9 @@ public static class DependencyInjection
         services.AddScoped<IUnpublishListingUseCase, UnpublishListingUseCase>();
         services.AddScoped<IRepublishListingUseCase, RepublishListingUseCase>();
         services.AddScoped<IResubmitListingUseCase, ResubmitListingUseCase>();
+
+        // T00.8 — campuses reference list (BR-CMP-01).
+        services.AddScoped<IListCampusesUseCase, ListCampusesUseCase>();
 
         return services;
     }
