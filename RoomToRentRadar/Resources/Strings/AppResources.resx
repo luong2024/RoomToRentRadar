@@ -409,4 +409,18 @@
   <data name="State_Offline_Banner" xml:space="preserve">
     <value>You are offline – showing saved data</value>
   </data>
+
+  <!-- Explore screen states -->
+  <data name="Explore_Error_Title" xml:space="preserve">
+    <value>Could not load rooms</value>
+  </data>
+  <data name="Explore_Empty_Title" xml:space="preserve">
+    <value>No rooms match</value>
+  </data>
+  <data name="Explore_Empty_Message" xml:space="preserve">
+    <value>Try a larger distance or clear your filters to see more rooms.</value>
+  </data>
+  <data name="Explore_Empty_Action" xml:space="preserve">
+    <value>Clear filters</value>
+  </data>
 </root>

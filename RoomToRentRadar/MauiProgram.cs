@@ -1,4 +1,5 @@
 using CommunityToolkit.Maui;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using RoomToRentRadar.Client.Adapters;
 using RoomToRentRadar.Client.Adapters.Abstractions;
@@ -43,6 +44,19 @@ namespace RoomToRentRadar
 
             // Register Client Gateways (ADR-003 Decision 5 & NFR-05)
             builder.Services.AddClientAdapters(ApiOptionsFactory.Create());
+
+#if DEBUG
+            // Wrap whichever IRoomGateway was registered (typed HttpClient or mock) with the scenario decorator.
+            var roomGatewayDescriptor = builder.Services.Last(d => d.ServiceType == typeof(IRoomGateway));
+            builder.Services.Remove(roomGatewayDescriptor);
+            builder.Services.Add(new ServiceDescriptor(typeof(IRoomGateway), sp =>
+            {
+                var inner = roomGatewayDescriptor.ImplementationFactory is { } factory
+                    ? (IRoomGateway)factory(sp)
+                    : (IRoomGateway)ActivatorUtilities.CreateInstance(sp, roomGatewayDescriptor.ImplementationType!);
+                return new DebugScenarioRoomGateway(inner);
+            }, roomGatewayDescriptor.Lifetime));
+#endif
 
             // Core UI & Device Services
             builder.Services.AddSingleton<ISessionStore, MauiSecureSessionStore>();
