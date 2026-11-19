@@ -6,5 +6,11 @@ public interface INavigationService
 
     Task GoToLoginAsync();
 
+    Task GoToDirectionsAsync(
+        double destinationLat,
+        double destinationLng,
+        double? originLat,
+        double? originLng);
+
     Task GoBackAsync();
 }

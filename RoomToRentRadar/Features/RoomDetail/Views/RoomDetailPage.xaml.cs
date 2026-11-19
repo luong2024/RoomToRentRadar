@@ -7,13 +7,15 @@ namespace RoomToRentRadar.Features.RoomDetail.Views;
 public partial class RoomDetailPage : ContentPage
 {
     private readonly RoomDetailViewModel _viewModel;
+    private readonly RoomDetailTravelViewModel _travelViewModel;
     private bool _observing;
     private bool _entryAnimated;
 
-    public RoomDetailPage(RoomDetailViewModel viewModel)
+    public RoomDetailPage(RoomDetailViewModel viewModel, RoomDetailTravelViewModel travelViewModel)
     {
         InitializeComponent();
         BindingContext = _viewModel = viewModel;
+        TravelSection.BindingContext = _travelViewModel = travelViewModel;
     }
 
     protected override void OnAppearing()
@@ -36,13 +38,24 @@ public partial class RoomDetailPage : ContentPage
             // Returning from the sign-in page must reveal the phone without a reload.
             _viewModel.RefreshContactCommand.Execute(null);
         }
+        SyncTravelSection();
         AnimateContent();
     }
 
     private void OnDetailStateChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(RoomDetailViewModel.State))
-            Dispatcher.Dispatch(AnimateContent);
+            Dispatcher.Dispatch(() =>
+            {
+                SyncTravelSection();
+                AnimateContent();
+            });
+    }
+
+    private void SyncTravelSection()
+    {
+        if (_viewModel.State == RoomDetailState.Content && _viewModel.Listing is { } listing)
+            _travelViewModel.Initialize(listing.Id, listing.Lat, listing.Lng);
     }
 
     private async void AnimateContent()
@@ -65,6 +78,7 @@ public partial class RoomDetailPage : ContentPage
     {
         _observing = false;
         _viewModel.PropertyChanged -= OnDetailStateChanged;
+        _travelViewModel.Cancel();
         DetailContent.CancelAnimations();
         DetailContent.Opacity = 1;
         DetailContent.TranslationY = 0;

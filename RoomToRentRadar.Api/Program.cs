@@ -1,12 +1,18 @@
+using System.Globalization;
+using System.Net;
 using System.Reflection;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
 using RoomToRentRadar.Api.Data;
 using RoomToRentRadar.Api.Data.Seed;
@@ -18,6 +24,7 @@ using RoomToRentRadar.Api.Features.Notifications;
 using RoomToRentRadar.Api.Features.Photos;
 using RoomToRentRadar.Api.Features.Reports;
 using RoomToRentRadar.Api.Features.SavedSearches;
+using RoomToRentRadar.Api.Features.Travel;
 using RoomToRentRadar.Shared.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -159,8 +166,95 @@ builder.Services.AddScoped<ListingReportsService>();
 builder.Services.AddScoped<ModerationQueueService>();
 builder.Services.AddScoped<ModerationActionsService>();
 builder.Services.AddHostedService<SavedSearchAlertWorker>();
+builder.Services.AddMemoryCache(cache =>
+{
+    cache.SizeLimit = 10_000;
+    cache.CompactionPercentage = 0.1;
+});
+builder.Services.Configure<TravelOptions>(
+    builder.Configuration.GetSection(TravelOptions.SectionName));
+builder.Services
+    .AddHttpClient<IRoutingEstimatesProvider, GoogleRoutesEstimatesProvider>(client =>
+    {
+        client.BaseAddress = new Uri("https://routes.googleapis.com/");
+        client.Timeout = TimeSpan.FromSeconds(10);
+    })
+    .AddStandardResilienceHandler(resilience =>
+    {
+        resilience.AttemptTimeout.Timeout = TimeSpan.FromSeconds(3);
+        resilience.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(8);
+        resilience.Retry.MaxRetryAttempts = 1;
+    });
+builder.Services.AddScoped<TravelEstimatesService>();
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+    // Proxies are only trusted when explicitly configured; loopback stays trusted by default.
+    var section = builder.Configuration.GetSection("ForwardedHeaders");
+
+    foreach (var proxy in section.GetSection("KnownProxies").Get<string[]>() ?? [])
+    {
+        if (IPAddress.TryParse(proxy, out var address))
+        {
+            options.KnownProxies.Add(address);
+        }
+    }
+
+    foreach (var network in section.GetSection("KnownNetworks").Get<string[]>() ?? [])
+    {
+        if (System.Net.IPNetwork.TryParse(network, out var parsed))
+        {
+            options.KnownIPNetworks.Add(parsed);
+        }
+    }
+});
+builder.Services.AddRateLimiter(rateLimiter =>
+{
+    rateLimiter.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    rateLimiter.AddPolicy(TravelRateLimitPolicy.Name, context =>
+    {
+        var travelOptions = context.RequestServices
+            .GetRequiredService<IOptions<TravelOptions>>()
+            .Value;
+        return RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = Math.Max(1, travelOptions.RateLimitPerMinute),
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            });
+    });
+    rateLimiter.OnRejected = async (context, cancellationToken) =>
+    {
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+        {
+            context.HttpContext.Response.Headers.RetryAfter =
+                ((int)retryAfter.TotalSeconds).ToString(CultureInfo.InvariantCulture);
+        }
+
+        var problem = TravelProblemFactory.RateLimitedProblem();
+        context.HttpContext.Response.StatusCode = problem.Status!.Value;
+        await context.HttpContext.Response.WriteAsJsonAsync(
+            problem,
+            ApiJson.Options,
+            "application/problem+json",
+            cancellationToken);
+    };
+});
 
 var app = builder.Build();
+
+app.UseForwardedHeaders();
+
+if (string.IsNullOrWhiteSpace(app.Configuration["Travel:GoogleRoutesApiKey"]))
+{
+    app.Logger.LogWarning(
+        "Travel:GoogleRoutesApiKey is not configured; travel estimates fall back to straight-line distances. " +
+        "Configure it with 'dotnet user-secrets set \"Travel:GoogleRoutesApiKey\" \"<key>\" --project RoomToRentRadar.Api' " +
+        "or the Travel__GoogleRoutesApiKey environment variable.");
+}
 
 await SqliteDatabaseSetup.EnableWalAsync(connectionString);
 
@@ -206,6 +300,7 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapControllers();
 
