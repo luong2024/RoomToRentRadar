@@ -42,7 +42,7 @@ case "$branch" in
         ;;
     feature/group-5/T*)
         if [ "${ALLOW_ARCHITECT_EDIT:-0}" != "1" ]; then
-            locked_changes="$(git diff --cached --name-only | grep -E '^(RoomToRentRadar\.Core/Models/|RoomToRentRadar\.Core/Abstractions/|RoomToRentRadar\.Infrastructure/Persistence/|RoomToRentRadar/MauiProgram\.cs$)' || true)"
+            locked_changes="$(git diff --cached --name-only | grep -E '^(RoomToRentRadar\.Core/Models/|RoomToRentRadar\.Core/Abstractions/|RoomToRentRadar\.Infrastructure/Persistence/|RoomToRentRadar/MauiProgram\.cs$|RoomToRentRadar\.Api/Program\.cs$)' || true)"
             if [ -n "$locked_changes" ]; then
                 echo "============================================================================" >&2
                 echo "[CHẶN COMMIT - VI PHẠM VÙNG CẤM @architect]" >&2
@@ -51,7 +51,8 @@ case "$branch" in
                 echo "" >&2
                 echo "- Không sửa Models/Interfaces trong RoomToRentRadar.Core" >&2
                 echo "- Không sửa RentalDatabaseService / DatabaseSchema / IctuSeedData" >&2
-                echo "- Không sửa MauiProgram.cs (hãy đăng ký DI/Route trong Features/<Feature>/<Feature>FeatureModule.cs)" >&2
+                echo "- Không sửa MauiProgram.cs hoặc RoomToRentRadar.Api/Program.cs" >&2
+                echo "  (Hãy sửa trong Features/<Feature>/<Feature>FeatureModule.cs hoặc RoomToRentRadar.Api/Endpoints/*Endpoints.cs)" >&2
                 echo "============================================================================" >&2
                 exit 1
             fi
