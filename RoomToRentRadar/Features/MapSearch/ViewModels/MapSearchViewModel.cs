@@ -12,8 +12,15 @@ public partial class MapSearchViewModel : ObservableObject
     public const double DefaultLongitude = 105.8075;
     public const double DefaultDistanceKm = 2.0;
 
-    // Minimum area threshold in degrees squared (~20m x 20m area on earth)
-    public const double MinimumPolygonAreaThreshold = 1e-8;
+    /// <summary>
+    /// Minimum enclosed search area in square meters (approx 20m x 20m = 400 m²).
+    /// </summary>
+    public const double MinimumPolygonAreaSquareMeters = 400.0;
+
+    /// <summary>
+    /// Backwards compatibility alias for MinimumPolygonAreaSquareMeters.
+    /// </summary>
+    public const double MinimumPolygonAreaThreshold = MinimumPolygonAreaSquareMeters;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanStartDrawing))]
@@ -196,25 +203,37 @@ public partial class MapSearchViewModel : ObservableObject
             return;
         }
 
-        // 3. Check polygon geometric area using Shoelace formula
-        double initialArea = CalculatePolygonArea(cleanedPoints);
-        if (initialArea < MinimumPolygonAreaThreshold)
+        // 3. Validate against self-intersection (e.g. bow-tie / figure-8 polygon)
+        if (IsSelfIntersecting(distinctOriginal))
         {
             HasDrawnPolygon = false;
             VertexCount = 0;
-            StatusMessage = "Drawn area is too flat or small. Please draw an open enclosed loop.";
+            StatusMessage = "The drawn area crosses over itself. Please draw a simple loop without intersecting lines.";
             IsDrawingMode = false;
             return;
         }
 
-        // 4. Simplify points using the Ramer-Douglas-Peucker (RDP) algorithm
+        // 4. Check polygon geometric area using localized metric projection Shoelace formula (m²)
+        double initialAreaM2 = CalculatePolygonAreaSquareMeters(distinctOriginal);
+        if (initialAreaM2 < MinimumPolygonAreaSquareMeters)
+        {
+            HasDrawnPolygon = false;
+            VertexCount = 0;
+            StatusMessage = $"Drawn area is too flat or small ({initialAreaM2:F0} m²). Minimum required area is {MinimumPolygonAreaSquareMeters:F0} m².";
+            IsDrawingMode = false;
+            return;
+        }
+
+        // 5. Simplify points using the closed-loop Ramer-Douglas-Peucker (RDP) algorithm
         var simplified = SimplifyPolygon(cleanedPoints, targetMaxCount: 16);
 
-        // 5. Post-RDP validation: ensure at least 3 distinct vertices and non-degenerate area
+        // 6. Post-RDP validation: ensure at least 3 distinct vertices, non-intersecting, and non-degenerate area
         var distinctSimplified = GetDistinctVertices(simplified);
-        double simplifiedArea = CalculatePolygonArea(distinctSimplified);
+        double simplifiedAreaM2 = CalculatePolygonAreaSquareMeters(distinctSimplified);
 
-        if (distinctSimplified.Count >= 3 && simplifiedArea >= MinimumPolygonAreaThreshold)
+        if (distinctSimplified.Count >= 3 &&
+            !IsSelfIntersecting(distinctSimplified) &&
+            simplifiedAreaM2 >= MinimumPolygonAreaSquareMeters)
         {
             foreach (var pt in distinctSimplified)
             {
@@ -224,7 +243,7 @@ public partial class MapSearchViewModel : ObservableObject
 
             HasDrawnPolygon = true;
             VertexCount = distinctSimplified.Count;
-            StatusMessage = $"Search area defined ({VertexCount} points)";
+            StatusMessage = $"Search area defined ({VertexCount} points, {simplifiedAreaM2:F0} m²)";
         }
         else
         {
@@ -332,26 +351,125 @@ public partial class MapSearchViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Calculates the enclosed geographic area using the Shoelace (Gauss) formula.
+    /// Checks whether the polygon self-intersects (e.g. bow-tie or figure-8 shape).
+    /// Returns true if any non-adjacent edges cross each other.
     /// </summary>
-    public static double CalculatePolygonArea(IReadOnlyList<GeoCoordinate> points)
+    public static bool IsSelfIntersecting(IReadOnlyList<GeoCoordinate> vertices)
     {
-        if (points.Count < 3)
+        if (vertices == null || vertices.Count < 4)
+            return false; // A triangle cannot self-intersect
+
+        int n = vertices.Count;
+        for (int i = 0; i < n; i++)
+        {
+            var a1 = vertices[i];
+            var a2 = vertices[(i + 1) % n];
+
+            for (int j = i + 1; j < n; j++)
+            {
+                // Adjacent edges share an endpoint, skip them
+                if (Math.Abs(i - j) <= 1 || (i == 0 && j == n - 1))
+                    continue;
+
+                var b1 = vertices[j];
+                var b2 = vertices[(j + 1) % n];
+
+                if (DoSegmentsIntersect(a1, a2, b1, b2))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool DoSegmentsIntersect(GeoCoordinate p1, GeoCoordinate q1, GeoCoordinate p2, GeoCoordinate q2)
+    {
+        int o1 = GetOrientation(p1, q1, p2);
+        int o2 = GetOrientation(p1, q1, q2);
+        int o3 = GetOrientation(p2, q2, p1);
+        int o4 = GetOrientation(p2, q2, q1);
+
+        // General case: segments cross each other
+        if (o1 != o2 && o3 != o4)
+            return true;
+
+        // Special collinear cases:
+        if (o1 == 0 && IsPointOnSegment(p1, p2, q1)) return true;
+        if (o2 == 0 && IsPointOnSegment(p1, q2, q1)) return true;
+        if (o3 == 0 && IsPointOnSegment(p2, p1, q2)) return true;
+        if (o4 == 0 && IsPointOnSegment(p2, q1, q2)) return true;
+
+        return false;
+    }
+
+    private static int GetOrientation(GeoCoordinate p, GeoCoordinate q, GeoCoordinate r)
+    {
+        double val = (q.Longitude - p.Longitude) * (r.Latitude - p.Latitude) -
+                     (q.Latitude - p.Latitude) * (r.Longitude - p.Longitude);
+
+        if (Math.Abs(val) < 1e-12) return 0; // Collinear
+        return (val > 0) ? 1 : 2; // 1 = Clockwise / CCW, 2 = Opposite
+    }
+
+    private static bool IsPointOnSegment(GeoCoordinate p, GeoCoordinate q, GeoCoordinate r)
+    {
+        return q.Longitude <= Math.Max(p.Longitude, r.Longitude) + 1e-9 &&
+               q.Longitude >= Math.Min(p.Longitude, r.Longitude) - 1e-9 &&
+               q.Latitude <= Math.Max(p.Latitude, r.Latitude) + 1e-9 &&
+               q.Latitude >= Math.Min(p.Latitude, r.Latitude) - 1e-9;
+    }
+
+    /// <summary>
+    /// Calculates the enclosed geographic area in square meters (m²) using localized metric projection and Shoelace formula.
+    /// Accurately reflects real-world ground area regardless of latitude.
+    /// </summary>
+    public static double CalculatePolygonAreaSquareMeters(IReadOnlyList<GeoCoordinate> points)
+    {
+        if (points == null || points.Count < 3)
             return 0.0;
 
+        // Use the first vertex as the local tangent origin
+        double originLat = points[0].Latitude;
+        double originLon = points[0].Longitude;
+        double originLatRad = originLat * Math.PI / 180.0;
+
+        // Earth mean radius in meters (WGS84 approx)
+        const double earthRadius = 6371000.0;
+        double metersPerDegreeLat = (Math.PI / 180.0) * earthRadius;
+        double metersPerDegreeLon = (Math.PI / 180.0) * earthRadius * Math.Cos(originLatRad);
+
+        // Project each geographic point to Cartesian coordinates (meters)
         double sum = 0.0;
         int n = points.Count;
         for (int i = 0; i < n; i++)
         {
             int next = (i + 1) % n;
-            sum += (points[i].Longitude * points[next].Latitude) - (points[next].Longitude * points[i].Latitude);
+
+            double xi = (points[i].Longitude - originLon) * metersPerDegreeLon;
+            double yi = (points[i].Latitude - originLat) * metersPerDegreeLat;
+
+            double xNext = (points[next].Longitude - originLon) * metersPerDegreeLon;
+            double yNext = (points[next].Latitude - originLat) * metersPerDegreeLat;
+
+            sum += (xi * yNext) - (xNext * yi);
         }
 
         return Math.Abs(sum) * 0.5;
     }
 
     /// <summary>
-    /// Simplifies polygon vertices using the Ramer-Douglas-Peucker (RDP) algorithm with adaptive tolerance.
+    /// Calculates the enclosed geographic area. Defaults to square meters (m²).
+    /// </summary>
+    public static double CalculatePolygonArea(IReadOnlyList<GeoCoordinate> points)
+    {
+        return CalculatePolygonAreaSquareMeters(points);
+    }
+
+    /// <summary>
+    /// Simplifies polygon vertices using the closed-loop Ramer-Douglas-Peucker (RDP) algorithm with adaptive tolerance.
+    /// Considers both the perimeter and the closing edge by splitting at the antipodal vertex.
     /// </summary>
     public static List<GeoCoordinate> SimplifyPolygon(List<GeoCoordinate> points, int targetMaxCount = 16)
     {
@@ -361,14 +479,14 @@ public partial class MapSearchViewModel : ObservableObject
 
         // Adaptive tolerance: start with ~0.00008 deg (~9m) and adjust if needed
         double epsilon = 0.00008;
-        var simplified = RamerDouglasPeucker(normalized, epsilon);
+        var simplified = SimplifyClosedPolygonRDP(normalized, epsilon);
 
         // If still too many points for comfortable touch pin manipulation, gradually increase epsilon
         int iterations = 0;
         while (simplified.Count > targetMaxCount && iterations < 5)
         {
             epsilon *= 1.5;
-            simplified = RamerDouglasPeucker(normalized, epsilon);
+            simplified = SimplifyClosedPolygonRDP(normalized, epsilon);
             iterations++;
         }
 
@@ -381,6 +499,72 @@ public partial class MapSearchViewModel : ObservableObject
         }
 
         return distinctSimplified;
+    }
+
+    /// <summary>
+    /// Simplifies a closed polygon by splitting it at the furthest antipodal point and running RDP on both halves.
+    /// Eliminates arbitrary starting point bias and preserves contours around the closing boundary.
+    /// </summary>
+    public static List<GeoCoordinate> SimplifyClosedPolygonRDP(List<GeoCoordinate> closedVertices, double epsilon)
+    {
+        if (closedVertices == null || closedVertices.Count <= 3)
+            return closedVertices != null ? new List<GeoCoordinate>(closedVertices) : new List<GeoCoordinate>();
+
+        // 1. Find the vertex furthest from index 0 to serve as the antipodal split point
+        int n = closedVertices.Count;
+        int furthestIdx = 1;
+        double maxDistSq = 0.0;
+        var origin = closedVertices[0];
+
+        for (int i = 1; i < n; i++)
+        {
+            double dLat = closedVertices[i].Latitude - origin.Latitude;
+            double dLon = closedVertices[i].Longitude - origin.Longitude;
+            double distSq = dLat * dLat + dLon * dLon;
+            if (distSq > maxDistSq)
+            {
+                maxDistSq = distSq;
+                furthestIdx = i;
+            }
+        }
+
+        // Ensure furthestIdx is valid to split into two non-empty halves
+        if (furthestIdx <= 0 || furthestIdx >= n - 1)
+        {
+            furthestIdx = n / 2;
+        }
+
+        // 2. Build Part 1: from 0 to furthestIdx
+        var part1 = new List<GeoCoordinate>();
+        for (int i = 0; i <= furthestIdx; i++)
+        {
+            part1.Add(closedVertices[i]);
+        }
+
+        // 3. Build Part 2: from furthestIdx to n-1 then back to 0
+        var part2 = new List<GeoCoordinate>();
+        for (int i = furthestIdx; i < n; i++)
+        {
+            part2.Add(closedVertices[i]);
+        }
+        part2.Add(closedVertices[0]); // complete the loop back to 0
+
+        // 4. Simplify both halves independently with standard RDP
+        var simplified1 = RamerDouglasPeucker(part1, epsilon);
+        var simplified2 = RamerDouglasPeucker(part2, epsilon);
+
+        // 5. Merge results:
+        var combined = new List<GeoCoordinate>();
+        for (int i = 0; i < simplified1.Count - 1; i++)
+        {
+            combined.Add(simplified1[i]);
+        }
+        for (int i = 0; i < simplified2.Count - 1; i++)
+        {
+            combined.Add(simplified2[i]);
+        }
+
+        return GetDistinctVertices(combined);
     }
 
     /// <summary>

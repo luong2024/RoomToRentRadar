@@ -375,22 +375,22 @@ public class MapSearchViewModelTests
     }
 
     [Test]
-    public void CalculatePolygonArea_WithKnownTriangle_ShouldReturnCorrectArea()
+    public void CalculatePolygonArea_WithKnownTriangle_ShouldReturnCorrectMetricArea()
     {
-        // Arrange: Right-angled triangle with base = 0.01 and height = 0.01
-        // Expected area = 0.5 * 0.01 * 0.01 = 0.00005
+        // Arrange: Right-angled triangle with sides 0.001 deg (~111.2m each)
+        // Area ~ 0.5 * 111.195 * 111.195 ~ 6182 m²
         var triangle = new List<GeoCoordinate>
         {
             new(0.0, 0.0),
-            new(0.01, 0.0),
-            new(0.0, 0.01)
+            new(0.001, 0.0),
+            new(0.0, 0.001)
         };
 
         // Act
         double area = MapSearchViewModel.CalculatePolygonArea(triangle);
 
         // Assert
-        Assert.That(area, Is.EqualTo(0.00005).Within(1e-9));
+        Assert.That(area, Is.EqualTo(6182.0).Within(50.0));
     }
 
     [Test]
@@ -585,5 +585,118 @@ public class MapSearchViewModelTests
 
         // Assert
         Assert.That(distinct.Count, Is.EqualTo(3));
+    }
+
+    [Test]
+    public void IsSelfIntersecting_WithBowTiePolygon_ShouldReturnTrue()
+    {
+        // Arrange: Bow-tie shape (hourglass) where non-adjacent edges cross in center
+        var bowTie = new List<GeoCoordinate>
+        {
+            new(21.0, 105.0),
+            new(21.1, 105.1),
+            new(21.0, 105.1),
+            new(21.1, 105.0)
+        };
+
+        // Act
+        bool isSelfIntersecting = MapSearchViewModel.IsSelfIntersecting(bowTie);
+
+        // Assert
+        Assert.That(isSelfIntersecting, Is.True);
+    }
+
+    [Test]
+    public void CompleteDrawing_WithSelfIntersectingPolygon_ShouldRejectWithWarning()
+    {
+        // Arrange: Hourglass/bow-tie
+        var bowTie = new List<GeoCoordinate>
+        {
+            new(21.5800, 105.8000),
+            new(21.5900, 105.8100),
+            new(21.5800, 105.8100),
+            new(21.5900, 105.8000)
+        };
+
+        // Act
+        _viewModel.CompleteDrawing(bowTie);
+
+        // Assert
+        Assert.That(_viewModel.HasDrawnPolygon, Is.False);
+        Assert.That(_viewModel.VertexCount, Is.EqualTo(0));
+        Assert.That(_viewModel.StatusMessage, Does.Contain("crosses over itself"));
+    }
+
+    [Test]
+    public void SimplifyPolygon_With24VertexCircle_ShouldPreserveContourAndStayWithinTargetCount()
+    {
+        // Arrange: Approximate circle with 24 vertices (radius ~ 200m)
+        double centerLat = 21.5855;
+        double centerLon = 105.8075;
+        double radiusDeg = 0.002;
+        var circlePoints = new List<GeoCoordinate>();
+        int numPoints = 24;
+
+        for (int i = 0; i < numPoints; i++)
+        {
+            double angle = (2.0 * Math.PI * i) / numPoints;
+            circlePoints.Add(new GeoCoordinate(
+                centerLat + radiusDeg * Math.Sin(angle),
+                centerLon + radiusDeg * Math.Cos(angle)));
+        }
+
+        // Act
+        var simplified = MapSearchViewModel.SimplifyPolygon(circlePoints, targetMaxCount: 16);
+
+        // Assert
+        Assert.That(simplified.Count, Is.GreaterThanOrEqualTo(3));
+        Assert.That(simplified.Count, Is.LessThanOrEqualTo(16));
+
+        // Enclosed area of simplified polygon should still be substantial (~100,000+ m²)
+        double area = MapSearchViewModel.CalculatePolygonAreaSquareMeters(simplified);
+        Assert.That(area, Is.GreaterThan(50000.0));
+    }
+
+    [Test]
+    public void SimplifyPolygon_WithConcaveLShapedPolygon_ShouldPreserveConcaveCorner()
+    {
+        // Arrange: L-shaped polygon with inner concave reflex vertex
+        var lShape = new List<GeoCoordinate>
+        {
+            new(21.5800, 105.8000), // bottom-left
+            new(21.5900, 105.8000), // top-left
+            new(21.5900, 105.8050), // top-middle
+            new(21.5850, 105.8050), // inner concave corner
+            new(21.5850, 105.8100), // right-middle
+            new(21.5800, 105.8100)  // bottom-right
+        };
+
+        // Act
+        var simplified = MapSearchViewModel.SimplifyPolygon(lShape, targetMaxCount: 16);
+
+        // Assert: All 6 key vertices should be preserved
+        Assert.That(simplified.Count, Is.EqualTo(6));
+        Assert.That(simplified.Any(p => MapSearchViewModel.IsSameLocation(p, new GeoCoordinate(21.5850, 105.8050), 1e-4)), Is.True);
+    }
+
+    [Test]
+    public void SimplifyClosedPolygonRDP_WithHighVariationNearClosingEdge_ShouldPreserveClosingContour()
+    {
+        // Arrange: Square where closing edge (from last to first point) has a prominent spike
+        var points = new List<GeoCoordinate>
+        {
+            new(21.5800, 105.8000), // index 0 (start)
+            new(21.5900, 105.8000),
+            new(21.5900, 105.8100),
+            new(21.5800, 105.8100), // index 3
+            new(21.5750, 105.8050)  // index 4: sharp spike on closing segment returning to index 0
+        };
+
+        // Act
+        var simplified = MapSearchViewModel.SimplifyClosedPolygonRDP(points, epsilon: 0.0001);
+
+        // Assert: The prominent spike on closing contour should NOT be flattened
+        Assert.That(simplified.Count, Is.EqualTo(5));
+        Assert.That(simplified.Any(p => MapSearchViewModel.IsSameLocation(p, new GeoCoordinate(21.5750, 105.8050), 1e-4)), Is.True);
     }
 }

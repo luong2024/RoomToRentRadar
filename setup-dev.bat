@@ -5,17 +5,22 @@ echo ========================================================
 echo    RoomToRentRadar - Khoi Tao Moi Truong Cho Nguoi Moi
 echo ========================================================
 echo.
-echo [1/4] Cai dat User Secrets cho Backend (.NET Secrets)...
-for /f "delims=" %%s in ('powershell -NoProfile -Command "$b = New-Object byte[] 32; [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [Convert]::ToBase64String($b)"') do set "JWT_SECRET=%%s"
-dotnet user-secrets set "Jwt:Secret" "!JWT_SECRET!" --project src/RoomToRentRadar.Bootstrap
-set "JWT_RES=!ERRORLEVEL!"
-dotnet user-secrets set "CosmosDb:RoomsContainerName" "RoomDetails" --project src/RoomToRentRadar.Bootstrap
-set "COSMOS_RES=!ERRORLEVEL!"
+echo [1/4] Kiem tra va cai dat User Secrets cho Backend (.NET Secrets)...
+dotnet user-secrets list --project src/RoomToRentRadar.Bootstrap 2>nul | findstr /i "Jwt:Secret" >nul
+if !ERRORLEVEL! NEQ 0 (
+    for /f "delims=" %%s in ('powershell -NoProfile -Command "$b = New-Object byte[] 32; [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [Convert]::ToBase64String($b)"') do set "JWT_SECRET=%%s"
+    dotnet user-secrets set "Jwt:Secret" "!JWT_SECRET!" --project src/RoomToRentRadar.Bootstrap >nul
+    set "JWT_RES=!ERRORLEVEL!"
+    dotnet user-secrets set "CosmosDb:RoomsContainerName" "RoomDetails" --project src/RoomToRentRadar.Bootstrap >nul
+    set "COSMOS_RES=!ERRORLEVEL!"
 
-if !JWT_RES! EQU 0 if !COSMOS_RES! EQU 0 (
-    echo       -^> Da tao ngau nhien JWT Secret (32 bytes) va luu secrets cuc bo thanh cong.
+    if !JWT_RES! EQU 0 if !COSMOS_RES! EQU 0 (
+        echo       -^> Da tao ngau nhien JWT Secret (32 bytes) va luu User Secrets cuc bo thanh cong.
+    ) else (
+        echo       -^> [CANH BAO] Khong the luu User Secrets day du (ma loi !JWT_RES! / !COSMOS_RES!).
+    )
 ) else (
-    echo       -^> [CANH BAO] Khong the luu User Secrets day du (ma loi !JWT_RES! / !COSMOS_RES!).
+    echo       -^> Jwt:Secret da ton tai trong User Secrets (giu nguyen gia tri de tranh mat phien dang nhap).
 )
 
 echo.
@@ -70,8 +75,19 @@ if defined ADB_EXE (
     echo       -^> Chua phat hien adb tren he thong ^(Neu chi chay tren Windows thi khong can buoc nay^).
 )
 echo.
-echo [4/4] Kiem tra cau hinh User Secrets da luu:
-dotnet user-secrets list --project src/RoomToRentRadar.Bootstrap
+echo [4/4] Kiem tra trang thai cau hinh User Secrets (Bao mat: Khong in gia tri secret):
+dotnet user-secrets list --project src/RoomToRentRadar.Bootstrap 2>nul | findstr /i "Jwt:Secret" >nul
+if !ERRORLEVEL! EQU 0 (
+    echo       -^> Jwt:Secret: [DA CAU HINH] (Gia tri duoc an vi ly do bao mat)
+) else (
+    echo       -^> Jwt:Secret: [CHUA CAU HINH]
+)
+dotnet user-secrets list --project src/RoomToRentRadar.Bootstrap 2>nul | findstr /i "CosmosDb:RoomsContainerName" >nul
+if !ERRORLEVEL! EQU 0 (
+    echo       -^> CosmosDb:RoomsContainerName: [DA CAU HINH]
+) else (
+    echo       -^> CosmosDb:RoomsContainerName: [CHUA CAU HINH]
+)
 echo.
 echo ========================================================
 echo   HOAN TAT!
