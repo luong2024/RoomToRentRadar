@@ -37,6 +37,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRoomListingCacheInvalidator>(sp => sp.GetRequiredService<GetRoomListingsUseCase>());
         services.AddScoped<IGetRoomDetailsUseCase, GetRoomDetailsUseCase>();
         services.AddScoped<ISearchRoomsUseCase, SearchRoomsUseCase>();
+        services.AddScoped<ISearchRoomsInPolygonUseCase, SearchRoomsInPolygonUseCase>();
         services.AddScoped<IRoutingService, RoutingService>();
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<IRegisterUserUseCase, RegisterUserUseCase>();

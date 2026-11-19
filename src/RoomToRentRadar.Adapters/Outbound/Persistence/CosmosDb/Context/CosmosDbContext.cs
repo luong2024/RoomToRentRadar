@@ -208,7 +208,23 @@ public sealed class CosmosDbContext : ICosmosDbContext
         var database = databaseResponse.Database;
 
         var listingsContainerName = string.IsNullOrWhiteSpace(_options.ContainerName) ? "RoomListings" : _options.ContainerName;
-        await database.CreateContainerIfNotExistsAsync(listingsContainerName, "/campusId", cancellationToken: cancellationToken);
+        var listingsContainerProperties = new ContainerProperties(listingsContainerName, "/campusId");
+        listingsContainerProperties.IndexingPolicy.SpatialIndexes.Add(new SpatialPath
+        {
+            Path = "/location/*",
+            SpatialTypes = { SpatialType.Point }
+        });
+        listingsContainerProperties.IndexingPolicy.SpatialIndexes.Add(new SpatialPath
+        {
+            Path = "/Location/*",
+            SpatialTypes = { SpatialType.Point }
+        });
+
+        var listingsResponse = await database.CreateContainerIfNotExistsAsync(
+            listingsContainerProperties,
+            cancellationToken: cancellationToken);
+
+        await EnsureSpatialIndexesAsync(listingsResponse.Container, listingsResponse.Resource, cancellationToken);
 
         var syncOutboxContainerName = string.IsNullOrWhiteSpace(_options.RoomProjectionSyncOutboxContainerName)
             ? "RoomProjectionSyncOutbox"
@@ -291,7 +307,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
             roomsContainerProperties,
             cancellationToken: cancellationToken);
 
-        await EnsureRoomsSpatialIndexesAsync(roomsResponse.Container, roomsResponse.Resource, cancellationToken);
+        await EnsureSpatialIndexesAsync(roomsResponse.Container, roomsResponse.Resource, cancellationToken);
     }
 
     private async Task EnsureFavouritesContainerOnDatabaseAsync(
@@ -335,7 +351,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
             cancellationToken: cancellationToken);
     }
 
-    private static async Task EnsureRoomsSpatialIndexesAsync(
+    private static async Task EnsureSpatialIndexesAsync(
         Container container,
         ContainerProperties properties,
         CancellationToken cancellationToken)
