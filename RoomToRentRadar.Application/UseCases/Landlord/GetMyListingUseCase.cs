@@ -1,7 +1,7 @@
 using RoomToRentRadar.Application.Mappers;
 using RoomToRentRadar.Domain.Exceptions;
 using RoomToRentRadar.Ports.Contracts.Common;
-using RoomToRentRadar.Ports.Contracts.Responses.Landlord;
+using RoomToRentRadar.Ports.Contracts.Responses.Listings;
 using RoomToRentRadar.Ports.Inbound.UseCases.Landlord;
 using RoomToRentRadar.Ports.Outbound.ExternalServices;
 using RoomToRentRadar.Ports.Outbound.Repositories;

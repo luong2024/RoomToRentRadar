@@ -3,7 +3,7 @@ using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.Exceptions;
 using RoomToRentRadar.Ports.Contracts.Common;
 using RoomToRentRadar.Ports.Contracts.Requests.Landlord;
-using RoomToRentRadar.Ports.Contracts.Responses.Landlord;
+using RoomToRentRadar.Ports.Contracts.Responses.Listings;
 using RoomToRentRadar.Ports.Inbound.UseCases.Landlord;
 using RoomToRentRadar.Ports.Outbound.ExternalServices;
 using RoomToRentRadar.Ports.Outbound.Repositories;
@@ -32,7 +32,7 @@ public sealed class ListMyListingsUseCase : IListMyListingsUseCase
         _storage = storage;
     }
 
-    public async Task<PagedMyListingsDto> ExecuteAsync(
+    public async Task<PagedMyListings> ExecuteAsync(
         ListMyListingsRequest request,
         CancellationToken ct = default)
     {
@@ -66,14 +66,14 @@ public sealed class ListMyListingsUseCase : IListMyListingsUseCase
             .ListByLandlordAsync(request.LandlordId, request.Status, request.PageNumber, request.PageSize, ct)
             .ConfigureAwait(false);
 
-        return new PagedMyListingsDto(
+        return new PagedMyListings(
             Items: page.Items.Select(listing => LandlordListingMapper.ToSummary(listing, _storage)).ToArray(),
             TotalCount: page.TotalCount,
             PageNumber: request.PageNumber,
             PageSize: request.PageSize,
             CountsByStatus: Enum.GetValues<ListingStatus>()
                 .ToDictionary(
-                    status => status.ToString(),
+                    status => status,
                     status => page.CountsByStatus.TryGetValue(status, out var count) ? count : 0));
     }
 }

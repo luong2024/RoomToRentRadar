@@ -1,6 +1,6 @@
 namespace RoomToRentRadar.Domain.Enums;
 
-/// <summary>The five safety criteria of the Safety Score (<c>docs/erd.md</c> §4.6, BR-LST-08).</summary>
+/// <summary>Safety features of a room, matching <c>SafetyFeature</c> in <c>docs/api/openapi.yaml</c>.</summary>
 public enum SafetyFeature
 {
     Cctv = 1,

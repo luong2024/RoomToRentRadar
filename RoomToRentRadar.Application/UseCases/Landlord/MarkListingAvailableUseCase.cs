@@ -1,6 +1,6 @@
 using RoomToRentRadar.Domain.Aggregates;
 using RoomToRentRadar.Ports.Contracts.Requests.Landlord;
-using RoomToRentRadar.Ports.Contracts.Responses.Landlord;
+using RoomToRentRadar.Ports.Contracts.Responses.Listings;
 using RoomToRentRadar.Ports.Inbound.UseCases.Landlord;
 using RoomToRentRadar.Ports.Outbound.ExternalServices;
 using RoomToRentRadar.Ports.Outbound.Repositories;

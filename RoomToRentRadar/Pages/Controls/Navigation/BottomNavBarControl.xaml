@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:fonts="clr-namespace:Fonts"
+             xmlns:nav="clr-namespace:RoomToRentRadar.Pages.Controls.Navigation"
+             x:Class="RoomToRentRadar.Pages.Controls.Navigation.BottomNavBarControl"
+             x:Name="ThisControl"
+             x:DataType="nav:BottomNavBarControl">
+
+    <Border Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+            StrokeThickness="1"
+            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+            Shadow="{StaticResource Elevation1Shadow}"
+            HeightRequest="64"
+            VerticalOptions="End"
+            Padding="0">
+        <Border.StrokeShape>
+            <RoundRectangle CornerRadius="0" />
+        </Border.StrokeShape>
+
+        <!-- Role-aware tabs (RoleTabsProvider); each cell grows to an equal share, >= 48 dp tall. -->
+        <FlexLayout Direction="Row"
+                    AlignItems="Stretch"
+                    HorizontalOptions="Fill"
+                    VerticalOptions="Fill"
+                    BindableLayout.ItemsSource="{Binding Tabs, Source={x:Reference ThisControl}}">
+            <BindableLayout.ItemTemplate>
+                <DataTemplate x:DataType="nav:BottomNavItem">
+                    <Grid FlexLayout.Grow="1"
+                          RowDefinitions="3, *, Auto"
+                          Padding="0,0,0,6"
+                          SemanticProperties.Description="{Binding Title}"
+                          SemanticProperties.Hint="{Binding Hint}">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding SelectCommand}"
+                                                  CommandParameter="{Binding Route}" />
+                        </Grid.GestureRecognizers>
+
+                        <!-- Top indicator pill -->
+                        <Border Grid.Row="0"
+                                WidthRequest="32"
+                                HeightRequest="3"
+                                HorizontalOptions="Center"
+                                VerticalOptions="Start"
+                                StrokeThickness="0"
+                                BackgroundColor="{StaticResource Teal500}"
+                                IsVisible="{Binding IsSelected}">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="1.5" />
+                            </Border.StrokeShape>
+                        </Border>
+
+                        <!-- Icon container with unread badge (Messages only) -->
+                        <Grid Grid.Row="1"
+                              WidthRequest="36"
+                              HeightRequest="28"
+                              HorizontalOptions="Center"
+                              VerticalOptions="Center">
+                            <Image WidthRequest="24"
+                                   HeightRequest="24"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="{Binding Glyph}"
+                                                     FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                     Size="24"
+                                                     Color="{Binding IconColor}" />
+                                </Image.Source>
+                            </Image>
+
+                            <Border WidthRequest="18"
+                                    HeightRequest="18"
+                                    HorizontalOptions="End"
+                                    VerticalOptions="Start"
+                                    StrokeThickness="0"
+                                    BackgroundColor="{StaticResource StatusDangerLight}"
+                                    IsVisible="{Binding HasBadge}">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="9" />
+                                </Border.StrokeShape>
+
+                                <Label Text="{Binding BadgeCount}"
+                                       TextColor="White"
+                                       FontSize="10"
+                                       FontAttributes="Bold"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center" />
+                            </Border>
+                        </Grid>
+
+                        <!-- Label -->
+                        <Label Grid.Row="2"
+                               Text="{Binding Title}"
+                               FontSize="{StaticResource FontSizeCaption}"
+                               FontAttributes="{Binding LabelFontAttributes}"
+                               TextColor="{Binding IconColor}"
+                               HorizontalOptions="Center"
+                               VerticalOptions="End" />
+                    </Grid>
+                </DataTemplate>
+            </BindableLayout.ItemTemplate>
+        </FlexLayout>
+    </Border>
+</ContentView>

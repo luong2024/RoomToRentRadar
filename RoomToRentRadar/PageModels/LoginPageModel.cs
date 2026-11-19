@@ -4,6 +4,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Client.Adapters.Abstractions;
 using RoomToRentRadar.Ports.Contracts.Requests.Auth;
+using RoomToRentRadar.Resources.Strings;
+using RoomToRentRadar.Services.Navigation.Core;
 
 namespace RoomToRentRadar.PageModels;
 
@@ -13,6 +15,7 @@ public partial class LoginPageModel : ObservableObject
 
     private readonly IAuthGateway _authGateway;
     private readonly ISessionStore _sessionStore;
+    private readonly INavigationService _navigation;
 
     [ObservableProperty]
     public partial string Email { get; set; } = string.Empty;
@@ -44,12 +47,25 @@ public partial class LoginPageModel : ObservableObject
     public bool IsSsoVisible => false;
 #endif
 
+    public string DontHaveAccountText => AppResources.GetString("Auth_DontHaveAccount");
+    public string SignUpNowText => AppResources.GetString("Auth_SignUpNow");
+    public string ContinueAsGuestText => AppResources.GetString("Auth_ContinueAsGuest");
+
     public LoginPageModel(
         IAuthGateway authGateway,
-        ISessionStore sessionStore)
+        ISessionStore sessionStore,
+        INavigationService navigation)
     {
         _authGateway = authGateway ?? throw new ArgumentNullException(nameof(authGateway));
         _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
+        _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
+
+        LocalizedStrings.Instance.PropertyChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(DontHaveAccountText));
+            OnPropertyChanged(nameof(SignUpNowText));
+            OnPropertyChanged(nameof(ContinueAsGuestText));
+        };
     }
 
     [RelayCommand]
@@ -102,7 +118,7 @@ public partial class LoginPageModel : ObservableObject
 
                 try
                 {
-                    await Shell.Current.GoToAsync("//main");
+                    await _navigation.CompleteSignInAsync();
                 }
                 catch (Exception)
                 {
@@ -166,7 +182,7 @@ public partial class LoginPageModel : ObservableObject
 
                 try
                 {
-                    await Shell.Current.GoToAsync("//main");
+                    await _navigation.CompleteSignInAsync();
                 }
                 catch (Exception)
                 {
@@ -205,7 +221,7 @@ public partial class LoginPageModel : ObservableObject
     [RelayCommand]
     private async Task NavigateToRegisterAsync()
     {
-        await Shell.Current.GoToAsync("roleselection");
+        await _navigation.GoToAsync(AppRoutes.RoleSelection);
     }
 
     [RelayCommand]
@@ -218,6 +234,12 @@ public partial class LoginPageModel : ObservableObject
                 "Password recovery via email is currently under maintenance. Please contact the ICTU Radar administrator.",
                 "OK");
         }
+    }
+
+    [RelayCommand]
+    private async Task ContinueAsGuestAsync()
+    {
+        await _navigation.GoToAsync("//" + AppRoutes.Explore);
     }
 
     private static string MapAuthErrorCodeToMessage(string? errorCode, HttpStatusCode statusCode, string defaultMessage)

@@ -3,6 +3,8 @@ using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.ValueObjects;
 using RoomToRentRadar.Ports.Contracts.Requests.Landlord;
+using RoomToRentRadar.Ports.Contracts.Requests.Listings;
+using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadar.Ports.Outbound.ExternalServices;
 using RoomToRentRadar.Ports.Outbound.Transactions;
 
@@ -141,7 +143,7 @@ internal static class AppTestData
             safetyFeatures: safetyFeatures,
             currentHouseRules: houseRules);
 
-    public static HouseRulesFieldsDto HouseRules() =>
+    public static HouseRulesFields HouseRules() =>
         new(
             QuietHoursStart: "22:00",
             QuietHoursEnd: "06:00",
@@ -195,7 +197,7 @@ internal static class AppTestData
         IReadOnlyList<string> photoIds,
         IReadOnlyList<Amenity>? amenities = null,
         IReadOnlyList<SafetyFeature>? safetyFeatures = null,
-        HouseRulesFieldsDto? houseRules = null,
+        HouseRulesFields? houseRules = null,
         string addressLine = "Tân Thịnh",
         double latitude = 21.5851,
         double longitude = 105.8066,

@@ -1,9 +1,10 @@
 using RoomToRentRadar.Domain.Aggregates;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
-using RoomToRentRadar.Ports.Contracts.Requests.Landlord;
-using RoomToRentRadar.Ports.Contracts.Responses.Landlord;
+using RoomToRentRadar.Ports.Contracts.Requests.Listings;
+using RoomToRentRadar.Ports.Contracts.Responses.Listings;
 using RoomToRentRadar.Ports.Contracts.Responses.Photos;
+using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadar.Ports.Outbound.ExternalServices;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 
@@ -93,14 +94,14 @@ public static class LandlordListingMapper
             DepositVnd: room.DepositVnd,
             AreaM2: room.AreaM2,
             MaxOccupants: room.MaxOccupants,
-            Furnishing: ParseEnumName<Furnishing>(room.Furnishing),
+            Furnishing: ParseEnumName<Furnishing>(room.Furnishing) ?? Furnishing.Unfurnished,
             AvailableFrom: room.AvailableFrom,
             Address: new AddressDto(room.AddressLine, room.Ward, room.District),
             Location: new GeoPointDto(room.Latitude, room.Longitude),
             Utilities: new UtilitiesDto(
                 room.ElectricityPriceVndPerKwh,
                 room.WaterPriceVnd,
-                ParseEnumName<WaterPriceUnit>(room.WaterPriceUnit),
+                ParseEnumName<WaterPriceUnit>(room.WaterPriceUnit) ?? WaterPriceUnit.PerCubicMeter,
                 room.InternetFeeVnd,
                 room.ParkingFeeVnd,
                 room.OtherFeesNote),
@@ -128,10 +129,10 @@ public static class LandlordListingMapper
                 VersionNumber: rules.VersionNumber,
                 UpdatedAtUtc: rules.CreatedAtUtc);
 
-    public static HouseRulesFieldsDto? ToHouseRulesFields(HouseRuleVersion? rules) =>
+    public static HouseRulesFields? ToHouseRulesFields(HouseRuleVersion? rules) =>
         rules is null
             ? null
-            : new HouseRulesFieldsDto(
+            : new HouseRulesFields(
                 QuietHoursStart: rules.QuietHoursStart,
                 QuietHoursEnd: rules.QuietHoursEnd,
                 CurfewTime: rules.CurfewTime,

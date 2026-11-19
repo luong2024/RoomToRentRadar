@@ -1,8 +1,12 @@
 using CommunityToolkit.Maui;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using RoomToRentRadar.Client.Adapters;
 using RoomToRentRadar.Client.Adapters.Abstractions;
 using RoomToRentRadar.DeviceAdapters;
+using RoomToRentRadar.Services;
+using RoomToRentRadar.Services.Navigation;
+using RoomToRentRadar.Services.Navigation.Core;
 using Syncfusion.Maui.Toolkit.Hosting;
 
 namespace RoomToRentRadar
@@ -39,39 +43,14 @@ namespace RoomToRentRadar
 #endif
 
             // Register Client Gateways (ADR-003 Decision 5 & NFR-05)
-            Uri baseApiUrl;
-#if DEBUG
-            // In local development, Android emulator connects to host via 10.0.2.2; desktop uses localhost
-            baseApiUrl = DeviceInfo.Platform == DevicePlatform.Android
-                ? new Uri("http://10.0.2.2:5000")
-                : new Uri("http://localhost:5000");
-#else
-            // In Release/Production, enforce HTTPS endpoint per ADR-003 / NFR-05
-            var configuredUrl = Preferences.Default.Get("ApiBaseUrl", "https://api.roomtorentradar.com");
-            baseApiUrl = new Uri(configuredUrl);
-#endif
-
-            builder.Services.AddClientAuthGateway(baseApiUrl);
+            builder.Services.AddClientAdapters(ApiOptionsFactory.Create());
 
             // Core UI & Device Services
-            builder.Services.AddSingleton<ModalErrorHandler>();
             builder.Services.AddSingleton<ISessionStore, MauiSecureSessionStore>();
+            builder.Services.AddSingleton<IAppSession, AppSession>();
+            builder.Services.AddSingleton<INavigationService, NavigationService>();
 
-            // Main Landing Page
-            builder.Services.AddTransient<PageModels.MainLandingPageModel>();
-            builder.Services.AddTransient<Pages.MainLandingPage>();
-
-            // UI Design System Catalog
-            builder.Services.AddSingleton<PageModels.UiCatalogPageModel>();
-            builder.Services.AddTransient<Pages.UiCatalogPage>();
-
-            // Auth Flow Services & Pages
-            builder.Services.AddTransient<PageModels.LoginPageModel>();
-            builder.Services.AddTransient<Pages.LoginPage>();
-            builder.Services.AddTransient<PageModels.RegisterPageModel>();
-            builder.Services.AddTransient<Pages.RegisterPage>();
-            builder.Services.AddTransient<PageModels.RoleSelectionPageModel>();
-            builder.Services.AddTransient<Pages.RoleSelectionPage>();
+            builder.Services.AddAppPages();
 
             return builder.Build();
         }

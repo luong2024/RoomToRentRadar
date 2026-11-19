@@ -3,7 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using RoomToRentRadar.Api.Authorization;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Ports.Contracts.Requests.Landlord;
-using RoomToRentRadar.Ports.Contracts.Responses.Landlord;
+using RoomToRentRadar.Ports.Contracts.Requests.Listings;
+using RoomToRentRadar.Ports.Contracts.Responses.Listings;
 using RoomToRentRadar.Ports.Inbound.UseCases.Landlord;
 
 namespace RoomToRentRadar.Api.Controllers;
@@ -64,10 +65,10 @@ public sealed class LandlordRoomsController : ControllerBase
 
     [HttpGet]
     [Authorize(Policy = AuthorizationPolicies.LandlordPolicy)]
-    [ProducesResponseType(typeof(PagedMyListingsDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PagedMyListings), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
-    public async Task<ActionResult<PagedMyListingsDto>> ListMyListings(
+    public async Task<ActionResult<PagedMyListings>> ListMyListings(
         [FromQuery] ListingStatus? status,
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
@@ -211,5 +212,5 @@ public sealed class LandlordRoomsController : ControllerBase
             ? values[0]
             : null;
 
-    private void SetEtag(int version) => Response.Headers.ETag = $"\"{version}\"";
+    private void SetEtag(long version) => Response.Headers.ETag = $"\"{version}\"";
 }

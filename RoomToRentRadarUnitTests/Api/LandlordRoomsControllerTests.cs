@@ -7,8 +7,10 @@ using RoomToRentRadar.Api.Authorization;
 using RoomToRentRadar.Api.Controllers;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Ports.Contracts.Requests.Landlord;
-using RoomToRentRadar.Ports.Contracts.Responses.Landlord;
+using RoomToRentRadar.Ports.Contracts.Requests.Listings;
+using RoomToRentRadar.Ports.Contracts.Responses.Listings;
 using RoomToRentRadar.Ports.Contracts.Responses.Photos;
+using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadar.Ports.Inbound.UseCases.Landlord;
 
 namespace RoomToRentRadarUnitTests.Api;
@@ -84,12 +86,12 @@ public class LandlordRoomsControllerTests
     [Test]
     public async Task ListMyListings_ScopesToTheCallerAndForwardsPaging()
     {
-        var page = new PagedMyListingsDto(
+        var page = new PagedMyListings(
             Array.Empty<MyListingSummaryDto>(),
             TotalCount: 0,
             PageNumber: 2,
             PageSize: 5,
-            CountsByStatus: Enum.GetValues<ListingStatus>().ToDictionary(status => status.ToString(), _ => 0));
+            CountsByStatus: Enum.GetValues<ListingStatus>().ToDictionary(status => status, _ => 0));
         ListMyListingsRequest? captured = null;
 
         _listMyListingsUseCase

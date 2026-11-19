@@ -4,6 +4,7 @@ using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.Exceptions;
 using RoomToRentRadar.Ports.Contracts.Requests.Landlord;
+using RoomToRentRadar.Ports.Contracts.Requests.Listings;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 
 namespace RoomToRentRadarUnitTests.Application.Landlord;
@@ -249,6 +250,24 @@ public class UpdateListingUseCaseTests
 
         Assert.That(_unitOfWork.Executions, Is.EqualTo(1));
         await _rooms.Received(1).UpdateAsync(_room, Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task ExecuteAsync_UndefinedFurnishingEnum_ThrowsDomainValidationException()
+    {
+        // Room.UpdateDetails re-runs EnsureInvariants, so an out-of-range enum is rejected on edit too
+        // (GUARDRAILS 1.5.1 -> INVALID_FURNISHING) and nothing is written.
+        var command = Command(ifMatch: "\"3\"", "p1", "p2", "p3") with
+        {
+            Listing = AppTestData.ListingRequest(new[] { "p1", "p2", "p3" }) with { Furnishing = (Furnishing)999 }
+        };
+
+        var exception = Assert.ThrowsAsync<DomainValidationException>(
+            async () => await _useCase.ExecuteAsync(command));
+
+        Assert.That(exception!.ErrorCode, Is.EqualTo("INVALID_FURNISHING"));
+        await _rooms.DidNotReceiveWithAnyArgs().UpdateAsync(default!, default);
+        Assert.That(_unitOfWork.Executions, Is.Zero);
     }
 
     private UpdateListingCommand Command(string? ifMatch, params string[] photoIds) =>

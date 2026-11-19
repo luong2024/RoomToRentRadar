@@ -1,21 +1,25 @@
 using System.Windows.Input;
+using RoomToRentRadar.Resources.Strings;
 
 namespace RoomToRentRadar.Pages.Controls.Feedback;
 
 public partial class EmptyStateView : ContentView
 {
+    private string _defaultTitle = string.Empty;
+    private string _defaultMessage = string.Empty;
+    private string _defaultActionText = string.Empty;
+
     public static readonly BindableProperty IconGlyphProperty =
-        BindableProperty.Create(nameof(IconGlyph), typeof(string), typeof(EmptyStateView), string.Empty);
+        BindableProperty.Create(nameof(IconGlyph), typeof(string), typeof(EmptyStateView), Fonts.FluentUI.search_24_regular);
 
     public static readonly BindableProperty TitleProperty =
-        BindableProperty.Create(nameof(Title), typeof(string), typeof(EmptyStateView), "No rooms found");
+        BindableProperty.Create(nameof(Title), typeof(string), typeof(EmptyStateView), string.Empty);
 
     public static readonly BindableProperty MessageProperty =
-        BindableProperty.Create(nameof(Message), typeof(string), typeof(EmptyStateView),
-            "Try adjusting your filters or expanding your search radius around ICTU.");
+        BindableProperty.Create(nameof(Message), typeof(string), typeof(EmptyStateView), string.Empty);
 
     public static readonly BindableProperty ActionTextProperty =
-        BindableProperty.Create(nameof(ActionText), typeof(string), typeof(EmptyStateView), "Reset Filters");
+        BindableProperty.Create(nameof(ActionText), typeof(string), typeof(EmptyStateView), string.Empty);
 
     public static readonly BindableProperty ActionCommandProperty =
         BindableProperty.Create(nameof(ActionCommand), typeof(ICommand), typeof(EmptyStateView), null);
@@ -71,6 +75,47 @@ public partial class EmptyStateView : ContentView
     public EmptyStateView()
     {
         InitializeComponent();
+        ApplyLocalizedDefaults();
+        Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
+    }
+
+    private void OnLoaded(object? sender, EventArgs e)
+    {
+        ApplyLocalizedDefaults();
+        LocalizedStrings.Instance.PropertyChanged += OnLocalizedStringsChanged;
+    }
+
+    private void OnUnloaded(object? sender, EventArgs e)
+    {
+        LocalizedStrings.Instance.PropertyChanged -= OnLocalizedStringsChanged;
+    }
+
+    private void OnLocalizedStringsChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        ApplyLocalizedDefaults();
+    }
+
+    // Only refresh values the caller has not overridden, so explicit texts survive language switches (US15).
+    private void ApplyLocalizedDefaults()
+    {
+        if (Title == _defaultTitle)
+        {
+            _defaultTitle = LocalizedStrings.Instance["State_Empty_Title"];
+            Title = _defaultTitle;
+        }
+
+        if (Message == _defaultMessage)
+        {
+            _defaultMessage = LocalizedStrings.Instance["State_Empty_Message"];
+            Message = _defaultMessage;
+        }
+
+        if (ActionText == _defaultActionText)
+        {
+            _defaultActionText = LocalizedStrings.Instance["State_Empty_Action"];
+            ActionText = _defaultActionText;
+        }
     }
 }
 

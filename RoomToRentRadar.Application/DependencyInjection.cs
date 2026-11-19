@@ -25,6 +25,8 @@ public static class DependencyInjection
         services.AddScoped<IApproveLandlordUseCase, ApproveLandlordUseCase>();
         services.AddScoped<IGetAuditLogsUseCase, GetAuditLogsUseCase>();
         services.AddScoped<ISearchRoomsUseCase, SearchRoomsUseCase>();
+        services.AddScoped<IGetRoomDetailUseCase, GetRoomDetailUseCase>();
+        services.AddScoped<IGetSimilarRoomsUseCase, GetSimilarRoomsUseCase>();
 
         // US08 / T08.2 — photo upload and landlord listing CRUD (UC-30..UC-33).
         services.AddScoped<IUploadPhotoUseCase, UploadPhotoUseCase>();

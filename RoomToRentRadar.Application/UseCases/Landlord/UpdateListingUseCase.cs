@@ -5,7 +5,8 @@ using RoomToRentRadar.Domain.Exceptions;
 using RoomToRentRadar.Domain.ValueObjects;
 using RoomToRentRadar.Ports.Contracts.Common;
 using RoomToRentRadar.Ports.Contracts.Requests.Landlord;
-using RoomToRentRadar.Ports.Contracts.Responses.Landlord;
+using RoomToRentRadar.Ports.Contracts.Requests.Listings;
+using RoomToRentRadar.Ports.Contracts.Responses.Listings;
 using RoomToRentRadar.Ports.Inbound.UseCases.Landlord;
 using RoomToRentRadar.Ports.Outbound.ExternalServices;
 using RoomToRentRadar.Ports.Outbound.Repositories;
@@ -126,7 +127,7 @@ public sealed class UpdateListingUseCase : IUpdateListingUseCase
             DepositVnd: listing.DepositVnd,
             AreaM2: listing.AreaM2,
             MaxOccupants: listing.MaxOccupants,
-            Furnishing: listing.Furnishing?.ToString(),
+            Furnishing: listing.Furnishing == default ? null : listing.Furnishing.ToString(),
             AvailableFrom: listing.AvailableFrom,
             AddressLine: listing.Address.AddressLine,
             Ward: listing.Address.Ward,
@@ -135,7 +136,9 @@ public sealed class UpdateListingUseCase : IUpdateListingUseCase
             Longitude: listing.Location.Longitude,
             ElectricityPriceVndPerKwh: listing.Utilities?.ElectricityPriceVndPerKwh,
             WaterPriceVnd: listing.Utilities?.WaterPriceVnd,
-            WaterPriceUnit: listing.Utilities?.WaterPriceUnit?.ToString(),
+            WaterPriceUnit: listing.Utilities is null || listing.Utilities.WaterPriceUnit == default
+                ? null
+                : listing.Utilities.WaterPriceUnit.ToString(),
             InternetFeeVnd: listing.Utilities?.InternetFeeVnd,
             ParkingFeeVnd: listing.Utilities?.ParkingFeeVnd,
             OtherFeesNote: listing.Utilities?.OtherFeesNote,

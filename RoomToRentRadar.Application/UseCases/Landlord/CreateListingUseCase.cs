@@ -1,5 +1,4 @@
 using RoomToRentRadar.Application.Mappers;
-using RoomToRentRadar.Application.UseCases.Photos;
 using RoomToRentRadar.Domain.Aggregates;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
@@ -7,7 +6,9 @@ using RoomToRentRadar.Domain.Exceptions;
 using RoomToRentRadar.Domain.ValueObjects;
 using RoomToRentRadar.Ports.Contracts.Common;
 using RoomToRentRadar.Ports.Contracts.Requests.Landlord;
-using RoomToRentRadar.Ports.Contracts.Responses.Landlord;
+using RoomToRentRadar.Ports.Contracts.Requests.Listings;
+using RoomToRentRadar.Ports.Contracts.Responses.Listings;
+using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadar.Ports.Inbound.UseCases.Landlord;
 using RoomToRentRadar.Ports.Outbound.ExternalServices;
 using RoomToRentRadar.Ports.Outbound.Repositories;
@@ -129,11 +130,13 @@ public sealed class CreateListingUseCase : ICreateListingUseCase
             longitude: listing.Location.Longitude,
             description: listing.Description,
             maxOccupants: listing.MaxOccupants,
-            furnishing: listing.Furnishing?.ToString(),
+            furnishing: listing.Furnishing == default ? null : listing.Furnishing.ToString(),
             availableFrom: listing.AvailableFrom,
             electricityPriceVndPerKwh: listing.Utilities?.ElectricityPriceVndPerKwh,
             waterPriceVnd: listing.Utilities?.WaterPriceVnd,
-            waterPriceUnit: listing.Utilities?.WaterPriceUnit?.ToString(),
+            waterPriceUnit: listing.Utilities is null || listing.Utilities.WaterPriceUnit == default
+                ? null
+                : listing.Utilities.WaterPriceUnit.ToString(),
             internetFeeVnd: listing.Utilities?.InternetFeeVnd,
             parkingFeeVnd: listing.Utilities?.ParkingFeeVnd,
             otherFeesNote: listing.Utilities?.OtherFeesNote,
@@ -142,7 +145,7 @@ public sealed class CreateListingUseCase : ICreateListingUseCase
     private static HouseRuleVersion? BuildHouseRules(
         string roomId,
         string landlordId,
-        HouseRulesFieldsDto? rules,
+        HouseRulesFields? rules,
         DateTime utcNow) =>
         rules is null
             ? null

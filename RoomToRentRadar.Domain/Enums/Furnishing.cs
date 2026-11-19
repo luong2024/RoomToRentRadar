@@ -1,6 +1,6 @@
 namespace RoomToRentRadar.Domain.Enums;
 
-/// <summary>Furnishing level whitelist of <c>docs/erd.md</c> §4.4 (BR-LST-02).</summary>
+/// <summary>Furnishing levels of a room, matching <c>Furnishing</c> in <c>docs/api/openapi.yaml</c>.</summary>
 public enum Furnishing
 {
     Unfurnished = 1,

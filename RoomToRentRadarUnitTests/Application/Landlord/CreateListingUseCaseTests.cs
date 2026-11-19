@@ -5,6 +5,8 @@ using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.Exceptions;
 using RoomToRentRadar.Domain.ValueObjects;
 using RoomToRentRadar.Ports.Contracts.Requests.Landlord;
+using RoomToRentRadar.Ports.Contracts.Requests.Listings;
+using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 
 namespace RoomToRentRadarUnitTests.Application.Landlord;
@@ -246,6 +248,51 @@ public class CreateListingUseCaseTests
         await Assert.ThatAsync(
             async () => await _useCase.ExecuteAsync(new CreateListingCommand("landlord-1", request)),
             Throws.TypeOf<DomainValidationException>().With.Property("ErrorCode").EqualTo("VALIDATION_FAILED"));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_UndefinedFurnishingEnum_ThrowsDomainValidationException()
+    {
+        // GUARDRAILS 1.5.1: an out-of-range enum must be rejected by the Room aggregate, not persisted
+        // as the numeric string "999" (Room.EnsureInvariants -> INVALID_FURNISHING).
+        ArrangePhotos(("p1", PhotoKind.Standard), ("p2", PhotoKind.Standard), ("p3", PhotoKind.Standard));
+        var request = AppTestData.ListingRequest(new[] { "p1", "p2", "p3" }) with
+        {
+            Furnishing = (Furnishing)999
+        };
+
+        var exception = Assert.ThrowsAsync<DomainValidationException>(
+            async () => await _useCase.ExecuteAsync(new CreateListingCommand("landlord-1", request)));
+
+        Assert.That(exception!.ErrorCode, Is.EqualTo("INVALID_FURNISHING"));
+        await _rooms.DidNotReceiveWithAnyArgs().AddAsync(default!, default);
+        Assert.That(_unitOfWork.Executions, Is.Zero);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_DefaultEnumValues_MapToNullOnTheRoom()
+    {
+        // Furnishing/WaterPriceUnit are non-nullable enums whose 0 value is undefined, so "not provided"
+        // must be stored as null on the aggregate instead of "0".
+        ArrangePhotos(("p1", PhotoKind.Standard), ("p2", PhotoKind.Standard), ("p3", PhotoKind.Standard));
+        Room? added = null;
+        _rooms.AddAsync(Arg.Do<Room>(room => added = room), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
+
+        var request = AppTestData.ListingRequest(new[] { "p1", "p2", "p3" }) with
+        {
+            Furnishing = default,
+            Utilities = new UtilitiesDto(3_800L, 70_000L, default, 120_000L, 60_000L, "Phí rác 25.000 đ")
+        };
+
+        await _useCase.ExecuteAsync(new CreateListingCommand("landlord-1", request));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(added!.Furnishing, Is.Null, "Furnishing = default phải thành null, không phải '0'.");
+            Assert.That(added.WaterPriceUnit, Is.Null,
+                "WaterPriceUnit = default phải thành null, không phải '0'.");
+            Assert.That(added.WaterPriceVnd, Is.EqualTo(70_000L), "Chỉ đơn vị nước về null; số tiền giữ nguyên.");
+        });
     }
 
     private void ArrangePhotos(params (string Id, PhotoKind Kind)[] photos)

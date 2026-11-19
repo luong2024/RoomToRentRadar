@@ -1,5 +1,5 @@
 using RoomToRentRadar.Ports.Contracts.Requests.Landlord;
-using RoomToRentRadar.Ports.Contracts.Responses.Landlord;
+using RoomToRentRadar.Ports.Contracts.Responses.Listings;
 
 namespace RoomToRentRadar.Ports.Inbound.UseCases.Landlord;
 

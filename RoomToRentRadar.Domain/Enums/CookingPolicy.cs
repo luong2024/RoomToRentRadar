@@ -1,6 +1,6 @@
 namespace RoomToRentRadar.Domain.Enums;
 
-/// <summary>Cooking policy whitelist of house rules (<c>docs/erd.md</c> §4.7, BR-HR-01).</summary>
+/// <summary>Cooking rules of a room, matching <c>CookingPolicy</c> in <c>docs/api/openapi.yaml</c>.</summary>
 public enum CookingPolicy
 {
     Allowed = 1,

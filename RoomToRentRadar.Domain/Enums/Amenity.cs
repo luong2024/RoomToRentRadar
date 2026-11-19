@@ -1,6 +1,6 @@
 namespace RoomToRentRadar.Domain.Enums;
 
-/// <summary>Amenity catalog of <c>docs/erd.md</c> §4.5 (BR-LST-02).</summary>
+/// <summary>Amenities a room can offer, matching <c>Amenity</c> in <c>docs/api/openapi.yaml</c>.</summary>
 public enum Amenity
 {
     AirConditioner = 1,

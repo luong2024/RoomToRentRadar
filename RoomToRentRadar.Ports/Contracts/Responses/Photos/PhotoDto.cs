@@ -1,8 +1,8 @@
-using RoomToRentRadar.Domain.Enums;
-
 namespace RoomToRentRadar.Ports.Contracts.Responses.Photos;
 
-/// <summary>A photo attached to a listing (openapi <c>PhotoDto</c>, BR-MED-05: sortOrder 0 = cover).</summary>
+using RoomToRentRadar.Domain.Enums;
+
+/// <summary>Matches <c>PhotoDto</c> in <c>docs/api/openapi.yaml</c> 1:1.</summary>
 public sealed record PhotoDto(
     string Id,
     PhotoKind Kind,
@@ -11,4 +11,5 @@ public sealed record PhotoDto(
     string OriginalUrl,
     int Width,
     int Height,
-    int SortOrder);
+    int SortOrder
+);

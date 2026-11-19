@@ -54,11 +54,11 @@ public class ListMyListingsUseCaseTests
             Assert.That(result.TotalCount, Is.EqualTo(7));
             Assert.That(result.PageNumber, Is.EqualTo(2));
             Assert.That(result.PageSize, Is.EqualTo(5));
-            Assert.That(result.CountsByStatus.Keys, Is.EquivalentTo(Enum.GetValues<ListingStatus>().Select(status => status.ToString())),
+            Assert.That(result.CountsByStatus.Keys, Is.EquivalentTo(Enum.GetValues<ListingStatus>()),
                 "SCR-LL-01: đủ 6 trạng thái, kể cả khi bằng 0.");
-            Assert.That(result.CountsByStatus["Available"], Is.EqualTo(2));
-            Assert.That(result.CountsByStatus["Rented"], Is.EqualTo(1));
-            Assert.That(result.CountsByStatus["Unpublished"], Is.Zero);
+            Assert.That(result.CountsByStatus[ListingStatus.Available], Is.EqualTo(2));
+            Assert.That(result.CountsByStatus[ListingStatus.Rented], Is.EqualTo(1));
+            Assert.That(result.CountsByStatus[ListingStatus.Unpublished], Is.Zero);
         });
     }
 

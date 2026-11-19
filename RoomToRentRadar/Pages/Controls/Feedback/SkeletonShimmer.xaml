@@ -9,52 +9,43 @@
             StrokeThickness="1"
             Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
-            Padding="0"
-            Shadow="{StaticResource Elevation1Shadow}">
+            Padding="0">
 
-        <VerticalStackLayout Spacing="12">
+        <VerticalStackLayout Spacing="12" AutomationProperties.IsInAccessibleTree="False">
             <!-- Simulated Image Skeleton Area -->
             <BoxView x:Name="ImagePlaceholder"
-                     HeightRequest="180"
+                     HeightRequest="172"
                      Color="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
                      Opacity="0.7" />
 
             <VerticalStackLayout Padding="16, 0, 16, 16" Spacing="10">
                 <!-- Simulated Price Bar -->
                 <BoxView x:Name="PriceBar"
-                         HeightRequest="24"
-                         WidthRequest="140"
+                         HeightRequest="18"
+                         WidthRequest="90"
                          HorizontalOptions="Start"
-                         CornerRadius="4"
+                         CornerRadius="6"
                          Color="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
                          Opacity="0.7" />
 
                 <!-- Simulated Title Bar -->
                 <BoxView x:Name="TitleBar"
-                         HeightRequest="18"
-                         WidthRequest="260"
+                         HeightRequest="14"
+                         WidthRequest="240"
                          HorizontalOptions="Start"
-                         CornerRadius="4"
+                         CornerRadius="6"
                          Color="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
                          Opacity="0.6" />
 
                 <!-- Simulated Location Bar -->
                 <BoxView x:Name="LocationBar"
-                         HeightRequest="14"
-                         WidthRequest="180"
+                         HeightRequest="12"
+                         WidthRequest="160"
                          HorizontalOptions="Start"
-                         CornerRadius="4"
+                         CornerRadius="6"
                          Color="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
                          Opacity="0.5" />
-
-                <!-- Simulated Amenities Chips Row -->
-                <HorizontalStackLayout Spacing="8" Margin="0,4,0,0">
-                    <BoxView WidthRequest="60" HeightRequest="20" CornerRadius="10" Color="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}" Opacity="0.5" />
-                    <BoxView WidthRequest="60" HeightRequest="20" CornerRadius="10" Color="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}" Opacity="0.5" />
-                    <BoxView WidthRequest="60" HeightRequest="20" CornerRadius="10" Color="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}" Opacity="0.5" />
-                </HorizontalStackLayout>
             </VerticalStackLayout>
         </VerticalStackLayout>
     </Border>
 </ContentView>
-

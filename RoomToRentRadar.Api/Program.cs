@@ -10,12 +10,14 @@ using RoomToRentRadar.Api.BackgroundJobs;
 using RoomToRentRadar.Api.Binders;
 using RoomToRentRadar.Api.Errors;
 using RoomToRentRadar.Api.Middlewares;
+using RoomToRentRadar.Api.Security;
 using RoomToRentRadar.Application;
 using RoomToRentRadar.Datastore.Sqlite;
 using RoomToRentRadar.Datastore.Sqlite.Configurations;
 using RoomToRentRadar.Infrastructure;
 using RoomToRentRadar.Infrastructure.Adapters.Media;
 using RoomToRentRadar.Infrastructure.Adapters.Security;
+using RoomToRentRadar.Ports.Outbound.ExternalServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +33,8 @@ builder.Services.AddControllers(options =>
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserContextPort, HttpContextUserContextAdapter>();
 
 // ADR-012 / system-architecture §7.2: framework-generated 400s (model binding) must use the same
 // problem+json shape as domain validation errors, with a stable errorCode and an `errors` map.

@@ -1,3 +1,5 @@
+using RoomToRentRadar.Ports.Contracts.Requests.Listings;
+
 namespace RoomToRentRadar.Ports.Contracts.Requests.Landlord;
 
 /// <summary>
