@@ -34,23 +34,23 @@ public sealed class HouseRuleVersion
     public string CreatedByUserId { get; }
     public DateTime CreatedAtUtc { get; }
 
-    private HouseRuleVersion(
+    public HouseRuleVersion(
         string id,
         string roomId,
         int versionNumber,
         GuestPolicy guestPolicy,
         CookingPolicy cookingPolicy,
         bool parkingAvailable,
-        string? parkingRules,
         bool petsAllowed,
         bool smokingAllowed,
-        string? otherRules,
         string createdByUserId,
         DateTime createdAtUtc,
-        string? quietHoursStart,
-        string? quietHoursEnd,
-        string? curfewTime,
-        string? guestPolicyNote)
+        string? quietHoursStart = null,
+        string? quietHoursEnd = null,
+        string? curfewTime = null,
+        string? guestPolicyNote = null,
+        string? parkingRules = null,
+        string? otherRules = null)
     {
         if (string.IsNullOrWhiteSpace(id))
         {
@@ -98,7 +98,7 @@ public sealed class HouseRuleVersion
         PetsAllowed = petsAllowed;
         SmokingAllowed = smokingAllowed;
         CreatedByUserId = createdByUserId.Trim();
-        CreatedAtUtc = AsUtc(createdAtUtc)!.Value;
+        CreatedAtUtc = AsUtc(createdAtUtc);
     }
 
     /// <summary>Creates version 1 (or a later version) of a room's house rules.</summary>
@@ -126,16 +126,16 @@ public sealed class HouseRuleVersion
             guestPolicy: guestPolicy,
             cookingPolicy: cookingPolicy,
             parkingAvailable: parkingAvailable,
-            parkingRules: parkingRules,
             petsAllowed: petsAllowed,
             smokingAllowed: smokingAllowed,
-            otherRules: otherRules,
             createdByUserId: createdByUserId,
             createdAtUtc: utcNow ?? DateTime.UtcNow,
             quietHoursStart: quietHoursStart,
             quietHoursEnd: quietHoursEnd,
             curfewTime: curfewTime,
-            guestPolicyNote: guestPolicyNote);
+            guestPolicyNote: guestPolicyNote,
+            parkingRules: parkingRules,
+            otherRules: otherRules);
     }
 
     /// <summary>Rebuilds a row from persistence or a test fixture; every column of ERD §4.7 is accepted.</summary>
@@ -164,16 +164,16 @@ public sealed class HouseRuleVersion
             guestPolicy,
             cookingPolicy,
             parkingAvailable,
-            parkingRules,
             petsAllowed,
             smokingAllowed,
-            otherRules,
             createdByUserId,
             createdAtUtc,
             quietHoursStart,
             quietHoursEnd,
             curfewTime,
-            guestPolicyNote);
+            guestPolicyNote,
+            parkingRules,
+            otherRules);
     }
 
     private static string? NormalizeTimeOfDay(string? value, string fieldName)
@@ -181,7 +181,7 @@ public sealed class HouseRuleVersion
         var normalized = NormalizeOptional(value, maxLength: null, fieldName);
         if (normalized is not null && !TimeOfDayPattern.IsMatch(normalized))
         {
-            throw new DomainValidationException($"{fieldName} must match HH:mm (00:00–23:59)."); // BR-HR-01
+            throw new DomainValidationException($"{fieldName} must match HH:mm (00:00–23:59).", "INVALID_TIME_FORMAT"); // BR-HR-01
         }
 
         return normalized;
@@ -197,25 +197,25 @@ public sealed class HouseRuleVersion
         var trimmed = value.Trim();
         if (maxLength.HasValue && trimmed.Length > maxLength.Value)
         {
-            throw new DomainValidationException($"{fieldName} must be at most {maxLength.Value} characters."); // BR-HR-01
+            var code = fieldName switch
+            {
+                "Parking rules" => "PARKING_RULES_TOO_LONG",
+                "Other rules" => "OTHER_RULES_TOO_LONG",
+                "Guest policy note" => "GUEST_POLICY_NOTE_TOO_LONG",
+                _ => null
+            };
+            throw new DomainValidationException($"{fieldName} must be at most {maxLength.Value} characters.", code); // BR-HR-01
         }
 
         return trimmed;
     }
 
     /// <summary>ERD §1: every date-time column is stored and exposed as UTC.</summary>
-    private static DateTime? AsUtc(DateTime? value)
-    {
-        if (value is not { } instant)
-        {
-            return null;
-        }
-
-        return instant.Kind switch
+    private static DateTime AsUtc(DateTime instant) =>
+        instant.Kind switch
         {
             DateTimeKind.Utc => instant,
             DateTimeKind.Local => instant.ToUniversalTime(),
             _ => DateTime.SpecifyKind(instant, DateTimeKind.Utc)
         };
-    }
 }

@@ -171,5 +171,6 @@ public sealed class InMemoryRoomRepository : IRoomRepository
         publishedAtUtc: source.PublishedAtUtc,
         amenities: source.Amenities,
         safetyFeatures: source.SafetyFeatures,
-        currentHouseRules: source.CurrentHouseRules);
+        currentHouseRules: source.CurrentHouseRules,
+        houseRuleHistory: source.HouseRuleHistory);
 }

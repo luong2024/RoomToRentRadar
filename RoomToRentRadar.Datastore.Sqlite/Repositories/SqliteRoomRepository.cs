@@ -98,7 +98,7 @@ public sealed class SqliteRoomRepository : IRoomRepository
 
         await InsertAmenitiesAsync(lease, room, ct);
         await InsertSafetyFeaturesAsync(lease, room, ct);
-        await InsertCurrentHouseRulesAsync(lease, room, ct);
+        await InsertHouseRulesAsync(lease, room, ct);
 
         room.MarkPersisted();
     }
@@ -109,7 +109,7 @@ public sealed class SqliteRoomRepository : IRoomRepository
     /// soon as a caller performs more than one transition between load and save. Zero rows updated
     /// means someone else wrote first → <see cref="ConcurrencyConflictException"/>.
     /// Children are replaced after the parent row wins the version check; <c>HouseRuleVersions</c> is
-    /// append-only and deliberately untouched here (updateListing ignores house rules, openapi.yaml).
+    /// append-only and updated with INSERT OR IGNORE for the current rules (optimizing round-trip I/O).
     /// </summary>
     public async Task UpdateAsync(Room room, CancellationToken ct = default)
     {
@@ -170,6 +170,7 @@ public sealed class SqliteRoomRepository : IRoomRepository
         await InsertAmenitiesAsync(lease, room, ct);
         await DeleteSafetyFeaturesAsync(lease, room.Id, ct);
         await InsertSafetyFeaturesAsync(lease, room, ct);
+        await InsertCurrentHouseRulesAsync(lease, room, ct);
 
         room.MarkPersisted();
     }
@@ -247,10 +248,12 @@ public sealed class SqliteRoomRepository : IRoomRepository
         }
 
         // Read after the row so a missing room costs one query only; SetChildren does not Touch().
-        room.SetChildren(
-            await LoadAmenitiesAsync(lease, id, ct),
-            await LoadSafetyFeaturesAsync(lease, id, ct),
-            await LoadCurrentHouseRulesAsync(lease, id, ct));
+        var amenities = await LoadAmenitiesAsync(lease, id, ct);
+        var safetyFeatures = await LoadSafetyFeaturesAsync(lease, id, ct);
+        var houseRuleHistory = await LoadHouseRuleHistoryAsync(lease, id, ct);
+        var currentHouseRules = houseRuleHistory.OrderByDescending(r => r.VersionNumber).FirstOrDefault();
+
+        room.SetChildren(amenities, safetyFeatures, currentHouseRules, houseRuleHistory);
 
         return room;
     }
@@ -298,7 +301,7 @@ public sealed class SqliteRoomRepository : IRoomRepository
         return features;
     }
 
-    private static async Task<HouseRuleVersion?> LoadCurrentHouseRulesAsync(
+    private static async Task<IReadOnlyList<HouseRuleVersion>> LoadHouseRuleHistoryAsync(
         SqliteConnectionLease lease,
         string roomId,
         CancellationToken ct)
@@ -310,34 +313,34 @@ public sealed class SqliteRoomRepository : IRoomRepository
                    SmokingAllowed, OtherRules, CreatedByUserId, CreatedAtUtc
             FROM HouseRuleVersions
             WHERE RoomId = @roomId
-            ORDER BY VersionNumber DESC
-            LIMIT 1;
+            ORDER BY VersionNumber ASC;
             """;
         cmd.Parameters.AddWithValue("@roomId", roomId);
 
+        var list = new List<HouseRuleVersion>();
         await using var reader = await cmd.ExecuteReaderAsync(ct);
-        if (!await reader.ReadAsync(ct))
+        while (await reader.ReadAsync(ct))
         {
-            return null;
+            list.Add(HouseRuleVersion.Reconstitute(
+                id: reader.GetString(0),
+                roomId: reader.GetString(1),
+                versionNumber: reader.GetInt32(2),
+                guestPolicy: ParseEnum<GuestPolicy>(reader.GetString(6)),
+                cookingPolicy: ParseEnum<CookingPolicy>(reader.GetString(8)),
+                parkingAvailable: reader.GetInt64(9) != 0,
+                petsAllowed: reader.GetInt64(11) != 0,
+                smokingAllowed: reader.GetInt64(12) != 0,
+                createdByUserId: reader.GetString(14),
+                createdAtUtc: ParseUtc(reader.GetString(15)),
+                quietHoursStart: GetNullableString(reader, 3),
+                quietHoursEnd: GetNullableString(reader, 4),
+                curfewTime: GetNullableString(reader, 5),
+                guestPolicyNote: GetNullableString(reader, 7),
+                parkingRules: GetNullableString(reader, 10),
+                otherRules: GetNullableString(reader, 13)));
         }
 
-        return HouseRuleVersion.Reconstitute(
-            id: reader.GetString(0),
-            roomId: reader.GetString(1),
-            versionNumber: reader.GetInt32(2),
-            guestPolicy: ParseEnum<GuestPolicy>(reader.GetString(6)),
-            cookingPolicy: ParseEnum<CookingPolicy>(reader.GetString(8)),
-            parkingAvailable: reader.GetInt64(9) != 0,
-            petsAllowed: reader.GetInt64(11) != 0,
-            smokingAllowed: reader.GetInt64(12) != 0,
-            createdByUserId: reader.GetString(14),
-            createdAtUtc: ParseUtc(reader.GetString(15)),
-            quietHoursStart: GetNullableString(reader, 3),
-            quietHoursEnd: GetNullableString(reader, 4),
-            curfewTime: GetNullableString(reader, 5),
-            guestPolicyNote: GetNullableString(reader, 7),
-            parkingRules: GetNullableString(reader, 10),
-            otherRules: GetNullableString(reader, 13));
+        return list;
     }
 
     private static async Task InsertAmenitiesAsync(SqliteConnectionLease lease, Room room, CancellationToken ct)
@@ -368,6 +371,46 @@ public sealed class SqliteRoomRepository : IRoomRepository
         }
     }
 
+    private static async Task InsertHouseRulesAsync(SqliteConnectionLease lease, Room room, CancellationToken ct)
+    {
+        var rulesToInsert = room.HouseRuleHistory.Count > 0
+            ? (IEnumerable<HouseRuleVersion>)room.HouseRuleHistory
+            : (room.CurrentHouseRules != null ? new[] { room.CurrentHouseRules } : Array.Empty<HouseRuleVersion>());
+
+        foreach (var rules in rulesToInsert)
+        {
+            await using var cmd = lease.CreateCommand();
+            cmd.CommandText = """
+                INSERT OR IGNORE INTO HouseRuleVersions (
+                    Id, RoomId, VersionNumber, QuietHoursStart, QuietHoursEnd, CurfewTime, GuestPolicy,
+                    GuestPolicyNote, CookingPolicy, ParkingAvailable, ParkingRules, PetsAllowed,
+                    SmokingAllowed, OtherRules, CreatedByUserId, CreatedAtUtc
+                ) VALUES (
+                    @id, @roomId, @versionNumber, @quietHoursStart, @quietHoursEnd, @curfewTime, @guestPolicy,
+                    @guestPolicyNote, @cookingPolicy, @parkingAvailable, @parkingRules, @petsAllowed,
+                    @smokingAllowed, @otherRules, @createdByUserId, @createdAtUtc
+                );
+                """;
+            cmd.Parameters.AddWithValue("@id", rules.Id);
+            cmd.Parameters.AddWithValue("@roomId", room.Id);
+            cmd.Parameters.AddWithValue("@versionNumber", rules.VersionNumber);
+            cmd.Parameters.AddWithValue("@quietHoursStart", (object?)rules.QuietHoursStart ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@quietHoursEnd", (object?)rules.QuietHoursEnd ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@curfewTime", (object?)rules.CurfewTime ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@guestPolicy", rules.GuestPolicy.ToString());
+            cmd.Parameters.AddWithValue("@guestPolicyNote", (object?)rules.GuestPolicyNote ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@cookingPolicy", rules.CookingPolicy.ToString());
+            cmd.Parameters.AddWithValue("@parkingAvailable", rules.ParkingAvailable ? 1 : 0);
+            cmd.Parameters.AddWithValue("@parkingRules", (object?)rules.ParkingRules ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@petsAllowed", rules.PetsAllowed ? 1 : 0);
+            cmd.Parameters.AddWithValue("@smokingAllowed", rules.SmokingAllowed ? 1 : 0);
+            cmd.Parameters.AddWithValue("@otherRules", (object?)rules.OtherRules ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@createdByUserId", rules.CreatedByUserId);
+            cmd.Parameters.AddWithValue("@createdAtUtc", rules.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture));
+            await cmd.ExecuteNonQueryAsync(ct);
+        }
+    }
+
     private static async Task InsertCurrentHouseRulesAsync(SqliteConnectionLease lease, Room room, CancellationToken ct)
     {
         if (room.CurrentHouseRules is not { } rules)
@@ -377,7 +420,7 @@ public sealed class SqliteRoomRepository : IRoomRepository
 
         await using var cmd = lease.CreateCommand();
         cmd.CommandText = """
-            INSERT INTO HouseRuleVersions (
+            INSERT OR IGNORE INTO HouseRuleVersions (
                 Id, RoomId, VersionNumber, QuietHoursStart, QuietHoursEnd, CurfewTime, GuestPolicy,
                 GuestPolicyNote, CookingPolicy, ParkingAvailable, ParkingRules, PetsAllowed,
                 SmokingAllowed, OtherRules, CreatedByUserId, CreatedAtUtc
