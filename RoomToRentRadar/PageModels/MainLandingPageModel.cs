@@ -49,14 +49,14 @@ public partial class MainLandingPageModel : BasePageModel
         _roomGateway = roomGateway ?? throw new ArgumentNullException(nameof(roomGateway));
         _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
         _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
+    }
 
-        LocalizedStrings.Instance.PropertyChanged += (_, _) =>
-        {
-            OnPropertyChanged(nameof(ExploreErrorTitleText));
-            OnPropertyChanged(nameof(ExploreEmptyTitleText));
-            OnPropertyChanged(nameof(ExploreEmptyMessageText));
-            OnPropertyChanged(nameof(ExploreEmptyActionText));
-        };
+    protected override void OnLanguageChanged()
+    {
+        OnPropertyChanged(nameof(ExploreErrorTitleText));
+        OnPropertyChanged(nameof(ExploreEmptyTitleText));
+        OnPropertyChanged(nameof(ExploreEmptyMessageText));
+        OnPropertyChanged(nameof(ExploreEmptyActionText));
     }
 
     public async Task InitializeAsync()

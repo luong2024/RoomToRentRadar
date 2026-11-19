@@ -30,7 +30,7 @@ public partial class BasePageModel : ObservableObject
 
     public BasePageModel()
     {
-        LocalizedStrings.Instance.PropertyChanged += OnLocalizationChanged;
+        _ = new WeakLocalizationSubscription(this);
     }
 
     public async Task RunAsync(Func<Task<bool>> load, bool isRefresh = false)
@@ -86,11 +86,34 @@ public partial class BasePageModel : ObservableObject
     private Task RetryAsync() =>
         _lastLoad is null ? Task.CompletedTask : RunAsync(_lastLoad, _lastIsRefresh);
 
-    private void OnLocalizationChanged(object? sender, PropertyChangedEventArgs e)
+    protected virtual void OnLanguageChanged()
     {
-        if (_lastException is null)
-            return;
+    }
 
-        ErrorMessage = ErrorMessageMapper.Map(_lastException, null);
+    private void OnLocalizationChanged()
+    {
+        if (_lastException is not null)
+            ErrorMessage = ErrorMessageMapper.Map(_lastException, null);
+
+        OnLanguageChanged();
+    }
+
+    private sealed class WeakLocalizationSubscription
+    {
+        private readonly WeakReference<BasePageModel> _target;
+
+        public WeakLocalizationSubscription(BasePageModel target)
+        {
+            _target = new WeakReference<BasePageModel>(target);
+            LocalizedStrings.Instance.PropertyChanged += OnPropertyChanged;
+        }
+
+        private void OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (_target.TryGetTarget(out var target))
+                target.OnLocalizationChanged();
+            else
+                LocalizedStrings.Instance.PropertyChanged -= OnPropertyChanged;
+        }
     }
 }

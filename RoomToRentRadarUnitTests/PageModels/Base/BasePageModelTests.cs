@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net;
+using System.Runtime.CompilerServices;
 using NUnit.Framework;
 using RoomToRentRadar.Client.Adapters.Abstractions;
 using RoomToRentRadar.PageModels.Base;
@@ -248,6 +249,22 @@ public class BasePageModelTests
         Assert.That(model.State, Is.EqualTo(stateBefore));
         Assert.That(model.IsLoading, Is.False);
         Assert.That(model.IsRefreshing, Is.False);
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static WeakReference CreateDroppedModel() => new(new BasePageModel());
+
+    [Test]
+    public void LocalizationSubscription_DroppedModel_IsCollectableAndLanguageChangeDoesNotThrow()
+    {
+        var weak = CreateDroppedModel();
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        Assert.That(weak.IsAlive, Is.False);
+        Assert.DoesNotThrow(() => LocalizedStrings.Instance.SetCulture(Vi));
     }
 
     [Test]

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net;
+using System.Runtime.CompilerServices;
 using NUnit.Framework;
 using NSubstitute;
 using RoomToRentRadar.Client.Adapters.Abstractions;
@@ -64,6 +65,60 @@ public class MainLandingPageModelTests
     private void GatewayThrows(ApiException exception) =>
         _roomGateway.SearchRoomsAsync(Arg.Any<RoomSearchRequest>())
             .Returns(Task.FromException<PagedResult<RoomCardDto>>(exception));
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static WeakReference CreateDroppedModel() => new(new MainLandingPageModel(
+        Substitute.For<IRoomGateway>(),
+        Substitute.For<ISessionStore>(),
+        Substitute.For<INavigationService>()));
+
+    [Test]
+    public void LocalizationSubscription_DroppedModel_IsCollectableAndLanguageChangeDoesNotThrow()
+    {
+        var weak = CreateDroppedModel();
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        Assert.That(weak.IsAlive, Is.False);
+        Assert.DoesNotThrow(() => LocalizedStrings.Instance.SetCulture(new CultureInfo("vi-VN")));
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task CultureChangeToVi_LiveModel_UpdatesExploreTextsAndRemapsError(bool hasError)
+    {
+        if (hasError)
+            GatewayThrows(new ApiException("Server failure", HttpStatusCode.NotFound, "ROOM_NOT_FOUND"));
+        else
+            GatewayReturnsRooms();
+
+        var model = CreateModel();
+        await model.InitializeAsync();
+        var expectedError = hasError ? AppResources.GetString("Error_ROOM_NOT_FOUND", new CultureInfo("vi-VN")) : string.Empty;
+        var notifications = new List<string?>();
+        string? errorWhenExploreTitleChanged = null;
+        model.PropertyChanged += (_, e) =>
+        {
+            notifications.Add(e.PropertyName);
+            if (e.PropertyName == nameof(model.ExploreErrorTitleText))
+                errorWhenExploreTitleChanged = model.ErrorMessage;
+        };
+
+        LocalizedStrings.Instance.SetCulture(new CultureInfo("vi-VN"));
+
+        Assert.That(notifications.Count(name => name == nameof(model.ExploreErrorTitleText)), Is.EqualTo(1));
+        Assert.That(notifications.Count(name => name == nameof(model.ExploreEmptyTitleText)), Is.EqualTo(1));
+        Assert.That(notifications.Count(name => name == nameof(model.ExploreEmptyMessageText)), Is.EqualTo(1));
+        Assert.That(notifications.Count(name => name == nameof(model.ExploreEmptyActionText)), Is.EqualTo(1));
+        Assert.That(model.ExploreErrorTitleText, Is.EqualTo(AppResources.GetString("Explore_Error_Title")));
+        Assert.That(model.ExploreEmptyTitleText, Is.EqualTo(AppResources.GetString("Explore_Empty_Title")));
+        Assert.That(model.ExploreEmptyMessageText, Is.EqualTo(AppResources.GetString("Explore_Empty_Message")));
+        Assert.That(model.ExploreEmptyActionText, Is.EqualTo(AppResources.GetString("Explore_Empty_Action")));
+        Assert.That(model.ErrorMessage, Is.EqualTo(expectedError));
+        Assert.That(errorWhenExploreTitleChanged, Is.EqualTo(expectedError));
+    }
 
     [Test]
     public async Task InitializeAsync_GatewayReturnsRooms_StateContentWithRooms()
