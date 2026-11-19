@@ -7,6 +7,7 @@ using RoomToRentRadar.Shared.Listings;
 using RoomToRentRadar.Shared.Notifications;
 using RoomToRentRadar.Shared.Pagination;
 using RoomToRentRadar.Shared.SavedSearches;
+using ListingSubmission = RoomToRentRadar.Models.ListingSubmission;
 
 namespace RoomToRentRadarUnitTests;
 
@@ -643,6 +644,31 @@ public class RoomDetailViewModelTests
             int limit = 20,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The room detail screen does not load notifications.");
+
+        public Task<IReadOnlyList<ManagedListingDto>> GetMyListingsAsync(
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The room detail screen does not list the landlord listings.");
+
+        public Task<ManagedListingDto> GetManagedListingAsync(
+            Guid id,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The room detail screen does not load a managed listing.");
+
+        public Task<ManagedListingDto> CreateListingAsync(
+            ListingSubmission submission,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The room detail screen does not create listings.");
+
+        public Task<ManagedListingDto> UpdateListingAsync(
+            Guid id,
+            ListingSubmission submission,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The room detail screen does not update listings.");
+
+        public Task<ManagedListingDto> UnpublishListingAsync(
+            Guid id,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The room detail screen does not unpublish listings.");
     }
 
     private sealed class FakeErrorHandler : IErrorHandler
@@ -674,6 +700,8 @@ public class RoomDetailViewModelTests
             GoToLoginCount++;
             return Task.CompletedTask;
         }
+
+        public Task GoToListingEditorAsync(Guid? listingId = null) => Task.CompletedTask;
 
         public Task GoBackAsync()
         {

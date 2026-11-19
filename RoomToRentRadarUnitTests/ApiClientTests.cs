@@ -5,6 +5,8 @@ using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Shared.Listings;
 using RoomToRentRadar.Shared.Notifications;
 using RoomToRentRadar.Shared.SavedSearches;
+using ListingPhotoUploadModel = RoomToRentRadar.Models.ListingPhotoUploadModel;
+using ListingSubmission = RoomToRentRadar.Models.ListingSubmission;
 
 namespace RoomToRentRadarUnitTests;
 
@@ -315,6 +317,282 @@ public class ApiClientTests
             Assert.That(notifications[0].Title, Is.EqualTo("Phòng mới trong “Quận 10”"));
             Assert.That(notifications[0].ListingId, Is.EqualTo(Guid.Parse("11111111-1111-1111-1111-111111111111")));
         });
+    }
+
+    [Test]
+    public async Task GetMyListingsAsync_RequestsTheMineEndpointAndParsesStatuses()
+    {
+        var handler = new CapturingHandler(() => JsonResponse($"""
+            [
+              {ManagedListingJson("11111111-1111-1111-1111-111111111111", "pending_review")},
+              {ManagedListingJson("22222222-2222-2222-2222-222222222222", "hidden")}
+            ]
+            """));
+        var client = CreateClient(handler);
+
+        var listings = await client.GetMyListingsAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(handler.Method, Is.EqualTo(HttpMethod.Get));
+            Assert.That(handler.RequestUri!.AbsolutePath, Is.EqualTo("/api/v1/listings/mine"));
+            Assert.That(listings, Has.Count.EqualTo(2));
+            Assert.That(listings[0].Status, Is.EqualTo(ListingStatus.PendingReview));
+            Assert.That(listings[1].Status, Is.EqualTo(ListingStatus.Hidden));
+            Assert.That(listings[0].RoomType, Is.EqualTo(RoomType.Studio));
+        });
+    }
+
+    [Test]
+    public async Task GetManagedListingAsync_RequestsTheManageEndpoint()
+    {
+        var id = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        var handler = new CapturingHandler(() => JsonResponse(ManagedListingJson(id.ToString("D"), "published")));
+        var client = CreateClient(handler);
+
+        var listing = await client.GetManagedListingAsync(id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(handler.Method, Is.EqualTo(HttpMethod.Get));
+            Assert.That(handler.RequestUri!.AbsolutePath, Is.EqualTo($"/api/v1/listings/{id}/manage"));
+            Assert.That(listing.Id, Is.EqualTo(id));
+            Assert.That(listing.Status, Is.EqualTo(ListingStatus.Published));
+        });
+    }
+
+    [Test]
+    public async Task CreateListingAsync_PostsMultipartFieldsAndPhotos()
+    {
+        var handler = new MultipartCapturingHandler(
+            () => JsonResponse(ManagedListingJson("44444444-4444-4444-4444-444444444444", "pending_review")));
+        var client = CreateClient(handler);
+
+        var created = await client.CreateListingAsync(new ListingSubmission(
+            "Phòng trọ gần đại học",
+            "12 Nguyễn Văn Cừ, Quận 5",
+            3_500_000,
+            3_500_000,
+            20.5,
+            RoomType.Studio,
+            1,
+            "Mô tả phòng",
+            10.7721,
+            null,
+            "Chủ trọ",
+            null,
+            [
+                Upload("phong-1.jpg"),
+                Upload("phong-2.png", "image/png")
+            ]));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(handler.Method, Is.EqualTo(HttpMethod.Post));
+            Assert.That(handler.RequestUri!.AbsolutePath, Is.EqualTo("/api/v1/listings"));
+            Assert.That(handler.Value("title"), Is.EqualTo("Phòng trọ gần đại học"));
+            Assert.That(handler.Value("address"), Is.EqualTo("12 Nguyễn Văn Cừ, Quận 5"));
+            Assert.That(handler.Value("price"), Is.EqualTo("3500000"));
+            Assert.That(handler.Value("deposit"), Is.EqualTo("3500000"));
+            Assert.That(handler.Value("area_m2"), Is.EqualTo("20.5"));
+            Assert.That(handler.Value("room_type"), Is.EqualTo("studio"));
+            Assert.That(handler.Value("bedrooms"), Is.EqualTo("1"));
+            Assert.That(handler.Value("lat"), Is.EqualTo("10.7721"));
+            Assert.That(handler.Value("lng"), Is.Null);
+            Assert.That(handler.Value("landlord_name"), Is.EqualTo("Chủ trọ"));
+            Assert.That(handler.FileNames("photos"), Is.EqualTo(new[] { "phong-1.jpg", "phong-2.png" }));
+            Assert.That(created.Status, Is.EqualTo(ListingStatus.PendingReview));
+        });
+    }
+
+    [Test]
+    public async Task CreateListingAsync_WhenTheApiRejectsTheForm_ThrowsListingSaveExceptionWithFieldErrors()
+    {
+        var handler = new StubHandler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.UnprocessableEntity)
+        {
+            Content = new StringContent(
+                """
+                {
+                  "title": "Invalid listing",
+                  "detail": "One or more fields are invalid.",
+                  "status": 422,
+                  "code": "invalid_listing",
+                  "errors": {
+                    "title": ["The title is too long."],
+                    "photos": ["At least 3 photos are required."]
+                  }
+                }
+                """,
+                Encoding.UTF8,
+                "application/problem+json")
+        }));
+        var client = CreateClient(handler);
+
+        var exception = Assert.ThrowsAsync<ListingSaveException>(() => client.CreateListingAsync(new ListingSubmission(
+            "Tiêu đề",
+            "Địa chỉ",
+            1,
+            0,
+            10,
+            RoomType.SingleRoom,
+            1,
+            null,
+            10.7,
+            106.6,
+            null,
+            null,
+            [Upload("phong-1.jpg")])))!;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception.StatusCode, Is.EqualTo(HttpStatusCode.UnprocessableEntity));
+            Assert.That(exception.Code, Is.EqualTo("invalid_listing"));
+            Assert.That(exception.Message, Is.EqualTo("One or more fields are invalid."));
+            Assert.That(exception.HasFieldErrors, Is.True);
+            Assert.That(exception.FieldErrors["title"], Is.EqualTo(new[] { "The title is too long." }));
+            Assert.That(exception.FieldErrors["photos"], Is.EqualTo(new[] { "At least 3 photos are required." }));
+        });
+    }
+
+    [Test]
+    public async Task UpdateListingAsync_PutsTheSubmissionToTheListingRoute()
+    {
+        var id = Guid.Parse("55555555-5555-5555-5555-555555555555");
+        var handler = new MultipartCapturingHandler(
+            () => JsonResponse(ManagedListingJson(id.ToString("D"), "pending_review")));
+        var client = CreateClient(handler);
+
+        var updated = await client.UpdateListingAsync(id, new ListingSubmission(
+            "Phòng đã sửa",
+            "Địa chỉ mới",
+            2_000_000,
+            2_000_000,
+            18,
+            RoomType.Apartment,
+            2,
+            null,
+            10.77,
+            106.66,
+            null,
+            null,
+            []));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(handler.Method, Is.EqualTo(HttpMethod.Put));
+            Assert.That(handler.RequestUri!.AbsolutePath, Is.EqualTo($"/api/v1/listings/{id}"));
+            Assert.That(handler.Value("title"), Is.EqualTo("Phòng đã sửa"));
+            Assert.That(handler.Value("room_type"), Is.EqualTo("apartment"));
+            Assert.That(handler.FileNames("photos"), Is.Empty);
+            Assert.That(updated.Status, Is.EqualTo(ListingStatus.PendingReview));
+        });
+    }
+
+    [Test]
+    public async Task UnpublishListingAsync_PostsToTheUnpublishRoute()
+    {
+        var id = Guid.Parse("66666666-6666-6666-6666-666666666666");
+        var handler = new CapturingHandler(() => JsonResponse(ManagedListingJson(id.ToString("D"), "hidden")));
+        var client = CreateClient(handler);
+
+        var updated = await client.UnpublishListingAsync(id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(handler.Method, Is.EqualTo(HttpMethod.Post));
+            Assert.That(handler.RequestUri!.AbsolutePath, Is.EqualTo($"/api/v1/listings/{id}/unpublish"));
+            Assert.That(updated.Status, Is.EqualTo(ListingStatus.Hidden));
+        });
+    }
+
+    [Test]
+    public void UnpublishListingAsync_WhenUnauthorized_ThrowsApiException()
+    {
+        var handler = new StubHandler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized)
+        {
+            Content = new StringContent(
+                """{"title":"Unauthorized","detail":"Sign in again.","status":401}""",
+                Encoding.UTF8,
+                "application/problem+json")
+        }));
+        var client = CreateClient(handler);
+
+        var exception = Assert.ThrowsAsync<ApiException>(
+            () => client.UnpublishListingAsync(Guid.NewGuid()))!;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+            Assert.That(exception.Message, Is.EqualTo("Sign in again."));
+        });
+    }
+
+    private static ListingPhotoUploadModel Upload(string fileName, string contentType = "image/jpeg")
+        => new(fileName, contentType, 3, () => Task.FromResult<Stream>(new MemoryStream([1, 2, 3])));
+
+    private static string ManagedListingJson(string id, string status) => $$"""
+        {
+          "id": "{{id}}",
+          "title": "Phòng đẹp",
+          "description": "Mô tả phòng",
+          "price": 2500000,
+          "deposit": 2500000,
+          "areaM2": 20,
+          "roomType": "studio",
+          "bedrooms": 1,
+          "address": "12 Nguyễn Văn Cừ, Quận 5",
+          "lat": 10.7721,
+          "lng": 106.6579,
+          "status": "{{status}}",
+          "createdAt": "2026-11-17T03:00:00Z",
+          "updatedAt": "2026-11-17T03:00:00Z",
+          "amenities": [],
+          "rules": [],
+          "landlordName": "Chủ trọ",
+          "photos": []
+        }
+        """;
+
+    private sealed class MultipartCapturingHandler(Func<HttpResponseMessage> respond) : HttpMessageHandler
+    {
+        private readonly List<(string Name, string? FileName, string? Value)> _parts = new();
+
+        public HttpMethod? Method { get; private set; }
+
+        public Uri? RequestUri { get; private set; }
+
+        public string? Value(string name)
+            => _parts.FirstOrDefault(part => part.Name == name && part.FileName is null).Value;
+
+        public IReadOnlyList<string> FileNames(string name)
+            => _parts
+                .Where(part => part.Name == name && part.FileName is not null)
+                .Select(part => part.FileName!)
+                .ToList();
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            Method = request.Method;
+            RequestUri = request.RequestUri;
+
+            if (request.Content is MultipartFormDataContent multipart)
+            {
+                foreach (var part in multipart)
+                {
+                    var name = part.Headers.ContentDisposition?.Name?.Trim('"') ?? string.Empty;
+                    var fileName = part.Headers.ContentDisposition?.FileName?.Trim('"');
+                    var value = fileName is null
+                        ? await part.ReadAsStringAsync(cancellationToken)
+                        : null;
+
+                    _parts.Add((name, fileName, value));
+                }
+            }
+
+            return respond();
+        }
     }
 
     private static AreaPolygon Triangle() => new()

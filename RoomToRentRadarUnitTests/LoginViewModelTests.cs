@@ -2,6 +2,7 @@ using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Features.Login.ViewModels;
 using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Infrastructure.Auth;
+using RoomToRentRadar.Models;
 using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.Shared.Listings;
 using RoomToRentRadar.Shared.Notifications;
@@ -207,6 +208,31 @@ public class LoginViewModelTests
             int limit = 20,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The login screen does not load notifications.");
+
+        public Task<IReadOnlyList<ManagedListingDto>> GetMyListingsAsync(
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The login screen does not list the landlord listings.");
+
+        public Task<ManagedListingDto> GetManagedListingAsync(
+            Guid id,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The login screen does not load a managed listing.");
+
+        public Task<ManagedListingDto> CreateListingAsync(
+            ListingSubmission submission,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The login screen does not create listings.");
+
+        public Task<ManagedListingDto> UpdateListingAsync(
+            Guid id,
+            ListingSubmission submission,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The login screen does not update listings.");
+
+        public Task<ManagedListingDto> UnpublishListingAsync(
+            Guid id,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The login screen does not unpublish listings.");
     }
 
     private sealed class FakeTokenStore : ITokenStore
@@ -260,6 +286,9 @@ public class LoginViewModelTests
             GoToLoginCount++;
             return Task.CompletedTask;
         }
+
+        public Task GoToListingEditorAsync(Guid? listingId = null)
+            => throw new NotSupportedException("The login screen does not open the listing editor.");
 
         public Task GoBackAsync()
         {

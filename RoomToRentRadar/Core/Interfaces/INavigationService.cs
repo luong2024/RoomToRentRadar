@@ -6,5 +6,8 @@ public interface INavigationService
 
     Task GoToLoginAsync();
 
+    /// <summary>Opens the listing editor; a null id starts a new listing.</summary>
+    Task GoToListingEditorAsync(Guid? listingId = null);
+
     Task GoBackAsync();
 }

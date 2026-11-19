@@ -1,8 +1,10 @@
 using System.Globalization;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using RoomToRentRadar.Models;
 using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.Shared.Listings;
 using RoomToRentRadar.Shared.Notifications;
@@ -238,6 +240,140 @@ public sealed class ApiClient(HttpClient httpClient) : IApiClient
             "The notifications endpoint returned an empty response.");
     }
 
+    public async Task<IReadOnlyList<ManagedListingDto>> GetMyListingsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.GetAsync("api/v1/listings/mine", cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+            throw await CreateApiExceptionAsync(response, cancellationToken);
+
+        var listings = await response.Content.ReadFromJsonAsync<List<ManagedListingDto>>(
+            ApiJson.Options,
+            cancellationToken);
+
+        return listings ?? throw new InvalidOperationException(
+            "The managed listings endpoint returned an empty response.");
+    }
+
+    public async Task<ManagedListingDto> GetManagedListingAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.GetAsync($"api/v1/listings/{id}/manage", cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+            throw await CreateApiExceptionAsync(response, cancellationToken);
+
+        return await ReadManagedListingAsync(response, cancellationToken);
+    }
+
+    public async Task<ManagedListingDto> CreateListingAsync(
+        ListingSubmission submission,
+        CancellationToken cancellationToken = default)
+    {
+        using var content = CreateListingContent(submission);
+        await AddPhotosAsync(content, submission.Photos);
+        using var response = await httpClient.PostAsync("api/v1/listings", content, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+            throw await CreateListingSaveExceptionAsync(response, cancellationToken);
+
+        return await ReadManagedListingAsync(response, cancellationToken);
+    }
+
+    public async Task<ManagedListingDto> UpdateListingAsync(
+        Guid id,
+        ListingSubmission submission,
+        CancellationToken cancellationToken = default)
+    {
+        using var content = CreateListingContent(submission);
+        await AddPhotosAsync(content, submission.Photos);
+        using var response = await httpClient.PutAsync($"api/v1/listings/{id}", content, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+            throw await CreateListingSaveExceptionAsync(response, cancellationToken);
+
+        return await ReadManagedListingAsync(response, cancellationToken);
+    }
+
+    public async Task<ManagedListingDto> UnpublishListingAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PostAsync(
+            $"api/v1/listings/{id}/unpublish",
+            content: null,
+            cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+            throw await CreateApiExceptionAsync(response, cancellationToken);
+
+        return await ReadManagedListingAsync(response, cancellationToken);
+    }
+
+    private static MultipartFormDataContent CreateListingContent(ListingSubmission submission)
+    {
+        var content = new MultipartFormDataContent();
+
+        AddText(content, "title", submission.Title);
+        AddText(content, "address", submission.Address);
+        AddText(content, "price", submission.Price.ToString(CultureInfo.InvariantCulture));
+        AddText(content, "deposit", submission.Deposit.ToString(CultureInfo.InvariantCulture));
+        AddText(content, "area_m2", submission.AreaM2.ToString("R", CultureInfo.InvariantCulture));
+        AddText(content, "room_type", RoomTypeWire.ToWireValue(submission.RoomType));
+        AddText(content, "bedrooms", submission.Bedrooms.ToString(CultureInfo.InvariantCulture));
+        AddText(content, "description", submission.Description);
+        AddText(content, "landlord_name", submission.LandlordName);
+        AddText(content, "landlord_phone", submission.LandlordPhone);
+
+        if (submission.Lat is { } lat && double.IsFinite(lat))
+            AddText(content, "lat", lat.ToString("R", CultureInfo.InvariantCulture));
+
+        if (submission.Lng is { } lng && double.IsFinite(lng))
+            AddText(content, "lng", lng.ToString("R", CultureInfo.InvariantCulture));
+
+        return content;
+    }
+
+    private static void AddText(MultipartFormDataContent content, string name, string? value)
+        => content.Add(new StringContent(value ?? string.Empty, Encoding.UTF8), name);
+
+    private static async Task AddPhotosAsync(
+        MultipartFormDataContent content,
+        IReadOnlyList<ListingPhotoUploadModel> photos)
+    {
+        foreach (var photo in photos)
+        {
+            // The stream is opened per attempt so a retried upload still has content.
+            var stream = await photo.OpenReadAsync();
+            var fileContent = new StreamContent(stream);
+
+            if (!string.IsNullOrWhiteSpace(photo.ContentType))
+                fileContent.Headers.ContentType = new MediaTypeHeaderValue(photo.ContentType);
+
+            content.Add(fileContent, "photos", SanitizeFileName(photo.FileName));
+        }
+    }
+
+    private static string SanitizeFileName(string fileName)
+    {
+        var trimmed = string.IsNullOrWhiteSpace(fileName) ? "photo.jpg" : fileName.Trim();
+        return trimmed.Replace("\"", string.Empty).Replace("\r", string.Empty).Replace("\n", string.Empty);
+    }
+
+    private static async Task<ManagedListingDto> ReadManagedListingAsync(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
+    {
+        var listing = await response.Content.ReadFromJsonAsync<ManagedListingDto>(
+            ApiJson.Options,
+            cancellationToken);
+
+        return listing ?? throw new InvalidOperationException(
+            "The listing management endpoint returned an empty response.");
+    }
+
     private static string BuildListingsUrl(
         int limit,
         string? cursor,
@@ -320,4 +456,74 @@ public sealed class ApiClient(HttpClient httpClient) : IApiClient
         => element.TryGetProperty(propertyName, out var value) && value.ValueKind == JsonValueKind.String
             ? value.GetString()
             : null;
+
+    private static async Task<ApiException> CreateListingSaveExceptionAsync(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
+    {
+        string? title = null;
+        string? detail = null;
+        string? code = null;
+        Dictionary<string, IReadOnlyList<string>>? fieldErrors = null;
+
+        try
+        {
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            var root = document.RootElement;
+
+            if (root.ValueKind == JsonValueKind.Object)
+            {
+                title = ReadString(root, "title");
+                detail = ReadString(root, "detail");
+                code = ReadString(root, "code");
+                fieldErrors = ReadFieldErrors(root);
+            }
+        }
+        catch (JsonException)
+        {
+        }
+
+        return new ListingSaveException(
+            response.StatusCode,
+            detail ?? title ?? $"The API returned status {(int)response.StatusCode}.",
+            code,
+            fieldErrors);
+    }
+
+    private static Dictionary<string, IReadOnlyList<string>>? ReadFieldErrors(JsonElement root)
+    {
+        if (!root.TryGetProperty("errors", out var errors) || errors.ValueKind != JsonValueKind.Object)
+            return null;
+
+        var result = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var field in errors.EnumerateObject())
+        {
+            var messages = new List<string>();
+
+            switch (field.Value.ValueKind)
+            {
+                case JsonValueKind.Array:
+                    foreach (var message in field.Value.EnumerateArray())
+                    {
+                        if (message.ValueKind == JsonValueKind.String && message.GetString() is { Length: > 0 } text)
+                            messages.Add(text);
+                    }
+
+                    break;
+
+                case JsonValueKind.String:
+                    if (field.Value.GetString() is { Length: > 0 } single)
+                        messages.Add(single);
+
+                    break;
+            }
+
+            if (messages.Count > 0)
+                result[field.Name] = messages;
+        }
+
+        return result.Count > 0 ? result : null;
+    }
 }

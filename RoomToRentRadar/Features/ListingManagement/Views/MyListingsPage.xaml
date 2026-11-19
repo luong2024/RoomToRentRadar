@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewModels="clr-namespace:RoomToRentRadar.Features.ListingManagement.ViewModels"
+             x:Class="RoomToRentRadar.Features.ListingManagement.Views.MyListingsPage"
+             x:DataType="viewModels:MyListingsViewModel"
+             Title="Tin của tôi"
+             SafeAreaEdges="All">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <Style x:Key="ListingsSecondaryButton" TargetType="Button">
+                <Setter Property="FontFamily" Value="OpenSansSemibold" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="BackgroundColor" Value="{StaticResource SoftSurface}" />
+                <Setter Property="TextColor" Value="{StaticResource Accent}" />
+                <Setter Property="CornerRadius" Value="14" />
+                <Setter Property="Padding" Value="16,8" />
+                <Setter Property="MinimumHeightRequest" Value="44" />
+            </Style>
+            <Style x:Key="ListingsQuietButton" TargetType="Button">
+                <Setter Property="FontFamily" Value="OpenSansSemibold" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="BackgroundColor" Value="Transparent" />
+                <Setter Property="TextColor" Value="#B3261E" />
+                <Setter Property="CornerRadius" Value="14" />
+                <Setter Property="Padding" Value="16,8" />
+                <Setter Property="MinimumHeightRequest" Value="44" />
+                <Setter Property="BorderColor" Value="{StaticResource Line}" />
+                <Setter Property="BorderWidth" Value="1" />
+            </Style>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+
+        <!-- Header: the Shell nav bar is hidden for shell tabs, so the page draws its own. -->
+        <Border StrokeShape="Rectangle" StrokeThickness="0" BackgroundColor="{StaticResource Canvas}">
+            <VerticalStackLayout Padding="20,16,20,10" Spacing="4">
+                <HorizontalStackLayout Spacing="8">
+                    <BoxView Color="{StaticResource Accent}" WidthRequest="22" HeightRequest="2" VerticalOptions="Center" />
+                    <Label Text="TIN ĐĂNG CỦA BẠN" Style="{StaticResource Eyebrow}" FontSize="9"
+                           TextColor="{StaticResource Accent}" />
+                </HorizontalStackLayout>
+                <Label Text="Tin của tôi" FontSize="24" FontFamily="OpenSansSemibold" CharacterSpacing="-0.6"
+                       SemanticProperties.HeadingLevel="Level1" />
+                <Label Text="Quản lý tin cho thuê: gửi duyệt, chỉnh sửa hoặc ẩn tin bất cứ lúc nào."
+                       Style="{StaticResource Caption}" FontSize="12" MaxLines="3" />
+            </VerticalStackLayout>
+        </Border>
+
+        <VerticalStackLayout Grid.Row="1" Padding="20,4,20,10" Spacing="8">
+            <Button Text="Đăng tin mới" Command="{Binding CreateCommand}"
+                    AutomationId="CreateListingButton"
+                    SemanticProperties.Description="Đăng tin cho thuê mới"
+                    SemanticProperties.Hint="Mở trang đăng tin mới" />
+            <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}"
+                   TextColor="#B3261E" FontSize="12" AutomationId="MyListingsError" />
+            <Label Text="{Binding OperationMessage}" IsVisible="{Binding HasOperationMessage}"
+                   TextColor="{StaticResource Accent}" FontSize="12" AutomationId="MyListingsNotice" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
+                               HorizontalOptions="Start" HeightRequest="22"
+                               SemanticProperties.Description="Đang tải tin đăng" />
+        </VerticalStackLayout>
+
+        <CollectionView Grid.Row="2" ItemsSource="{Binding Listings}"
+                        AutomationId="MyListingsList"
+                        SelectionMode="None"
+                        Margin="20,0,20,0">
+            <CollectionView.EmptyView>
+                <ContentView x:DataType="viewModels:MyListingsViewModel">
+                    <VerticalStackLayout Padding="20,36" Spacing="14" HorizontalOptions="Center">
+                        <Image Source="location_pin.png" WidthRequest="34" HeightRequest="34"
+                               HorizontalOptions="Center"
+                               SemanticProperties.Description="Chưa có tin đăng" />
+                        <Label Text="{Binding Message}" AutomationId="MyListingsEmptyMessage"
+                               HorizontalTextAlignment="Center" TextColor="{StaticResource Muted}"
+                               FontSize="13" />
+                        <Button Text="Đăng tin mới" Command="{Binding CreateCommand}"
+                                Style="{StaticResource ListingsSecondaryButton}"
+                                HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+                </ContentView>
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="viewModels:MyListingsItem">
+                    <Border Margin="0,0,0,14" Padding="6" StrokeShape="RoundRectangle 24" StrokeThickness="0">
+                        <Border.Shadow>
+                            <Shadow Brush="#183B2B" Offset="0,4" Radius="12" Opacity="0.06" />
+                        </Border.Shadow>
+                        <Grid RowDefinitions="140,Auto">
+                            <Border StrokeThickness="0" StrokeShape="RoundRectangle 20" Padding="0">
+                                <Grid BackgroundColor="{StaticResource SoftSurface}">
+                                    <Image Source="{Binding PhotoSource}" Aspect="AspectFill"
+                                           SemanticProperties.Description="Ảnh hoặc hình minh họa phòng trọ" />
+                                    <Border Margin="10" Padding="8,4" HorizontalOptions="End" VerticalOptions="End"
+                                            StrokeThickness="0" StrokeShape="RoundRectangle 10" BackgroundColor="#F7FAF3"
+                                            IsVisible="{Binding ShowIllustrationNote}">
+                                        <Label Text="Ảnh minh họa" FontSize="9" TextColor="{StaticResource Accent}" />
+                                    </Border>
+                                    <Border Margin="10" Padding="10,5" HorizontalOptions="Start" VerticalOptions="Start"
+                                            StrokeThickness="0" StrokeShape="RoundRectangle 12"
+                                            BackgroundColor="{StaticResource SoftSurface}">
+                                        <Border.Triggers>
+                                            <DataTrigger TargetType="Border" Binding="{Binding StatusText}" Value="Đã đăng">
+                                                <Setter Property="BackgroundColor" Value="{StaticResource AccentSoft}" />
+                                            </DataTrigger>
+                                            <DataTrigger TargetType="Border" Binding="{Binding StatusText}" Value="Chờ duyệt">
+                                                <Setter Property="BackgroundColor" Value="#FBF1E1" />
+                                            </DataTrigger>
+                                            <DataTrigger TargetType="Border" Binding="{Binding StatusText}" Value="Đã gỡ">
+                                                <Setter Property="BackgroundColor" Value="#F7E4E1" />
+                                            </DataTrigger>
+                                        </Border.Triggers>
+                                        <Label Text="{Binding StatusText}" FontSize="10" FontFamily="OpenSansSemibold"
+                                               CharacterSpacing="0.6" TextColor="{StaticResource Muted}">
+                                            <Label.Triggers>
+                                                <DataTrigger TargetType="Label" Binding="{Binding StatusText}" Value="Đã đăng">
+                                                    <Setter Property="TextColor" Value="{StaticResource Accent}" />
+                                                </DataTrigger>
+                                                <DataTrigger TargetType="Label" Binding="{Binding StatusText}" Value="Chờ duyệt">
+                                                    <Setter Property="TextColor" Value="{StaticResource WarmAccent}" />
+                                                </DataTrigger>
+                                                <DataTrigger TargetType="Label" Binding="{Binding StatusText}" Value="Đã gỡ">
+                                                    <Setter Property="TextColor" Value="#B3261E" />
+                                                </DataTrigger>
+                                            </Label.Triggers>
+                                        </Label>
+                                    </Border>
+                                </Grid>
+                            </Border>
+
+                            <VerticalStackLayout Grid.Row="1" Padding="12,12,12,8" Spacing="8">
+                                <Label Text="{Binding Title}" FontSize="16" FontFamily="OpenSansSemibold"
+                                       MaxLines="2" LineBreakMode="TailTruncation" />
+                                <HorizontalStackLayout Spacing="10">
+                                    <Label Text="{Binding PriceText}" FontSize="16" FontFamily="OpenSansSemibold"
+                                           TextColor="{StaticResource Accent}" />
+                                    <Label Text="{Binding AreaText}" FontSize="12" TextColor="{StaticResource Muted}"
+                                           VerticalOptions="Center" />
+                                </HorizontalStackLayout>
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6">
+                                    <Image Source="location_pin.png" HeightRequest="14" WidthRequest="14" VerticalOptions="Center" />
+                                    <Label Grid.Column="1" Text="{Binding Address}" FontSize="11"
+                                           TextColor="{StaticResource Muted}" LineBreakMode="TailTruncation" MaxLines="1" />
+                                </Grid>
+                                <BoxView HeightRequest="1" Color="{StaticResource Line}" Margin="0,2" />
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                    <Button Text="Sửa" Clicked="OnEditClicked"
+                                            AutomationId="EditListingButton"
+                                            IsEnabled="{Binding IsActionEnabled}"
+                                            Style="{StaticResource ListingsSecondaryButton}"
+                                            SemanticProperties.Description="Sửa tin đăng này" />
+                                    <Button Grid.Column="1" Text="Ẩn tin" Clicked="OnUnpublishClicked"
+                                            AutomationId="UnpublishListingButton"
+                                            IsVisible="{Binding CanUnpublish}"
+                                            IsEnabled="{Binding IsActionEnabled}"
+                                            Style="{StaticResource ListingsQuietButton}"
+                                            SemanticProperties.Description="Ẩn tin đăng này khỏi sinh viên" />
+                                </Grid>
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+            <CollectionView.Footer>
+                <BoxView HeightRequest="12" Color="Transparent" />
+            </CollectionView.Footer>
+        </CollectionView>
+
+        <!-- Sign-in prompt: the /mine endpoint answers 401 without a token. -->
+        <Border Grid.Row="3" IsVisible="{Binding IsSignInRequired}" Margin="20,8,20,16" Padding="16" StrokeThickness="0"
+                BackgroundColor="{StaticResource AccentSoft}" StrokeShape="RoundRectangle 18">
+            <VerticalStackLayout Spacing="10">
+                <Label Text="Cần đăng nhập để xem tin của bạn." FontSize="13" />
+                <Button Text="Đăng nhập" Command="{Binding SignInCommand}" MinimumHeightRequest="44"
+                        HorizontalOptions="Start"
+                        SemanticProperties.Description="Đăng nhập lại để quản lý tin đăng" />
+            </VerticalStackLayout>
+        </Border>
+    </Grid>
+</ContentPage>

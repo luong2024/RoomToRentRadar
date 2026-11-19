@@ -50,6 +50,20 @@ public sealed class ListingManagementController(
             : ToProblem(result.Problem!);
     }
 
+    [HttpGet("mine")]
+    [ProducesResponseType(typeof(IReadOnlyList<ManagedListingDto>), StatusCodes.Status200OK, "application/json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError, "application/problem+json")]
+    public async Task<ActionResult<IReadOnlyList<ManagedListingDto>>> GetMyListings(
+        CancellationToken cancellationToken)
+    {
+        var listings = await listingManagementService.GetMineAsync(
+            CurrentUserId,
+            cancellationToken);
+
+        return Ok(listings);
+    }
+
     [HttpGet("{id:guid}/manage")]
     [ProducesResponseType(typeof(ManagedListingDto), StatusCodes.Status200OK, "application/json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]

@@ -1,6 +1,7 @@
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Features.Home.ViewModels;
 using RoomToRentRadar.Infrastructure.Api;
+using RoomToRentRadar.Models;
 using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.Shared.Listings;
 using RoomToRentRadar.Shared.Notifications;
@@ -632,6 +633,31 @@ public partial class HomeViewModelTests
             int limit = 20,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The home screen does not load notifications.");
+
+        public Task<IReadOnlyList<ManagedListingDto>> GetMyListingsAsync(
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The home screen does not list the landlord listings.");
+
+        public Task<ManagedListingDto> GetManagedListingAsync(
+            Guid id,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The home screen does not load a managed listing.");
+
+        public Task<ManagedListingDto> CreateListingAsync(
+            ListingSubmission submission,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The home screen does not create listings.");
+
+        public Task<ManagedListingDto> UpdateListingAsync(
+            Guid id,
+            ListingSubmission submission,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The home screen does not update listings.");
+
+        public Task<ManagedListingDto> UnpublishListingAsync(
+            Guid id,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The home screen does not unpublish listings.");
     }
 
     private sealed class FakeErrorHandler : IErrorHandler
@@ -660,6 +686,8 @@ public partial class HomeViewModelTests
         }
 
         public Task GoToLoginAsync() => Task.CompletedTask;
+
+        public Task GoToListingEditorAsync(Guid? listingId = null) => Task.CompletedTask;
 
         public Task GoBackAsync() => Task.CompletedTask;
     }

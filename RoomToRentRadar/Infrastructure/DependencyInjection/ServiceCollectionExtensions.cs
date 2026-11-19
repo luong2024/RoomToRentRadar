@@ -4,6 +4,8 @@ using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Features.Home.ViewModels;
 using RoomToRentRadar.Features.Home.Views;
+using RoomToRentRadar.Features.ListingManagement.ViewModels;
+using RoomToRentRadar.Features.ListingManagement.Views;
 using RoomToRentRadar.Features.Login.ViewModels;
 using RoomToRentRadar.Features.Login.Views;
 using RoomToRentRadar.Features.RoomDetail.ViewModels;
@@ -12,6 +14,7 @@ using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Infrastructure.Auth;
 using RoomToRentRadar.Infrastructure.ErrorHandling;
 using RoomToRentRadar.Infrastructure.Navigation;
+using RoomToRentRadar.Infrastructure.Photos;
 using RoomToRentRadar.Services;
 
 namespace RoomToRentRadar.Infrastructure.DependencyInjection;
@@ -37,6 +40,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISavedAreaSearchStore>(provider => new FileSavedAreaSearchStore(
             FileSystem.AppDataDirectory, provider.GetRequiredService<IPreferences>()));
         services.AddSingleton<INavigationService, ShellNavigationService>();
+        services.AddSingleton<IPhotoPicker, FilePickerPhotoPicker>();
         return services;
     }
 
@@ -49,6 +53,10 @@ public static class ServiceCollectionExtensions
         services.AddTransient<RoomDetailPage>();
         services.AddTransient<LoginViewModel>();
         services.AddTransient<LoginPage>();
+        services.AddTransient<MyListingsViewModel>();
+        services.AddTransient<MyListingsPage>();
+        services.AddTransient<ListingEditorViewModel>();
+        services.AddTransient<ListingEditorPage>();
         return services;
     }
 }

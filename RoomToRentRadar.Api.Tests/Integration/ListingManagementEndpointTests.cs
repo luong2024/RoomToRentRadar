@@ -533,6 +533,88 @@ public sealed class ListingManagementEndpointTests
             Is.EqualTo(ListingWriteProblemFactory.ListingNotFound));
     }
 
+    [Test]
+    public async Task GetMine_ReturnsOnlyCallersListings()
+    {
+        var token = await AccessTokenAsync();
+        var first = await CreateListingAsync(token);
+        var second = await CreateListingAsync(token);
+        var otherToken = await SeedSecondUserAndLoginAsync();
+        var otherListing = await CreateListingAsync(otherToken);
+
+        var listings = await GetMineAsync(token);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(listings, Has.Count.EqualTo(2));
+            Assert.That(listings.Select(x => x.Id), Is.EquivalentTo(new[] { first.Id, second.Id }));
+            Assert.That(listings.Select(x => x.Id), Does.Not.Contain(otherListing.Id));
+        });
+    }
+
+    [Test]
+    public async Task GetMine_IncludesNonPublishedStatuses()
+    {
+        var token = await AccessTokenAsync();
+        var pending = await CreateListingAsync(token);
+        var hidden = await CreateListingAsync(token);
+
+        var unpublish = await SendAsync(
+            HttpMethod.Post,
+            $"/api/v1/listings/{hidden.Id}/unpublish",
+            content: null,
+            token);
+        Assert.That(unpublish.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        var listings = await GetMineAsync(token);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(listings, Has.Count.EqualTo(2));
+            Assert.That(
+                listings.Single(x => x.Id == pending.Id).Status,
+                Is.EqualTo(ListingStatus.PendingReview));
+            Assert.That(
+                listings.Single(x => x.Id == hidden.Id).Status,
+                Is.EqualTo(ListingStatus.Hidden));
+        });
+    }
+
+    [Test]
+    public async Task GetMine_Anonymous_ReturnsUnauthorizedProblem()
+    {
+        var response = await SendAsync(
+            HttpMethod.Get,
+            "/api/v1/listings/mine",
+            content: null,
+            token: null);
+
+        var problem = await ReadProblemAsync(response, HttpStatusCode.Unauthorized);
+        Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo("unauthorized"));
+    }
+
+    [Test]
+    public async Task GetMine_OrdersByUpdatedAtDescendingThenId()
+    {
+        var ownerId = await DemoUserIdAsync();
+        var baseDate = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+        await SetOwnerAndUpdatedAtAsync(TestListingsSeed.IdFor(3), ownerId, baseDate.AddHours(1));
+        await SetOwnerAndUpdatedAtAsync(TestListingsSeed.IdFor(5), ownerId, baseDate.AddHours(3));
+        // Same timestamp as listing 3 so the id tie-break decides the order.
+        await SetOwnerAndUpdatedAtAsync(TestListingsSeed.IdFor(7), ownerId, baseDate.AddHours(1));
+
+        var listings = await GetMineAsync(await AccessTokenAsync());
+
+        Assert.That(
+            listings.Select(x => x.Id),
+            Is.EqualTo(new[]
+            {
+                TestListingsSeed.IdFor(5),
+                TestListingsSeed.IdFor(3),
+                TestListingsSeed.IdFor(7)
+            }));
+    }
+
     private static (string Name, string Value)[] DefaultFields(
         string title = "Sunny room near campus",
         string price = "5000000") =>
@@ -612,6 +694,24 @@ public sealed class ListingManagementEndpointTests
         return detail!;
     }
 
+    private async Task<IReadOnlyList<ManagedListingDto>> GetMineAsync(string token)
+    {
+        var response = await SendAsync(
+            HttpMethod.Get,
+            "/api/v1/listings/mine",
+            content: null,
+            token);
+        Assert.That(
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.OK),
+            await response.Content.ReadAsStringAsync());
+
+        var listings = await response.Content.ReadFromJsonAsync<IReadOnlyList<ManagedListingDto>>(
+            ApiJson.Options);
+        Assert.That(listings, Is.Not.Null);
+        return listings!;
+    }
+
     private static async Task<JsonElement> ReadProblemAsync(
         HttpResponseMessage response,
         HttpStatusCode expectedStatus)
@@ -680,6 +780,16 @@ public sealed class ListingManagementEndpointTests
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var listing = await dbContext.Listings.SingleAsync(x => x.Id == listingId);
         listing.OwnerId = ownerId;
+        await dbContext.SaveChangesAsync();
+    }
+
+    private async Task SetOwnerAndUpdatedAtAsync(Guid listingId, Guid ownerId, DateTime updatedAt)
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var listing = await dbContext.Listings.SingleAsync(x => x.Id == listingId);
+        listing.OwnerId = ownerId;
+        listing.UpdatedAt = updatedAt;
         await dbContext.SaveChangesAsync();
     }
 

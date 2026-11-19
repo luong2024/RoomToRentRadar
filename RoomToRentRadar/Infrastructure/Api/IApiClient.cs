@@ -1,3 +1,4 @@
+using RoomToRentRadar.Models;
 using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.Shared.Listings;
 using RoomToRentRadar.Shared.Notifications;
@@ -50,5 +51,26 @@ public interface IApiClient
 
     Task<IReadOnlyList<NotificationDto>> GetNotificationsAsync(
         int limit = 20,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Every listing owned by the signed-in landlord, newest first.</summary>
+    Task<IReadOnlyList<ManagedListingDto>> GetMyListingsAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<ManagedListingDto> GetManagedListingAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
+
+    Task<ManagedListingDto> CreateListingAsync(
+        ListingSubmission submission,
+        CancellationToken cancellationToken = default);
+
+    Task<ManagedListingDto> UpdateListingAsync(
+        Guid id,
+        ListingSubmission submission,
+        CancellationToken cancellationToken = default);
+
+    Task<ManagedListingDto> UnpublishListingAsync(
+        Guid id,
         CancellationToken cancellationToken = default);
 }

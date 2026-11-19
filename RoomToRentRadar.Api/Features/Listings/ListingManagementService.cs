@@ -173,6 +173,23 @@ public sealed class ListingManagementService(
         return ListingWriteResult<ManagedListingDto>.Success(ToManaged(listing));
     }
 
+    public async Task<IReadOnlyList<ManagedListingDto>> GetMineAsync(
+        Guid ownerId,
+        CancellationToken cancellationToken)
+    {
+        var listings = await dbContext.Listings
+            .AsNoTracking()
+            .Include(x => x.Photos)
+            .Include(x => x.Amenities)
+            .Include(x => x.Rules)
+            .Where(x => x.OwnerId == ownerId)
+            .OrderByDescending(x => x.UpdatedAt)
+            .ThenBy(x => x.Id)
+            .ToListAsync(cancellationToken);
+
+        return listings.Select(ToManaged).ToList();
+    }
+
     public async Task<ManagedListingDto?> GetManagedAsync(
         Guid ownerId,
         Guid listingId,

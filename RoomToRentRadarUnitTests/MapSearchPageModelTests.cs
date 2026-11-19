@@ -718,6 +718,31 @@ public class MapSearchPageModelTests
             int limit = 20,
             CancellationToken cancellationToken = default)
             => Task.FromResult(Notifications);
+
+        public Task<IReadOnlyList<ManagedListingDto>> GetMyListingsAsync(
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<ManagedListingDto> GetManagedListingAsync(
+            Guid id,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<ManagedListingDto> CreateListingAsync(
+            ListingSubmission submission,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<ManagedListingDto> UpdateListingAsync(
+            Guid id,
+            ListingSubmission submission,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<ManagedListingDto> UnpublishListingAsync(
+            Guid id,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 
     private sealed class QueuedApiClient : IApiClient
@@ -789,6 +814,31 @@ public class MapSearchPageModelTests
 
         public Task<IReadOnlyList<NotificationDto>> GetNotificationsAsync(
             int limit = 20,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<IReadOnlyList<ManagedListingDto>> GetMyListingsAsync(
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<ManagedListingDto> GetManagedListingAsync(
+            Guid id,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<ManagedListingDto> CreateListingAsync(
+            ListingSubmission submission,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<ManagedListingDto> UpdateListingAsync(
+            Guid id,
+            ListingSubmission submission,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<ManagedListingDto> UnpublishListingAsync(
+            Guid id,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
     }

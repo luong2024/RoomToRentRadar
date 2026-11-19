@@ -11,5 +11,6 @@
     <TabBar>
         <ShellContent x:Name="ExploreTab" Title="Khám phá phòng" Route="home" />
         <ShellContent x:Name="MapTab" Title="Bản đồ" Route="map" />
+        <ShellContent x:Name="MyListingsTab" Title="Tin của tôi" Route="my-listings" />
     </TabBar>
 </Shell>

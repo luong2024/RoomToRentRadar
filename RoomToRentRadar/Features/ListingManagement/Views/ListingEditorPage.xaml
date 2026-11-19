@@ -1,0 +1,352 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewModels="clr-namespace:RoomToRentRadar.Features.ListingManagement.ViewModels"
+             x:Class="RoomToRentRadar.Features.ListingManagement.Views.ListingEditorPage"
+             x:DataType="viewModels:ListingEditorViewModel"
+             Title="Tin đăng"
+             Shell.NavBarIsVisible="False"
+             Shell.TabBarIsVisible="False"
+             SafeAreaEdges="All">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <Style x:Key="EditorBackButton" TargetType="Button">
+                <Setter Property="FontFamily" Value="OpenSansSemibold" />
+                <Setter Property="FontSize" Value="18" />
+                <Setter Property="TextColor" Value="{StaticResource Accent}" />
+                <Setter Property="BackgroundColor" Value="{StaticResource AccentSoft}" />
+                <Setter Property="CornerRadius" Value="22" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="WidthRequest" Value="44" />
+                <Setter Property="HeightRequest" Value="44" />
+                <Setter Property="MinimumHeightRequest" Value="44" />
+                <Setter Property="MinimumWidthRequest" Value="44" />
+            </Style>
+            <Style x:Key="EditorSectionTitle" TargetType="Label">
+                <Setter Property="FontFamily" Value="OpenSansSemibold" />
+                <Setter Property="FontSize" Value="16" />
+                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+            </Style>
+            <Style x:Key="EditorFieldLabel" TargetType="Label">
+                <Setter Property="FontFamily" Value="OpenSansSemibold" />
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+            </Style>
+            <Style x:Key="EditorFieldBox" TargetType="Border">
+                <Setter Property="StrokeThickness" Value="0" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 12" />
+                <Setter Property="BackgroundColor" Value="{StaticResource SoftSurface}" />
+                <Setter Property="Padding" Value="12,0" />
+            </Style>
+            <Style x:Key="EditorEntry" TargetType="Entry">
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="TextColor" Value="{StaticResource Ink}" />
+                <Setter Property="PlaceholderColor" Value="{StaticResource Muted}" />
+                <Setter Property="BackgroundColor" Value="Transparent" />
+                <Setter Property="MinimumHeightRequest" Value="50" />
+            </Style>
+            <Style x:Key="EditorTextArea" TargetType="Editor">
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="TextColor" Value="{StaticResource Ink}" />
+                <Setter Property="PlaceholderColor" Value="{StaticResource Muted}" />
+                <Setter Property="BackgroundColor" Value="Transparent" />
+                <Setter Property="MinimumHeightRequest" Value="104" />
+            </Style>
+            <Style x:Key="EditorFieldError" TargetType="Label">
+                <Setter Property="FontSize" Value="11" />
+                <Setter Property="TextColor" Value="#B3261E" />
+            </Style>
+            <Style x:Key="EditorPhotoButton" TargetType="Button">
+                <Setter Property="FontFamily" Value="OpenSansSemibold" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="BackgroundColor" Value="{StaticResource SoftSurface}" />
+                <Setter Property="TextColor" Value="{StaticResource Accent}" />
+                <Setter Property="CornerRadius" Value="14" />
+                <Setter Property="Padding" Value="16,10" />
+                <Setter Property="MinimumHeightRequest" Value="44" />
+            </Style>
+            <Style x:Key="EditorRemovePhotoButton" TargetType="Button">
+                <Setter Property="FontFamily" Value="OpenSansSemibold" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="BackgroundColor" Value="{StaticResource Surface}" />
+                <Setter Property="TextColor" Value="#B3261E" />
+                <Setter Property="CornerRadius" Value="14" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="WidthRequest" Value="28" />
+                <Setter Property="HeightRequest" Value="28" />
+                <Setter Property="MinimumHeightRequest" Value="28" />
+                <Setter Property="MinimumWidthRequest" Value="28" />
+            </Style>
+
+            <DataTemplate x:Key="EditorRoomTypeChipTemplate" x:DataType="viewModels:RoomTypeOption">
+                <Border Margin="0,0,8,8" Padding="14,10" MinimumHeightRequest="44" StrokeThickness="0"
+                        StrokeShape="RoundRectangle 18" BackgroundColor="{StaticResource SoftSurface}">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding SelectCommand}" />
+                    </Border.GestureRecognizers>
+                    <Border.Triggers>
+                        <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
+                            <Setter Property="BackgroundColor" Value="{StaticResource Accent}" />
+                            <Setter Property="Stroke" Value="{StaticResource Accent}" />
+                        </DataTrigger>
+                    </Border.Triggers>
+                    <Label Text="{Binding Label}" FontSize="12">
+                        <Label.Triggers>
+                            <DataTrigger TargetType="Label" Binding="{Binding IsSelected}" Value="True">
+                                <Setter Property="TextColor" Value="White" />
+                            </DataTrigger>
+                        </Label.Triggers>
+                    </Label>
+                </Border>
+            </DataTemplate>
+
+            <DataTemplate x:Key="EditorPhotoTemplate" x:DataType="viewModels:EditorPhoto">
+                <Border Margin="0,0,10,0" WidthRequest="116" HeightRequest="136" Padding="0" StrokeThickness="0"
+                        StrokeShape="RoundRectangle 16" BackgroundColor="{StaticResource SoftSurface}">
+                    <Grid RowDefinitions="100,Auto">
+                        <Grid BackgroundColor="{StaticResource SoftSurface}">
+                            <Label Text="Ảnh" FontSize="11" TextColor="{StaticResource Muted}"
+                                   HorizontalOptions="Center" VerticalOptions="Center" />
+                            <Image Source="{Binding PreviewImageSource}" Aspect="AspectFill"
+                                   SemanticProperties.Description="Ảnh xem trước của tin đăng" />
+                            <Button Text="✕" Style="{StaticResource EditorRemovePhotoButton}"
+                                    Command="{Binding RemoveCommand}"
+                                    IsVisible="{Binding IsRemovable}"
+                                    HorizontalOptions="End" VerticalOptions="Start" Margin="4"
+                                    AutomationId="RemovePhotoButton"
+                                    SemanticProperties.Description="Xóa ảnh này khỏi tin đăng" />
+                        </Grid>
+                        <Label Grid.Row="1" Text="{Binding BadgeText}" FontSize="10" MaxLines="1"
+                               LineBreakMode="TailTruncation" Margin="8,4" TextColor="{StaticResource Muted}" />
+                    </Grid>
+                </Border>
+            </DataTemplate>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- The Shell nav bar is hidden app-wide, so the editor renders its own header. -->
+        <Border StrokeShape="Rectangle" StrokeThickness="0" BackgroundColor="{StaticResource Canvas}">
+            <Grid Padding="16,12" ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                <Button Text="←" Style="{StaticResource EditorBackButton}" Command="{Binding GoBackCommand}"
+                        AutomationId="ListingEditorBack"
+                        SemanticProperties.Description="Quay lại danh sách tin đăng" />
+                <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                    <Label Text="{Binding PageTitle}" FontSize="19" FontFamily="OpenSansSemibold"
+                           CharacterSpacing="-0.4" AutomationId="ListingEditorTitle"
+                           SemanticProperties.HeadingLevel="Level1" />
+                    <Label Text="Tin mới luôn ở trạng thái chờ duyệt trước khi hiển thị."
+                           Style="{StaticResource Caption}" FontSize="11" />
+                </VerticalStackLayout>
+            </Grid>
+        </Border>
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="20,6,20,20" Spacing="16" MaximumWidthRequest="760" HorizontalOptions="Fill">
+
+                <!-- Thông tin cơ bản -->
+                <Border Padding="18" StrokeShape="RoundRectangle 22" StrokeThickness="0">
+                    <VerticalStackLayout Spacing="14">
+                        <Label Text="Thông tin cơ bản" Style="{StaticResource EditorSectionTitle}" />
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Tiêu đề tin đăng" Style="{StaticResource EditorFieldLabel}" />
+                            <Border Style="{StaticResource EditorFieldBox}">
+                                <Entry Text="{Binding Title}" Style="{StaticResource EditorEntry}"
+                                       Placeholder="Ví dụ: Phòng đơn gần ĐH Bách Khoa, có ban công"
+                                       AutomationId="ListingTitleEntry"
+                                       SemanticProperties.Description="Tiêu đề tin đăng" />
+                            </Border>
+                            <Label Text="{Binding TitleError}" IsVisible="{Binding HasTitleError}"
+                                   Style="{StaticResource EditorFieldError}" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Địa chỉ" Style="{StaticResource EditorFieldLabel}" />
+                            <Border Style="{StaticResource EditorFieldBox}">
+                                <Entry Text="{Binding Address}" Style="{StaticResource EditorEntry}"
+                                       Placeholder="Số nhà, đường, phường, quận"
+                                       AutomationId="ListingAddressEntry"
+                                       SemanticProperties.Description="Địa chỉ phòng trọ" />
+                            </Border>
+                            <Label Text="{Binding AddressError}" IsVisible="{Binding HasAddressError}"
+                                   Style="{StaticResource EditorFieldError}" />
+                        </VerticalStackLayout>
+
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Giá thuê (đồng)" Style="{StaticResource EditorFieldLabel}" />
+                                <Border Style="{StaticResource EditorFieldBox}">
+                                    <Entry Text="{Binding PriceText}" Style="{StaticResource EditorEntry}"
+                                           Keyboard="Numeric" Placeholder="3500000"
+                                           AutomationId="ListingPriceEntry"
+                                           SemanticProperties.Description="Giá thuê mỗi tháng, đơn vị đồng" />
+                                </Border>
+                                <Label Text="{Binding PriceError}" IsVisible="{Binding HasPriceError}"
+                                       Style="{StaticResource EditorFieldError}" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" Spacing="6">
+                                <Label Text="Tiền cọc (đồng)" Style="{StaticResource EditorFieldLabel}" />
+                                <Border Style="{StaticResource EditorFieldBox}">
+                                    <Entry Text="{Binding DepositText}" Style="{StaticResource EditorEntry}"
+                                           Keyboard="Numeric" Placeholder="3500000"
+                                           AutomationId="ListingDepositEntry"
+                                           SemanticProperties.Description="Tiền cọc, đơn vị đồng" />
+                                </Border>
+                                <Label Text="{Binding DepositError}" IsVisible="{Binding HasDepositError}"
+                                       Style="{StaticResource EditorFieldError}" />
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Diện tích (m²)" Style="{StaticResource EditorFieldLabel}" />
+                                <Border Style="{StaticResource EditorFieldBox}">
+                                    <Entry Text="{Binding AreaText}" Style="{StaticResource EditorEntry}"
+                                           Keyboard="Numeric" Placeholder="20"
+                                           AutomationId="ListingAreaEntry"
+                                           SemanticProperties.Description="Diện tích phòng, mét vuông" />
+                                </Border>
+                                <Label Text="{Binding AreaError}" IsVisible="{Binding HasAreaError}"
+                                       Style="{StaticResource EditorFieldError}" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" Spacing="6">
+                                <Label Text="Số phòng ngủ" Style="{StaticResource EditorFieldLabel}" />
+                                <Border Style="{StaticResource EditorFieldBox}">
+                                    <Entry Text="{Binding BedroomsText}" Style="{StaticResource EditorEntry}"
+                                           Keyboard="Numeric" Placeholder="1"
+                                           AutomationId="ListingBedroomsEntry"
+                                           SemanticProperties.Description="Số phòng ngủ" />
+                                </Border>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Loại phòng" Style="{StaticResource EditorFieldLabel}" />
+                            <FlexLayout Wrap="Wrap" Direction="Row" AlignItems="Center"
+                                        BindableLayout.ItemsSource="{Binding RoomTypeOptions}"
+                                        BindableLayout.ItemTemplate="{StaticResource EditorRoomTypeChipTemplate}" />
+                            <Label Text="{Binding RoomTypeError}" IsVisible="{Binding HasRoomTypeError}"
+                                   Style="{StaticResource EditorFieldError}" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Mô tả thêm" Style="{StaticResource EditorFieldLabel}" />
+                            <Border Style="{StaticResource EditorFieldBox}" Padding="12,8">
+                                <Editor Text="{Binding DescriptionText}" Style="{StaticResource EditorTextArea}"
+                                        Placeholder="Mô tả chỗ ở, tiện ích xung quanh, giờ giấc…"
+                                        AutomationId="ListingDescriptionEntry"
+                                        SemanticProperties.Description="Mô tả thêm về phòng trọ" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Vị trí -->
+                <Border Padding="18" StrokeShape="RoundRectangle 22" StrokeThickness="0">
+                    <VerticalStackLayout Spacing="14">
+                        <Label Text="Vị trí" Style="{StaticResource EditorSectionTitle}" />
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Vĩ độ" Style="{StaticResource EditorFieldLabel}" />
+                                <Border Style="{StaticResource EditorFieldBox}">
+                                    <Entry Text="{Binding LatText}" Style="{StaticResource EditorEntry}"
+                                           Keyboard="Numeric" Placeholder="10.7721"
+                                           AutomationId="ListingLatEntry"
+                                           SemanticProperties.Description="Vĩ độ của phòng trọ" />
+                                </Border>
+                                <Label Text="{Binding LatError}" IsVisible="{Binding HasLatError}"
+                                       Style="{StaticResource EditorFieldError}" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" Spacing="6">
+                                <Label Text="Kinh độ" Style="{StaticResource EditorFieldLabel}" />
+                                <Border Style="{StaticResource EditorFieldBox}">
+                                    <Entry Text="{Binding LngText}" Style="{StaticResource EditorEntry}"
+                                           Keyboard="Numeric" Placeholder="106.6579"
+                                           AutomationId="ListingLngEntry"
+                                           SemanticProperties.Description="Kinh độ của phòng trọ" />
+                                </Border>
+                                <Label Text="{Binding LngError}" IsVisible="{Binding HasLngError}"
+                                       Style="{StaticResource EditorFieldError}" />
+                            </VerticalStackLayout>
+                        </Grid>
+                        <Label Text="Toạ độ dùng để hiển thị tin trên bản đồ và tính khoảng cách tới trường."
+                               Style="{StaticResource Caption}" FontSize="11" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Liên hệ -->
+                <Border Padding="18" StrokeShape="RoundRectangle 22" StrokeThickness="0">
+                    <VerticalStackLayout Spacing="14">
+                        <Label Text="Liên hệ" Style="{StaticResource EditorSectionTitle}" />
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Tên người cho thuê" Style="{StaticResource EditorFieldLabel}" />
+                            <Border Style="{StaticResource EditorFieldBox}">
+                                <Entry Text="{Binding LandlordNameText}" Style="{StaticResource EditorEntry}"
+                                       Placeholder="Nguyễn Văn A"
+                                       AutomationId="ListingLandlordNameEntry"
+                                       SemanticProperties.Description="Tên người cho thuê" />
+                            </Border>
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Số điện thoại" Style="{StaticResource EditorFieldLabel}" />
+                            <Border Style="{StaticResource EditorFieldBox}">
+                                <Entry Text="{Binding LandlordPhoneText}" Style="{StaticResource EditorEntry}"
+                                       Keyboard="Telephone" Placeholder="0901234567"
+                                       AutomationId="ListingLandlordPhoneEntry"
+                                       SemanticProperties.Description="Số điện thoại liên hệ" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Ảnh -->
+                <Border Padding="18" StrokeShape="RoundRectangle 22" StrokeThickness="0">
+                    <VerticalStackLayout Spacing="12">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <Label Text="Ảnh" Style="{StaticResource EditorSectionTitle}" />
+                            <Label Grid.Column="1" Text="{Binding PhotoCountText}" FontSize="12"
+                                   TextColor="{StaticResource Accent}" VerticalOptions="Center"
+                                   AutomationId="ListingPhotoCount" />
+                        </Grid>
+                        <Label Text="Tối thiểu 3 ảnh JPG/PNG, tối đa 10MB mỗi ảnh."
+                               Style="{StaticResource Caption}" FontSize="11" />
+                        <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                            <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Photos}" Spacing="0"
+                                                   Padding="0,2,0,2"
+                                                   BindableLayout.ItemTemplate="{StaticResource EditorPhotoTemplate}" />
+                        </ScrollView>
+                        <Button Text="Thêm ảnh" Command="{Binding PickPhotosCommand}"
+                                Style="{StaticResource EditorPhotoButton}" HorizontalOptions="Start"
+                                AutomationId="AddPhotosButton"
+                                SemanticProperties.Description="Chọn thêm ảnh cho tin đăng" />
+                        <Label Text="{Binding PhotosError}" IsVisible="{Binding HasPhotosError}"
+                               Style="{StaticResource EditorFieldError}" AutomationId="ListingPhotosError" />
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- Submit -->
+        <Border Grid.Row="2" StrokeShape="Rectangle" StrokeThickness="0" BackgroundColor="{StaticResource Canvas}"
+                Padding="20,10,20,14">
+            <VerticalStackLayout Spacing="8" MaximumWidthRequest="760" HorizontalOptions="Fill">
+                <Label Text="{Binding SuccessMessage}" IsVisible="{Binding HasSuccessMessage}"
+                       TextColor="{StaticResource Accent}" FontSize="12" AutomationId="ListingEditorSuccess" />
+                <Label Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}"
+                       TextColor="#B3261E" FontSize="12" AutomationId="ListingEditorError" />
+                <Button Text="{Binding SubmitText}" Command="{Binding SaveCommand}" IsEnabled="{Binding IsNotBusy}"
+                        AutomationId="SaveListingButton"
+                        SemanticProperties.Description="Gửi tin đăng để kiểm duyệt" />
+                <Button Text="Đăng nhập lại" Command="{Binding SignInCommand}" IsVisible="{Binding IsSignInRequired}"
+                        BackgroundColor="Transparent" TextColor="{StaticResource Accent}"
+                        MinimumHeightRequest="42" FontSize="12" />
+                <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
+                                   HorizontalOptions="Center" HeightRequest="22"
+                                   SemanticProperties.Description="Đang lưu tin đăng" />
+            </VerticalStackLayout>
+        </Border>
+    </Grid>
+</ContentPage>
