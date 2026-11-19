@@ -6,6 +6,7 @@
              x:DataType="feedback:StateView"
              x:Name="RootStateView">
 
+    <ContentView.Content>
     <Grid RowSpacing="0">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -60,4 +61,5 @@
                                      RetryCommand="{Binding Source={x:Reference RootStateView}, Path=RetryCommand}" />
         </Grid>
     </Grid>
+    </ContentView.Content>
 </ContentView>
