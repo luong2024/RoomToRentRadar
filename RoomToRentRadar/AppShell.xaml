@@ -217,7 +217,11 @@
         SemanticProperties.Description="Search room listings on map"
         SemanticProperties.Hint="Navigate to map to draw search area" />
 
-    <FlyoutItem Title="Sign In / Register" Route="auth" Icon="{StaticResource IconProjects}">
+    <FlyoutItem
+        x:Name="AuthFlyoutItem"
+        Title="{loc:Translate Nav_SignIn}"
+        Route="auth"
+        Icon="{StaticResource IconProjects}">
         <ShellContent
             x:Name="AuthShellContent"
             Title="Authentication"
@@ -228,11 +232,19 @@
 
     <ShellContent
         x:Name="ProfileShellContent"
+        Shell.FlyoutItemIsVisible="False"
         Title="{loc:Translate Profile_Title}"
         Icon="{StaticResource IconProjects}"
         Route="profile"
         SemanticProperties.Description="View and edit your profile"
         SemanticProperties.Hint="Open your profile" />
+
+    <MenuItem
+        x:Name="LogoutMenuItem"
+        Text="{loc:Translate Nav_Logout}"
+        IconImageSource="{StaticResource IconLogout}"
+        Shell.FlyoutItemIsVisible="False"
+        Clicked="OnLogoutMenuItemClicked" />
 
     <Shell.FlyoutFooter>
         <VerticalStackLayout
