@@ -162,9 +162,41 @@ public class SearchRoomsInPolygonUseCaseTests
         Assert.That(ex!.Errors.ContainsKey(nameof(request.PolygonCoordinates)), Is.True);
     }
 
+    [Test]
+    public async Task ExecuteAsync_WithRoomTypeAndAmenities_PassesFiltersToRepository()
+    {
+        var request = new SpatialRoomSearchRequestDto
+        {
+            PolygonCoordinates = ValidCoordinates,
+            PageIndex = 1,
+            PageSize = 10,
+            MinPrice = 1000000m,
+            MaxPrice = 3000000m,
+            RoomType = "Single",
+            Amenities = ["Wifi", "AirConditioner"],
+            SortBy = "price",
+            Descending = true
+        };
+
+        var result = await _useCase.ExecuteAsync(request);
+
+        Assert.That(result, Is.Not.Null);
+        Assert.That(_repository.LastFilter, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(_repository.LastFilter!.MinPrice, Is.EqualTo(1000000m));
+            Assert.That(_repository.LastFilter.MaxPrice, Is.EqualTo(3000000m));
+            Assert.That(_repository.LastFilter.RoomType, Is.EqualTo("Single"));
+            Assert.That(_repository.LastFilter.Amenities, Is.EquivalentTo(new[] { "Wifi", "AirConditioner" }));
+            Assert.That(_repository.LastFilter.SortBy, Is.EqualTo("price"));
+            Assert.That(_repository.LastFilter.Descending, Is.True);
+        });
+    }
+
     private sealed class FakeSpatialRoomListingRepository : IRoomListingRepository
     {
         private readonly List<RoomListing> _items = [];
+        public RoomSearchFilter? LastFilter { get; private set; }
 
         public void SeedItems(IEnumerable<RoomListing> items) => _items.AddRange(items);
 
@@ -199,6 +231,7 @@ public class SearchRoomsInPolygonUseCaseTests
             int pageSize,
             CancellationToken cancellationToken = default)
         {
+            LastFilter = filter;
             var filtered = _items
                 .Where(r => r.Status == ListingRoomStatus.Available && r.VerificationStatus == VerificationStatus.Verified)
                 .ToList();

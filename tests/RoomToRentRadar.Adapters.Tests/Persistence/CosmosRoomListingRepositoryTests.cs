@@ -724,4 +724,94 @@ public class CosmosRoomListingRepositoryTests
             Assert.That(repository.LastRequestCharge, Is.EqualTo(6.5));
         });
     }
+
+    [Test]
+    public async Task SearchByPolygonAsync_WithRoomTypeAndAmenities_AppliesAllFiltersInCosmosQueries()
+    {
+        var listingsContainer = new Mock<Container>();
+        var roomsContainer = new Mock<Container>();
+        var outboxContainer = CreateOutboxContainer();
+
+        var polygon = new GeoPolygon([
+            new GeoLocation(21.585, 105.807),
+            new GeoLocation(21.586, 105.807),
+            new GeoLocation(21.586, 105.808),
+            new GeoLocation(21.585, 105.808)
+        ]);
+
+        var countResponse = new Mock<FeedResponse<int>>();
+        countResponse.Setup(r => r.GetEnumerator()).Returns(new List<int> { 1 }.GetEnumerator());
+        countResponse.SetupGet(r => r.RequestCharge).Returns(2.0);
+
+        var countIterator = new Mock<FeedIterator<int>>();
+        countIterator.SetupSequence(it => it.HasMoreResults).Returns(true).Returns(false);
+        countIterator.Setup(it => it.ReadNextAsync(It.IsAny<CancellationToken>())).ReturnsAsync(countResponse.Object);
+
+        QueryDefinition? capturedCountQuery = null;
+        listingsContainer
+            .Setup(c => c.GetItemQueryIterator<int>(It.IsAny<QueryDefinition>(), null, null))
+            .Callback<QueryDefinition, string, QueryRequestOptions>((q, _, _) => capturedCountQuery = q)
+            .Returns(countIterator.Object);
+
+        var listingDoc = new RoomListingDocument
+        {
+            Id = "room-poly-2",
+            CampusId = "campus-ictu",
+            Title = "Studio with Amenities",
+            MonthlyRentAmount = 2000000m,
+            MonthlyRentCurrency = "VND",
+            AreaSquareMeters = 25.0,
+            Address = "ICTU Thai Nguyen",
+            Latitude = 21.5855,
+            Longitude = 105.8075,
+            Status = (int)ListingRoomStatus.Available,
+            VerificationStatus = (int)VerificationStatus.Verified,
+            RoomType = "Studio",
+            Amenities = ["Wifi", "AirConditioner"]
+        };
+
+        var itemsResponse = new Mock<FeedResponse<RoomListingDocument>>();
+        itemsResponse.Setup(r => r.GetEnumerator()).Returns(new List<RoomListingDocument> { listingDoc }.GetEnumerator());
+        itemsResponse.SetupGet(r => r.RequestCharge).Returns(3.0);
+
+        var itemsIterator = new Mock<FeedIterator<RoomListingDocument>>();
+        itemsIterator.SetupSequence(it => it.HasMoreResults).Returns(true).Returns(false);
+        itemsIterator.Setup(it => it.ReadNextAsync(It.IsAny<CancellationToken>())).ReturnsAsync(itemsResponse.Object);
+
+        QueryDefinition? capturedItemsQuery = null;
+        listingsContainer
+            .Setup(c => c.GetItemQueryIterator<RoomListingDocument>(It.IsAny<QueryDefinition>(), null, null))
+            .Callback<QueryDefinition, string, QueryRequestOptions>((q, _, _) => capturedItemsQuery = q)
+            .Returns(itemsIterator.Object);
+
+        var repository = new CosmosRoomListingRepository(
+            listingsContainer.Object,
+            roomsContainer.Object,
+            outboxContainer.Object);
+
+        var filter = new RoomSearchFilter(
+            MinPrice: 1500000m,
+            MaxPrice: 2500000m,
+            RoomType: "Studio",
+            Amenities: ["Wifi", "AirConditioner"]);
+
+        var result = await repository.SearchByPolygonAsync(polygon, filter, 1, 10);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.TotalCount, Is.EqualTo(1));
+            Assert.That(result.Items, Has.Count.EqualTo(1));
+            Assert.That(result.Items[0].Id, Is.EqualTo("room-poly-2"));
+
+            Assert.That(capturedCountQuery, Is.Not.Null);
+            Assert.That(capturedCountQuery!.QueryText, Does.Contain("STRINGEQUALS(c.roomType, @roomType, true)"));
+            Assert.That(capturedCountQuery.QueryText, Does.Contain("ARRAY_CONTAINS(c.amenities, @amenity_0)"));
+            Assert.That(capturedCountQuery.QueryText, Does.Contain("ARRAY_CONTAINS(c.amenities, @amenity_1)"));
+
+            Assert.That(capturedItemsQuery, Is.Not.Null);
+            Assert.That(capturedItemsQuery!.QueryText, Does.Contain("STRINGEQUALS(c.roomType, @roomType, true)"));
+            Assert.That(capturedItemsQuery.QueryText, Does.Contain("ARRAY_CONTAINS(c.amenities, @amenity_0)"));
+            Assert.That(capturedItemsQuery.QueryText, Does.Contain("ARRAY_CONTAINS(c.amenities, @amenity_1)"));
+        });
+    }
 }

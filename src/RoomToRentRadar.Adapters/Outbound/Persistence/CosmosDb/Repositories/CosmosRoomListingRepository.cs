@@ -170,6 +170,25 @@ public sealed class CosmosRoomListingRepository : IRoomListingRepository
             whereClauses.Add("c.monthlyRentAmount <= @maxPrice");
         }
 
+        if (!string.IsNullOrWhiteSpace(filter.RoomType))
+        {
+            whereClauses.Add("STRINGEQUALS(c.roomType, @roomType, true)");
+        }
+
+        var distinctAmenities = filter.Amenities?
+            .Where(a => !string.IsNullOrWhiteSpace(a))
+            .Select(a => a.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (distinctAmenities is { Count: > 0 })
+        {
+            for (var i = 0; i < distinctAmenities.Count; i++)
+            {
+                whereClauses.Add($"ARRAY_CONTAINS(c.amenities, @amenity_{i})");
+            }
+        }
+
         var whereSql = string.Join(" AND ", whereClauses);
 
         // 1. Cross-partition count query
@@ -186,6 +205,19 @@ public sealed class CosmosRoomListingRepository : IRoomListingRepository
         if (filter.MaxPrice.HasValue)
         {
             countDefinition = countDefinition.WithParameter("@maxPrice", filter.MaxPrice.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.RoomType))
+        {
+            countDefinition = countDefinition.WithParameter("@roomType", filter.RoomType.Trim());
+        }
+
+        if (distinctAmenities is { Count: > 0 })
+        {
+            for (var i = 0; i < distinctAmenities.Count; i++)
+            {
+                countDefinition = countDefinition.WithParameter($"@amenity_{i}", distinctAmenities[i]);
+            }
         }
 
         var totalCount = 0;
@@ -229,6 +261,19 @@ public sealed class CosmosRoomListingRepository : IRoomListingRepository
         if (filter.MaxPrice.HasValue)
         {
             itemsDefinition = itemsDefinition.WithParameter("@maxPrice", filter.MaxPrice.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.RoomType))
+        {
+            itemsDefinition = itemsDefinition.WithParameter("@roomType", filter.RoomType.Trim());
+        }
+
+        if (distinctAmenities is { Count: > 0 })
+        {
+            for (var i = 0; i < distinctAmenities.Count; i++)
+            {
+                itemsDefinition = itemsDefinition.WithParameter($"@amenity_{i}", distinctAmenities[i]);
+            }
         }
 
         var results = new List<RoomListing>(pageSize);
