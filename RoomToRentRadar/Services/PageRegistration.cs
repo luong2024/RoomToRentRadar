@@ -23,8 +23,8 @@ public static class PageRegistration
         services.AddPage<MainLandingPage, MainLandingPageModel>();
         services.AddPage<AccountPlaceholderPage, AccountPageModel>();
         services.AddTransient<MapPlaceholderPage>();
-        services.AddTransient<SavedPlaceholderPage>();
-        services.AddTransient<MessagesPlaceholderPage>();
+        services.AddPage<SavedPlaceholderPage, SavedPageModel>();
+        services.AddPage<MessagesPlaceholderPage, MessagesPageModel>();
 
         services.AddPage<LoginPage, LoginPageModel>();
         services.AddPage<RegisterPage, RegisterPageModel>();

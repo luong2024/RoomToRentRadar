@@ -87,7 +87,7 @@
 
         <!-- Bottom Navigation Bar -->
         <nav:BottomNavBarControl Grid.Row="2"
-                                 ActiveTab="Explore" />
+                                 ActiveRoute="explore" />
     </Grid>
 </ContentPage>
 

@@ -427,6 +427,6 @@
 
         <!-- 6. BOTTOM NAVIGATION BAR (ACTIVE ON ACCOUNT) -->
         <nav:BottomNavBarControl Grid.Row="2"
-                                 ActiveTab="Account" />
+                                 ActiveRoute="account" />
     </Grid>
 </ContentPage>

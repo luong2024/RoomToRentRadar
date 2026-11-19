@@ -28,13 +28,13 @@
                     ActionText="{Binding EmptyAction}"
                     HasAction="True"
                     ActionCommand="{Binding Source={x:Reference BottomNav}, Path=SelectTabCommand}"
-                    ActionCommandParameter="{x:Static nav:BottomNavTab.Explore}" />
+                    ActionCommandParameter="explore" />
             </VerticalStackLayout>
         </ScrollView>
 
         <!-- Bottom Navigation Bar -->
         <nav:BottomNavBarControl x:Name="BottomNav"
                                  Grid.Row="2"
-                                 ActiveTab="Map" />
+                                 ActiveRoute="map" />
     </Grid>
 </ContentPage>
