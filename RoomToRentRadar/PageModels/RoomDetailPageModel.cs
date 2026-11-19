@@ -79,7 +79,7 @@ public partial class RoomDetailPageModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(FavouriteIconColor))]
     public partial bool IsFavourite { get; set; } = false;
 
-    public string FavouriteIconGlyph => IsFavourite ? FluentUI.heart_24_filled : FluentUI.heart_24_regular;
+    public string FavouriteIconGlyph => FluentUI.heart_24_regular;
     public string FavouriteIconColor => IsFavourite ? "#DC2626" : "#1E293B";
 
     [ObservableProperty]
@@ -378,7 +378,7 @@ public partial class RoomDetailPageModel : ObservableObject
         CurrentPhotoIndex = 1;
         PhotoCounterText = $"{CurrentPhotoIndex} / {TotalPhotosCount}";
         HasPhotos = detail.Photos.Count > 0;
-        HeroCoverUrl = detail.Photos.FirstOrDefault(p => p.Kind == PhotoKind.Cover)?.MediumUrl
+        HeroCoverUrl = detail.Photos.OrderBy(p => p.SortOrder).FirstOrDefault()?.MediumUrl
             ?? detail.Photos.FirstOrDefault()?.MediumUrl;
         Is360Available = detail.Photos.Any(p => p.Kind == PhotoKind.Panorama);
 
@@ -1019,7 +1019,7 @@ public partial class RoomDetailPageModel : ObservableObject
 #if !UNIT_TESTS
         else if (Shell.Current != null)
         {
-            proceed = await Shell.Current.DisplayAlert(
+            proceed = await Shell.Current.DisplayAlertAsync(
                 AppResources.GetString("RoomDetail_SignInPromptTitle"),
                 AppResources.GetString("RoomDetail_SignInPromptMessage"),
                 AppResources.GetString("RoomDetail_SignInAction"),

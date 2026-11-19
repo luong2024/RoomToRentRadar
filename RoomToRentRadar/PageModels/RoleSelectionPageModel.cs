@@ -1,10 +1,18 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using RoomToRentRadar.Services.Navigation.Core;
 
 namespace RoomToRentRadar.PageModels;
 
 public partial class RoleSelectionPageModel : ObservableObject
 {
+    private readonly INavigationService _navigation;
+
+    public RoleSelectionPageModel(INavigationService navigation)
+    {
+        _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
+    }
+
     [ObservableProperty]
     public partial string SelectedRole { get; set; } = "Student";
 
@@ -33,13 +41,13 @@ public partial class RoleSelectionPageModel : ObservableObject
     [RelayCommand]
     private async Task ContinueAsync()
     {
-        await Shell.Current.GoToAsync($"register?role={SelectedRole}");
+        await _navigation.GoToAsync(AppRoutes.Register, new Dictionary<string, object> { ["role"] = SelectedRole });
     }
 
     [RelayCommand]
     private async Task NavigateToLoginAsync()
     {
-        await Shell.Current.GoToAsync("//login");
+        await _navigation.GoToAsync("//" + AppRoutes.Login);
     }
 }
 

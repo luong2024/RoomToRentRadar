@@ -84,6 +84,18 @@
   <data name="Nav_Hint_Account" xml:space="preserve">
     <value>View account profile and app preferences</value>
   </data>
+  <data name="Nav_Listings" xml:space="preserve">
+    <value>My listings</value>
+  </data>
+  <data name="Nav_Hint_Listings" xml:space="preserve">
+    <value>Manage your room listings</value>
+  </data>
+  <data name="Nav_Moderation" xml:space="preserve">
+    <value>Moderation</value>
+  </data>
+  <data name="Nav_Hint_Moderation" xml:space="preserve">
+    <value>Review and moderate room listings</value>
+  </data>
 
   <!-- Account Screen -->
   <data name="Account_Title" xml:space="preserve">
@@ -217,6 +229,23 @@
     <value>Tap the heart icon on any room listing in Explore to save it here for quick access, price updates, and room comparison (US10).</value>
   </data>
 
+  <!-- Guest sign-in prompt (Saved / Messages tabs, BR-AUTH-07) -->
+  <data name="Prompt_SignIn_Title" xml:space="preserve">
+    <value>Sign in to continue</value>
+  </data>
+  <data name="Prompt_SignIn_SavedMessage" xml:space="preserve">
+    <value>Sign in to save favorite rooms, track price changes and compare rooms (US10).</value>
+  </data>
+  <data name="Prompt_SignIn_MessagesMessage" xml:space="preserve">
+    <value>Sign in to chat with verified landlords and schedule viewings (US14).</value>
+  </data>
+  <data name="Prompt_SignIn_Button" xml:space="preserve">
+    <value>Sign in</value>
+  </data>
+  <data name="Prompt_SignIn_NotNow" xml:space="preserve">
+    <value>Not now</value>
+  </data>
+
   <!-- Common & Dialogs -->
   <data name="Common_Ok" xml:space="preserve">
     <value>OK</value>
@@ -240,7 +269,6 @@
     <value>RoomToRentRadar 1.0&#10;Group 2 ICTU Mobile Rental Radar Project.</value>
   </data>
 
-  <!-- Room Details (SCR-ROOM-01 / US02 / T02.2) -->
   <data name="RoomDetail_Title" xml:space="preserve">
     <value>Room Details</value>
   </data>
@@ -564,5 +592,160 @@
   </data>
   <data name="RoomDetail_BackToExplore" xml:space="preserve">
     <value>Back to Explore</value>
+  </data>
+
+  <!-- Placeholder screens (T00.15): shared PlaceholderPage titles, "Coming in" and id text -->
+  <data name="Placeholder_ComingIn" xml:space="preserve">
+    <value>Coming in {0}</value>
+  </data>
+  <data name="Placeholder_IdFormat" xml:space="preserve">
+    <value>ID: {0}</value>
+  </data>
+  <data name="Placeholder_SCR-ROOM-01_Title" xml:space="preserve">
+    <value>Room detail</value>
+  </data>
+  <data name="Placeholder_SCR-ROOM-02_Title" xml:space="preserve">
+    <value>Photo gallery</value>
+  </data>
+  <data name="Placeholder_SCR-SRCH-01_Title" xml:space="preserve">
+    <value>Search filters</value>
+  </data>
+  <data name="Placeholder_SCR-CMP-01_Title" xml:space="preserve">
+    <value>Compare rooms</value>
+  </data>
+  <data name="Placeholder_SCR-CHAT-02_Title" xml:space="preserve">
+    <value>Conversation</value>
+  </data>
+  <data name="Placeholder_SCR-SAVED-01_Title" xml:space="preserve">
+    <value>Saved searches</value>
+  </data>
+  <data name="Placeholder_SCR-NOTI-01_Title" xml:space="preserve">
+    <value>Notifications</value>
+  </data>
+  <data name="Placeholder_SCR-ACC-02_Title" xml:space="preserve">
+    <value>Choose campus</value>
+  </data>
+  <data name="Placeholder_SCR-ACC-03_Title" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="Placeholder_SCR-LL-01_Title" xml:space="preserve">
+    <value>My listings</value>
+  </data>
+  <data name="Placeholder_SCR-LL-02_Title" xml:space="preserve">
+    <value>Listing editor</value>
+  </data>
+  <data name="Placeholder_SCR-ADM-01_Title" xml:space="preserve">
+    <value>Moderation</value>
+  </data>
+  <data name="Placeholder_SCR-ADM-02_Title" xml:space="preserve">
+    <value>Review listing</value>
+  </data>
+  <data name="Placeholder_SCR-ADM-03_Title" xml:space="preserve">
+    <value>Report detail</value>
+  </data>
+
+  <!-- Error messages (errorCode map) -->
+  <data name="Error_VALIDATION_FAILED" xml:space="preserve">
+    <value>Please check the values you entered.</value>
+  </data>
+  <data name="Error_INVALID_SORT_OPTION" xml:space="preserve">
+    <value>That sort option is not supported.</value>
+  </data>
+  <data name="Error_INVALID_PRICE_RANGE" xml:space="preserve">
+    <value>The price range is not valid.</value>
+  </data>
+  <data name="Error_INVALID_AREA_RANGE" xml:space="preserve">
+    <value>The area range is not valid.</value>
+  </data>
+  <data name="Error_INVALID_DISTANCE_RANGE" xml:space="preserve">
+    <value>The distance filter is not valid.</value>
+  </data>
+  <data name="Error_CAMPUS_NOT_FOUND" xml:space="preserve">
+    <value>That campus could not be found.</value>
+  </data>
+  <data name="Error_INVALID_STATE_TRANSITION" xml:space="preserve">
+    <value>This action is not allowed in the current state.</value>
+  </data>
+  <data name="Error_INVALID_CREDENTIALS" xml:space="preserve">
+    <value>Invalid email or password.</value>
+  </data>
+  <data name="Error_ACCOUNT_LOCKED" xml:space="preserve">
+    <value>Your account is temporarily locked, please try again in {time}.</value>
+  </data>
+  <data name="Error_EMAIL_TAKEN" xml:space="preserve">
+    <value>This email address is already in use.</value>
+  </data>
+  <data name="Error_LANDLORD_NOT_APPROVED" xml:space="preserve">
+    <value>Landlord account is pending approval.</value>
+  </data>
+  <data name="Error_ROOM_NOT_FOUND" xml:space="preserve">
+    <value>Listing does not exist.</value>
+  </data>
+  <data name="Error_LISTING_NOT_AVAILABLE" xml:space="preserve">
+    <value>Room is no longer available.</value>
+  </data>
+  <data name="Error_ALREADY_REPORTED" xml:space="preserve">
+    <value>You have already reported this listing.</value>
+  </data>
+  <data name="Error_LIMIT_EXCEEDED" xml:space="preserve">
+    <value>Limit reached.</value>
+  </data>
+  <data name="Error_CONCURRENCY_CONFLICT" xml:space="preserve">
+    <value>Data has changed, please refresh.</value>
+  </data>
+  <data name="Error_ETAG_MISMATCH" xml:space="preserve">
+    <value>Data has changed, please refresh.</value>
+  </data>
+  <data name="Error_RATE_LIMITED" xml:space="preserve">
+    <value>Too many requests, please try again shortly.</value>
+  </data>
+  <data name="Error_NETWORK_ERROR" xml:space="preserve">
+    <value>No internet connection.</value>
+  </data>
+  <data name="Error_LockDuration" xml:space="preserve">
+    <value>15 minutes</value>
+  </data>
+  <data name="Error_Unexpected" xml:space="preserve">
+    <value>An unexpected error occurred, please try again.</value>
+  </data>
+
+  <!-- Shared state controls (EmptyStateView / ErrorRetryView / SkeletonShimmer) -->
+  <data name="State_Empty_Title" xml:space="preserve">
+    <value>No rooms found</value>
+  </data>
+  <data name="State_Empty_Message" xml:space="preserve">
+    <value>Try adjusting your filters or expanding your search radius around ICTU.</value>
+  </data>
+  <data name="State_Empty_Action" xml:space="preserve">
+    <value>Reset Filters</value>
+  </data>
+  <data name="State_Error_Title" xml:space="preserve">
+    <value>Connection Error</value>
+  </data>
+  <data name="State_Error_Message" xml:space="preserve">
+    <value>Unable to connect to the server. Please check your internet connection.</value>
+  </data>
+  <data name="State_Retry" xml:space="preserve">
+    <value>Retry</value>
+  </data>
+  <data name="State_Loading" xml:space="preserve">
+    <value>Loading</value>
+  </data>
+  <data name="State_Offline_Banner" xml:space="preserve">
+    <value>You are offline – showing saved data</value>
+  </data>
+
+  <!-- Explore screen states -->
+  <data name="Explore_Error_Title" xml:space="preserve">
+    <value>Could not load rooms</value>
+  </data>
+  <data name="Explore_Empty_Title" xml:space="preserve">
+    <value>No rooms match</value>
+  </data>
+  <data name="Explore_Empty_Message" xml:space="preserve">
+    <value>Try a larger distance or clear your filters to see more rooms.</value>
+  </data>
+  <data name="Explore_Empty_Action" xml:space="preserve">
+    <value>Clear filters</value>
   </data>
 </root>

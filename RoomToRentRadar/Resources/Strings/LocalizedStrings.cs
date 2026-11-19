@@ -31,3 +31,25 @@ public class LocalizedStrings : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 }
+
+#if !UNIT_TESTS
+[ContentProperty(nameof(Key))]
+[AcceptEmptyServiceProvider]
+public class LocalizedStringsExtension : IMarkupExtension<string>
+{
+    public string Key { get; set; } = string.Empty;
+
+    public string ProvideValue(IServiceProvider serviceProvider)
+    {
+        if (string.IsNullOrWhiteSpace(Key))
+            return string.Empty;
+
+        return AppResources.GetString(Key);
+    }
+
+    object IMarkupExtension.ProvideValue(IServiceProvider serviceProvider)
+    {
+        return ProvideValue(serviceProvider);
+    }
+}
+#endif

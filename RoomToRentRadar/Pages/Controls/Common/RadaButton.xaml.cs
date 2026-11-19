@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using Microsoft.Maui.Controls.Shapes;
 
 namespace RoomToRentRadar.Pages.Controls.Common;
 
@@ -20,6 +21,14 @@ public partial class RadaButton : ContentView
     public static readonly BindableProperty LeadingIconProperty =
         BindableProperty.Create(nameof(LeadingIcon), typeof(ImageSource), typeof(RadaButton), null,
             propertyChanged: (b, o, n) => ((RadaButton)b).UpdateIconVisibility());
+
+    public static readonly BindableProperty LeadingGlyphProperty =
+        BindableProperty.Create(nameof(LeadingGlyph), typeof(string), typeof(RadaButton), string.Empty,
+            propertyChanged: (b, o, n) => ((RadaButton)b).UpdateIconVisibility());
+
+    public static readonly BindableProperty CornerRadiusProperty =
+        BindableProperty.Create(nameof(CornerRadius), typeof(double), typeof(RadaButton), 8.0,
+            propertyChanged: (b, o, n) => ((RadaButton)b).UpdateCornerRadius((double)n));
 
     public static readonly BindableProperty VariantProperty =
         BindableProperty.Create(nameof(Variant), typeof(RadaButtonVariant), typeof(RadaButton), RadaButtonVariant.Primary,
@@ -44,6 +53,9 @@ public partial class RadaButton : ContentView
     public static readonly BindableProperty HasLeadingIconProperty =
         BindableProperty.Create(nameof(HasLeadingIcon), typeof(bool), typeof(RadaButton), false);
 
+    public static readonly BindableProperty HasLeadingGlyphProperty =
+        BindableProperty.Create(nameof(HasLeadingGlyph), typeof(bool), typeof(RadaButton), false);
+
     public string Text
     {
         get => (string)GetValue(TextProperty);
@@ -54,6 +66,18 @@ public partial class RadaButton : ContentView
     {
         get => (ImageSource?)GetValue(LeadingIconProperty);
         set => SetValue(LeadingIconProperty, value);
+    }
+
+    public string LeadingGlyph
+    {
+        get => (string)GetValue(LeadingGlyphProperty);
+        set => SetValue(LeadingGlyphProperty, value);
+    }
+
+    public double CornerRadius
+    {
+        get => (double)GetValue(CornerRadiusProperty);
+        set => SetValue(CornerRadiusProperty, value);
     }
 
     public RadaButtonVariant Variant
@@ -98,16 +122,29 @@ public partial class RadaButton : ContentView
         private set => SetValue(HasLeadingIconProperty, value);
     }
 
+    public bool HasLeadingGlyph
+    {
+        get => (bool)GetValue(HasLeadingGlyphProperty);
+        private set => SetValue(HasLeadingGlyphProperty, value);
+    }
+
     public RadaButton()
     {
         InitializeComponent();
         ApplyVariantStyle();
         UpdateIconVisibility();
+        ButtonBorder.HandlerChanged += OnBorderHandlerChanged;
+    }
+
+    private void UpdateCornerRadius(double radius)
+    {
+        ButtonBorder.StrokeShape = new RoundRectangleGeometry { CornerRadius = new CornerRadius(radius) };
     }
 
     private void UpdateIconVisibility()
     {
         HasLeadingIcon = LeadingIcon != null && !IsLoading;
+        HasLeadingGlyph = LeadingIcon == null && !string.IsNullOrEmpty(LeadingGlyph) && !IsLoading;
     }
 
     private void UpdateLoadingState()
@@ -118,6 +155,8 @@ public partial class RadaButton : ContentView
 
     private void ApplyVariantStyle()
     {
+        ButtonBorder.StrokeThickness = Variant == RadaButtonVariant.Outline ? 1.5 : 1.0;
+
         switch (Variant)
         {
             case RadaButtonVariant.Primary:
@@ -140,8 +179,8 @@ public partial class RadaButton : ContentView
 
             case RadaButtonVariant.Outline:
                 ButtonBorder.BackgroundColor = Colors.Transparent;
-                ButtonBorder.SetDynamicResource(Border.StrokeProperty, "BorderSubtleLight");
-                SetDynamicResource(TextColorProperty, "TextPrimaryLight");
+                ButtonBorder.SetDynamicResource(Border.StrokeProperty, "ActionPrimaryLight");
+                SetDynamicResource(TextColorProperty, "ActionPrimaryLight");
                 break;
 
             case RadaButtonVariant.Ghost:
@@ -157,4 +196,30 @@ public partial class RadaButton : ContentView
                 break;
         }
     }
+
+    private void OnBorderHandlerChanged(object? sender, EventArgs e)
+    {
+#if ANDROID
+        if (ButtonBorder.Handler?.PlatformView is Android.Views.View platformView)
+        {
+            platformView.SetAccessibilityDelegate(new ButtonAccessibilityDelegate());
+        }
+#endif
+    }
+
+#if ANDROID
+    // A Border with a tap gesture is not announced as a button by TalkBack; expose the button role explicitly.
+    private sealed class ButtonAccessibilityDelegate : Android.Views.View.AccessibilityDelegate
+    {
+        public override void OnInitializeAccessibilityNodeInfo(Android.Views.View host, Android.Views.Accessibility.AccessibilityNodeInfo info)
+        {
+            base.OnInitializeAccessibilityNodeInfo(host, info);
+            if (info != null)
+            {
+                info.ClassName = "android.widget.Button";
+                info.Clickable = true;
+            }
+        }
+    }
+#endif
 }

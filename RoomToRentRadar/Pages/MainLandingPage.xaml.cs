@@ -16,4 +16,3 @@ public partial class MainLandingPage : ContentPage
         await _viewModel.InitializeAsync();
     }
 }
-

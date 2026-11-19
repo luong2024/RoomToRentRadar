@@ -561,7 +561,7 @@ public class RoomDetailPageModelTests
             Utilities = new UtilitiesView(
                 ElectricityPriceVndPerKwh: null,
                 WaterPriceVnd: 15000,
-                WaterPriceUnit: WaterPriceUnit.PerM3,
+                WaterPriceUnit: WaterPriceUnit.PerCubicMeter,
                 InternetFeeVnd: 50000,
                 ParkingFeeVnd: null,
                 OtherFeesNote: null,
@@ -898,8 +898,8 @@ public class RoomDetailPageModelTests
                 UpdatedAtUtc: DateTime.UtcNow.AddDays(-3)),
             Photos: new List<PhotoDto>
             {
-                new("photo-1", PhotoKind.Regular, "thumb1.jpg", "med1.jpg", "orig1.jpg", 800, 600, 0),
-                new("photo-2", PhotoKind.Pan360, "thumb2.jpg", "med2.jpg", "orig2.jpg", 1920, 1080, 1)
+                new("photo-1", PhotoKind.Standard, "thumb1.jpg", "med1.jpg", "orig1.jpg", 800, 600, 0),
+                new("photo-2", PhotoKind.Panorama, "thumb2.jpg", "med2.jpg", "orig2.jpg", 1920, 1080, 1)
             },
             Landlord: new LandlordContactDto(
                 Id: "landlord-1",

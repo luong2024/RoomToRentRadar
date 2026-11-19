@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Client.Adapters.Abstractions;
 using RoomToRentRadar.Ports.Contracts.Requests.Auth;
+using RoomToRentRadar.Services.Navigation.Core;
 
 namespace RoomToRentRadar.PageModels;
 
@@ -16,6 +17,7 @@ public partial class RegisterPageModel : ObservableObject
 
     private readonly IAuthGateway _authGateway;
     private readonly ISessionStore _sessionStore;
+    private readonly INavigationService _navigation;
 
     [ObservableProperty]
     public partial string Role { get; set; } = "Student";
@@ -79,10 +81,12 @@ public partial class RegisterPageModel : ObservableObject
 
     public RegisterPageModel(
         IAuthGateway authGateway,
-        ISessionStore sessionStore)
+        ISessionStore sessionStore,
+        INavigationService navigation)
     {
         _authGateway = authGateway ?? throw new ArgumentNullException(nameof(authGateway));
         _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
+        _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
         UpdateRoleState();
     }
 
@@ -218,7 +222,7 @@ public partial class RegisterPageModel : ObservableObject
 
                 try
                 {
-                    await Shell.Current.GoToAsync("//main");
+                    await _navigation.CompleteSignInAsync();
                 }
                 catch (Exception)
                 {
@@ -256,7 +260,7 @@ public partial class RegisterPageModel : ObservableObject
     [RelayCommand]
     private async Task NavigateToLoginAsync()
     {
-        await Shell.Current.GoToAsync("//login");
+        await _navigation.GoToAsync("//" + AppRoutes.Login);
     }
 
     private static string MapRegisterErrorCodeToMessage(string? errorCode, HttpStatusCode statusCode, string defaultMessage)

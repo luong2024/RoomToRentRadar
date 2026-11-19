@@ -89,7 +89,7 @@ public class HttpRoomGatewayRealApiTests
         {
             Assert.That(detail.Id, Is.EqualTo("seed-z115"));
             Assert.That(detail.Title, Does.Contain("Z115"));
-            Assert.That(detail.Status, Is.EqualTo(Domain.Enums.ListingStatus.Available));
+            Assert.That(detail.Status, Is.EqualTo(RoomToRentRadar.Domain.Enums.ListingStatus.Available));
             Assert.That(detail.IsVerified, Is.True);
         });
     }
