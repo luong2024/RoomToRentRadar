@@ -1,8 +1,10 @@
 using System.Globalization;
+using System.Net;
 using System.Reflection;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Controllers;
@@ -184,6 +186,29 @@ builder.Services
         resilience.Retry.MaxRetryAttempts = 1;
     });
 builder.Services.AddScoped<TravelEstimatesService>();
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+    // Proxies are only trusted when explicitly configured; loopback stays trusted by default.
+    var section = builder.Configuration.GetSection("ForwardedHeaders");
+
+    foreach (var proxy in section.GetSection("KnownProxies").Get<string[]>() ?? [])
+    {
+        if (IPAddress.TryParse(proxy, out var address))
+        {
+            options.KnownProxies.Add(address);
+        }
+    }
+
+    foreach (var network in section.GetSection("KnownNetworks").Get<string[]>() ?? [])
+    {
+        if (System.Net.IPNetwork.TryParse(network, out var parsed))
+        {
+            options.KnownIPNetworks.Add(parsed);
+        }
+    }
+});
 builder.Services.AddRateLimiter(rateLimiter =>
 {
     rateLimiter.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -220,6 +245,8 @@ builder.Services.AddRateLimiter(rateLimiter =>
 });
 
 var app = builder.Build();
+
+app.UseForwardedHeaders();
 
 if (string.IsNullOrWhiteSpace(app.Configuration["Travel:GoogleRoutesApiKey"]))
 {

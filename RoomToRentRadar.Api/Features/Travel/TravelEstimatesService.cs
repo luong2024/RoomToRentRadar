@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
@@ -15,10 +16,13 @@ public sealed class TravelEstimatesService(
     IMemoryCache cache,
     IOptions<TravelOptions> options)
 {
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> FetchLocks = new();
+
     public async Task<TravelResult<ListingTravelEstimatesDto>> GetEstimatesAsync(
         Guid listingId,
-        double toLat,
-        double toLng,
+        string campusId,
+        double campusLat,
+        double campusLng,
         CancellationToken cancellationToken)
     {
         var listing = await dbContext.Listings
@@ -36,8 +40,9 @@ public sealed class TravelEstimatesService(
             Enum.GetValues<TravelMode>().Select(mode => EstimateAsync(
                 listing.Lat,
                 listing.Lng,
-                toLat,
-                toLng,
+                campusId,
+                campusLat,
+                campusLng,
                 mode,
                 cancellationToken)));
 
@@ -48,6 +53,7 @@ public sealed class TravelEstimatesService(
     private async Task<TravelEstimateDto> EstimateAsync(
         double fromLat,
         double fromLng,
+        string campusId,
         double toLat,
         double toLng,
         TravelMode mode,
@@ -56,11 +62,25 @@ public sealed class TravelEstimatesService(
         // Coordinates are rounded to three decimals (~110 m) on purpose: nearby
         // requests share an estimate and the coarse key keeps the cache small.
         var cacheKey = FormattableString.Invariant(
-            $"travel:{fromLat:F3}:{fromLng:F3}:{toLat:F3}:{toLng:F3}:{mode}");
+            $"travel:{campusId}:{fromLat:F3}:{fromLng:F3}:{mode}");
 
-        var estimate = await cache.GetOrCreateAsync(cacheKey, async entry =>
+        if (cache.TryGetValue(cacheKey, out TravelEstimateDto? cached) && cached is not null)
         {
-            entry.Size = 1;
+            return cached;
+        }
+
+        // GetOrCreateAsync does not deduplicate concurrent async factories, so a
+        // per-key gate keeps N simultaneous requests down to one provider call.
+        var gate = FetchLocks.GetOrAdd(cacheKey, static _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        try
+        {
+            if (cache.TryGetValue(cacheKey, out cached) && cached is not null)
+            {
+                return cached;
+            }
 
             var routed = await routingProvider.GetEstimateAsync(
                 fromLat,
@@ -68,32 +88,45 @@ public sealed class TravelEstimatesService(
                 toLat,
                 toLng,
                 mode,
-                cancellationToken);
+                cancellationToken)
+                .ConfigureAwait(false);
+
+            TravelEstimateDto estimate;
+            TimeSpan lifetime;
 
             if (routed is not null)
             {
-                entry.AbsoluteExpirationRelativeToNow =
-                    TimeSpan.FromMinutes(Math.Max(1, options.Value.CacheMinutes));
-                return new TravelEstimateDto(
+                estimate = new TravelEstimateDto(
                     mode,
                     TravelSource.Route,
                     routed.DistanceM,
                     routed.DurationS);
+                lifetime = TimeSpan.FromMinutes(Math.Max(1, options.Value.CacheMinutes));
+            }
+            else
+            {
+                // Short-lived negative cache: a failing provider is not retried on every request.
+                estimate = new TravelEstimateDto(
+                    mode,
+                    TravelSource.Fallback,
+                    (int)Math.Round(
+                        GeoDistance.HaversineKm(fromLat, fromLng, toLat, toLng) * 1000d,
+                        MidpointRounding.AwayFromZero),
+                    null);
+                lifetime = TimeSpan.FromSeconds(Math.Max(1, options.Value.FallbackCacheSeconds));
             }
 
-            // Short-lived negative cache: a failing provider is not retried on every request.
-            entry.AbsoluteExpirationRelativeToNow =
-                TimeSpan.FromSeconds(Math.Max(1, options.Value.FallbackCacheSeconds));
+            cache.Set(cacheKey, estimate, new MemoryCacheEntryOptions
+            {
+                Size = 1,
+                AbsoluteExpirationRelativeToNow = lifetime
+            });
 
-            return new TravelEstimateDto(
-                mode,
-                TravelSource.Fallback,
-                (int)Math.Round(
-                    GeoDistance.HaversineKm(fromLat, fromLng, toLat, toLng) * 1000d,
-                    MidpointRounding.AwayFromZero),
-                null);
-        });
-
-        return estimate!;
+            return estimate;
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 }

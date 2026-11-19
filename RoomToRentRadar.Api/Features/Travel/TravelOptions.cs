@@ -10,5 +10,5 @@ public sealed class TravelOptions
 
     public int FallbackCacheSeconds { get; set; } = 45;
 
-    public int RateLimitPerMinute { get; set; } = 60;
+    public int RateLimitPerMinute { get; set; } = 15;
 }

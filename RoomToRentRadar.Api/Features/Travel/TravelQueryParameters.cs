@@ -5,11 +5,7 @@ namespace RoomToRentRadar.Api.Features.Travel;
 
 public sealed class TravelQueryParameters
 {
-    [FromQuery(Name = "to_lat")]
-    [Description("Destination latitude in degrees, between -90 and 90. Requires to_lng.")]
-    public double? ToLat { get; init; }
-
-    [FromQuery(Name = "to_lng")]
-    [Description("Destination longitude in degrees, between -180 and 180. Requires to_lat.")]
-    public double? ToLng { get; init; }
+    [FromQuery(Name = "campus_id")]
+    [Description("Campus identifier from the server-side catalog, for example bach-khoa or khtn.")]
+    public string? CampusId { get; init; }
 }

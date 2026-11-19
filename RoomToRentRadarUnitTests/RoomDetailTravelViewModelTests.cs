@@ -57,8 +57,7 @@ public class RoomDetailTravelViewModelTests
             Assert.That(viewModel.SelectedCampusName, Is.EqualTo("Bách Khoa"));
             Assert.That(client.Calls, Has.Count.EqualTo(1));
             Assert.That(client.Calls[0].ListingId, Is.EqualTo(ListingId));
-            Assert.That(client.Calls[0].ToLat, Is.EqualTo(10.7721));
-            Assert.That(client.Calls[0].ToLng, Is.EqualTo(106.6579));
+            Assert.That(client.Calls[0].CampusId, Is.EqualTo("bach-khoa"));
             Assert.That(
                 viewModel.Estimates.Select(item => item.ModeLabel),
                 Is.EqualTo(new[] { "Xe máy", "Xe buýt", "Đi bộ" }));
@@ -88,8 +87,7 @@ public class RoomDetailTravelViewModelTests
             Assert.That(store.SelectedCampus, Is.EqualTo("KHTN"));
             Assert.That(viewModel.State, Is.EqualTo(RoomDetailTravelState.Loaded));
             Assert.That(client.Calls, Has.Count.EqualTo(1));
-            Assert.That(client.Calls[0].ToLat, Is.EqualTo(10.7626));
-            Assert.That(client.Calls[0].ToLng, Is.EqualTo(106.6822));
+            Assert.That(client.Calls[0].CampusId, Is.EqualTo("khtn"));
         });
     }
 
@@ -145,14 +143,81 @@ public class RoomDetailTravelViewModelTests
     }
 
     [Test]
+    public async Task LoadAsync_WhenRateLimited_ShowsRetryMessageWithDelay()
+    {
+        var client = new FakeTravelEstimatesClient
+        {
+            Result = new TravelEstimatesFetchResult(
+                TravelEstimatesFetchOutcome.RateLimited,
+                null,
+                TimeSpan.FromSeconds(30))
+        };
+        var viewModel = CreateViewModel(client, new FakeCampusSelectionStore { SelectedCampus = "KHTN" });
+
+        viewModel.Initialize(ListingId, DestinationLat, DestinationLng, DestinationTitle);
+        await AwaitAutoStartedLoadAsync(viewModel);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.State, Is.EqualTo(RoomDetailTravelState.RateLimited));
+            Assert.That(viewModel.IsRateLimitedVisible, Is.True);
+            Assert.That(viewModel.IsErrorVisible, Is.False);
+            Assert.That(viewModel.Estimates, Is.Empty);
+            Assert.That(viewModel.RateLimitedMessage, Does.Contain("30 giây"));
+        });
+    }
+
+    [Test]
+    public async Task LoadAsync_WhenRateLimitedWithoutRetryAfter_UsesGenericMessage()
+    {
+        var client = new FakeTravelEstimatesClient
+        {
+            Result = new TravelEstimatesFetchResult(TravelEstimatesFetchOutcome.RateLimited, null)
+        };
+        var viewModel = CreateViewModel(client, new FakeCampusSelectionStore { SelectedCampus = "KHTN" });
+
+        viewModel.Initialize(ListingId, DestinationLat, DestinationLng, DestinationTitle);
+        await AwaitAutoStartedLoadAsync(viewModel);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.State, Is.EqualTo(RoomDetailTravelState.RateLimited));
+            Assert.That(viewModel.RateLimitedMessage, Does.Contain("ít phút"));
+        });
+    }
+
+    [Test]
+    public async Task Initialize_SameListingAfterError_RetriesTheLoad()
+    {
+        var client = new FakeTravelEstimatesClient { Exception = new HttpRequestException("network down") };
+        var viewModel = CreateViewModel(client, new FakeCampusSelectionStore { SelectedCampus = "KHTN" });
+
+        viewModel.Initialize(ListingId, DestinationLat, DestinationLng, DestinationTitle);
+        await AwaitAutoStartedLoadAsync(viewModel);
+        Assert.That(viewModel.State, Is.EqualTo(RoomDetailTravelState.Error));
+
+        client.Exception = null;
+        client.Result = FoundResult(RouteEstimate());
+
+        viewModel.Initialize(ListingId, DestinationLat, DestinationLng, DestinationTitle);
+        await AwaitAutoStartedLoadAsync(viewModel);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(client.Calls, Has.Count.EqualTo(2));
+            Assert.That(viewModel.State, Is.EqualTo(RoomDetailTravelState.Loaded));
+        });
+    }
+
+    [Test]
     public async Task ChangingCampus_CancelsThePreviousRequest()
     {
         var firstRequestStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var client = new FakeTravelEstimatesClient
         {
-            Handler = async (_, toLat, _, cancellationToken) =>
+            Handler = async (_, campusId, cancellationToken) =>
             {
-                if (toLat > 10.77)
+                if (campusId == "bach-khoa")
                 {
                     firstRequestStarted.TrySetResult();
                     await Task.Delay(Timeout.Infinite, cancellationToken);
@@ -177,7 +242,7 @@ public class RoomDetailTravelViewModelTests
             Assert.That(client.Calls, Has.Count.EqualTo(2));
             Assert.That(client.Calls[0].CancellationToken.IsCancellationRequested, Is.True);
             Assert.That(client.Calls[1].CancellationToken.IsCancellationRequested, Is.False);
-            Assert.That(client.Calls[1].ToLat, Is.EqualTo(10.7626));
+            Assert.That(client.Calls[1].CampusId, Is.EqualTo("khtn"));
         });
     }
 
@@ -187,7 +252,7 @@ public class RoomDetailTravelViewModelTests
         var requestStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var client = new FakeTravelEstimatesClient
         {
-            Handler = async (_, _, _, cancellationToken) =>
+            Handler = async (_, _, cancellationToken) =>
             {
                 requestStarted.TrySetResult();
                 await Task.Delay(Timeout.Infinite, cancellationToken);
@@ -383,7 +448,7 @@ public class RoomDetailTravelViewModelTests
 
     private sealed class FakeTravelEstimatesClient : ITravelEstimatesClient
     {
-        public Func<Guid, double, double, CancellationToken, Task<TravelEstimatesFetchResult>>? Handler { get; set; }
+        public Func<Guid, string, CancellationToken, Task<TravelEstimatesFetchResult>>? Handler { get; set; }
 
         public TravelEstimatesFetchResult? Result { get; set; }
 
@@ -393,15 +458,14 @@ public class RoomDetailTravelViewModelTests
 
         public Task<TravelEstimatesFetchResult> GetEstimatesAsync(
             Guid listingId,
-            double toLat,
-            double toLng,
+            string campusId,
             CancellationToken cancellationToken = default)
         {
-            Calls.Add(new Call(listingId, toLat, toLng, cancellationToken));
+            Calls.Add(new Call(listingId, campusId, cancellationToken));
 
             if (Handler is { } handler)
             {
-                return handler(listingId, toLat, toLng, cancellationToken);
+                return handler(listingId, campusId, cancellationToken);
             }
 
             return Exception is { } exception
@@ -409,7 +473,7 @@ public class RoomDetailTravelViewModelTests
                 : Task.FromResult(Result!);
         }
 
-        public sealed record Call(Guid ListingId, double ToLat, double ToLng, CancellationToken CancellationToken);
+        public sealed record Call(Guid ListingId, string CampusId, CancellationToken CancellationToken);
     }
 
     private sealed class FakeCampusSelectionStore : ICampusSelectionStore

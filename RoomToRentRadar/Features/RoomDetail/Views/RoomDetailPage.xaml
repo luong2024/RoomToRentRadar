@@ -176,6 +176,17 @@
                                IsVisible="{Binding IsListingGoneVisible}"
                                Style="{StaticResource Caption}" />
 
+                        <VerticalStackLayout Spacing="8" IsVisible="{Binding IsRateLimitedVisible}">
+                            <Label Text="{Binding RateLimitedMessage}"
+                                   Style="{StaticResource Caption}" />
+                            <Button Text="Thử lại"
+                                    Command="{Binding LoadCommand}"
+                                    AutomationId="TravelRateLimitedRetryButton"
+                                    HorizontalOptions="Start"
+                                    SemanticProperties.Description="Thử tải lại thời gian di chuyển"
+                                    SemanticProperties.Hint="Tải lại thời gian di chuyển tới phòng này" />
+                        </VerticalStackLayout>
+
                         <VerticalStackLayout Spacing="8" IsVisible="{Binding IsErrorVisible}">
                             <Label Text="Chưa tải được thời gian di chuyển. Kiểm tra kết nối mạng rồi thử lại nhé."
                                    Style="{StaticResource Caption}" />

@@ -9,12 +9,10 @@ public sealed class TravelEstimatesClient(HttpClient httpClient) : ITravelEstima
 {
     public async Task<TravelEstimatesFetchResult> GetEstimatesAsync(
         Guid listingId,
-        double toLat,
-        double toLng,
+        string campusId,
         CancellationToken cancellationToken = default)
     {
-        var url = FormattableString.Invariant(
-            $"api/v1/listings/{listingId}/travel?to_lat={toLat:R}&to_lng={toLng:R}");
+        var url = $"api/v1/listings/{listingId}/travel?campus_id={Uri.EscapeDataString(campusId)}";
 
         using var response = await httpClient.GetAsync(url, cancellationToken);
 
@@ -22,6 +20,14 @@ public sealed class TravelEstimatesClient(HttpClient httpClient) : ITravelEstima
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
             return new TravelEstimatesFetchResult(TravelEstimatesFetchOutcome.NotFound, null);
+        }
+
+        if (response.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            return new TravelEstimatesFetchResult(
+                TravelEstimatesFetchOutcome.RateLimited,
+                null,
+                ReadRetryAfter(response));
         }
 
         response.EnsureSuccessStatusCode();
@@ -33,5 +39,23 @@ public sealed class TravelEstimatesClient(HttpClient httpClient) : ITravelEstima
         return estimates is null
             ? throw new InvalidOperationException("The travel endpoint returned an empty response.")
             : new TravelEstimatesFetchResult(TravelEstimatesFetchOutcome.Found, estimates);
+    }
+
+    private static TimeSpan? ReadRetryAfter(HttpResponseMessage response)
+    {
+        var retryAfter = response.Headers.RetryAfter;
+
+        if (retryAfter?.Delta is { } delta)
+        {
+            return delta;
+        }
+
+        if (retryAfter?.Date is { } date)
+        {
+            var remaining = date - DateTimeOffset.UtcNow;
+            return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
+        }
+
+        return null;
     }
 }

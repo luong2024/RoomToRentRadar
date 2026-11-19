@@ -5,18 +5,19 @@ namespace RoomToRentRadar.Infrastructure.Api;
 public enum TravelEstimatesFetchOutcome
 {
     Found,
-    NotFound
+    NotFound,
+    RateLimited
 }
 
 public sealed record TravelEstimatesFetchResult(
     TravelEstimatesFetchOutcome Outcome,
-    ListingTravelEstimatesDto? Estimates);
+    ListingTravelEstimatesDto? Estimates,
+    TimeSpan? RetryAfter = null);
 
 public interface ITravelEstimatesClient
 {
     Task<TravelEstimatesFetchResult> GetEstimatesAsync(
         Guid listingId,
-        double toLat,
-        double toLng,
+        string campusId,
         CancellationToken cancellationToken = default);
 }

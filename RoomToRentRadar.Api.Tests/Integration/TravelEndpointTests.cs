@@ -9,6 +9,7 @@ using RoomToRentRadar.Api.Data;
 using RoomToRentRadar.Api.Features.Listings;
 using RoomToRentRadar.Api.Features.Travel;
 using RoomToRentRadar.Api.Tests.Infrastructure;
+using RoomToRentRadar.Shared.Campuses;
 using RoomToRentRadar.Shared.Serialization;
 using RoomToRentRadar.Shared.Travel;
 
@@ -20,6 +21,8 @@ public sealed class TravelEndpointTests
     // Index 0 of TestListingsSeed is Guid.Empty, which EF treats as an unset key
     // and replaces on insert, so published-listing tests use index 3.
     private static readonly Guid PublishedListingId = TestListingsSeed.IdFor(3);
+    private static readonly CampusInfo BachKhoa = CampusCatalog.FindById("bach-khoa")!;
+    private static readonly CampusInfo Khtn = CampusCatalog.FindById("khtn")!;
     private const double PublishedLat = 10.703;
     private const double PublishedLng = 106.703;
 
@@ -34,6 +37,8 @@ public sealed class TravelEndpointTests
         {
             services.RemoveAll<IRoutingEstimatesProvider>();
             services.AddSingleton<IRoutingEstimatesProvider>(_provider);
+            // The limiter partition is per-IP and shared across the fixture run.
+            services.Configure<TravelOptions>(options => options.RateLimitPerMinute = 1000);
         });
         await _factory.InitializeDatabaseAsync();
         _client = _factory.CreateClient();
@@ -67,7 +72,7 @@ public sealed class TravelEndpointTests
             _ => new RoutingEstimate(5000, 3600)
         };
 
-        var response = await GetTravelAsync(PublishedListingId, 10.7801, 106.7191);
+        var response = await GetTravelAsync(PublishedListingId, BachKhoa.Id);
         var payload = await ReadPayloadAsync(response);
 
         Assert.Multiple(() =>
@@ -93,11 +98,29 @@ public sealed class TravelEndpointTests
     }
 
     [Test]
+    public async Task GetTravel_KnownCampus_UsesServerSideCampusCoordinates()
+    {
+        _provider.Handler = (_, _, _, _, _) => new RoutingEstimate(1000, 60);
+
+        var response = await GetTravelAsync(PublishedListingId, Khtn.Id);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_provider.Calls, Is.Not.Empty);
+            Assert.That(_provider.Calls.Select(call => call.ToLat), Is.All.EqualTo(Khtn.Lat));
+            Assert.That(_provider.Calls.Select(call => call.ToLng), Is.All.EqualTo(Khtn.Lng));
+            Assert.That(_provider.Calls.Select(call => call.FromLat), Is.All.EqualTo(PublishedLat));
+            Assert.That(_provider.Calls.Select(call => call.FromLng), Is.All.EqualTo(PublishedLng));
+        });
+    }
+
+    [Test]
     public async Task GetTravel_RouteResponse_UsesSnakeCaseWireValues()
     {
         _provider.Handler = (_, _, _, _, _) => new RoutingEstimate(1000, 60);
 
-        var response = await GetTravelAsync(PublishedListingId, 10.7812, 106.7202);
+        var response = await GetTravelAsync(PublishedListingId, BachKhoa.Id);
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var firstMode = document.RootElement.GetProperty("modes")[0];
 
@@ -116,8 +139,8 @@ public sealed class TravelEndpointTests
         _provider.Handler = (_, _, _, _, mode) => new RoutingEstimate(1000 + (int)mode, 60);
         var listingId = PublishedListingId;
 
-        var first = await ReadPayloadAsync(await GetTravelAsync(listingId, 10.7823, 106.7213));
-        var second = await ReadPayloadAsync(await GetTravelAsync(listingId, 10.7823, 106.7213));
+        var first = await ReadPayloadAsync(await GetTravelAsync(listingId, BachKhoa.Id));
+        var second = await ReadPayloadAsync(await GetTravelAsync(listingId, BachKhoa.Id));
 
         Assert.Multiple(() =>
         {
@@ -129,19 +152,38 @@ public sealed class TravelEndpointTests
     }
 
     [Test]
+    public async Task GetTravel_SwitchingCampus_FetchesNewEstimates()
+    {
+        _provider.Handler = (_, _, toLat, _, _) => new RoutingEstimate((int)(toLat * 100), 60);
+
+        var bachKhoaPayload = await ReadPayloadAsync(
+            await GetTravelAsync(PublishedListingId, BachKhoa.Id));
+        var khtnPayload = await ReadPayloadAsync(
+            await GetTravelAsync(PublishedListingId, Khtn.Id));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_provider.CallCount, Is.EqualTo(6));
+            Assert.That(
+                bachKhoaPayload.Modes[0].DistanceM,
+                Is.EqualTo((int)(BachKhoa.Lat * 100)));
+            Assert.That(
+                khtnPayload.Modes[0].DistanceM,
+                Is.EqualTo((int)(Khtn.Lat * 100)));
+        });
+    }
+
+    [Test]
     public async Task GetTravel_ProviderHasNoBusRoute_FallsBackToStraightLineForBusOnly()
     {
         _provider.Handler = (_, _, _, _, mode) => mode == TravelMode.Bus
             ? null
             : new RoutingEstimate(4200, 900);
 
-        var payload = await ReadPayloadAsync(await GetTravelAsync(
-            PublishedListingId,
-            10.7601,
-            106.6901));
+        var payload = await ReadPayloadAsync(await GetTravelAsync(PublishedListingId, Khtn.Id));
         var bus = payload.Modes.Single(x => x.Mode == TravelMode.Bus);
         var expectedDistanceM = (int)Math.Round(
-            GeoDistance.HaversineKm(PublishedLat, PublishedLng, 10.7601, 106.6901) * 1000d,
+            GeoDistance.HaversineKm(PublishedLat, PublishedLng, Khtn.Lat, Khtn.Lng) * 1000d,
             MidpointRounding.AwayFromZero);
 
         Assert.Multiple(() =>
@@ -159,7 +201,7 @@ public sealed class TravelEndpointTests
     {
         _provider.Handler = (_, _, _, _, _) => null;
 
-        var response = await GetTravelAsync(PublishedListingId, 10.7612, 106.6912);
+        var response = await GetTravelAsync(PublishedListingId, BachKhoa.Id);
         var payload = await ReadPayloadAsync(response);
 
         Assert.Multiple(() =>
@@ -176,11 +218,9 @@ public sealed class TravelEndpointTests
     public async Task GetTravel_ProviderUnavailable_RepeatedRequestWithinFallbackWindow_SkipsProvider()
     {
         _provider.Handler = (_, _, _, _, _) => null;
-        const double toLat = 10.7634;
-        const double toLng = 106.6934;
 
-        var first = await ReadPayloadAsync(await GetTravelAsync(PublishedListingId, toLat, toLng));
-        var second = await ReadPayloadAsync(await GetTravelAsync(PublishedListingId, toLat, toLng));
+        var first = await ReadPayloadAsync(await GetTravelAsync(PublishedListingId, Khtn.Id));
+        var second = await ReadPayloadAsync(await GetTravelAsync(PublishedListingId, Khtn.Id));
 
         Assert.Multiple(() =>
         {
@@ -195,6 +235,41 @@ public sealed class TravelEndpointTests
         });
     }
 
+    [Test]
+    public async Task GetTravel_ConcurrentRequests_FetchesEachModeOnce()
+    {
+        _provider.Handler = (_, _, _, _, _) =>
+        {
+            Thread.Sleep(75);
+            return new RoutingEstimate(3000, 600);
+        };
+
+        var responses = await Task.WhenAll(
+            Enumerable.Range(0, 10)
+                .Select(_ => _client.GetAsync(TravelUrl(PublishedListingId, BachKhoa.Id))));
+
+        try
+        {
+            Assert.Multiple(() =>
+            {
+                Assert.That(
+                    responses.Select(response => response.StatusCode),
+                    Is.All.EqualTo(HttpStatusCode.OK));
+                Assert.That(
+                    _provider.CallCount,
+                    Is.EqualTo(3),
+                    "concurrent requests for the same key must share one provider fetch per mode");
+            });
+        }
+        finally
+        {
+            foreach (var response in responses)
+            {
+                response.Dispose();
+            }
+        }
+    }
+
     [TestCase(20)]
     [TestCase(21)]
     [TestCase(22)]
@@ -202,7 +277,7 @@ public sealed class TravelEndpointTests
     [TestCase(24)]
     public async Task GetTravel_NonPublishedListing_ReturnsNotFound(int seedIndex)
     {
-        var response = await GetTravelAsync(TestListingsSeed.IdFor(seedIndex), 10.7701, 106.7001);
+        var response = await GetTravelAsync(TestListingsSeed.IdFor(seedIndex), BachKhoa.Id);
         var code = await ReadProblemCodeAsync(response);
 
         Assert.Multiple(() =>
@@ -216,7 +291,7 @@ public sealed class TravelEndpointTests
     [Test]
     public async Task GetTravel_UnknownListing_ReturnsNotFound()
     {
-        var response = await GetTravelAsync(Guid.NewGuid(), 10.7701, 106.7001);
+        var response = await GetTravelAsync(Guid.NewGuid(), BachKhoa.Id);
         var code = await ReadProblemCodeAsync(response);
 
         Assert.Multiple(() =>
@@ -227,7 +302,7 @@ public sealed class TravelEndpointTests
     }
 
     [Test]
-    public async Task GetTravel_MissingDestination_ReturnsInvalidDestination()
+    public async Task GetTravel_MissingCampusId_ReturnsInvalidDestination()
     {
         var response = await _client.GetAsync($"/api/v1/listings/{PublishedListingId}/travel");
         var code = await ReadProblemCodeAsync(response);
@@ -240,16 +315,14 @@ public sealed class TravelEndpointTests
         Assert.That(_provider.CallCount, Is.Zero);
     }
 
-    [TestCase("NaN", "106.7")]
-    [TestCase("Infinity", "106.7")]
-    [TestCase("91", "106.7")]
-    [TestCase("-90.1", "106.7")]
-    [TestCase("10.7", "181")]
-    [TestCase("10.7", "-180.1")]
-    public async Task GetTravel_InvalidDestination_ReturnsInvalidDestination(string toLat, string toLng)
+    [TestCase("hcmus")]
+    [TestCase("")]
+    [TestCase("%20%20")]
+    [TestCase("bach%20khoa")]
+    public async Task GetTravel_UnknownCampusId_ReturnsInvalidDestination(string campusId)
     {
         var response = await _client.GetAsync(
-            $"/api/v1/listings/{PublishedListingId}/travel?to_lat={toLat}&to_lng={toLng}");
+            $"/api/v1/listings/{PublishedListingId}/travel?campus_id={campusId}");
         var code = await ReadProblemCodeAsync(response);
 
         Assert.Multiple(() =>
@@ -261,23 +334,26 @@ public sealed class TravelEndpointTests
     }
 
     [Test]
-    public async Task GetTravel_NonNumericDestination_ReturnsInvalidParameterFormat()
+    public async Task GetTravel_ExtraCoordinateParameters_AreIgnored()
     {
+        _provider.Handler = (_, _, _, _, _) => new RoutingEstimate(1000, 60);
+
         var response = await _client.GetAsync(
-            $"/api/v1/listings/{PublishedListingId}/travel?to_lat=abc&to_lng=106.7");
-        var code = await ReadProblemCodeAsync(response);
+            $"/api/v1/listings/{PublishedListingId}/travel?campus_id={Khtn.Id}&to_lat=0&to_lng=0");
 
         Assert.Multiple(() =>
         {
-            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
-            Assert.That(code, Is.EqualTo(ListingProblemFactory.InvalidParameterFormat));
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(_provider.Calls.Select(call => call.ToLat), Is.All.EqualTo(Khtn.Lat));
+            Assert.That(_provider.Calls.Select(call => call.ToLng), Is.All.EqualTo(Khtn.Lng));
         });
-        Assert.That(_provider.CallCount, Is.Zero);
     }
 
-    private Task<HttpResponseMessage> GetTravelAsync(Guid listingId, double toLat, double toLng)
-        => _client.GetAsync(FormattableString.Invariant(
-            $"/api/v1/listings/{listingId}/travel?to_lat={toLat}&to_lng={toLng}"));
+    private Task<HttpResponseMessage> GetTravelAsync(Guid listingId, string campusId)
+        => _client.GetAsync(TravelUrl(listingId, campusId));
+
+    private static string TravelUrl(Guid listingId, string campusId)
+        => $"/api/v1/listings/{listingId}/travel?campus_id={Uri.EscapeDataString(campusId)}";
 
     private static async Task<ListingTravelEstimatesDto> ReadPayloadAsync(HttpResponseMessage response)
     {
@@ -300,6 +376,7 @@ public sealed class TravelEndpointTests
 public sealed class TravelEndpointFallbackWithoutKeyTests
 {
     private static readonly Guid PublishedListingId = TestListingsSeed.IdFor(3);
+    private static readonly CampusInfo BachKhoa = CampusCatalog.FindById("bach-khoa")!;
     private const double PublishedLat = 10.703;
     private const double PublishedLng = 106.703;
 
@@ -311,7 +388,11 @@ public sealed class TravelEndpointFallbackWithoutKeyTests
     {
         // Keep the real provider but guarantee it has no key, so every call falls back.
         _factory = new ListingsApiFactory(services =>
-            services.Configure<TravelOptions>(options => options.GoogleRoutesApiKey = null));
+            services.Configure<TravelOptions>(options =>
+            {
+                options.GoogleRoutesApiKey = null;
+                options.RateLimitPerMinute = 1000;
+            }));
         await _factory.InitializeDatabaseAsync();
         _client = _factory.CreateClient();
     }
@@ -336,14 +417,12 @@ public sealed class TravelEndpointFallbackWithoutKeyTests
     [Test]
     public async Task GetTravel_NoRoutingKeyConfigured_AlwaysReturnsStraightLineFallback()
     {
-        const double toLat = 10.7503;
-        const double toLng = 106.6803;
         var expectedDistanceM = (int)Math.Round(
-            GeoDistance.HaversineKm(PublishedLat, PublishedLng, toLat, toLng) * 1000d,
+            GeoDistance.HaversineKm(PublishedLat, PublishedLng, BachKhoa.Lat, BachKhoa.Lng) * 1000d,
             MidpointRounding.AwayFromZero);
 
-        var response = await _client.GetAsync(FormattableString.Invariant(
-            $"/api/v1/listings/{PublishedListingId}/travel?to_lat={toLat}&to_lng={toLng}"));
+        var response = await _client.GetAsync(
+            $"/api/v1/listings/{PublishedListingId}/travel?campus_id={BachKhoa.Id}");
         var payload = await response.Content.ReadFromJsonAsync<ListingTravelEstimatesDto>(ApiJson.Options);
 
         Assert.Multiple(() =>
@@ -395,8 +474,7 @@ public sealed class TravelRateLimitTests
     [Test]
     public async Task GetTravel_ExceedingPerIpLimit_Returns429Problem()
     {
-        var url = FormattableString.Invariant(
-            $"/api/v1/listings/{PublishedListingId}/travel?to_lat=10.7503&to_lng=106.6803");
+        var url = $"/api/v1/listings/{PublishedListingId}/travel?campus_id=bach-khoa";
 
         var first = await _client.GetAsync(url);
         var second = await _client.GetAsync(url);

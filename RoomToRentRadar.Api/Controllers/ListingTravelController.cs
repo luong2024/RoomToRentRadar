@@ -21,11 +21,9 @@ public sealed class ListingTravelController(TravelEstimatesService travelEstimat
         [FromQuery] TravelQueryParameters parameters,
         CancellationToken cancellationToken)
     {
-        if (!TravelDestinationValidator.TryValidate(
-                parameters.ToLat,
-                parameters.ToLng,
-                out var lat,
-                out var lng,
+        if (!TravelCampusResolver.TryResolve(
+                parameters.CampusId,
+                out var campus,
                 out var problem))
         {
             return ToProblem(problem!);
@@ -33,8 +31,9 @@ public sealed class ListingTravelController(TravelEstimatesService travelEstimat
 
         var result = await travelEstimatesService.GetEstimatesAsync(
             listingId,
-            lat,
-            lng,
+            campus.Id,
+            campus.Lat,
+            campus.Lng,
             cancellationToken);
 
         return result.IsSuccess ? Ok(result.Value) : ToProblem(result.Problem!);

@@ -2,9 +2,9 @@ using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Core.Interfaces;
-using RoomToRentRadar.Features.Home.ViewModels;
 using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Services;
+using RoomToRentRadar.Shared.Campuses;
 using RoomToRentRadar.Shared.Travel;
 
 namespace RoomToRentRadar.Features.RoomDetail.ViewModels;
@@ -15,6 +15,7 @@ public enum RoomDetailTravelState
     Loading,
     Loaded,
     ListingGone,
+    RateLimited,
     Error
 }
 
@@ -52,18 +53,22 @@ public partial class RoomDetailTravelViewModel : ObservableObject
     }
 
     public IReadOnlyList<string> CampusNames { get; } =
-        HomeFilterOptions.Campuses.Select(campus => campus.Name).ToList();
+        CampusCatalog.All.Select(campus => campus.Name).ToList();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsNoCampusVisible))]
     [NotifyPropertyChangedFor(nameof(IsLoadingVisible))]
     [NotifyPropertyChangedFor(nameof(IsLoadedVisible))]
     [NotifyPropertyChangedFor(nameof(IsListingGoneVisible))]
+    [NotifyPropertyChangedFor(nameof(IsRateLimitedVisible))]
     [NotifyPropertyChangedFor(nameof(IsErrorVisible))]
     public partial RoomDetailTravelState State { get; set; }
 
     [ObservableProperty]
     public partial string? SelectedCampusName { get; set; }
+
+    [ObservableProperty]
+    public partial string? RateLimitedMessage { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasFallbackNote))]
@@ -76,6 +81,8 @@ public partial class RoomDetailTravelViewModel : ObservableObject
     public bool IsLoadedVisible => State == RoomDetailTravelState.Loaded;
 
     public bool IsListingGoneVisible => State == RoomDetailTravelState.ListingGone;
+
+    public bool IsRateLimitedVisible => State == RoomDetailTravelState.RateLimited;
 
     public bool IsErrorVisible => State == RoomDetailTravelState.Error;
 
@@ -91,9 +98,10 @@ public partial class RoomDetailTravelViewModel : ObservableObject
         _destinationLng = destinationLng;
         _destinationLabel = destinationLabel;
 
-        // Reappearing while loaded keeps the previous estimates; an interrupted
-        // load (page left mid-request) is restarted.
-        if (_listingId == listingId && State != RoomDetailTravelState.Loading)
+        // Reappearing while loaded keeps the previous estimates; a failed load is
+        // retried and an interrupted load (page left mid-request) is restarted.
+        if (_listingId == listingId
+            && State is not (RoomDetailTravelState.Loading or RoomDetailTravelState.Error))
         {
             return;
         }
@@ -149,8 +157,7 @@ public partial class RoomDetailTravelViewModel : ObservableObject
 
         try
         {
-            var campus = HomeFilterOptions.Campuses.FirstOrDefault(
-                option => string.Equals(option.Name, SelectedCampusName, StringComparison.Ordinal));
+            var campus = CampusCatalog.FindByName(SelectedCampusName);
 
             if (_listingId is not { } listingId || campus is null)
             {
@@ -165,8 +172,7 @@ public partial class RoomDetailTravelViewModel : ObservableObject
             {
                 var result = await _travelClient.GetEstimatesAsync(
                     listingId,
-                    campus.Lat,
-                    campus.Lng,
+                    campus.Id,
                     cancellation.Token);
 
                 if (cancellation.IsCancellationRequested)
@@ -178,6 +184,14 @@ public partial class RoomDetailTravelViewModel : ObservableObject
                 {
                     Estimates = [];
                     State = RoomDetailTravelState.ListingGone;
+                    return;
+                }
+
+                if (result.Outcome == TravelEstimatesFetchOutcome.RateLimited)
+                {
+                    Estimates = [];
+                    RateLimitedMessage = DescribeRateLimit(result.RetryAfter);
+                    State = RoomDetailTravelState.RateLimited;
                     return;
                 }
 
@@ -220,6 +234,17 @@ public partial class RoomDetailTravelViewModel : ObservableObject
     }
 
     private void StartLoad() => LoadCommand.Execute(null);
+
+    private static string DescribeRateLimit(TimeSpan? retryAfter)
+    {
+        var seconds = retryAfter is { } delay
+            ? (int)Math.Ceiling(delay.TotalSeconds)
+            : 0;
+
+        return seconds > 0
+            ? $"Hệ thống đang nhận nhiều yêu cầu. Anh/Chị thử lại sau {seconds} giây nhé."
+            : "Hệ thống đang nhận nhiều yêu cầu. Anh/Chị thử lại sau ít phút nhé.";
+    }
 
     private static TravelModeEstimateItem ToItem(TravelEstimateDto estimate)
     {
