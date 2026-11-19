@@ -82,6 +82,8 @@ public static class ServiceCollectionExtensions
 
         services.AddTransient<RoomDetailViewModel>();
         services.AddTransient<RoomDetailPage>();
+        services.AddTransient<RoomToRentRadar.Features.MapSearch.ViewModels.MapSearchViewModel>();
+        services.AddTransient<RoomToRentRadar.Features.MapSearch.Views.MapSearchPage>();
         services.AddTransient<ICreateListingService, CreateListingService>();
         services.AddTransient<CreateListingViewModel>();
         services.AddTransient<CreateListingPage>();
