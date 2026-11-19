@@ -12,7 +12,7 @@
        Shell.TitleColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}">
     <TabBar>
         <ShellContent x:Name="ExploreTab" Icon="explore_tab.png" Title="Khám phá" Route="home" />
-        <ShellContent x:Name="FavouritesTab" Title="Yêu thích" Route="favourites" />
+        <ShellContent x:Name="FavouritesTab" Icon="favourites_tab.png" Title="Yêu thích" Route="favourites" />
         <ShellContent x:Name="MapTab" Icon="map_tab.png" Title="Bản đồ" Route="map" />
         <ShellContent x:Name="MyListingsTab" Icon="listings_tab.png" Title="Tin của tôi" Route="my-listings" />
     </TabBar>
