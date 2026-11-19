@@ -8,6 +8,7 @@ using RoomToRentRadar.Client.Adapters.Http;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Ports.Contracts.Common;
 using RoomToRentRadar.Ports.Contracts.Requests.Rooms;
+using RoomToRentRadar.Ports.Contracts.Responses.Photos;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 
 namespace RoomToRentRadarUnitTests.ClientAdapters.Gateways;
@@ -206,6 +207,91 @@ public class HttpRoomGatewayTests
         Assert.That(query["sort"], Is.EqualTo(string.Empty));
     }
 
+    [Test]
+    public async Task GetRoomDetailAsync_ValidRoomId_CallsEndpointAndReturnsDetail()
+    {
+        var expectedDetail = Detail("room-123");
+        var (gateway, stub) = CreateGateway(_ => JsonResponse(HttpStatusCode.OK, expectedDetail));
+
+        var result = await gateway.GetRoomDetailAsync("room-123");
+
+        var recorded = stub.Requests.Single();
+        Assert.That(recorded.Method, Is.EqualTo(HttpMethod.Get));
+        Assert.That(recorded.Path, Is.EqualTo("/api/rooms/room-123"));
+        Assert.That(result.Id, Is.EqualTo("room-123"));
+        Assert.That(result.Title, Is.EqualTo(expectedDetail.Title));
+    }
+
+    [Test]
+    public async Task GetRoomDetailAsync_WithCampusId_AppendsEscapedCampusId()
+    {
+        var expectedDetail = Detail("room-123");
+        var (gateway, stub) = CreateGateway(_ => JsonResponse(HttpStatusCode.OK, expectedDetail));
+
+        await gateway.GetRoomDetailAsync("room-123", "ICTU Campus");
+
+        var recorded = stub.Requests.Single();
+        Assert.That(recorded.Path, Is.EqualTo("/api/rooms/room-123"));
+        Assert.That(recorded.Uri.Query, Is.EqualTo("?campusId=ICTU%20Campus"));
+    }
+
+    [TestCase("")]
+    [TestCase("   ")]
+    public void GetRoomDetailAsync_InvalidRoomId_ThrowsArgumentException(string invalidId)
+    {
+        var (gateway, _) = CreateGateway(_ => JsonResponse(HttpStatusCode.OK, Detail("room-1")));
+
+        Assert.ThrowsAsync<ArgumentException>(async () => await gateway.GetRoomDetailAsync(invalidId));
+    }
+
+    [Test]
+    public void GetRoomDetailAsync_RoomNotFound_ThrowsApiException()
+    {
+        var (gateway, _) = CreateGateway(_ => Problem(HttpStatusCode.NotFound, ProblemCodes.RoomNotFound));
+
+        var ex = Assert.ThrowsAsync<ApiException>(async () => await gateway.GetRoomDetailAsync("non-existent"));
+
+        Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        Assert.That(ex.ErrorCode, Is.EqualTo(ProblemCodes.RoomNotFound));
+    }
+
+    [Test]
+    public async Task GetSimilarRoomsAsync_ValidRoomId_CallsEndpointAndReturnsCards()
+    {
+        var cards = new List<RoomCardDto> { Card() };
+        var (gateway, stub) = CreateGateway(_ => JsonResponse(HttpStatusCode.OK, cards));
+
+        var result = await gateway.GetSimilarRoomsAsync("room-123");
+
+        var recorded = stub.Requests.Single();
+        Assert.That(recorded.Method, Is.EqualTo(HttpMethod.Get));
+        Assert.That(recorded.Path, Is.EqualTo("/api/rooms/room-123/similar"));
+        Assert.That(result, Has.Count.EqualTo(1));
+        Assert.That(result[0].Id, Is.EqualTo("room-1"));
+    }
+
+    [Test]
+    public async Task GetSimilarRoomsAsync_WithCampusId_AppendsEscapedCampusId()
+    {
+        var cards = new List<RoomCardDto> { Card() };
+        var (gateway, stub) = CreateGateway(_ => JsonResponse(HttpStatusCode.OK, cards));
+
+        await gateway.GetSimilarRoomsAsync("room-123", "TNUE");
+
+        var recorded = stub.Requests.Single();
+        Assert.That(recorded.Path, Is.EqualTo("/api/rooms/room-123/similar"));
+        Assert.That(recorded.Uri.Query, Is.EqualTo("?campusId=TNUE"));
+    }
+
+    [TestCase("")]
+    [TestCase("   ")]
+    public void GetSimilarRoomsAsync_InvalidRoomId_ThrowsArgumentException(string invalidId)
+    {
+        var (gateway, _) = CreateGateway(_ => JsonResponse(HttpStatusCode.OK, new List<RoomCardDto>()));
+
+        Assert.ThrowsAsync<ArgumentException>(async () => await gateway.GetSimilarRoomsAsync(invalidId));
+    }
+
     private static (HttpRoomGateway Gateway, StubHttpMessageHandler Stub) CreateGateway(
         Func<HttpRequestMessage, HttpResponseMessage> responder)
     {
@@ -218,6 +304,22 @@ public class HttpRoomGatewayTests
         "room-1", "Test room", 2_000_000, 20, RoomType.BoardingRoom, 0.5, true,
         ListingStatus.Available, null, 21.5851, 105.8066,
         new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), false);
+
+    private static RoomDetailDto Detail(string id) => new(
+        id, "Test Room", "Test description", RoomType.BoardingRoom, ListingStatus.Available, true,
+        2_500_000, 2_500_000, 25.0, 2, Furnishing.Full, new DateOnly(2026, 12, 1),
+        new AddressDto("12 Z115", "Quyet Thang", "Thai Nguyen"),
+        new GeoPointDto(21.5851, 105.8066),
+        1.2,
+        new UtilitiesView(3500, 100000, WaterPriceUnit.PerPerson, null, 50000, null, 2950000),
+        [Amenity.Wifi, Amenity.AirConditioner],
+        new SafetyDto(4, true, [SafetyFeature.Cctv, SafetyFeature.SecureEntrance]),
+        null,
+        Array.Empty<PhotoDto>(),
+        new LandlordContactDto("landlord-1", "Nguyen Thi Hoa", true, new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc), null, null),
+        false,
+        new DateTime(2026, 11, 15, 0, 0, 0, DateTimeKind.Utc),
+        new DateTime(2026, 11, 15, 0, 0, 0, DateTimeKind.Utc));
 
     private static HttpResponseMessage OkPage(params RoomCardDto[] cards) =>
         JsonResponse(HttpStatusCode.OK, new PagedResult<RoomCardDto>(cards, cards.Length, 1, 20));

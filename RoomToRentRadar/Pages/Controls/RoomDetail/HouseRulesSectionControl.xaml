@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.PageModels"
+             xmlns:models="clr-namespace:RoomToRentRadar.Pages.Controls.RoomDetail.Models"
+             xmlns:fonts="clr-namespace:Fonts"
+             xmlns:loc="clr-namespace:RoomToRentRadar.Resources.Strings"
+             x:Class="RoomToRentRadar.Pages.Controls.RoomDetail.HouseRulesSectionControl"
+             x:DataType="vm:RoomDetailPageModel">
+
+    <Border IsVisible="{Binding HasHouseRules}"
+            StrokeShape="RoundRectangle 12"
+            StrokeThickness="1"
+            Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+            Shadow="{StaticResource Elevation1Shadow}"
+            Padding="16">
+        <VerticalStackLayout Spacing="10">
+            <!-- Header -->
+            <Label Text="{loc:LocalizedStrings RoomDetail_HouseRules}"
+                   FontFamily="{StaticResource FontFamilySemibold}"
+                   FontSize="{StaticResource FontSizeH3}"
+                   FontAttributes="Bold"
+                   TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+                   Margin="0,0,0,2" />
+
+            <!-- Rules List -->
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding HouseRulesList}"
+                                 Spacing="8">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="models:HouseRuleItem">
+                        <Grid ColumnDefinitions="26, *" VerticalOptions="Center">
+                            <Label Grid.Column="0"
+                                   Text="{Binding IconGlyph}"
+                                   FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                   FontSize="18"
+                                   TextColor="{AppThemeBinding Light={StaticResource ActionAccentLight}, Dark={StaticResource ActionAccentDark}}"
+                                   VerticalTextAlignment="Center" />
+                            <Label Grid.Column="1"
+                                   VerticalTextAlignment="Center"
+                                   LineBreakMode="WordWrap">
+                                <Label.FormattedText>
+                                    <FormattedString>
+                                        <Span Text="{Binding Title}"
+                                              FontFamily="{StaticResource FontFamilySemibold}"
+                                              FontAttributes="Bold"
+                                              FontSize="{StaticResource FontSizeBodyMedium}"
+                                              TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                        <Span Text=" " />
+                                        <Span Text="{Binding Detail}"
+                                              FontFamily="{StaticResource FontFamilyRegular}"
+                                              FontSize="{StaticResource FontSizeBodyMedium}"
+                                              TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                                    </FormattedString>
+                                </Label.FormattedText>
+                            </Label>
+                        </Grid>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </Border>
+</ContentView>

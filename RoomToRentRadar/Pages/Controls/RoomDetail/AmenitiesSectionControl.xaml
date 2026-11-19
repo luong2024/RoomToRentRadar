@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.PageModels"
+             xmlns:models="clr-namespace:RoomToRentRadar.Pages.Controls.RoomDetail.Models"
+             xmlns:fonts="clr-namespace:Fonts"
+             xmlns:loc="clr-namespace:RoomToRentRadar.Resources.Strings"
+             x:Class="RoomToRentRadar.Pages.Controls.RoomDetail.AmenitiesSectionControl"
+             x:DataType="vm:RoomDetailPageModel">
+
+    <Border StrokeShape="RoundRectangle 12"
+            StrokeThickness="1"
+            Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+            Shadow="{StaticResource Elevation1Shadow}"
+            Padding="16">
+        <VerticalStackLayout Spacing="12">
+            <!-- Section Header -->
+            <Label Text="{loc:LocalizedStrings RoomDetail_Amenities}"
+                   FontFamily="{StaticResource FontFamilySemibold}"
+                   FontSize="{StaticResource FontSizeH3}"
+                   FontAttributes="Bold"
+                   TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+
+            <!-- Amenities 2-Column Grid -->
+            <FlexLayout BindableLayout.ItemsSource="{Binding AmenitiesDisplayList}"
+                        Wrap="Wrap"
+                        JustifyContent="SpaceBetween"
+                        AlignContent="Start">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="models:AmenityDisplayItem">
+                        <HorizontalStackLayout FlexLayout.Basis="48%"
+                                               Spacing="10"
+                                               Margin="0,5"
+                                               VerticalOptions="Center">
+                            <Label Text="{Binding IconGlyph}"
+                                   FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                   FontSize="20"
+                                   TextColor="{AppThemeBinding Light={StaticResource ActionAccentLight}, Dark={StaticResource ActionAccentDark}}"
+                                   VerticalTextAlignment="Center" />
+                            <Label Text="{Binding Name}"
+                                   FontFamily="{StaticResource FontFamilyRegular}"
+                                   FontSize="{StaticResource FontSizeBodyMedium}"
+                                   TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+                                   LineBreakMode="TailTruncation"
+                                   VerticalTextAlignment="Center" />
+                        </HorizontalStackLayout>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </FlexLayout>
+
+            <!-- See All Amenities Expand / Collapse Button (Touch Target 48dp) -->
+            <Border IsVisible="{Binding HasMoreAmenities}"
+                    StrokeShape="RoundRectangle 8"
+                    StrokeThickness="1"
+                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
+                    HeightRequest="48"
+                    Margin="0,6,0,0">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding ToggleAllAmenitiesCommand}" />
+                </Border.GestureRecognizers>
+                <Label Text="{Binding SeeAllAmenitiesText}"
+                       FontFamily="{StaticResource FontFamilySemibold}"
+                       FontSize="{StaticResource FontSizeBodyMedium}"
+                       TextColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}"
+                       HorizontalTextAlignment="Center"
+                       VerticalTextAlignment="Center" />
+            </Border>
+        </VerticalStackLayout>
+    </Border>
+</ContentView>

@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.PageModels"
+             xmlns:models="clr-namespace:RoomToRentRadar.Pages.Controls.RoomDetail.Models"
+             xmlns:fonts="clr-namespace:Fonts"
+             x:Class="RoomToRentRadar.Pages.Controls.RoomDetail.LocationTravelTimesControl"
+             x:DataType="vm:RoomDetailPageModel">
+
+    <Border StrokeShape="RoundRectangle 12"
+            StrokeThickness="1"
+            Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+            Shadow="{StaticResource Elevation1Shadow}"
+            Padding="0">
+        <VerticalStackLayout Spacing="0">
+            <!-- 1. Map Illustration / Preview Banner -->
+            <Grid HeightRequest="130" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}">
+                <!-- Map Street Grid Simulation Lines -->
+                <BoxView WidthRequest="3"
+                         HeightRequest="130"
+                         Color="{StaticResource White}"
+                         HorizontalOptions="Center" />
+                <BoxView HeightRequest="3"
+                         HorizontalOptions="Fill"
+                         Color="{StaticResource White}"
+                         VerticalOptions="Center" />
+
+                <!-- Location Map Pin Circle -->
+                <Border StrokeShape="RoundRectangle 9999"
+                        StrokeThickness="0"
+                        WidthRequest="40"
+                        HeightRequest="40"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource ActionSecondaryLight}, Dark={StaticResource ActionSecondaryDark}}"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Center"
+                        Shadow="{StaticResource Elevation1Shadow}">
+                    <Label Text="{x:Static fonts:FluentUI.location_20_regular}"
+                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                           FontSize="20"
+                           TextColor="White"
+                           HorizontalTextAlignment="Center"
+                           VerticalTextAlignment="Center" />
+                </Border>
+            </Grid>
+
+            <!-- 2. Address & Commute Details Content -->
+            <VerticalStackLayout Padding="16" Spacing="8">
+                <!-- Full Address -->
+                <Label Text="{Binding AddressFormatted}"
+                       FontFamily="{StaticResource FontFamilySemibold}"
+                       FontSize="{StaticResource FontSizeBodyLarge}"
+                       FontAttributes="Bold"
+                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+                       LineBreakMode="WordWrap" />
+
+                <!-- Getting to Campus Subtitle -->
+                <Label Text="{Binding CommuteHeaderFormatted}"
+                       FontFamily="{StaticResource FontFamilyRegular}"
+                       FontSize="{StaticResource FontSizeBodyMedium}"
+                       TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+
+                <!-- Straight line fallback note if travel times are unavailable -->
+                <Label Text="{Binding StraightLineNotice}"
+                       IsVisible="{Binding IsCommuteFallback}"
+                       FontFamily="{StaticResource FontFamilyRegular}"
+                       FontSize="{StaticResource FontSizeCaption}"
+                       TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+
+                <!-- 3. Commute Times 3-Column Grid -->
+                <Grid ColumnDefinitions="*, *, *"
+                      ColumnSpacing="8"
+                      Margin="0,8,0,0"
+                      BindableLayout.ItemsSource="{Binding CommuteTimes}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="models:CommuteModeItem">
+                            <Border StrokeShape="RoundRectangle 8"
+                                    StrokeThickness="1"
+                                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
+                                    Padding="6,10">
+                                <VerticalStackLayout Spacing="3" HorizontalOptions="Center">
+                                    <Label Text="{Binding IconGlyph}"
+                                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                           FontSize="20"
+                                           TextColor="{AppThemeBinding Light={StaticResource ActionAccentLight}, Dark={StaticResource ActionAccentDark}}"
+                                           HorizontalTextAlignment="Center" />
+                                    <Label Text="{Binding TimeFormatted}"
+                                           FontFamily="{StaticResource FontFamilySemibold}"
+                                           FontSize="{StaticResource FontSizeBodyMedium}"
+                                           FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+                                           HorizontalTextAlignment="Center" />
+                                    <Label Text="{Binding Label}"
+                                           FontFamily="{StaticResource FontFamilyRegular}"
+                                           FontSize="{StaticResource FontSizeBadge}"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+                                           HorizontalTextAlignment="Center" />
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </Grid>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </Border>
+</ContentView>

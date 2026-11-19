@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.PageModels"
+             xmlns:fonts="clr-namespace:Fonts"
+             xmlns:loc="clr-namespace:RoomToRentRadar.Resources.Strings"
+             x:Class="RoomToRentRadar.Pages.Controls.RoomDetail.LandlordBlockControl"
+             x:DataType="vm:RoomDetailPageModel">
+
+    <VerticalStackLayout Spacing="12">
+        <!-- 1. Landlord Profile Card -->
+        <Border StrokeShape="RoundRectangle 12"
+                StrokeThickness="1"
+                Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+                Shadow="{StaticResource Elevation1Shadow}"
+                Padding="16">
+            <Grid ColumnDefinitions="48, *" VerticalOptions="Center">
+                <!-- Circular Avatar with Initials -->
+                <Border Grid.Column="0"
+                        StrokeShape="RoundRectangle 9999"
+                        StrokeThickness="0"
+                        WidthRequest="48"
+                        HeightRequest="48"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Center">
+                    <Label Text="{Binding LandlordInitials}"
+                           FontFamily="{StaticResource FontFamilySemibold}"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}"
+                           HorizontalTextAlignment="Center"
+                           VerticalTextAlignment="Center" />
+                </Border>
+
+                <!-- Landlord Name & Verification Info -->
+                <VerticalStackLayout Grid.Column="1"
+                                     Spacing="2"
+                                     Margin="12,0,0,0"
+                                     VerticalOptions="Center">
+                    <Label Text="{Binding LandlordName}"
+                           FontFamily="{StaticResource FontFamilySemibold}"
+                           FontSize="{StaticResource FontSizeH3}"
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+
+                    <!-- Verified Landlord with Checkmark -->
+                    <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+                        <Label Text="{x:Static fonts:FluentUI.shield_checkmark_16_regular}"
+                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                               FontSize="14"
+                               TextColor="{AppThemeBinding Light={StaticResource StatusSuccessTextLight}, Dark={StaticResource StatusSuccessDark}}"
+                               VerticalTextAlignment="Center" />
+                        <Label Text="{Binding LandlordBadge}"
+                               FontFamily="{StaticResource FontFamilyRegular}"
+                               FontSize="{StaticResource FontSizeCaption}"
+                               TextColor="{AppThemeBinding Light={StaticResource StatusSuccessTextLight}, Dark={StaticResource StatusSuccessDark}}"
+                               VerticalTextAlignment="Center" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Grid>
+        </Border>
+
+        <!-- 2. Report Listing Action Link (Touch Target 48dp) -->
+        <Border StrokeThickness="0"
+                BackgroundColor="Transparent"
+                HeightRequest="48"
+                Padding="8,0"
+                HorizontalOptions="Start">
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Command="{Binding ReportListingCommand}" />
+            </Border.GestureRecognizers>
+            <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                <Label Text="{x:Static fonts:FluentUI.flag_20_regular}"
+                       FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                       FontSize="18"
+                       TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+                       VerticalTextAlignment="Center" />
+                <Label Text="{loc:LocalizedStrings RoomDetail_ReportListing}"
+                       FontFamily="{StaticResource FontFamilyRegular}"
+                       FontSize="{StaticResource FontSizeBodyMedium}"
+                       TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+                       VerticalTextAlignment="Center" />
+            </HorizontalStackLayout>
+        </Border>
+    </VerticalStackLayout>
+</ContentView>

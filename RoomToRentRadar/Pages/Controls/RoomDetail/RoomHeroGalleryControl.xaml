@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.PageModels"
+             xmlns:fonts="clr-namespace:Fonts"
+             xmlns:loc="clr-namespace:RoomToRentRadar.Resources.Strings"
+             x:Class="RoomToRentRadar.Pages.Controls.RoomDetail.RoomHeroGalleryControl"
+             x:DataType="vm:RoomDetailPageModel">
+
+    <Grid HeightRequest="260" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}">
+        <!-- 1. Room Hero Cover Photo -->
+        <Image Source="{Binding HeroCoverUrl}"
+               Aspect="AspectFill"
+               HeightRequest="260"
+               HorizontalOptions="Fill"
+               VerticalOptions="Fill"
+               IsVisible="{Binding HasPhotos}" />
+
+        <!-- Fallback Placeholder when image is missing -->
+        <VerticalStackLayout IsVisible="{Binding HasNoPhotos}"
+                             HorizontalOptions="Center"
+                             VerticalOptions="Center"
+                             Spacing="8">
+            <Label Text="{x:Static fonts:FluentUI.home_48_regular}"
+                   FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                   FontSize="48"
+                   HorizontalTextAlignment="Center"
+                   TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+            <Label Text="{loc:LocalizedStrings RoomDetail_NoPhotos}"
+                   FontSize="{StaticResource FontSizeCaption}"
+                   HorizontalTextAlignment="Center"
+                   TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+        </VerticalStackLayout>
+
+        <!-- Top Scrim Gradient for button contrast -->
+        <BoxView HeightRequest="80"
+                 VerticalOptions="Start"
+                 Color="#33000000" />
+
+        <!-- 2. Top Navigation Bar: Back, Share, Favourite -->
+        <Grid Padding="16,16,16,0"
+              VerticalOptions="Start">
+            <!-- Back Button (Touch target 48x48) -->
+            <Border StrokeShape="RoundRectangle 9999"
+                    StrokeThickness="0"
+                    WidthRequest="48"
+                    HeightRequest="48"
+                    BackgroundColor="#EEFFFFFF"
+                    HorizontalOptions="Start"
+                    VerticalOptions="Start"
+                    Shadow="{StaticResource Elevation1Shadow}"
+                    SemanticProperties.Description="Back to previous page">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding GoBackCommand}" />
+                </Border.GestureRecognizers>
+                <Label Text="{x:Static fonts:FluentUI.chevron_left_24_regular}"
+                       FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                       FontSize="22"
+                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+                       HorizontalTextAlignment="Center"
+                       VerticalTextAlignment="Center" />
+            </Border>
+
+            <!-- Actions: Share & Favourite -->
+            <HorizontalStackLayout HorizontalOptions="End"
+                                   VerticalOptions="Start"
+                                   Spacing="10">
+                <!-- Share Button -->
+                <Border StrokeShape="RoundRectangle 9999"
+                        StrokeThickness="0"
+                        WidthRequest="48"
+                        HeightRequest="48"
+                        BackgroundColor="#EEFFFFFF"
+                        Shadow="{StaticResource Elevation1Shadow}"
+                        SemanticProperties.Description="Share listing">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding ShareListingCommand}" />
+                    </Border.GestureRecognizers>
+                    <Label Text="{x:Static fonts:FluentUI.share_24_regular}"
+                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                           FontSize="20"
+                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+                           HorizontalTextAlignment="Center"
+                           VerticalTextAlignment="Center" />
+                </Border>
+
+                <!-- Favourite Button -->
+                <Border StrokeShape="RoundRectangle 9999"
+                        StrokeThickness="0"
+                        WidthRequest="48"
+                        HeightRequest="48"
+                        BackgroundColor="#EEFFFFFF"
+                        Shadow="{StaticResource Elevation1Shadow}"
+                        SemanticProperties.Description="Save room to favourites">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding ToggleFavouriteCommand}" />
+                    </Border.GestureRecognizers>
+                    <Label Text="{Binding FavouriteIconGlyph}"
+                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                           FontSize="20"
+                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+                           HorizontalTextAlignment="Center"
+                           VerticalTextAlignment="Center">
+                        <Label.Triggers>
+                            <DataTrigger TargetType="Label" Binding="{Binding IsFavourite}" Value="True">
+                                <Setter Property="TextColor" Value="{StaticResource StatusDangerLight}" />
+                            </DataTrigger>
+                        </Label.Triggers>
+                    </Label>
+                </Border>
+            </HorizontalStackLayout>
+        </Grid>
+
+        <!-- 3. Bottom Badges: 360 View Pill & Photo Counter -->
+        <Grid Padding="16,0,16,16"
+              VerticalOptions="End">
+            <!-- 360° View Button Pill -->
+            <Border IsVisible="{Binding Is360Available}"
+                    StrokeShape="RoundRectangle 9999"
+                    StrokeThickness="0"
+                    BackgroundColor="#DD1E293B"
+                    Padding="12,6"
+                    HorizontalOptions="Start"
+                    VerticalOptions="End">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding Open360ViewCommand}" />
+                </Border.GestureRecognizers>
+                <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                    <Label Text="{x:Static fonts:FluentUI.arrow_rotate_clockwise_24_regular}"
+                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                           FontSize="16"
+                           TextColor="White"
+                           VerticalTextAlignment="Center" />
+                    <Label Text="{loc:LocalizedStrings RoomDetail_360View}"
+                           FontFamily="{StaticResource FontFamilySemibold}"
+                           FontSize="{StaticResource FontSizeBadge}"
+                           FontAttributes="Bold"
+                           TextColor="White"
+                           VerticalTextAlignment="Center" />
+                </HorizontalStackLayout>
+            </Border>
+
+            <!-- Photo Counter Badge (e.g. "1 / 12") -->
+            <Border StrokeShape="RoundRectangle 9999"
+                    StrokeThickness="0"
+                    BackgroundColor="#B3000000"
+                    Padding="10,4"
+                    HorizontalOptions="End"
+                    VerticalOptions="End">
+                <Label Text="{Binding PhotoCounterText}"
+                       FontFamily="{StaticResource FontFamilySemibold}"
+                       FontSize="{StaticResource FontSizeBadge}"
+                       FontAttributes="Bold"
+                       TextColor="White"
+                       VerticalTextAlignment="Center" />
+            </Border>
+        </Grid>
+    </Grid>
+</ContentView>
