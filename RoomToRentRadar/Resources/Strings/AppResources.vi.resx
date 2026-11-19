@@ -21,7 +21,7 @@
   <resheader name="version"><value>2.0</value></resheader>
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
-  <data name="App_Name" xml:space="preserve"><value>Smart Rent</value></data>
+  <data name="App_Name" xml:space="preserve"><value>RoomToRentRadar</value></data>
   <data name="Campus_Location" xml:space="preserve"><value>ĐH CNTT&amp;TT (ICTU) • Thái Nguyên</value></data>
   <data name="Menu_Open" xml:space="preserve"><value>Mở menu chính</value></data>
   <data name="Notification_Title" xml:space="preserve"><value>Thông báo</value></data>
@@ -36,7 +36,7 @@
   <data name="Language_Label" xml:space="preserve"><value>Ngôn ngữ / Language</value></data>
   <data name="Language_Vietnamese" xml:space="preserve"><value>Tiếng Việt</value></data>
   <data name="Language_English" xml:space="preserve"><value>English</value></data>
-  <data name="Footer_Version" xml:space="preserve"><value>Smart Rent • ICTU v1.0</value></data>
+  <data name="Footer_Version" xml:space="preserve"><value>RoomToRentRadar • ICTU v1.0</value></data>
   <data name="Title_ExploreRooms" xml:space="preserve"><value>Khám phá phòng trọ</value></data>
   <data name="Result_Summary_Format" xml:space="preserve"><value>Tìm thấy {0} phòng quanh ICTU</value></data>
   <data name="Result_Summary_Updating" xml:space="preserve"><value>Đang cập nhật danh sách phòng quanh ICTU</value></data>
@@ -126,4 +126,12 @@
   <data name="Filter_ShowResults_Format" xml:space="preserve"><value>Xem kết quả ({0})</value></data>
   <data name="CreateListing_PageTitle" xml:space="preserve"><value>Đăng tin cho thuê</value></data>
   <data name="Nav_CreateListing" xml:space="preserve"><value>Đăng tin</value></data>
+  <data name="Nav_SignIn" xml:space="preserve"><value>Sign In / Register</value></data>
+  <data name="Nav_Logout" xml:space="preserve"><value>Đăng xuất</value></data>
+  <data name="Logout_Confirm_Title" xml:space="preserve"><value>Đăng xuất</value></data>
+  <data name="Logout_Confirm_Message" xml:space="preserve"><value>Bạn có chắc chắn muốn đăng xuất?</value></data>
+  <data name="Logout_Confirm_Subtitle" xml:space="preserve"><value>Sau khi đăng xuất, bạn sẽ cần đăng nhập lại để tiếp tục sử dụng hệ thống.</value></data>
+  <data name="Logout_Confirm_Yes" xml:space="preserve"><value>Đăng xuất</value></data>
+  <data name="Logout_Confirm_No" xml:space="preserve"><value>Hủy</value></data>
+  <data name="Logout_Success" xml:space="preserve"><value>Đăng xuất thành công</value></data>
 </root>

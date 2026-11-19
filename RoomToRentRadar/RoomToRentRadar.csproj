@@ -22,7 +22,7 @@
 		<EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
 
 		<!-- Display name -->
-		<ApplicationTitle>Trọ ICTU</ApplicationTitle>
+		<ApplicationTitle>RoomToRentRadar</ApplicationTitle>
 
 		<!-- App Identifier -->
 		<ApplicationId>com.companyname.roomtorentradar</ApplicationId>

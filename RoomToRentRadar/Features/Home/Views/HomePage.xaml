@@ -199,6 +199,7 @@
                             Grid.Column="1"
                             Text="Go to Sign In / Sign Up"
                             Command="{Binding NavigateToAuthCommand}"
+                            IsVisible="{Binding IsNotAuthenticated}"
                             BackgroundColor="{StaticResource HeroOverlayGlass}"
                             TextColor="{StaticResource White}"
                             CornerRadius="20"
@@ -316,7 +317,7 @@
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer
                                     Command="{Binding QuickFilterCommand}"
-                                    CommandParameter="Điều hòa" />
+                                    CommandParameter="Air conditioner" />
                             </Border.GestureRecognizers>
                             <Label
                                 FontAttributes="Bold"
@@ -334,7 +335,7 @@
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer
                                     Command="{Binding QuickFilterCommand}"
-                                    CommandParameter="Khép kín" />
+                                    CommandParameter="Private bathroom" />
                             </Border.GestureRecognizers>
                             <Label
                                 FontAttributes="Bold"
@@ -352,7 +353,7 @@
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer
                                     Command="{Binding QuickFilterCommand}"
-                                    CommandParameter="Gác xép" />
+                                    CommandParameter="Mezzanine" />
                             </Border.GestureRecognizers>
                             <Label
                                 FontAttributes="Bold"
@@ -388,7 +389,7 @@
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer
                                     Command="{Binding QuickFilterCommand}"
-                                    CommandParameter="Nóng lạnh" />
+                                    CommandParameter="Water heater" />
                             </Border.GestureRecognizers>
                             <Label
                                 FontAttributes="Bold"

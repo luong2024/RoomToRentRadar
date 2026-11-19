@@ -4,11 +4,11 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:f="clr-namespace:Fonts"
-    Title="Trọ ICTU">
+    Title="RoomToRentRadar">
 
     <Window.TitleBar>
         <TitleBar
-            Title="Trọ ICTU"
+            Title="RoomToRentRadar"
             BackgroundColor="{AppThemeBinding Light={StaticResource TitleBarBackground}, Dark={StaticResource TitleBarBackgroundDark}}"
             ForegroundColor="{AppThemeBinding Light={StaticResource TitleBarForeground}, Dark={StaticResource TitleBarForegroundDark}}"
             HeightRequest="48">

@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Core.Constants;
+using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Core.Localization;
 
 namespace RoomToRentRadar.Features.Home.ViewModels;
@@ -8,16 +9,28 @@ namespace RoomToRentRadar.Features.Home.ViewModels;
 public partial class HomeViewModel : ObservableObject
 {
     private readonly Func<string, Task>? _navigateAsync;
+    private readonly IAuthenticationSessionService? _sessionService;
 
-    public HomeViewModel() : this(null)
+    public HomeViewModel() : this(null, null)
     {
     }
 
-    internal HomeViewModel(Func<string, Task>? navigateAsync)
+    public HomeViewModel(IAuthenticationSessionService sessionService) : this(null, sessionService)
+    {
+    }
+
+    internal HomeViewModel(Func<string, Task>? navigateAsync, IAuthenticationSessionService? sessionService = null)
     {
         _navigateAsync = navigateAsync;
+        _sessionService = sessionService;
         UpdateLocalizedStrings();
         LocalizationResourceManager.Instance.PropertyChanged += (_, _) => UpdateLocalizedStrings();
+
+        if (_sessionService != null)
+        {
+            _sessionService.CurrentUserChanged += (_, _) => UpdateAuthState();
+            UpdateAuthState();
+        }
     }
 
     private void UpdateLocalizedStrings()
@@ -27,13 +40,44 @@ public partial class HomeViewModel : ObservableObject
     }
 
     [ObservableProperty]
-    public partial string Title { get; set; } = "Smart Rent";
+    public partial string Title { get; set; } = "RoomToRentRadar";
 
     [ObservableProperty]
-    public partial string Subtitle { get; set; } = "Tìm phòng trọ lý tưởng quanh ĐH CNTT&TT (ICTU)";
+    public partial string Subtitle { get; set; } = "Find your ideal room around ICTU campus";
 
     [ObservableProperty]
     public partial string QuickSearchText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool IsAuthenticated { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsNotAuthenticated { get; set; } = true;
+
+    private void UpdateAuthState()
+    {
+        void Apply()
+        {
+            IsAuthenticated = _sessionService?.IsAuthenticated == true;
+            IsNotAuthenticated = !IsAuthenticated;
+        }
+
+        try
+        {
+            if (MainThread.IsMainThread)
+            {
+                Apply();
+            }
+            else
+            {
+                MainThread.BeginInvokeOnMainThread(Apply);
+            }
+        }
+        catch
+        {
+            Apply();
+        }
+    }
 
     [RelayCommand]
     public void OpenMenu()
