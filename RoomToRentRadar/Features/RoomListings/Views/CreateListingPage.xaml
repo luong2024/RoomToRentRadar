@@ -706,7 +706,7 @@
                                                 StrokeShape="RoundRectangle 13">
                                                 <Border.GestureRecognizers>
                                                     <TapGestureRecognizer
-                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.RemovePhotoCommand}"
+                                                        Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.RemovePhotoCommand}"
                                                         CommandParameter="{Binding .}" />
                                                 </Border.GestureRecognizers>
                                                 <Label
@@ -810,7 +810,7 @@
             Padding="{OnIdiom Phone='16,12', Tablet='24,14', Desktop='24,14'}"
             BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
             Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
-            StrokeThickness="1,0,0,0">
+            StrokeThickness="1">
             <Border.Shadow>
                 <Shadow
                     Brush="{StaticResource Black}"
