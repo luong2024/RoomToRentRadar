@@ -101,17 +101,22 @@
                             <Border.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding OpenCreateListingCommand}" />
                             </Border.GestureRecognizers>
-                            <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
-                                <Label
-                                    FontFamily="{x:Static f:FluentUI.FontFamily}"
-                                    FontSize="16"
-                                    HorizontalOptions="Center"
-                                    Text="{x:Static f:FluentUI.add_32_regular}"
-                                    TextColor="White"
-                                    VerticalOptions="Center" />
+                            <HorizontalStackLayout
+                                Spacing="6"
+                                VerticalOptions="Center"
+                                InputTransparent="True"
+                                CascadeInputTransparent="True">
+                                <Image
+                                    Source="ic_create_listing.png"
+                                    HeightRequest="22"
+                                    WidthRequest="22"
+                                    Aspect="AspectFit"
+                                    VerticalOptions="Center"
+                                    InputTransparent="True" />
                                 <Label
                                     FontAttributes="Bold"
                                     FontSize="12"
+                                    InputTransparent="True"
                                     Text="Post Listing"
                                     TextColor="White"
                                     VerticalOptions="Center" />
