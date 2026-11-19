@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.PageModels"
+             xmlns:detail="clr-namespace:RoomToRentRadar.Pages.Controls.RoomDetail"
+             xmlns:feedback="clr-namespace:RoomToRentRadar.Pages.Controls.Feedback"
+             xmlns:fonts="clr-namespace:Fonts"
+             xmlns:loc="clr-namespace:RoomToRentRadar.Resources.Strings"
+             x:Class="RoomToRentRadar.Pages.RoomDetailPage"
+             x:DataType="vm:RoomDetailPageModel"
+             Shell.NavBarIsVisible="False"
+             Shell.TabBarIsVisible="False"
+             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCanvasLight}, Dark={StaticResource SurfaceCanvasDark}}">
+
+    <Grid>
+        <!-- 1. LOADING SKELETON STATE -->
+        <VerticalStackLayout IsVisible="{Binding IsLoading}"
+                             Spacing="16"
+                             Padding="16"
+                             VerticalOptions="Start">
+            <Border HeightRequest="260"
+                    StrokeShape="RoundRectangle 12"
+                    StrokeThickness="0"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}" />
+            <feedback:SkeletonShimmer />
+            <feedback:SkeletonShimmer />
+        </VerticalStackLayout>
+
+        <!-- 2. ERROR STATE WITH RETRY -->
+        <feedback:ErrorRetryView IsVisible="{Binding HasError}"
+                                 Title="{loc:LocalizedStrings Common_Error}"
+                                 ErrorMessage="{Binding ErrorMessage}"
+                                 RetryText="{loc:LocalizedStrings Common_Retry}"
+                                 RetryCommand="{Binding InitializeCommand}"
+                                 VerticalOptions="Center"
+                                 HorizontalOptions="Center" />
+
+        <!-- 3. NOT FOUND (404) STATE -->
+        <feedback:EmptyStateView IsVisible="{Binding IsNotFound}"
+                                 IconGlyph="{x:Static fonts:FluentUI.search_info_24_regular}"
+                                 Title="{loc:LocalizedStrings RoomDetail_NotFoundTitle}"
+                                 Message="{Binding ErrorMessage}"
+                                 ActionText="{loc:LocalizedStrings Common_Back}"
+                                 ActionCommand="{Binding GoBackCommand}"
+                                 VerticalOptions="Center"
+                                 HorizontalOptions="Center" />
+
+        <!-- 4. MAIN CONTENT (SUCCESSFUL STATE) -->
+        <Grid IsVisible="{Binding IsContentVisible}"
+              RowDefinitions="*, Auto">
+
+            <!-- Scrollable Content with Pull-To-Refresh -->
+            <RefreshView Grid.Row="0"
+                         Command="{Binding InitializeCommand}"
+                         IsRefreshing="{Binding IsBusy}">
+                <ScrollView>
+                    <VerticalStackLayout Spacing="0">
+                        <!-- Top Hero Image Gallery (Back, Share, Fav, 360, Counter) -->
+                        <detail:RoomHeroGalleryControl />
+
+                        <!-- Details Body Content (Sections) -->
+                        <VerticalStackLayout Padding="16,14,16,24" Spacing="16">
+
+                            <!-- Status Badge & Relative Updated Timestamp -->
+                            <Grid ColumnDefinitions="Auto, *">
+                                <!-- Status Badge -->
+                                <Border Grid.Column="0"
+                                        StrokeShape="RoundRectangle 9999"
+                                        StrokeThickness="0"
+                                        BackgroundColor="{AppThemeBinding Light=#1516A34A, Dark=#254CB5AE}"
+                                        Padding="10,4">
+                                    <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                                        <Label Text="{x:Static fonts:FluentUI.checkmark_circle_16_regular}"
+                                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                               FontSize="14"
+                                               TextColor="{AppThemeBinding Light={StaticResource StatusSuccessTextLight}, Dark={StaticResource StatusSuccessDark}}"
+                                               VerticalTextAlignment="Center" />
+                                        <Label Text="{Binding StatusBadgeText}"
+                                               FontFamily="{StaticResource FontFamilySemibold}"
+                                               FontSize="{StaticResource FontSizeBadge}"
+                                               FontAttributes="Bold"
+                                               TextColor="{AppThemeBinding Light={StaticResource StatusSuccessTextLight}, Dark={StaticResource StatusSuccessDark}}"
+                                               VerticalTextAlignment="Center" />
+                                    </HorizontalStackLayout>
+                                </Border>
+
+                                <!-- Relative Updated Ago -->
+                                <Label Grid.Column="1"
+                                       Text="{Binding UpdatedAgoText}"
+                                       FontFamily="{StaticResource FontFamilyRegular}"
+                                       FontSize="{StaticResource FontSizeCaption}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+                                       HorizontalTextAlignment="End"
+                                       VerticalTextAlignment="Center" />
+                            </Grid>
+
+                            <!-- Room Title -->
+                            <Label Text="{Binding Title}"
+                                   FontFamily="{StaticResource FontFamilySemibold}"
+                                   FontSize="{StaticResource FontSizeH1}"
+                                   FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+                                   LineBreakMode="WordWrap" />
+
+                            <!-- Pricing & Deposit Display -->
+                            <VerticalStackLayout Spacing="4">
+                                <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                                    <Label Text="{Binding PriceFormatted}"
+                                           FontFamily="{StaticResource FontFamilySemibold}"
+                                           FontSize="{StaticResource FontSizeDisplay}"
+                                           FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}" />
+                                    <Label Text="{Binding PeriodFormatted}"
+                                           FontFamily="{StaticResource FontFamilyRegular}"
+                                           FontSize="{StaticResource FontSizeBodyLarge}"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"
+                                           VerticalTextAlignment="End"
+                                           Margin="0,0,0,4" />
+                                </HorizontalStackLayout>
+                                <Label Text="{Binding DepositFormatted}"
+                                       FontFamily="{StaticResource FontFamilyRegular}"
+                                       FontSize="{StaticResource FontSizeBodyMedium}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                            </VerticalStackLayout>
+
+                            <!-- Unavailable Notice Banner (Visible when listing is rented/unavailable) -->
+                            <detail:UnavailableBannerControl />
+
+                            <!-- Similar Rooms Recommendation Carousel (Visible when listing is unavailable) -->
+                            <detail:SimilarRoomsCarouselControl />
+
+                            <!-- Key Facts Grid (Area, Room type, Occupants, Furnishing, Availability, Distance) -->
+                            <detail:RoomKeyFactsGridControl />
+
+                            <!-- Monthly Utility Costs Card -->
+                            <detail:MonthlyCostsCardControl />
+
+                            <!-- Amenities 2-Column Section -->
+                            <detail:AmenitiesSectionControl />
+
+                            <!-- Safety Checklist Section -->
+                            <detail:SafetySectionControl />
+
+                            <!-- House Rules Section -->
+                            <detail:HouseRulesSectionControl />
+
+                            <!-- Location & Travel Times Section -->
+                            <detail:LocationTravelTimesControl />
+
+                            <!-- Landlord Block & Report Listing Action -->
+                            <detail:LandlordBlockControl />
+
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </ScrollView>
+            </RefreshView>
+
+            <!-- 5. STICKY BOTTOM ACTION BAR (Price + Call / Zalo / Message / Disabled button) -->
+            <detail:StickyBottomActionBarControl Grid.Row="1" />
+        </Grid>
+    </Grid>
+</ContentPage>

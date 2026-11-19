@@ -94,4 +94,61 @@ public class LocalizedStringsTests
         var text = LocalizedStrings.Instance[key!];
         Assert.That(text, Is.EqualTo(string.Empty));
     }
+
+    [Test]
+    public void Indexer_RoomDetail_EnglishAndVietnamese_ReturnsCorrectTranslations()
+    {
+        LocalizedStrings.Instance.SetCulture(new CultureInfo("en-US"));
+        Assert.That(LocalizedStrings.Instance["RoomDetail_Title"], Is.EqualTo("Room Details"));
+        Assert.That(LocalizedStrings.Instance["RoomDetail_VerifiedAvailable"], Is.EqualTo("Verified · Available"));
+        Assert.That(LocalizedStrings.Instance["RoomDetail_MonthlyCosts"], Is.EqualTo("Monthly costs"));
+        Assert.That(LocalizedStrings.Instance["RoomDetail_ContactDisabled"], Is.EqualTo("Contact is disabled for unavailable rooms"));
+        Assert.That(LocalizedStrings.Instance["RoomDetail_SimilarRoomsNearby"], Is.EqualTo("Similar rooms nearby"));
+        Assert.That(LocalizedStrings.Instance["RoomDetail_SignInToContact"], Is.EqualTo("Sign in to contact"));
+
+        LocalizedStrings.Instance.SetCulture(new CultureInfo("vi-VN"));
+        Assert.That(LocalizedStrings.Instance["RoomDetail_Title"], Is.EqualTo("Chi tiết phòng"));
+        Assert.That(LocalizedStrings.Instance["RoomDetail_VerifiedAvailable"], Is.EqualTo("Đã xác minh · Còn phòng"));
+        Assert.That(LocalizedStrings.Instance["RoomDetail_MonthlyCosts"], Is.EqualTo("Chi phí hàng tháng"));
+        Assert.That(LocalizedStrings.Instance["RoomDetail_ContactDisabled"], Is.EqualTo("Tính năng liên hệ bị tắt đối với phòng đã hết"));
+        Assert.That(LocalizedStrings.Instance["RoomDetail_SimilarRoomsNearby"], Is.EqualTo("Phòng tương tự gần đây"));
+        Assert.That(LocalizedStrings.Instance["RoomDetail_SignInToContact"], Is.EqualTo("Đăng nhập để liên hệ"));
+    }
+
+    [Test]
+    public void Resx_AllEnglishKeys_HaveCorrespondingVietnameseTranslation()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        string? enResx = null;
+        string? viResx = null;
+        while (dir != null)
+        {
+            var enCandidate = Path.Combine(dir.FullName, "RoomToRentRadar", "Resources", "Strings", "AppResources.resx");
+            var viCandidate = Path.Combine(dir.FullName, "RoomToRentRadar", "Resources", "Strings", "AppResources.vi.resx");
+            if (File.Exists(enCandidate) && File.Exists(viCandidate))
+            {
+                enResx = enCandidate;
+                viResx = viCandidate;
+                break;
+            }
+            dir = dir.Parent;
+        }
+
+        Assert.That(enResx, Is.Not.Null, "AppResources.resx path was not found.");
+        Assert.That(viResx, Is.Not.Null, "AppResources.vi.resx path was not found.");
+
+        var enKeys = System.Xml.Linq.XDocument.Load(enResx!)
+            .Descendants("data")
+            .Select(d => d.Attribute("name")?.Value)
+            .Where(k => !string.IsNullOrEmpty(k))
+            .ToHashSet();
+
+        var viKeys = System.Xml.Linq.XDocument.Load(viResx!)
+            .Descendants("data")
+            .Select(d => d.Attribute("name")?.Value)
+            .Where(k => !string.IsNullOrEmpty(k))
+            .ToHashSet();
+
+        Assert.That(enKeys, Is.EquivalentTo(viKeys), "English and Vietnamese resource keys must match 1:1.");
+    }
 }

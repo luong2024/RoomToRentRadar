@@ -33,6 +33,9 @@ public static class PageRegistration
         // One shared placeholder for the 12 detail routes and the my-listings / moderation tabs (T00.15).
         services.AddPage<PlaceholderPage, PlaceholderPageModel>();
 
+        // Room Detail Screen (US02 / T02.2)
+        services.AddPage<RoomDetailPage, RoomDetailPageModel>();
+
         services.AddSingleton<UiCatalogPageModel>();
         services.AddTransient<UiCatalogPage>();
 

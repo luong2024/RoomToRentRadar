@@ -79,6 +79,45 @@ public class HttpRoomGatewayRealApiTests
         Assert.That(ex.ErrorCode, Is.EqualTo(ProblemCodes.CampusNotFound));
     }
 
+    [Test]
+    [CancelAfter(30000)]
+    public async Task GetRoomDetailAsync_SeedRoom_ReturnsDetailFromRealApi()
+    {
+        var detail = await _gateway.GetRoomDetailAsync("seed-z115");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(detail.Id, Is.EqualTo("seed-z115"));
+            Assert.That(detail.Title, Does.Contain("Z115"));
+            Assert.That(detail.Status, Is.EqualTo(RoomToRentRadar.Domain.Enums.ListingStatus.Available));
+            Assert.That(detail.IsVerified, Is.True);
+        });
+    }
+
+    [Test]
+    [CancelAfter(30000)]
+    public void GetRoomDetailAsync_UnknownRoom_ThrowsApiException_RoomNotFound()
+    {
+        var ex = Assert.ThrowsAsync<ApiException>(async () =>
+            await _gateway.GetRoomDetailAsync("non-existent-room-id"));
+
+        Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        Assert.That(ex.ErrorCode, Is.EqualTo(ProblemCodes.RoomNotFound));
+    }
+
+    [Test]
+    [CancelAfter(30000)]
+    public async Task GetSimilarRoomsAsync_SeedRoom_ReturnsSimilarRoomsFromRealApi()
+    {
+        var similar = await _gateway.GetSimilarRoomsAsync("seed-z115");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(similar, Is.Not.Null);
+            Assert.That(similar.All(r => r.Id != "seed-z115"), Is.True, "Must exclude target room itself");
+        });
+    }
+
     // Private copy of ClientAdaptersEndToEndTests.CreateFactory, with SeedDemoRooms=true (PLAN Phase 6).
     private static WebApplicationFactory<Program> CreateFactory() =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(webHost =>

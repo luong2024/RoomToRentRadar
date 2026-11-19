@@ -32,11 +32,25 @@ public sealed class HttpRoomGateway : IRoomGateway
     public Task<ComparisonDto> CompareRoomsAsync(IReadOnlyList<string> roomIds, string? campusId = null, CancellationToken ct = default) =>
         Pending.For<ComparisonDto>("T10.1", "compareRooms");
 
-    public Task<RoomDetailDto> GetRoomDetailAsync(string roomId, string? campusId = null, CancellationToken ct = default) =>
-        Pending.For<RoomDetailDto>("T02.1", "getRoomDetail");
+    public async Task<RoomDetailDto> GetRoomDetailAsync(string roomId, string? campusId = null, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
+        var url = string.IsNullOrWhiteSpace(campusId)
+            ? $"/api/rooms/{Uri.EscapeDataString(roomId)}"
+            : $"/api/rooms/{Uri.EscapeDataString(roomId)}?campusId={Uri.EscapeDataString(campusId)}";
+        using var response = await _httpClient.GetAsync(url, ct);
+        return await ApiResponseReader.ReadAsync<RoomDetailDto>(response, _logger, ct);
+    }
 
-    public Task<IReadOnlyList<RoomCardDto>> GetSimilarRoomsAsync(string roomId, string? campusId = null, CancellationToken ct = default) =>
-        Pending.For<IReadOnlyList<RoomCardDto>>("T02.1", "getSimilarRooms");
+    public async Task<IReadOnlyList<RoomCardDto>> GetSimilarRoomsAsync(string roomId, string? campusId = null, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
+        var url = string.IsNullOrWhiteSpace(campusId)
+            ? $"/api/rooms/{Uri.EscapeDataString(roomId)}/similar"
+            : $"/api/rooms/{Uri.EscapeDataString(roomId)}/similar?campusId={Uri.EscapeDataString(campusId)}";
+        using var response = await _httpClient.GetAsync(url, ct);
+        return await ApiResponseReader.ReadAsync<List<RoomCardDto>>(response, _logger, ct);
+    }
 
     public Task<TravelTimesDto> GetRoomTravelTimesAsync(string roomId, string? campusId = null, CancellationToken ct = default) =>
         Pending.For<TravelTimesDto>("T09.1", "getRoomTravelTimes");
