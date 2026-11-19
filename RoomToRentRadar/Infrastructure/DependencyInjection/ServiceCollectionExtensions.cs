@@ -36,8 +36,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IErrorHandler, ModalErrorHandler>();
         services.AddSingleton<IPreferences>(Preferences.Default);
         services.AddSingleton<ICampusSelectionStore, PreferencesCampusSelectionStore>();
-        services.AddSingleton<ILauncher>(Launcher.Default);
-        services.AddSingleton<IMapsDirectionsLauncher, MapsDirectionsLauncher>();
         services.AddSingleton<ITravelEstimatesClient>(serviceProvider =>
         {
             var handler = serviceProvider.GetRequiredService<AuthenticatedHttpMessageHandler>();
@@ -61,6 +59,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<RoomDetailViewModel>();
         services.AddTransient<RoomDetailTravelViewModel>();
         services.AddTransient<RoomDetailPage>();
+        services.AddTransient<DirectionsPage>();
         services.AddTransient<LoginViewModel>();
         services.AddTransient<LoginPage>();
         return services;

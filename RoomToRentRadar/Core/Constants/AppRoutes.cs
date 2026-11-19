@@ -7,4 +7,6 @@ public static class AppRoutes
     public const string RoomDetail = "listing-detail";
 
     public const string Login = "login";
+
+    public const string Directions = "directions";
 }

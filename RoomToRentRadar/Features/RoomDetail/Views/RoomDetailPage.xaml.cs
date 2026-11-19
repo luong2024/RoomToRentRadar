@@ -55,7 +55,7 @@ public partial class RoomDetailPage : ContentPage
     private void SyncTravelSection()
     {
         if (_viewModel.State == RoomDetailState.Content && _viewModel.Listing is { } listing)
-            _travelViewModel.Initialize(listing.Id, listing.Lat, listing.Lng, listing.Title);
+            _travelViewModel.Initialize(listing.Id, listing.Lat, listing.Lng);
     }
 
     private async void AnimateContent()

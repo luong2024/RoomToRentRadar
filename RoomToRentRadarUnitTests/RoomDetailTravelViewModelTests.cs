@@ -13,7 +13,6 @@ public class RoomDetailTravelViewModelTests
     private static readonly Guid ListingId = Guid.Parse("2f1c1d4c-9b3a-4c49-9f5e-6a0d8f7c1234");
     private const double DestinationLat = 10.703;
     private const double DestinationLng = 106.703;
-    private const string DestinationTitle = "Phòng trọ trung tâm";
 
     [Test]
     public async Task Initialize_WithoutStoredCampus_ShowsNoCampusStateAndDoesNotCallApi()
@@ -21,7 +20,7 @@ public class RoomDetailTravelViewModelTests
         var client = new FakeTravelEstimatesClient();
         var viewModel = CreateViewModel(client, new FakeCampusSelectionStore());
 
-        viewModel.Initialize(ListingId, DestinationLat, DestinationLng, DestinationTitle);
+        viewModel.Initialize(ListingId, DestinationLat, DestinationLng);
         await AwaitAutoStartedLoadAsync(viewModel);
 
         Assert.Multiple(() =>
@@ -47,7 +46,7 @@ public class RoomDetailTravelViewModelTests
         var store = new FakeCampusSelectionStore { SelectedCampus = "Bách Khoa" };
         var viewModel = CreateViewModel(client, store);
 
-        viewModel.Initialize(ListingId, DestinationLat, DestinationLng, DestinationTitle);
+        viewModel.Initialize(ListingId, DestinationLat, DestinationLng);
         await AwaitAutoStartedLoadAsync(viewModel);
 
         Assert.Multiple(() =>
@@ -76,7 +75,7 @@ public class RoomDetailTravelViewModelTests
         var client = new FakeTravelEstimatesClient { Result = FoundResult(RouteEstimate()) };
         var store = new FakeCampusSelectionStore();
         var viewModel = CreateViewModel(client, store);
-        viewModel.Initialize(ListingId, DestinationLat, DestinationLng, DestinationTitle);
+        viewModel.Initialize(ListingId, DestinationLat, DestinationLng);
         await AwaitAutoStartedLoadAsync(viewModel);
 
         viewModel.SelectedCampusName = "KHTN";
@@ -98,7 +97,7 @@ public class RoomDetailTravelViewModelTests
         var store = new FakeCampusSelectionStore { SelectedCampus = "KHTN" };
         var viewModel = CreateViewModel(client, store);
 
-        viewModel.Initialize(ListingId, DestinationLat, DestinationLng, DestinationTitle);
+        viewModel.Initialize(ListingId, DestinationLat, DestinationLng);
         await AwaitAutoStartedLoadAsync(viewModel);
 
         Assert.Multiple(() =>
@@ -130,7 +129,7 @@ public class RoomDetailTravelViewModelTests
         };
         var viewModel = CreateViewModel(client, new FakeCampusSelectionStore { SelectedCampus = "KHTN" });
 
-        viewModel.Initialize(ListingId, DestinationLat, DestinationLng, DestinationTitle);
+        viewModel.Initialize(ListingId, DestinationLat, DestinationLng);
         await AwaitAutoStartedLoadAsync(viewModel);
 
         Assert.Multiple(() =>
@@ -154,7 +153,7 @@ public class RoomDetailTravelViewModelTests
         };
         var viewModel = CreateViewModel(client, new FakeCampusSelectionStore { SelectedCampus = "KHTN" });
 
-        viewModel.Initialize(ListingId, DestinationLat, DestinationLng, DestinationTitle);
+        viewModel.Initialize(ListingId, DestinationLat, DestinationLng);
         await AwaitAutoStartedLoadAsync(viewModel);
 
         Assert.Multiple(() =>
@@ -176,7 +175,7 @@ public class RoomDetailTravelViewModelTests
         };
         var viewModel = CreateViewModel(client, new FakeCampusSelectionStore { SelectedCampus = "KHTN" });
 
-        viewModel.Initialize(ListingId, DestinationLat, DestinationLng, DestinationTitle);
+        viewModel.Initialize(ListingId, DestinationLat, DestinationLng);
         await AwaitAutoStartedLoadAsync(viewModel);
 
         Assert.Multiple(() =>
@@ -192,14 +191,14 @@ public class RoomDetailTravelViewModelTests
         var client = new FakeTravelEstimatesClient { Exception = new HttpRequestException("network down") };
         var viewModel = CreateViewModel(client, new FakeCampusSelectionStore { SelectedCampus = "KHTN" });
 
-        viewModel.Initialize(ListingId, DestinationLat, DestinationLng, DestinationTitle);
+        viewModel.Initialize(ListingId, DestinationLat, DestinationLng);
         await AwaitAutoStartedLoadAsync(viewModel);
         Assert.That(viewModel.State, Is.EqualTo(RoomDetailTravelState.Error));
 
         client.Exception = null;
         client.Result = FoundResult(RouteEstimate());
 
-        viewModel.Initialize(ListingId, DestinationLat, DestinationLng, DestinationTitle);
+        viewModel.Initialize(ListingId, DestinationLat, DestinationLng);
         await AwaitAutoStartedLoadAsync(viewModel);
 
         Assert.Multiple(() =>
@@ -228,7 +227,7 @@ public class RoomDetailTravelViewModelTests
         };
         var viewModel = CreateViewModel(client, new FakeCampusSelectionStore { SelectedCampus = "Bách Khoa" });
 
-        viewModel.Initialize(ListingId, DestinationLat, DestinationLng, DestinationTitle);
+        viewModel.Initialize(ListingId, DestinationLat, DestinationLng);
         var firstExecution = viewModel.LoadCommand.ExecutionTask;
         Assert.That(firstExecution, Is.Not.Null);
         await firstRequestStarted.Task;
@@ -261,7 +260,7 @@ public class RoomDetailTravelViewModelTests
         };
         var viewModel = CreateViewModel(client, new FakeCampusSelectionStore { SelectedCampus = "KHTN" });
 
-        viewModel.Initialize(ListingId, DestinationLat, DestinationLng, DestinationTitle);
+        viewModel.Initialize(ListingId, DestinationLat, DestinationLng);
         await requestStarted.Task;
 
         viewModel.Cancel();
@@ -275,9 +274,9 @@ public class RoomDetailTravelViewModelTests
         var client = new FakeTravelEstimatesClient { Result = FoundResult(RouteEstimate()) };
         var viewModel = CreateViewModel(client, new FakeCampusSelectionStore { SelectedCampus = "KHTN" });
 
-        viewModel.Initialize(ListingId, DestinationLat, DestinationLng, DestinationTitle);
+        viewModel.Initialize(ListingId, DestinationLat, DestinationLng);
         await AwaitAutoStartedLoadAsync(viewModel);
-        viewModel.Initialize(ListingId, DestinationLat, DestinationLng, DestinationTitle);
+        viewModel.Initialize(ListingId, DestinationLat, DestinationLng);
         await Task.Yield();
 
         Assert.That(client.Calls, Has.Count.EqualTo(1));
@@ -289,11 +288,11 @@ public class RoomDetailTravelViewModelTests
         var client = new FakeTravelEstimatesClient { Result = FoundResult(RouteEstimate()) };
         var viewModel = CreateViewModel(client, new FakeCampusSelectionStore { SelectedCampus = "KHTN" });
 
-        viewModel.Initialize(ListingId, DestinationLat, DestinationLng, DestinationTitle);
+        viewModel.Initialize(ListingId, DestinationLat, DestinationLng);
         await AwaitAutoStartedLoadAsync(viewModel);
 
         var otherListingId = Guid.NewGuid();
-        viewModel.Initialize(otherListingId, DestinationLat, DestinationLng, DestinationTitle);
+        viewModel.Initialize(otherListingId, DestinationLat, DestinationLng);
         await AwaitAutoStartedLoadAsync(viewModel);
 
         Assert.Multiple(() =>
@@ -319,7 +318,7 @@ public class RoomDetailTravelViewModelTests
         };
         var viewModel = CreateViewModel(client, new FakeCampusSelectionStore { SelectedCampus = "KHTN" });
 
-        viewModel.Initialize(ListingId, DestinationLat, DestinationLng, DestinationTitle);
+        viewModel.Initialize(ListingId, DestinationLat, DestinationLng);
         await AwaitAutoStartedLoadAsync(viewModel);
 
         Assert.That(viewModel.Estimates[0].ValueText, Is.EqualTo($"{expected} · 6,2 km"));
@@ -338,7 +337,7 @@ public class RoomDetailTravelViewModelTests
         };
         var viewModel = CreateViewModel(client, new FakeCampusSelectionStore { SelectedCampus = "KHTN" });
 
-        viewModel.Initialize(ListingId, DestinationLat, DestinationLng, DestinationTitle);
+        viewModel.Initialize(ListingId, DestinationLat, DestinationLng);
         await AwaitAutoStartedLoadAsync(viewModel);
 
         Assert.Multiple(() =>
@@ -359,7 +358,7 @@ public class RoomDetailTravelViewModelTests
         };
         var viewModel = CreateViewModel(client, new FakeCampusSelectionStore { SelectedCampus = "KHTN" });
 
-        viewModel.Initialize(ListingId, DestinationLat, DestinationLng, DestinationTitle);
+        viewModel.Initialize(ListingId, DestinationLat, DestinationLng);
         await AwaitAutoStartedLoadAsync(viewModel);
 
         Assert.Multiple(() =>
@@ -371,49 +370,73 @@ public class RoomDetailTravelViewModelTests
     }
 
     [Test]
-    public async Task OpenDirections_OpensMapsWithDestinationCoordinates()
+    public async Task OpenDirections_OpensInAppDirectionsFromSelectedCampus()
     {
         var client = new FakeTravelEstimatesClient { Result = FoundResult(RouteEstimate()) };
-        var launcher = new FakeMapsDirectionsLauncher();
+        var navigation = new FakeNavigationService();
         var viewModel = CreateViewModel(
             client,
             new FakeCampusSelectionStore { SelectedCampus = "KHTN" },
-            launcher);
+            navigation);
 
-        viewModel.Initialize(ListingId, DestinationLat, DestinationLng, DestinationTitle);
+        viewModel.Initialize(ListingId, DestinationLat, DestinationLng);
         await AwaitAutoStartedLoadAsync(viewModel);
 
         await viewModel.OpenDirectionsCommand.ExecuteAsync(null);
 
         Assert.Multiple(() =>
         {
-            Assert.That(launcher.Calls, Has.Count.EqualTo(1));
-            Assert.That(launcher.Calls[0].Latitude, Is.EqualTo(DestinationLat));
-            Assert.That(launcher.Calls[0].Longitude, Is.EqualTo(DestinationLng));
-            Assert.That(launcher.Calls[0].Label, Is.EqualTo(DestinationTitle));
+            Assert.That(navigation.Directions, Has.Count.EqualTo(1));
+            Assert.That(navigation.Directions[0].DestinationLat, Is.EqualTo(DestinationLat));
+            Assert.That(navigation.Directions[0].DestinationLng, Is.EqualTo(DestinationLng));
+            Assert.That(navigation.Directions[0].OriginLat, Is.EqualTo(10.7626));
+            Assert.That(navigation.Directions[0].OriginLng, Is.EqualTo(106.6822));
         });
     }
 
     [Test]
-    public async Task OpenDirections_WhenLauncherCannotOpen_NotifiesTheUser()
+    public async Task OpenDirections_WithoutSelectedCampus_OmitsTheOrigin()
     {
         var client = new FakeTravelEstimatesClient { Result = FoundResult(RouteEstimate()) };
-        var launcher = new FakeMapsDirectionsLauncher { Result = false };
-        var errorHandler = new FakeErrorHandler();
-        var viewModel = CreateViewModel(
-            client,
-            new FakeCampusSelectionStore { SelectedCampus = "KHTN" },
-            launcher,
-            errorHandler);
+        var navigation = new FakeNavigationService();
+        var viewModel = CreateViewModel(client, new FakeCampusSelectionStore(), navigation);
 
-        viewModel.Initialize(ListingId, DestinationLat, DestinationLng, DestinationTitle);
+        viewModel.Initialize(ListingId, DestinationLat, DestinationLng);
         await AwaitAutoStartedLoadAsync(viewModel);
 
         await viewModel.OpenDirectionsCommand.ExecuteAsync(null);
 
         Assert.Multiple(() =>
         {
-            Assert.That(launcher.Calls, Has.Count.EqualTo(1));
+            Assert.That(navigation.Directions, Has.Count.EqualTo(1));
+            Assert.That(navigation.Directions[0].OriginLat, Is.Null);
+            Assert.That(navigation.Directions[0].OriginLng, Is.Null);
+        });
+    }
+
+    [Test]
+    public async Task OpenDirections_WhenNavigationFails_NotifiesTheUser()
+    {
+        var client = new FakeTravelEstimatesClient { Result = FoundResult(RouteEstimate()) };
+        var navigation = new FakeNavigationService
+        {
+            Exception = new InvalidOperationException("shell not ready")
+        };
+        var errorHandler = new FakeErrorHandler();
+        var viewModel = CreateViewModel(
+            client,
+            new FakeCampusSelectionStore { SelectedCampus = "KHTN" },
+            navigation,
+            errorHandler);
+
+        viewModel.Initialize(ListingId, DestinationLat, DestinationLng);
+        await AwaitAutoStartedLoadAsync(viewModel);
+
+        await viewModel.OpenDirectionsCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(navigation.Directions, Has.Count.EqualTo(1));
             Assert.That(errorHandler.Errors, Has.Count.EqualTo(1));
         });
     }
@@ -421,12 +444,12 @@ public class RoomDetailTravelViewModelTests
     private static RoomDetailTravelViewModel CreateViewModel(
         FakeTravelEstimatesClient client,
         FakeCampusSelectionStore store,
-        FakeMapsDirectionsLauncher? launcher = null,
+        FakeNavigationService? navigation = null,
         FakeErrorHandler? errorHandler = null)
         => new(
             client,
             store,
-            launcher ?? new FakeMapsDirectionsLauncher(),
+            navigation ?? new FakeNavigationService(),
             errorHandler ?? new FakeErrorHandler());
 
     private static TravelEstimateDto RouteEstimate()
@@ -485,19 +508,39 @@ public class RoomDetailTravelViewModelTests
         public void SetSelectedCampus(string? campusName) => SelectedCampus = campusName;
     }
 
-    private sealed class FakeMapsDirectionsLauncher : IMapsDirectionsLauncher
+    private sealed class FakeNavigationService : INavigationService
     {
-        public bool Result { get; set; } = true;
+        public Exception? Exception { get; set; }
 
-        public List<Call> Calls { get; } = [];
+        public List<DirectionsCall> Directions { get; } = [];
 
-        public Task<bool> OpenAsync(double latitude, double longitude, string? label)
+        public Task GoToDirectionsAsync(
+            double destinationLat,
+            double destinationLng,
+            double? originLat,
+            double? originLng)
         {
-            Calls.Add(new Call(latitude, longitude, label));
-            return Task.FromResult(Result);
+            Directions.Add(new DirectionsCall(destinationLat, destinationLng, originLat, originLng));
+
+            return Exception is { } exception
+                ? Task.FromException(exception)
+                : Task.CompletedTask;
         }
 
-        public sealed record Call(double Latitude, double Longitude, string? Label);
+        public Task GoToRoomDetailAsync(Guid listingId)
+            => throw new NotSupportedException("The travel section does not open room details.");
+
+        public Task GoToLoginAsync()
+            => throw new NotSupportedException("The travel section does not open the login screen.");
+
+        public Task GoBackAsync()
+            => throw new NotSupportedException("The travel section does not navigate back.");
+
+        public sealed record DirectionsCall(
+            double DestinationLat,
+            double DestinationLng,
+            double? OriginLat,
+            double? OriginLng);
     }
 
     private sealed class FakeErrorHandler : IErrorHandler
@@ -569,5 +612,30 @@ public class CampusSelectionStoreTests
 
         public T Get<T>(string key, T defaultValue, string? sharedName = null)
             => _values.TryGetValue(key, out var value) && value is T typed ? typed : defaultValue;
+    }
+}
+
+[TestFixture]
+public class DirectionsUrlBuilderTests
+{
+    [Test]
+    public void Build_WithOriginAndDestination_UsesInvariantCoordinates()
+    {
+        var url = DirectionsUrlBuilder.Build(10.703, 106.703, 10.7626, 106.6822);
+
+        Assert.That(
+            url,
+            Is.EqualTo(
+                "https://www.google.com/maps/dir/?api=1&origin=10.7626,106.6822&destination=10.703,106.703"));
+    }
+
+    [Test]
+    public void Build_WithoutOrigin_OnlyIncludesTheDestination()
+    {
+        var url = DirectionsUrlBuilder.Build(10.5, 106.25);
+
+        Assert.That(
+            url,
+            Is.EqualTo("https://www.google.com/maps/dir/?api=1&destination=10.5,106.25"));
     }
 }

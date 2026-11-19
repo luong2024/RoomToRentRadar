@@ -30,25 +30,24 @@ public partial class RoomDetailTravelViewModel : ObservableObject
 
     private readonly ITravelEstimatesClient _travelClient;
     private readonly ICampusSelectionStore _campusStore;
-    private readonly IMapsDirectionsLauncher _mapsLauncher;
+    private readonly INavigationService _navigationService;
     private readonly IErrorHandler _errorHandler;
 
     private CancellationTokenSource? _loadCancellation;
     private Guid? _listingId;
     private double? _destinationLat;
     private double? _destinationLng;
-    private string? _destinationLabel;
     private bool _suppressCampusChange;
 
     public RoomDetailTravelViewModel(
         ITravelEstimatesClient travelClient,
         ICampusSelectionStore campusStore,
-        IMapsDirectionsLauncher mapsLauncher,
+        INavigationService navigationService,
         IErrorHandler errorHandler)
     {
         _travelClient = travelClient;
         _campusStore = campusStore;
-        _mapsLauncher = mapsLauncher;
+        _navigationService = navigationService;
         _errorHandler = errorHandler;
     }
 
@@ -91,12 +90,10 @@ public partial class RoomDetailTravelViewModel : ObservableObject
     public void Initialize(
         Guid listingId,
         double destinationLat,
-        double destinationLng,
-        string? destinationLabel)
+        double destinationLng)
     {
         _destinationLat = destinationLat;
         _destinationLng = destinationLng;
-        _destinationLabel = destinationLabel;
 
         // Reappearing while loaded keeps the previous estimates; a failed load is
         // retried and an interrupted load (page left mid-request) is restarted.
@@ -141,10 +138,20 @@ public partial class RoomDetailTravelViewModel : ObservableObject
             return;
         }
 
-        if (!await _mapsLauncher.OpenAsync(latitude, longitude, _destinationLabel))
+        var campus = CampusCatalog.FindByName(SelectedCampusName);
+
+        try
+        {
+            await _navigationService.GoToDirectionsAsync(
+                latitude,
+                longitude,
+                campus?.Lat,
+                campus?.Lng);
+        }
+        catch (Exception)
         {
             _errorHandler.HandleError(new InvalidOperationException(
-                "Không mở được ứng dụng bản đồ. Anh/Chị thử lại sau nhé."));
+                "Không mở được trang chỉ đường. Anh/Chị thử lại sau nhé."));
         }
     }
 
