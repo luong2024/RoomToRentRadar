@@ -477,7 +477,7 @@ public class RoomListingsViewModelTests
             Assert.That(vm.Title, Is.EqualTo("Khám phá phòng trọ"));
             Assert.That(vm.EmptyStateMessage, Is.EqualTo("Chưa có phòng trọ nào phù hợp."));
             Assert.That(vm.ResultSummaryText, Is.EqualTo("Tìm thấy 12 phòng quanh ICTU"));
-            Assert.That(vm.SortOptions[0].DisplayName, Is.EqualTo("Mới nhất"));
+            Assert.That(vm.SortOptions[0].DisplayName, Is.EqualTo("Gần ICTU nhất"));
             Assert.That(vm.PriceSortLabel, Is.EqualTo("Giá"));
         });
 
@@ -490,7 +490,7 @@ public class RoomListingsViewModelTests
             Assert.That(vm.Title, Is.EqualTo("Explore Rooms"));
             Assert.That(vm.EmptyStateMessage, Is.EqualTo("No matching rooms found."));
             Assert.That(vm.ResultSummaryText, Is.EqualTo("Found 12 rooms around ICTU"));
-            Assert.That(vm.SortOptions[0].DisplayName, Is.EqualTo("Newest"));
+            Assert.That(vm.SortOptions[0].DisplayName, Is.EqualTo("Closest to ICTU"));
             Assert.That(vm.PriceSortLabel, Is.EqualTo("Price"));
         });
     }
@@ -656,7 +656,7 @@ public class RoomListingsViewModelTests
         public Task<PagedResponse<RoomListItemModel>> GetRoomListingsAsync(
             int page,
             int pageSize,
-            RoomSortOption sortBy = RoomSortOption.Newest,
+            RoomSortOption sortBy = RoomSortOption.DistanceAsc,
             string? search = null,
             RoomFilterCriteria? filter = null,
             CancellationToken cancellationToken = default)

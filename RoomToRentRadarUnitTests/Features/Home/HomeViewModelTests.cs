@@ -84,7 +84,7 @@ public class HomeViewModelTests
 
             // Assert
             Assert.That(vm.Subtitle, Is.EqualTo("Find your ideal room around ICTU campus"));
-            Assert.That(vm.Title, Is.EqualTo("Smart Rent"));
+            Assert.That(vm.Title, Is.EqualTo("RoomToRentRadar"));
         }
         finally
         {

@@ -40,10 +40,10 @@ public partial class HomeViewModel : ObservableObject
     }
 
     [ObservableProperty]
-    public partial string Title { get; set; } = "Smart Rent";
+    public partial string Title { get; set; } = "RoomToRentRadar";
 
     [ObservableProperty]
-    public partial string Subtitle { get; set; } = "Tìm phòng trọ lý tưởng quanh ĐH CNTT&TT (ICTU)";
+    public partial string Subtitle { get; set; } = "Find your ideal room around ICTU campus";
 
     [ObservableProperty]
     public partial string QuickSearchText { get; set; } = string.Empty;
