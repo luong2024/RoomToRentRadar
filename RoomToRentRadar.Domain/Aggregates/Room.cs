@@ -266,9 +266,10 @@ public sealed class Room
         double latitude,
         double longitude,
         ListingStatus status,
-        DateTime lastUpdatedAtUtc,
         DateTime createdAtUtc,
+        DateTime lastUpdatedAtUtc,
         int version,
+        string? concurrencyToken = null,
         string? description = null,
         int? maxOccupants = null,
         string? furnishing = null,
@@ -288,8 +289,7 @@ public sealed class Room
         IEnumerable<Amenity>? amenities = null,
         IEnumerable<RoomSafetyFeatureEntry>? safetyFeatures = null,
         HouseRuleVersion? currentHouseRules = null,
-        IEnumerable<HouseRuleVersion>? houseRuleHistory = null,
-        string? concurrencyToken = null)
+        IEnumerable<HouseRuleVersion>? houseRuleHistory = null)
     {
         if (string.IsNullOrWhiteSpace(id))
         {
@@ -349,7 +349,7 @@ public sealed class Room
         }
 
         var latestRule = currentHouseRules ?? room._houseRuleHistory.OrderByDescending(h => h.VersionNumber).FirstOrDefault();
-        room.SetChildren(amenities, safetyFeatures, latestRule);
+        room.SetChildren(amenities, safetyFeatures, latestRule, houseRuleHistory);
         room.EnsureInvariants();
         return room;
     }
@@ -452,6 +452,30 @@ public sealed class Room
     }
 
     /// <summary>
+    /// Attaches an existing house rule version instance, enforcing RoomId and sequential version integrity.
+    /// </summary>
+    public void AddHouseRuleVersion(HouseRuleVersion version)
+    {
+        ArgumentNullException.ThrowIfNull(version);
+        if (!string.Equals(version.RoomId, Id, StringComparison.Ordinal))
+        {
+            throw new DomainValidationException($"House rule version belongs to room '{version.RoomId}', not '{Id}'.");
+        }
+
+        var expectedVersion = (CurrentHouseRules?.VersionNumber ?? 0) + 1;
+        if (version.VersionNumber != expectedVersion)
+        {
+            throw new DomainValidationException(
+                $"Expected house rule version number {expectedVersion}, but received {version.VersionNumber}.",
+                "INVALID_VERSION_NUMBER");
+        }
+
+        _houseRuleHistory.Add(version);
+        CurrentHouseRules = version;
+        Touch();
+    }
+
+    /// <summary>
     /// Assigns the child collections loaded from storage (or supplied when creating a listing).
     /// Validates every enum, removes duplicates keeping the first occurrence and a stable order, and
     /// deliberately does not <see cref="Touch"/>: creating a room already starts at version 1.
@@ -459,14 +483,22 @@ public sealed class Room
     public void SetChildren(
         IEnumerable<Amenity>? amenities,
         IEnumerable<RoomSafetyFeatureEntry>? safetyFeatures,
-        HouseRuleVersion? currentHouseRules = null)
+        HouseRuleVersion? currentHouseRules = null,
+        IEnumerable<HouseRuleVersion>? houseRuleHistory = null)
     {
         Amenities = NormalizeEnumList(amenities, "Amenity", "INVALID_AMENITY"); // GUARDRAILS 1.5.1 whitelist
         SafetyFeatures = NormalizeSafetyFeatureEntries(safetyFeatures);
-        CurrentHouseRules = currentHouseRules;
-        if (currentHouseRules != null && !_houseRuleHistory.Any(h => h.Id == currentHouseRules.Id))
+
+        if (houseRuleHistory != null)
         {
-            _houseRuleHistory.Add(currentHouseRules);
+            _houseRuleHistory.Clear();
+            _houseRuleHistory.AddRange(houseRuleHistory);
+        }
+
+        CurrentHouseRules = currentHouseRules ?? _houseRuleHistory.OrderByDescending(h => h.VersionNumber).FirstOrDefault();
+        if (CurrentHouseRules != null && !_houseRuleHistory.Any(h => h.Id == CurrentHouseRules.Id))
+        {
+            _houseRuleHistory.Add(CurrentHouseRules);
         }
     }
 

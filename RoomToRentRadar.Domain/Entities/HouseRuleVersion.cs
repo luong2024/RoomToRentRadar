@@ -111,13 +111,13 @@ public sealed class HouseRuleVersion
         bool petsAllowed,
         bool smokingAllowed,
         string createdByUserId,
+        DateTime? utcNow = null,
         string? quietHoursStart = null,
         string? quietHoursEnd = null,
         string? curfewTime = null,
         string? guestPolicyNote = null,
         string? parkingRules = null,
-        string? otherRules = null,
-        DateTime? utcNow = null)
+        string? otherRules = null)
     {
         return new HouseRuleVersion(
             id: Guid.NewGuid().ToString("N"),

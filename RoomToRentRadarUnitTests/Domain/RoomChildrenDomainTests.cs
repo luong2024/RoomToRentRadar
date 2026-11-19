@@ -324,7 +324,7 @@ public class RoomChildrenDomainTests
     {
         var roomId = Guid.NewGuid().ToString("N");
         var amenities = new[] { Amenity.AirConditioner, Amenity.Wifi };
-        var safety = new[] { new RoomSafetyFeature(SafetyFeature.FireSafety, isConfirmed: true) };
+        var safety = new[] { new RoomSafetyFeatureEntry(SafetyFeature.FireSafety, IsConfirmed: true) };
         var history = new[]
         {
             new HouseRuleVersion("hr-1", roomId, 1, GuestPolicy.Allowed, CookingPolicy.Allowed, true, false, false, "u1", FixedNow)
