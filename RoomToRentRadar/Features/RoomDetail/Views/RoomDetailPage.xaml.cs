@@ -21,6 +21,7 @@ public partial class RoomDetailPage : ContentPage
     protected override void OnAppearing()
     {
         base.OnAppearing();
+        _viewModel.ActivateFavourites();
         if (!_observing)
         {
             _observing = true;
@@ -78,6 +79,7 @@ public partial class RoomDetailPage : ContentPage
     {
         _observing = false;
         _viewModel.PropertyChanged -= OnDetailStateChanged;
+        _viewModel.DeactivateFavourites();
         _travelViewModel.Cancel();
         DetailContent.CancelAnimations();
         DetailContent.Opacity = 1;

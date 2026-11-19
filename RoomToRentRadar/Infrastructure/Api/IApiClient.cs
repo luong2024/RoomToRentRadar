@@ -1,4 +1,5 @@
 using RoomToRentRadar.Shared.Auth;
+using RoomToRentRadar.Shared.Favourites;
 using RoomToRentRadar.Shared.Listings;
 using RoomToRentRadar.Shared.Notifications;
 using RoomToRentRadar.Shared.SavedSearches;
@@ -51,4 +52,11 @@ public interface IApiClient
     Task<IReadOnlyList<NotificationDto>> GetNotificationsAsync(
         int limit = 20,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<FavouriteListingDto>> GetFavouritesAsync(
+        CancellationToken cancellationToken = default);
+
+    Task AddFavouriteAsync(Guid listingId, CancellationToken cancellationToken = default);
+
+    Task RemoveFavouriteAsync(Guid listingId, CancellationToken cancellationToken = default);
 }

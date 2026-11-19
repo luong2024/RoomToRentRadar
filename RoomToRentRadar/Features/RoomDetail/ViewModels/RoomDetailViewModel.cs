@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Infrastructure.Api;
+using RoomToRentRadar.Infrastructure.Favourites;
 using RoomToRentRadar.Shared.Listings;
 
 namespace RoomToRentRadar.Features.RoomDetail.ViewModels;
@@ -45,6 +46,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     private readonly IApiClient _apiClient;
     private readonly IErrorHandler _errorHandler;
     private readonly INavigationService _navigationService;
+    private readonly IFavouritesStore _favouritesStore;
 
     private Guid? _listingId;
 
@@ -94,11 +96,19 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     [NotifyPropertyChangedFor(nameof(HasSimilarStatusMessage))]
     public partial string SimilarStatusMessage { get; set; }
 
-    public RoomDetailViewModel(IApiClient apiClient, IErrorHandler errorHandler, INavigationService navigationService)
+    [ObservableProperty]
+    public partial bool IsFavourite { get; set; }
+
+    public RoomDetailViewModel(
+        IApiClient apiClient,
+        IErrorHandler errorHandler,
+        INavigationService navigationService,
+        IFavouritesStore favouritesStore)
     {
         _apiClient = apiClient;
         _errorHandler = errorHandler;
         _navigationService = navigationService;
+        _favouritesStore = favouritesStore;
         PostedOnText = string.Empty;
         UpdatedOnText = string.Empty;
         StatusText = string.Empty;
@@ -132,6 +142,16 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     public bool HasSimilarRooms => SimilarRooms.Count > 0;
 
     public bool HasSimilarStatusMessage => !string.IsNullOrEmpty(SimilarStatusMessage) && !HasSimilarRooms;
+
+    public void ActivateFavourites()
+    {
+        _favouritesStore.Changed -= OnFavouritesChanged;
+        _favouritesStore.Changed += OnFavouritesChanged;
+        OnFavouritesChanged(this, EventArgs.Empty);
+        _ = LoadFavouritesAsync();
+    }
+
+    public void DeactivateFavourites() => _favouritesStore.Changed -= OnFavouritesChanged;
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
@@ -211,6 +231,25 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         }
     }
 
+    [RelayCommand(AllowConcurrentExecutions = false)]
+    private async Task ToggleFavouriteAsync()
+    {
+        if (_listingId is not { } listingId || State != RoomDetailState.Content)
+            return;
+
+        try
+        {
+            if (_favouritesStore.IsFavourite(listingId))
+                await _favouritesStore.RemoveAsync(listingId);
+            else
+                await _favouritesStore.AddAsync(listingId);
+        }
+        catch (Exception ex)
+        {
+            _errorHandler.HandleError(ex);
+        }
+    }
+
     [RelayCommand]
     private async Task ShowLoginAsync()
     {
@@ -266,7 +305,24 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
             .ToList();
         Rules = detail.Rules.ToList();
         LandlordPhone = string.Empty;
+        IsFavourite = _favouritesStore.IsFavourite(detail.Id);
     }
+
+    private async Task LoadFavouritesAsync()
+    {
+        try
+        {
+            await _favouritesStore.EnsureLoadedAsync();
+            OnFavouritesChanged(this, EventArgs.Empty);
+        }
+        catch (Exception)
+        {
+            // The heart keeps its unselected state when favourites cannot be read.
+        }
+    }
+
+    private void OnFavouritesChanged(object? sender, EventArgs e)
+        => IsFavourite = _listingId is { } listingId && _favouritesStore.IsFavourite(listingId);
 
     private async Task LoadSimilarRoomsAsync(Guid listingId, CancellationToken cancellationToken)
     {

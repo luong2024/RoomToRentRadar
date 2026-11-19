@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewModels="clr-namespace:RoomToRentRadar.Features.Favourites.ViewModels"
+             x:Class="RoomToRentRadar.Features.Favourites.Views.FavouritesPage"
+             x:DataType="viewModels:FavouritesViewModel"
+             Title="Yêu thích"
+             SafeAreaEdges="All">
+
+    <Grid RowDefinitions="Auto,*,Auto,Auto">
+        <VerticalStackLayout Padding="20,16,20,10" Spacing="4">
+            <HorizontalStackLayout Spacing="8">
+                <BoxView Color="{StaticResource Accent}" WidthRequest="22" HeightRequest="2" VerticalOptions="Center" />
+                <Label Text="PHÒNG ĐÃ LƯU" Style="{StaticResource Eyebrow}" FontSize="9"
+                       TextColor="{StaticResource Accent}" />
+            </HorizontalStackLayout>
+            <Label Text="Những chốn bạn đang cân nhắc" FontSize="24" FontFamily="OpenSansSemibold"
+                   CharacterSpacing="-0.5" />
+            <Label Text="Giá và tình trạng phòng được cập nhật mỗi lần bạn mở màn hình này."
+                   Style="{StaticResource Caption}" FontSize="11" />
+        </VerticalStackLayout>
+
+        <RefreshView x:Name="FavouritesRefresh" Grid.Row="1" IsRefreshing="{Binding IsRefreshing}"
+                     Command="{Binding RefreshCommand}" Margin="20,0,20,0">
+            <CollectionView x:Name="FavouritesList" ItemsSource="{Binding Items}" SelectionMode="None"
+                            AutomationId="FavouritesList">
+                <CollectionView.EmptyView>
+                    <VerticalStackLayout Padding="24,40" Spacing="12" HorizontalOptions="Center">
+                        <Label Text="♡" FontSize="42" HorizontalTextAlignment="Center"
+                               TextColor="{StaticResource Muted}"
+                               SemanticProperties.Description="Chưa có phòng yêu thích" />
+                        <Label Text="Chưa có phòng yêu thích nào. Nhấn ♡ trên một phòng để lưu lại."
+                               HorizontalTextAlignment="Center" TextColor="{StaticResource Muted}" />
+                    </VerticalStackLayout>
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="viewModels:FavouriteListingItem">
+                        <Border Margin="0,0,0,14" Padding="10" StrokeShape="RoundRectangle 22" StrokeThickness="0"
+                                AutomationId="FavouriteCard">
+                            <Border.Shadow>
+                                <Shadow Brush="#183B2B" Offset="0,4" Radius="12" Opacity="0.06" />
+                            </Border.Shadow>
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnItemTapped" CommandParameter="{Binding .}" />
+                            </Border.GestureRecognizers>
+                            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="96,*,Auto"
+                                  ColumnSpacing="12" RowSpacing="6">
+                                <Border Grid.RowSpan="2" WidthRequest="96" HeightRequest="96"
+                                        StrokeShape="RoundRectangle 16" StrokeThickness="0"
+                                        BackgroundColor="{StaticResource SoftSurface}">
+                                    <Image Source="{Binding PhotoSource}" Aspect="AspectFill"
+                                           SemanticProperties.Description="Ảnh hoặc hình minh họa phòng trọ" />
+                                </Border>
+                                <Label Grid.Column="1" Text="{Binding Title}" FontSize="16"
+                                       FontFamily="OpenSansSemibold" MaxLines="2"
+                                       LineBreakMode="TailTruncation" />
+                                <Button Grid.Column="2" Text="Bỏ lưu" FontSize="11" Padding="10,6"
+                                        MinimumHeightRequest="40" CornerRadius="14"
+                                        BackgroundColor="{StaticResource SoftSurface}"
+                                        TextColor="{StaticResource Accent}"
+                                        CommandParameter="{Binding .}" Clicked="OnRemoveClicked"
+                                        AutomationId="RemoveFavourite"
+                                        SemanticProperties.Description="Bỏ lưu phòng này" />
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="1" Spacing="3">
+                                    <Label Text="{Binding PriceText}" FontSize="18"
+                                           FontFamily="OpenSansSemibold"
+                                           TextColor="{StaticResource Accent}" />
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                        <Label Text="{Binding MetaText}" FontSize="11"
+                                               TextColor="{StaticResource Muted}" />
+                                        <Label Grid.Column="1" Text="{Binding AvailabilityText}" FontSize="11"
+                                               TextColor="#B3261E">
+                                            <Label.Triggers>
+                                                <DataTrigger TargetType="Label" Binding="{Binding IsAvailable}" Value="True">
+                                                    <Setter Property="TextColor" Value="{StaticResource Accent}" />
+                                                </DataTrigger>
+                                            </Label.Triggers>
+                                        </Label>
+                                    </Grid>
+                                    <Label Text="{Binding Address}" FontSize="11" MaxLines="1"
+                                           LineBreakMode="TailTruncation" TextColor="{StaticResource Muted}" />
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+
+        <Border Grid.Row="2" IsVisible="{Binding HasError}" Margin="20,8" Padding="14">
+            <Label Text="{Binding ErrorMessage}" HorizontalTextAlignment="Center" FontSize="12" />
+        </Border>
+
+        <Border Grid.Row="3" IsVisible="{Binding IsUndoVisible}" Margin="20,8,20,16" Padding="14,10"
+                BackgroundColor="{StaticResource Ink}" StrokeThickness="0" StrokeShape="RoundRectangle 16">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <Label Text="{Binding UndoMessage}" TextColor="White" FontSize="12"
+                       VerticalOptions="Center" LineBreakMode="TailTruncation" />
+                <Button Grid.Column="1" Text="Hoàn tác" Command="{Binding UndoCommand}"
+                        FontSize="13" FontFamily="OpenSansSemibold" Padding="8,4"
+                        MinimumHeightRequest="40" BackgroundColor="Transparent"
+                        TextColor="{StaticResource AccentSoft}"
+                        AutomationId="UndoRemoveFavourite"
+                        SemanticProperties.Description="Hoàn tác bỏ lưu phòng" />
+            </Grid>
+        </Border>
+    </Grid>
+</ContentPage>

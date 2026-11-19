@@ -166,6 +166,19 @@
                                             <Label Text="ROOM RADAR" FontSize="9" CharacterSpacing="1" FontFamily="OpenSansSemibold"
                                                    TextColor="{StaticResource Accent}" />
                                         </Border>
+                                        <Button Text="♡" FontSize="20" WidthRequest="44" HeightRequest="44"
+                                                Padding="0" CornerRadius="22" MinimumHeightRequest="44" MinimumWidthRequest="44"
+                                                BackgroundColor="#F7FAF3" TextColor="{StaticResource Accent}"
+                                                HorizontalOptions="End" VerticalOptions="Start" Margin="12"
+                                                CommandParameter="{Binding .}" Clicked="OnFavouriteHeartClicked"
+                                                AutomationId="HomeFavouriteHeart"
+                                                SemanticProperties.Description="Lưu phòng vào danh sách yêu thích">
+                                            <Button.Triggers>
+                                                <DataTrigger TargetType="Button" Binding="{Binding IsFavourite}" Value="True">
+                                                    <Setter Property="Text" Value="♥" />
+                                                </DataTrigger>
+                                            </Button.Triggers>
+                                        </Button>
                                     </Grid>
                                 </Border>
                                 <VerticalStackLayout Grid.Row="1" Padding="12,14,12,12" Spacing="10">

@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using RoomToRentRadar.Shared.Auth;
+using RoomToRentRadar.Shared.Favourites;
 using RoomToRentRadar.Shared.Listings;
 using RoomToRentRadar.Shared.Notifications;
 using RoomToRentRadar.Shared.SavedSearches;
@@ -236,6 +237,39 @@ public sealed class ApiClient(HttpClient httpClient) : IApiClient
 
         return notifications ?? throw new InvalidOperationException(
             "The notifications endpoint returned an empty response.");
+    }
+
+    public async Task<IReadOnlyList<FavouriteListingDto>> GetFavouritesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var favourites = await httpClient.GetFromJsonAsync<List<FavouriteListingDto>>(
+            "api/v1/favourites",
+            ApiJson.Options,
+            cancellationToken);
+
+        return favourites ?? throw new InvalidOperationException(
+            "The favourites endpoint returned an empty response.");
+    }
+
+    public async Task AddFavouriteAsync(Guid listingId, CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PutAsync(
+            $"api/v1/favourites/{listingId}",
+            content: null,
+            cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+            throw await CreateApiExceptionAsync(response, cancellationToken);
+    }
+
+    public async Task RemoveFavouriteAsync(Guid listingId, CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.DeleteAsync(
+            $"api/v1/favourites/{listingId}",
+            cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+            throw await CreateApiExceptionAsync(response, cancellationToken);
     }
 
     private static string BuildListingsUrl(

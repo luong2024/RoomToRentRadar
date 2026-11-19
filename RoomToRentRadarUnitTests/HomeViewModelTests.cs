@@ -2,6 +2,7 @@ using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Features.Home.ViewModels;
 using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Shared.Auth;
+using RoomToRentRadar.Shared.Favourites;
 using RoomToRentRadar.Shared.Listings;
 using RoomToRentRadar.Shared.Notifications;
 using RoomToRentRadar.Shared.Pagination;
@@ -18,7 +19,7 @@ public partial class HomeViewModelTests
         var first = CreateListing("First room");
         var second = CreateListing("Second room");
         var apiClient = new FakeApiClient(CreatePage("cursor-2", first, second));
-        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new TestFavouritesStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
 
@@ -45,7 +46,8 @@ public partial class HomeViewModelTests
         var viewModel = new HomeViewModel(
             new FakeApiClient(new InvalidOperationException("boom")),
             errorHandler,
-            new FakeNavigationService());
+            new FakeNavigationService(),
+            new TestFavouritesStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
 
@@ -71,7 +73,7 @@ public partial class HomeViewModelTests
         var apiClient = new FakeApiClient(
             CreatePage(2, false, "cursor-2", first),
             CreatePage(2, false, null, second));
-        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new TestFavouritesStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
         await viewModel.LoadMoreCommand.ExecuteAsync(null);
@@ -96,7 +98,7 @@ public partial class HomeViewModelTests
         var apiClient = new FakeApiClient(
             CreatePage("cursor-2", first),
             CreatePage(null, first, second));
-        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new TestFavouritesStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
         await viewModel.LoadMoreCommand.ExecuteAsync(null);
@@ -116,7 +118,7 @@ public partial class HomeViewModelTests
         var apiClient = new FakeApiClient(
             CreatePage("cursor-2", first),
             new InvalidOperationException("boom"));
-        var viewModel = new HomeViewModel(apiClient, errorHandler, new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, errorHandler, new FakeNavigationService(), new TestFavouritesStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
         await viewModel.LoadMoreCommand.ExecuteAsync(null);
@@ -140,7 +142,7 @@ public partial class HomeViewModelTests
         var apiClient = new FakeApiClient(
             CreatePage("cursor-2", first),
             CreatePage(null, refreshed));
-        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new TestFavouritesStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
         await viewModel.RefreshCommand.ExecuteAsync(null);
@@ -164,7 +166,7 @@ public partial class HomeViewModelTests
         var apiClient = new FakeApiClient(
             CreatePage("cursor-2", first),
             new InvalidOperationException("boom"));
-        var viewModel = new HomeViewModel(apiClient, errorHandler, new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, errorHandler, new FakeNavigationService(), new TestFavouritesStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
         await viewModel.RefreshCommand.ExecuteAsync(null);
@@ -186,7 +188,8 @@ public partial class HomeViewModelTests
         var viewModel = new HomeViewModel(
             new FakeApiClient(CreatePage(null)),
             new FakeErrorHandler(),
-            navigationService)
+            navigationService,
+            new TestFavouritesStore())
         {
             SelectedListing = HomeListingItem.FromDto(listing)
         };
@@ -208,7 +211,8 @@ public partial class HomeViewModelTests
         var viewModel = new HomeViewModel(
             new FakeApiClient(CreatePage(null)),
             new FakeErrorHandler(),
-            navigationService);
+            navigationService,
+            new TestFavouritesStore());
 
         await viewModel.OpenSelectedListingCommand.ExecuteAsync(null);
 
@@ -229,7 +233,8 @@ public partial class HomeViewModelTests
         var viewModel = new HomeViewModel(
             new FakeApiClient(CreatePage(null)),
             errorHandler,
-            navigationService)
+            navigationService,
+            new TestFavouritesStore())
         {
             SelectedListing = HomeListingItem.FromDto(listing)
         };
@@ -251,7 +256,7 @@ public partial class HomeViewModelTests
         var apiClient = new FakeApiClient(
             CreatePage("cursor-2", CreateListing("First room")),
             CreatePage(null, CreateListing("Studio near BK")));
-        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new TestFavouritesStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
 
@@ -299,7 +304,7 @@ public partial class HomeViewModelTests
     public async Task ApplyFiltersAsync_WithInvalidPriceRange_ShowsErrorAndKeepsResults()
     {
         var apiClient = new FakeApiClient(CreatePage(null, CreateListing()));
-        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new TestFavouritesStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
         viewModel.ToggleFilterPanelCommand.Execute(null);
@@ -327,7 +332,7 @@ public partial class HomeViewModelTests
             CreatePage(null, fullListRoom),
             CreatePage(null, filteredRoom),
             CreatePage(null, fullListRoom));
-        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new TestFavouritesStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
         viewModel.RoomTypeChips.Single(chip => chip.Label == "Studio").SelectCommand.Execute(null);
@@ -353,7 +358,7 @@ public partial class HomeViewModelTests
         var apiClient = new FakeApiClient(
             CreatePage(null, CreateListing()),
             CreatePage(0, false, null));
-        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new TestFavouritesStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
         viewModel.PriceMaxText = "1";
@@ -379,7 +384,7 @@ public partial class HomeViewModelTests
             CreatePage(0, false, null),
             CreatePage(2, false, "cursor-2", listing));
         var errorHandler = new FakeErrorHandler();
-        var viewModel = new HomeViewModel(apiClient, errorHandler, new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, errorHandler, new FakeNavigationService(), new TestFavouritesStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
 
@@ -473,7 +478,7 @@ public partial class HomeViewModelTests
             CreatePage(null, CreateListing()),
             CreatePage("cursor-2", first),
             CreatePage(null, second));
-        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new TestFavouritesStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
         viewModel.AreaMaxText = "30";
@@ -503,7 +508,7 @@ public partial class HomeViewModelTests
     public async Task LoadAsync_WhenServerReportsCappedTotal_ShowsCappedResultCount()
     {
         var apiClient = new FakeApiClient(CreatePage(1000, true, null, CreateListing()));
-        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new TestFavouritesStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
 
@@ -513,6 +518,103 @@ public partial class HomeViewModelTests
             Assert.That(viewModel.IsTotalCountCapped, Is.True);
             Assert.That(viewModel.ResultsText, Is.EqualTo("1.000+ phòng phù hợp"));
         });
+    }
+
+    [Test]
+    public async Task LoadAsync_WhenListingIsFavourite_FillsHeartAfterLoadingFavourites()
+    {
+        var favourite = CreateListing("Favourite room");
+        var other = CreateListing("Other room");
+        var apiClient = new FakeApiClient(CreatePage(null, favourite, other));
+        var favouritesStore = new TestFavouritesStore(CreateFavourite(favourite));
+        var viewModel = new HomeViewModel(
+            apiClient,
+            new FakeErrorHandler(),
+            new FakeNavigationService(),
+            favouritesStore);
+
+        await viewModel.LoadCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(favouritesStore.EnsureLoadedCount, Is.EqualTo(1));
+            Assert.That(viewModel.Listings.Single(item => item.Id == favourite.Id).IsFavourite, Is.True);
+            Assert.That(viewModel.Listings.Single(item => item.Id == other.Id).IsFavourite, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task ActivateFavourites_WhenCacheWasCleared_ReloadsSoHeartsStayCorrect()
+    {
+        var favourite = CreateListing("Favourite room");
+        var favouritesStore = new TestFavouritesStore(CreateFavourite(favourite));
+        var viewModel = new HomeViewModel(
+            new FakeApiClient(CreatePage(null, favourite)),
+            new FakeErrorHandler(),
+            new FakeNavigationService(),
+            favouritesStore);
+        await viewModel.LoadCommand.ExecuteAsync(null);
+
+        viewModel.ActivateFavourites();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(favouritesStore.EnsureLoadedCount, Is.EqualTo(2));
+            Assert.That(viewModel.Listings[0].IsFavourite, Is.True);
+        });
+
+        viewModel.DeactivateFavourites();
+    }
+
+    [Test]
+    public async Task ToggleFavouriteCommand_WhenNotFavourite_AddsAndFillsHeart()
+    {
+        var listing = CreateListing();
+        var apiClient = new FakeApiClient(CreatePage(null, listing));
+        var favouritesStore = new TestFavouritesStore();
+        var viewModel = new HomeViewModel(
+            apiClient,
+            new FakeErrorHandler(),
+            new FakeNavigationService(),
+            favouritesStore);
+        await viewModel.LoadCommand.ExecuteAsync(null);
+        viewModel.ActivateFavourites();
+
+        await viewModel.ToggleFavouriteCommand.ExecuteAsync(viewModel.Listings[0]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(favouritesStore.Added, Is.EqualTo(new[] { listing.Id }));
+            Assert.That(viewModel.Listings[0].IsFavourite, Is.True);
+        });
+
+        viewModel.DeactivateFavourites();
+    }
+
+    [Test]
+    public async Task ToggleFavouriteCommand_WhenStoreFails_ReportsErrorAndKeepsHeartEmpty()
+    {
+        var listing = CreateListing();
+        var exception = new HttpRequestException("offline");
+        var favouritesStore = new TestFavouritesStore { AddException = exception };
+        var errorHandler = new FakeErrorHandler();
+        var viewModel = new HomeViewModel(
+            new FakeApiClient(CreatePage(null, listing)),
+            errorHandler,
+            new FakeNavigationService(),
+            favouritesStore);
+        await viewModel.LoadCommand.ExecuteAsync(null);
+        viewModel.ActivateFavourites();
+
+        await viewModel.ToggleFavouriteCommand.ExecuteAsync(viewModel.Listings[0]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(errorHandler.HandledException, Is.SameAs(exception));
+            Assert.That(viewModel.Listings[0].IsFavourite, Is.False);
+        });
+
+        viewModel.DeactivateFavourites();
     }
 
     private static ListingSearchResultDto CreatePage(
@@ -544,6 +646,20 @@ public partial class HomeViewModelTests
             108.0,
             DateTime.UtcNow,
             null);
+
+    private static FavouriteListingDto CreateFavourite(ListingSummaryDto listing)
+        => new(
+            listing.Id,
+            listing.Title,
+            listing.Price,
+            listing.AreaM2,
+            listing.Bedrooms,
+            listing.Address,
+            listing.Lat,
+            listing.Lng,
+            listing.CoverPhotoUrl,
+            true,
+            DateTime.UtcNow);
 
     private sealed class FakeApiClient : IApiClient
     {
@@ -632,6 +748,16 @@ public partial class HomeViewModelTests
             int limit = 20,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The home screen does not load notifications.");
+
+        public Task<IReadOnlyList<FavouriteListingDto>> GetFavouritesAsync(
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The home screen does not load favourites directly.");
+
+        public Task AddFavouriteAsync(Guid listingId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The home screen does not save favourites directly.");
+
+        public Task RemoveFavouriteAsync(Guid listingId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The home screen does not remove favourites directly.");
     }
 
     private sealed class FakeErrorHandler : IErrorHandler

@@ -1,10 +1,14 @@
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Infrastructure.Api;
+using RoomToRentRadar.Infrastructure.Favourites;
 using RoomToRentRadar.Shared.Auth;
 
 namespace RoomToRentRadar.Infrastructure.Auth;
 
-public sealed class AuthService(IApiClient apiClient, ITokenStore tokenStore)
+public sealed class AuthService(
+    IApiClient apiClient,
+    ITokenStore tokenStore,
+    IFavouritesStore favouritesStore)
 {
     public async Task<bool> SignInAsync(
         string email,
@@ -18,6 +22,7 @@ public sealed class AuthService(IApiClient apiClient, ITokenStore tokenStore)
         }
 
         await tokenStore.SaveAsync(response.AccessToken, response.ExpiresAt, cancellationToken);
+        favouritesStore.Clear();
         return true;
     }
 
@@ -37,6 +42,7 @@ public sealed class AuthService(IApiClient apiClient, ITokenStore tokenStore)
             }
 
             await tokenStore.SaveAsync(response.AccessToken, response.ExpiresAt, cancellationToken);
+            favouritesStore.Clear();
             return true;
         }
         catch (Exception)
@@ -59,6 +65,7 @@ public sealed class AuthService(IApiClient apiClient, ITokenStore tokenStore)
         finally
         {
             await tokenStore.ClearAsync(cancellationToken);
+            favouritesStore.Clear();
         }
     }
 

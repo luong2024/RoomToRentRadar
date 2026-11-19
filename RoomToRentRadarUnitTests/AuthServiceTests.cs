@@ -2,6 +2,7 @@ using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Infrastructure.Auth;
 using RoomToRentRadar.Shared.Auth;
+using RoomToRentRadar.Shared.Favourites;
 using RoomToRentRadar.Shared.Listings;
 using RoomToRentRadar.Shared.Notifications;
 using RoomToRentRadar.Shared.Pagination;
@@ -17,7 +18,8 @@ public class AuthServiceTests
     {
         var apiClient = new FakeApiClient();
         var tokenStore = new FakeTokenStore { AccessToken = "stored-token" };
-        var service = new AuthService(apiClient, tokenStore);
+        var favouritesStore = new TestFavouritesStore();
+        var service = new AuthService(apiClient, tokenStore, favouritesStore);
 
         var signedIn = await service.EnsureSignedInAsync();
 
@@ -26,6 +28,7 @@ public class AuthServiceTests
             Assert.That(signedIn, Is.True);
             Assert.That(apiClient.DemoLoginCount, Is.Zero);
             Assert.That(tokenStore.AccessToken, Is.EqualTo("stored-token"));
+            Assert.That(favouritesStore.ClearCount, Is.Zero);
         });
     }
 
@@ -38,7 +41,8 @@ public class AuthServiceTests
             DemoLoginResult = new LoginResponse("demo-token", expiresAt, "Demo Renter")
         };
         var tokenStore = new FakeTokenStore();
-        var service = new AuthService(apiClient, tokenStore);
+        var favouritesStore = new TestFavouritesStore();
+        var service = new AuthService(apiClient, tokenStore, favouritesStore);
 
         var signedIn = await service.EnsureSignedInAsync();
 
@@ -48,6 +52,7 @@ public class AuthServiceTests
             Assert.That(apiClient.DemoLoginCount, Is.EqualTo(1));
             Assert.That(tokenStore.AccessToken, Is.EqualTo("demo-token"));
             Assert.That(tokenStore.ExpiresAt, Is.EqualTo(expiresAt));
+            Assert.That(favouritesStore.ClearCount, Is.EqualTo(1));
         });
     }
 
@@ -56,7 +61,8 @@ public class AuthServiceTests
     {
         var apiClient = new FakeApiClient { DemoLoginResult = null };
         var tokenStore = new FakeTokenStore();
-        var service = new AuthService(apiClient, tokenStore);
+        var favouritesStore = new TestFavouritesStore();
+        var service = new AuthService(apiClient, tokenStore, favouritesStore);
 
         var signedIn = await service.EnsureSignedInAsync();
 
@@ -64,6 +70,7 @@ public class AuthServiceTests
         {
             Assert.That(signedIn, Is.False);
             Assert.That(tokenStore.AccessToken, Is.Null);
+            Assert.That(favouritesStore.ClearCount, Is.Zero);
         });
     }
 
@@ -72,7 +79,8 @@ public class AuthServiceTests
     {
         var apiClient = new FakeApiClient { DemoLoginException = new HttpRequestException("API offline") };
         var tokenStore = new FakeTokenStore();
-        var service = new AuthService(apiClient, tokenStore);
+        var favouritesStore = new TestFavouritesStore();
+        var service = new AuthService(apiClient, tokenStore, favouritesStore);
 
         var signedIn = await service.EnsureSignedInAsync();
 
@@ -80,6 +88,7 @@ public class AuthServiceTests
         {
             Assert.That(signedIn, Is.False);
             Assert.That(tokenStore.AccessToken, Is.Null);
+            Assert.That(favouritesStore.ClearCount, Is.Zero);
         });
     }
 
@@ -150,6 +159,16 @@ public class AuthServiceTests
             int limit = 20,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException("Automatic sign-in does not load notifications.");
+
+        public Task<IReadOnlyList<FavouriteListingDto>> GetFavouritesAsync(
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("Automatic sign-in does not load favourites.");
+
+        public Task AddFavouriteAsync(Guid listingId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("Automatic sign-in does not save favourites.");
+
+        public Task RemoveFavouriteAsync(Guid listingId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("Automatic sign-in does not remove favourites.");
     }
 
     private sealed class FakeTokenStore : ITokenStore

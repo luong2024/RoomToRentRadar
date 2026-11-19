@@ -54,6 +54,31 @@ namespace RoomToRentRadar.Api.Data.Migrations
                     b.ToTable("auth_sessions", (string)null);
                 });
 
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.Favourite", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("user_id");
+
+                    b.Property<Guid>("ListingId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("listing_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("created_at");
+
+                    b.HasKey("UserId", "ListingId");
+
+                    b.HasIndex("ListingId")
+                        .HasDatabaseName("ix_favourites_listing_id");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_favourites_user_id_created_at");
+
+                    b.ToTable("favourites", (string)null);
+                });
+
             modelBuilder.Entity("RoomToRentRadar.Api.Domain.Listing", b =>
                 {
                     b.Property<Guid>("Id")
@@ -660,6 +685,25 @@ namespace RoomToRentRadar.Api.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("RoomToRentRadar.Api.Domain.Favourite", b =>
+                {
+                    b.HasOne("RoomToRentRadar.Api.Domain.Listing", "Listing")
+                        .WithMany()
+                        .HasForeignKey("ListingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RoomToRentRadar.Api.Domain.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Listing");
 
                     b.Navigation("User");
                 });

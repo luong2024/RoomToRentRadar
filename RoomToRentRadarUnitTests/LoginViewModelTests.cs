@@ -3,6 +3,7 @@ using RoomToRentRadar.Features.Login.ViewModels;
 using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Infrastructure.Auth;
 using RoomToRentRadar.Shared.Auth;
+using RoomToRentRadar.Shared.Favourites;
 using RoomToRentRadar.Shared.Listings;
 using RoomToRentRadar.Shared.Notifications;
 using RoomToRentRadar.Shared.Pagination;
@@ -136,7 +137,7 @@ public class LoginViewModelTests
         FakeNavigationService navigationService,
         FakeErrorHandler? errorHandler = null)
         => new(
-            new AuthService(apiClient, tokenStore),
+            new AuthService(apiClient, tokenStore, new TestFavouritesStore()),
             errorHandler ?? new FakeErrorHandler(),
             navigationService);
 
@@ -207,6 +208,16 @@ public class LoginViewModelTests
             int limit = 20,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The login screen does not load notifications.");
+
+        public Task<IReadOnlyList<FavouriteListingDto>> GetFavouritesAsync(
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The login screen does not load favourites.");
+
+        public Task AddFavouriteAsync(Guid listingId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The login screen does not save favourites.");
+
+        public Task RemoveFavouriteAsync(Guid listingId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The login screen does not remove favourites.");
     }
 
     private sealed class FakeTokenStore : ITokenStore

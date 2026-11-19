@@ -31,10 +31,20 @@ public partial class HomePage : ContentPage
     private async void OnOpenMapClicked(object? sender, EventArgs e)
         => await Shell.Current.GoToAsync("//map");
 
+    private async void OnFavouriteHeartClicked(object? sender, EventArgs e)
+    {
+        if (sender is Button { CommandParameter: HomeListingItem item }
+            && _viewModel.ToggleFavouriteCommand.CanExecute(item))
+        {
+            await _viewModel.ToggleFavouriteCommand.ExecuteAsync(item);
+        }
+    }
+
     protected override void OnAppearing()
     {
         base.OnAppearing();
         UpdateLayout();
+        _viewModel.ActivateFavourites();
         if (!_motionActive)
         {
             _motionActive = true;
@@ -54,6 +64,7 @@ public partial class HomePage : ContentPage
     {
         _motionActive = false;
         _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        _viewModel.DeactivateFavourites();
         ResetMotion(HomeChrome);
         ResetMotion(FilterPanel);
         base.OnDisappearing();

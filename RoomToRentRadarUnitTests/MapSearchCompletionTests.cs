@@ -4,6 +4,7 @@ using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Models;
 using RoomToRentRadar.Services;
 using RoomToRentRadar.Shared.Auth;
+using RoomToRentRadar.Shared.Favourites;
 using RoomToRentRadar.Shared.Listings;
 using RoomToRentRadar.Shared.Notifications;
 using RoomToRentRadar.Shared.Pagination;
@@ -239,5 +240,8 @@ public class MapSearchCompletionTests
         public Task<SavedSearchDto?> SetSavedSearchAlertAsync(Guid id, SavedSearchAlertState alertState, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task DeleteSavedSearchAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<NotificationDto>> GetNotificationsAsync(int limit = 20, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<IReadOnlyList<FavouriteListingDto>> GetFavouritesAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task AddFavouriteAsync(Guid listingId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task RemoveFavouriteAsync(Guid listingId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 }

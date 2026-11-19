@@ -48,9 +48,25 @@
                                    VerticalOptions="Center" />
                         </FlexLayout>
 
-                        <Label Text="{Binding Listing.Title}"
-                               FontSize="25" FontFamily="OpenSansSemibold" CharacterSpacing="-0.4"
-                               SemanticProperties.HeadingLevel="Level1" />
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                            <Label Text="{Binding Listing.Title}"
+                                   FontSize="25" FontFamily="OpenSansSemibold" CharacterSpacing="-0.4"
+                                   VerticalOptions="Center"
+                                   SemanticProperties.HeadingLevel="Level1" />
+                            <Button Grid.Column="1" Text="♡" FontSize="22"
+                                    WidthRequest="48" HeightRequest="48" MinimumHeightRequest="48" MinimumWidthRequest="48"
+                                    Padding="0" CornerRadius="24"
+                                    BackgroundColor="{StaticResource AccentSoft}" TextColor="{StaticResource Accent}"
+                                    Command="{Binding ToggleFavouriteCommand}"
+                                    AutomationId="RoomDetailFavouriteHeart"
+                                    SemanticProperties.Description="Lưu phòng vào danh sách yêu thích">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding IsFavourite}" Value="True">
+                                        <Setter Property="Text" Value="♥" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
                         <Border Padding="16,14" BackgroundColor="{StaticResource AccentSoft}"
                                 StrokeThickness="0" StrokeShape="RoundRectangle 18">
                             <VerticalStackLayout Spacing="5">

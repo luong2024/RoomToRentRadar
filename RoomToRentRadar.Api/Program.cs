@@ -18,6 +18,7 @@ using RoomToRentRadar.Api.Data;
 using RoomToRentRadar.Api.Data.Seed;
 using RoomToRentRadar.Api.Domain;
 using RoomToRentRadar.Api.Features.Auth;
+using RoomToRentRadar.Api.Features.Favourites;
 using RoomToRentRadar.Api.Features.Listings;
 using RoomToRentRadar.Api.Features.Moderation;
 using RoomToRentRadar.Api.Features.Notifications;
@@ -162,6 +163,7 @@ builder.Services.Configure<AlertsOptions>(
 builder.Services.AddScoped<SavedSearchService>();
 builder.Services.AddScoped<SavedSearchAlertEvaluator>();
 builder.Services.AddScoped<NotificationsService>();
+builder.Services.AddScoped<FavouriteService>();
 builder.Services.AddScoped<ListingReportsService>();
 builder.Services.AddScoped<ModerationQueueService>();
 builder.Services.AddScoped<ModerationActionsService>();

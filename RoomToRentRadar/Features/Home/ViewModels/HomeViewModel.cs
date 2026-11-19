@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Infrastructure.Api;
+using RoomToRentRadar.Infrastructure.Favourites;
 using RoomToRentRadar.Shared.Listings;
 
 namespace RoomToRentRadar.Features.Home.ViewModels;
@@ -17,6 +18,7 @@ public partial class HomeViewModel : ObservableObject
     private readonly IApiClient _apiClient;
     private readonly IErrorHandler _errorHandler;
     private readonly INavigationService _navigationService;
+    private readonly IFavouritesStore _favouritesStore;
     private CancellationTokenSource? _searchCancellation;
     private readonly HashSet<Guid> _listingIds = new();
     private string? _nextCursor;
@@ -74,11 +76,16 @@ public partial class HomeViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsTotalCountCapped { get; set; }
 
-    public HomeViewModel(IApiClient apiClient, IErrorHandler errorHandler, INavigationService navigationService)
+    public HomeViewModel(
+        IApiClient apiClient,
+        IErrorHandler errorHandler,
+        INavigationService navigationService,
+        IFavouritesStore favouritesStore)
     {
         _apiClient = apiClient;
         _errorHandler = errorHandler;
         _navigationService = navigationService;
+        _favouritesStore = favouritesStore;
         ResultsText = "Đang tải phòng trọ…";
         EmptyMessage = "Đang tải phòng trọ…";
         ErrorMessage = string.Empty;
@@ -136,6 +143,16 @@ public partial class HomeViewModel : ObservableObject
 
     public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
 
+    public void ActivateFavourites()
+    {
+        _favouritesStore.Changed -= OnFavouritesChanged;
+        _favouritesStore.Changed += OnFavouritesChanged;
+        ApplyFavouriteState();
+        _ = EnsureFavouritesAsync(CancellationToken.None);
+    }
+
+    public void DeactivateFavourites() => _favouritesStore.Changed -= OnFavouritesChanged;
+
     public bool CanLoadMore => HasMore
         && _nextCursor is not null
         && !IsBusy
@@ -179,6 +196,7 @@ public partial class HomeViewModel : ObservableObject
             return;
         }
 
+        await RefreshFavouritesAsync(cancellationToken);
         await LoadFirstPageAsync(cancellationToken);
     }
 
@@ -255,6 +273,25 @@ public partial class HomeViewModel : ObservableObject
         {
             // Clearing the selection lets the same room be tapped again.
             SelectedListing = null;
+        }
+    }
+
+    [RelayCommand(AllowConcurrentExecutions = false)]
+    private async Task ToggleFavouriteAsync(HomeListingItem? listing)
+    {
+        if (listing is null)
+            return;
+
+        try
+        {
+            if (_favouritesStore.IsFavourite(listing.Id))
+                await _favouritesStore.RemoveAsync(listing.Id);
+            else
+                await _favouritesStore.AddAsync(listing.Id);
+        }
+        catch (Exception ex)
+        {
+            _errorHandler.HandleError(ex);
         }
     }
 
@@ -338,6 +375,8 @@ public partial class HomeViewModel : ObservableObject
             HasMore = page.Pagination.HasMore;
             TotalCount = page.TotalCount;
             IsTotalCountCapped = page.TotalCountCapped;
+            await EnsureFavouritesAsync(requestToken);
+            ApplyFavouriteState();
             UpdateResultsText();
             EmptyMessage = HasActiveFilters
                 ? "Không tìm thấy phòng phù hợp. Hãy thử nới lỏng bộ lọc."
@@ -633,9 +672,51 @@ public partial class HomeViewModel : ObservableObject
     {
         foreach (var listing in listings)
         {
-            if (_listingIds.Add(listing.Id))
-                Listings.Add(HomeListingItem.FromDto(listing));
+            if (!_listingIds.Add(listing.Id))
+                continue;
+
+            var item = HomeListingItem.FromDto(listing);
+            item.IsFavourite = _favouritesStore.IsFavourite(item.Id);
+            Listings.Add(item);
         }
         OnPropertyChanged(nameof(CanLoadMore));
     }
+
+    private async Task EnsureFavouritesAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _favouritesStore.EnsureLoadedAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception)
+        {
+            // Hearts stay unfilled when favourites cannot be read; listings remain usable.
+        }
+    }
+
+    private async Task RefreshFavouritesAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _favouritesStore.RefreshAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception)
+        {
+            // A failed favourite refresh must not block the listing refresh.
+        }
+    }
+
+    private void ApplyFavouriteState()
+    {
+        foreach (var item in Listings)
+            item.IsFavourite = _favouritesStore.IsFavourite(item.Id);
+    }
+
+    private void OnFavouritesChanged(object? sender, EventArgs e) => ApplyFavouriteState();
 }

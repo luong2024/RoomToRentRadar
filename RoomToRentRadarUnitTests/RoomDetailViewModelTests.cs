@@ -3,6 +3,7 @@ using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Features.RoomDetail.ViewModels;
 using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Shared.Auth;
+using RoomToRentRadar.Shared.Favourites;
 using RoomToRentRadar.Shared.Listings;
 using RoomToRentRadar.Shared.Notifications;
 using RoomToRentRadar.Shared.Pagination;
@@ -22,7 +23,7 @@ public class RoomDetailViewModelTests
         var detail = CreateDetail(createdAt);
         var apiClient = new FakeApiClient(new ListingDetailFetchResult(ListingDetailFetchOutcome.Found, detail));
         var errorHandler = new FakeErrorHandler();
-        var viewModel = new RoomDetailViewModel(apiClient, errorHandler, new FakeNavigationService());
+        var viewModel = new RoomDetailViewModel(apiClient, errorHandler, new FakeNavigationService(), new TestFavouritesStore());
         ApplyListingId(viewModel, ListingId);
 
         await AwaitAutoStartedLoadAsync(viewModel);
@@ -82,7 +83,7 @@ public class RoomDetailViewModelTests
                 ListingContactFetchOutcome.Found,
                 new ListingContactDto("Landlord An", "+84 900 000 000"))
         };
-        var viewModel = new RoomDetailViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new RoomDetailViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new TestFavouritesStore());
         ApplyListingId(viewModel, ListingId);
 
         await AwaitAutoStartedLoadAsync(viewModel);
@@ -106,7 +107,7 @@ public class RoomDetailViewModelTests
             ContactException = new HttpRequestException("network down")
         };
         var errorHandler = new FakeErrorHandler();
-        var viewModel = new RoomDetailViewModel(apiClient, errorHandler, new FakeNavigationService());
+        var viewModel = new RoomDetailViewModel(apiClient, errorHandler, new FakeNavigationService(), new TestFavouritesStore());
         ApplyListingId(viewModel, ListingId);
 
         await AwaitAutoStartedLoadAsync(viewModel);
@@ -126,7 +127,7 @@ public class RoomDetailViewModelTests
     {
         var apiClient = new FakeApiClient(
             new ListingDetailFetchResult(ListingDetailFetchOutcome.Found, CreateDetail(DateTime.UtcNow)));
-        var viewModel = new RoomDetailViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new RoomDetailViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new TestFavouritesStore());
         ApplyListingId(viewModel, ListingId);
 
         await AwaitAutoStartedLoadAsync(viewModel);
@@ -153,7 +154,7 @@ public class RoomDetailViewModelTests
     {
         var apiClient = new FakeApiClient(
             new ListingDetailFetchResult(ListingDetailFetchOutcome.NotFound, null));
-        var viewModel = new RoomDetailViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new RoomDetailViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new TestFavouritesStore());
 
         await viewModel.RefreshContactCommand.ExecuteAsync(null);
 
@@ -177,7 +178,7 @@ public class RoomDetailViewModelTests
             SimilarResult = similar
         };
         var errorHandler = new FakeErrorHandler();
-        var viewModel = new RoomDetailViewModel(apiClient, errorHandler, new FakeNavigationService());
+        var viewModel = new RoomDetailViewModel(apiClient, errorHandler, new FakeNavigationService(), new TestFavouritesStore());
         ApplyListingId(viewModel, ListingId);
 
         await AwaitAutoStartedLoadAsync(viewModel);
@@ -208,7 +209,7 @@ public class RoomDetailViewModelTests
     public async Task LoadAsync_WhenUnavailableAndNoSimilarRooms_ShowsEmptyMessage()
     {
         var apiClient = new FakeApiClient(new ListingDetailFetchResult(ListingDetailFetchOutcome.Unavailable, null));
-        var viewModel = new RoomDetailViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new RoomDetailViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new TestFavouritesStore());
         ApplyListingId(viewModel, ListingId);
 
         await AwaitAutoStartedLoadAsync(viewModel);
@@ -232,7 +233,7 @@ public class RoomDetailViewModelTests
             SimilarException = new HttpRequestException("network down")
         };
         var errorHandler = new FakeErrorHandler();
-        var viewModel = new RoomDetailViewModel(apiClient, errorHandler, new FakeNavigationService());
+        var viewModel = new RoomDetailViewModel(apiClient, errorHandler, new FakeNavigationService(), new TestFavouritesStore());
         ApplyListingId(viewModel, ListingId);
 
         await AwaitAutoStartedLoadAsync(viewModel);
@@ -256,7 +257,8 @@ public class RoomDetailViewModelTests
         var viewModel = new RoomDetailViewModel(
             new FakeApiClient(new ListingDetailFetchResult(ListingDetailFetchOutcome.Unavailable, null)),
             new FakeErrorHandler(),
-            navigationService);
+            navigationService,
+            new TestFavouritesStore());
         var similar = CreateSummary(Guid.NewGuid(), "Nearby room");
 
         await viewModel.OpenSimilarRoomCommand.ExecuteAsync(similar);
@@ -275,7 +277,8 @@ public class RoomDetailViewModelTests
         var viewModel = new RoomDetailViewModel(
             new FakeApiClient(new ListingDetailFetchResult(ListingDetailFetchOutcome.NotFound, null)),
             new FakeErrorHandler(),
-            navigationService);
+            navigationService,
+            new TestFavouritesStore());
 
         await viewModel.ShowLoginCommand.ExecuteAsync(null);
 
@@ -287,7 +290,7 @@ public class RoomDetailViewModelTests
     {
         var apiClient = new FakeApiClient(new ListingDetailFetchResult(ListingDetailFetchOutcome.NotFound, null));
         var errorHandler = new FakeErrorHandler();
-        var viewModel = new RoomDetailViewModel(apiClient, errorHandler, new FakeNavigationService());
+        var viewModel = new RoomDetailViewModel(apiClient, errorHandler, new FakeNavigationService(), new TestFavouritesStore());
         ApplyListingId(viewModel, ListingId);
 
         await AwaitAutoStartedLoadAsync(viewModel);
@@ -313,7 +316,7 @@ public class RoomDetailViewModelTests
         var exception = new HttpRequestException("network down");
         var apiClient = new FakeApiClient(exception);
         var errorHandler = new FakeErrorHandler();
-        var viewModel = new RoomDetailViewModel(apiClient, errorHandler, new FakeNavigationService());
+        var viewModel = new RoomDetailViewModel(apiClient, errorHandler, new FakeNavigationService(), new TestFavouritesStore());
         ApplyListingId(viewModel, ListingId);
 
         await AwaitAutoStartedLoadAsync(viewModel);
@@ -339,7 +342,7 @@ public class RoomDetailViewModelTests
     {
         var apiClient = new FakeApiClient(new ListingDetailFetchResult(ListingDetailFetchOutcome.Found, null));
         var errorHandler = new FakeErrorHandler();
-        var viewModel = new RoomDetailViewModel(apiClient, errorHandler, new FakeNavigationService());
+        var viewModel = new RoomDetailViewModel(apiClient, errorHandler, new FakeNavigationService(), new TestFavouritesStore());
         ApplyListingId(viewModel, ListingId);
 
         await AwaitAutoStartedLoadAsync(viewModel);
@@ -362,7 +365,7 @@ public class RoomDetailViewModelTests
         var exception = new HttpRequestException("network down");
         var apiClient = new FakeApiClient(exception);
         var errorHandler = new FakeErrorHandler();
-        var viewModel = new RoomDetailViewModel(apiClient, errorHandler, new FakeNavigationService());
+        var viewModel = new RoomDetailViewModel(apiClient, errorHandler, new FakeNavigationService(), new TestFavouritesStore());
         ApplyListingId(viewModel, ListingId);
 
         await AwaitAutoStartedLoadAsync(viewModel);
@@ -400,7 +403,7 @@ public class RoomDetailViewModelTests
     {
         var apiClient = new FakeApiClient(
             new ListingDetailFetchResult(ListingDetailFetchOutcome.Found, CreateDetail(DateTime.UtcNow)));
-        var viewModel = new RoomDetailViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new RoomDetailViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new TestFavouritesStore());
 
         // OnAppearing can fire before Shell applies the query attributes.
         await viewModel.LoadCommand.ExecuteAsync(null);
@@ -433,7 +436,7 @@ public class RoomDetailViewModelTests
     {
         var apiClient = new FakeApiClient(
             new ListingDetailFetchResult(ListingDetailFetchOutcome.Found, CreateDetail(DateTime.UtcNow)));
-        var viewModel = new RoomDetailViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new RoomDetailViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new TestFavouritesStore());
         var query = new Dictionary<string, object>();
         if (idValue is not null)
             query[RoomDetailViewModel.ListingIdQueryKey] = idValue;
@@ -461,7 +464,7 @@ public class RoomDetailViewModelTests
     {
         var listingId = Guid.NewGuid();
         var apiClient = new FakeApiClient(new ListingDetailFetchResult(ListingDetailFetchOutcome.NotFound, null));
-        var viewModel = new RoomDetailViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new RoomDetailViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new TestFavouritesStore());
 
         ApplyListingId(viewModel, listingId);
         await AwaitAutoStartedLoadAsync(viewModel);
@@ -481,12 +484,82 @@ public class RoomDetailViewModelTests
         var viewModel = new RoomDetailViewModel(
             new FakeApiClient(new ListingDetailFetchResult(ListingDetailFetchOutcome.NotFound, null)),
             new FakeErrorHandler(),
-            navigationService);
+            navigationService,
+            new TestFavouritesStore());
 
         await viewModel.GoBackCommand.ExecuteAsync(null);
 
         Assert.That(navigationService.GoBackCount, Is.EqualTo(1));
     }
+
+    [Test]
+    public async Task ActivateFavourites_WhenListingIsFavourite_FillsHeartAndTracksStoreChanges()
+    {
+        var detail = CreateDetail(DateTime.UtcNow);
+        var apiClient = new FakeApiClient(new ListingDetailFetchResult(ListingDetailFetchOutcome.Found, detail));
+        var favouritesStore = new TestFavouritesStore(CreateFavourite(ListingId));
+        var viewModel = new RoomDetailViewModel(
+            apiClient,
+            new FakeErrorHandler(),
+            new FakeNavigationService(),
+            favouritesStore);
+        ApplyListingId(viewModel, ListingId);
+        await AwaitAutoStartedLoadAsync(viewModel);
+
+        viewModel.ActivateFavourites();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(favouritesStore.EnsureLoadedCount, Is.EqualTo(1));
+            Assert.That(viewModel.IsFavourite, Is.True);
+        });
+
+        await favouritesStore.RemoveAsync(ListingId);
+
+        Assert.That(viewModel.IsFavourite, Is.False);
+
+        viewModel.DeactivateFavourites();
+    }
+
+    [Test]
+    public async Task ToggleFavouriteCommand_WhenNotFavourite_AddsAndFillsHeart()
+    {
+        var detail = CreateDetail(DateTime.UtcNow);
+        var apiClient = new FakeApiClient(new ListingDetailFetchResult(ListingDetailFetchOutcome.Found, detail));
+        var favouritesStore = new TestFavouritesStore();
+        var viewModel = new RoomDetailViewModel(
+            apiClient,
+            new FakeErrorHandler(),
+            new FakeNavigationService(),
+            favouritesStore);
+        ApplyListingId(viewModel, ListingId);
+        await AwaitAutoStartedLoadAsync(viewModel);
+        viewModel.ActivateFavourites();
+
+        await viewModel.ToggleFavouriteCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(favouritesStore.Added, Is.EqualTo(new[] { ListingId }));
+            Assert.That(viewModel.IsFavourite, Is.True);
+        });
+
+        viewModel.DeactivateFavourites();
+    }
+
+    private static FavouriteListingDto CreateFavourite(Guid listingId)
+        => new(
+            listingId,
+            "Sunny room",
+            1_500_000,
+            25,
+            1,
+            "1 Main St",
+            16.0,
+            108.0,
+            null,
+            true,
+            DateTime.UtcNow);
 
     private static ListingDetailDto CreateDetail(DateTime createdAt)
         => new(
@@ -643,6 +716,16 @@ public class RoomDetailViewModelTests
             int limit = 20,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The room detail screen does not load notifications.");
+
+        public Task<IReadOnlyList<FavouriteListingDto>> GetFavouritesAsync(
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The room detail screen does not load favourites directly.");
+
+        public Task AddFavouriteAsync(Guid listingId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The room detail screen does not save favourites directly.");
+
+        public Task RemoveFavouriteAsync(Guid listingId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The room detail screen does not remove favourites directly.");
     }
 
     private sealed class FakeErrorHandler : IErrorHandler
