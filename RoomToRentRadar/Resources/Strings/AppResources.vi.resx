@@ -239,4 +239,330 @@
   <data name="Account_Alert_HelpMessage" xml:space="preserve">
     <value>RoomToRentRadar 1.0&#10;Dự án Radar Phòng trọ Sinh viên ICTU - Nhóm 2.</value>
   </data>
+
+  <!-- Room Details (SCR-ROOM-01 / US02 / T02.2) -->
+  <data name="RoomDetail_Title" xml:space="preserve">
+    <value>Chi tiết phòng</value>
+  </data>
+  <data name="RoomDetail_360View" xml:space="preserve">
+    <value>Xem 360°</value>
+  </data>
+  <data name="RoomDetail_VerifiedAvailable" xml:space="preserve">
+    <value>Đã xác minh · Còn phòng</value>
+  </data>
+  <data name="RoomDetail_VerifiedRented" xml:space="preserve">
+    <value>Đã xác minh · Đã cho thuê</value>
+  </data>
+  <data name="RoomDetail_StatusAvailable" xml:space="preserve">
+    <value>Còn phòng</value>
+  </data>
+  <data name="RoomDetail_StatusRented" xml:space="preserve">
+    <value>Đã cho thuê</value>
+  </data>
+  <data name="RoomDetail_StatusUnpublished" xml:space="preserve">
+    <value>Đã ẩn tin</value>
+  </data>
+  <data name="RoomDetail_UpdatedDaysAgo" xml:space="preserve">
+    <value>Cập nhật {0} ngày trước</value>
+  </data>
+  <data name="RoomDetail_UpdatedToday" xml:space="preserve">
+    <value>Cập nhật hôm nay</value>
+  </data>
+  <data name="RoomDetail_UpdatedYesterday" xml:space="preserve">
+    <value>Cập nhật hôm qua</value>
+  </data>
+  <data name="RoomDetail_PerMonth" xml:space="preserve">
+    <value>/ tháng</value>
+  </data>
+  <data name="RoomDetail_Deposit" xml:space="preserve">
+    <value>Tiền cọc {0} ({1})</value>
+  </data>
+  <data name="RoomDetail_DepositMonth" xml:space="preserve">
+    <value>{0} tháng</value>
+  </data>
+  <data name="RoomDetail_DepositMonths" xml:space="preserve">
+    <value>{0} tháng</value>
+  </data>
+  <data name="RoomDetail_DepositShort" xml:space="preserve">
+    <value>Cọc {0}</value>
+  </data>
+  <data name="RoomDetail_Area" xml:space="preserve">
+    <value>Diện tích</value>
+  </data>
+  <data name="RoomDetail_RoomType" xml:space="preserve">
+    <value>Loại phòng</value>
+  </data>
+  <data name="RoomDetail_MaxOccupants" xml:space="preserve">
+    <value>Số người tối đa</value>
+  </data>
+  <data name="RoomDetail_Furnishing" xml:space="preserve">
+    <value>Nội thất</value>
+  </data>
+  <data name="RoomDetail_AvailableFrom" xml:space="preserve">
+    <value>Vào ở từ</value>
+  </data>
+  <data name="RoomDetail_ToCampus" xml:space="preserve">
+    <value>Đến {0}</value>
+  </data>
+  <data name="RoomDetail_PeopleCount" xml:space="preserve">
+    <value>{0} người</value>
+  </data>
+  <data name="RoomDetail_OnePerson" xml:space="preserve">
+    <value>1 người</value>
+  </data>
+  <data name="RoomType_BoardingRoom" xml:space="preserve">
+    <value>Phòng trọ</value>
+  </data>
+  <data name="RoomType_Dormitory" xml:space="preserve">
+    <value>Ký túc xá</value>
+  </data>
+  <data name="RoomType_SharedRoom" xml:space="preserve">
+    <value>Ở ghép</value>
+  </data>
+  <data name="RoomType_Apartment" xml:space="preserve">
+    <value>Chung cư</value>
+  </data>
+  <data name="RoomType_Studio" xml:space="preserve">
+    <value>Phòng Studio</value>
+  </data>
+  <data name="Furnishing_Full" xml:space="preserve">
+    <value>Đầy đủ</value>
+  </data>
+  <data name="Furnishing_Partial" xml:space="preserve">
+    <value>Cơ bản</value>
+  </data>
+  <data name="Furnishing_None" xml:space="preserve">
+    <value>Trống</value>
+  </data>
+  <data name="RoomDetail_MonthlyCosts" xml:space="preserve">
+    <value>Chi phí hàng tháng</value>
+  </data>
+  <data name="RoomDetail_Rent" xml:space="preserve">
+    <value>Tiền phòng</value>
+  </data>
+  <data name="RoomDetail_Electricity" xml:space="preserve">
+    <value>Tiền điện</value>
+  </data>
+  <data name="RoomDetail_Water" xml:space="preserve">
+    <value>Tiền nước</value>
+  </data>
+  <data name="RoomDetail_Internet" xml:space="preserve">
+    <value>Mạng Internet</value>
+  </data>
+  <data name="RoomDetail_MotorbikeParking" xml:space="preserve">
+    <value>Gửi xe máy</value>
+  </data>
+  <data name="RoomDetail_PerKwh" xml:space="preserve">
+    <value>{0} đ / kWh</value>
+  </data>
+  <data name="RoomDetail_PerPerson" xml:space="preserve">
+    <value>{0} đ / người</value>
+  </data>
+  <data name="RoomDetail_PerM3" xml:space="preserve">
+    <value>{0} đ / m³</value>
+  </data>
+  <data name="RoomDetail_Included" xml:space="preserve">
+    <value>Đã bao gồm</value>
+  </data>
+  <data name="RoomDetail_Free" xml:space="preserve">
+    <value>Miễn phí</value>
+  </data>
+  <data name="RoomDetail_EstimatedTotal" xml:space="preserve">
+    <value>Tổng dự tính</value>
+  </data>
+  <data name="RoomDetail_EstimateNote" xml:space="preserve">
+    <value>Dự tính: 100 kWh điện, 1 người nước.</value>
+  </data>
+  <data name="RoomDetail_Amenities" xml:space="preserve">
+    <value>Tiện ích</value>
+  </data>
+  <data name="RoomDetail_SeeAllAmenities" xml:space="preserve">
+    <value>Xem tất cả {0} tiện ích</value>
+  </data>
+  <data name="RoomDetail_CollapseAmenities" xml:space="preserve">
+    <value>Thu gọn</value>
+  </data>
+  <data name="Amenity_AirConditioner" xml:space="preserve">
+    <value>Điều hòa</value>
+  </data>
+  <data name="Amenity_WaterHeater" xml:space="preserve">
+    <value>Bình nóng lạnh</value>
+  </data>
+  <data name="Amenity_PrivateBathroom" xml:space="preserve">
+    <value>Vệ sinh khép kín</value>
+  </data>
+  <data name="Amenity_Wifi" xml:space="preserve">
+    <value>Wi-Fi</value>
+  </data>
+  <data name="Amenity_Bed" xml:space="preserve">
+    <value>Giường ngủ</value>
+  </data>
+  <data name="Amenity_Fridge" xml:space="preserve">
+    <value>Tủ lạnh</value>
+  </data>
+  <data name="Amenity_MotorbikeParking" xml:space="preserve">
+    <value>Chỗ để xe máy</value>
+  </data>
+  <data name="Amenity_Wardrobe" xml:space="preserve">
+    <value>Tủ quần áo</value>
+  </data>
+  <data name="Amenity_Desk" xml:space="preserve">
+    <value>Bàn học</value>
+  </data>
+  <data name="Amenity_WardrobeAndDesk" xml:space="preserve">
+    <value>Tủ &amp; bàn học</value>
+  </data>
+  <data name="Amenity_WashingMachine" xml:space="preserve">
+    <value>Máy giặt</value>
+  </data>
+  <data name="Amenity_Balcony" xml:space="preserve">
+    <value>Ban công</value>
+  </data>
+  <data name="Amenity_Kitchen" xml:space="preserve">
+    <value>Bếp</value>
+  </data>
+  <data name="Amenity_SecurityCamera" xml:space="preserve">
+    <value>Camera an ninh</value>
+  </data>
+  <data name="Amenity_FingerprintLock" xml:space="preserve">
+    <value>Khóa vân tay</value>
+  </data>
+  <data name="Amenity_Window" xml:space="preserve">
+    <value>Cửa sổ</value>
+  </data>
+  <data name="RoomDetail_Safety" xml:space="preserve">
+    <value>An toàn &amp; An ninh</value>
+  </data>
+  <data name="RoomDetail_SafetyScoreVerified" xml:space="preserve">
+    <value>{0}/5 · Đã xác minh</value>
+  </data>
+  <data name="Safety_Cctv" xml:space="preserve">
+    <value>Camera giám sát tại lối vào</value>
+  </data>
+  <data name="Safety_SecureEntrance" xml:space="preserve">
+    <value>Cửa an toàn (khóa vân tay / thẻ từ)</value>
+  </data>
+  <data name="Safety_FireExtinguisher" xml:space="preserve">
+    <value>Bình chữa cháy &amp; lối thoát hiểm</value>
+  </data>
+  <data name="Safety_OwnerLivesOnSite" xml:space="preserve">
+    <value>Chủ trọ sống cùng khu trọ</value>
+  </data>
+  <data name="Safety_WellLitAccessPath" xml:space="preserve">
+    <value>Lối vào có đèn chiếu sáng ban đêm</value>
+  </data>
+  <data name="RoomDetail_HouseRules" xml:space="preserve">
+    <value>Nội quy phòng trọ</value>
+  </data>
+  <data name="HouseRule_QuietHours" xml:space="preserve">
+    <value>Giờ yên tĩnh</value>
+  </data>
+  <data name="HouseRule_Curfew" xml:space="preserve">
+    <value>Giờ đóng cửa</value>
+  </data>
+  <data name="HouseRule_CurfewGateCloses" xml:space="preserve">
+    <value>{0} (đóng cổng)</value>
+  </data>
+  <data name="HouseRule_Guests" xml:space="preserve">
+    <value>Khách đến chơi</value>
+  </data>
+  <data name="HouseRule_Cooking" xml:space="preserve">
+    <value>Nấu ăn</value>
+  </data>
+  <data name="HouseRule_Parking" xml:space="preserve">
+    <value>Để xe</value>
+  </data>
+  <data name="HouseRule_GuestsDaytimeOnly" xml:space="preserve">
+    <value>Chỉ ban ngày</value>
+  </data>
+  <data name="HouseRule_GuestsAllowed" xml:space="preserve">
+    <value>Được phép</value>
+  </data>
+  <data name="HouseRule_GuestsNotAllowed" xml:space="preserve">
+    <value>Không ở qua đêm</value>
+  </data>
+  <data name="HouseRule_CookingShared" xml:space="preserve">
+    <value>Chỉ dùng bếp chung</value>
+  </data>
+  <data name="HouseRule_CookingInRoom" xml:space="preserve">
+    <value>Nấu ăn trong phòng</value>
+  </data>
+  <data name="HouseRule_CookingNotAllowed" xml:space="preserve">
+    <value>Không nấu ăn</value>
+  </data>
+  <data name="HouseRule_ParkingYard" xml:space="preserve">
+    <value>Xe để trong sân, 1 xe/phòng</value>
+  </data>
+  <data name="RoomDetail_GettingToCampus" xml:space="preserve">
+    <value>Đến {0} · {1} km</value>
+  </data>
+  <data name="TravelMode_Motorbike" xml:space="preserve">
+    <value>Xe máy</value>
+  </data>
+  <data name="TravelMode_Bus" xml:space="preserve">
+    <value>Xe buýt (dự tính)</value>
+  </data>
+  <data name="TravelMode_Walking" xml:space="preserve">
+    <value>Đi bộ</value>
+  </data>
+  <data name="RoomDetail_Minutes" xml:space="preserve">
+    <value>{0} phút</value>
+  </data>
+  <data name="RoomDetail_MinutesEst" xml:space="preserve">
+    <value>~{0} phút</value>
+  </data>
+  <data name="RoomDetail_VerifiedLandlordSince" xml:space="preserve">
+    <value>Chủ trọ xác thực · tham gia từ {0}</value>
+  </data>
+  <data name="RoomDetail_ReportListing" xml:space="preserve">
+    <value>Báo cáo tin đăng này</value>
+  </data>
+  <data name="RoomDetail_ActionCall" xml:space="preserve">
+    <value>Gọi điện</value>
+  </data>
+  <data name="RoomDetail_ActionZalo" xml:space="preserve">
+    <value>Zalo</value>
+  </data>
+  <data name="RoomDetail_ActionMessage" xml:space="preserve">
+    <value>Nhắn tin</value>
+  </data>
+  <data name="RoomDetail_ContactDisabled" xml:space="preserve">
+    <value>Tính năng liên hệ bị tắt đối với phòng đã hết</value>
+  </data>
+  <data name="RoomDetail_SignInPromptTitle" xml:space="preserve">
+    <value>Yêu cầu đăng nhập</value>
+  </data>
+  <data name="RoomDetail_SignInPromptMessage" xml:space="preserve">
+    <value>Vui lòng đăng nhập để xem thông tin liên hệ và gửi tin nhắn cho chủ trọ.</value>
+  </data>
+  <data name="RoomDetail_SignInAction" xml:space="preserve">
+    <value>Đăng nhập</value>
+  </data>
+  <data name="RoomDetail_UnavailableBanner" xml:space="preserve">
+    <value>Phòng này không còn khả dụng. Đã được đánh dấu đã thuê {0}.</value>
+  </data>
+  <data name="RoomDetail_UnavailableBannerGeneral" xml:space="preserve">
+    <value>Phòng này không còn khả dụng.</value>
+  </data>
+  <data name="RoomDetail_StraightLineNotice" xml:space="preserve">
+    <value>Khoảng cách đường chim bay: {0} km đến {1} · hiện chưa có dữ liệu thời gian di chuyển</value>
+  </data>
+  <data name="RoomDetail_SimilarRoomsNearby" xml:space="preserve">
+    <value>Phòng tương tự gần đây</value>
+  </data>
+  <data name="RoomDetail_SimilarRoomsCriteria" xml:space="preserve">
+    <value>±20% giá · trong 2 km</value>
+  </data>
+  <data name="RoomDetail_DistanceFromThisRoom" xml:space="preserve">
+    <value>Cách phòng này {0} km</value>
+  </data>
+  <data name="RoomDetail_NotFoundTitle" xml:space="preserve">
+    <value>Không tìm thấy tin đăng</value>
+  </data>
+  <data name="RoomDetail_NotFoundMessage" xml:space="preserve">
+    <value>Tin đăng phòng này không tồn tại hoặc đã bị gỡ bỏ.</value>
+  </data>
+  <data name="RoomDetail_BackToExplore" xml:space="preserve">
+    <value>Quay lại Khám phá</value>
+  </data>
 </root>
