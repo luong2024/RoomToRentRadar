@@ -155,12 +155,21 @@ public class RoomsContractsTests
     }
 
     [Test]
-    public async Task IRoomRepository_ExposesOnlyGetByIdAddAndUpdate()
+    public async Task IRoomRepository_ExposesLifecycleAndLandlordQueries_WithoutFullScan()
     {
         var methodNames = typeof(IRoomRepository).GetMethods().Select(m => m.Name).ToList();
 
-        Assert.That(methodNames, Is.EquivalentTo(new[] { "GetByIdAsync", "AddAsync", "UpdateAsync" }),
-            "GetAllAsync đã bị bỏ (M2: full-scan bị thay bằng IRoomSearchReadModel)");
+        Assert.Multiple(() =>
+        {
+            Assert.That(methodNames, Is.EquivalentTo(new[]
+                {
+                    "GetByIdAsync", "AddAsync", "UpdateAsync",
+                    "GetOwnedByIdAsync", "CountNonArchivedByLandlordAsync", "ListByLandlordAsync"
+                }),
+                "US08 (UC-31/UC-32): thêm 3 truy vấn landlord owner-scoped; GetAllAsync vẫn bị bỏ (M2)");
+            Assert.That(methodNames, Does.Not.Contain("GetAllAsync"),
+                "GetAllAsync đã bị bỏ (M2: full-scan bị thay bằng IRoomSearchReadModel)");
+        });
 
         var repository = Substitute.For<IRoomRepository>();
         var room = Room.Create(

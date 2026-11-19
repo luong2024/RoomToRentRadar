@@ -1,11 +1,13 @@
 // ADR-012, system-architecture 7.2: one global handler turns every exception into problem+json with a stable errorCode.
 // Pass-through rules: a started response can no longer be rewritten; a cancelled request means the client disconnected;
-// BadHttpRequestException is already translated to 400/413 by Kestrel and must not regress to 500.
+// a BadHttpRequestException other than Kestrel's 413 body-too-large keeps its Kestrel status (e.g. malformed body 400)
+// and must not regress to 500. Kestrel's 413 bypasses StatusCodeProblemPages, so it is mapped below.
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using RoomToRentRadar.Api.Errors;
+using RoomToRentRadar.Ports.Contracts.Common;
 
 namespace RoomToRentRadar.Api.Middlewares;
 
@@ -30,7 +32,7 @@ public sealed class ProblemDetailsMiddleware
         }
         catch (Exception ex) when (!ShouldPassThrough(context, ex))
         {
-            var mapping = ExceptionProblemMap.Resolve(ex);
+            var mapping = ResolveMapping(ex);
             var isUnexpected = mapping is null;
             mapping ??= ExceptionProblemMap.InternalError;
 
@@ -69,8 +71,16 @@ public sealed class ProblemDetailsMiddleware
         }
     }
 
+    private static readonly ProblemMapping PayloadTooLarge =
+        new(StatusCodes.Status413PayloadTooLarge, "Payload Too Large", ProblemCodes.FileTooLarge);
+
+    private static ProblemMapping? ResolveMapping(Exception ex) =>
+        ex is BadHttpRequestException { StatusCode: StatusCodes.Status413PayloadTooLarge }
+            ? PayloadTooLarge
+            : ExceptionProblemMap.Resolve(ex);
+
     private static bool ShouldPassThrough(HttpContext context, Exception ex) =>
         context.Response.HasStarted
         || (ex is OperationCanceledException && context.RequestAborted.IsCancellationRequested)
-        || ex is BadHttpRequestException;
+        || (ex is BadHttpRequestException { StatusCode: not StatusCodes.Status413PayloadTooLarge });
 }
