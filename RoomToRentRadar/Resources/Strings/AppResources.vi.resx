@@ -399,6 +399,9 @@
   <data name="RoomDetail_EstimatedTotal" xml:space="preserve">
     <value>Tổng dự tính</value>
   </data>
+  <data name="RoomDetail_EstimatedMonthlyFormat" xml:space="preserve">
+    <value>~{0}/tháng</value>
+  </data>
   <data name="RoomDetail_EstimateNote" xml:space="preserve">
     <value>Dự tính: 100 kWh điện, 1 người nước.</value>
   </data>
@@ -465,6 +468,9 @@
   <data name="RoomDetail_SafetyScoreVerified" xml:space="preserve">
     <value>{0}/5 · Đã xác minh</value>
   </data>
+  <data name="RoomDetail_SafetyScoreUnverified" xml:space="preserve">
+    <value>{0}/5 · Chưa xác minh</value>
+  </data>
   <data name="Safety_Cctv" xml:space="preserve">
     <value>Camera giám sát tại lối vào</value>
   </data>
@@ -487,7 +493,7 @@
     <value>Giờ yên tĩnh</value>
   </data>
   <data name="HouseRule_Curfew" xml:space="preserve">
-    <value>Giờ đóng cửa</value>
+    <value>Giờ giới nghiêm</value>
   </data>
   <data name="HouseRule_CurfewGateCloses" xml:space="preserve">
     <value>{0} (đóng cổng)</value>

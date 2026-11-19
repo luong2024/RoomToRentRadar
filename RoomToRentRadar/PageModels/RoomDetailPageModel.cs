@@ -378,7 +378,9 @@ public partial class RoomDetailPageModel : ObservableObject
         CurrentPhotoIndex = 1;
         PhotoCounterText = $"{CurrentPhotoIndex} / {TotalPhotosCount}";
         HasPhotos = detail.Photos.Count > 0;
-        HeroCoverUrl = detail.Photos.OrderBy(p => p.SortOrder).FirstOrDefault()?.MediumUrl
+        HeroCoverUrl = detail.Photos.OrderBy(p => p.SortOrder).FirstOrDefault()?.OriginalUrl
+            ?? detail.Photos.OrderBy(p => p.SortOrder).FirstOrDefault()?.MediumUrl
+            ?? detail.Photos.FirstOrDefault()?.OriginalUrl
             ?? detail.Photos.FirstOrDefault()?.MediumUrl;
         Is360Available = detail.Photos.Any(p => p.Kind == PhotoKind.Panorama);
 
@@ -558,7 +560,10 @@ public partial class RoomDetailPageModel : ObservableObject
     {
         SafetyChecklist.Clear();
         int score = safety.Score > 0 ? (safety.Score <= 5 ? safety.Score : (int)Math.Round(safety.Score / 20.0)) : 4;
-        SafetyScoreFormatted = string.Format(AppResources.GetString("RoomDetail_SafetyScoreVerified"), score);
+        string scoreFormat = safety.IsVerified
+            ? AppResources.GetString("RoomDetail_SafetyScoreVerified")
+            : AppResources.GetString("RoomDetail_SafetyScoreUnverified");
+        SafetyScoreFormatted = string.Format(scoreFormat, score);
 
         var presentFeatures = safety.Features.ToHashSet();
 

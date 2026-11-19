@@ -339,7 +339,7 @@
     <value>1 person</value>
   </data>
   <data name="RoomType_BoardingRoom" xml:space="preserve">
-    <value>Boarding</value>
+    <value>Boarding room</value>
   </data>
   <data name="RoomType_Dormitory" xml:space="preserve">
     <value>Dormitory</value>
@@ -398,6 +398,9 @@
   <data name="RoomDetail_EstimatedTotal" xml:space="preserve">
     <value>Estimated total</value>
   </data>
+  <data name="RoomDetail_EstimatedMonthlyFormat" xml:space="preserve">
+    <value>~{0}/mo</value>
+  </data>
   <data name="RoomDetail_EstimateNote" xml:space="preserve">
     <value>Estimate: 100 kWh electricity, 1 person water.</value>
   </data>
@@ -408,7 +411,7 @@
     <value>See all {0} amenities</value>
   </data>
   <data name="RoomDetail_CollapseAmenities" xml:space="preserve">
-    <value>Show less</value>
+    <value>Collapse amenities</value>
   </data>
   <data name="Amenity_AirConditioner" xml:space="preserve">
     <value>Air conditioner</value>
@@ -463,6 +466,9 @@
   </data>
   <data name="RoomDetail_SafetyScoreVerified" xml:space="preserve">
     <value>{0}/5 · Verified</value>
+  </data>
+  <data name="RoomDetail_SafetyScoreUnverified" xml:space="preserve">
+    <value>{0}/5 · Unverified</value>
   </data>
   <data name="Safety_Cctv" xml:space="preserve">
     <value>CCTV at the entrance</value>
