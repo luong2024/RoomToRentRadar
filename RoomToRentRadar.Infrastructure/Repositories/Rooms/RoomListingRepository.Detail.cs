@@ -57,8 +57,9 @@ namespace RoomToRentRadar.Data
         }
 
         /// <summary>
-        /// T03.1 (US03): Retrieves similar verified rooms excluding current room (AC3).
-        /// Baseline delegation to base; fully implemented in Phase 3.
+        /// T03.1 (US03 / Phase 3): Retrieves similar verified rooms excluding the current room.
+        /// Fulfills AC3: Suggests alternatives when room is unavailable or for comparison,
+        /// prioritizing same ward (location proximity), closest rental price, and distance to ICTU campus.
         /// </summary>
         public override async Task<List<RoomListing>> GetSimilarRoomsAsync(int excludeRoomId, string ward, decimal targetRent, int limit = 3)
         {
@@ -67,7 +68,43 @@ namespace RoomToRentRadar.Data
                 return await base.GetSimilarRoomsAsync(excludeRoomId, ward, targetRent, limit);
             }
 
-            return await base.GetSimilarRoomsAsync(excludeRoomId, ward, targetRent, limit);
+            int sanitizedLimit = Math.Max(1, Math.Min(20, limit));
+            string searchWard = string.IsNullOrWhiteSpace(ward) ? string.Empty : ward.Trim();
+
+            await using var connection = await Database.GetOpenConnectionAsync();
+            await using var cmd = connection.CreateCommand();
+
+            cmd.CommandText = @"
+                SELECT 
+                    Id, Title, Description, MonthlyRent, Deposit, Area, RoomType, Address, Ward,
+                    Latitude, Longitude, DistanceToCampusKm, MotorbikeMinutes, BusMinutes, WalkMinutes,
+                    AmenitiesCsv, ThumbnailUrl, PhotosJson, Panorama360Url,
+                    LandlordId, LandlordName, LandlordPhone, Status, IsVerified, SecurityScore,
+                    QuietHours, GuestPolicy, CookingRules, ParkingRules, RulesVersion, UpdatedAt
+                FROM RoomListing
+                WHERE Id != @ExcludeRoomId 
+                  AND Status = @Status 
+                  AND IsVerified = 1
+                ORDER BY 
+                    CASE WHEN LOWER(Ward) = LOWER(@Ward) THEN 0 ELSE 1 END ASC,
+                    ABS(MonthlyRent - @TargetRent) ASC,
+                    DistanceToCampusKm ASC
+                LIMIT @Limit;";
+
+            cmd.Parameters.AddWithValue("@ExcludeRoomId", excludeRoomId);
+            cmd.Parameters.AddWithValue("@Status", Constants.ListingStatuses.Available);
+            cmd.Parameters.AddWithValue("@Ward", searchWard);
+            cmd.Parameters.AddWithValue("@TargetRent", targetRent);
+            cmd.Parameters.AddWithValue("@Limit", sanitizedLimit);
+
+            var results = new List<RoomListing>(sanitizedLimit);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                results.Add(ReadDetailListing(reader));
+            }
+
+            return results;
         }
 
         private static RoomListing ReadDetailListing(SqliteDataReader reader)
