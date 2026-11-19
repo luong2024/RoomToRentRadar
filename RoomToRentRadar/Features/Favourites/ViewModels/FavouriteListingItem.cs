@@ -1,4 +1,5 @@
 using System.Globalization;
+using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Shared.Favourites;
 
 namespace RoomToRentRadar.Features.Favourites.ViewModels;
@@ -17,8 +18,27 @@ public sealed record FavouriteListingItem(
 
     public string? CoverPhotoUrl { get; init; }
 
-    public string PhotoSource => Uri.TryCreate(CoverPhotoUrl, UriKind.Absolute, out var photo)
-        && photo.Scheme == Uri.UriSchemeHttps ? photo.AbsoluteUri : Illustration;
+    public string PhotoSource => ResolvePhotoSource() ?? Illustration;
+
+    private string? ResolvePhotoSource()
+    {
+        if (string.IsNullOrWhiteSpace(CoverPhotoUrl))
+        {
+            return null;
+        }
+
+        if (Uri.TryCreate(CoverPhotoUrl, UriKind.Absolute, out var absolute)
+            && (absolute.Scheme == Uri.UriSchemeHttp || absolute.Scheme == Uri.UriSchemeHttps))
+        {
+            return absolute.AbsoluteUri;
+        }
+
+        // The API emits relative paths ("/media/..."); resolve them against the API host.
+        return Uri.TryCreate(new Uri(ApiConstants.BaseAddress), CoverPhotoUrl, out var resolved)
+            && (resolved.Scheme == Uri.UriSchemeHttp || resolved.Scheme == Uri.UriSchemeHttps)
+            ? resolved.AbsoluteUri
+            : null;
+    }
 
     public static FavouriteListingItem FromDto(FavouriteListingDto favourite)
         => new(
