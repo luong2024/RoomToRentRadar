@@ -53,19 +53,14 @@ public sealed class PhotoProcessorTests
     }
 
     [Test]
-    public void TryProcess_Webp_IsNormalizedToJpeg()
+    public void TryProcess_Webp_IsRejected()
     {
         var content = TestImageFactory.CreateWebp(800, 600);
 
         var succeeded = _processor.TryProcess(content, out var photo);
 
-        Assert.That(succeeded, Is.True);
-        Assert.Multiple(() =>
-        {
-            Assert.That(photo!.Width, Is.EqualTo(800));
-            Assert.That(photo.Height, Is.EqualTo(600));
-            Assert.That(IsJpeg(photo.Original), Is.True);
-        });
+        Assert.That(succeeded, Is.False);
+        Assert.That(photo, Is.Null);
     }
 
     [Test]

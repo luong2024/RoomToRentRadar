@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.Features.ListingManagement.ViewModels"
+             xmlns:models="clr-namespace:RoomToRentRadar.Features.ListingManagement.Models"
+             x:Class="RoomToRentRadar.Features.ListingManagement.Views.MyListingsPage"
+             x:DataType="vm:MyListingsViewModel" Title="Tin của tôi" SafeAreaEdges="All">
+    <Grid RowDefinitions="Auto,Auto,*" Padding="20" RowSpacing="14">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <Label Text="Tin của tôi" FontSize="26" FontFamily="OpenSansSemibold" SemanticProperties.HeadingLevel="Level1" />
+            <Button Grid.Column="1" Text="Đăng tin" Command="{Binding CreateCommand}" IsVisible="{Binding IsAuthenticated}" />
+        </Grid>
+        <VerticalStackLayout Grid.Row="1" Spacing="8">
+            <Label Text="{Binding Message}" SemanticProperties.Description="Thông báo quản lý tin" />
+            <Button Text="Đăng nhập" Command="{Binding SignInCommand}">
+                <Button.Triggers><DataTrigger TargetType="Button" Binding="{Binding IsAuthenticated}" Value="True"><Setter Property="IsVisible" Value="False" /></DataTrigger></Button.Triggers>
+            </Button>
+            <Button Text="Tải lại" Command="{Binding LoadCommand}" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
+        </VerticalStackLayout>
+        <CollectionView Grid.Row="2" ItemsSource="{Binding Listings}" SelectionMode="None">
+            <CollectionView.EmptyView><Label Text="Chưa có tin để hiển thị." Padding="0,24" /></CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:OwnedListingItem">
+                    <Border Padding="16" Margin="0,0,0,12" StrokeShape="RoundRectangle 18"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="{Binding StatusText}" FontSize="12" FontFamily="OpenSansSemibold" />
+                            <Label Text="{Binding Title}" FontSize="18" FontFamily="OpenSansSemibold" />
+                            <Label Text="{Binding Address}" MaxLines="2" />
+                            <Label Text="{Binding PriceText}" />
+                            <Button Text="Quản lý tin" Command="{Binding EditCommand, Source={RelativeSource AncestorType={x:Type vm:MyListingsViewModel}}, x:DataType=vm:MyListingsViewModel}" CommandParameter="{Binding .}" />
+                        </VerticalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>

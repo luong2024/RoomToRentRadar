@@ -134,6 +134,20 @@ public sealed class ListingWriteValidatorTests
         });
     }
 
+    [Test]
+    public void TryValidate_PhotoExactlyAtSizeLimit_IsAccepted()
+    {
+        var files = CreateFiles(3);
+        files[0] = CreateFile(length: PhotoUploadLimits.MaxFileBytes);
+
+        var isValid = ListingWriteValidator.TryValidate(CreateForm(photos: files), 3, out _, out var problem);
+
+        Assert.That(isValid, Is.True);
+        Assert.That(problem, Is.Null);
+        Assert.That(PhotoUploadLimits.MaxRequestBodyBytes,
+            Is.GreaterThan(PhotoUploadLimits.MaxFilesPerRequest * PhotoUploadLimits.MaxFileBytes));
+    }
+
     [TestCase("image/webp")]
     [TestCase("image/gif")]
     [TestCase("text/plain")]

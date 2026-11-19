@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.Features.ListingManagement.ViewModels"
+             xmlns:models="clr-namespace:RoomToRentRadar.Features.ListingManagement.Models"
+             xmlns:shared="clr-namespace:RoomToRentRadar.Shared.Listings;assembly=RoomToRentRadar.Shared"
+             xmlns:maps="clr-namespace:Mapsui.UI.Maui;assembly=Mapsui.UI.Maui"
+             x:Class="RoomToRentRadar.Features.ListingManagement.Views.ListingEditorPage"
+             x:DataType="vm:ListingEditorViewModel" Title="{Binding PageTitle}" Shell.NavBarIsVisible="True" SafeAreaEdges="All">
+    <ContentPage.Resources>
+        <Style x:Key="FieldError" TargetType="Label">
+            <Setter Property="TextColor" Value="{AppThemeBinding Light=#A52B28, Dark=#FFAAA5}" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style TargetType="Entry">
+            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
+        </Style>
+    </ContentPage.Resources>
+    <ScrollView>
+        <VerticalStackLayout Padding="20,16,20,32" Spacing="12" MaximumWidthRequest="720" HorizontalOptions="Fill">
+            <Label Text="{Binding PageTitle}" FontSize="26" FontFamily="OpenSansSemibold" SemanticProperties.HeadingLevel="Level1" />
+            <Label Text="{Binding StatusText}" />
+            <Label Text="{Binding Message}" AutomationId="ListingFormMessage" />
+            <Button Text="Đăng nhập để lưu tin" Command="{Binding SignInCommand}">
+                <Button.Triggers><DataTrigger TargetType="Button" Binding="{Binding IsAuthenticated}" Value="True"><Setter Property="IsVisible" Value="False" /></DataTrigger></Button.Triggers>
+            </Button>
+            <Button Text="Tải lại thông tin tin đăng" Command="{Binding LoadCommand}" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
+            <VerticalStackLayout Spacing="8" IsEnabled="{Binding IsNotBusy}">
+                <Label Text="Tiêu đề *" />
+                <Entry Text="{Binding TitleField.Text}" Placeholder="Ví dụ: Phòng studio gần trường" MaxLength="200" AutomationId="ListingTitle" SemanticProperties.Description="Tiêu đề tin đăng, bắt buộc" />
+                <Label Text="{Binding TitleField.Error}" Style="{StaticResource FieldError}" />
+                <Label Text="Địa chỉ *" />
+                <Entry Text="{Binding AddressField.Text}" MaxLength="300" Placeholder="Số nhà, đường, phường, thành phố" AutomationId="ListingAddress" SemanticProperties.Description="Địa chỉ phòng, bắt buộc" />
+                <Label Text="{Binding AddressField.Error}" Style="{StaticResource FieldError}" />
+                <Label Text="Tiền thuê mỗi tháng (đồng) *" />
+                <Entry Text="{Binding RentField.Text}" Keyboard="Numeric" Placeholder="3000000" AutomationId="ListingRent" SemanticProperties.Description="Tiền thuê mỗi tháng bằng đồng" />
+                <Label Text="{Binding RentField.Error}" Style="{StaticResource FieldError}" />
+                <Label Text="Tiền cọc (đồng) *" />
+                <Entry Text="{Binding DepositField.Text}" Keyboard="Numeric" Placeholder="Nhập 0 nếu không yêu cầu cọc" AutomationId="ListingDeposit" SemanticProperties.Description="Tiền cọc bằng đồng, bắt buộc, có thể bằng không" />
+                <Label Text="{Binding DepositField.Error}" Style="{StaticResource FieldError}" />
+                <Label Text="Diện tích (m²) *" />
+                <Entry Text="{Binding AreaField.Text}" Keyboard="Numeric" Placeholder="25" AutomationId="ListingArea" SemanticProperties.Description="Diện tích phòng bằng mét vuông" />
+                <Label Text="{Binding AreaField.Error}" Style="{StaticResource FieldError}" />
+                <Label Text="Loại phòng *" />
+                <Picker ItemsSource="{Binding RoomTypes}" SelectedItem="{Binding SelectedRoomType}" Title="Chọn loại phòng"
+                        ItemDisplayBinding="{Binding Name, x:DataType=models:RoomTypeOption}" AutomationId="ListingRoomType" />
+                <Label Text="{Binding RoomTypeError}" Style="{StaticResource FieldError}" />
+                <Label Text="Vị trí phòng" FontFamily="OpenSansSemibold" />
+                <Label Text="Chạm bản đồ để đặt vị trí phòng. Có thể nhập tọa độ bên dưới nếu bản đồ không tải được." FontSize="12" />
+                <maps:MapControl x:Name="LocationMap" HeightRequest="280" SemanticProperties.Description="Bản đồ chọn vị trí phòng" />
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Vĩ độ" />
+                        <Entry Text="{Binding LatitudeField.Text}" Keyboard="Text" Placeholder="10.7769" SemanticProperties.Description="Vĩ độ vị trí phòng" />
+                        <Label Text="{Binding LatitudeField.Error}" Style="{StaticResource FieldError}" />
+                    </VerticalStackLayout>
+                    <VerticalStackLayout Grid.Column="1" Spacing="4">
+                        <Label Text="Kinh độ" />
+                        <Entry Text="{Binding LongitudeField.Text}" Keyboard="Text" Placeholder="106.7009" SemanticProperties.Description="Kinh độ vị trí phòng" />
+                        <Label Text="{Binding LongitudeField.Error}" Style="{StaticResource FieldError}" />
+                    </VerticalStackLayout>
+                </Grid>
+                <Label Text="Ảnh phòng *" FontFamily="OpenSansSemibold" />
+                <Label Text="Ít nhất 3 ảnh JPG hoặc PNG, tối đa 10 MB mỗi ảnh. Tối đa 10 ảnh mới mỗi lần lưu." FontSize="12" />
+                <Label Text="{Binding PhotoCountText}" />
+                <Button Text="Chọn ảnh" Command="{Binding PickPhotosCommand}" AutomationId="ListingPickPhotos" />
+                <Label Text="{Binding PhotoError}" Style="{StaticResource FieldError}" />
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding ExistingPhotos}" Spacing="8">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="models:ExistingListingPhoto">
+                            <Grid ColumnDefinitions="100,*" ColumnSpacing="12">
+                                <Image Source="{Binding ThumbnailUrl}" HeightRequest="90" WidthRequest="100" Aspect="AspectFill" SemanticProperties.Description="Ảnh đã lưu của tin đăng" />
+                                <Label Grid.Column="1" Text="Ảnh đã lưu" VerticalOptions="Center" />
+                            </Grid>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding SelectedPhotos}" Spacing="8">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="models:SelectedListingPhoto">
+                            <Grid ColumnDefinitions="100,*,Auto" ColumnSpacing="8">
+                                <Image Source="{Binding Path}" HeightRequest="90" WidthRequest="100" Aspect="AspectFill" SemanticProperties.Description="Ảnh mới được chọn" />
+                                <Label Grid.Column="1" Text="{Binding FileName}" VerticalOptions="Center" LineBreakMode="TailTruncation" />
+                                <Button Grid.Column="2" Text="Bỏ" Command="{Binding RemoveCommand}" SemanticProperties.Description="Bỏ ảnh đã chọn" />
+                            </Grid>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+                <Label Text="Mô tả thêm" />
+                <Editor Text="{Binding DescriptionField.Text}" AutoSize="TextChanges" MinimumHeightRequest="110" MaxLength="4000" SemanticProperties.Description="Mô tả phòng, không bắt buộc" />
+                <Label Text="{Binding DescriptionField.Error}" Style="{StaticResource FieldError}" />
+            </VerticalStackLayout>
+            <Button Text="Lưu tin" Command="{Binding SaveCommand}" AutomationId="ListingSave" IsVisible="{Binding IsAuthenticated}" />
+            <Button Text="Gỡ đăng tin" Command="{Binding UnpublishCommand}" IsVisible="{Binding CanUnpublish}" AutomationId="ListingUnpublish" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
