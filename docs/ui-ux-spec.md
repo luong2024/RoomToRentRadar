@@ -96,6 +96,8 @@ Use semantic tokens only; method in `.agents/skills/ui/02-design-system`. The pa
 | `StatusSuccess` | `#16A34A` | `#4CB5AE` | verified badge (icon + text) |
 | `StatusWarning` | `#D97706` | `#F59E0B` | pending/unavailable banners |
 | `StatusDanger` | `#DC2626` | `#EF4444` | errors, destructive |
+| `StatusWarningSubtle` | `#FEF3C7` | `#3B2A0A` | offline/warning banner fill (text: `StatusWarningText`) |
+| `StatusDangerBorder` | `#FECACA` | `#7F1D1D` | inline error card border |
 | `StatusInfo` | `#0284C7` | `#38BDF8` | info |
 | `Favourite` *(to add)* | `#DC2626` | `#EF4444` | filled heart (reuse danger red) |
 
