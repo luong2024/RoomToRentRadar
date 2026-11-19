@@ -166,7 +166,7 @@ public sealed class RoomDocument : IProjectionVersionedDocument
             HouseRules = room.HouseRules.ToList(),
             LandlordPhone = room.LandlordPhone,
             LastUpdatedDate = room.LastUpdatedDate,
-            CreatedAt = room.CreatedAt,
+            CreatedAt = room.CreatedAt != default ? room.CreatedAt : (room.LastUpdatedDate ?? DateTime.UtcNow),
             Latitude = room.Latitude,
             Longitude = room.Longitude,
             Location = location

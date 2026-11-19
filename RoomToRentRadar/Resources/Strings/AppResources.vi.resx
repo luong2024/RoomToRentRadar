@@ -138,4 +138,12 @@
   <data name="Validation_AreaNegative" xml:space="preserve"><value>Diện tích không được nhỏ hơn 0.</value></data>
   <data name="ActiveFilter_ClearAll" xml:space="preserve"><value>Xóa tất cả bộ lọc</value></data>
   <data name="Filter_DistanceDisabled" xml:space="preserve"><value>Tắt</value></data>
+  <data name="Nav_SignIn" xml:space="preserve"><value>Sign In / Register</value></data>
+  <data name="Nav_Logout" xml:space="preserve"><value>Đăng xuất</value></data>
+  <data name="Logout_Confirm_Title" xml:space="preserve"><value>Đăng xuất</value></data>
+  <data name="Logout_Confirm_Message" xml:space="preserve"><value>Bạn có chắc chắn muốn đăng xuất?</value></data>
+  <data name="Logout_Confirm_Subtitle" xml:space="preserve"><value>Sau khi đăng xuất, bạn sẽ cần đăng nhập lại để tiếp tục sử dụng hệ thống.</value></data>
+  <data name="Logout_Confirm_Yes" xml:space="preserve"><value>Đăng xuất</value></data>
+  <data name="Logout_Confirm_No" xml:space="preserve"><value>Hủy</value></data>
+  <data name="Logout_Success" xml:space="preserve"><value>Đăng xuất thành công</value></data>
 </root>

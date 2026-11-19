@@ -252,4 +252,52 @@ public class InMemoryRoomRepositoryTests
         Assert.That(totalCount, Is.EqualTo(2));
         Assert.That(items, Has.Count.EqualTo(2));
     }
+
+    [Test]
+    public async Task SearchAsync_WhenSortedByNewest_ShouldOrderByCreatedAtDescending_EvenWhenUpdatedLater()
+    {
+        // Arrange
+        // Room A: Created earlier (Nov 1), but updated very recently (Nov 20)
+        var roomA = new Room
+        {
+            Id = "room-older-created-recent-update",
+            Title = "Phòng cũ vừa cập nhật",
+            Price = 2000000m,
+            Area = 20.0,
+            Status = RoomStatus.Available,
+            IsVerified = true,
+            CreatedAt = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc),
+            LastUpdatedDate = new DateTime(2026, 11, 20, 0, 0, 0, DateTimeKind.Utc)
+        };
+
+        // Room B: Created later (Nov 15), but not updated since creation (Nov 15)
+        var roomB = new Room
+        {
+            Id = "room-newer-created",
+            Title = "Phòng mới tạo",
+            Price = 2000000m,
+            Area = 20.0,
+            Status = RoomStatus.Available,
+            IsVerified = true,
+            CreatedAt = new DateTime(2026, 11, 15, 0, 0, 0, DateTimeKind.Utc),
+            LastUpdatedDate = new DateTime(2026, 11, 15, 0, 0, 0, DateTimeKind.Utc)
+        };
+
+        _repository.Upsert(roomA);
+        _repository.Upsert(roomB);
+
+        var query = new SearchRoomsQuery(sortBy: "Newest", pageSize: 10);
+
+        // Act
+        var (items, totalCount) = await _repository.SearchAsync(query);
+
+        // Assert: Newest sorts by CreatedAt DESC, so roomB (Nov 15) must come BEFORE roomA (Nov 1)
+        Assert.Multiple(() =>
+        {
+            Assert.That(totalCount, Is.EqualTo(2));
+            Assert.That(items, Has.Count.EqualTo(2));
+            Assert.That(items[0].Id, Is.EqualTo(roomB.Id), "Room with more recent CreatedAt must be first.");
+            Assert.That(items[1].Id, Is.EqualTo(roomA.Id), "Room with older CreatedAt must be second even if LastUpdatedDate is newer.");
+        });
+    }
 }

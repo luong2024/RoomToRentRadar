@@ -162,7 +162,7 @@ public class InMemoryRoomRepository : IRoomRepository
                 filtered.OrderBy(r => (r.Latitude.HasValue && r.Longitude.HasValue)
                     ? CalculateHaversineDistanceKm(query.Latitude.Value, query.Longitude.Value, r.Latitude.Value, r.Longitude.Value)
                     : double.MaxValue).ThenBy(r => r.Id, StringComparer.Ordinal),
-            "newest" => filtered.OrderByDescending(r => r.CreatedAt != default ? r.CreatedAt : r.LastUpdatedDate).ThenBy(r => r.Id, StringComparer.Ordinal),
+            "newest" => filtered.OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.Id, StringComparer.Ordinal),
             _ => filtered.OrderBy(r => r.Id, StringComparer.Ordinal)
         };
 

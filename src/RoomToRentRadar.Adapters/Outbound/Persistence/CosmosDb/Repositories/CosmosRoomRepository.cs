@@ -295,7 +295,7 @@ public class CosmosRoomRepository : IRoomRepository
             "pricedesc" or "price_desc" => "ORDER BY c.price DESC, c.id DESC",
             "distanceasc" or "distance_asc" when query.Latitude.HasValue && query.Longitude.HasValue =>
                 "ORDER BY ST_DISTANCE(c.location, @location) ASC",
-            "newest" => "ORDER BY c.lastUpdatedDate DESC, c.id DESC",
+            "newest" => "ORDER BY c.createdAt DESC, c.id DESC",
             _ => "ORDER BY c.id ASC"
         };
 

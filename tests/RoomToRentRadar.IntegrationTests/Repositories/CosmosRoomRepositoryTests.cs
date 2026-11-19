@@ -61,9 +61,27 @@ public class CosmosRoomRepositoryTests
                 Path = "/Location/*",
                 SpatialTypes = { SpatialType.Point }
             });
+            containerProperties.IndexingPolicy.CompositeIndexes.Add(new System.Collections.ObjectModel.Collection<CompositePath>
+            {
+                new() { Path = "/price", Order = CompositePathSortOrder.Ascending },
+                new() { Path = "/id", Order = CompositePathSortOrder.Ascending }
+            });
+            containerProperties.IndexingPolicy.CompositeIndexes.Add(new System.Collections.ObjectModel.Collection<CompositePath>
+            {
+                new() { Path = "/price", Order = CompositePathSortOrder.Descending },
+                new() { Path = "/id", Order = CompositePathSortOrder.Descending }
+            });
+            containerProperties.IndexingPolicy.CompositeIndexes.Add(new System.Collections.ObjectModel.Collection<CompositePath>
+            {
+                new() { Path = "/createdAt", Order = CompositePathSortOrder.Descending },
+                new() { Path = "/id", Order = CompositePathSortOrder.Descending }
+            });
 
             var containerResponse = await _database.CreateContainerIfNotExistsAsync(containerProperties);
             _container = containerResponse.Container;
+
+            // Ensure composite indexes exist if container already existed
+            await EnsureContainerIndexesAsync(_container, containerResponse.Resource);
 
             _repository = new CosmosRoomRepository(_container);
 
@@ -418,5 +436,220 @@ public class CosmosRoomRepositoryTests
             Assert.That(items[0].Latitude, Is.EqualTo(room.Latitude));
             Assert.That(items[0].Longitude, Is.EqualTo(room.Longitude));
         });
+    }
+
+    [Test]
+    public async Task SearchAsync_WithPriceAscSort_ReturnsCrossPageItemsInCorrectOrder()
+    {
+        if (_repository is null) Assert.Ignore("Cosmos DB repository is not initialized.");
+
+        var testId = Guid.NewGuid().ToString("N")[..8];
+        var uniqueKeyword = $"sort-price-asc-{testId}";
+
+        var room1 = new Room { Id = $"p1-{testId}", Title = $"Phòng {uniqueKeyword}", Price = 1_000_000m, Area = 20, Status = RoomStatus.Available, IsVerified = true };
+        var room2 = new Room { Id = $"p2-{testId}", Title = $"Phòng {uniqueKeyword}", Price = 2_000_000m, Area = 20, Status = RoomStatus.Available, IsVerified = true };
+        var room3 = new Room { Id = $"p3-{testId}", Title = $"Phòng {uniqueKeyword}", Price = 3_000_000m, Area = 20, Status = RoomStatus.Available, IsVerified = true };
+        var room4 = new Room { Id = $"p4-{testId}", Title = $"Phòng {uniqueKeyword}", Price = 4_000_000m, Area = 20, Status = RoomStatus.Available, IsVerified = true };
+
+        await _repository.CreateAsync(room3);
+        await _repository.CreateAsync(room1);
+        await _repository.CreateAsync(room4);
+        await _repository.CreateAsync(room2);
+
+        var page1Query = new SearchRoomsQuery(keyword: uniqueKeyword, sortBy: "PriceAsc", pageNumber: 1, pageSize: 2);
+        var (page1Items, totalCount1) = await _repository.SearchAsync(page1Query);
+
+        var page2Query = new SearchRoomsQuery(keyword: uniqueKeyword, sortBy: "PriceAsc", pageNumber: 2, pageSize: 2);
+        var (page2Items, totalCount2) = await _repository.SearchAsync(page2Query);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(totalCount1, Is.EqualTo(4));
+            Assert.That(totalCount2, Is.EqualTo(4));
+            Assert.That(page1Items.Select(r => r.Price), Is.EqualTo(new[] { 1_000_000m, 2_000_000m }));
+            Assert.That(page2Items.Select(r => r.Price), Is.EqualTo(new[] { 3_000_000m, 4_000_000m }));
+        });
+    }
+
+    [Test]
+    public async Task SearchAsync_WithPriceDescSort_ReturnsCrossPageItemsInCorrectOrder()
+    {
+        if (_repository is null) Assert.Ignore("Cosmos DB repository is not initialized.");
+
+        var testId = Guid.NewGuid().ToString("N")[..8];
+        var uniqueKeyword = $"sort-price-desc-{testId}";
+
+        var room1 = new Room { Id = $"pd1-{testId}", Title = $"Phòng {uniqueKeyword}", Price = 1_500_000m, Area = 20, Status = RoomStatus.Available, IsVerified = true };
+        var room2 = new Room { Id = $"pd2-{testId}", Title = $"Phòng {uniqueKeyword}", Price = 2_500_000m, Area = 20, Status = RoomStatus.Available, IsVerified = true };
+        var room3 = new Room { Id = $"pd3-{testId}", Title = $"Phòng {uniqueKeyword}", Price = 3_500_000m, Area = 20, Status = RoomStatus.Available, IsVerified = true };
+        var room4 = new Room { Id = $"pd4-{testId}", Title = $"Phòng {uniqueKeyword}", Price = 4_500_000m, Area = 20, Status = RoomStatus.Available, IsVerified = true };
+
+        await _repository.CreateAsync(room2);
+        await _repository.CreateAsync(room4);
+        await _repository.CreateAsync(room1);
+        await _repository.CreateAsync(room3);
+
+        var page1Query = new SearchRoomsQuery(keyword: uniqueKeyword, sortBy: "PriceDesc", pageNumber: 1, pageSize: 2);
+        var (page1Items, totalCount1) = await _repository.SearchAsync(page1Query);
+
+        var page2Query = new SearchRoomsQuery(keyword: uniqueKeyword, sortBy: "PriceDesc", pageNumber: 2, pageSize: 2);
+        var (page2Items, totalCount2) = await _repository.SearchAsync(page2Query);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(totalCount1, Is.EqualTo(4));
+            Assert.That(totalCount2, Is.EqualTo(4));
+            Assert.That(page1Items.Select(r => r.Price), Is.EqualTo(new[] { 4_500_000m, 3_500_000m }));
+            Assert.That(page2Items.Select(r => r.Price), Is.EqualTo(new[] { 2_500_000m, 1_500_000m }));
+        });
+    }
+
+    [Test]
+    public async Task SearchAsync_WithDistanceAscSort_OrdersBySpatialProximity()
+    {
+        if (_repository is null) Assert.Ignore("Cosmos DB repository is not initialized.");
+
+        var testId = Guid.NewGuid().ToString("N")[..8];
+        var uniqueKeyword = $"sort-dist-{testId}";
+
+        // Center: ICTU (21.5852, 105.8073)
+        // Near (~0.3km)
+        var roomNear = new Room { Id = $"dist-near-{testId}", Title = $"Gần {uniqueKeyword}", Price = 2_000_000m, Area = 20, Latitude = 21.587, Longitude = 105.808, Status = RoomStatus.Available, IsVerified = true };
+        // Mid (~2km)
+        var roomMid = new Room { Id = $"dist-mid-{testId}", Title = $"Vừa {uniqueKeyword}", Price = 2_000_000m, Area = 20, Latitude = 21.600, Longitude = 105.815, Status = RoomStatus.Available, IsVerified = true };
+        // Far (~15km)
+        var roomFar = new Room { Id = $"dist-far-{testId}", Title = $"Xa {uniqueKeyword}", Price = 2_000_000m, Area = 20, Latitude = 21.700, Longitude = 105.900, Status = RoomStatus.Available, IsVerified = true };
+
+        await _repository.CreateAsync(roomFar);
+        await _repository.CreateAsync(roomNear);
+        await _repository.CreateAsync(roomMid);
+
+        var query = new SearchRoomsQuery(keyword: uniqueKeyword, latitude: 21.5852, longitude: 105.8073, sortBy: "DistanceAsc", pageNumber: 1, pageSize: 10);
+        var (items, totalCount) = await _repository.SearchAsync(query);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(totalCount, Is.EqualTo(3));
+            Assert.That(items.Count, Is.EqualTo(3));
+            Assert.That(items[0].Id, Is.EqualTo(roomNear.Id));
+            Assert.That(items[1].Id, Is.EqualTo(roomMid.Id));
+            Assert.That(items[2].Id, Is.EqualTo(roomFar.Id));
+        });
+    }
+
+    [Test]
+    public async Task SearchAsync_WithNewestSort_OrdersByCreatedAtDescending_EvenWhenUpdatedLater()
+    {
+        if (_repository is null) Assert.Ignore("Cosmos DB repository is not initialized.");
+
+        var testId = Guid.NewGuid().ToString("N")[..8];
+        var uniqueKeyword = $"sort-newest-{testId}";
+
+        var baseDate = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        // Room A: Created Nov 1, Updated Nov 25 (Updated very late)
+        var roomA = new Room
+        {
+            Id = $"newest-older-{testId}",
+            Title = $"Phòng cũ vừa sửa {uniqueKeyword}",
+            Price = 2_000_000m,
+            Area = 20,
+            CreatedAt = baseDate.AddDays(1),
+            LastUpdatedDate = baseDate.AddDays(25),
+            Status = RoomStatus.Available,
+            IsVerified = true
+        };
+
+        // Room B: Created Nov 15, Updated Nov 15 (Created more recently)
+        var roomB = new Room
+        {
+            Id = $"newest-newer-{testId}",
+            Title = $"Phòng mới tạo {uniqueKeyword}",
+            Price = 2_000_000m,
+            Area = 20,
+            CreatedAt = baseDate.AddDays(15),
+            LastUpdatedDate = baseDate.AddDays(15),
+            Status = RoomStatus.Available,
+            IsVerified = true
+        };
+
+        await _repository.CreateAsync(roomA);
+        await _repository.CreateAsync(roomB);
+
+        var query = new SearchRoomsQuery(keyword: uniqueKeyword, sortBy: "Newest", pageNumber: 1, pageSize: 10);
+        var (items, totalCount) = await _repository.SearchAsync(query);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(totalCount, Is.EqualTo(2));
+            Assert.That(items.Count, Is.EqualTo(2));
+            Assert.That(items[0].Id, Is.EqualTo(roomB.Id), "Room B (created Nov 15) must come before Room A (created Nov 1).");
+            Assert.That(items[1].Id, Is.EqualTo(roomA.Id));
+        });
+    }
+
+    private static async Task EnsureContainerIndexesAsync(Container container, ContainerProperties properties)
+    {
+        var indexingPolicy = properties.IndexingPolicy ?? new IndexingPolicy();
+        properties.IndexingPolicy = indexingPolicy;
+        var modified = false;
+
+        var locationIndex = indexingPolicy.SpatialIndexes.FirstOrDefault(index =>
+            index.Path.Equals("/location/*", StringComparison.Ordinal));
+
+        if (locationIndex is null)
+        {
+            indexingPolicy.SpatialIndexes.Add(new SpatialPath
+            {
+                Path = "/location/*",
+                SpatialTypes = { SpatialType.Point }
+            });
+            modified = true;
+        }
+
+        if (!HasCompositeIndex(indexingPolicy, "/price", CompositePathSortOrder.Ascending, "/id", CompositePathSortOrder.Ascending))
+        {
+            indexingPolicy.CompositeIndexes.Add(new System.Collections.ObjectModel.Collection<CompositePath>
+            {
+                new() { Path = "/price", Order = CompositePathSortOrder.Ascending },
+                new() { Path = "/id", Order = CompositePathSortOrder.Ascending }
+            });
+            modified = true;
+        }
+
+        if (!HasCompositeIndex(indexingPolicy, "/price", CompositePathSortOrder.Descending, "/id", CompositePathSortOrder.Descending))
+        {
+            indexingPolicy.CompositeIndexes.Add(new System.Collections.ObjectModel.Collection<CompositePath>
+            {
+                new() { Path = "/price", Order = CompositePathSortOrder.Descending },
+                new() { Path = "/id", Order = CompositePathSortOrder.Descending }
+            });
+            modified = true;
+        }
+
+        if (!HasCompositeIndex(indexingPolicy, "/createdAt", CompositePathSortOrder.Descending, "/id", CompositePathSortOrder.Descending))
+        {
+            indexingPolicy.CompositeIndexes.Add(new System.Collections.ObjectModel.Collection<CompositePath>
+            {
+                new() { Path = "/createdAt", Order = CompositePathSortOrder.Descending },
+                new() { Path = "/id", Order = CompositePathSortOrder.Descending }
+            });
+            modified = true;
+        }
+
+        if (modified)
+        {
+            await container.ReplaceContainerAsync(properties);
+        }
+    }
+
+    private static bool HasCompositeIndex(IndexingPolicy policy, string path1, CompositePathSortOrder order1, string path2, CompositePathSortOrder order2)
+    {
+        return policy.CompositeIndexes.Any(ci =>
+            ci.Count >= 2 &&
+            string.Equals(ci[0].Path, path1, StringComparison.Ordinal) &&
+            ci[0].Order == order1 &&
+            string.Equals(ci[1].Path, path2, StringComparison.Ordinal) &&
+            ci[1].Order == order2);
     }
 }

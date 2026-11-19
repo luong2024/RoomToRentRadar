@@ -235,4 +235,38 @@ public class RoomRepositoryPaginationTests
             Assert.That(page3Items[0].Id, Is.EqualTo("room-far"));
         });
     }
+
+    [Test]
+    public async Task SearchAsync_WithNewestSort_SortsAcrossMultiplePagesBeforePagination_BasedOnCreatedAt()
+    {
+        // Arrange
+        var repo = new InMemoryRoomRepository();
+        var baseDate = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        // 4 rooms with different CreatedAt and LastUpdatedDate
+        // room1: Created Nov 10, Updated Nov 10
+        repo.Upsert(new Room { Id = "room-3rd", Title = "3rd Newest", Price = 2_000_000m, CreatedAt = baseDate.AddDays(10), LastUpdatedDate = baseDate.AddDays(10), IsVerified = true, Status = RoomStatus.Available });
+        // room2: Created Nov 20, Updated Nov 20 -> Newest!
+        repo.Upsert(new Room { Id = "room-1st", Title = "1st Newest", Price = 2_000_000m, CreatedAt = baseDate.AddDays(20), LastUpdatedDate = baseDate.AddDays(20), IsVerified = true, Status = RoomStatus.Available });
+        // room3: Created Nov 5, Updated Nov 25 (Updated later, but created earlier -> must be 4th!)
+        repo.Upsert(new Room { Id = "room-4th", Title = "4th Newest (Updated Late)", Price = 2_000_000m, CreatedAt = baseDate.AddDays(5), LastUpdatedDate = baseDate.AddDays(25), IsVerified = true, Status = RoomStatus.Available });
+        // room4: Created Nov 15, Updated Nov 15 -> 2nd!
+        repo.Upsert(new Room { Id = "room-2nd", Title = "2nd Newest", Price = 2_000_000m, CreatedAt = baseDate.AddDays(15), LastUpdatedDate = baseDate.AddDays(15), IsVerified = true, Status = RoomStatus.Available });
+
+        // Act: Page 1 (size 2) and Page 2 (size 2)
+        var page1Query = new SearchRoomsQuery(sortBy: "Newest", pageNumber: 1, pageSize: 2);
+        var (page1Items, totalCount1) = await repo.SearchAsync(page1Query);
+
+        var page2Query = new SearchRoomsQuery(sortBy: "Newest", pageNumber: 2, pageSize: 2);
+        var (page2Items, totalCount2) = await repo.SearchAsync(page2Query);
+
+        // Assert: Page 1 has 1st and 2nd; Page 2 has 3rd and 4th
+        Assert.Multiple(() =>
+        {
+            Assert.That(totalCount1, Is.EqualTo(4));
+            Assert.That(totalCount2, Is.EqualTo(4));
+            Assert.That(page1Items.Select(r => r.Id), Is.EqualTo(new[] { "room-1st", "room-2nd" }));
+            Assert.That(page2Items.Select(r => r.Id), Is.EqualTo(new[] { "room-3rd", "room-4th" }));
+        });
+    }
 }
