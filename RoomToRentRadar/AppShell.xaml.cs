@@ -32,6 +32,7 @@ namespace RoomToRentRadar
             InitializeComponent();
             _sessionService = sessionService;
             _routeGuardService = routeGuardService;
+            UpdateAuthVisibility();
             Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(Features.RoomDetails.Views.RoomDetailPage));
             Routing.RegisterRoute(AppRoutes.RoomDetails, typeof(RoomDetailsPage));
 
@@ -55,6 +56,7 @@ namespace RoomToRentRadar
             InitializeComponent();
             _sessionService = sessionService;
             _routeGuardService = routeGuardService;
+            UpdateAuthVisibility();
 
             HomeShellContent.Content = homePage;
             RoomListingsShellContent.Content = roomListingsPage;
@@ -276,8 +278,59 @@ namespace RoomToRentRadar
             UpdateProfileVisibility();
         }
 
-        private void UpdateProfileVisibility() =>
-            ProfileShellContent.IsVisible = _sessionService?.IsAuthenticated == true;
+        private void UpdateProfileVisibility() => UpdateAuthVisibility();
+        private void UpdateAuthVisibility()
+        {
+            var isAuthenticated = _sessionService?.IsAuthenticated == true;
+            if (ProfileShellContent != null)
+            {
+                ProfileShellContent.IsVisible = isAuthenticated;
+            }
+
+            if (AuthFlyoutItem != null)
+            {
+                AuthFlyoutItem.IsVisible = !isAuthenticated;
+            }
+
+            if (AuthShellContent != null)
+            {
+                AuthShellContent.IsVisible = !isAuthenticated;
+            }
+
+            var logoutItem = (LogoutMenuItem?.Parent as BaseShellItem)
+                ?? Items.FirstOrDefault(i => i.GetType().Name == "MenuShellItem");
+            if (logoutItem != null)
+            {
+                logoutItem.IsVisible = isAuthenticated;
+            }
+        }
+
+        private async void OnLogoutMenuItemClicked(object? sender, EventArgs e)
+        {
+            FlyoutIsPresented = false;
+
+            var confirmTitle = LocalizationResourceManager.Instance["Logout_Confirm_Title"] ?? "Log Out";
+            var confirmMessage = LocalizationResourceManager.Instance["Logout_Confirm_Message"] ?? "Are you sure you want to log out?";
+            var confirmYes = LocalizationResourceManager.Instance["Logout_Confirm_Yes"] ?? "Log Out";
+            var confirmNo = LocalizationResourceManager.Instance["Logout_Confirm_No"] ?? "Cancel";
+
+            var page = CurrentPage ?? this;
+            bool shouldLogout = await page.DisplayAlertAsync(confirmTitle, confirmMessage, confirmYes, confirmNo);
+            if (!shouldLogout)
+            {
+                return;
+            }
+
+            if (_sessionService != null)
+            {
+                await _sessionService.LogoutAsync();
+            }
+
+            await GoToAsync($"//{AppRoutes.Home}");
+
+            var successMsg = LocalizationResourceManager.Instance["Logout_Success"] ?? "Logged out successfully";
+            await DisplayToastAsync(successMsg);
+        }
 
         public void UpdateDesktopPaneCompactState(bool isCompact)
         {
