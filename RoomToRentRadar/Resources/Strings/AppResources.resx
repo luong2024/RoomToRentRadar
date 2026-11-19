@@ -268,4 +268,54 @@
   <data name="Account_Alert_HelpMessage" xml:space="preserve">
     <value>RoomToRentRadar 1.0&#10;Group 2 ICTU Mobile Rental Radar Project.</value>
   </data>
+
+  <!-- Placeholder screens (T00.15): shared PlaceholderPage titles, "Coming in" and id text -->
+  <data name="Placeholder_ComingIn" xml:space="preserve">
+    <value>Coming in {0}</value>
+  </data>
+  <data name="Placeholder_IdFormat" xml:space="preserve">
+    <value>ID: {0}</value>
+  </data>
+  <data name="Placeholder_SCR-ROOM-01_Title" xml:space="preserve">
+    <value>Room detail</value>
+  </data>
+  <data name="Placeholder_SCR-ROOM-02_Title" xml:space="preserve">
+    <value>Photo gallery</value>
+  </data>
+  <data name="Placeholder_SCR-SRCH-01_Title" xml:space="preserve">
+    <value>Search filters</value>
+  </data>
+  <data name="Placeholder_SCR-CMP-01_Title" xml:space="preserve">
+    <value>Compare rooms</value>
+  </data>
+  <data name="Placeholder_SCR-CHAT-02_Title" xml:space="preserve">
+    <value>Conversation</value>
+  </data>
+  <data name="Placeholder_SCR-SAVED-01_Title" xml:space="preserve">
+    <value>Saved searches</value>
+  </data>
+  <data name="Placeholder_SCR-NOTI-01_Title" xml:space="preserve">
+    <value>Notifications</value>
+  </data>
+  <data name="Placeholder_SCR-ACC-02_Title" xml:space="preserve">
+    <value>Choose campus</value>
+  </data>
+  <data name="Placeholder_SCR-ACC-03_Title" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="Placeholder_SCR-LL-01_Title" xml:space="preserve">
+    <value>My listings</value>
+  </data>
+  <data name="Placeholder_SCR-LL-02_Title" xml:space="preserve">
+    <value>Listing editor</value>
+  </data>
+  <data name="Placeholder_SCR-ADM-01_Title" xml:space="preserve">
+    <value>Moderation</value>
+  </data>
+  <data name="Placeholder_SCR-ADM-02_Title" xml:space="preserve">
+    <value>Review listing</value>
+  </data>
+  <data name="Placeholder_SCR-ADM-03_Title" xml:space="preserve">
+    <value>Report detail</value>
+  </data>
 </root>

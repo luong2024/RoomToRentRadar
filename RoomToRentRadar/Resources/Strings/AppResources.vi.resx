@@ -268,4 +268,54 @@
   <data name="Account_Alert_HelpMessage" xml:space="preserve">
     <value>RoomToRentRadar 1.0&#10;Dự án Radar Phòng trọ Sinh viên ICTU - Nhóm 2.</value>
   </data>
+
+  <!-- Placeholder screens (T00.15): shared PlaceholderPage titles, "Coming in" and id text -->
+  <data name="Placeholder_ComingIn" xml:space="preserve">
+    <value>Sẽ có trong {0}</value>
+  </data>
+  <data name="Placeholder_IdFormat" xml:space="preserve">
+    <value>Mã: {0}</value>
+  </data>
+  <data name="Placeholder_SCR-ROOM-01_Title" xml:space="preserve">
+    <value>Chi tiết phòng</value>
+  </data>
+  <data name="Placeholder_SCR-ROOM-02_Title" xml:space="preserve">
+    <value>Thư viện ảnh</value>
+  </data>
+  <data name="Placeholder_SCR-SRCH-01_Title" xml:space="preserve">
+    <value>Bộ lọc tìm kiếm</value>
+  </data>
+  <data name="Placeholder_SCR-CMP-01_Title" xml:space="preserve">
+    <value>So sánh phòng</value>
+  </data>
+  <data name="Placeholder_SCR-CHAT-02_Title" xml:space="preserve">
+    <value>Cuộc trò chuyện</value>
+  </data>
+  <data name="Placeholder_SCR-SAVED-01_Title" xml:space="preserve">
+    <value>Tìm kiếm đã lưu</value>
+  </data>
+  <data name="Placeholder_SCR-NOTI-01_Title" xml:space="preserve">
+    <value>Thông báo</value>
+  </data>
+  <data name="Placeholder_SCR-ACC-02_Title" xml:space="preserve">
+    <value>Chọn trường</value>
+  </data>
+  <data name="Placeholder_SCR-ACC-03_Title" xml:space="preserve">
+    <value>Ngôn ngữ</value>
+  </data>
+  <data name="Placeholder_SCR-LL-01_Title" xml:space="preserve">
+    <value>Tin đăng của tôi</value>
+  </data>
+  <data name="Placeholder_SCR-LL-02_Title" xml:space="preserve">
+    <value>Trình soạn tin đăng</value>
+  </data>
+  <data name="Placeholder_SCR-ADM-01_Title" xml:space="preserve">
+    <value>Kiểm duyệt</value>
+  </data>
+  <data name="Placeholder_SCR-ADM-02_Title" xml:space="preserve">
+    <value>Duyệt tin đăng</value>
+  </data>
+  <data name="Placeholder_SCR-ADM-03_Title" xml:space="preserve">
+    <value>Chi tiết báo cáo</value>
+  </data>
 </root>

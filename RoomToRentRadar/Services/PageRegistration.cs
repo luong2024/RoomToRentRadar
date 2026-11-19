@@ -30,6 +30,9 @@ public static class PageRegistration
         services.AddPage<RegisterPage, RegisterPageModel>();
         services.AddPage<RoleSelectionPage, RoleSelectionPageModel>();
 
+        // One shared placeholder for the 12 detail routes and the my-listings / moderation tabs (T00.15).
+        services.AddPage<PlaceholderPage, PlaceholderPageModel>();
+
         services.AddSingleton<UiCatalogPageModel>();
         services.AddTransient<UiCatalogPage>();
 

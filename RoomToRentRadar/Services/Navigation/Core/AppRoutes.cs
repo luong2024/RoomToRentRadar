@@ -4,7 +4,7 @@ namespace RoomToRentRadar.Services.Navigation.Core;
 /// Canonical Shell route names (docs/ui-ux-spec.md §2.1). Pure C# so the role/tab logic
 /// can be unit-tested without a MAUI host (T00.15).
 /// </summary>
-public static class AppRoutes
+public static partial class AppRoutes
 {
     // Bottom tabs (§2.1). "main" was renamed to "explore".
     public const string Explore = "explore";

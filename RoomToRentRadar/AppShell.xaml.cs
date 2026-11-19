@@ -22,6 +22,9 @@ namespace RoomToRentRadar
             Routing.RegisterRoute(AppRoutes.Register, typeof(Pages.RegisterPage));
             Routing.RegisterRoute(AppRoutes.RoleSelection, typeof(Pages.RoleSelectionPage));
 
+            // Register the 12 shared placeholder detail routes (T00.15 P4).
+            AppRoutes.RegisterAll();
+
             if (_appSession != null)
             {
                 _appSession.SessionEnded += OnSessionEnded;
