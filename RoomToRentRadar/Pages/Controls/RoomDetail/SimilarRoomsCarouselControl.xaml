@@ -53,7 +53,7 @@
 
                         <VerticalStackLayout Spacing="0">
                             <!-- Room Thumbnail / Fallback -->
-                            <Grid HeightRequest="105" BackgroundColor="#E2E8F0">
+                            <Grid HeightRequest="105" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}">
                                 <Image Source="{Binding ThumbnailUrl}"
                                        Aspect="AspectFill"
                                        HeightRequest="105"
@@ -64,7 +64,7 @@
                                        FontSize="24"
                                        HorizontalOptions="Center"
                                        VerticalOptions="Center"
-                                       TextColor="{StaticResource Slate400}" />
+                                       TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
                             </Grid>
 
                             <!-- Room Brief Info -->

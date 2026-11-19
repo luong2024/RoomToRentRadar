@@ -22,14 +22,14 @@
                         StrokeThickness="0"
                         WidthRequest="48"
                         HeightRequest="48"
-                        BackgroundColor="#DCE7F1"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
                         HorizontalOptions="Center"
                         VerticalOptions="Center">
                     <Label Text="{Binding LandlordInitials}"
                            FontFamily="{StaticResource FontFamilySemibold}"
                            FontSize="18"
                            FontAttributes="Bold"
-                           TextColor="{StaticResource Navy700}"
+                           TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}"
                            HorizontalTextAlignment="Center"
                            VerticalTextAlignment="Center" />
                 </Border>
@@ -50,12 +50,12 @@
                         <Label Text="{x:Static fonts:FluentUI.shield_checkmark_16_regular}"
                                FontFamily="{x:Static fonts:FluentUI.FontFamily}"
                                FontSize="14"
-                               TextColor="#15803D"
+                               TextColor="{AppThemeBinding Light={StaticResource StatusSuccessTextLight}, Dark={StaticResource StatusSuccessDark}}"
                                VerticalTextAlignment="Center" />
                         <Label Text="{Binding LandlordBadge}"
                                FontFamily="{StaticResource FontFamilyRegular}"
                                FontSize="{StaticResource FontSizeCaption}"
-                               TextColor="#15803D"
+                               TextColor="{AppThemeBinding Light={StaticResource StatusSuccessTextLight}, Dark={StaticResource StatusSuccessDark}}"
                                VerticalTextAlignment="Center" />
                     </HorizontalStackLayout>
                 </VerticalStackLayout>

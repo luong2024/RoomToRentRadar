@@ -29,21 +29,21 @@
                 <Border Grid.Column="1"
                         StrokeShape="RoundRectangle 9999"
                         StrokeThickness="1"
-                        Stroke="#15803D"
-                        BackgroundColor="#1516A34A"
+                        Stroke="{AppThemeBinding Light={StaticResource StatusSuccessLight}, Dark={StaticResource StatusSuccessDark}}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
                         Padding="10,4"
                         VerticalOptions="Center">
                     <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
                         <Label Text="{x:Static fonts:FluentUI.shield_checkmark_16_regular}"
                                FontFamily="{x:Static fonts:FluentUI.FontFamily}"
                                FontSize="14"
-                               TextColor="#15803D"
+                               TextColor="{AppThemeBinding Light={StaticResource StatusSuccessTextLight}, Dark={StaticResource StatusSuccessDark}}"
                                VerticalTextAlignment="Center" />
                         <Label Text="{Binding SafetyScoreFormatted}"
                                FontFamily="{StaticResource FontFamilySemibold}"
                                FontSize="{StaticResource FontSizeBadge}"
                                FontAttributes="Bold"
-                               TextColor="#15803D"
+                               TextColor="{AppThemeBinding Light={StaticResource StatusSuccessTextLight}, Dark={StaticResource StatusSuccessDark}}"
                                VerticalTextAlignment="Center" />
                     </HorizontalStackLayout>
                 </Border>
@@ -59,8 +59,14 @@
                                    Text="{Binding IconGlyph}"
                                    FontFamily="{x:Static fonts:FluentUI.FontFamily}"
                                    FontSize="16"
-                                   TextColor="{Binding IconColor}"
-                                   VerticalTextAlignment="Center" />
+                                   TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+                                   VerticalTextAlignment="Center">
+                                <Label.Triggers>
+                                    <DataTrigger TargetType="Label" Binding="{Binding IsVerified}" Value="True">
+                                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource StatusSuccessLight}, Dark={StaticResource StatusSuccessDark}}" />
+                                    </DataTrigger>
+                                </Label.Triggers>
+                            </Label>
                             <Label Grid.Column="1"
                                    Text="{Binding Description}"
                                    FontFamily="{StaticResource FontFamilyRegular}"

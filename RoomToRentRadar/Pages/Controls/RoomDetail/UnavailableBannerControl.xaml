@@ -10,7 +10,7 @@
             StrokeShape="RoundRectangle 8"
             StrokeThickness="1"
             Stroke="{AppThemeBinding Light={StaticResource StatusWarningLight}, Dark={StaticResource StatusWarningDark}}"
-            BackgroundColor="{AppThemeBinding Light=#FFFBEB, Dark=#33260A}"
+            BackgroundColor="{AppThemeBinding Light={StaticResource StatusWarningSubtleLight}, Dark={StaticResource StatusWarningSubtleDark}}"
             Padding="14,12"
             Margin="0,0,0,12">
         <Grid ColumnDefinitions="28, *" VerticalOptions="Center">

@@ -15,15 +15,15 @@
             Padding="0">
         <VerticalStackLayout Spacing="0">
             <!-- 1. Map Illustration / Preview Banner -->
-            <Grid HeightRequest="130" BackgroundColor="#E5EAEF">
+            <Grid HeightRequest="130" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}">
                 <!-- Map Street Grid Simulation Lines -->
                 <BoxView WidthRequest="3"
                          HeightRequest="130"
-                         Color="#FFFFFF"
+                         Color="{StaticResource White}"
                          HorizontalOptions="Center" />
                 <BoxView HeightRequest="3"
                          HorizontalOptions="Fill"
-                         Color="#FFFFFF"
+                         Color="{StaticResource White}"
                          VerticalOptions="Center" />
 
                 <!-- Location Map Pin Circle -->
@@ -31,7 +31,7 @@
                         StrokeThickness="0"
                         WidthRequest="40"
                         HeightRequest="40"
-                        BackgroundColor="{StaticResource Teal700}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource ActionSecondaryLight}, Dark={StaticResource ActionSecondaryDark}}"
                         HorizontalOptions="Center"
                         VerticalOptions="Center"
                         Shadow="{StaticResource Elevation1Shadow}">

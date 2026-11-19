@@ -56,7 +56,7 @@
                 <Label Text="{x:Static fonts:FluentUI.chevron_left_24_regular}"
                        FontFamily="{x:Static fonts:FluentUI.FontFamily}"
                        FontSize="22"
-                       TextColor="{StaticResource Slate800}"
+                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
                        HorizontalTextAlignment="Center"
                        VerticalTextAlignment="Center" />
             </Border>
@@ -79,7 +79,7 @@
                     <Label Text="{x:Static fonts:FluentUI.share_24_regular}"
                            FontFamily="{x:Static fonts:FluentUI.FontFamily}"
                            FontSize="20"
-                           TextColor="{StaticResource Slate800}"
+                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
                            HorizontalTextAlignment="Center"
                            VerticalTextAlignment="Center" />
                 </Border>
@@ -98,9 +98,15 @@
                     <Label Text="{Binding FavouriteIconGlyph}"
                            FontFamily="{x:Static fonts:FluentUI.FontFamily}"
                            FontSize="20"
-                           TextColor="{Binding FavouriteIconColor}"
+                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
                            HorizontalTextAlignment="Center"
-                           VerticalTextAlignment="Center" />
+                           VerticalTextAlignment="Center">
+                        <Label.Triggers>
+                            <DataTrigger TargetType="Label" Binding="{Binding IsFavourite}" Value="True">
+                                <Setter Property="TextColor" Value="{StaticResource StatusDangerLight}" />
+                            </DataTrigger>
+                        </Label.Triggers>
+                    </Label>
                 </Border>
             </HorizontalStackLayout>
         </Grid>

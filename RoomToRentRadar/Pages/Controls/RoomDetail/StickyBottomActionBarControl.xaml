@@ -82,7 +82,7 @@
                     <!-- In-App Message Button (Touch Target 110x48) -->
                     <Border StrokeShape="RoundRectangle 8"
                             StrokeThickness="0"
-                            BackgroundColor="{StaticResource Navy700}"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}"
                             HeightRequest="48"
                             Padding="16,0"
                             SemanticProperties.Description="Send in-app message to landlord">
@@ -141,7 +141,7 @@
             <Border IsVisible="{Binding IsUnavailable}"
                     StrokeShape="RoundRectangle 8"
                     StrokeThickness="0"
-                    BackgroundColor="{AppThemeBinding Light=#E2E8F0, Dark=#1E293B}"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource ActionDisabledLight}, Dark={StaticResource ActionDisabledDark}}"
                     HeightRequest="48"
                     HorizontalOptions="Fill"
                     VerticalOptions="Center">
