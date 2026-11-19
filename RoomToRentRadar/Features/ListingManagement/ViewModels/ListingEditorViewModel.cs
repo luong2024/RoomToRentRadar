@@ -196,7 +196,6 @@ public partial class ListingEditorViewModel(IListingManagementClient client, Aut
         IsBusy = true;
         try
         {
-            if (!await Shell.Current.DisplayAlertAsync("Gỡ đăng tin?", "Tin sẽ không còn hiển thị công khai. Bạn vẫn có thể chỉnh sửa tin.", "Gỡ đăng", "Hủy") || _released) return;
             ApplySavedListing(await client.UnpublishAsync(_listingId.Value, cancellationToken));
             Message = "Đã gỡ đăng tin.";
         }

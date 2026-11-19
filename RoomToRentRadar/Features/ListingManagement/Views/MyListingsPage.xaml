@@ -48,6 +48,16 @@
                                       Style="{StaticResource SoftSfButton}" WidthRequest="88" />
                 </Grid>
             </Border>
+            <Border Padding="14,10" StrokeShape="RoundRectangle 14" IsVisible="{Binding IsAuthenticated}">
+                <Border.Triggers>
+                    <DataTrigger TargetType="Border" Binding="{Binding OperationMessage}" Value="">
+                        <Setter Property="IsVisible" Value="False" />
+                    </DataTrigger>
+                </Border.Triggers>
+                <Label Text="{Binding OperationMessage}" Style="{StaticResource Caption}" FontSize="12.5"
+                       TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}"
+                       SemanticProperties.Description="Kết quả thao tác quản lý tin" />
+            </Border>
         </VerticalStackLayout>
 
         <!-- 8.2 Dedicated Logged-Out Experience (Shown only when IsAuthenticated == False) -->
@@ -139,10 +149,19 @@
                                         <Image Source="location_pin.png" WidthRequest="14" HeightRequest="14" VerticalOptions="Start" Margin="0,2,0,0" />
                                         <Label Grid.Column="1" Text="{Binding Address}" Style="{StaticResource Caption}" MaxLines="2" LineBreakMode="TailTruncation" />
                                     </Grid>
-                                    <buttons:SfButton Text="Chỉnh sửa &amp; quản lý tin  →"
-                                                      Style="{StaticResource SoftSfButton}"
-                                                      Command="{Binding EditCommand, Source={RelativeSource AncestorType={x:Type vm:MyListingsViewModel}}, x:DataType=vm:MyListingsViewModel}"
-                                                      CommandParameter="{Binding .}" />
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                        <buttons:SfButton Text="Chỉnh sửa &amp; quản lý tin  →"
+                                                          Style="{StaticResource SoftSfButton}"
+                                                          Command="{Binding EditCommand, Source={RelativeSource AncestorType={x:Type vm:MyListingsViewModel}}, x:DataType=vm:MyListingsViewModel}"
+                                                          CommandParameter="{Binding .}" />
+                                        <buttons:SfButton Grid.Column="1" Text="Gỡ tin"
+                                                          Style="{StaticResource DestructiveActionButton}"
+                                                          IsVisible="{Binding CanUnpublish}"
+                                                          IsEnabled="{Binding IsNotBusy, Source={RelativeSource AncestorType={x:Type vm:MyListingsViewModel}}, x:DataType=vm:MyListingsViewModel}"
+                                                          Clicked="OnUnpublishClicked"
+                                                          AutomationId="MyListingUnpublish"
+                                                          SemanticProperties.Description="Gỡ đăng tin này" />
+                                    </Grid>
                                 </VerticalStackLayout>
                             </cards:SfCardView>
                         </DataTemplate>

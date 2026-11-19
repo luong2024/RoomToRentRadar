@@ -922,6 +922,9 @@ public class RoomDetailViewModelTests
             return Task.CompletedTask;
         }
 
+        public Task GoToListingEditorAsync(Guid? listingId = null)
+            => throw new NotSupportedException("The room detail screen does not open the listing editor.");
+
         public Task GoToDirectionsAsync(
             double destinationLat,
             double destinationLng,

@@ -297,7 +297,7 @@
                 <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" InputTransparent="True"
                                    HorizontalOptions="End" WidthRequest="20" HeightRequest="20" Margin="0,0,12,0" Color="{StaticResource Muted}" />
             </Grid>
-            <buttons:SfButton Grid.Column="1" Text="Gỡ tin" Command="{Binding UnpublishCommand}" IsVisible="{Binding CanUnpublish}"
+            <buttons:SfButton Grid.Column="1" Text="Gỡ tin" Clicked="OnUnpublishClicked" IsVisible="{Binding CanUnpublish}"
                               IsEnabled="{Binding IsNotBusy}" AutomationId="ListingUnpublish" Style="{StaticResource DestructiveActionButton}" />
         </Grid>
     </Border>

@@ -533,6 +533,9 @@ public class RoomDetailTravelViewModelTests
         public Task GoToLoginAsync()
             => throw new NotSupportedException("The travel section does not open the login screen.");
 
+        public Task GoToListingEditorAsync(Guid? listingId = null)
+            => throw new NotSupportedException("The travel section does not open the listing editor.");
+
         public Task GoToComparisonAsync()
             => throw new NotSupportedException("The travel section does not open room comparison.");
 

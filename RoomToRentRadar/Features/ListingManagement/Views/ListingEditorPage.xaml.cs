@@ -65,6 +65,18 @@ public partial class ListingEditorPage : ContentPage
         if (!Navigation.NavigationStack.Contains(this)) _model.ReleaseSelectedPhotos();
     }
 
+    private async void OnUnpublishClicked(object? sender, EventArgs e)
+    {
+        if (_model.IsBusy || !_model.CanUnpublish) return;
+
+        var confirmed = await DisplayAlertAsync(
+            "Gỡ đăng tin?",
+            "Tin sẽ không còn hiển thị công khai. Bạn vẫn có thể chỉnh sửa tin.",
+            "Gỡ đăng",
+            "Hủy");
+        if (confirmed) await _model.UnpublishCommand.ExecuteAsync(null);
+    }
+
     private void OnMapTapped(object? sender, MapEventArgs args)
     {
         if (_model.IsBusy) return;

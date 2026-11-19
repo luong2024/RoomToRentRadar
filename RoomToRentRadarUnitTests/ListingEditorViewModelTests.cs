@@ -209,6 +209,57 @@ public class ListingEditorViewModelTests
         Assert.That(viewModel.Message, Is.Empty);
     }
 
+    [Test]
+    public async Task UnpublishCommand_ExistingListing_HidesItAndUpdatesStatus()
+    {
+        var client = new FakeClient();
+        var viewModel = CreateViewModel(client);
+        viewModel.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = client.Saved.Id.ToString() });
+        await viewModel.LoadCommand.ExecuteAsync(null);
+
+        await viewModel.UnpublishCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(client.UnpublishCalls, Is.EqualTo(1));
+            Assert.That(viewModel.StatusText, Is.EqualTo(ListingStatusText.For(ListingStatus.Hidden)));
+            Assert.That(viewModel.CanUnpublish, Is.False);
+            Assert.That(viewModel.Message, Is.EqualTo("Đã gỡ đăng tin."));
+            Assert.That(viewModel.IsBusy, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task UnpublishCommand_ApiFailure_KeepsListingAndShowsError()
+    {
+        var client = new FakeClient { UnpublishError = new HttpRequestException("Offline") };
+        var viewModel = CreateViewModel(client);
+        viewModel.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = client.Saved.Id.ToString() });
+        await viewModel.LoadCommand.ExecuteAsync(null);
+
+        await viewModel.UnpublishCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(client.UnpublishCalls, Is.EqualTo(1));
+            Assert.That(viewModel.StatusText, Is.EqualTo(ListingStatusText.For(ListingStatus.PendingReview)));
+            Assert.That(viewModel.CanUnpublish, Is.True);
+            Assert.That(viewModel.Message, Is.Not.Empty);
+            Assert.That(viewModel.IsBusy, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task UnpublishCommand_NewListingWithoutId_DoesNotCallApi()
+    {
+        var client = new FakeClient();
+        var viewModel = CreateViewModel(client);
+
+        await viewModel.UnpublishCommand.ExecuteAsync(null);
+
+        Assert.That(client.UnpublishCalls, Is.Zero);
+    }
+
     private static ListingEditorViewModel CreateViewModel(FakeClient client, bool signedIn = true)
         => new(client, new AuthService(null!, new FakeTokenStore(signedIn)), new FakeNavigationService());
 
@@ -246,6 +297,7 @@ public class ListingEditorViewModelTests
     {
         public Task GoToRoomDetailAsync(Guid listingId) => Task.CompletedTask;
         public Task GoToLoginAsync() => Task.CompletedTask;
+        public Task GoToListingEditorAsync(Guid? listingId = null) => Task.CompletedTask;
         public Task GoToDirectionsAsync(double destinationLat, double destinationLng, double? originLat, double? originLng) => Task.CompletedTask;
         public Task GoToComparisonAsync() => Task.CompletedTask;
         public Task GoBackAsync() => Task.CompletedTask;
@@ -255,9 +307,11 @@ public class ListingEditorViewModelTests
     {
         public int CreateCalls { get; private set; }
         public int UpdateCalls { get; private set; }
+        public int UnpublishCalls { get; private set; }
         public ListingFormSubmission? LastSubmission { get; private set; }
         public Exception? CreateError { get; set; }
         public Exception? LoadError { get; set; }
+        public Exception? UnpublishError { get; set; }
         public Func<CancellationToken, Task<ManagedListingDto>>? CreateOverride { get; set; }
         public Func<CancellationToken, Task<ManagedListingDto>>? LoadOverride { get; set; }
         public ManagedListingDto Saved { get; } = CreateListing();
@@ -279,7 +333,12 @@ public class ListingEditorViewModelTests
             return Task.FromResult(Saved);
         }
         public Task<ManagedListingDto> UnpublishAsync(Guid id, CancellationToken cancellationToken = default)
-            => Task.FromResult(Saved with { Status = ListingStatus.Hidden });
+        {
+            UnpublishCalls++;
+            return UnpublishError is { } error
+                ? Task.FromException<ManagedListingDto>(error)
+                : Task.FromResult(Saved with { Status = ListingStatus.Hidden });
+        }
 
         private static ManagedListingDto CreateListing()
         {

@@ -26,13 +26,30 @@ public sealed record SelectedListingPhoto(string FileName, string ContentType, s
         () => Task.FromResult<Stream>(File.OpenRead(Path)));
 }
 
-public sealed record OwnedListingItem(ManagedListingDto Listing)
+public sealed partial class OwnedListingItem(ManagedListingDto listing) : ObservableObject
 {
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Id))]
+    [NotifyPropertyChangedFor(nameof(Title))]
+    [NotifyPropertyChangedFor(nameof(Address))]
+    [NotifyPropertyChangedFor(nameof(Status))]
+    [NotifyPropertyChangedFor(nameof(StatusText))]
+    [NotifyPropertyChangedFor(nameof(PriceText))]
+    [NotifyPropertyChangedFor(nameof(CanUnpublish))]
+    public partial ManagedListingDto Listing { get; set; } = listing;
+
     public Guid Id => Listing.Id;
     public string Title => Listing.Title;
     public string Address => Listing.Address;
+    public ListingStatus Status => Listing.Status;
     public string StatusText => ListingStatusText.For(Listing.Status);
     public string PriceText => $"{Listing.Price:N0} đ/tháng";
+
+    /// <summary>Only listings that are still public can be taken down.</summary>
+    public bool CanUnpublish => Listing.Status is ListingStatus.Published or ListingStatus.PendingReview;
+
+    /// <summary>Refreshes the card after the listing was edited or unpublished.</summary>
+    public void Apply(ManagedListingDto listing) => Listing = listing;
 }
 
 public static class ListingStatusText

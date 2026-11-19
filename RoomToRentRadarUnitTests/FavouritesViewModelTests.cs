@@ -325,6 +325,9 @@ public class FavouritesViewModelTests
             return Task.CompletedTask;
         }
 
+        public Task GoToListingEditorAsync(Guid? listingId = null)
+            => throw new NotSupportedException("The favourites screen does not open the listing editor.");
+
         public Task GoToDirectionsAsync(
             double destinationLat,
             double destinationLng,

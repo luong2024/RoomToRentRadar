@@ -11,6 +11,11 @@ public sealed class ShellNavigationService : INavigationService
     public Task GoToLoginAsync()
         => GetShell().GoToAsync(AppRoutes.Login);
 
+    public Task GoToListingEditorAsync(Guid? listingId = null)
+        => GetShell().GoToAsync(listingId is { } id
+            ? $"{AppRoutes.ListingEditor}?id={id}"
+            : AppRoutes.ListingEditor);
+
     public Task GoToDirectionsAsync(
         double destinationLat,
         double destinationLng,

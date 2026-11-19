@@ -435,6 +435,9 @@ public class ComparisonViewModelTests
 
         public Task GoToLoginAsync() => Task.CompletedTask;
 
+        public Task GoToListingEditorAsync(Guid? listingId = null)
+            => throw new NotSupportedException("The comparison screen does not open the listing editor.");
+
         public Task GoToDirectionsAsync(double destinationLat, double destinationLng, double? originLat, double? originLng)
             => Task.CompletedTask;
 

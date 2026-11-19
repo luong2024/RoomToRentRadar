@@ -261,6 +261,9 @@ public class LoginViewModelTests
             return Task.CompletedTask;
         }
 
+        public Task GoToListingEditorAsync(Guid? listingId = null)
+            => throw new NotSupportedException("The login screen does not open the listing editor.");
+
         public Task GoToDirectionsAsync(
             double destinationLat,
             double destinationLng,

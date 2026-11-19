@@ -683,6 +683,9 @@ public partial class HomeViewModelTests
 
         public Task GoToLoginAsync() => Task.CompletedTask;
 
+        public Task GoToListingEditorAsync(Guid? listingId = null)
+            => throw new NotSupportedException("The home screen does not open the listing editor.");
+
         public Task GoToDirectionsAsync(
             double destinationLat,
             double destinationLng,

@@ -6,6 +6,8 @@ public interface INavigationService
 
     Task GoToLoginAsync();
 
+    Task GoToListingEditorAsync(Guid? listingId = null);
+
     Task GoToDirectionsAsync(
         double destinationLat,
         double destinationLng,
