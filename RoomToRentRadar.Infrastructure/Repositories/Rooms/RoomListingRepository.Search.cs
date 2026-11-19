@@ -14,8 +14,10 @@ namespace RoomToRentRadar.Data
     public partial class RoomListingRepository
     {
         /// <summary>
-        /// T05.1 (US05 / Phase 2): Multi-filter search query against SQLite database.
-        /// Fulfills AC1 (price, area, room type, distance to ICTU filters) and AC2 (combinable filters, fast execution).
+        /// T05.1 (US05 / Phase 3): High-performance multi-filter search query against SQLite database.
+        /// Fulfills AC1 (filters for price, area, room type, distance, keyword),
+        /// AC2 (combinable dynamic filters, sorting by price or distance, response time &lt; 1.5s),
+        /// and AC3 (provides complete List&lt;RoomListing&gt; for instant result count calculation).
         /// </summary>
         public override async Task<List<RoomListing>> SearchAsync(RoomFilterCriteria criteria)
         {
@@ -36,6 +38,7 @@ namespace RoomToRentRadar.Data
             };
             cmd.Parameters.AddWithValue("@Status", Constants.ListingStatuses.Available);
 
+            // AC1: Keyword search across title, description, address, ward, and amenities
             if (!string.IsNullOrWhiteSpace(criteria.Keyword))
             {
                 var keyword = $"%{criteria.Keyword.Trim()}%";
@@ -43,6 +46,7 @@ namespace RoomToRentRadar.Data
                 cmd.Parameters.AddWithValue("@Keyword", keyword);
             }
 
+            // AC1: Price range filters
             if (criteria.MinPrice.HasValue)
             {
                 whereClauses.Add("MonthlyRent >= @MinPrice");
@@ -55,6 +59,7 @@ namespace RoomToRentRadar.Data
                 cmd.Parameters.AddWithValue("@MaxPrice", criteria.MaxPrice.Value);
             }
 
+            // AC1: Area range filters
             if (criteria.MinArea.HasValue)
             {
                 whereClauses.Add("Area >= @MinArea");
@@ -67,19 +72,22 @@ namespace RoomToRentRadar.Data
                 cmd.Parameters.AddWithValue("@MaxArea", criteria.MaxArea.Value);
             }
 
+            // AC1: Room type filter (case-insensitive, ignoring "Tất cả")
             if (!string.IsNullOrWhiteSpace(criteria.RoomType) && !string.Equals(criteria.RoomType, "Tất cả", StringComparison.OrdinalIgnoreCase))
             {
                 whereClauses.Add("RoomType = @RoomType COLLATE NOCASE");
                 cmd.Parameters.AddWithValue("@RoomType", criteria.RoomType.Trim());
             }
 
+            // AC1: Maximum distance to ICTU campus filter
             if (criteria.MaxDistanceKm.HasValue)
             {
                 whereClauses.Add("DistanceToCampusKm <= @MaxDistanceKm");
-                cmd.Parameters.AddWithValue("@MaxDistanceKm", criteria.MaxDistanceKm.Value);
+                cmd.Parameters.AddWithValue("@MaxDistanceKm", Math.Max(0, criteria.MaxDistanceKm.Value));
             }
 
-            string orderByClause = criteria.SortBy switch
+            // AC2: Flexible sorting options (DistanceAsc, PriceAsc, PriceDesc)
+            string orderByClause = (criteria.SortBy?.Trim()) switch
             {
                 "PriceAsc" => "ORDER BY MonthlyRent ASC, DistanceToCampusKm ASC",
                 "PriceDesc" => "ORDER BY MonthlyRent DESC, DistanceToCampusKm ASC",
@@ -105,6 +113,7 @@ namespace RoomToRentRadar.Data
                 results.Add(ReadSearchListing(reader));
             }
 
+            // AC3: Returns complete list of matched listings, allowing immediate results.Count inspection
             return results;
         }
 
