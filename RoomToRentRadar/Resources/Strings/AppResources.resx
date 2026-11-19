@@ -383,4 +383,27 @@
   <data name="Error_Unexpected" xml:space="preserve">
     <value>An unexpected error occurred, please try again.</value>
   </data>
+
+  <!-- Shared state controls (EmptyStateView / ErrorRetryView / SkeletonShimmer) -->
+  <data name="State_Empty_Title" xml:space="preserve">
+    <value>No rooms found</value>
+  </data>
+  <data name="State_Empty_Message" xml:space="preserve">
+    <value>Try adjusting your filters or expanding your search radius around ICTU.</value>
+  </data>
+  <data name="State_Empty_Action" xml:space="preserve">
+    <value>Reset Filters</value>
+  </data>
+  <data name="State_Error_Title" xml:space="preserve">
+    <value>Connection Error</value>
+  </data>
+  <data name="State_Error_Message" xml:space="preserve">
+    <value>Unable to connect to the server. Please check your internet connection.</value>
+  </data>
+  <data name="State_Retry" xml:space="preserve">
+    <value>Retry</value>
+  </data>
+  <data name="State_Loading" xml:space="preserve">
+    <value>Loading</value>
+  </data>
 </root>

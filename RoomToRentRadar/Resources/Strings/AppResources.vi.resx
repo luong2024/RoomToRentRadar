@@ -383,4 +383,27 @@
   <data name="Error_Unexpected" xml:space="preserve">
     <value>Đã có lỗi xảy ra, vui lòng thử lại.</value>
   </data>
+
+  <!-- Shared state controls (EmptyStateView / ErrorRetryView / SkeletonShimmer) -->
+  <data name="State_Empty_Title" xml:space="preserve">
+    <value>Không tìm thấy phòng</value>
+  </data>
+  <data name="State_Empty_Message" xml:space="preserve">
+    <value>Hãy thử điều chỉnh bộ lọc hoặc mở rộng bán kính tìm kiếm quanh ICTU.</value>
+  </data>
+  <data name="State_Empty_Action" xml:space="preserve">
+    <value>Đặt lại bộ lọc</value>
+  </data>
+  <data name="State_Error_Title" xml:space="preserve">
+    <value>Lỗi kết nối</value>
+  </data>
+  <data name="State_Error_Message" xml:space="preserve">
+    <value>Không thể kết nối tới máy chủ. Vui lòng kiểm tra kết nối internet của bạn.</value>
+  </data>
+  <data name="State_Retry" xml:space="preserve">
+    <value>Thử lại</value>
+  </data>
+  <data name="State_Loading" xml:space="preserve">
+    <value>Đang tải</value>
+  </data>
 </root>
