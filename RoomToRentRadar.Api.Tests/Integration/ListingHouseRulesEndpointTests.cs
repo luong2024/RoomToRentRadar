@@ -76,6 +76,49 @@ public sealed class ListingHouseRulesEndpointTests
     }
 
     [Test]
+    public async Task GetManaged_ListingWithHouseRules_ReturnsStructuredRules()
+    {
+        var listingId = ManagedListingId;
+        await AssignOwnerAsync(listingId);
+        await SeedHouseRulesAsync(listingId, version: 3);
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/listings/{listingId}/manage");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await AccessTokenAsync());
+        var response = await _client.SendAsync(request);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        var listing = await response.Content.ReadFromJsonAsync<ManagedListingDto>(ApiJson.Options);
+        Assert.That(listing, Is.Not.Null);
+        Assert.That(listing!.HouseRules, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(listing.HouseRules!.QuietHours, Is.EqualTo("22:00 - 06:00"));
+            Assert.That(listing.HouseRules.GuestPolicy, Is.EqualTo("Guests leave before 22:00"));
+            Assert.That(listing.HouseRules.CookingRules, Is.EqualTo("Cook in the shared kitchen"));
+            Assert.That(listing.HouseRules.ParkingRules, Is.EqualTo("Park on the ground floor"));
+            Assert.That(listing.HouseRules.Version, Is.EqualTo(3));
+        });
+    }
+
+    [Test]
+    public async Task Unpublish_ByOwner_ReturnsHouseRules()
+    {
+        var listingId = ManagedListingId;
+        await AssignOwnerAsync(listingId);
+        await SeedHouseRulesAsync(listingId, version: 2);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/listings/{listingId}/unpublish");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await AccessTokenAsync());
+        var response = await _client.SendAsync(request);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        var listing = await response.Content.ReadFromJsonAsync<ManagedListingDto>(ApiJson.Options);
+        Assert.That(listing, Is.Not.Null);
+        Assert.That(listing!.HouseRules, Is.Not.Null);
+        Assert.That(listing.HouseRules!.Version, Is.EqualTo(2));
+    }
+
+    [Test]
     public async Task Update_ByOwner_CreatesFirstVersionAndDetailReflectsIt()
     {
         var listingId = ManagedListingId;

@@ -200,53 +200,56 @@
                     </VerticalStackLayout>
                 </Border>
 
-                <VerticalStackLayout Spacing="12" IsVisible="{Binding HasHouseRules}" Padding="4,0" AutomationId="HouseRulesSection">
-                    <Label Text="Nội quy tòa nhà"
-                           FontSize="18" FontFamily="OpenSansSemibold"
-                           SemanticProperties.HeadingLevel="Level2" />
-                    <VerticalStackLayout Spacing="10">
-                        <Border Padding="14" BackgroundColor="{StaticResource SoftSurface}" StrokeThickness="0">
-                            <VerticalStackLayout Spacing="4">
-                                <Label Text="Giờ yên tĩnh"
-                                       Style="{StaticResource Eyebrow}"
-                                       TextColor="{StaticResource Accent}" />
-                                <Label Text="{Binding HouseRules.QuietHours}"
-                                       Style="{StaticResource BodyText}"
-                                       LineHeight="1.25" />
-                            </VerticalStackLayout>
-                        </Border>
-                        <Border Padding="14" BackgroundColor="{StaticResource SoftSurface}" StrokeThickness="0">
-                            <VerticalStackLayout Spacing="4">
-                                <Label Text="Khách đến thăm"
-                                       Style="{StaticResource Eyebrow}"
-                                       TextColor="{StaticResource Accent}" />
-                                <Label Text="{Binding HouseRules.GuestPolicy}"
-                                       Style="{StaticResource BodyText}"
-                                       LineHeight="1.25" />
-                            </VerticalStackLayout>
-                        </Border>
-                        <Border Padding="14" BackgroundColor="{StaticResource SoftSurface}" StrokeThickness="0">
-                            <VerticalStackLayout Spacing="4">
-                                <Label Text="Nấu ăn"
-                                       Style="{StaticResource Eyebrow}"
-                                       TextColor="{StaticResource Accent}" />
-                                <Label Text="{Binding HouseRules.CookingRules}"
-                                       Style="{StaticResource BodyText}"
-                                       LineHeight="1.25" />
-                            </VerticalStackLayout>
-                        </Border>
-                        <Border Padding="14" BackgroundColor="{StaticResource SoftSurface}" StrokeThickness="0">
-                            <VerticalStackLayout Spacing="4">
-                                <Label Text="Gửi xe"
-                                       Style="{StaticResource Eyebrow}"
-                                       TextColor="{StaticResource Accent}" />
-                                <Label Text="{Binding HouseRules.ParkingRules}"
-                                       Style="{StaticResource BodyText}"
-                                       LineHeight="1.25" />
-                            </VerticalStackLayout>
-                        </Border>
+                <!-- House Rules Card -->
+                <Border Padding="18" StrokeThickness="0" StrokeShape="RoundRectangle 18" IsVisible="{Binding HasHouseRules}"
+                        AutomationId="HouseRulesSection">
+                    <VerticalStackLayout Spacing="12">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="Nội quy tòa nhà" Style="{StaticResource SectionTitle}" FontSize="17"
+                                   SemanticProperties.HeadingLevel="Level2" />
+                            <Label Text="{Binding HouseRulesVersionText}" Style="{StaticResource Caption}"
+                                   AutomationId="HouseRulesVersionCaption" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="10">
+                            <Border Padding="14" StrokeThickness="0" StrokeShape="RoundRectangle 14"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
+                                <VerticalStackLayout Spacing="4">
+                                    <Label Text="Giờ yên tĩnh" Style="{StaticResource Eyebrow}"
+                                           TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
+                                    <Label Text="{Binding HouseRules.QuietHours}"
+                                           Style="{StaticResource BodyText}" LineHeight="1.3" />
+                                </VerticalStackLayout>
+                            </Border>
+                            <Border Padding="14" StrokeThickness="0" StrokeShape="RoundRectangle 14"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
+                                <VerticalStackLayout Spacing="4">
+                                    <Label Text="Khách đến thăm" Style="{StaticResource Eyebrow}"
+                                           TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
+                                    <Label Text="{Binding HouseRules.GuestPolicy}"
+                                           Style="{StaticResource BodyText}" LineHeight="1.3" />
+                                </VerticalStackLayout>
+                            </Border>
+                            <Border Padding="14" StrokeThickness="0" StrokeShape="RoundRectangle 14"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
+                                <VerticalStackLayout Spacing="4">
+                                    <Label Text="Nấu ăn" Style="{StaticResource Eyebrow}"
+                                           TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
+                                    <Label Text="{Binding HouseRules.CookingRules}"
+                                           Style="{StaticResource BodyText}" LineHeight="1.3" />
+                                </VerticalStackLayout>
+                            </Border>
+                            <Border Padding="14" StrokeThickness="0" StrokeShape="RoundRectangle 14"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
+                                <VerticalStackLayout Spacing="4">
+                                    <Label Text="Gửi xe" Style="{StaticResource Eyebrow}"
+                                           TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
+                                    <Label Text="{Binding HouseRules.ParkingRules}"
+                                           Style="{StaticResource BodyText}" LineHeight="1.3" />
+                                </VerticalStackLayout>
+                            </Border>
+                        </VerticalStackLayout>
                     </VerticalStackLayout>
-                </VerticalStackLayout>
+                </Border>
 
                 <!-- Travel time from the user's campus -->
                 <Border x:Name="TravelSection"

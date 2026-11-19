@@ -59,6 +59,7 @@ public class RoomDetailViewModelTests
             Assert.That(viewModel.HouseRules?.CookingRules, Is.EqualTo("Cook in the shared kitchen"));
             Assert.That(viewModel.HouseRules?.ParkingRules, Is.EqualTo("Park on the ground floor"));
             Assert.That(viewModel.HouseRules?.Version, Is.EqualTo(2));
+            Assert.That(viewModel.HouseRulesVersionText, Does.StartWith("Phiên bản 2"));
             Assert.That(viewModel.HasAmenities, Is.True);
             Assert.That(viewModel.HasRules, Is.True);
             Assert.That(viewModel.HasHouseRules, Is.True);
@@ -96,6 +97,7 @@ public class RoomDetailViewModelTests
             Assert.That(viewModel.State, Is.EqualTo(RoomDetailState.Content));
             Assert.That(viewModel.HouseRules, Is.Null);
             Assert.That(viewModel.HasHouseRules, Is.False);
+            Assert.That(viewModel.HouseRulesVersionText, Is.Empty);
         });
     }
 

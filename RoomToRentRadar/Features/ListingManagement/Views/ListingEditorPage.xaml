@@ -280,6 +280,89 @@
                 </expander:SfExpander>
             </cards:SfCardView>
 
+            <!-- Step 05: House Rules (edit mode only) -->
+            <Border Padding="18" StrokeThickness="0" StrokeShape="RoundRectangle 22"
+                    IsVisible="{Binding IsEditMode}"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}"
+                    AutomationId="HouseRulesEditor">
+                <Border.Shadow>
+                    <Shadow Brush="{StaticResource InkBrush}" Offset="0,6" Radius="18" Opacity="0.06" />
+                </Border.Shadow>
+                <VerticalStackLayout Spacing="14" IsEnabled="{Binding IsNotBusy}">
+                    <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+                        <Border WidthRequest="28" HeightRequest="28" StrokeThickness="0" StrokeShape="RoundRectangle 10"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}">
+                            <Label Text="05" FontSize="11" FontFamily="OpenSansSemibold"
+                                   TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}"
+                                   HorizontalTextAlignment="Center" VerticalTextAlignment="Center" />
+                        </Border>
+                        <Label Text="Nội quy tòa nhà" Style="{StaticResource SectionTitle}" FontSize="16" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+
+                    <Label Text="{Binding HouseRulesVersionText}" AutomationId="HouseRulesVersion"
+                           Style="{StaticResource HelperLabel}" />
+                    <Label Text="Nội quy hiển thị cho khách xem tin ngay sau khi lưu."
+                           Style="{StaticResource HelperLabel}" />
+
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Giờ yên tĩnh *" Style="{StaticResource SectionLabel}" FontSize="12.5" />
+                        <Border Padding="10,4" HeightRequest="96" StrokeThickness="1" StrokeShape="RoundRectangle 12"
+                                Stroke="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+                            <Editor Text="{Binding QuietHoursField.Text}"
+                                    MaxLength="300" Style="{StaticResource FormEditor}"
+                                    AutomationId="HouseRulesQuietHours"
+                                    SemanticProperties.Description="Giờ yên tĩnh của tòa nhà, bắt buộc" />
+                        </Border>
+                        <Label Text="{Binding QuietHoursField.Error}" Style="{StaticResource FieldError}" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Khách đến thăm *" Style="{StaticResource SectionLabel}" FontSize="12.5" />
+                        <Border Padding="10,4" HeightRequest="96" StrokeThickness="1" StrokeShape="RoundRectangle 12"
+                                Stroke="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+                            <Editor Text="{Binding GuestPolicyField.Text}"
+                                    MaxLength="300" Style="{StaticResource FormEditor}"
+                                    AutomationId="HouseRulesGuestPolicy"
+                                    SemanticProperties.Description="Quy định khách đến thăm, bắt buộc" />
+                        </Border>
+                        <Label Text="{Binding GuestPolicyField.Error}" Style="{StaticResource FieldError}" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Nấu ăn *" Style="{StaticResource SectionLabel}" FontSize="12.5" />
+                        <Border Padding="10,4" HeightRequest="96" StrokeThickness="1" StrokeShape="RoundRectangle 12"
+                                Stroke="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+                            <Editor Text="{Binding CookingRulesField.Text}"
+                                    MaxLength="300" Style="{StaticResource FormEditor}"
+                                    AutomationId="HouseRulesCooking"
+                                    SemanticProperties.Description="Quy định nấu ăn, bắt buộc" />
+                        </Border>
+                        <Label Text="{Binding CookingRulesField.Error}" Style="{StaticResource FieldError}" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Gửi xe *" Style="{StaticResource SectionLabel}" FontSize="12.5" />
+                        <Border Padding="10,4" HeightRequest="96" StrokeThickness="1" StrokeShape="RoundRectangle 12"
+                                Stroke="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+                            <Editor Text="{Binding ParkingRulesField.Text}"
+                                    MaxLength="300" Style="{StaticResource FormEditor}"
+                                    AutomationId="HouseRulesParking"
+                                    SemanticProperties.Description="Quy định gửi xe, bắt buộc" />
+                        </Border>
+                        <Label Text="{Binding ParkingRulesField.Error}" Style="{StaticResource FieldError}" />
+                    </VerticalStackLayout>
+
+                    <buttons:SfButton Text="Lưu nội quy" Command="{Binding SaveHouseRulesCommand}"
+                                      HorizontalOptions="Start" Style="{StaticResource SoftSfButton}"
+                                      AutomationId="HouseRulesSave"
+                                      SemanticProperties.Description="Lưu nội quy và tạo phiên bản mới" />
+                </VerticalStackLayout>
+            </Border>
+
         </VerticalStackLayout>
     </ScrollView>
     <Border Grid.Row="1" Padding="20,12,20,16" StrokeShape="Rectangle" StrokeThickness="0"

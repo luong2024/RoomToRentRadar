@@ -9,6 +9,7 @@ public interface IListingManagementClient
     Task<ManagedListingDto> CreateAsync(ListingFormSubmission form, CancellationToken cancellationToken = default);
     Task<ManagedListingDto> UpdateAsync(Guid id, ListingFormSubmission form, CancellationToken cancellationToken = default);
     Task<ManagedListingDto> UnpublishAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<HouseRulesDto> UpdateHouseRulesAsync(Guid id, UpdateHouseRulesRequest request, CancellationToken cancellationToken = default);
 }
 
 public sealed record ListingFormSubmission(

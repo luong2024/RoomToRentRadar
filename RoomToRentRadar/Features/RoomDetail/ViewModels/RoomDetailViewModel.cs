@@ -115,6 +115,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasHouseRules))]
+    [NotifyPropertyChangedFor(nameof(HouseRulesVersionText))]
     public partial HouseRulesDto? HouseRules { get; set; }
 
     [ObservableProperty]
@@ -168,6 +169,10 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     public bool HasRules => Rules.Count > 0;
 
     public bool HasHouseRules => HouseRules is not null;
+
+    public string HouseRulesVersionText => HouseRules is { } rules
+        ? $"Phiên bản {rules.Version} · cập nhật {rules.UpdatedAt.ToLocalTime():dd/MM/yyyy HH:mm}"
+        : string.Empty;
 
     public bool IsPhoneVisible => !string.IsNullOrEmpty(LandlordPhone);
 
