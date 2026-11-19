@@ -11,6 +11,22 @@ public sealed class ShellNavigationService : INavigationService
     public Task GoToLoginAsync()
         => GetShell().GoToAsync(AppRoutes.Login);
 
+    public Task GoToDirectionsAsync(
+        double destinationLat,
+        double destinationLng,
+        double? originLat,
+        double? originLng)
+    {
+        var query = FormattableString.Invariant($"to_lat={destinationLat}&to_lng={destinationLng}");
+
+        if (originLat is { } fromLat && originLng is { } fromLng)
+        {
+            query += FormattableString.Invariant($"&from_lat={fromLat}&from_lng={fromLng}");
+        }
+
+        return GetShell().GoToAsync($"{AppRoutes.Directions}?{query}");
+    }
+
     public Task GoBackAsync()
         => GetShell().GoToAsync("..");
 

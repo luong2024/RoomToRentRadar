@@ -261,6 +261,13 @@ public class LoginViewModelTests
             return Task.CompletedTask;
         }
 
+        public Task GoToDirectionsAsync(
+            double destinationLat,
+            double destinationLng,
+            double? originLat,
+            double? originLng)
+            => throw new NotSupportedException("The login screen does not open directions.");
+
         public Task GoBackAsync()
         {
             GoBackCount++;

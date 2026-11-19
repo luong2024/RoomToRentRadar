@@ -16,5 +16,6 @@ public partial class AppShell : Shell
         MapTab.ContentTemplate = new DataTemplate(() => services.GetRequiredService<MapSearchPage>());
         Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(RoomDetailPage));
         Routing.RegisterRoute(AppRoutes.Login, typeof(LoginPage));
+        Routing.RegisterRoute(AppRoutes.Directions, typeof(DirectionsPage));
     }
 }
