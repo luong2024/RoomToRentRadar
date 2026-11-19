@@ -28,6 +28,7 @@ public class RouteGuardServiceTests
     [TestCase(AppRoutes.RoomDetails)]
     [TestCase("rooms/details?roomId=123")]
     [TestCase("//rooms?search=ictu&priceMax=2000000")]
+    [TestCase("..")]
     public void EvaluateRouteAccess_WhenRouteIsPublic_ShouldAllowForGuestAndAuthenticatedUser(string? route)
     {
         var guestResult = _guardService.EvaluateRouteAccess(route, null);

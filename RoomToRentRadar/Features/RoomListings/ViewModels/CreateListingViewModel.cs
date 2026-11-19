@@ -332,16 +332,39 @@ public partial class CreateListingViewModel : ObservableObject
         if (NavigationBackHandler != null)
         {
             await NavigationBackHandler.Invoke();
+            return;
         }
-        else if (Shell.Current != null)
+
+        if (Shell.Current != null)
         {
+            if (Shell.Current.Navigation?.NavigationStack?.Count > 1)
+            {
+                try
+                {
+                    await Shell.Current.Navigation.PopAsync();
+                    return;
+                }
+                catch
+                {
+                    try
+                    {
+                        await Shell.Current.GoToAsync("..");
+                        return;
+                    }
+                    catch
+                    {
+                        // Fall back to tab navigation below
+                    }
+                }
+            }
+
             try
             {
-                await Shell.Current.GoToAsync("..");
+                await Shell.Current.GoToAsync($"//{Core.Constants.AppRoutes.RoomListings}");
             }
             catch
             {
-                await Shell.Current.GoToAsync($"//{Core.Constants.AppRoutes.RoomListings}");
+                await Shell.Current.GoToAsync($"//{Core.Constants.AppRoutes.Home}");
             }
         }
     }

@@ -266,7 +266,8 @@ public class RouteGuardService : IRouteGuardService
 
     private static bool IsPublicRoute(string normalizedRoute)
     {
-        return normalizedRoute == AppRoutes.Home.ToLowerInvariant()
+        return normalizedRoute == ".."
+               || normalizedRoute == AppRoutes.Home.ToLowerInvariant()
                || normalizedRoute == AppRoutes.RoomListings.ToLowerInvariant()
                || normalizedRoute == AppRoutes.RoomDetail.ToLowerInvariant()
                || normalizedRoute == AppRoutes.RoomDetails.ToLowerInvariant()

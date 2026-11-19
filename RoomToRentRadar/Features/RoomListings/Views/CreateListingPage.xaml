@@ -42,16 +42,22 @@
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding GoBackCommand}" />
                         </Border.GestureRecognizers>
-                        <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                        <HorizontalStackLayout
+                            Spacing="6"
+                            VerticalOptions="Center"
+                            InputTransparent="True"
+                            CascadeInputTransparent="True">
                             <Label
                                 FontFamily="{x:Static f:FluentUI.FontFamily}"
                                 FontSize="18"
+                                InputTransparent="True"
                                 Text="{x:Static f:FluentUI.arrow_left_20_regular}"
                                 TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
                                 VerticalOptions="Center" />
                             <Label
                                 FontAttributes="Bold"
                                 FontSize="13"
+                                InputTransparent="True"
                                 Text="Back"
                                 TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
                                 VerticalOptions="Center" />

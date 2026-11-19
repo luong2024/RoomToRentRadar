@@ -81,13 +81,14 @@ namespace RoomToRentRadar
         {
             base.OnNavigating(args);
 
-            if (_isRedirecting || _routeGuardService == null || _sessionService == null)
+            if (_isRedirecting || _routeGuardService == null || _sessionService == null
+                || args.Source == ShellNavigationSource.Pop || args.Source == ShellNavigationSource.PopToRoot)
             {
                 return;
             }
 
             var targetUri = args.Target?.Location?.OriginalString;
-            if (string.IsNullOrWhiteSpace(targetUri))
+            if (string.IsNullOrWhiteSpace(targetUri) || targetUri == "..")
             {
                 return;
             }

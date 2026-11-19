@@ -412,6 +412,21 @@ public class CreateListingViewModelTests
 
     #endregion
 
+    [Test]
+    public async Task GoBackAsync_WhenNavigationBackHandlerProvided_InvokesHandler()
+    {
+        var invoked = false;
+        _viewModel.NavigationBackHandler = () =>
+        {
+            invoked = true;
+            return Task.CompletedTask;
+        };
+
+        await _viewModel.GoBackCommand.ExecuteAsync(null);
+
+        Assert.That(invoked, Is.True);
+    }
+
     private void FillValidFormData()
     {
         _viewModel.Title = "Phòng trọ sinh viên khép kín gần cổng ICTU";
