@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:feedback="clr-namespace:RoomToRentRadar.Pages.Controls.Feedback"
+             x:Class="RoomToRentRadar.Pages.Controls.Feedback.StateView"
+             x:DataType="feedback:StateView"
+             x:Name="RootStateView">
+
+    <ContentView.Content>
+    <Grid RowSpacing="0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <feedback:OfflineBannerView x:Name="BannerHost"
+                                    Grid.Row="0"
+                                    IsVisible="False" />
+
+        <Grid Grid.Row="1" RowSpacing="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Loaded content injected via the BodyContent content property -->
+            <ContentView x:Name="ContentHost"
+                         Grid.Row="0"
+                         IsVisible="False" />
+
+            <!-- Compact error card kept below the already-loaded content -->
+            <feedback:ErrorRetryView x:Name="InlineErrorHost"
+                                     Grid.Row="1"
+                                     Compact="True"
+                                     IsVisible="False"
+                                     Margin="16,8,16,16"
+                                     ErrorMessage="{Binding Source={x:Reference RootStateView}, Path=ErrorMessage}"
+                                     RetryCommand="{Binding Source={x:Reference RootStateView}, Path=RetryCommand}" />
+
+            <ScrollView x:Name="SkeletonHost"
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        IsVisible="False">
+                <VerticalStackLayout Spacing="12" Padding="16">
+                    <feedback:SkeletonShimmer />
+                    <feedback:SkeletonShimmer />
+                    <feedback:SkeletonShimmer />
+                </VerticalStackLayout>
+            </ScrollView>
+
+            <feedback:EmptyStateView x:Name="EmptyHost"
+                                     Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     IsVisible="False" />
+
+            <feedback:ErrorRetryView x:Name="FullErrorHost"
+                                     Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     IsVisible="False"
+                                     ErrorMessage="{Binding Source={x:Reference RootStateView}, Path=ErrorMessage}"
+                                     RetryCommand="{Binding Source={x:Reference RootStateView}, Path=RetryCommand}" />
+        </Grid>
+    </Grid>
+    </ContentView.Content>
+</ContentView>

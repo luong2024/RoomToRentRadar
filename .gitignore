@@ -59,7 +59,32 @@ launchSettings.json.user
 *.db-shm
 *.db-wal
 
+# Local databases, secrets and signing material (never commit — checked by CI)
+*.db
+*.db3
+*.sqlite
+*.sqlite3
+# Re-include the Datastore.Sqlite project folder: *.sqlite matches its name case-insensitively on Windows.
+!RoomToRentRadar.Datastore.Sqlite/
+google-services.json
+GoogleService-Info.plist
+*.keystore
+*.jks
+*.pfx
+*.p12
+.env
+appsettings.*.local.json
+
+# Runtime-generated media uploads (ADR-008)
+/media/
+RoomToRentRadar.Api/media/
+
 # OS generated files
 .DS_Store
 Thumbs.db
 
+
+implementation_plan.md
+*.zip
+.qoder/
+.superpowers/

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.PageModels"
+             xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
+             xmlns:feedback="clr-namespace:RoomToRentRadar.Pages.Controls.Feedback"
+             xmlns:nav="clr-namespace:RoomToRentRadar.Pages.Controls.Navigation"
+             xmlns:fonts="clr-namespace:Fonts"
+             x:Class="RoomToRentRadar.Pages.PlaceholderPage"
+             x:DataType="vm:PlaceholderPageModel"
+             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCanvasLight}, Dark={StaticResource SurfaceCanvasDark}}">
+
+    <Grid RowDefinitions="Auto, *, Auto">
+        <!-- Top App Bar: Back is shown only for pushed detail routes, not for root tabs -->
+        <common:PageHeaderBar Grid.Row="0"
+                               Title="{Binding Title}"
+                               CanGoBack="{Binding CanGoBack}"
+                               BackCommand="{Binding BackCommand}" />
+
+        <ScrollView Grid.Row="1" Padding="{StaticResource ScreenMargin}">
+            <VerticalStackLayout Spacing="12" MaximumWidthRequest="640" HorizontalOptions="Center" VerticalOptions="Center">
+                <feedback:EmptyStateView
+                    IconGlyph="{x:Static fonts:FluentUI.clock_24_regular}"
+                    Title="{Binding Title}"
+                    Message="{Binding ComingInText}"
+                    HasAction="False" />
+
+                <!-- Screen id (docs/ui-ux-spec.md) and optional deep-link id -->
+                <Label Text="{Binding ScrId}"
+                       FontFamily="{StaticResource FontFamilyRegular}"
+                       FontSize="{StaticResource FontSizeCaption}"
+                       TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+                       HorizontalTextAlignment="Center" />
+
+                <Label Text="{Binding IdText}"
+                       IsVisible="{Binding HasId}"
+                       FontFamily="{StaticResource FontFamilyRegular}"
+                       FontSize="{StaticResource FontSizeCaption}"
+                       TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+                       HorizontalTextAlignment="Center" />
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- Bottom tab bar only when this placeholder is a root tab (my-listings / moderation) -->
+        <nav:BottomNavBarControl Grid.Row="2"
+                                 ActiveRoute="{Binding ActiveRoute}"
+                                 IsVisible="{Binding IsRootTab}" />
+    </Grid>
+</ContentPage>

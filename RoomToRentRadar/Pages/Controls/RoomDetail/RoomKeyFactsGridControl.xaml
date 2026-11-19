@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.PageModels"
+             xmlns:models="clr-namespace:RoomToRentRadar.Pages.Controls.RoomDetail.Models"
+             xmlns:fonts="clr-namespace:Fonts"
+             x:Class="RoomToRentRadar.Pages.Controls.RoomDetail.RoomKeyFactsGridControl"
+             x:DataType="vm:RoomDetailPageModel">
+
+    <FlexLayout BindableLayout.ItemsSource="{Binding KeyFacts}"
+                Wrap="Wrap"
+                JustifyContent="SpaceBetween"
+                AlignContent="Start">
+        <BindableLayout.ItemTemplate>
+            <DataTemplate x:DataType="models:KeyFactItem">
+                <Border FlexLayout.Basis="31%"
+                        HeightRequest="84"
+                        Margin="0,0,0,8"
+                        Padding="10,8"
+                        StrokeShape="RoundRectangle 8"
+                        StrokeThickness="1"
+                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+                        Shadow="{StaticResource Elevation1Shadow}">
+                    <VerticalStackLayout Spacing="2" VerticalOptions="Center">
+                        <Label Text="{Binding IconGlyph}"
+                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                               FontSize="18"
+                               TextColor="{AppThemeBinding Light={StaticResource ActionAccentLight}, Dark={StaticResource ActionAccentDark}}" />
+                        <Label Text="{Binding Value}"
+                               FontFamily="{StaticResource FontFamilySemibold}"
+                               FontSize="{StaticResource FontSizeBodyMedium}"
+                               FontAttributes="Bold"
+                               LineBreakMode="TailTruncation"
+                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                        <Label Text="{Binding Label}"
+                               FontFamily="{StaticResource FontFamilyRegular}"
+                               FontSize="{StaticResource FontSizeBadge}"
+                               LineBreakMode="TailTruncation"
+                               TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                    </VerticalStackLayout>
+                </Border>
+            </DataTemplate>
+        </BindableLayout.ItemTemplate>
+    </FlexLayout>
+</ContentView>

@@ -6,10 +6,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <DefineConstants>$(DefineConstants);UNIT_TESTS</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.0" />
     <PackageReference Include="NSubstitute" Version="5.3.0" />
     <PackageReference Include="NUnit" Version="4.3.2" />
@@ -22,7 +25,29 @@
     <ProjectReference Include="..\RoomToRentRadar.Ports\RoomToRentRadar.Ports.csproj" />
     <ProjectReference Include="..\RoomToRentRadar.Application\RoomToRentRadar.Application.csproj" />
     <ProjectReference Include="..\RoomToRentRadar.Infrastructure\RoomToRentRadar.Infrastructure.csproj" />
-    <ProjectReference Include="..\RoomToRentRadar.Datastore\RoomToRentRadar.Datastore.csproj" />
+    <ProjectReference Include="..\RoomToRentRadar.Datastore.CosmosDb\RoomToRentRadar.Datastore.CosmosDb.csproj" />
+    <ProjectReference Include="..\RoomToRentRadar.Datastore.Sqlite\RoomToRentRadar.Datastore.Sqlite.csproj" />
+    <ProjectReference Include="..\RoomToRentRadar.Client.Adapters\RoomToRentRadar.Client.Adapters.csproj" />
+    <ProjectReference Include="..\RoomToRentRadar.Api\RoomToRentRadar.Api.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\RoomToRentRadar\Resources\Fonts\FluentUI.cs" Link="Resources\Fonts\FluentUI.cs" />
+    <Compile Include="..\RoomToRentRadar\Pages\Controls\RoomDetail\Models\RoomDetailModels.cs" Link="Pages\Controls\RoomDetail\Models\RoomDetailModels.cs" />
+    <Compile Include="..\RoomToRentRadar\PageModels\RoomDetailPageModel.cs" Link="PageModels\RoomDetailPageModel.cs" />
+    <Compile Include="..\RoomToRentRadar\PageModels\AccountPageModel.cs" Link="PageModels\AccountPageModel.cs" />
+    <Compile Include="..\RoomToRentRadar\Resources\Strings\AppResources.cs" Link="Resources\Strings\AppResources.cs" />
+    <Compile Include="..\RoomToRentRadar\Resources\Strings\LocalizedStrings.cs" Link="Resources\Strings\LocalizedStrings.cs" />
+    <Compile Include="..\RoomToRentRadar\Services\Navigation\Core\*.cs" Link="Services\Navigation\Core\%(Filename)%(Extension)" />
+    <Compile Include="..\RoomToRentRadar\PageModels\Base\*.cs" Link="PageModels\Base\%(Filename)%(Extension)" />
+    <Compile Include="..\RoomToRentRadar\PageModels\MainLandingPageModel.cs" Link="PageModels\MainLandingPageModel.cs" />
+    <Compile Include="..\RoomToRentRadar\Pages\Controls\Cards\Models\*.cs" Link="Pages\Controls\Cards\Models\%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\RoomToRentRadar\Resources\Strings\AppResources.resx" Link="Resources\Strings\AppResources.resx">
+      <LogicalName>RoomToRentRadar.Resources.Strings.AppResources.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\RoomToRentRadar\Resources\Strings\AppResources.vi.resx" Link="Resources\Strings\AppResources.vi.resx">
+      <LogicalName>RoomToRentRadar.Resources.Strings.AppResources.vi.resources</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
   <ItemGroup>

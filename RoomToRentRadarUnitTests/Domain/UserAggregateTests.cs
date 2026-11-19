@@ -1,0 +1,483 @@
+using RoomToRentRadar.Datastore.Sqlite.Seed;
+using RoomToRentRadar.Domain.Aggregates;
+using RoomToRentRadar.Domain.Entities;
+using RoomToRentRadar.Domain.Enums;
+using RoomToRentRadar.Domain.Exceptions;
+
+namespace RoomToRentRadarUnitTests.Domain;
+
+[TestFixture]
+public class UserAggregateTests
+{
+    private static readonly DateTime FixedNow = new(2026, 11, 10, 8, 0, 0, DateTimeKind.Utc);
+
+    [Test]
+    public void RegisterLocal_AsStudent_CreatesVerifiedStudentAccount()
+    {
+        var user = User.RegisterLocal(
+            email: "Student@ictu.edu.vn",
+            passwordHash: "hashed-password",
+            fullName: "Nguyen Van Sinh Vien",
+            role: UserRole.Student,
+            phoneNumber: "0912345678",
+            studentCode: "dtc225180",
+            utcNow: FixedNow);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(user.Id, Is.Not.Empty);
+            Assert.That(user.Email.Value, Is.EqualTo("student@ictu.edu.vn"));
+            Assert.That(user.Role, Is.EqualTo(UserRole.Student));
+            Assert.That(user.AuthProvider, Is.EqualTo(AuthProvider.Local));
+            Assert.That(user.IsVerified, Is.True);
+            Assert.That(user.StudentCode, Is.EqualTo("DTC225180"));
+        });
+    }
+
+    [Test]
+    public void RegisterLocal_AsLandlord_CreatesUnverifiedLandlordAndBlocksPublishingUntilApproved()
+    {
+        var landlord = User.RegisterLocal(
+            email: "landlord@gmail.com",
+            passwordHash: "hashed-password",
+            fullName: "Tran Thi Chu Tro",
+            role: UserRole.Landlord,
+            phoneNumber: "0987654321",
+            studentCode: null,
+            utcNow: FixedNow);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(landlord.Role, Is.EqualTo(UserRole.Landlord));
+            Assert.That(landlord.IsVerified, Is.False);
+            Assert.That(landlord.PhoneNumber, Is.EqualTo("0987654321"));
+            Assert.That(
+                () => landlord.EnsureCanPublishListing(),
+                Throws.TypeOf<LandlordNotApprovedException>());
+        });
+
+        landlord.ApproveLandlord(FixedNow.AddMinutes(30));
+
+        Assert.That(landlord.IsVerified, Is.True);
+        Assert.That(() => landlord.EnsureCanPublishListing(), Throws.Nothing);
+    }
+
+    [Test]
+    public void RegisterLocal_AsAdmin_ThrowsForbiddenRoleException()
+    {
+        Assert.That(
+            () => User.RegisterLocal(
+                email: "admin@ictu.edu.vn",
+                passwordHash: "hashed-password",
+                fullName: "Unauthorized Admin",
+                role: UserRole.Admin,
+                phoneNumber: null,
+                studentCode: null,
+                utcNow: FixedNow),
+            Throws.TypeOf<ForbiddenRoleException>());
+    }
+
+    [Test]
+    public void RegisterLocal_LandlordWithoutPhoneNumber_ThrowsDomainValidationException()
+    {
+        Assert.That(
+            () => User.RegisterLocal(
+                email: "landlord@gmail.com",
+                passwordHash: "hashed-password",
+                fullName: "Landlord Without Phone",
+                role: UserRole.Landlord,
+                phoneNumber: null,
+                studentCode: null,
+                utcNow: FixedNow),
+            Throws.TypeOf<DomainValidationException>());
+    }
+
+    [Test]
+    public void RecordLoginFailure_FiveConsecutiveAttempts_LocksAccountFor15Minutes()
+    {
+        var user = User.RegisterLocal(
+            email: "student@ictu.edu.vn",
+            passwordHash: "hashed-password",
+            fullName: "Student",
+            role: UserRole.Student,
+            phoneNumber: null,
+            studentCode: "DTC01",
+            utcNow: FixedNow);
+
+        for (var i = 0; i < User.MaxFailedLoginAttempts; i++)
+        {
+            user.RecordLoginFailure(FixedNow);
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(user.FailedLoginCount, Is.EqualTo(5));
+            Assert.That(user.IsLockedOut(FixedNow.AddMinutes(10)), Is.True);
+            Assert.That(
+                () => user.EnsureNotLockedOut(FixedNow.AddMinutes(10)),
+                Throws.TypeOf<AccountLockedException>());
+            Assert.That(user.IsLockedOut(FixedNow.AddMinutes(16)), Is.False);
+        });
+    }
+
+    [Test]
+    public void RotateRefreshToken_RevokesCurrentTokenAndIssuesReplacement()
+    {
+        var user = User.RegisterLocal(
+            email: "student@ictu.edu.vn",
+            passwordHash: "hashed-password",
+            fullName: "Student",
+            role: UserRole.Student,
+            phoneNumber: null,
+            studentCode: "DTC01",
+            utcNow: FixedNow);
+
+        user.IssueRefreshToken("token-hash-1", "jti-1", FixedNow, TimeSpan.FromDays(7));
+        var nextSession = user.RotateRefreshToken(
+            currentTokenHash: "token-hash-1",
+            newTokenHash: "token-hash-2",
+            newJwtId: "jti-2",
+            utcNow: FixedNow.AddHours(1),
+            lifetime: TimeSpan.FromDays(7));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(nextSession.TokenHash, Is.EqualTo("token-hash-2"));
+            var oldToken = user.RefreshTokens.Single(t => t.TokenHash == "token-hash-1");
+            Assert.That(oldToken.IsRevoked, Is.True);
+            Assert.That(oldToken.ReplacedByTokenHash, Is.EqualTo("token-hash-2"));
+            Assert.That(nextSession.IsActive(FixedNow.AddHours(2)), Is.True);
+        });
+    }
+
+    [Test]
+    public void RotateRefreshToken_WhenTokenAlreadyRevoked_RevokesAllActiveTokensAndThrowsInvalidTokenException()
+    {
+        var user = User.RegisterLocal(
+            email: "student@ictu.edu.vn",
+            passwordHash: "hashed-password",
+            fullName: "Student",
+            role: UserRole.Student,
+            phoneNumber: null,
+            studentCode: "DTC01",
+            utcNow: FixedNow);
+
+        user.IssueRefreshToken("token-hash-1", "jti-1", FixedNow, TimeSpan.FromDays(7));
+        user.RotateRefreshToken("token-hash-1", "token-hash-2", "jti-2", FixedNow.AddMinutes(5), TimeSpan.FromDays(7));
+
+        Assert.That(
+            () => user.RotateRefreshToken("token-hash-1", "token-hash-3", "jti-3", FixedNow.AddMinutes(10), TimeSpan.FromDays(7)),
+            Throws.TypeOf<InvalidTokenException>());
+
+        Assert.That(user.RefreshTokens.All(t => t.IsRevoked), Is.True);
+    }
+
+    [Test]
+    public void RegisterLocal_WithUndefinedRoleInteger_ThrowsDomainValidationException()
+    {
+        Assert.Throws<DomainValidationException>(() => User.RegisterLocal(
+            email: "student@ictu.edu.vn",
+            passwordHash: "hash",
+            fullName: "Test",
+            role: (UserRole)999,
+            phoneNumber: null,
+            studentCode: null,
+            utcNow: FixedNow));
+    }
+
+    [TestCase("", "valid-jti")]
+    [TestCase("   ", "valid-jti")]
+    [TestCase(null, "valid-jti")]
+    public void RefreshTokenSession_WithInvalidTokenHash_ThrowsDomainValidationException(string? tokenHash, string jwtId)
+    {
+        Assert.Throws<DomainValidationException>(() => new RefreshTokenSession(
+            tokenHash: tokenHash!,
+            jwtId: jwtId,
+            createdAtUtc: FixedNow,
+            expiresAtUtc: FixedNow.AddDays(7)));
+    }
+
+    [TestCase("valid-hash", "")]
+    [TestCase("valid-hash", "   ")]
+    [TestCase("valid-hash", null)]
+    public void RefreshTokenSession_WithInvalidJwtId_ThrowsDomainValidationException(string tokenHash, string? jwtId)
+    {
+        Assert.Throws<DomainValidationException>(() => new RefreshTokenSession(
+            tokenHash: tokenHash,
+            jwtId: jwtId!,
+            createdAtUtc: FixedNow,
+            expiresAtUtc: FixedNow.AddDays(7)));
+    }
+
+    [Test]
+    public void RefreshTokenSession_WithExpirationNotGreaterThanCreation_ThrowsDomainValidationException()
+    {
+        Assert.Throws<DomainValidationException>(() => new RefreshTokenSession(
+            tokenHash: "valid-hash",
+            jwtId: "valid-jti",
+            createdAtUtc: FixedNow,
+            expiresAtUtc: FixedNow));
+
+        Assert.Throws<DomainValidationException>(() => new RefreshTokenSession(
+            tokenHash: "valid-hash",
+            jwtId: "valid-jti",
+            createdAtUtc: FixedNow,
+            expiresAtUtc: FixedNow.AddMinutes(-5)));
+    }
+
+    [Test]
+    public void RegisterLocal_NewUser_HasDefaultCampusLanguageAndVersionOne()
+    {
+        var user = User.RegisterLocal(
+            email: "student@ictu.edu.vn",
+            passwordHash: "hashed-password",
+            fullName: "Nguyen Van A",
+            role: UserRole.Student,
+            phoneNumber: null,
+            studentCode: "DTC01",
+            utcNow: FixedNow);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(user.SelectedCampusId, Is.EqualTo("ICTU"));
+            Assert.That(user.PreferredLanguage, Is.EqualTo("en"));
+            Assert.That(user.Version, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void RegisterIctuSso_NewUser_HasDefaults()
+    {
+        var user = User.RegisterIctuSso("dtc225180@ictu.edu.vn", "Nguyen Van A", "sso-subject-1", null, FixedNow);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(user.SelectedCampusId, Is.EqualTo("ICTU"));
+            Assert.That(user.PreferredLanguage, Is.EqualTo("en"));
+            Assert.That(user.Version, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void Reconstitute_WithoutNewArguments_UsesDefaults()
+    {
+        var user = ReconstituteWithoutNewArguments();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(user.SelectedCampusId, Is.EqualTo("ICTU"));
+            Assert.That(user.PreferredLanguage, Is.EqualTo("en"));
+            Assert.That(user.Version, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void Reconstitute_WithExplicitValues_RoundTrips()
+    {
+        var user = ReconstituteUser("TNUS", "vi", 7);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(user.SelectedCampusId, Is.EqualTo("TNUS"));
+            Assert.That(user.PreferredLanguage, Is.EqualTo("vi"));
+            Assert.That(user.Version, Is.EqualTo(7));
+        });
+    }
+
+    [TestCase("fr")]
+    [TestCase("EN")]
+    [TestCase("Vi")]
+    [TestCase("")]
+    [TestCase(" ")]
+    [TestCase(null)]
+    public void Reconstitute_UnsupportedLanguage_ThrowsDomainValidationException(string? language)
+    {
+        var ex = Assert.Throws<DomainValidationException>(() => ReconstituteUser(preferredLanguage: language!));
+
+        Assert.That(ex!.Message, Does.Contain("not supported"));
+    }
+
+    [TestCase("")]
+    [TestCase(" ")]
+    [TestCase(null)]
+    public void Reconstitute_BlankCampus_ThrowsDomainValidationException(string? campusId)
+    {
+        var ex = Assert.Throws<DomainValidationException>(() => ReconstituteUser(selectedCampusId: campusId!));
+
+        Assert.That(ex!.Message, Does.Contain("Selected campus is required."));
+    }
+
+    [TestCase(0)]
+    [TestCase(-1)]
+    public void Reconstitute_VersionBelowOne_ThrowsDomainValidationException(int version)
+    {
+        var ex = Assert.Throws<DomainValidationException>(() => ReconstituteUser(version: version));
+
+        Assert.That(ex!.Message, Does.Contain("Version must be"));
+    }
+
+    [Test]
+    public void SupportedLanguages_ContainsExactlyEnAndVi()
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(User.SupportedLanguages, Is.EquivalentTo(new[] { "en", "vi" }));
+            Assert.That(User.SupportedLanguages, Does.Contain(User.DefaultPreferredLanguage));
+        });
+    }
+
+    [Test]
+    public void DefaultSelectedCampusId_MatchesCampusSeedDefault()
+    {
+        Assert.That(User.DefaultSelectedCampusId, Is.EqualTo(CampusSeedData.DefaultCampusId));
+    }
+
+    [Test]
+    public void Reconstitute_WithoutNewArguments_DoesNotChangeConcurrencyToken()
+    {
+        var withoutToken = ReconstituteWithoutNewArguments();
+
+        var withToken = User.Reconstitute(
+            id: "u1",
+            email: "student@ictu.edu.vn",
+            fullName: "Nguyen Van A",
+            passwordHash: "hash",
+            role: UserRole.Student,
+            authProvider: AuthProvider.Local,
+            ssoSubjectId: null,
+            phoneNumber: null,
+            studentCode: null,
+            isVerified: true,
+            failedLoginCount: 0,
+            lockoutEndUtc: null,
+            createdAtUtc: FixedNow,
+            updatedAtUtc: FixedNow,
+            concurrencyToken: "etag-1");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(withoutToken.ConcurrencyToken, Is.EqualTo("1"));
+            Assert.That(withToken.ConcurrencyToken, Is.EqualTo("etag-1"));
+        });
+    }
+
+    [Test]
+    public void ConcurrencyToken_DerivedFromVersion_WhenNoExplicitToken()
+    {
+        var reconstituted = ReconstituteUser(version: 7);
+        var registered = User.RegisterLocal(
+            email: "student@ictu.edu.vn",
+            passwordHash: "hash",
+            fullName: "Nguyen Van A",
+            role: UserRole.Student,
+            phoneNumber: null,
+            studentCode: "DTC01",
+            utcNow: FixedNow);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(reconstituted.ConcurrencyToken, Is.EqualTo("7"));
+            Assert.That(registered.ConcurrencyToken, Is.EqualTo("1"));
+        });
+    }
+
+    [Test]
+    public void MarkPersisted_AdvancesVersionAndToken()
+    {
+        var user = ReconstituteUser();
+
+        user.MarkPersisted();
+        Assert.Multiple(() =>
+        {
+            Assert.That(user.Version, Is.EqualTo(2));
+            Assert.That(user.ConcurrencyToken, Is.EqualTo("2"));
+        });
+
+        user.MarkPersisted();
+        Assert.Multiple(() =>
+        {
+            Assert.That(user.Version, Is.EqualTo(3));
+            Assert.That(user.ConcurrencyToken, Is.EqualTo("3"));
+        });
+    }
+
+    [Test]
+    public void MarkPersisted_AfterExplicitToken_ReturnsToVersionDerivedToken()
+    {
+        var user = ReconstituteUser(version: 4, concurrencyToken: "etag-9");
+        Assert.That(user.ConcurrencyToken, Is.EqualTo("etag-9"));
+
+        user.MarkPersisted();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(user.Version, Is.EqualTo(5));
+            Assert.That(user.ConcurrencyToken, Is.EqualTo("5"));
+        });
+    }
+
+    [Test]
+    public void Reconstitute_WithExplicitToken_KeepsToken_ForCosmosAdapter()
+    {
+        var user = ReconstituteUser(concurrencyToken: "etag-1");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(user.ConcurrencyToken, Is.EqualTo("etag-1"));
+            Assert.That(user.Version, Is.EqualTo(1));
+        });
+
+        user.SetConcurrencyToken("etag-2");
+        Assert.That(user.ConcurrencyToken, Is.EqualTo("etag-2"));
+
+        user.SetConcurrencyToken(null);
+        Assert.That(user.ConcurrencyToken, Is.EqualTo(user.Version.ToString()));
+    }
+
+    private static User ReconstituteUser(
+        string selectedCampusId = "ICTU",
+        string preferredLanguage = "en",
+        int version = 1,
+        string? concurrencyToken = null)
+    {
+        return User.Reconstitute(
+            id: "u1",
+            email: "student@ictu.edu.vn",
+            fullName: "Nguyen Van A",
+            passwordHash: "hash",
+            role: UserRole.Student,
+            authProvider: AuthProvider.Local,
+            ssoSubjectId: null,
+            phoneNumber: null,
+            studentCode: null,
+            isVerified: true,
+            failedLoginCount: 0,
+            lockoutEndUtc: null,
+            createdAtUtc: FixedNow,
+            updatedAtUtc: FixedNow,
+            concurrencyToken: concurrencyToken,
+            selectedCampusId: selectedCampusId,
+            preferredLanguage: preferredLanguage,
+            version: version);
+    }
+
+    private static User ReconstituteWithoutNewArguments()
+    {
+        return User.Reconstitute(
+            id: "u1",
+            email: "student@ictu.edu.vn",
+            fullName: "Nguyen Van A",
+            passwordHash: "hash",
+            role: UserRole.Student,
+            authProvider: AuthProvider.Local,
+            ssoSubjectId: null,
+            phoneNumber: null,
+            studentCode: null,
+            isVerified: true,
+            failedLoginCount: 0,
+            lockoutEndUtc: null,
+            createdAtUtc: FixedNow,
+            updatedAtUtc: FixedNow);
+    }
+}
+

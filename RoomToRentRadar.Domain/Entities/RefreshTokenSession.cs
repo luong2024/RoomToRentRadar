@@ -1,0 +1,75 @@
+using RoomToRentRadar.Domain.Exceptions;
+
+namespace RoomToRentRadar.Domain.Entities;
+
+public sealed class RefreshTokenSession
+{
+    public string TokenHash { get; private set; }
+    public string JwtId { get; private set; }
+    public DateTime CreatedAtUtc { get; private set; }
+    public DateTime ExpiresAtUtc { get; private set; }
+    public DateTime? RevokedAtUtc { get; private set; }
+    public string? ReplacedByTokenHash { get; private set; }
+
+    public RefreshTokenSession(
+        string tokenHash,
+        string jwtId,
+        DateTime createdAtUtc,
+        DateTime expiresAtUtc,
+        DateTime? revokedAtUtc = null,
+        string? replacedByTokenHash = null)
+    {
+        if (string.IsNullOrWhiteSpace(tokenHash))
+        {
+            throw new DomainValidationException("Token hash is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(jwtId))
+        {
+            throw new DomainValidationException("JWT ID is required.");
+        }
+
+        var normalizedCreatedAt = createdAtUtc.Kind == DateTimeKind.Unspecified
+            ? DateTime.SpecifyKind(createdAtUtc, DateTimeKind.Utc)
+            : createdAtUtc.ToUniversalTime();
+
+        var normalizedExpiresAt = expiresAtUtc.Kind == DateTimeKind.Unspecified
+            ? DateTime.SpecifyKind(expiresAtUtc, DateTimeKind.Utc)
+            : expiresAtUtc.ToUniversalTime();
+
+        if (normalizedExpiresAt <= normalizedCreatedAt)
+        {
+            throw new DomainValidationException("Token expiration must be greater than creation time.");
+        }
+
+        TokenHash = tokenHash.Trim();
+        JwtId = jwtId.Trim();
+        CreatedAtUtc = normalizedCreatedAt;
+        ExpiresAtUtc = normalizedExpiresAt;
+        RevokedAtUtc = revokedAtUtc.HasValue
+            ? (revokedAtUtc.Value.Kind == DateTimeKind.Unspecified
+                ? DateTime.SpecifyKind(revokedAtUtc.Value, DateTimeKind.Utc)
+                : revokedAtUtc.Value.ToUniversalTime())
+            : null;
+        ReplacedByTokenHash = string.IsNullOrWhiteSpace(replacedByTokenHash) ? null : replacedByTokenHash.Trim();
+    }
+
+    public bool IsExpired(DateTime utcNow) => utcNow >= ExpiresAtUtc;
+
+    public bool IsRevoked => RevokedAtUtc.HasValue;
+
+    public bool IsActive(DateTime utcNow) => !IsRevoked && !IsExpired(utcNow);
+
+    public void Revoke(DateTime utcNow, string? replacedByTokenHash = null)
+    {
+        if (!RevokedAtUtc.HasValue)
+        {
+            RevokedAtUtc = utcNow;
+        }
+
+        if (!string.IsNullOrWhiteSpace(replacedByTokenHash))
+        {
+            ReplacedByTokenHash = replacedByTokenHash;
+        }
+    }
+}

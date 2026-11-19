@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
+             x:Class="RoomToRentRadar.Pages.Controls.Common.PriceTagView"
+             x:Name="RootPriceView">
+
+    <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+        <!-- Main Price Text (VND formatted) -->
+        <Label x:Name="PriceLabel"
+               Text="{Binding Source={x:Reference RootPriceView}, Path=FormattedPrice}"
+               TextColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionAccentDark}}"
+               FontFamily="{StaticResource FontFamilySemibold}"
+               FontSize="{StaticResource FontSizeH2}"
+               FontAttributes="Bold"
+               VerticalTextAlignment="Center" />
+
+        <!-- Period Text (e.g. / tháng) -->
+        <Label x:Name="PeriodLabel"
+               Text="{Binding Source={x:Reference RootPriceView}, Path=Period}"
+               TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+               FontFamily="{StaticResource FontFamilyRegular}"
+               FontSize="{StaticResource FontSizeCaption}"
+               VerticalTextAlignment="End"
+               Margin="0,0,0,2" />
+    </HorizontalStackLayout>
+</ContentView>
+

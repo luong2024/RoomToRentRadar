@@ -3,48 +3,93 @@
     x:Class="RoomToRentRadar.AppShell"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:sf="clr-namespace:Syncfusion.Maui.Toolkit.SegmentedControl;assembly=Syncfusion.Maui.Toolkit"
     xmlns:pages="clr-namespace:RoomToRentRadar.Pages"
-    Shell.FlyoutBehavior="Flyout"
+    Shell.FlyoutBehavior="Disabled"
+    Shell.NavBarIsVisible="False"
+    Shell.TabBarIsVisible="False"
     Title="RoomToRentRadar">
 
+    <!-- 1. Default Initial Screen: EXPLORE TAB (Guest & Authenticated) -->
     <ShellContent
-        Title="Dashboard"
-        Icon="{StaticResource IconDashboard}"
-        ContentTemplate="{DataTemplate pages:MainPage}"
-        Route="main"
-        SemanticProperties.Description="Dashboard"
-        SemanticProperties.Hint="Navigate to dashboard"/>
+        Title="Explore"
+        ContentTemplate="{DataTemplate pages:MainLandingPage}"
+        Route="explore"
+        Shell.NavBarIsVisible="False"
+        SemanticProperties.Description="Explore verified student rooms"
+        SemanticProperties.Hint="Browse student rental properties near ICTU" />
 
+    <!-- 2. MAP TAB -->
     <ShellContent
-        Title="Projects"
-        Icon="{StaticResource IconProjects}"
-        ContentTemplate="{DataTemplate pages:ProjectListPage}"
-        Route="projects"
-        SemanticProperties.Description="Projects"
-        SemanticProperties.Hint="Navigate to projects"/>
+        Title="Map"
+        ContentTemplate="{DataTemplate pages:MapPlaceholderPage}"
+        Route="map"
+        Shell.NavBarIsVisible="False"
+        SemanticProperties.Description="Interactive Map"
+        SemanticProperties.Hint="Browse rooms on interactive map near campus" />
 
+    <!-- 3. SAVED TAB -->
     <ShellContent
-        Title="Manage Meta"
-        Icon="{StaticResource IconMeta}"
-        ContentTemplate="{DataTemplate pages:ManageMetaPage}"
-        Route="manage"
-        SemanticProperties.Description="Manage Meta"
-        SemanticProperties.Hint="Navigate to manage meta"/>
+        Title="Saved"
+        ContentTemplate="{DataTemplate pages:SavedPlaceholderPage}"
+        Route="saved"
+        Shell.NavBarIsVisible="False"
+        SemanticProperties.Description="Saved Rooms"
+        SemanticProperties.Hint="View saved favorites and search alerts" />
 
-    <Shell.FlyoutFooter>
-        <Grid Padding="15">
-            <sf:SfSegmentedControl x:Name="ThemeSegmentedControl" 
-                VerticalOptions="Center" HorizontalOptions="Center" SelectionChanged="SfSegmentedControl_SelectionChanged"
-                SegmentWidth="40" SegmentHeight="40">
-                <sf:SfSegmentedControl.ItemsSource>
-                    <x:Array Type="{x:Type sf:SfSegmentItem}">
-                        <sf:SfSegmentItem ImageSource="{StaticResource IconLight}" SemanticProperties.Description="Light mode"/>
-                        <sf:SfSegmentItem ImageSource="{StaticResource IconDark}" SemanticProperties.Description="Dark mode"/>
-                    </x:Array>
-                </sf:SfSegmentedControl.ItemsSource>
-            </sf:SfSegmentedControl>
-        </Grid>
-    </Shell.FlyoutFooter>
+    <!-- 4. MESSAGES TAB -->
+    <ShellContent
+        Title="Messages"
+        ContentTemplate="{DataTemplate pages:MessagesPlaceholderPage}"
+        Route="messages"
+        Shell.NavBarIsVisible="False"
+        SemanticProperties.Description="Messages"
+        SemanticProperties.Hint="Chat with verified landlords" />
+
+    <!-- 5. ACCOUNT TAB -->
+    <ShellContent
+        Title="Account"
+        ContentTemplate="{DataTemplate pages:AccountPlaceholderPage}"
+        Route="account"
+        Shell.NavBarIsVisible="False"
+        SemanticProperties.Description="My Account"
+        SemanticProperties.Hint="View account profile and app preferences" />
+
+    <!-- 6. MY LISTINGS TAB (Landlord) - shared placeholder until T08.1 -->
+    <ShellContent
+        Title="My listings"
+        ContentTemplate="{DataTemplate pages:PlaceholderPage}"
+        Route="my-listings"
+        Shell.NavBarIsVisible="False"
+        SemanticProperties.Description="My listings"
+        SemanticProperties.Hint="Manage your room listings" />
+
+    <!-- 7. MODERATION TAB (Admin) - shared placeholder until T13.5 -->
+    <ShellContent
+        Title="Moderation"
+        ContentTemplate="{DataTemplate pages:PlaceholderPage}"
+        Route="moderation"
+        Shell.NavBarIsVisible="False"
+        SemanticProperties.Description="Moderation"
+        SemanticProperties.Hint="Review and moderate room listings" />
+
+    <!-- 8. SIGN IN (AUTH FLOW) -->
+    <ShellContent
+        Title="Sign In"
+        ContentTemplate="{DataTemplate pages:LoginPage}"
+        Route="login"
+        Shell.NavBarIsVisible="False"
+        Shell.TabBarIsVisible="False"
+        SemanticProperties.Description="Sign in to your account"
+        SemanticProperties.Hint="Sign in using email or ICTU SSO" />
+
+    <!-- 9. UI Design System Catalog (Developer tool - hidden in Release) -->
+    <ShellContent
+        x:Name="UiCatalogContent"
+        Title="UI Catalog"
+        ContentTemplate="{DataTemplate pages:UiCatalogPage}"
+        Route="uicatalog"
+        Shell.NavBarIsVisible="False"
+        SemanticProperties.Description="UI Design System Catalog"
+        SemanticProperties.Hint="Explore colors, typography, buttons, inputs, and components" />
 
 </Shell>

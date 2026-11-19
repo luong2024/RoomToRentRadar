@@ -5,10 +5,12 @@
     <Project Path="RoomToRentRadar.Application/RoomToRentRadar.Application.csproj" />
   </Folder>
   <Folder Name="/2. Driven Adapters &amp; Persistence/">
-    <Project Path="RoomToRentRadar.Datastore/RoomToRentRadar.Datastore.csproj" />
+    <Project Path="RoomToRentRadar.Datastore.CosmosDb/RoomToRentRadar.Datastore.CosmosDb.csproj" />
+    <Project Path="RoomToRentRadar.Datastore.Sqlite/RoomToRentRadar.Datastore.Sqlite.csproj" />
     <Project Path="RoomToRentRadar.Infrastructure/RoomToRentRadar.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/3. Driving Adapters (API &amp; UI)/">
+    <Project Path="RoomToRentRadar.Client.Adapters/RoomToRentRadar.Client.Adapters.csproj" />
     <Project Path="RoomToRentRadar.Api/RoomToRentRadar.Api.csproj" />
     <Project Path="RoomToRentRadar/RoomToRentRadar.csproj">
       <Deploy Solution="Debug|*" />

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary 
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!-- ========================================================================= -->
+    <!-- 8PT GRID SPACING VALUES                                                   -->
+    <!-- ========================================================================= -->
+
+    <x:Double x:Key="Space2">2</x:Double>
+    <x:Double x:Key="Space4">4</x:Double>
+    <x:Double x:Key="Space8">8</x:Double>
+    <x:Double x:Key="Space12">12</x:Double>
+    <x:Double x:Key="Space16">16</x:Double>
+    <x:Double x:Key="Space20">20</x:Double>
+    <x:Double x:Key="Space24">24</x:Double>
+    <x:Double x:Key="Space32">32</x:Double>
+    <x:Double x:Key="Space40">40</x:Double>
+    <x:Double x:Key="Space48">48</x:Double>
+    <x:Double x:Key="Space64">64</x:Double>
+
+    <!-- ========================================================================= -->
+    <!-- THICKNESS & PADDING SCALES                                                -->
+    <!-- ========================================================================= -->
+
+    <Thickness x:Key="PaddingNone">0</Thickness>
+    <Thickness x:Key="PaddingXs">4</Thickness>
+    <Thickness x:Key="PaddingSm">8</Thickness>
+    <Thickness x:Key="PaddingMd">12</Thickness>
+    <Thickness x:Key="PaddingDefault">16</Thickness>
+    <Thickness x:Key="PaddingLg">24</Thickness>
+    <Thickness x:Key="PaddingXl">32</Thickness>
+
+    <!-- Adaptive Screen Margin (Mobile: 16, Desktop/Windows: 32) -->
+    <OnIdiom x:Key="ScreenMargin" x:TypeArguments="Thickness" Default="16">
+        <OnIdiom.Tablet>24</OnIdiom.Tablet>
+        <OnIdiom.Desktop>32</OnIdiom.Desktop>
+    </OnIdiom>
+
+    <OnIdiom x:Key="CardPadding" x:TypeArguments="Thickness" Default="16">
+        <OnIdiom.Desktop>20</OnIdiom.Desktop>
+    </OnIdiom>
+
+    <!-- ========================================================================= -->
+    <!-- CORNER RADIUS SCALE                                                       -->
+    <!-- ========================================================================= -->
+
+    <x:Double x:Key="RadiusSm">4</x:Double>
+    <x:Double x:Key="RadiusMd">8</x:Double>
+    <x:Double x:Key="RadiusLg">12</x:Double> <!-- Standard for Room Cards -->
+    <x:Double x:Key="RadiusXl">16</x:Double>
+    <x:Double x:Key="RadiusPill">9999</x:Double>
+
+    <CornerRadius x:Key="CornerRadiusSm">4</CornerRadius>
+    <CornerRadius x:Key="CornerRadiusMd">8</CornerRadius>
+    <CornerRadius x:Key="CornerRadiusLg">12</CornerRadius>
+    <CornerRadius x:Key="CornerRadiusXl">16</CornerRadius>
+    <CornerRadius x:Key="CornerRadiusPill">9999</CornerRadius>
+
+    <!-- ========================================================================= -->
+    <!-- TOUCH & CLICK TARGET DIMENSIONS (CROSS-PLATFORM)                          -->
+    <!-- ========================================================================= -->
+
+    <!-- Mobile Touch Target >= 48px, Desktop Click Target ~40px -->
+    <OnIdiom x:Key="MinTouchTarget" x:TypeArguments="x:Double" Default="48">
+        <OnIdiom.Desktop>40</OnIdiom.Desktop>
+    </OnIdiom>
+
+    <x:Double x:Key="ButtonHeightSm">32</x:Double>
+    
+    <OnIdiom x:Key="ButtonHeightMd" x:TypeArguments="x:Double" Default="48">
+        <OnIdiom.Desktop>42</OnIdiom.Desktop>
+    </OnIdiom>
+    
+    <x:Double x:Key="ButtonHeightLg">54</x:Double>
+
+    <OnIdiom x:Key="InputHeight" x:TypeArguments="x:Double" Default="48">
+        <OnIdiom.Desktop>44</OnIdiom.Desktop>
+    </OnIdiom>
+
+    <OnIdiom x:Key="HeaderHeight" x:TypeArguments="x:Double" Default="56">
+        <OnIdiom.Desktop>64</OnIdiom.Desktop>
+    </OnIdiom>
+
+    <x:Double x:Key="BadgeHeight">24</x:Double>
+
+</ResourceDictionary>
+

@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary 
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!-- ========================================================================= -->
+    <!-- FONT FAMILIES                                                             -->
+    <!-- ========================================================================= -->
+
+    <x:String x:Key="FontFamilyRegular">OpenSansRegular</x:String>
+    <x:String x:Key="FontFamilySemibold">OpenSansSemibold</x:String>
+    <x:String x:Key="FontFamilySegoe">SegoeSemibold</x:String>
+
+    <!-- ========================================================================= -->
+    <!-- TYPOGRAPHY FONT SIZES (CROSS-PLATFORM ADAPTIVE)                           -->
+    <!-- ========================================================================= -->
+
+    <!-- Display / Hero Banner / High impact -->
+    <OnIdiom x:Key="FontSizeDisplay" x:TypeArguments="x:Double" Default="32">
+        <OnIdiom.Desktop>40</OnIdiom.Desktop>
+    </OnIdiom>
+
+    <!-- Heading 1: Page Titles -->
+    <OnIdiom x:Key="FontSizeH1" x:TypeArguments="x:Double" Default="24">
+        <OnIdiom.Desktop>28</OnIdiom.Desktop>
+    </OnIdiom>
+
+    <!-- Heading 2: Section Titles -->
+    <OnIdiom x:Key="FontSizeH2" x:TypeArguments="x:Double" Default="20">
+        <OnIdiom.Desktop>22</OnIdiom.Desktop>
+    </OnIdiom>
+
+    <!-- Heading 3: Card Titles & Landlord Name -->
+    <OnIdiom x:Key="FontSizeH3" x:TypeArguments="x:Double" Default="16">
+        <OnIdiom.Desktop>18</OnIdiom.Desktop>
+    </OnIdiom>
+
+    <!-- Body Large: Highlighted description -->
+    <x:Double x:Key="FontSizeBodyLarge">16</x:Double>
+
+    <!-- Body Medium: Standard body text -->
+    <x:Double x:Key="FontSizeBodyMedium">14</x:Double>
+
+    <!-- Caption / Helper text -->
+    <x:Double x:Key="FontSizeCaption">12</x:Double>
+
+    <!-- Badge / Micro text -->
+    <x:Double x:Key="FontSizeBadge">11</x:Double>
+
+    <!-- ========================================================================= -->
+    <!-- SEMANTIC TYPOGRAPHY STYLES (LABEL STYLES)                                 -->
+    <!-- ========================================================================= -->
+
+    <Style x:Key="TextDisplay" TargetType="Label">
+        <Setter Property="FontFamily" Value="{StaticResource FontFamilySemibold}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeDisplay}" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+        <Setter Property="LineHeight" Value="1.2" />
+    </Style>
+
+    <Style x:Key="TextH1" TargetType="Label">
+        <Setter Property="FontFamily" Value="{StaticResource FontFamilySemibold}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeH1}" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+        <Setter Property="LineHeight" Value="1.25" />
+    </Style>
+
+    <Style x:Key="TextH2" TargetType="Label">
+        <Setter Property="FontFamily" Value="{StaticResource FontFamilySemibold}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeH2}" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+        <Setter Property="LineHeight" Value="1.3" />
+    </Style>
+
+    <Style x:Key="TextH3" TargetType="Label">
+        <Setter Property="FontFamily" Value="{StaticResource FontFamilySemibold}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeH3}" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+        <Setter Property="LineHeight" Value="1.3" />
+    </Style>
+
+    <Style x:Key="TextBodyLarge" TargetType="Label">
+        <Setter Property="FontFamily" Value="{StaticResource FontFamilyRegular}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBodyLarge}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+        <Setter Property="LineHeight" Value="1.4" />
+    </Style>
+
+    <Style x:Key="TextBodyMedium" TargetType="Label">
+        <Setter Property="FontFamily" Value="{StaticResource FontFamilyRegular}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBodyMedium}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+        <Setter Property="LineHeight" Value="1.4" />
+    </Style>
+
+    <Style x:Key="TextCaption" TargetType="Label">
+        <Setter Property="FontFamily" Value="{StaticResource FontFamilyRegular}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+        <Setter Property="LineHeight" Value="1.3" />
+    </Style>
+
+    <Style x:Key="TextPriceLarge" TargetType="Label">
+        <Setter Property="FontFamily" Value="{StaticResource FontFamilySemibold}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeH2}" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionAccentDark}}" />
+    </Style>
+
+    <Style x:Key="TextBrandHeading" TargetType="Label">
+        <Setter Property="FontFamily" Value="{StaticResource FontFamilySemibold}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeH1}" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}" />
+    </Style>
+
+    <Style x:Key="TextBadgeLabel" TargetType="Label">
+        <Setter Property="FontFamily" Value="{StaticResource FontFamilySemibold}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBadge}" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="VerticalTextAlignment" Value="Center" />
+        <Setter Property="HorizontalTextAlignment" Value="Center" />
+    </Style>
+
+</ResourceDictionary>
+

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:feedback="clr-namespace:RoomToRentRadar.Pages.Controls.Feedback"
+             x:Class="RoomToRentRadar.Pages.Controls.Feedback.SkeletonShimmer"
+             x:Name="RootSkeletonView">
+
+    <Border StrokeShape="RoundRectangle 12"
+            StrokeThickness="1"
+            Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+            Padding="0">
+
+        <VerticalStackLayout Spacing="12" AutomationProperties.IsInAccessibleTree="False">
+            <!-- Simulated Image Skeleton Area -->
+            <BoxView x:Name="ImagePlaceholder"
+                     HeightRequest="172"
+                     Color="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
+                     Opacity="0.7" />
+
+            <VerticalStackLayout Padding="16, 0, 16, 16" Spacing="10">
+                <!-- Simulated Price Bar -->
+                <BoxView x:Name="PriceBar"
+                         HeightRequest="18"
+                         WidthRequest="90"
+                         HorizontalOptions="Start"
+                         CornerRadius="6"
+                         Color="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
+                         Opacity="0.7" />
+
+                <!-- Simulated Title Bar -->
+                <BoxView x:Name="TitleBar"
+                         HeightRequest="14"
+                         WidthRequest="240"
+                         HorizontalOptions="Start"
+                         CornerRadius="6"
+                         Color="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
+                         Opacity="0.6" />
+
+                <!-- Simulated Location Bar -->
+                <BoxView x:Name="LocationBar"
+                         HeightRequest="12"
+                         WidthRequest="160"
+                         HorizontalOptions="Start"
+                         CornerRadius="6"
+                         Color="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
+                         Opacity="0.5" />
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </Border>
+</ContentView>
