@@ -3,6 +3,7 @@ using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Core.Interfaces;
+using RoomToRentRadar.Features.RoomReport.ViewModels;
 using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Shared.Listings;
 
@@ -138,13 +139,16 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         IErrorHandler errorHandler,
         INavigationService navigationService,
         IFavouritesService favouritesService,
-        IUndoService undoService)
+        IUndoService undoService,
+        RoomReportViewModel reportViewModel)
     {
         _apiClient = apiClient;
         _errorHandler = errorHandler;
         _navigationService = navigationService;
         _favouritesService = favouritesService;
         _undoService = undoService;
+        Report = reportViewModel;
+        Report.PropertyChanged += OnReportPropertyChanged;
         PostedOnText = string.Empty;
         UpdatedOnText = string.Empty;
         StatusText = string.Empty;
@@ -161,7 +165,17 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
 
     public ObservableCollection<ListingSummaryDto> SimilarRooms { get; } = [];
 
+    public RoomReportViewModel Report { get; }
+
+    public bool IsTabBarVisible => !Report.IsOpen;
+
     public string FavouriteGlyph => IsFavourite ? "♥" : "♡";
+
+    private void OnReportPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(RoomReportViewModel.IsOpen))
+            OnPropertyChanged(nameof(IsTabBarVisible));
+    }
 
     public bool IsLoadingVisible => State is RoomDetailState.Initial or RoomDetailState.Loading;
 
@@ -262,6 +276,13 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
             // The contact card falls back to the sign-in prompt; the details stay usable.
             LandlordPhone = string.Empty;
         }
+    }
+
+    [RelayCommand]
+    private void OpenReport()
+    {
+        if (Listing is { } listing)
+            Report.Open(listing.Id, listing.Title);
     }
 
     [RelayCommand]

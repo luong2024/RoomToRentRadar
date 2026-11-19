@@ -16,6 +16,7 @@ using RoomToRentRadar.Features.ListingManagement.ViewModels;
 using RoomToRentRadar.Features.ListingManagement.Views;
 using RoomToRentRadar.Features.RoomDetail.ViewModels;
 using RoomToRentRadar.Features.RoomDetail.Views;
+using RoomToRentRadar.Features.RoomReport.ViewModels;
 using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Infrastructure.Auth;
 using RoomToRentRadar.Infrastructure.ErrorHandling;
@@ -50,6 +51,7 @@ public static class ServiceCollectionExtensions
         });
         services.AddSingleton<IFavouritesService, FavouritesService>();
         services.AddSingleton<IUndoPrompt, SnackbarUndoPrompt>();
+        services.AddSingleton<IAlertPrompt, ShellAlertPrompt>();
         services.AddSingleton<IUndoService, UndoService>();
         services.AddSingleton<AuthService>();
         services.AddSingleton<IListingManagementClient>(provider => new ListingManagementClient(new HttpClient(
@@ -58,6 +60,15 @@ public static class ServiceCollectionExtensions
             BaseAddress = new Uri(ApiConstants.BaseAddress),
             Timeout = TimeSpan.FromMinutes(3)
         }));
+        services.AddSingleton<IListingReportsClient>(serviceProvider =>
+        {
+            var handler = serviceProvider.GetRequiredService<AuthenticatedHttpMessageHandler>();
+            return new ListingReportsClient(new HttpClient(handler)
+            {
+                BaseAddress = new Uri(ApiConstants.BaseAddress),
+                Timeout = TimeSpan.FromSeconds(15)
+            });
+        });
         services.AddSingleton<IErrorHandler, ModalErrorHandler>();
         services.AddSingleton<IPreferences>(Preferences.Default);
         services.AddSingleton<ICampusSelectionStore, PreferencesCampusSelectionStore>();
@@ -84,6 +95,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<HomePage>();
         services.AddTransient<RoomDetailViewModel>();
         services.AddTransient<RoomDetailTravelViewModel>();
+        services.AddTransient<RoomReportViewModel>();
         services.AddTransient<RoomDetailPage>();
         services.AddTransient<FavouritesViewModel>();
         services.AddTransient<FavouritesPage>();

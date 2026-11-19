@@ -1,12 +1,14 @@
 using System.Globalization;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Features.RoomDetail.ViewModels;
+using RoomToRentRadar.Features.RoomReport.ViewModels;
 using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.Shared.Favourites;
 using RoomToRentRadar.Shared.Listings;
 using RoomToRentRadar.Shared.Notifications;
 using RoomToRentRadar.Shared.Pagination;
+using RoomToRentRadar.Shared.Reports;
 using RoomToRentRadar.Shared.SavedSearches;
 
 namespace RoomToRentRadarUnitTests;
@@ -637,18 +639,60 @@ public class RoomDetailViewModelTests
         });
     }
 
+    [Test]
+    public async Task OpenReportCommand_OpensSheetAndSubmitsForLoadedListing()
+    {
+        var reportsClient = new FakeListingReportsClient();
+        var viewModel = CreateViewModel(
+            new FakeApiClient(new ListingDetailFetchResult(ListingDetailFetchOutcome.Found, CreateDetail(DateTime.UtcNow))),
+            new FakeErrorHandler(),
+            new FakeNavigationService(),
+            reportViewModel: new RoomReportViewModel(
+                reportsClient,
+                new FakeNavigationService(),
+                new FakeErrorHandler(),
+                new FakeAlertPrompt()));
+        ApplyListingId(viewModel, ListingId);
+        await AwaitAutoStartedLoadAsync(viewModel);
+
+        Assert.That(viewModel.IsTabBarVisible, Is.True);
+
+        viewModel.OpenReportCommand.Execute(null);
+
+        Assert.That(viewModel.IsTabBarVisible, Is.False);
+        Assert.That(viewModel.Report.IsOpen, Is.True);
+
+        viewModel.Report.SelectReasonCommand.Execute(viewModel.Report.Reasons[0]);
+        await viewModel.Report.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.Report.IsOpen, Is.False);
+            Assert.That(viewModel.IsTabBarVisible, Is.True);
+            Assert.That(viewModel.Report.ListingTitle, Is.EqualTo("Sunny room"));
+            Assert.That(reportsClient.RequestedIds, Has.Count.EqualTo(1));
+            Assert.That(reportsClient.RequestedIds[0], Is.EqualTo(ListingId));
+        });
+    }
+
     private static RoomDetailViewModel CreateViewModel(
         IApiClient apiClient,
         IErrorHandler errorHandler,
         INavigationService navigationService,
         FakeFavouritesService? favouritesService = null,
-        FakeUndoService? undoService = null)
+        FakeUndoService? undoService = null,
+        RoomReportViewModel? reportViewModel = null)
         => new(
             apiClient,
             errorHandler,
             navigationService,
             favouritesService ?? new FakeFavouritesService(),
-            undoService ?? new FakeUndoService());
+            undoService ?? new FakeUndoService(),
+            reportViewModel ?? new RoomReportViewModel(
+                new FakeListingReportsClient(),
+                navigationService,
+                errorHandler,
+                new FakeAlertPrompt()));
 
     private static FavouriteRoomDto CreateFavourite(Guid listingId)
         => new(
@@ -889,6 +933,38 @@ public class RoomDetailViewModelTests
 
             if (OnOffer is not null)
                 await OnOffer(item);
+        }
+    }
+
+    private sealed class FakeAlertPrompt : IAlertPrompt
+    {
+        public List<(string Title, string Message)> Alerts { get; } = new();
+
+        public Task ShowAsync(
+            string title,
+            string message,
+            string dismissText = "OK",
+            CancellationToken cancellationToken = default)
+        {
+            Alerts.Add((title, message));
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeListingReportsClient : IListingReportsClient
+    {
+        public List<Guid> RequestedIds { get; } = new();
+
+        public Task<ListingReportSubmitResult> CreateReportAsync(
+            Guid listingId,
+            ListingReportReason reason,
+            string? details,
+            CancellationToken cancellationToken = default)
+        {
+            RequestedIds.Add(listingId);
+            return Task.FromResult(new ListingReportSubmitResult(
+                ListingReportSubmitOutcome.Created,
+                Guid.NewGuid()));
         }
     }
 

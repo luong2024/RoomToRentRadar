@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using RoomToRentRadar.Features.RoomDetail.ViewModels;
+using RoomToRentRadar.Features.RoomReport.ViewModels;
 using RoomToRentRadar.Shared.Listings;
 
 namespace RoomToRentRadar.Features.RoomDetail.Views;
@@ -26,7 +27,10 @@ public partial class RoomDetailPage : ContentPage
             _observing = true;
             _entryAnimated = false;
             _viewModel.PropertyChanged += OnDetailStateChanged;
+            _viewModel.Report.PropertyChanged += OnReportStateChanged;
         }
+
+        Shell.SetTabBarIsVisible(this, _viewModel.IsTabBarVisible);
 
         if (_viewModel.State == RoomDetailState.Initial && _viewModel.LoadCommand.CanExecute(null))
         {
@@ -50,6 +54,15 @@ public partial class RoomDetailPage : ContentPage
                 SyncTravelSection();
                 AnimateContent();
             });
+    }
+
+    private void OnReportStateChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(RoomReportViewModel.IsOpen))
+            return;
+
+        Dispatcher.Dispatch(() =>
+            Shell.SetTabBarIsVisible(this, _viewModel.IsTabBarVisible));
     }
 
     private void SyncTravelSection()
@@ -78,6 +91,8 @@ public partial class RoomDetailPage : ContentPage
     {
         _observing = false;
         _viewModel.PropertyChanged -= OnDetailStateChanged;
+        _viewModel.Report.PropertyChanged -= OnReportStateChanged;
+        Shell.SetTabBarIsVisible(this, true);
         _travelViewModel.Cancel();
         DetailContent.CancelAnimations();
         DetailContent.Opacity = 1;
