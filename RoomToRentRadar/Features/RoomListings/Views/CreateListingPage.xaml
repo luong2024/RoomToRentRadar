@@ -706,7 +706,7 @@
                                                 StrokeShape="RoundRectangle 13">
                                                 <Border.GestureRecognizers>
                                                     <TapGestureRecognizer
-                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:CreateListingViewModel}}, Path=RemovePhotoCommand, x:DataType=vm:CreateListingViewModel}"
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.RemovePhotoCommand}"
                                                         CommandParameter="{Binding .}" />
                                                 </Border.GestureRecognizers>
                                                 <Label

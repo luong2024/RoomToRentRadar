@@ -229,6 +229,7 @@
         x:Name="CreateListingShellContent"
         Title="Đăng tin cho thuê"
         Icon="{StaticResource IconAdd}"
+        ContentTemplate="{DataTemplate roomViews:CreateListingPage}"
         Route="create-listing"
         SemanticProperties.Description="Tạo tin đăng cho thuê phòng trọ"
         SemanticProperties.Hint="Mở form tạo tin đăng cho thuê phòng" />

@@ -35,6 +35,7 @@ namespace RoomToRentRadar
             Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(Features.RoomDetails.Views.RoomDetailPage));
             Routing.RegisterRoute(AppRoutes.RoomDetails, typeof(RoomDetailsPage));
             Routing.RegisterRoute(AppRoutes.CreateListing, typeof(CreateListingPage));
+            Routing.RegisterRoute("create-listing", typeof(CreateListingPage));
 
             UpdateLanguageButtonStyles();
             LocalizationResourceManager.Instance.PropertyChanged += (_, _) => UpdateLanguageButtonStyles();
@@ -62,11 +63,15 @@ namespace RoomToRentRadar
             RoomListingsShellContent.Content = roomListingsPage;
             AuthShellContent.Content = authPage;
             ProfileShellContent.Content = profilePage;
-            CreateListingShellContent.Content = createListingPage;
+            if (CreateListingShellContent.ContentTemplate == null)
+            {
+                CreateListingShellContent.Content = createListingPage;
+            }
 
             Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(Features.RoomDetails.Views.RoomDetailPage));
             Routing.RegisterRoute(AppRoutes.RoomDetails, typeof(RoomDetailsPage));
             Routing.RegisterRoute(AppRoutes.CreateListing, typeof(CreateListingPage));
+            Routing.RegisterRoute("create-listing", typeof(CreateListingPage));
 
             UpdateLanguageButtonStyles();
             LocalizationResourceManager.Instance.PropertyChanged += (_, _) => UpdateLanguageButtonStyles();
