@@ -29,6 +29,7 @@ namespace RoomToRentRadar.Infrastructure.DependencyInjection
             services.TryAddSingleton<RentalDatabaseService>();
             services.TryAddSingleton<ComparisonBasketService>();
             services.TryAddSingleton<ITravelTimeService, TravelTimeService>();
+            services.TryAddSingleton<IComparisonShareService, ComparisonShareService>();
 
             // Fallback in-memory contracts (only used when the real feature service is not registered yet)
             services.TryAddSingleton<IAuthService, InMemoryAuthService>();
