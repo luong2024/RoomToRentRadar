@@ -390,6 +390,7 @@ public class ListingEditorViewModelTests
         public Task GoToRoomDetailAsync(Guid listingId) => Task.CompletedTask;
         public Task GoToLoginAsync() => Task.CompletedTask;
         public Task GoToDirectionsAsync(double destinationLat, double destinationLng, double? originLat, double? originLng) => Task.CompletedTask;
+        public Task GoToComparisonAsync() => Task.CompletedTask;
         public Task GoBackAsync() => Task.CompletedTask;
     }
 

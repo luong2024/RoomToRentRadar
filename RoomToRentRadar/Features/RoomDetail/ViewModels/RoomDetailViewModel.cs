@@ -63,6 +63,8 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     private readonly IApiClient _apiClient;
     private readonly IErrorHandler _errorHandler;
     private readonly INavigationService _navigationService;
+    private readonly IFavouritesService _favouritesService;
+    private readonly IUndoService _undoService;
 
     private Guid? _listingId;
 
@@ -132,11 +134,22 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     [NotifyPropertyChangedFor(nameof(HasSimilarStatusMessage))]
     public partial string SimilarStatusMessage { get; set; }
 
-    public RoomDetailViewModel(IApiClient apiClient, IErrorHandler errorHandler, INavigationService navigationService)
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FavouriteGlyph))]
+    public partial bool IsFavourite { get; set; }
+
+    public RoomDetailViewModel(
+        IApiClient apiClient,
+        IErrorHandler errorHandler,
+        INavigationService navigationService,
+        IFavouritesService favouritesService,
+        IUndoService undoService)
     {
         _apiClient = apiClient;
         _errorHandler = errorHandler;
         _navigationService = navigationService;
+        _favouritesService = favouritesService;
+        _undoService = undoService;
         PostedOnText = string.Empty;
         UpdatedOnText = string.Empty;
         StatusText = string.Empty;
@@ -153,6 +166,8 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     }
 
     public ObservableCollection<ListingSummaryDto> SimilarRooms { get; } = [];
+
+    public string FavouriteGlyph => IsFavourite ? "♥" : "♡";
 
     public bool IsLoadingVisible => State is RoomDetailState.Initial or RoomDetailState.Loading;
 
@@ -229,6 +244,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
                         ?? throw new InvalidOperationException("The listing detail response was empty.");
                     ShowDetail(detail);
                     State = RoomDetailState.Content;
+                    await RefreshFavouriteStateAsync(listingId, cancellationToken);
                     await RefreshContactAsync(cancellationToken);
                     break;
             }
@@ -266,6 +282,37 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         try
         {
             await _navigationService.GoToLoginAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorHandler.HandleError(ex);
+        }
+    }
+
+    [RelayCommand(AllowConcurrentExecutions = false)]
+    private async Task ToggleFavouriteAsync(CancellationToken cancellationToken)
+    {
+        if (_listingId is not { } listingId)
+            return;
+
+        try
+        {
+            if (IsFavourite)
+            {
+                var removed = await _favouritesService.RemoveAsync(listingId, cancellationToken);
+                IsFavourite = false;
+
+                if (removed is not null)
+                {
+                    await _undoService.OfferRemovalUndoAsync(removed, cancellationToken);
+                    IsFavourite = _favouritesService.IsFavourite(listingId);
+                }
+            }
+            else
+            {
+                await _favouritesService.AddAsync(listingId, cancellationToken);
+                IsFavourite = true;
+            }
         }
         catch (Exception ex)
         {
@@ -337,6 +384,20 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         Rules = detail.Rules.ToList();
         HouseRules = detail.HouseRules;
         LandlordPhone = string.Empty;
+    }
+
+    private async Task RefreshFavouriteStateAsync(Guid listingId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _favouritesService.RefreshAsync(cancellationToken);
+            IsFavourite = _favouritesService.IsFavourite(listingId);
+        }
+        catch (Exception)
+        {
+            // The heart falls back to its empty state; the details stay usable.
+            IsFavourite = false;
+        }
     }
 
     private async Task LoadSimilarRoomsAsync(Guid listingId, CancellationToken cancellationToken)

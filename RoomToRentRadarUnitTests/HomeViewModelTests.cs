@@ -1,4 +1,5 @@
 using RoomToRentRadar.Core.Interfaces;
+using RoomToRentRadar.Features.Comparison.Services;
 using RoomToRentRadar.Features.Home.ViewModels;
 using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Shared.Auth;
@@ -18,7 +19,7 @@ public partial class HomeViewModelTests
         var first = CreateListing("First room");
         var second = CreateListing("Second room");
         var apiClient = new FakeApiClient(CreatePage("cursor-2", first, second));
-        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new RoomComparisonStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
 
@@ -45,7 +46,8 @@ public partial class HomeViewModelTests
         var viewModel = new HomeViewModel(
             new FakeApiClient(new InvalidOperationException("boom")),
             errorHandler,
-            new FakeNavigationService());
+            new FakeNavigationService(),
+            new RoomComparisonStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
 
@@ -71,7 +73,7 @@ public partial class HomeViewModelTests
         var apiClient = new FakeApiClient(
             CreatePage(2, false, "cursor-2", first),
             CreatePage(2, false, null, second));
-        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new RoomComparisonStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
         await viewModel.LoadMoreCommand.ExecuteAsync(null);
@@ -96,7 +98,7 @@ public partial class HomeViewModelTests
         var apiClient = new FakeApiClient(
             CreatePage("cursor-2", first),
             CreatePage(null, first, second));
-        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new RoomComparisonStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
         await viewModel.LoadMoreCommand.ExecuteAsync(null);
@@ -116,7 +118,7 @@ public partial class HomeViewModelTests
         var apiClient = new FakeApiClient(
             CreatePage("cursor-2", first),
             new InvalidOperationException("boom"));
-        var viewModel = new HomeViewModel(apiClient, errorHandler, new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, errorHandler, new FakeNavigationService(), new RoomComparisonStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
         await viewModel.LoadMoreCommand.ExecuteAsync(null);
@@ -140,7 +142,7 @@ public partial class HomeViewModelTests
         var apiClient = new FakeApiClient(
             CreatePage("cursor-2", first),
             CreatePage(null, refreshed));
-        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new RoomComparisonStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
         await viewModel.RefreshCommand.ExecuteAsync(null);
@@ -164,7 +166,7 @@ public partial class HomeViewModelTests
         var apiClient = new FakeApiClient(
             CreatePage("cursor-2", first),
             new InvalidOperationException("boom"));
-        var viewModel = new HomeViewModel(apiClient, errorHandler, new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, errorHandler, new FakeNavigationService(), new RoomComparisonStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
         await viewModel.RefreshCommand.ExecuteAsync(null);
@@ -179,6 +181,23 @@ public partial class HomeViewModelTests
     }
 
     [Test]
+    public async Task RefreshAsync_WhenCompleted_EmitsIsRefreshingTransitionToStopSpinner()
+    {
+        var apiClient = new FakeApiClient(CreatePage(null));
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new RoomComparisonStore());
+        var values = new List<bool>();
+        viewModel.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(HomeViewModel.IsRefreshing))
+                values.Add(viewModel.IsRefreshing);
+        };
+
+        await viewModel.RefreshCommand.ExecuteAsync(null);
+
+        Assert.That(values, Is.EqualTo(new[] { true, false }));
+    }
+
+    [Test]
     public async Task OpenSelectedListingAsync_WhenListingSelected_NavigatesWithListingIdAndClearsSelection()
     {
         var listing = CreateListing();
@@ -186,7 +205,8 @@ public partial class HomeViewModelTests
         var viewModel = new HomeViewModel(
             new FakeApiClient(CreatePage(null)),
             new FakeErrorHandler(),
-            navigationService)
+            navigationService,
+            new RoomComparisonStore())
         {
             SelectedListing = HomeListingItem.FromDto(listing)
         };
@@ -208,7 +228,8 @@ public partial class HomeViewModelTests
         var viewModel = new HomeViewModel(
             new FakeApiClient(CreatePage(null)),
             new FakeErrorHandler(),
-            navigationService);
+            navigationService,
+            new RoomComparisonStore());
 
         await viewModel.OpenSelectedListingCommand.ExecuteAsync(null);
 
@@ -229,7 +250,8 @@ public partial class HomeViewModelTests
         var viewModel = new HomeViewModel(
             new FakeApiClient(CreatePage(null)),
             errorHandler,
-            navigationService)
+            navigationService,
+            new RoomComparisonStore())
         {
             SelectedListing = HomeListingItem.FromDto(listing)
         };
@@ -251,7 +273,7 @@ public partial class HomeViewModelTests
         var apiClient = new FakeApiClient(
             CreatePage("cursor-2", CreateListing("First room")),
             CreatePage(null, CreateListing("Studio near BK")));
-        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new RoomComparisonStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
 
@@ -299,7 +321,7 @@ public partial class HomeViewModelTests
     public async Task ApplyFiltersAsync_WithInvalidPriceRange_ShowsErrorAndKeepsResults()
     {
         var apiClient = new FakeApiClient(CreatePage(null, CreateListing()));
-        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new RoomComparisonStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
         viewModel.ToggleFilterPanelCommand.Execute(null);
@@ -327,7 +349,7 @@ public partial class HomeViewModelTests
             CreatePage(null, fullListRoom),
             CreatePage(null, filteredRoom),
             CreatePage(null, fullListRoom));
-        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new RoomComparisonStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
         viewModel.RoomTypeChips.Single(chip => chip.Label == "Studio").SelectCommand.Execute(null);
@@ -353,7 +375,7 @@ public partial class HomeViewModelTests
         var apiClient = new FakeApiClient(
             CreatePage(null, CreateListing()),
             CreatePage(0, false, null));
-        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new RoomComparisonStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
         viewModel.PriceMaxText = "1";
@@ -379,7 +401,7 @@ public partial class HomeViewModelTests
             CreatePage(0, false, null),
             CreatePage(2, false, "cursor-2", listing));
         var errorHandler = new FakeErrorHandler();
-        var viewModel = new HomeViewModel(apiClient, errorHandler, new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, errorHandler, new FakeNavigationService(), new RoomComparisonStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
 
@@ -473,7 +495,7 @@ public partial class HomeViewModelTests
             CreatePage(null, CreateListing()),
             CreatePage("cursor-2", first),
             CreatePage(null, second));
-        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new RoomComparisonStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
         viewModel.AreaMaxText = "30";
@@ -503,7 +525,7 @@ public partial class HomeViewModelTests
     public async Task LoadAsync_WhenServerReportsCappedTotal_ShowsCappedResultCount()
     {
         var apiClient = new FakeApiClient(CreatePage(1000, true, null, CreateListing()));
-        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService());
+        var viewModel = new HomeViewModel(apiClient, new FakeErrorHandler(), new FakeNavigationService(), new RoomComparisonStore());
 
         await viewModel.LoadCommand.ExecuteAsync(null);
 
@@ -667,6 +689,14 @@ public partial class HomeViewModelTests
             double? originLat,
             double? originLng)
             => throw new NotSupportedException("The home screen does not open directions.");
+
+        public int ComparisonNavigationCount { get; private set; }
+
+        public Task GoToComparisonAsync()
+        {
+            ComparisonNavigationCount++;
+            return Task.CompletedTask;
+        }
 
         public Task GoBackAsync() => Task.CompletedTask;
     }

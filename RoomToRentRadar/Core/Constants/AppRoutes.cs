@@ -9,4 +9,6 @@ public static class AppRoutes
     public const string Login = "login";
 
     public const string Directions = "directions";
+
+    public const string Comparison = "compare";
 }

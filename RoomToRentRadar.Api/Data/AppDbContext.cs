@@ -17,6 +17,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<SavedSearchAlertLog> SavedSearchAlertLogs => Set<SavedSearchAlertLog>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<ListingReport> ListingReports => Set<ListingReport>();
+    public DbSet<ListingFavourite> ListingFavourites => Set<ListingFavourite>();
     public DbSet<ModerationAuditLog> ModerationAuditLogs => Set<ModerationAuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

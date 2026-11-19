@@ -3,6 +3,11 @@ using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Storage;
 using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Interfaces;
+using RoomToRentRadar.Features.Comparison.Services;
+using RoomToRentRadar.Features.Comparison.ViewModels;
+using RoomToRentRadar.Features.Comparison.Views;
+using RoomToRentRadar.Features.Favourites.ViewModels;
+using RoomToRentRadar.Features.Favourites.Views;
 using RoomToRentRadar.Features.Home.ViewModels;
 using RoomToRentRadar.Features.Home.Views;
 using RoomToRentRadar.Features.Login.ViewModels;
@@ -34,6 +39,18 @@ public static class ServiceCollectionExtensions
                 Timeout = TimeSpan.FromSeconds(15)
             });
         });
+        services.AddSingleton<IFavouritesApiClient>(serviceProvider =>
+        {
+            var handler = serviceProvider.GetRequiredService<AuthenticatedHttpMessageHandler>();
+            return new FavouritesApiClient(new HttpClient(handler)
+            {
+                BaseAddress = new Uri(ApiConstants.BaseAddress),
+                Timeout = TimeSpan.FromSeconds(15)
+            });
+        });
+        services.AddSingleton<IFavouritesService, FavouritesService>();
+        services.AddSingleton<IUndoPrompt, SnackbarUndoPrompt>();
+        services.AddSingleton<IUndoService, UndoService>();
         services.AddSingleton<AuthService>();
         services.AddSingleton<IListingManagementClient>(provider => new ListingManagementClient(new HttpClient(
             provider.GetRequiredService<AuthenticatedHttpMessageHandler>())
@@ -44,6 +61,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IErrorHandler, ModalErrorHandler>();
         services.AddSingleton<IPreferences>(Preferences.Default);
         services.AddSingleton<ICampusSelectionStore, PreferencesCampusSelectionStore>();
+        services.AddSingleton<IRoomComparisonStore, RoomComparisonStore>();
         services.AddSingleton<ITravelEstimatesClient>(serviceProvider =>
         {
             var handler = serviceProvider.GetRequiredService<AuthenticatedHttpMessageHandler>();
@@ -67,7 +85,11 @@ public static class ServiceCollectionExtensions
         services.AddTransient<RoomDetailViewModel>();
         services.AddTransient<RoomDetailTravelViewModel>();
         services.AddTransient<RoomDetailPage>();
+        services.AddTransient<FavouritesViewModel>();
+        services.AddTransient<FavouritesPage>();
         services.AddTransient<DirectionsPage>();
+        services.AddTransient<ComparisonViewModel>();
+        services.AddTransient<ComparisonPage>();
         services.AddTransient<LoginViewModel>();
         services.AddTransient<LoginPage>();
         services.AddTransient<MyListingsViewModel>();

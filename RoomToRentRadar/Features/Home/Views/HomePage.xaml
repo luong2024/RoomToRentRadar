@@ -127,7 +127,8 @@
                             Command="{Binding BindingContext.OpenListingCommand, Source={x:Reference HomeRoot}}"
                             CommandParameter="{Binding .}" />
                     </ContentView.GestureRecognizers>
-                    <views:HomePropertyCard />
+                    <views:HomePropertyCard
+                        CompareCommand="{Binding BindingContext.ToggleCompareCommand, Source={x:Reference HomeRoot}}" />
                 </ContentView>
             </DataTemplate>
 
@@ -146,8 +147,8 @@
                             Command="{Binding BindingContext.OpenListingCommand, Source={x:Reference HomeRoot}}"
                             CommandParameter="{Binding .}" />
                     </Border.GestureRecognizers>
-                    <Grid ColumnDefinitions="96,*"
-                        ColumnSpacing="12">
+                    <Grid ColumnDefinitions="96,*,Auto"
+                        ColumnSpacing="10">
                         <Border StrokeThickness="0"
                             StrokeShape="RoundRectangle 13"
                             WidthRequest="96"
@@ -192,6 +193,45 @@
                                 </Label.FormattedText>
                             </Label>
                         </VerticalStackLayout>
+                        <Border Grid.Column="2"
+                            WidthRequest="36"
+                            HeightRequest="36"
+                            Padding="0"
+                            VerticalOptions="Center"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 18"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}"
+                            AutomationId="HomeRowCompare"
+                            SemanticProperties.Description="Thêm hoặc bỏ phòng khỏi bảng so sánh">
+                            <Border.Triggers>
+                                <DataTrigger TargetType="Border"
+                                    Binding="{Binding IsCompared}"
+                                    Value="True">
+                                    <Setter Property="BackgroundColor"
+                                        Value="{StaticResource Accent}" />
+                                </DataTrigger>
+                            </Border.Triggers>
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer
+                                    Command="{Binding BindingContext.ToggleCompareCommand, Source={x:Reference HomeRoot}}"
+                                    CommandParameter="{Binding .}" />
+                            </Border.GestureRecognizers>
+                            <Image Source="compare_icon.png"
+                                WidthRequest="18"
+                                HeightRequest="18"
+                                HorizontalOptions="Center"
+                                VerticalOptions="Center"
+                                InputTransparent="True">
+                                <Image.Triggers>
+                                    <DataTrigger TargetType="Image"
+                                        Binding="{Binding IsCompared}"
+                                        Value="True">
+                                        <Setter Property="Source"
+                                            Value="compare_icon_light.png" />
+                                    </DataTrigger>
+                                </Image.Triggers>
+                            </Image>
+                        </Border>
                     </Grid>
                 </Border>
             </DataTemplate>
@@ -491,6 +531,33 @@
                             Padding="14,0" />
                     </Grid>
                 </Border>
+                <VerticalStackLayout Grid.Row="1"
+                    Grid.RowSpan="2"
+                    Padding="16,0,16,14"
+                    Spacing="6"
+                    VerticalOptions="End"
+                    HorizontalOptions="Center"
+                    IsVisible="{Binding ShowComparisonBar}"
+                    ZIndex="6">
+                    <Border IsVisible="{Binding HasCompareHint}"
+                        Padding="12,7"
+                        HorizontalOptions="Center"
+                        StrokeThickness="0"
+                        StrokeShape="RoundRectangle 12"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}">
+                        <Label Text="{Binding CompareHint}"
+                            FontSize="11.5"
+                            TextColor="{AppThemeBinding Light={StaticResource Canvas}, Dark={StaticResource CanvasDark}}" />
+                    </Border>
+                    <buttons:SfButton Text="{Binding ComparisonBarText}"
+                        Command="{Binding OpenComparisonCommand}"
+                        Style="{StaticResource PrimaryActionButton}"
+                        HeightRequest="46"
+                        CornerRadius="23"
+                        Padding="22,0"
+                        AutomationId="OpenComparison"
+                        SemanticProperties.Description="Mở bảng so sánh phòng" />
+                </VerticalStackLayout>
                 <Grid Grid.RowSpan="3"
                     IsVisible="{Binding IsSearchOpen}"
                     RowDefinitions="Auto,Auto,*"

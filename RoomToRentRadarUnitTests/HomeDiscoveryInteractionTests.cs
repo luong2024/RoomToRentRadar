@@ -1,4 +1,6 @@
 using CommunityToolkit.Mvvm.Input;
+using RoomToRentRadar.Features.Comparison.Models;
+using RoomToRentRadar.Features.Comparison.Services;
 using RoomToRentRadar.Features.Home.ViewModels;
 using RoomToRentRadar.Shared.Listings;
 
@@ -10,7 +12,7 @@ public partial class HomeViewModelTests
     public async Task ResetDraft_WhenFiltersApplied_DoesNotChangeResultsUntilApply()
     {
         var api = new FakeApiClient(CreatePage(null, CreateListing()), CreatePage(null, CreateListing()));
-        var model = new HomeViewModel(api, new FakeErrorHandler(), new FakeNavigationService());
+        var model = new HomeViewModel(api, new FakeErrorHandler(), new FakeNavigationService(), new RoomComparisonStore());
         model.PriceMinText = "2";
         model.PriceMaxText = "4";
         await model.ApplyFiltersCommand.ExecuteAsync(null);
@@ -44,7 +46,7 @@ public partial class HomeViewModelTests
     public async Task CloseFilterPanel_WithUnsavedEdits_RestoresAppliedValuesOnReopen()
     {
         var api = new FakeApiClient(CreatePage(null, CreateListing()));
-        var model = new HomeViewModel(api, new FakeErrorHandler(), new FakeNavigationService());
+        var model = new HomeViewModel(api, new FakeErrorHandler(), new FakeNavigationService(), new RoomComparisonStore());
         model.PriceMinText = "2";
         model.AreaMinText = "20";
         model.RoomTypeChips.Single(chip => chip.Value is RoomType.Studio).SelectCommand.Execute(null);
@@ -78,7 +80,7 @@ public partial class HomeViewModelTests
     public async Task RemoveFilterChip_RemovesOnlyItsAppliedGroup(int group)
     {
         var api = new FakeApiClient(CreatePage(null, CreateListing()), CreatePage(null, CreateListing()));
-        var model = new HomeViewModel(api, new FakeErrorHandler(), new FakeNavigationService());
+        var model = new HomeViewModel(api, new FakeErrorHandler(), new FakeNavigationService(), new RoomComparisonStore());
         model.PriceMinText = "2";
         model.PriceMaxText = "4";
         model.AreaMinText = "20";
@@ -114,7 +116,7 @@ public partial class HomeViewModelTests
     public async Task ActiveFilterCount_GroupsBoundsAndCampusRadiusRatherThanIndividualFields()
     {
         var api = new FakeApiClient(CreatePage(null, CreateListing()));
-        var model = new HomeViewModel(api, new FakeErrorHandler(), new FakeNavigationService());
+        var model = new HomeViewModel(api, new FakeErrorHandler(), new FakeNavigationService(), new RoomComparisonStore());
         model.PriceMinText = "1";
         model.PriceMaxText = "5";
         model.AreaMinText = "10";
@@ -133,7 +135,7 @@ public partial class HomeViewModelTests
     public async Task SelectSearchCampus_PreservesAppliedFiltersAndDiscardsUnappliedDraft()
     {
         var api = new FakeApiClient(CreatePage(null, CreateListing()), CreatePage(null, CreateListing()));
-        var model = new HomeViewModel(api, new FakeErrorHandler(), new FakeNavigationService());
+        var model = new HomeViewModel(api, new FakeErrorHandler(), new FakeNavigationService(), new RoomComparisonStore());
         model.PriceMinText = "2";
         model.AreaMaxText = "35";
         await model.ApplyFiltersCommand.ExecuteAsync(null);
@@ -156,7 +158,7 @@ public partial class HomeViewModelTests
     public void SearchQuery_WithNoMatchingCampus_ReturnsNoSuggestionsWithoutNetworkRequest()
     {
         var api = new FakeApiClient();
-        var model = new HomeViewModel(api, new FakeErrorHandler(), new FakeNavigationService());
+        var model = new HomeViewModel(api, new FakeErrorHandler(), new FakeNavigationService(), new RoomComparisonStore());
         model.OpenSearchCommand.Execute(null);
 
         model.SearchQuery = "no matching place 9876";
@@ -165,6 +167,120 @@ public partial class HomeViewModelTests
         {
             Assert.That(model.CampusSuggestions, Is.Empty);
             Assert.That(api.RequestedFilters, Is.Empty);
+        });
+    }
+
+    [Test]
+    public async Task ToggleCompare_WhenListingNotCompared_AddsItAndShowsComparisonBar()
+    {
+        var api = new FakeApiClient(CreatePage(null, CreateListing()));
+        var store = new RoomComparisonStore();
+        var model = new HomeViewModel(api, new FakeErrorHandler(), new FakeNavigationService(), store);
+        await model.LoadCommand.ExecuteAsync(null);
+        var listing = model.Listings[0];
+
+        model.ToggleCompareCommand.Execute(listing);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(store.Rooms.Select(room => room.Id), Is.EqualTo(new[] { listing.Id }));
+            Assert.That(listing.IsCompared, Is.True);
+            Assert.That(model.ComparisonCount, Is.EqualTo(1));
+            Assert.That(model.ShowComparisonBar, Is.True);
+            Assert.That(model.ComparisonBarText, Is.EqualTo("So sánh (1)"));
+            Assert.That(model.HasCompareHint, Is.False);
+        });
+
+        model.OpenSearchCommand.Execute(null);
+
+        Assert.That(model.ShowComparisonBar, Is.False);
+    }
+
+    [Test]
+    public async Task ToggleCompare_WhenListingAlreadyCompared_RemovesItAndHidesBar()
+    {
+        var api = new FakeApiClient(CreatePage(null, CreateListing()));
+        var store = new RoomComparisonStore();
+        var model = new HomeViewModel(api, new FakeErrorHandler(), new FakeNavigationService(), store);
+        await model.LoadCommand.ExecuteAsync(null);
+        var listing = model.Listings[0];
+        model.ToggleCompareCommand.Execute(listing);
+
+        model.ToggleCompareCommand.Execute(listing);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(store.Rooms, Is.Empty);
+            Assert.That(listing.IsCompared, Is.False);
+            Assert.That(model.HasComparison, Is.False);
+            Assert.That(model.ShowComparisonBar, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task ToggleCompare_WhenAddingFourthRoom_KeepsThreeAndShowsLimitHint()
+    {
+        var listings = new[] { CreateListing("Room 1"), CreateListing("Room 2"), CreateListing("Room 3"), CreateListing("Room 4") };
+        var api = new FakeApiClient(CreatePage(null, listings));
+        var store = new RoomComparisonStore();
+        var model = new HomeViewModel(api, new FakeErrorHandler(), new FakeNavigationService(), store);
+        await model.LoadCommand.ExecuteAsync(null);
+
+        foreach (var listing in model.Listings)
+        {
+            model.ToggleCompareCommand.Execute(listing);
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(store.Rooms, Has.Count.EqualTo(3));
+            Assert.That(model.Listings.Take(3).Select(item => item.IsCompared), Is.EqualTo(new[] { true, true, true }));
+            Assert.That(model.Listings[3].IsCompared, Is.False);
+            Assert.That(store.Contains(model.Listings[3].Id), Is.False);
+            Assert.That(model.CompareHint, Is.EqualTo("Chỉ so sánh được tối đa 3 phòng."));
+            Assert.That(model.HasCompareHint, Is.True);
+            Assert.That(model.ComparisonBarText, Is.EqualTo("So sánh (3)"));
+        });
+    }
+
+    [Test]
+    public async Task OpenComparisonCommand_NavigatesToComparisonScreen()
+    {
+        var navigationService = new FakeNavigationService();
+        var model = new HomeViewModel(
+            new FakeApiClient(CreatePage(null, CreateListing())),
+            new FakeErrorHandler(),
+            navigationService,
+            new RoomComparisonStore());
+        await model.LoadCommand.ExecuteAsync(null);
+
+        await model.OpenComparisonCommand.ExecuteAsync(null);
+
+        Assert.That(navigationService.ComparisonNavigationCount, Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task RefreshComparisonState_AfterStoreChangedOutsideHome_MarksListings()
+    {
+        var first = CreateListing("First room");
+        var second = CreateListing("Second room");
+        var store = new RoomComparisonStore();
+        var model = new HomeViewModel(
+            new FakeApiClient(CreatePage(null, first, second)),
+            new FakeErrorHandler(),
+            new FakeNavigationService(),
+            store);
+        await model.LoadCommand.ExecuteAsync(null);
+        store.TryAdd(new ComparisonCandidate(second.Id, second.Title, second.CoverPhotoUrl, second.Price, second.AreaM2));
+
+        model.RefreshComparisonState();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(model.Listings[0].IsCompared, Is.False);
+            Assert.That(model.Listings[1].IsCompared, Is.True);
+            Assert.That(model.ShowComparisonBar, Is.True);
+            Assert.That(model.ComparisonBarText, Is.EqualTo("So sánh (1)"));
         });
     }
 }
