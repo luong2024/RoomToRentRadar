@@ -406,4 +406,7 @@
   <data name="State_Loading" xml:space="preserve">
     <value>Loading</value>
   </data>
+  <data name="State_Offline_Banner" xml:space="preserve">
+    <value>You are offline – showing saved data</value>
+  </data>
 </root>
