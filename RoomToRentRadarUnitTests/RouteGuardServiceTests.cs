@@ -77,6 +77,10 @@ public class RouteGuardServiceTests
     [TestCase("//" + AppRoutes.Booking)]
     [TestCase(AppRoutes.RoommateMatching)]
     [TestCase("//" + AppRoutes.RoommateMatching)]
+    [TestCase(AppRoutes.CreateListing)]
+    [TestCase("//" + AppRoutes.CreateListing)]
+    [TestCase("create-listing")]
+    [TestCase("//create-listing")]
     public void EvaluateRouteAccess_WhenGuestAccessesProtectedRoute_ShouldRequireAuthentication(string route)
     {
         var result = _guardService.EvaluateRouteAccess(route, null);
@@ -105,6 +109,39 @@ public class RouteGuardServiceTests
         var landlord = new AuthUser(Guid.NewGuid(), "landlord@test.com", UserRoleConstants.Landlord, "LOCAL", true);
         var result = _guardService.EvaluateRouteAccess(AppRoutes.RoommateMatching, landlord);
         Assert.That(result, Is.EqualTo(RouteAccessStatus.AccessDeniedRoleMismatch));
+    }
+
+    [TestCase(AppRoutes.CreateListing)]
+    [TestCase("//" + AppRoutes.CreateListing)]
+    [TestCase("create-listing")]
+    [TestCase("//create-listing")]
+    public void EvaluateRouteAccess_WhenStudentAccessesCreateListing_ShouldDenyWithRoleMismatch(string route)
+    {
+        var student = new AuthUser(Guid.NewGuid(), "student@test.com", UserRoleConstants.Student, "LOCAL", true);
+        var result = _guardService.EvaluateRouteAccess(route, student);
+        Assert.That(result, Is.EqualTo(RouteAccessStatus.AccessDeniedRoleMismatch));
+    }
+
+    [TestCase(AppRoutes.CreateListing)]
+    [TestCase("//" + AppRoutes.CreateListing)]
+    [TestCase("create-listing")]
+    [TestCase("//create-listing")]
+    public void EvaluateRouteAccess_WhenLandlordAccessesCreateListing_ShouldAllow(string route)
+    {
+        var landlord = new AuthUser(Guid.NewGuid(), "landlord@test.com", UserRoleConstants.Landlord, "LOCAL", true);
+        var result = _guardService.EvaluateRouteAccess(route, landlord);
+        Assert.That(result, Is.EqualTo(RouteAccessStatus.Allowed));
+    }
+
+    [TestCase(AppRoutes.CreateListing)]
+    [TestCase("//" + AppRoutes.CreateListing)]
+    [TestCase("create-listing")]
+    [TestCase("//create-listing")]
+    public void EvaluateRouteAccess_WhenAdminAccessesCreateListing_ShouldAllow(string route)
+    {
+        var admin = new AuthUser(Guid.NewGuid(), "admin@test.com", "ADMIN", "LOCAL", true);
+        var result = _guardService.EvaluateRouteAccess(route, admin);
+        Assert.That(result, Is.EqualTo(RouteAccessStatus.Allowed));
     }
 
     [TestCase(UserRoleConstants.Student)]

@@ -58,6 +58,16 @@ public class RouteGuardService : IRouteGuardService
         }
 
         // 4. Role-restricted routes
+        if (IsCreateListingRoute(normalizedRoute))
+        {
+            var isLandlordOrAdmin = string.Equals(currentUser.Role, UserRoleConstants.Landlord, StringComparison.OrdinalIgnoreCase)
+                                   || string.Equals(currentUser.Role, "ADMIN", StringComparison.OrdinalIgnoreCase);
+
+            return isLandlordOrAdmin
+                ? RouteAccessStatus.Allowed
+                : RouteAccessStatus.AccessDeniedRoleMismatch;
+        }
+
         if (IsRoommateMatchingRoute(normalizedRoute))
         {
             var isStudentOrAdmin = string.Equals(currentUser.Role, UserRoleConstants.Student, StringComparison.OrdinalIgnoreCase)
@@ -270,9 +280,14 @@ public class RouteGuardService : IRouteGuardService
                || normalizedRoute == AppRoutes.Home.ToLowerInvariant()
                || normalizedRoute == AppRoutes.RoomListings.ToLowerInvariant()
                || normalizedRoute == AppRoutes.RoomDetail.ToLowerInvariant()
-               || normalizedRoute == AppRoutes.RoomDetails.ToLowerInvariant()
-               || normalizedRoute == AppRoutes.CreateListing.ToLowerInvariant()
-               || normalizedRoute == "create-listing";
+               || normalizedRoute == AppRoutes.RoomDetails.ToLowerInvariant();
+    }
+
+    private static bool IsCreateListingRoute(string normalizedRoute)
+    {
+        return normalizedRoute == AppRoutes.CreateListing.ToLowerInvariant()
+               || normalizedRoute == "create-listing"
+               || normalizedRoute == "rooms/create";
     }
 
     private static bool IsProfileRoute(string normalizedRoute)
