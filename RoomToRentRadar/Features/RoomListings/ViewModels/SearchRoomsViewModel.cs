@@ -243,9 +243,17 @@ public abstract partial class SearchRoomsViewModel : ObservableObject
         OnPropertyChanged(nameof(IsApartmentRoomSelected));
     }
 
-    partial void OnHasPriceErrorChanged(bool value) => OnPropertyChanged(nameof(IsFilterValid));
+    partial void OnHasPriceErrorChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsFilterValid));
+        ApplyFiltersCommand.NotifyCanExecuteChanged();
+    }
 
-    partial void OnHasAreaErrorChanged(bool value) => OnPropertyChanged(nameof(IsFilterValid));
+    partial void OnHasAreaErrorChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsFilterValid));
+        ApplyFiltersCommand.NotifyCanExecuteChanged();
+    }
 
     public virtual bool ValidateFilters()
     {
@@ -351,7 +359,7 @@ public abstract partial class SearchRoomsViewModel : ObservableObject
             : roomType.Trim().ToLowerInvariant();
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsFilterValid))]
     public virtual async Task ApplyFiltersAsync()
     {
         if (!ValidateFilters())
@@ -450,9 +458,13 @@ public abstract partial class SearchRoomsViewModel : ObservableObject
         await ExecuteSearchAsync();
     }
 
-    public virtual RoomSearchCriteria CreateSearchCriteria(int pageNumber = 1, int pageSize = 10, string? keyword = null)
+    public virtual RoomSearchCriteria CreateSearchCriteria(
+        int pageNumber = 1,
+        int pageSize = 10,
+        string? keyword = null,
+        RoomSortOption? sortBy = null)
     {
-        var hasActiveDistance = IsDistanceFilterActive && RadiusInKm > 0;
+        var hasActiveDistance = (IsDistanceFilterActive && RadiusInKm > 0) || sortBy == RoomSortOption.DistanceAsc;
         return new RoomSearchCriteria
         {
             MinPrice = MinPrice,
@@ -460,10 +472,11 @@ public abstract partial class SearchRoomsViewModel : ObservableObject
             MinArea = MinArea,
             MaxArea = MaxArea,
             RoomType = string.Equals(SelectedRoomType, "all", StringComparison.OrdinalIgnoreCase) ? null : SelectedRoomType,
-            RadiusInKm = hasActiveDistance ? RadiusInKm : null,
+            RadiusInKm = (IsDistanceFilterActive && RadiusInKm > 0) ? RadiusInKm : null,
             Latitude = hasActiveDistance ? IctuLatitude : null,
             Longitude = hasActiveDistance ? IctuLongitude : null,
             Keyword = keyword,
+            SortBy = sortBy,
             PageNumber = pageNumber,
             PageSize = pageSize
         };
@@ -583,7 +596,11 @@ public abstract partial class SearchRoomsViewModel : ObservableObject
             return null;
         }
 
-        var cleaned = priceText
+        var trimmed = priceText.Trim();
+        var isNegative = trimmed.StartsWith('-');
+
+        var cleaned = trimmed
+            .Replace("-", string.Empty, StringComparison.Ordinal)
             .Replace(",", string.Empty, StringComparison.Ordinal)
             .Replace(".", string.Empty, StringComparison.Ordinal)
             .Replace(" ", string.Empty, StringComparison.Ordinal)
@@ -591,9 +608,14 @@ public abstract partial class SearchRoomsViewModel : ObservableObject
             .Replace("₫", string.Empty, StringComparison.Ordinal)
             .Trim();
 
-        if (decimal.TryParse(cleaned, NumberStyles.Number, CultureInfo.InvariantCulture, out var value) && value >= 0)
+        if (string.IsNullOrEmpty(cleaned))
         {
-            return value;
+            return null;
+        }
+
+        if (decimal.TryParse(cleaned, NumberStyles.Number, CultureInfo.InvariantCulture, out var value))
+        {
+            return isNegative ? -value : value;
         }
 
         return null;
@@ -606,15 +628,25 @@ public abstract partial class SearchRoomsViewModel : ObservableObject
             return null;
         }
 
-        var cleaned = areaText
+        var trimmed = areaText.Trim();
+        var isNegative = trimmed.StartsWith('-');
+
+        var cleaned = trimmed
+            .Replace("-", string.Empty, StringComparison.Ordinal)
             .Replace("m²", string.Empty, StringComparison.OrdinalIgnoreCase)
             .Replace("m2", string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace(",", ".", StringComparison.Ordinal)
             .Replace(" ", string.Empty, StringComparison.Ordinal)
             .Trim();
 
-        if (double.TryParse(cleaned, NumberStyles.Number, CultureInfo.InvariantCulture, out var value) && value >= 0)
+        if (string.IsNullOrEmpty(cleaned))
         {
-            return value;
+            return null;
+        }
+
+        if (double.TryParse(cleaned, NumberStyles.Number, CultureInfo.InvariantCulture, out var value))
+        {
+            return isNegative ? -value : value;
         }
 
         return null;

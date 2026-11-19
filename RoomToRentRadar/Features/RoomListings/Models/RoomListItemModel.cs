@@ -25,7 +25,9 @@ public sealed partial class RoomListItemModel : ObservableObject
 
     public string District { get; init; } = "TP. Thái Nguyên";
 
-    public double DistanceToCampusKm { get; init; }
+    public double? DistanceToCampusKm { get; init; }
+
+    public bool HasDistance => DistanceToCampusKm.HasValue;
 
     public string? ThumbnailUrl { get; init; }
 
@@ -44,7 +46,10 @@ public sealed partial class RoomListItemModel : ObservableObject
 
     public string FormattedArea => string.Format(ViCulture, "{0:0.#} m²", AreaSqm);
 
-    public string FormattedDistance => string.Format(ViCulture, "{0:0.0} km tới ICTU", DistanceToCampusKm);
+    public string FormattedDistance =>
+        DistanceToCampusKm.HasValue
+            ? string.Format(ViCulture, "{0:0.0} km tới ICTU", DistanceToCampusKm.Value)
+            : string.Empty;
 
     public string AvailabilityText => IsAvailable ? "Còn trống" : "Đã thuê";
 

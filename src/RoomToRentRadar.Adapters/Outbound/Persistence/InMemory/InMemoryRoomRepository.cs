@@ -114,7 +114,21 @@ public class InMemoryRoomRepository : IRoomRepository
                 CalculateHaversineDistanceKm(userLat, userLon, r.Latitude.Value, r.Longitude.Value) <= radius);
         }
 
-        var list = filtered.OrderBy(r => r.Id, StringComparer.Ordinal).ToList();
+        // Sắp xếp (Sorting) trước khi phân trang (Pagination)
+        var normalizedSort = query.SortBy?.Trim().ToLowerInvariant();
+        IEnumerable<Room> ordered = normalizedSort switch
+        {
+            "priceasc" or "price_asc" => filtered.OrderBy(r => r.Price).ThenBy(r => r.Id, StringComparer.Ordinal),
+            "pricedesc" or "price_desc" => filtered.OrderByDescending(r => r.Price).ThenBy(r => r.Id, StringComparer.Ordinal),
+            "distanceasc" or "distance_asc" when query.Latitude.HasValue && query.Longitude.HasValue =>
+                filtered.OrderBy(r => (r.Latitude.HasValue && r.Longitude.HasValue)
+                    ? CalculateHaversineDistanceKm(query.Latitude.Value, query.Longitude.Value, r.Latitude.Value, r.Longitude.Value)
+                    : double.MaxValue).ThenBy(r => r.Id, StringComparer.Ordinal),
+            "newest" => filtered.OrderByDescending(r => r.CreatedAt != default ? r.CreatedAt : r.LastUpdatedDate).ThenBy(r => r.Id, StringComparer.Ordinal),
+            _ => filtered.OrderBy(r => r.Id, StringComparer.Ordinal)
+        };
+
+        var list = ordered.ToList();
         var totalCount = list.Count;
 
         // 7. Phân trang (Pagination)

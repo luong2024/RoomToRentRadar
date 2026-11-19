@@ -53,6 +53,12 @@ public sealed class RoomDocument
     [JsonProperty("landlordPhone")]
     public string LandlordPhone { get; set; } = string.Empty;
 
+    [JsonProperty("thumbnailUrl")]
+    public string? ThumbnailUrl { get; set; }
+
+    [JsonProperty("createdAt")]
+    public DateTime CreatedAt { get; set; }
+
     [JsonProperty("lastUpdatedDate")]
     public DateTime LastUpdatedDate { get; set; }
 
@@ -95,6 +101,8 @@ public sealed class RoomDocument
             HouseRules = room.HouseRules.ToList(),
             LandlordPhone = room.LandlordPhone,
             LastUpdatedDate = room.LastUpdatedDate,
+            ThumbnailUrl = room.ThumbnailUrl,
+            CreatedAt = room.CreatedAt,
             Latitude = room.Latitude,
             Longitude = room.Longitude,
             Location = location
@@ -128,6 +136,8 @@ public sealed class RoomDocument
             HouseRules = HouseRules ?? [],
             LandlordPhone = LandlordPhone,
             LastUpdatedDate = LastUpdatedDate,
+            ThumbnailUrl = ThumbnailUrl,
+            CreatedAt = CreatedAt != default ? CreatedAt : LastUpdatedDate,
             Latitude = lat,
             Longitude = lon
         };

@@ -49,7 +49,11 @@ public class SearchRoomsUseCase : ISearchRoomsUseCase
             r.Area,
             r.RoomType,
             r.IsVerified,
-            CalculateHaversineDistanceKm(query.Latitude, query.Longitude, r.Latitude, r.Longitude)
+            CalculateHaversineDistanceKm(query.Latitude, query.Longitude, r.Latitude, r.Longitude),
+            r.Address,
+            r.ThumbnailUrl,
+            r.Amenities,
+            r.CreatedAt != default ? new DateTimeOffset(r.CreatedAt, TimeSpan.Zero) : DateTimeOffset.UtcNow
         )).ToList();
 
         var pageSize = Math.Clamp(query.PageSize <= 0 ? DefaultPageSize : query.PageSize, 1, MaxPageSize);
@@ -125,6 +129,14 @@ public class SearchRoomsUseCase : ISearchRoomsUseCase
         if (query.RadiusInKm.HasValue && (!query.Latitude.HasValue || !query.Longitude.HasValue))
         {
             throw new ArgumentException("Tọa độ Latitude và Longitude là bắt buộc khi sử dụng lọc theo bán kính RadiusInKm.");
+        }
+
+        var isDistanceSort = string.Equals(query.SortBy, "DistanceAsc", StringComparison.OrdinalIgnoreCase) ||
+                             string.Equals(query.SortBy, "distance_asc", StringComparison.OrdinalIgnoreCase);
+
+        if (isDistanceSort && (!query.Latitude.HasValue || !query.Longitude.HasValue))
+        {
+            throw new ArgumentException("Tọa độ Latitude và Longitude là bắt buộc khi sắp xếp theo khoảng cách.");
         }
 
         if (query.Latitude.HasValue && (query.Latitude.Value < -90 || query.Latitude.Value > 90))

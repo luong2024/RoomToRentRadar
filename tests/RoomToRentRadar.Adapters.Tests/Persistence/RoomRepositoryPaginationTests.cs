@@ -138,4 +138,101 @@ public class RoomRepositoryPaginationTests
             Assert.That(similarIds, Does.Not.Contain(areaTooLargeRoom.Id), "Phòng có diện tích quá lớn (45m2) phải bị loại.");
         });
     }
+
+    [Test]
+    public async Task SearchAsync_WithPriceAscSort_SortsAcrossMultiplePagesBeforePagination()
+    {
+        // Arrange
+        var repo = new InMemoryRoomRepository();
+        // Insert in scrambled order
+        repo.Upsert(new Room { Id = "room-5m", Title = "Room 5M", Price = 5_000_000m, Area = 20, IsVerified = true, Status = RoomStatus.Available });
+        repo.Upsert(new Room { Id = "room-1m", Title = "Room 1M", Price = 1_000_000m, Area = 20, IsVerified = true, Status = RoomStatus.Available });
+        repo.Upsert(new Room { Id = "room-4m", Title = "Room 4M", Price = 4_000_000m, Area = 20, IsVerified = true, Status = RoomStatus.Available });
+        repo.Upsert(new Room { Id = "room-2m", Title = "Room 2M", Price = 2_000_000m, Area = 20, IsVerified = true, Status = RoomStatus.Available });
+        repo.Upsert(new Room { Id = "room-3m", Title = "Room 3M", Price = 3_000_000m, Area = 20, IsVerified = true, Status = RoomStatus.Available });
+
+        // Act: Fetch Page 1 (size 2) and Page 2 (size 2)
+        var page1Query = new SearchRoomsQuery(sortBy: "PriceAsc", pageNumber: 1, pageSize: 2);
+        var (page1Items, totalCount1) = await repo.SearchAsync(page1Query);
+
+        var page2Query = new SearchRoomsQuery(sortBy: "PriceAsc", pageNumber: 2, pageSize: 2);
+        var (page2Items, totalCount2) = await repo.SearchAsync(page2Query);
+
+        var page3Query = new SearchRoomsQuery(sortBy: "PriceAsc", pageNumber: 3, pageSize: 2);
+        var (page3Items, totalCount3) = await repo.SearchAsync(page3Query);
+
+        // Assert: Cross-page sorting guarantees Page 1 max price <= Page 2 min price <= Page 3 min price
+        Assert.Multiple(() =>
+        {
+            Assert.That(totalCount1, Is.EqualTo(5));
+            Assert.That(totalCount2, Is.EqualTo(5));
+            Assert.That(totalCount3, Is.EqualTo(5));
+
+            Assert.That(page1Items.Select(r => r.Price), Is.EqualTo(new[] { 1_000_000m, 2_000_000m }));
+            Assert.That(page2Items.Select(r => r.Price), Is.EqualTo(new[] { 3_000_000m, 4_000_000m }));
+            Assert.That(page3Items.Select(r => r.Price), Is.EqualTo(new[] { 5_000_000m }));
+
+            Assert.That(page1Items.Max(r => r.Price), Is.LessThan(page2Items.Min(r => r.Price)), "Page 1 max must be less than Page 2 min");
+            Assert.That(page2Items.Max(r => r.Price), Is.LessThan(page3Items.Min(r => r.Price)), "Page 2 max must be less than Page 3 min");
+        });
+    }
+
+    [Test]
+    public async Task SearchAsync_WithPriceDescSort_SortsAcrossMultiplePagesBeforePagination()
+    {
+        // Arrange
+        var repo = new InMemoryRoomRepository();
+        repo.Upsert(new Room { Id = "room-1m", Title = "Room 1M", Price = 1_000_000m, Area = 20, IsVerified = true, Status = RoomStatus.Available });
+        repo.Upsert(new Room { Id = "room-5m", Title = "Room 5M", Price = 5_000_000m, Area = 20, IsVerified = true, Status = RoomStatus.Available });
+        repo.Upsert(new Room { Id = "room-2m", Title = "Room 2M", Price = 2_000_000m, Area = 20, IsVerified = true, Status = RoomStatus.Available });
+        repo.Upsert(new Room { Id = "room-4m", Title = "Room 4M", Price = 4_000_000m, Area = 20, IsVerified = true, Status = RoomStatus.Available });
+        repo.Upsert(new Room { Id = "room-3m", Title = "Room 3M", Price = 3_000_000m, Area = 20, IsVerified = true, Status = RoomStatus.Available });
+
+        // Act
+        var page1Query = new SearchRoomsQuery(sortBy: "PriceDesc", pageNumber: 1, pageSize: 2);
+        var (page1Items, _) = await repo.SearchAsync(page1Query);
+
+        var page2Query = new SearchRoomsQuery(sortBy: "PriceDesc", pageNumber: 2, pageSize: 2);
+        var (page2Items, _) = await repo.SearchAsync(page2Query);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(page1Items.Select(r => r.Price), Is.EqualTo(new[] { 5_000_000m, 4_000_000m }));
+            Assert.That(page2Items.Select(r => r.Price), Is.EqualTo(new[] { 3_000_000m, 2_000_000m }));
+            Assert.That(page1Items.Min(r => r.Price), Is.GreaterThan(page2Items.Max(r => r.Price)));
+        });
+    }
+
+    [Test]
+    public async Task SearchAsync_WithDistanceAscSort_SortsAcrossMultiplePagesBeforePagination()
+    {
+        // Arrange: User at ICTU (21.5852, 105.8073)
+        var repo = new InMemoryRoomRepository();
+        // Room Near (~0.3km)
+        repo.Upsert(new Room { Id = "room-near", Title = "Near", Price = 2_000_000m, Latitude = 21.587, Longitude = 105.808, IsVerified = true, Status = RoomStatus.Available });
+        // Room Far (~10km)
+        repo.Upsert(new Room { Id = "room-far", Title = "Far", Price = 1_500_000m, Latitude = 21.650, Longitude = 105.850, IsVerified = true, Status = RoomStatus.Available });
+        // Room Mid (~2km)
+        repo.Upsert(new Room { Id = "room-mid", Title = "Mid", Price = 1_800_000m, Latitude = 21.600, Longitude = 105.815, IsVerified = true, Status = RoomStatus.Available });
+
+        // Act: Page 1 (size 1) and Page 2 (size 1)
+        var queryPage1 = new SearchRoomsQuery(latitude: 21.5852, longitude: 105.8073, sortBy: "DistanceAsc", pageNumber: 1, pageSize: 1);
+        var (page1Items, totalCount1) = await repo.SearchAsync(queryPage1);
+
+        var queryPage2 = new SearchRoomsQuery(latitude: 21.5852, longitude: 105.8073, sortBy: "DistanceAsc", pageNumber: 2, pageSize: 1);
+        var (page2Items, totalCount2) = await repo.SearchAsync(queryPage2);
+
+        var queryPage3 = new SearchRoomsQuery(latitude: 21.5852, longitude: 105.8073, sortBy: "DistanceAsc", pageNumber: 3, pageSize: 1);
+        var (page3Items, totalCount3) = await repo.SearchAsync(queryPage3);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(totalCount1, Is.EqualTo(3));
+            Assert.That(page1Items[0].Id, Is.EqualTo("room-near"));
+            Assert.That(page2Items[0].Id, Is.EqualTo("room-mid"));
+            Assert.That(page3Items[0].Id, Is.EqualTo("room-far"));
+        });
+    }
 }

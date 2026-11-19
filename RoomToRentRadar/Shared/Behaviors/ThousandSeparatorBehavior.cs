@@ -35,10 +35,31 @@ public sealed class ThousandSeparatorBehavior : Behavior<Entry>
             return;
         }
 
+        var trimmed = newText.Trim();
+        var isNegative = trimmed.StartsWith('-');
+
         // Extract only numeric digits
-        var rawDigits = new string(newText.Where(char.IsDigit).ToArray());
+        var rawDigits = new string(trimmed.Where(char.IsDigit).ToArray());
         if (string.IsNullOrEmpty(rawDigits))
         {
+            if (isNegative)
+            {
+                if (entry.Text != "-")
+                {
+                    _isUpdating = true;
+                    try
+                    {
+                        entry.Text = "-";
+                        entry.CursorPosition = 1;
+                    }
+                    finally
+                    {
+                        _isUpdating = false;
+                    }
+                }
+                return;
+            }
+
             _isUpdating = true;
             try
             {
@@ -53,7 +74,10 @@ public sealed class ThousandSeparatorBehavior : Behavior<Entry>
 
         if (decimal.TryParse(rawDigits, NumberStyles.Number, CultureInfo.InvariantCulture, out var number))
         {
-            var formatted = number.ToString("N0", ViCulture);
+            var formatted = isNegative
+                ? "-" + number.ToString("N0", ViCulture)
+                : number.ToString("N0", ViCulture);
+
             if (!string.Equals(entry.Text, formatted, StringComparison.Ordinal))
             {
                 _isUpdating = true;

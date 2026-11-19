@@ -295,6 +295,101 @@ public class SearchRoomsUseCaseTests
         Assert.That(result.Items, Has.Count.EqualTo(1));
     }
 
+    [Test]
+    public void ExecuteAsync_WhenDistanceSortWithoutCoordinates_ShouldThrowArgumentException()
+    {
+        var query = new SearchRoomsQuery(sortBy: "DistanceAsc");
+
+        var ex = Assert.ThrowsAsync<ArgumentException>(async () =>
+            await _useCase.ExecuteAsync(query));
+
+        Assert.That(ex!.Message, Does.Contain("Tọa độ Latitude và Longitude là bắt buộc khi sắp xếp theo khoảng cách."));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithSortByPriceAsc_SortsAcrossPagesAndMapsSummaryFieldsFaithfully()
+    {
+        // Arrange
+        var createdAt1 = new DateTime(2026, 11, 1, 10, 0, 0, DateTimeKind.Utc);
+        var createdAt2 = new DateTime(2026, 11, 2, 10, 0, 0, DateTimeKind.Utc);
+        var createdAt3 = new DateTime(2026, 11, 3, 10, 0, 0, DateTimeKind.Utc);
+
+        var room3M = new Room
+        {
+            Id = "r3",
+            Title = "Room 3M",
+            Description = "Desc 3M",
+            Price = 3_000_000m,
+            Area = 30,
+            Address = "789 Đường Z",
+            IsVerified = true,
+            Status = RoomStatus.Available,
+            ThumbnailUrl = "https://example.com/r3.jpg",
+            Amenities = ["Wifi", "Bình nóng lạnh"],
+            CreatedAt = createdAt3
+        };
+
+        var room1M = new Room
+        {
+            Id = "r1",
+            Title = "Room 1M",
+            Description = "Desc 1M",
+            Price = 1_000_000m,
+            Area = 20,
+            Address = "123 Đường X",
+            IsVerified = true,
+            Status = RoomStatus.Available,
+            ThumbnailUrl = "https://example.com/r1.jpg",
+            Amenities = ["Wifi"],
+            CreatedAt = createdAt1
+        };
+
+        var room2M = new Room
+        {
+            Id = "r2",
+            Title = "Room 2M",
+            Description = "Desc 2M",
+            Price = 2_000_000m,
+            Area = 25,
+            Address = "456 Đường Y",
+            IsVerified = true,
+            Status = RoomStatus.Available,
+            ThumbnailUrl = "https://example.com/r2.jpg",
+            Amenities = ["Điều hòa"],
+            CreatedAt = createdAt2
+        };
+
+        _roomRepository.Add(room3M);
+        _roomRepository.Add(room1M);
+        _roomRepository.Add(room2M);
+
+        // Act: Page 1 (size 2) and Page 2 (size 2) with SortBy = PriceAsc
+        var page1Result = await _useCase.ExecuteAsync(new SearchRoomsQuery(sortBy: "PriceAsc", pageNumber: 1, pageSize: 2));
+        var page2Result = await _useCase.ExecuteAsync(new SearchRoomsQuery(sortBy: "PriceAsc", pageNumber: 2, pageSize: 2));
+
+        // Assert cross-page ordering
+        Assert.Multiple(() =>
+        {
+            Assert.That(page1Result.TotalCount, Is.EqualTo(3));
+            Assert.That(page1Result.Items, Has.Count.EqualTo(2));
+            Assert.That(page1Result.Items[0].Id, Is.EqualTo("r1"));
+            Assert.That(page1Result.Items[0].Price, Is.EqualTo(1_000_000m));
+            Assert.That(page1Result.Items[0].Address, Is.EqualTo("123 Đường X"));
+            Assert.That(page1Result.Items[0].ThumbnailUrl, Is.EqualTo("https://example.com/r1.jpg"));
+            Assert.That(page1Result.Items[0].Amenities, Is.EquivalentTo(new[] { "Wifi" }));
+
+            Assert.That(page1Result.Items[1].Id, Is.EqualTo("r2"));
+            Assert.That(page1Result.Items[1].Price, Is.EqualTo(2_000_000m));
+
+            Assert.That(page2Result.Items, Has.Count.EqualTo(1));
+            Assert.That(page2Result.Items[0].Id, Is.EqualTo("r3"));
+            Assert.That(page2Result.Items[0].Price, Is.EqualTo(3_000_000m));
+            Assert.That(page2Result.Items[0].Address, Is.EqualTo("789 Đường Z"));
+            Assert.That(page2Result.Items[0].ThumbnailUrl, Is.EqualTo("https://example.com/r3.jpg"));
+            Assert.That(page2Result.Items[0].Amenities, Is.EquivalentTo(new[] { "Wifi", "Bình nóng lạnh" }));
+        });
+    }
+
     private static Room CreateValidRoom(
         string id,
         decimal price,
@@ -361,6 +456,17 @@ public class SearchRoomsUseCaseTests
                 filtered = filtered.Where(r => r.Title.Contains(query.Keyword, StringComparison.OrdinalIgnoreCase) ||
                                                r.Description.Contains(query.Keyword, StringComparison.OrdinalIgnoreCase) ||
                                                r.Address.Contains(query.Keyword, StringComparison.OrdinalIgnoreCase));
+
+            if (!string.IsNullOrWhiteSpace(query.SortBy))
+            {
+                var sort = query.SortBy.Trim().ToLowerInvariant();
+                filtered = sort switch
+                {
+                    "priceasc" or "price_asc" => filtered.OrderBy(r => r.Price),
+                    "pricedesc" or "price_desc" => filtered.OrderByDescending(r => r.Price),
+                    _ => filtered.OrderBy(r => r.Id)
+                };
+            }
 
             var list = filtered.ToList();
             var totalCount = list.Count;

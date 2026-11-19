@@ -248,7 +248,11 @@ public sealed class LocalizationResourceManager : INotifyPropertyChanged
         ["Filter_Amenity_Washing"] = "Máy giặt",
         ["Filter_Amenity_Kitchen"] = "Bếp nấu",
         ["Filter_ResetAll"] = "Đặt lại",
-        ["Filter_ShowResults_Format"] = "Xem kết quả ({0})"
+        ["Filter_ShowResults_Format"] = "Xem kết quả ({0})",
+        ["Validation_PriceNegative"] = "Giá không được nhỏ hơn 0.",
+        ["Validation_AreaNegative"] = "Diện tích không được nhỏ hơn 0.",
+        ["Validation_MinPriceGreaterThanMax"] = "Giá tối thiểu không được lớn hơn giá tối đa.",
+        ["Validation_MinAreaGreaterThanMax"] = "Diện tích tối thiểu không được lớn hơn diện tích tối đa."
     };
 
     private static readonly Dictionary<string, string> FallbackEnglish = new(StringComparer.Ordinal)
@@ -362,6 +366,10 @@ public sealed class LocalizationResourceManager : INotifyPropertyChanged
         ["Filter_Amenity_Washing"] = "Washing Machine",
         ["Filter_Amenity_Kitchen"] = "Kitchen",
         ["Filter_ResetAll"] = "Reset All",
-        ["Filter_ShowResults_Format"] = "Show Results ({0})"
+        ["Filter_ShowResults_Format"] = "Show Results ({0})",
+        ["Validation_PriceNegative"] = "Price must not be negative.",
+        ["Validation_AreaNegative"] = "Area must not be negative.",
+        ["Validation_MinPriceGreaterThanMax"] = "Minimum price cannot be greater than maximum price.",
+        ["Validation_MinAreaGreaterThanMax"] = "Minimum area cannot be greater than maximum area."
     };
 }

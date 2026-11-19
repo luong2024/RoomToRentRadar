@@ -10,6 +10,9 @@ namespace RoomToRentRadar.Features.RoomListings.Services;
 /// </summary>
 public sealed class RoomListingsService : IRoomListingsService
 {
+    public const double IctuCampusLatitude = 21.5852;
+    public const double IctuCampusLongitude = 105.8073;
+
     private static readonly Dictionary<string, string[]> AmenityKeywords = new(StringComparer.OrdinalIgnoreCase)
     {
         ["aircon"] = ["Điều hòa", "Air conditioner", "aircon"],
@@ -48,6 +51,10 @@ public sealed class RoomListingsService : IRoomListingsService
         var sortQuery = GetSortQueryValue(sortBy);
         var searchTerm = search?.Trim();
         var endpoint = $"api/rooms?page={page}&pageSize={pageSize}&sortBy={sortQuery}";
+        if (sortBy == RoomSortOption.DistanceAsc)
+        {
+            endpoint += $"&latitude={IctuCampusLatitude.ToString(CultureInfo.InvariantCulture)}&longitude={IctuCampusLongitude.ToString(CultureInfo.InvariantCulture)}";
+        }
         if (!string.IsNullOrEmpty(searchTerm))
         {
             endpoint += $"&search={Uri.EscapeDataString(searchTerm)}";
@@ -234,8 +241,17 @@ public sealed class RoomListingsService : IRoomListingsService
 
         if (criteria.RadiusInKm.HasValue)
         {
-            query = query.Where(r => r.DistanceToCampusKm <= criteria.RadiusInKm.Value);
+            query = query.Where(r => (r.DistanceToCampusKm ?? double.MaxValue) <= criteria.RadiusInKm.Value);
         }
+
+        var sortBy = criteria.SortBy ?? RoomSortOption.Newest;
+        query = sortBy switch
+        {
+            RoomSortOption.PriceAsc => query.OrderBy(r => r.Price).ThenBy(r => r.Id),
+            RoomSortOption.PriceDesc => query.OrderByDescending(r => r.Price).ThenBy(r => r.Id),
+            RoomSortOption.DistanceAsc => query.OrderBy(r => r.DistanceToCampusKm ?? double.MaxValue).ThenBy(r => r.Id),
+            _ => query.OrderByDescending(r => r.CreatedAt).ThenBy(r => r.Id)
+        };
 
         var list = query.ToList();
         var totalCount = list.Count;
@@ -253,7 +269,11 @@ public sealed class RoomListingsService : IRoomListingsService
                 r.AreaSqm,
                 r.RoomType,
                 r.IsVerified,
-                r.DistanceToCampusKm))
+                r.DistanceToCampusKm,
+                r.Address,
+                r.ThumbnailUrl,
+                r.Amenities,
+                r.CreatedAt))
             .ToList();
 
         var activeFilters = new List<string>();

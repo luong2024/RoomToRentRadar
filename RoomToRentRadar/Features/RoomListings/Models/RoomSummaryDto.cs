@@ -10,22 +10,33 @@ public sealed record RoomSummaryDto(
     double Area,
     string RoomType,
     bool IsVerified,
-    double? DistanceInKm)
+    double? DistanceInKm,
+    string Address = "",
+    string? ThumbnailUrl = null,
+    IReadOnlyList<string>? Amenities = null,
+    DateTimeOffset? CreatedAt = null)
 {
     /// <summary>
     /// Converts this search summary DTO to a presentation item model.
     /// </summary>
-    public RoomListItemModel ToListItemModel(string address = "Thái Nguyên")
+    public RoomListItemModel ToListItemModel(string? addressOverride = null)
     {
+        var resolvedAddress = !string.IsNullOrWhiteSpace(addressOverride)
+            ? addressOverride
+            : (!string.IsNullOrWhiteSpace(Address) ? Address : "Thái Nguyên");
+
         return new RoomListItemModel
         {
             Id = Id,
             Title = Title,
             Price = Price,
             AreaSqm = Area,
-            Address = address,
+            Address = resolvedAddress,
             RoomType = RoomType,
-            DistanceToCampusKm = DistanceInKm ?? 0.0,
+            DistanceToCampusKm = DistanceInKm,
+            ThumbnailUrl = ThumbnailUrl,
+            Amenities = Amenities ?? [],
+            CreatedAt = CreatedAt ?? DateTimeOffset.UtcNow,
             IsVerified = IsVerified,
             IsAvailable = true
         };

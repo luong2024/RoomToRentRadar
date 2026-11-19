@@ -25,6 +25,8 @@ public sealed record RoomSearchCriteria
 
     public double? RadiusInKm { get; init; }
 
+    public RoomSortOption? SortBy { get; init; }
+
     public int PageNumber { get; init; } = 1;
 
     public int PageSize { get; init; } = 10;
@@ -40,7 +42,7 @@ public sealed record RoomSearchCriteria
 
     public string ToQueryString()
     {
-        var parameters = new List<string>(10);
+        var parameters = new List<string>(11);
 
         if (MinPrice.HasValue)
         {
@@ -85,6 +87,18 @@ public sealed record RoomSearchCriteria
         if (RadiusInKm.HasValue)
         {
             parameters.Add($"radiusInKm={RadiusInKm.Value.ToString(CultureInfo.InvariantCulture)}");
+        }
+
+        if (SortBy.HasValue)
+        {
+            var sortValue = SortBy.Value switch
+            {
+                RoomSortOption.PriceAsc => "PriceAsc",
+                RoomSortOption.PriceDesc => "PriceDesc",
+                RoomSortOption.DistanceAsc => "DistanceAsc",
+                _ => "Newest"
+            };
+            parameters.Add($"sortBy={sortValue}");
         }
 
         parameters.Add($"pageNumber={Math.Max(1, PageNumber)}");

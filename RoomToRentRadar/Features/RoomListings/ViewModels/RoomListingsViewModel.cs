@@ -54,13 +54,13 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         SelectedSortOptionItem = SortOptions[0];
         Rooms.CollectionChanged += (_, _) => NotifyStateProperties();
 
-        // Initial default presets
-        FilterMinPriceText = "1,000,000";
-        FilterMaxPriceText = "2,000,000";
-        MinPrice = 1_000_000m;
-        MaxPrice = 2_000_000m;
-        SelectedRoomType = "private";
-        SelectedPricePreset = "1m-2m";
+        // Initial unfiltered state
+        FilterMinPriceText = string.Empty;
+        FilterMaxPriceText = string.Empty;
+        MinPrice = null;
+        MaxPrice = null;
+        SelectedRoomType = "all";
+        SelectedPricePreset = string.Empty;
 
         UpdateLocalizedStrings();
         LocalizationResourceManager.Instance.PropertyChanged += (_, _) => UpdateLocalizedStrings();
@@ -514,27 +514,8 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         }
 
         IsPriceMenuOpen = false;
-        IsFilterPanelOpen = false;
 
-        FilterMinAreaText = string.Empty;
-        FilterMaxAreaText = string.Empty;
-        MinArea = null;
-        MaxArea = null;
-        IsDistanceFilterActive = false;
-        RadiusInKm = DefaultRadiusKm;
-
-        SelectPricePreset("1m-2m");
-        SelectedRoomType = "private";
-
-        HasPriceError = false;
-        PriceErrorMessage = string.Empty;
-        HasAreaError = false;
-        AreaErrorMessage = string.Empty;
-
-        ActiveFilters.Clear();
-        IsFilterPanelOpen = false;
-
-        await ExecuteSearchAsync();
+        await base.ResetFiltersAsync();
     }
 
     [RelayCommand]
@@ -595,22 +576,22 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
 
             var sortOption = SelectedSortOptionItem?.Option ?? RoomSortOption.Newest;
             PagedResponse<RoomListItemModel> response;
-            if (HasActiveFilters && (MinArea.HasValue || MaxArea.HasValue || IsDistanceFilterActive))
+            if ((HasActiveFilters && (MinArea.HasValue || MaxArea.HasValue || IsDistanceFilterActive)) || sortOption == RoomSortOption.DistanceAsc)
             {
                 var criteria = CreateSearchCriteria(
                     pageNumber: nextPage,
                     pageSize: PageSize,
-                    keyword: GetActiveSearchTerm());
+                    keyword: GetActiveSearchTerm(),
+                    sortBy: sortOption);
 
                 var searchResult = await _roomListingsService.SearchRoomsAsync(criteria, token);
 
                 var items = searchResult.Items
-                    .Select(dto => dto.ToListItemModel());
-
-                var sortedItems = ApplyClientSorting(items, sortOption);
+                    .Select(dto => dto.ToListItemModel())
+                    .ToList();
 
                 response = new PagedResponse<RoomListItemModel>(
-                    sortedItems,
+                    items,
                     searchResult.CurrentPage,
                     PageSize,
                     searchResult.TotalCount);
@@ -732,22 +713,22 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
 
             // Search and filter are executed server-side so results cover the whole catalog and stay paginated.
             PagedResponse<RoomListItemModel> response;
-            if (HasActiveFilters && (MinArea.HasValue || MaxArea.HasValue || IsDistanceFilterActive))
+            if ((HasActiveFilters && (MinArea.HasValue || MaxArea.HasValue || IsDistanceFilterActive)) || sortOption == RoomSortOption.DistanceAsc)
             {
                 var criteria = CreateSearchCriteria(
                     pageNumber: 1,
                     pageSize: PageSize,
-                    keyword: GetActiveSearchTerm());
+                    keyword: GetActiveSearchTerm(),
+                    sortBy: sortOption);
 
                 var searchResult = await _roomListingsService.SearchRoomsAsync(criteria, token);
 
                 var items = searchResult.Items
-                    .Select(dto => dto.ToListItemModel());
-
-                var sortedItems = ApplyClientSorting(items, sortOption);
+                    .Select(dto => dto.ToListItemModel())
+                    .ToList();
 
                 response = new PagedResponse<RoomListItemModel>(
-                    sortedItems,
+                    items,
                     searchResult.CurrentPage,
                     PageSize,
                     searchResult.TotalCount);
@@ -840,19 +821,6 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         }
     }
 
-    private static List<RoomListItemModel> ApplyClientSorting(
-        IEnumerable<RoomListItemModel> items,
-        RoomSortOption sortBy)
-    {
-        return sortBy switch
-        {
-            RoomSortOption.PriceAsc => items.OrderBy(r => r.Price).ThenBy(r => r.Id).ToList(),
-            RoomSortOption.PriceDesc => items.OrderByDescending(r => r.Price).ThenBy(r => r.Id).ToList(),
-            RoomSortOption.DistanceAsc => items.OrderBy(r => r.DistanceToCampusKm).ThenBy(r => r.Id).ToList(),
-            _ => items.OrderByDescending(r => r.CreatedAt).ThenBy(r => r.Id).ToList()
-        };
-    }
-
     private string? GetActiveSearchTerm() =>
         HasSearchQuery ? SearchQuery.Trim() : null;
 
@@ -860,7 +828,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
     {
         var minPrice = TryParsePrice(FilterMinPriceText);
         var maxPrice = TryParsePrice(FilterMaxPriceText);
-        var roomType = string.IsNullOrWhiteSpace(SelectedRoomType)
+        var roomType = string.IsNullOrWhiteSpace(SelectedRoomType) || string.Equals(SelectedRoomType, "all", StringComparison.OrdinalIgnoreCase)
             ? null
             : SelectedRoomType.Trim().ToLowerInvariant();
         var amenities = GetSelectedAmenities();
