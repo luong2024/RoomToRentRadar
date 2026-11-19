@@ -13,14 +13,14 @@ public partial class RoomListingPage : ContentPage
 
     private void UpdateLayout()
     {
-        var inset = Width >= 720 ? 40 : 20;
-        TopBar.Padding = new Thickness(inset, 18);
-        ListingRefresh.Margin = new Thickness(inset, 0, inset - 18, 0);
+        var inset = Width >= 720 ? 36 : 16;
+        TopBar.Padding = new Thickness(inset, 12);
+        ListingRefresh.Margin = new Thickness(inset, 0, Math.Max(2, inset - 14), 0);
         var contentWidth = Math.Min(Width - inset * 2, 1280);
         CardsLayout.Span = contentWidth >= 1040 ? 3 : contentWidth >= 660 ? 2 : 1;
         HeroArt.IsVisible = Width >= 850;
         NavCaption.IsVisible = Width >= 850;
-        HeroTitle.FontSize = Width >= 720 ? 34 : 30;
+        HeroTitle.FontSize = Width >= 720 ? 22 : 20;
     }
 
     private void CampusPickerLoaded(object? sender, EventArgs e)

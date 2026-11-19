@@ -372,6 +372,19 @@ public sealed class ListingPhotosEndpointTests
         });
     }
 
+    [TestCase("image/webp", "photo.webp", HttpStatusCode.UnsupportedMediaType)]
+    [TestCase("image/jpeg", "photo.jpg", HttpStatusCode.BadRequest)]
+    public async Task Upload_WebpIncludingDisguisedContent_IsRejected(
+        string contentType, string fileName, HttpStatusCode expectedStatus)
+    {
+        var listingId = TestListingsSeed.IdFor(1);
+        using var response = await UploadAsync(listingId,
+            (TestImageFactory.CreateWebp(), contentType, fileName));
+        Assert.That(response.StatusCode, Is.EqualTo(expectedStatus));
+        Assert.That(await GetPhotoRowsAsync(listingId), Is.Empty);
+        Assert.That(StoredFileCount(listingId), Is.Zero);
+    }
+
     private async Task<HttpResponseMessage> UploadAsync(
         Guid listingId,
         params (byte[] Content, string ContentType, string FileName)[] files)

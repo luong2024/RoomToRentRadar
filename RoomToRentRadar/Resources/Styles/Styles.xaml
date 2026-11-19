@@ -1,70 +1,536 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                    xmlns:buttons="clr-namespace:Syncfusion.Maui.Toolkit.Buttons;assembly=Syncfusion.Maui.Toolkit"
+                    xmlns:cards="clr-namespace:Syncfusion.Maui.Toolkit.Cards;assembly=Syncfusion.Maui.Toolkit"
+                    xmlns:chips="clr-namespace:Syncfusion.Maui.Toolkit.Chips;assembly=Syncfusion.Maui.Toolkit"
+                    xmlns:expander="clr-namespace:Syncfusion.Maui.Toolkit.Expander;assembly=Syncfusion.Maui.Toolkit"
+                    xmlns:inputLayout="clr-namespace:Syncfusion.Maui.Toolkit.TextInputLayout;assembly=Syncfusion.Maui.Toolkit"
+                    xmlns:progressBar="clr-namespace:Syncfusion.Maui.Toolkit.ProgressBar;assembly=Syncfusion.Maui.Toolkit"
+                    xmlns:pullToRefresh="clr-namespace:Syncfusion.Maui.Toolkit.PullToRefresh;assembly=Syncfusion.Maui.Toolkit"
+                    xmlns:shimmer="clr-namespace:Syncfusion.Maui.Toolkit.Shimmer;assembly=Syncfusion.Maui.Toolkit">
+
+    <!-- Page & Typography Scale (Section 4.1) -->
     <Style TargetType="ContentPage" ApplyToDerivedTypes="True">
         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Canvas}, Dark={StaticResource CanvasDark}}" />
     </Style>
+
     <Style x:Key="BodyText" TargetType="Label">
         <Setter Property="FontFamily" Value="OpenSansRegular" />
         <Setter Property="FontSize" Value="14" />
-        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource BodyInk}, Dark={StaticResource InkDark}}" />
     </Style>
     <Style TargetType="Label" BasedOn="{StaticResource BodyText}" />
-    <Style x:Key="Caption" TargetType="Label" BasedOn="{StaticResource BodyText}">
-        <Setter Property="FontSize" Value="12" />
-        <Setter Property="TextColor" Value="{StaticResource Muted}" />
+
+    <Style x:Key="ScreenTitle" TargetType="Label" BasedOn="{StaticResource BodyText}">
+        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+        <Setter Property="FontSize" Value="24" />
+        <Setter Property="CharacterSpacing" Value="-0.5" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
     </Style>
+
+    <Style x:Key="SectionTitle" TargetType="Label" BasedOn="{StaticResource BodyText}">
+        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+        <Setter Property="FontSize" Value="18" />
+        <Setter Property="CharacterSpacing" Value="-0.3" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+    </Style>
+
+    <Style x:Key="CardTitle" TargetType="Label" BasedOn="{StaticResource BodyText}">
+        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="CharacterSpacing" Value="-0.2" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+    </Style>
+
+    <Style x:Key="Caption" TargetType="Label" BasedOn="{StaticResource BodyText}">
+        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+    </Style>
+
     <Style x:Key="Eyebrow" TargetType="Label" BasedOn="{StaticResource Caption}">
         <Setter Property="FontFamily" Value="OpenSansSemibold" />
         <Setter Property="FontSize" Value="10" />
-        <Setter Property="CharacterSpacing" Value="1.1" />
+        <Setter Property="CharacterSpacing" Value="1.0" />
     </Style>
+
+    <!-- Primitives -->
     <Style TargetType="Border">
-        <Setter Property="Stroke" Value="{StaticResource Line}" />
+        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}" />
         <Setter Property="StrokeThickness" Value="1" />
-        <Setter Property="StrokeShape" Value="RoundRectangle 22" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 20" />
         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
     </Style>
+
     <Style TargetType="Button">
         <Setter Property="FontFamily" Value="OpenSansSemibold" />
-        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontSize" Value="14" />
         <Setter Property="BackgroundColor" Value="{StaticResource Accent}" />
         <Setter Property="TextColor" Value="White" />
-        <Setter Property="CornerRadius" Value="16" />
-        <Setter Property="Padding" Value="20,12" />
+        <Setter Property="CornerRadius" Value="15" />
+        <Setter Property="Padding" Value="20,0" />
+        <Setter Property="HeightRequest" Value="50" />
         <Setter Property="MinimumHeightRequest" Value="48" />
         <Setter Property="VisualStateManager.VisualStateGroups">
             <VisualStateGroupList>
                 <VisualStateGroup x:Name="CommonStates">
-                    <VisualState x:Name="Normal">
-                        <VisualState.Setters>
-                            <Setter Property="Opacity" Value="1" />
-                            <Setter Property="Scale" Value="1" />
-                        </VisualState.Setters>
-                    </VisualState>
+                    <VisualState x:Name="Normal" />
                     <VisualState x:Name="Pressed">
                         <VisualState.Setters>
+                            <Setter Property="BackgroundColor" Value="{StaticResource AccentPressed}" />
                             <Setter Property="Scale" Value="0.98" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="Focused">
+                        <VisualState.Setters>
+                            <Setter Property="BorderColor" Value="{StaticResource AccentLight}" />
+                            <Setter Property="BorderWidth" Value="2" />
                         </VisualState.Setters>
                     </VisualState>
                     <VisualState x:Name="Disabled">
                         <VisualState.Setters>
-                            <Setter Property="Opacity" Value="0.4" />
-                            <Setter Property="Scale" Value="1" />
+                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}" />
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource DisabledInk}, Dark={StaticResource MutedDark}}" />
                         </VisualState.Setters>
                     </VisualState>
                 </VisualStateGroup>
             </VisualStateGroupList>
         </Setter>
     </Style>
+
+    <Style x:Key="IconImageButton" TargetType="ImageButton">
+        <Setter Property="HeightRequest" Value="48" />
+        <Setter Property="WidthRequest" Value="48" />
+        <Setter Property="MinimumHeightRequest" Value="48" />
+        <Setter Property="MinimumWidthRequest" Value="48" />
+        <Setter Property="Padding" Value="12" />
+        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
+        <Setter Property="VisualStateManager.VisualStateGroups">
+            <VisualStateGroupList>
+                <VisualStateGroup x:Name="CommonStates">
+                    <VisualState x:Name="Normal" />
+                    <VisualState x:Name="Pressed">
+                        <VisualState.Setters>
+                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentLightDark}}" />
+                            <Setter Property="Scale" Value="0.98" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="Focused">
+                        <VisualState.Setters>
+                            <Setter Property="BorderColor" Value="{StaticResource FocusRing}" />
+                            <Setter Property="BorderWidth" Value="2" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="Disabled">
+                        <VisualState.Setters>
+                            <Setter Property="BackgroundColor" Value="{StaticResource Line}" />
+                            <Setter Property="Opacity" Value="0.55" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateGroupList>
+        </Setter>
+    </Style>
+    <Style TargetType="ImageButton" BasedOn="{StaticResource IconImageButton}" />
+
     <Style TargetType="Picker">
         <Setter Property="FontFamily" Value="OpenSansSemibold" />
-        <Setter Property="FontSize" Value="14" />
-        <Setter Property="TextColor" Value="{StaticResource Ink}" />
-        <Setter Property="TitleColor" Value="{StaticResource Muted}" />
+        <Setter Property="FontSize" Value="13.5" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+        <Setter Property="TitleColor" Value="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
         <Setter Property="BackgroundColor" Value="Transparent" />
-        <Setter Property="MinimumHeightRequest" Value="48" />
+        <Setter Property="MinimumHeightRequest" Value="42" />
     </Style>
+
     <Style TargetType="ActivityIndicator">
         <Setter Property="Color" Value="{StaticResource Accent}" />
+    </Style>
+
+    <!-- Shared action hierarchy. Native ripple + visual states keep feedback lightweight. -->
+    <Style x:Key="ActionButtonBase" TargetType="buttons:SfButton">
+        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="CornerRadius" Value="15" />
+        <Setter Property="Padding" Value="18,0" />
+        <Setter Property="HeightRequest" Value="50" />
+        <Setter Property="MinimumHeightRequest" Value="48" />
+        <Setter Property="StrokeThickness" Value="0" />
+    </Style>
+
+    <Style x:Key="PrimaryActionButton" TargetType="buttons:SfButton" BasedOn="{StaticResource ActionButtonBase}">
+        <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+        <Setter Property="TextColor" Value="White" />
+        <Setter Property="VisualStateManager.VisualStateGroups">
+            <VisualStateGroupList>
+                <VisualStateGroup x:Name="CommonStates">
+                    <VisualState x:Name="Normal" />
+                    <VisualState x:Name="Pressed">
+                        <VisualState.Setters>
+                            <Setter Property="Background" Value="{StaticResource AccentPressedBrush}" />
+                            <Setter Property="Scale" Value="0.98" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="PointerOver">
+                        <VisualState.Setters>
+                            <Setter Property="Background" Value="{StaticResource AccentPressedBrush}" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="Focused">
+                        <VisualState.Setters>
+                            <Setter Property="Stroke" Value="{StaticResource FocusRingBrush}" />
+                            <Setter Property="StrokeThickness" Value="2" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="Disabled">
+                        <VisualState.Setters>
+                            <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource LineBrush}, Dark={StaticResource LineDarkBrush}}" />
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource DisabledInk}, Dark={StaticResource MutedDark}}" />
+                            <Setter Property="StrokeThickness" Value="0" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateGroupList>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SecondaryActionButton" TargetType="buttons:SfButton" BasedOn="{StaticResource ActionButtonBase}">
+        <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource AccentSoftBrush}, Dark={StaticResource AccentSoftDarkBrush}}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource AccentPressed}, Dark={StaticResource AccentDark}}" />
+        <Setter Property="HeightRequest" Value="48" />
+        <Setter Property="VisualStateManager.VisualStateGroups">
+            <VisualStateGroupList>
+                <VisualStateGroup x:Name="CommonStates">
+                    <VisualState x:Name="Normal" />
+                    <VisualState x:Name="Pressed">
+                        <VisualState.Setters>
+                            <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource AccentLightBrush}, Dark={StaticResource AccentLightDarkBrush}}" />
+                            <Setter Property="Scale" Value="0.98" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="PointerOver">
+                        <VisualState.Setters>
+                            <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource AccentLightBrush}, Dark={StaticResource AccentLightDarkBrush}}" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="Focused">
+                        <VisualState.Setters>
+                            <Setter Property="Stroke" Value="{StaticResource FocusRingBrush}" />
+                            <Setter Property="StrokeThickness" Value="2" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="Disabled">
+                        <VisualState.Setters>
+                            <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource LineBrush}, Dark={StaticResource LineDarkBrush}}" />
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource DisabledInk}, Dark={StaticResource MutedDark}}" />
+                            <Setter Property="StrokeThickness" Value="0" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateGroupList>
+        </Setter>
+    </Style>
+
+    <Style x:Key="OutlineActionButton" TargetType="buttons:SfButton" BasedOn="{StaticResource ActionButtonBase}">
+        <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource SurfaceBrush}, Dark={StaticResource SurfaceDarkBrush}}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource AccentPressed}, Dark={StaticResource AccentDark}}" />
+        <Setter Property="Stroke" Value="{StaticResource ActionBorderBrush}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="HeightRequest" Value="48" />
+        <Setter Property="VisualStateManager.VisualStateGroups">
+            <VisualStateGroupList>
+                <VisualStateGroup x:Name="CommonStates">
+                    <VisualState x:Name="Normal" />
+                    <VisualState x:Name="Pressed">
+                        <VisualState.Setters>
+                            <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource AccentSoftBrush}, Dark={StaticResource AccentSoftDarkBrush}}" />
+                            <Setter Property="Scale" Value="0.98" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="PointerOver">
+                        <VisualState.Setters>
+                            <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource AccentSoftBrush}, Dark={StaticResource AccentSoftDarkBrush}}" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="Focused">
+                        <VisualState.Setters>
+                            <Setter Property="Stroke" Value="{StaticResource FocusRingBrush}" />
+                            <Setter Property="StrokeThickness" Value="2" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="Disabled">
+                        <VisualState.Setters>
+                            <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource LineBrush}, Dark={StaticResource LineDarkBrush}}" />
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource DisabledInk}, Dark={StaticResource MutedDark}}" />
+                            <Setter Property="StrokeThickness" Value="0" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateGroupList>
+        </Setter>
+    </Style>
+
+    <Style x:Key="TextActionButton" TargetType="buttons:SfButton" BasedOn="{StaticResource ActionButtonBase}">
+        <Setter Property="Background" Value="{StaticResource TransparentBrush}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource AccentPressed}, Dark={StaticResource AccentDark}}" />
+        <Setter Property="HeightRequest" Value="44" />
+        <Setter Property="MinimumHeightRequest" Value="44" />
+        <Setter Property="Padding" Value="12,0" />
+        <Setter Property="VisualStateManager.VisualStateGroups">
+            <VisualStateGroupList>
+                <VisualStateGroup x:Name="CommonStates">
+                    <VisualState x:Name="Normal" />
+                    <VisualState x:Name="Pressed">
+                        <VisualState.Setters>
+                            <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource AccentSoftBrush}, Dark={StaticResource AccentSoftDarkBrush}}" />
+                            <Setter Property="Scale" Value="0.98" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="PointerOver">
+                        <VisualState.Setters>
+                            <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource AccentSoftBrush}, Dark={StaticResource AccentSoftDarkBrush}}" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="Focused">
+                        <VisualState.Setters>
+                            <Setter Property="Stroke" Value="{StaticResource FocusRingBrush}" />
+                            <Setter Property="StrokeThickness" Value="2" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="Disabled">
+                        <VisualState.Setters>
+                            <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource LineBrush}, Dark={StaticResource LineDarkBrush}}" />
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource DisabledInk}, Dark={StaticResource MutedDark}}" />
+                            <Setter Property="StrokeThickness" Value="0" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateGroupList>
+        </Setter>
+    </Style>
+
+    <Style x:Key="DestructiveActionButton" TargetType="buttons:SfButton" BasedOn="{StaticResource ActionButtonBase}">
+        <Setter Property="Background" Value="{StaticResource DangerSoftBrush}" />
+        <Setter Property="TextColor" Value="{StaticResource Danger}" />
+        <Setter Property="VisualStateManager.VisualStateGroups">
+            <VisualStateGroupList>
+                <VisualStateGroup x:Name="CommonStates">
+                    <VisualState x:Name="Normal" />
+                    <VisualState x:Name="Pressed">
+                        <VisualState.Setters>
+                            <Setter Property="Background" Value="{StaticResource DangerPressedBrush}" />
+                            <Setter Property="Scale" Value="0.98" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="PointerOver">
+                        <VisualState.Setters>
+                            <Setter Property="Background" Value="{StaticResource DangerPressedBrush}" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="Focused">
+                        <VisualState.Setters>
+                            <Setter Property="Stroke" Value="{StaticResource FocusRingBrush}" />
+                            <Setter Property="StrokeThickness" Value="2" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="Disabled">
+                        <VisualState.Setters>
+                            <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource LineBrush}, Dark={StaticResource LineDarkBrush}}" />
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource DisabledInk}, Dark={StaticResource MutedDark}}" />
+                            <Setter Property="StrokeThickness" Value="0" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateGroupList>
+        </Setter>
+    </Style>
+
+    <Style x:Key="IconActionButton" TargetType="buttons:SfButton" BasedOn="{StaticResource ActionButtonBase}">
+        <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource SurfaceBrush}, Dark={StaticResource SurfaceDarkBrush}}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource AccentPressed}, Dark={StaticResource AccentDark}}" />
+        <Setter Property="HeightRequest" Value="48" />
+        <Setter Property="WidthRequest" Value="48" />
+        <Setter Property="MinimumWidthRequest" Value="48" />
+        <Setter Property="FontSize" Value="22" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="VisualStateManager.VisualStateGroups">
+            <VisualStateGroupList>
+                <VisualStateGroup x:Name="CommonStates">
+                    <VisualState x:Name="Normal" />
+                    <VisualState x:Name="Pressed">
+                        <VisualState.Setters>
+                            <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource AccentLightBrush}, Dark={StaticResource AccentLightDarkBrush}}" />
+                            <Setter Property="Scale" Value="0.98" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="PointerOver">
+                        <VisualState.Setters>
+                            <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource AccentLightBrush}, Dark={StaticResource AccentLightDarkBrush}}" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="Focused">
+                        <VisualState.Setters>
+                            <Setter Property="Stroke" Value="{StaticResource FocusRingBrush}" />
+                            <Setter Property="StrokeThickness" Value="2" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="Disabled">
+                        <VisualState.Setters>
+                            <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource LineBrush}, Dark={StaticResource LineDarkBrush}}" />
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource DisabledInk}, Dark={StaticResource MutedDark}}" />
+                            <Setter Property="StrokeThickness" Value="0" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateGroupList>
+        </Setter>
+    </Style>
+
+    <Style x:Key="FloatingActionButton" TargetType="buttons:SfButton" BasedOn="{StaticResource ActionButtonBase}">
+        <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+        <Setter Property="TextColor" Value="White" />
+        <Setter Property="Shadow">
+            <Setter.Value><Shadow Brush="{StaticResource AccentPressedBrush}" Offset="0,4" Radius="12" Opacity="0.18" /></Setter.Value>
+        </Setter>
+        <Setter Property="VisualStateManager.VisualStateGroups">
+            <VisualStateGroupList>
+                <VisualStateGroup x:Name="CommonStates">
+                    <VisualState x:Name="Normal" />
+                    <VisualState x:Name="Pressed">
+                        <VisualState.Setters>
+                            <Setter Property="Background" Value="{StaticResource AccentPressedBrush}" />
+                            <Setter Property="Scale" Value="0.98" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="PointerOver">
+                        <VisualState.Setters>
+                            <Setter Property="Background" Value="{StaticResource AccentPressedBrush}" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="Focused">
+                        <VisualState.Setters>
+                            <Setter Property="Stroke" Value="{StaticResource FocusRingBrush}" />
+                            <Setter Property="StrokeThickness" Value="2" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="Disabled">
+                        <VisualState.Setters>
+                            <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource LineBrush}, Dark={StaticResource LineDarkBrush}}" />
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource DisabledInk}, Dark={StaticResource MutedDark}}" />
+                            <Setter Property="StrokeThickness" Value="0" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateGroupList>
+        </Setter>
+    </Style>
+
+    <Style TargetType="buttons:SfButton" BasedOn="{StaticResource PrimaryActionButton}" />
+    <Style x:Key="SoftSfButton" TargetType="buttons:SfButton" BasedOn="{StaticResource SecondaryActionButton}" />
+    <Style x:Key="OutlineSfButton" TargetType="buttons:SfButton" BasedOn="{StaticResource OutlineActionButton}" />
+    <Style x:Key="InverseSfButton" TargetType="buttons:SfButton" BasedOn="{StaticResource OutlineActionButton}" />
+    <Style x:Key="DangerSoftSfButton" TargetType="buttons:SfButton" BasedOn="{StaticResource DestructiveActionButton}" />
+    <Style x:Key="GhostSfButton" TargetType="buttons:SfButton" BasedOn="{StaticResource TextActionButton}" />
+    <Style x:Key="SmallSfButton" TargetType="buttons:SfButton" BasedOn="{StaticResource SecondaryActionButton}" />
+
+    <!-- Syncfusion Toolkit: Cards (White-First Design) -->
+    <Style TargetType="cards:SfCardView">
+        <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource SurfaceBrush}, Dark={StaticResource SurfaceDarkBrush}}" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
+        <Setter Property="BorderColor" Value="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}" />
+        <Setter Property="BorderWidth" Value="0" />
+        <Setter Property="CornerRadius" Value="20" />
+        <Setter Property="Shadow">
+            <Setter.Value>
+                <Shadow Brush="{StaticResource InkBrush}" Offset="0,5" Radius="16" Opacity="0.04" />
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="ElevatedCard" TargetType="cards:SfCardView">
+        <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource SurfaceBrush}, Dark={StaticResource SurfaceDarkBrush}}" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
+        <Setter Property="BorderColor" Value="Transparent" />
+        <Setter Property="BorderWidth" Value="0" />
+        <Setter Property="CornerRadius" Value="22" />
+        <Setter Property="Shadow">
+            <Setter.Value>
+                <Shadow Brush="{StaticResource InkBrush}" Offset="0,6" Radius="18" Opacity="0.06" />
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Syncfusion Toolkit: Chips -->
+    <Style TargetType="chips:SfChip">
+        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+        <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource SoftSurfaceBrush}, Dark={StaticResource SoftSurfaceDarkBrush}}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource BodyInk}, Dark={StaticResource InkDark}}" />
+        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource LineBrush}, Dark={StaticResource LineDarkBrush}}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="Padding" Value="10,4" />
+        <Setter Property="MinimumHeightRequest" Value="34" />
+    </Style>
+
+    <Style x:Key="AccentSfChip" TargetType="chips:SfChip">
+        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+        <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource AccentSoftBrush}, Dark={StaticResource AccentSoftDarkBrush}}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource AccentPressed}, Dark={StaticResource AccentDark}}" />
+        <Setter Property="Stroke" Value="{StaticResource TransparentBrush}" />
+        <Setter Property="StrokeThickness" Value="0" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="10,3" />
+        <Setter Property="MinimumHeightRequest" Value="28" />
+    </Style>
+
+    <!-- Syncfusion Toolkit: TextInputLayout -->
+    <Style TargetType="inputLayout:SfTextInputLayout">
+        <Setter Property="ContainerType" Value="Outlined" />
+        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}" />
+        <Setter Property="OutlineCornerRadius" Value="13" />
+        <Setter Property="FocusedStrokeThickness" Value="2" />
+        <Setter Property="UnfocusedStrokeThickness" Value="1" />
+        <Setter Property="ReserveSpaceForAssistiveLabels" Value="False" />
+        <Setter Property="InputViewPadding" Value="14,6,14,6" />
+        <Setter Property="HeightRequest" Value="56" />
+        <Setter Property="ContainerBackground" Value="{AppThemeBinding Light={StaticResource SurfaceBrush}, Dark={StaticResource SurfaceDarkBrush}}" />
+    </Style>
+
+    <!-- Syncfusion Toolkit: Progress Indicators -->
+    <Style TargetType="progressBar:SfCircularProgressBar">
+        <Setter Property="ProgressFill" Value="{StaticResource AccentBrush}" />
+        <Setter Property="TrackFill" Value="{AppThemeBinding Light={StaticResource LineBrush}, Dark={StaticResource LineDarkBrush}}" />
+        <Setter Property="WidthRequest" Value="26" />
+        <Setter Property="HeightRequest" Value="26" />
+    </Style>
+
+    <Style TargetType="progressBar:SfLinearProgressBar">
+        <Setter Property="ProgressFill" Value="{StaticResource AccentBrush}" />
+        <Setter Property="TrackFill" Value="{StaticResource AccentLightBrush}" />
+        <Setter Property="TrackHeight" Value="3" />
+        <Setter Property="ProgressHeight" Value="3" />
+        <Setter Property="TrackCornerRadius" Value="2" />
+        <Setter Property="ProgressCornerRadius" Value="2" />
+    </Style>
+
+    <!-- Syncfusion Toolkit: PullToRefresh -->
+    <Style TargetType="pullToRefresh:SfPullToRefresh">
+        <Setter Property="ProgressColor" Value="{StaticResource Accent}" />
+        <Setter Property="ProgressBackground" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
+    </Style>
+
+    <!-- Syncfusion Toolkit: Shimmer -->
+    <Style TargetType="shimmer:SfShimmer">
+        <Setter Property="Fill" Value="{AppThemeBinding Light={StaticResource ShimmerFillLight}, Dark={StaticResource ShimmerFillDark}}" />
+        <Setter Property="WaveColor" Value="{AppThemeBinding Light={StaticResource ShimmerWaveLight}, Dark={StaticResource ShimmerWaveDark}}" />
+    </Style>
+
+    <!-- Syncfusion Toolkit: Expander -->
+    <Style TargetType="expander:SfExpander">
+        <Setter Property="HeaderIconColor" Value="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
+        <Setter Property="HeaderBackground" Value="Transparent" />
     </Style>
 </ResourceDictionary>
