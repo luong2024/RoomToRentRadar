@@ -70,7 +70,12 @@ public partial class RoomDetailPageModel : ObservableObject
     public partial bool IsSignedIn { get; set; } = false;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FavouriteIconGlyph))]
+    [NotifyPropertyChangedFor(nameof(FavouriteIconColor))]
     public partial bool IsFavourite { get; set; } = false;
+
+    public string FavouriteIconGlyph => IsFavourite ? FluentUI.heart_24_filled : FluentUI.heart_24_regular;
+    public string FavouriteIconColor => IsFavourite ? "#DC2626" : "#1E293B";
 
     [ObservableProperty]
     public partial RoomDetailDto? Room { get; set; }
@@ -92,7 +97,10 @@ public partial class RoomDetailPageModel : ObservableObject
     public partial string? HeroCoverUrl { get; set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNoPhotos))]
     public partial bool HasPhotos { get; set; } = false;
+
+    public bool HasNoPhotos => !HasPhotos;
 
     [ObservableProperty]
     public partial bool Is360Available { get; set; } = false;

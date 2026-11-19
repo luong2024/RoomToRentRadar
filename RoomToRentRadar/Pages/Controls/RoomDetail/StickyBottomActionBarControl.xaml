@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.PageModels"
+             xmlns:fonts="clr-namespace:Fonts"
+             xmlns:loc="clr-namespace:RoomToRentRadar.Resources.Strings"
+             x:Class="RoomToRentRadar.Pages.Controls.RoomDetail.StickyBottomActionBarControl"
+             x:DataType="vm:RoomDetailPageModel">
+
+    <Border StrokeShape="RoundRectangle 0"
+            StrokeThickness="1"
+            Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+            Shadow="{StaticResource Elevation2Shadow}"
+            Padding="16,10"
+            VerticalOptions="End">
+
+        <Grid VerticalOptions="Center">
+            <!-- 1. AVAILABLE STATE: Price & Contact Action Buttons -->
+            <Grid IsVisible="{Binding IsAvailable}"
+                  ColumnDefinitions="*, Auto"
+                  VerticalOptions="Center">
+                <!-- Left: Short Price & Deposit Summary -->
+                <VerticalStackLayout Grid.Column="0"
+                                     Spacing="1"
+                                     VerticalOptions="Center">
+                    <Label Text="{Binding PriceShortFormatted}"
+                           FontFamily="{StaticResource FontFamilySemibold}"
+                           FontSize="{StaticResource FontSizeH2}"
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}" />
+                    <Label Text="{Binding DepositShortFormatted}"
+                           FontFamily="{StaticResource FontFamilyRegular}"
+                           FontSize="{StaticResource FontSizeCaption}"
+                           TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                </VerticalStackLayout>
+
+                <!-- Right: Action Buttons Group (Call, Zalo, Message) -->
+                <HorizontalStackLayout Grid.Column="1"
+                                       Spacing="8"
+                                       VerticalOptions="Center">
+                    <!-- Phone Call Button (Touch Target 48x48) -->
+                    <Border StrokeShape="RoundRectangle 8"
+                            StrokeThickness="1"
+                            Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+                            WidthRequest="48"
+                            HeightRequest="48"
+                            SemanticProperties.Description="Call landlord">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding CallLandlordCommand}" />
+                        </Border.GestureRecognizers>
+                        <Label Text="{x:Static fonts:FluentUI.call_24_regular}"
+                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                               FontSize="20"
+                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+                               HorizontalTextAlignment="Center"
+                               VerticalTextAlignment="Center" />
+                    </Border>
+
+                    <!-- Zalo Action Button (Touch Target 56x48) -->
+                    <Border StrokeShape="RoundRectangle 8"
+                            StrokeThickness="1"
+                            Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+                            WidthRequest="56"
+                            HeightRequest="48"
+                            SemanticProperties.Description="Contact landlord on Zalo">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding OpenZaloCommand}" />
+                        </Border.GestureRecognizers>
+                        <Label Text="Zalo"
+                               FontFamily="{StaticResource FontFamilySemibold}"
+                               FontSize="{StaticResource FontSizeBodyMedium}"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+                               HorizontalTextAlignment="Center"
+                               VerticalTextAlignment="Center" />
+                    </Border>
+
+                    <!-- In-App Message Button (Touch Target 110x48) -->
+                    <Border StrokeShape="RoundRectangle 8"
+                            StrokeThickness="0"
+                            BackgroundColor="{StaticResource Navy700}"
+                            HeightRequest="48"
+                            Padding="16,0"
+                            SemanticProperties.Description="Send in-app message to landlord">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding MessageLandlordCommand}" />
+                        </Border.GestureRecognizers>
+                        <HorizontalStackLayout Spacing="6"
+                                               VerticalOptions="Center"
+                                               HorizontalOptions="Center">
+                            <Label Text="{x:Static fonts:FluentUI.chat_20_regular}"
+                                   FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                   FontSize="18"
+                                   TextColor="White"
+                                   VerticalTextAlignment="Center" />
+                            <Label Text="{loc:LocalizedStrings RoomDetail_MessageAction}"
+                                   FontFamily="{StaticResource FontFamilySemibold}"
+                                   FontSize="{StaticResource FontSizeBodyMedium}"
+                                   FontAttributes="Bold"
+                                   TextColor="White"
+                                   VerticalTextAlignment="Center" />
+                        </HorizontalStackLayout>
+                    </Border>
+                </HorizontalStackLayout>
+            </Grid>
+
+            <!-- 2. UNAVAILABLE STATE: Disabled Contact Notice Button (AC3) -->
+            <Border IsVisible="{Binding IsUnavailable}"
+                    StrokeShape="RoundRectangle 8"
+                    StrokeThickness="0"
+                    BackgroundColor="{AppThemeBinding Light=#E2E8F0, Dark=#1E293B}"
+                    HeightRequest="48"
+                    HorizontalOptions="Fill"
+                    VerticalOptions="Center">
+                <Label Text="{Binding ContactDisabledText}"
+                       FontFamily="{StaticResource FontFamilySemibold}"
+                       FontSize="{StaticResource FontSizeBodyMedium}"
+                       TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+                       HorizontalTextAlignment="Center"
+                       VerticalTextAlignment="Center" />
+            </Border>
+        </Grid>
+    </Border>
+</ContentView>
