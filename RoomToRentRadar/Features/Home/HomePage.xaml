@@ -1,54 +1,127 @@
-<?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:home="clr-namespace:RoomToRentRadar.Features.Home"
-             xmlns:models="clr-namespace:RoomToRentRadar.Models;assembly=RoomToRentRadar.Core"
-             x:Class="RoomToRentRadar.Features.Home.HomePage"
-             x:DataType="home:HomePageModel"
-             Title="RoomToRentRadar — ICTU">
+﻿<ContentPage
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:home="clr-namespace:RoomToRentRadar.Features.Home"
+    xmlns:models="clr-namespace:RoomToRentRadar.Models;assembly=RoomToRentRadar.Core"
+    x:Class="RoomToRentRadar.Features.Home.HomePage"
+    x:Name="HomePageRoot"
+    x:DataType="home:HomePageModel"
+    Title="RoomToRentRadar â€” ICTU">
+    <CollectionView
+        ItemsSource="{Binding FeaturedRooms}"
+        SelectionMode="None"
+        Margin="20">
 
-    <ScrollView>
-        <VerticalStackLayout Padding="20" Spacing="16">
+        <CollectionView.ItemsLayout>
+            <LinearItemsLayout
+                Orientation="Vertical"
+                ItemSpacing="12" />
+        </CollectionView.ItemsLayout>
 
-            <Border Padding="18" StrokeThickness="1" StrokeShape="RoundRectangle 12">
-                <VerticalStackLayout Spacing="6">
-                    <Label Text="RoomToRentRadar — Group 5" FontSize="22" FontAttributes="Bold" />
-                    <Label Text="{Binding CampusBanner}" FontSize="14" Opacity="0.8" />
-                    <Label FontSize="14">
-                        <Label.FormattedText>
-                            <FormattedString>
-                                <Span Text="Phòng trọ đã xác thực quanh trường: " />
-                                <Span Text="{Binding VerifiedRoomCount}" FontAttributes="Bold" />
-                            </FormattedString>
-                        </Label.FormattedText>
-                    </Label>
-                </VerticalStackLayout>
-            </Border>
+        <CollectionView.Header>
+            <VerticalStackLayout Spacing="16" Padding="0,0,0,10">
 
-            <Label Text="Danh sách phòng mẫu (nạp qua IRoomListingRepository)" FontSize="16" FontAttributes="Bold" />
+                <Border
+                    Padding="18"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 12">
 
-            <CollectionView ItemsSource="{Binding FeaturedRooms}" SelectionMode="None">
-                <CollectionView.ItemsLayout>
-                    <LinearItemsLayout Orientation="Vertical" ItemSpacing="10" />
-                </CollectionView.ItemsLayout>
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="models:RoomListing">
-                        <Border Padding="14" StrokeThickness="1" StrokeShape="RoundRectangle 10">
-                            <VerticalStackLayout Spacing="4">
-                                <Label Text="{Binding Title}" FontSize="16" FontAttributes="Bold" />
-                                <Label Text="{Binding Address}" FontSize="13" Opacity="0.85" />
-                                <HorizontalStackLayout Spacing="12">
-                                    <Label Text="{Binding MonthlyRent, StringFormat='{0:N0} đ/tháng'}" FontAttributes="Bold" />
-                                    <Label Text="{Binding Area, StringFormat='{0} m²'}" />
-                                    <Label Text="{Binding DistanceToCampusKm, StringFormat='Cách ICTU {0:F1} km'}" />
-                                </HorizontalStackLayout>
-                            </VerticalStackLayout>
-                        </Border>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
+                    <VerticalStackLayout Spacing="8">
+                        <Label
+                            Text="RoomToRentRadar â€” Group 5"
+                            FontSize="22"
+                            FontAttributes="Bold" />
 
-        </VerticalStackLayout>
-    </ScrollView>
+                        <Label
+                            Text="{Binding CampusBanner}"
+                            FontSize="14" />
+
+                        <Label
+                            Text="{Binding VerifiedRoomCount,
+                            StringFormat='Sá»‘ phĂ²ng Ä‘Ă£ xĂ¡c thá»±c: {0}'}"
+                            FontSize="14"
+                            FontAttributes="Bold" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <Label
+                    Text="Danh sĂ¡ch phĂ²ng"
+                    FontSize="18"
+                    FontAttributes="Bold" />
+
+                <ActivityIndicator
+                    IsRunning="{Binding IsBusy}"
+                    IsVisible="{Binding IsBusy}" />
+
+                <Label
+                    Text="ChÆ°a cĂ³ phĂ²ng nĂ o Ä‘Æ°á»£c tĂ¬m tháº¥y."
+                    IsVisible="{Binding VerifiedRoomCount,
+                    Converter={StaticResource ZeroToBooleanConverter}}"
+                    FontSize="14" />
+
+            </VerticalStackLayout>
+        </CollectionView.Header>
+
+        <CollectionView.EmptyView>
+            <Label
+                Text="KhĂ´ng cĂ³ dá»¯ liá»‡u phĂ²ng Ä‘á»ƒ hiá»ƒn thá»‹."
+                HorizontalOptions="Center"
+                Padding="20" />
+        </CollectionView.EmptyView>
+
+        <CollectionView.ItemTemplate>
+            <DataTemplate x:DataType="models:RoomListing">
+
+                <Border
+                    Padding="16"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 12">
+
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer
+                            Command="{Binding Source={x:Reference HomePageRoot},
+                            Path=BindingContext.OpenRoomDetailCommand}"
+                            CommandParameter="{Binding .}" />
+                    </Border.GestureRecognizers>
+
+                    <VerticalStackLayout Spacing="8">
+
+                        <Label
+                            Text="{Binding Title}"
+                            FontSize="18"
+                            FontAttributes="Bold" />
+
+                        <Label
+                            Text="{Binding Address}"
+                            FontSize="14" />
+
+                        <Label
+                            Text="{Binding MonthlyRent,
+                            StringFormat='GiĂ¡ thuĂª: {0:N0} Ä‘/thĂ¡ng'}"
+                            FontSize="15"
+                            FontAttributes="Bold" />
+
+                        <HorizontalStackLayout Spacing="16">
+                            <Label
+                                Text="{Binding Area,
+                                StringFormat='Diá»‡n tĂ­ch: {0} mÂ²'}" />
+
+                            <Label
+                                Text="{Binding DistanceToCampusKm,
+                                StringFormat='CĂ¡ch ICTU: {0:F1} km'}" />
+                        </HorizontalStackLayout>
+
+                        <Label
+                            Text="Nháº¥n Ä‘á»ƒ xem chi tiáº¿t"
+                            FontSize="12"
+                            Opacity="0.7" />
+
+                    </VerticalStackLayout>
+                </Border>
+
+            </DataTemplate>
+        </CollectionView.ItemTemplate>
+    </CollectionView>
 
 </ContentPage>
+

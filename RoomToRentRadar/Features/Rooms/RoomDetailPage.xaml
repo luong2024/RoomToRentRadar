@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="RoomToRentRadar.Features.Rooms.RoomDetailPage"
+    Title="Chi tiết phòng"
+    BackgroundColor="#F5F7F5">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
+
+            <!-- Ảnh phòng -->
+            <Border
+                StrokeThickness="0"
+                StrokeShape="RoundRectangle 16"
+                HeightRequest="220">
+
+                <Image
+                    Source="{Binding Room.ThumbnailUrl}"
+                    Aspect="AspectFill" />
+            </Border>
+
+            <!-- Tiêu đề và trạng thái -->
+            <VerticalStackLayout Spacing="8">
+
+                <Label
+                    Text="{Binding Room.Title}"
+                    FontSize="23"
+                    FontAttributes="Bold"
+                    TextColor="#202820" />
+
+                <Border
+                    BackgroundColor="{Binding StatusColor}"
+                    StrokeThickness="0"
+                    Padding="10,5"
+                    HorizontalOptions="Start"
+                    StrokeShape="RoundRectangle 8">
+
+                    <Label
+                        Text="{Binding StatusText}"
+                        TextColor="White"
+                        FontSize="13"
+                        FontAttributes="Bold" />
+                </Border>
+
+                <Label
+                    Text="{Binding Room.Address}"
+                    FontSize="14"
+                    TextColor="#666666" />
+
+                <Label
+                    Text="{Binding Room.Ward}"
+                    FontSize="14"
+                    TextColor="#666666" />
+            </VerticalStackLayout>
+
+            <BoxView HeightRequest="1" Color="#DDDDDD" />
+
+            <!-- Giá thuê -->
+            <VerticalStackLayout Spacing="5">
+                <Label
+                    Text="Giá thuê"
+                    FontSize="14"
+                    TextColor="#777777" />
+
+                <Label
+                    Text="{Binding MonthlyRentText}"
+                    FontSize="25"
+                    FontAttributes="Bold"
+                    TextColor="#238B57" />
+            </VerticalStackLayout>
+
+            <!-- Thông tin cơ bản -->
+            <Border
+                BackgroundColor="White"
+                Stroke="#E5E5E5"
+                StrokeThickness="1"
+                Padding="16"
+                StrokeShape="RoundRectangle 12">
+
+                <VerticalStackLayout Spacing="12">
+
+                    <Label
+                        Text="Thông tin phòng"
+                        FontSize="18"
+                        FontAttributes="Bold"
+                        TextColor="#202820" />
+
+                    <Grid
+                        ColumnDefinitions="*,*"
+                        RowDefinitions="Auto,Auto,Auto"
+                        ColumnSpacing="12"
+                        RowSpacing="14">
+
+                        <VerticalStackLayout Grid.Row="0" Grid.Column="0" Spacing="3">
+                            <Label Text="Diện tích" FontSize="12" TextColor="#888888" />
+                            <Label Text="{Binding AreaText}" FontAttributes="Bold" TextColor="#333333" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Row="0" Grid.Column="1" Spacing="3">
+                            <Label Text="Loại phòng" FontSize="12" TextColor="#888888" />
+                            <Label Text="{Binding Room.RoomType}" FontAttributes="Bold" TextColor="#333333" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Row="1" Grid.Column="0" Spacing="3">
+                            <Label Text="Tiền đặt cọc" FontSize="12" TextColor="#888888" />
+                            <Label Text="{Binding DepositText}" FontAttributes="Bold" TextColor="#333333" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Row="1" Grid.Column="1" Spacing="3">
+                            <Label Text="Khoảng cách đến ICTU" FontSize="12" TextColor="#888888" />
+                            <Label Text="{Binding DistanceText}" FontAttributes="Bold" TextColor="#333333" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Row="2" Grid.Column="0" Spacing="3">
+                            <Label Text="Xác minh" FontSize="12" TextColor="#888888" />
+                            <Label Text="{Binding VerifiedText}" FontAttributes="Bold" TextColor="#333333" />
+                        </VerticalStackLayout>
+
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Mô tả -->
+            <Border
+                BackgroundColor="White"
+                Stroke="#E5E5E5"
+                StrokeThickness="1"
+                Padding="16"
+                StrokeShape="RoundRectangle 12">
+
+                <VerticalStackLayout Spacing="8">
+                    <Label
+                        Text="Mô tả phòng"
+                        FontSize="18"
+                        FontAttributes="Bold"
+                        TextColor="#202820" />
+
+                    <Label
+                        Text="{Binding Room.Description}"
+                        FontSize="14"
+                        TextColor="#555555"
+                        LineBreakMode="WordWrap" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Tiện ích -->
+            <Border
+                BackgroundColor="White"
+                Stroke="#E5E5E5"
+                StrokeThickness="1"
+                Padding="16"
+                StrokeShape="RoundRectangle 12">
+
+                <VerticalStackLayout Spacing="8">
+                    <Label
+                        Text="Tiện ích"
+                        FontSize="18"
+                        FontAttributes="Bold"
+                        TextColor="#202820" />
+
+                    <Label
+                        Text="{Binding AmenitiesText}"
+                        FontSize="14"
+                        TextColor="#555555" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Chủ phòng -->
+            <Border
+                BackgroundColor="White"
+                Stroke="#E5E5E5"
+                StrokeThickness="1"
+                Padding="16"
+                StrokeShape="RoundRectangle 12">
+
+                <VerticalStackLayout Spacing="8">
+                    <Label
+                        Text="Thông tin chủ phòng"
+                        FontSize="18"
+                        FontAttributes="Bold"
+                        TextColor="#202820" />
+
+                    <Label
+                        Text="{Binding Room.LandlordName}"
+                        FontSize="14"
+                        TextColor="#555555" />
+
+                    <Label
+                        Text="{Binding Room.MaskedLandlordPhone}"
+                        FontSize="14"
+                        TextColor="#238B57" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Trạng thái tải và lỗi -->
+            <ActivityIndicator
+                IsRunning="{Binding IsBusy}"
+                IsVisible="{Binding IsBusy}"
+                Color="#238B57" />
+
+            <Label
+                Text="{Binding ErrorMessage}"
+                TextColor="#D9534F"
+                FontSize="14"
+                HorizontalTextAlignment="Center" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
