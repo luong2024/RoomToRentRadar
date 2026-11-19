@@ -50,6 +50,7 @@ public partial class HomePage : ContentPage
     {
         base.OnAppearing();
         UpdateLayout();
+        _viewModel.RefreshComparisonState();
         if (!_motionActive)
         {
             _motionActive = true;

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using RoomToRentRadar.Core.Constants;
+using RoomToRentRadar.Features.Comparison.Views;
 using RoomToRentRadar.Features.Home.Views;
 using RoomToRentRadar.Features.Login.Views;
 using RoomToRentRadar.Features.Map.Views;
@@ -20,5 +21,6 @@ public partial class AppShell : Shell
         Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(RoomDetailPage));
         Routing.RegisterRoute(AppRoutes.Login, typeof(LoginPage));
         Routing.RegisterRoute(AppRoutes.Directions, typeof(DirectionsPage));
+        Routing.RegisterRoute(AppRoutes.Comparison, typeof(ComparisonPage));
     }
 }

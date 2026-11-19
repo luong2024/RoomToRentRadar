@@ -682,6 +682,9 @@ public class RoomDetailViewModelTests
             double? originLng)
             => throw new NotSupportedException("The room detail screen does not open directions directly.");
 
+        public Task GoToComparisonAsync()
+            => throw new NotSupportedException("The room detail screen does not open room comparison.");
+
         public Task GoBackAsync()
         {
             GoBackCount++;
