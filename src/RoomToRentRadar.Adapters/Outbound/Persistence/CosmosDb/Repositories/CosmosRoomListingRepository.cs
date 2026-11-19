@@ -137,6 +137,116 @@ public sealed class CosmosRoomListingRepository : IRoomListingRepository
         return new PagedResult<RoomListing>(results, page, pageSize, totalCount);
     }
 
+    public async Task<PagedResult<RoomListing>> SearchByPolygonAsync(
+        GeoPolygon polygon,
+        RoomSearchFilter filter,
+        int pageIndex,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(polygon);
+        ArgumentNullException.ThrowIfNull(filter);
+
+        var totalRu = 0.0;
+        var positions = polygon.Vertices.Select(v => new Position(v.Longitude, v.Latitude)).ToList();
+        var linearRing = new LinearRing(positions);
+        var cosmosPolygon = new Microsoft.Azure.Cosmos.Spatial.Polygon([linearRing]);
+
+        var whereClauses = new List<string>
+        {
+            "ST_WITHIN(c.location, @polygon)",
+            "c.status = @status",
+            "c.verificationStatus = @verificationStatus",
+            "(NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false)"
+        };
+
+        if (filter.MinPrice.HasValue)
+        {
+            whereClauses.Add("c.monthlyRentAmount >= @minPrice");
+        }
+
+        if (filter.MaxPrice.HasValue)
+        {
+            whereClauses.Add("c.monthlyRentAmount <= @maxPrice");
+        }
+
+        var whereSql = string.Join(" AND ", whereClauses);
+
+        // 1. Cross-partition count query
+        var countDefinition = new QueryDefinition($"SELECT VALUE COUNT(1) FROM c WHERE {whereSql}")
+            .WithParameter("@polygon", cosmosPolygon)
+            .WithParameter("@status", (int)ListingRoomStatus.Available)
+            .WithParameter("@verificationStatus", (int)VerificationStatus.Verified);
+
+        if (filter.MinPrice.HasValue)
+        {
+            countDefinition = countDefinition.WithParameter("@minPrice", filter.MinPrice.Value);
+        }
+
+        if (filter.MaxPrice.HasValue)
+        {
+            countDefinition = countDefinition.WithParameter("@maxPrice", filter.MaxPrice.Value);
+        }
+
+        var totalCount = 0;
+        using var countIterator = _listingsContainer.GetItemQueryIterator<int>(countDefinition);
+        while (countIterator.HasMoreResults)
+        {
+            var countPage = await countIterator.ReadNextAsync(cancellationToken);
+            totalRu += countPage.RequestCharge;
+            totalCount += countPage.Sum();
+        }
+
+        if (totalCount == 0)
+        {
+            LastRequestCharge = totalRu;
+            return new PagedResult<RoomListing>([], pageIndex, pageSize, 0);
+        }
+
+        // 2. Ordering and pagination
+        var direction = filter.Descending ? "DESC" : "ASC";
+        var orderByClause = (filter.SortBy?.ToLowerInvariant()) switch
+        {
+            "price" => $"ORDER BY c.monthlyRentAmount {direction}, c.id {direction}",
+            "area" => $"ORDER BY c.areaSquareMeters {direction}, c.id {direction}",
+            "created" => $"ORDER BY c.createdAtUtc {direction}, c.id {direction}",
+            _ => $"ORDER BY c.id {direction}"
+        };
+
+        var offset = checked((long)(pageIndex - 1) * pageSize);
+        var itemsDefinition = new QueryDefinition($"SELECT * FROM c WHERE {whereSql} {orderByClause} OFFSET @offset LIMIT @limit")
+            .WithParameter("@polygon", cosmosPolygon)
+            .WithParameter("@status", (int)ListingRoomStatus.Available)
+            .WithParameter("@verificationStatus", (int)VerificationStatus.Verified)
+            .WithParameter("@offset", offset)
+            .WithParameter("@limit", pageSize);
+
+        if (filter.MinPrice.HasValue)
+        {
+            itemsDefinition = itemsDefinition.WithParameter("@minPrice", filter.MinPrice.Value);
+        }
+
+        if (filter.MaxPrice.HasValue)
+        {
+            itemsDefinition = itemsDefinition.WithParameter("@maxPrice", filter.MaxPrice.Value);
+        }
+
+        var results = new List<RoomListing>(pageSize);
+        using var itemsIterator = _listingsContainer.GetItemQueryIterator<RoomListingDocument>(itemsDefinition);
+        while (itemsIterator.HasMoreResults)
+        {
+            var page = await itemsIterator.ReadNextAsync(cancellationToken);
+            totalRu += page.RequestCharge;
+            foreach (var doc in page)
+            {
+                results.Add(doc.ToDomain());
+            }
+        }
+
+        LastRequestCharge = totalRu;
+        return new PagedResult<RoomListing>(results, pageIndex, pageSize, totalCount);
+    }
+
     public async Task AddAsync(RoomListing roomListing, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(roomListing);

@@ -8,6 +8,7 @@ using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.ValueObjects;
 using ListingRoomStatus = RoomToRentRadar.Domain.Enums.RoomStatus;
+using RoomToRentRadar.Application.DTOs;
 
 namespace RoomToRentRadar.Adapters.Tests.Persistence;
 
@@ -643,4 +644,84 @@ public class CosmosRoomListingRepositoryTests
         status: status,
         verificationStatus: VerificationStatus.Verified,
         campusId: campusId);
+
+    [Test]
+    public async Task SearchByPolygonAsync_QueriesListingsContainerWithSpatialFilterAndReturnsPagedResults()
+    {
+        var listingsContainer = new Mock<Container>();
+        var roomsContainer = new Mock<Container>();
+        var outboxContainer = CreateOutboxContainer();
+
+        var polygon = new GeoPolygon([
+            new GeoLocation(21.585, 105.807),
+            new GeoLocation(21.586, 105.807),
+            new GeoLocation(21.586, 105.808),
+            new GeoLocation(21.585, 105.808)
+        ]);
+
+        var countResponse = new Mock<FeedResponse<int>>();
+        countResponse.Setup(r => r.GetEnumerator()).Returns(new List<int> { 1 }.GetEnumerator());
+        countResponse.SetupGet(r => r.RequestCharge).Returns(2.5);
+
+        var countIterator = new Mock<FeedIterator<int>>();
+        countIterator.SetupSequence(it => it.HasMoreResults).Returns(true).Returns(false);
+        countIterator.Setup(it => it.ReadNextAsync(It.IsAny<CancellationToken>())).ReturnsAsync(countResponse.Object);
+
+        QueryDefinition? capturedCountQuery = null;
+        listingsContainer
+            .Setup(c => c.GetItemQueryIterator<int>(It.IsAny<QueryDefinition>(), null, null))
+            .Callback<QueryDefinition, string, QueryRequestOptions>((q, _, _) => capturedCountQuery = q)
+            .Returns(countIterator.Object);
+
+        var listingDoc = new RoomListingDocument
+        {
+            Id = "room-poly-1",
+            CampusId = "campus-ictu",
+            Title = "Studio within Polygon",
+            MonthlyRentAmount = 2500000m,
+            MonthlyRentCurrency = "VND",
+            AreaSquareMeters = 28.0,
+            Address = "ICTU Thai Nguyen",
+            Latitude = 21.5855,
+            Longitude = 105.8075,
+            Status = (int)ListingRoomStatus.Available,
+            VerificationStatus = (int)VerificationStatus.Verified
+        };
+
+        var itemsResponse = new Mock<FeedResponse<RoomListingDocument>>();
+        itemsResponse.Setup(r => r.GetEnumerator()).Returns(new List<RoomListingDocument> { listingDoc }.GetEnumerator());
+        itemsResponse.SetupGet(r => r.RequestCharge).Returns(4.0);
+
+        var itemsIterator = new Mock<FeedIterator<RoomListingDocument>>();
+        itemsIterator.SetupSequence(it => it.HasMoreResults).Returns(true).Returns(false);
+        itemsIterator.Setup(it => it.ReadNextAsync(It.IsAny<CancellationToken>())).ReturnsAsync(itemsResponse.Object);
+
+        QueryDefinition? capturedItemsQuery = null;
+        listingsContainer
+            .Setup(c => c.GetItemQueryIterator<RoomListingDocument>(It.IsAny<QueryDefinition>(), null, null))
+            .Callback<QueryDefinition, string, QueryRequestOptions>((q, _, _) => capturedItemsQuery = q)
+            .Returns(itemsIterator.Object);
+
+        var repository = new CosmosRoomListingRepository(
+            listingsContainer.Object,
+            roomsContainer.Object,
+            outboxContainer.Object);
+
+        var filter = new RoomSearchFilter(MinPrice: 1000000m, MaxPrice: 3000000m, SortBy: "price");
+        var result = await repository.SearchByPolygonAsync(polygon, filter, 1, 10);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.TotalCount, Is.EqualTo(1));
+            Assert.That(result.Items, Has.Count.EqualTo(1));
+            Assert.That(result.Items[0].Id, Is.EqualTo("room-poly-1"));
+            Assert.That(capturedCountQuery, Is.Not.Null);
+            Assert.That(capturedCountQuery!.QueryText, Does.Contain("ST_WITHIN(c.location, @polygon)"));
+            Assert.That(capturedCountQuery.QueryText, Does.Contain("c.monthlyRentAmount >= @minPrice"));
+            Assert.That(capturedItemsQuery, Is.Not.Null);
+            Assert.That(capturedItemsQuery!.QueryText, Does.Contain("ST_WITHIN(c.location, @polygon)"));
+            Assert.That(capturedItemsQuery.QueryText, Does.Contain("ORDER BY c.monthlyRentAmount"));
+            Assert.That(repository.LastRequestCharge, Is.EqualTo(6.5));
+        });
+    }
 }
