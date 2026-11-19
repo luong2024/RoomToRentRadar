@@ -29,7 +29,14 @@ namespace RoomToRentRadar.Data
             var results = new List<SavedSearchAlert>();
             await using var connection = await Database.GetOpenConnectionAsync();
             await using var cmd = connection.CreateCommand();
-            cmd.CommandText = "SELECT * FROM SavedSearchAlert WHERE UserId = @UserId ORDER BY Id DESC;";
+            cmd.CommandText = @"
+                SELECT 
+                    Id, UserId, Name, MinPrice, MaxPrice, MinArea, MaxDistanceKm, RoomType,
+                    CenterLatitude, CenterLongitude, RadiusKm, PolygonJson,
+                    IsEnabled, AlertsSentToday, MaxDailyAlerts, CreatedAt
+                FROM SavedSearchAlert 
+                WHERE UserId = @UserId 
+                ORDER BY CreatedAt DESC, Id DESC;";
             cmd.Parameters.AddWithValue("@UserId", userId);
 
             await using var reader = await cmd.ExecuteReaderAsync();
@@ -41,11 +48,46 @@ namespace RoomToRentRadar.Data
         }
 
         /// <summary>
+        /// Helper: Retrieves a single saved search alert by its primary key ID.
+        /// </summary>
+        public virtual async Task<SavedSearchAlert?> GetByIdAsync(int alertId)
+        {
+            await using var connection = await Database.GetOpenConnectionAsync();
+            await using var cmd = connection.CreateCommand();
+            cmd.CommandText = @"
+                SELECT 
+                    Id, UserId, Name, MinPrice, MaxPrice, MinArea, MaxDistanceKm, RoomType,
+                    CenterLatitude, CenterLongitude, RadiusKm, PolygonJson,
+                    IsEnabled, AlertsSentToday, MaxDailyAlerts, CreatedAt
+                FROM SavedSearchAlert 
+                WHERE Id = @Id 
+                LIMIT 1;";
+            cmd.Parameters.AddWithValue("@Id", alertId);
+
+            await using var reader = await cmd.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                return MapAlert(reader);
+            }
+            return null;
+        }
+
+        /// <summary>
         /// AC1: Saves a search alert. Performs an INSERT if Id &lt;= 0, or an UPDATE if Id &gt; 0.
         /// </summary>
         public virtual async Task<int> SaveAlertAsync(SavedSearchAlert alert)
         {
             if (alert is null) throw new ArgumentNullException(nameof(alert));
+
+            // Sanitize alert fields
+            if (string.IsNullOrWhiteSpace(alert.Name))
+            {
+                alert.Name = "Tìm kiếm đã lưu";
+            }
+            if (alert.MaxDailyAlerts <= 0)
+            {
+                alert.MaxDailyAlerts = 3;
+            }
 
             await using var connection = await Database.GetOpenConnectionAsync();
             await using var cmd = connection.CreateCommand();
@@ -87,16 +129,16 @@ namespace RoomToRentRadar.Data
             }
 
             cmd.Parameters.AddWithValue("@UserId", alert.UserId);
-            cmd.Parameters.AddWithValue("@Name", alert.Name ?? string.Empty);
+            cmd.Parameters.AddWithValue("@Name", alert.Name.Trim());
             cmd.Parameters.AddWithValue("@MinPrice", (object?)alert.MinPrice ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@MaxPrice", (object?)alert.MaxPrice ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@MinArea", (object?)alert.MinArea ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@MaxDistanceKm", (object?)alert.MaxDistanceKm ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@RoomType", (object?)alert.RoomType ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@RoomType", string.IsNullOrWhiteSpace(alert.RoomType) ? DBNull.Value : (object)alert.RoomType.Trim());
             cmd.Parameters.AddWithValue("@CenterLatitude", (object?)alert.CenterLatitude ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@CenterLongitude", (object?)alert.CenterLongitude ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@RadiusKm", (object?)alert.RadiusKm ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@PolygonJson", alert.PolygonJson ?? "[]");
+            cmd.Parameters.AddWithValue("@PolygonJson", string.IsNullOrWhiteSpace(alert.PolygonJson) ? "[]" : alert.PolygonJson);
             cmd.Parameters.AddWithValue("@IsEnabled", alert.IsEnabled ? 1 : 0);
             cmd.Parameters.AddWithValue("@AlertsSentToday", alert.AlertsSentToday);
             cmd.Parameters.AddWithValue("@MaxDailyAlerts", alert.MaxDailyAlerts);
@@ -118,7 +160,7 @@ namespace RoomToRentRadar.Data
         }
 
         /// <summary>
-        /// AC3: Pauses (isEnabled = false) or resumes (isEnabled = true) an alert.
+        /// AC3: Pauses (isEnabled = false) or resumes (isEnabled = true) an alert at any time.
         /// </summary>
         public virtual async Task<bool> ToggleAlertAsync(int alertId, bool isEnabled)
         {
@@ -133,7 +175,7 @@ namespace RoomToRentRadar.Data
         }
 
         /// <summary>
-        /// AC3: Deletes an alert permanently from SQLite.
+        /// AC3: Deletes an alert permanently from SQLite at any time.
         /// </summary>
         public virtual async Task<bool> DeleteAlertAsync(int alertId)
         {
