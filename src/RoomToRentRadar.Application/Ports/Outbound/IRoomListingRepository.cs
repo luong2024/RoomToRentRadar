@@ -42,5 +42,8 @@ public interface IRoomListingRepository
         RoomSearchFilter filter,
         int pageIndex,
         int pageSize,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(new PagedResult<RoomListing>([], pageIndex, pageSize, 0));
+    }
 }

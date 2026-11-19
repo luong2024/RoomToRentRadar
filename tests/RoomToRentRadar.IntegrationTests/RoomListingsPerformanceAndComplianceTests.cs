@@ -301,6 +301,16 @@ public class RoomListingsApplicationPerformanceTests
             _rooms.RemoveAll(room => room.Id == roomId && room.CampusId == campusId);
             return Task.CompletedTask;
         }
+
+        public Task<PagedResult<RoomListing>> SearchByPolygonAsync(
+            GeoPolygon polygon,
+            RoomSearchFilter filter,
+            int pageIndex,
+            int pageSize,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new PagedResult<RoomListing>([], pageIndex, pageSize, 0));
+        }
     }
 
     private sealed class FakeCampusRepository : ICampusRepository
@@ -368,7 +378,11 @@ public class CosmosRoomListingPerformanceIntegrationTests
             var database = dbResponse.Database;
 
             var containerProperties = new ContainerProperties(ContainerName, "/campusId");
-            containerProperties.IndexingPolicy.SpatialIndexes.Add(new SpatialPath { Path = "/location/*" });
+            containerProperties.IndexingPolicy.SpatialIndexes.Add(new SpatialPath
+            {
+                Path = "/location/*",
+                SpatialTypes = { SpatialType.Point }
+            });
             var containerResponse = await database.CreateContainerIfNotExistsAsync(containerProperties);
             _container = containerResponse.Container;
 
