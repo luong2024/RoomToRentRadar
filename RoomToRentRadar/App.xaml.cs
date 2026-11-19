@@ -10,6 +10,10 @@ public partial class App : Application
     public App(IServiceProvider services)
     {
         InitializeComponent();
+#if ANDROID
+        Microsoft.Maui.Controls.PlatformConfiguration.AndroidSpecific.Application.SetWindowSoftInputModeAdjust(
+            this, Microsoft.Maui.Controls.PlatformConfiguration.AndroidSpecific.WindowSoftInputModeAdjust.Resize);
+#endif
         UserAppTheme = AppTheme.Light;
         _services = services;
     }
@@ -26,7 +30,7 @@ public partial class App : Application
             {
                 Title = "Room Radar",
                 BackgroundColor = Colors.White,
-                ForegroundColor = Color.FromArgb("#252E2A")
+                ForegroundColor = (Color)Resources["Ink"]
             },
             Width = 1200,
             Height = 850,

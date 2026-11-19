@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RoomToRentRadar.Api.Features.Listings;
@@ -14,6 +15,16 @@ public sealed class ListingManagementController(
     ListingManagementService listingManagementService) : ControllerBase
 {
     private const int MinimumPhotosOnCreate = 3;
+
+    [HttpGet("mine")]
+    [ProducesResponseType(typeof(IReadOnlyList<ManagedListingDto>), StatusCodes.Status200OK, "application/json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
+    public async Task<ActionResult<IReadOnlyList<ManagedListingDto>>> GetMyListings(
+        CancellationToken cancellationToken,
+        [FromQuery, Range(1, 100)] int limit = 50,
+        [FromQuery, Range(0, int.MaxValue)] int offset = 0)
+        => Ok(await listingManagementService.GetMineAsync(CurrentUserId, limit, offset, cancellationToken));
 
     [HttpPost]
     [Consumes("multipart/form-data")]

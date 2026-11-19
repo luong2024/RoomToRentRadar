@@ -24,12 +24,14 @@ public partial class MapSearchPage : ContentPage
 {
     private const double PinHitRadiusPixels = 36;
 
-    private static readonly MapsuiColor AccentColor = new(35, 79, 64, 255);
-    private static readonly MapsuiColor AccentFill = new(35, 79, 64, 18);
+    private static readonly MapsuiColor AccentColor = new(121, 84, 119, 255);
+    private static readonly MapsuiColor AccentFill = new(121, 84, 119, 28);
+    private static readonly MapsuiColor InkColor = new(48, 41, 54, 255);
     private static readonly MapsuiColor SurfaceColor = new(255, 255, 255, 255);
     private static readonly GeometryFactory GeometryFactory = new(new PrecisionModel(), 4326);
 
     private readonly MapSearchPageModel _model;
+    private readonly TileLayer _baseMapLayer;
     private bool _observing;
     private bool _renderQueued;
     private bool _pinsDirty = true;
@@ -50,7 +52,7 @@ public partial class MapSearchPage : ContentPage
         var map = MapView.Map;
         // tile.openstreetmap.org is unreachable on some networks; Esri's ArcGIS
         // street basemap needs no key and keeps the pins readable.
-        map.Layers.Add(new TileLayer(new HttpTileSource(
+        _baseMapLayer = new TileLayer(new HttpTileSource(
             new GlobalSphericalMercator(),
             "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
             name: "Esri World Street Map",
@@ -58,7 +60,17 @@ public partial class MapSearchPage : ContentPage
                 "Esri, HERE, Garmin, © OpenStreetMap contributors",
                 "https://www.esri.com/en-us/legal/terms/full-maps-use-terms"),
             configureHttpRequestMessage: request =>
-                request.Headers.UserAgent.ParseAdd("RoomToRentRadar/1.0"))));
+                request.Headers.UserAgent.ParseAdd("RoomToRentRadar/1.0")));
+        map.Layers.Add(_baseMapLayer);
+        _baseMapLayer.DataChanged += (_, args) =>
+        {
+            if (args.Error is not null)
+                Dispatcher.Dispatch(() =>
+                {
+                    if (_observing)
+                        _model.MapNotice = "Chưa tải được một phần bản đồ. Kiểm tra kết nối rồi di chuyển bản đồ để thử lại.";
+                });
+        };
         map.Layers.Add(_draftLayer);
         map.Layers.Add(_pinsLayer);
         var (x, y) = SphericalMercator.FromLonLat(106.7009, 10.7769);
@@ -77,6 +89,10 @@ public partial class MapSearchPage : ContentPage
         _model.FocusRequested += OnFocusRequested;
         _model.PropertyChanged += OnModelPropertyChanged;
         _model.Listings.CollectionChanged += OnListingsChanged;
+        _baseMapLayer.PropertyChanged += OnBaseMapPropertyChanged;
+        Connectivity.Current.ConnectivityChanged += OnConnectivityChanged;
+        UpdateConnectivityNotice();
+        _model.IsMapLoading = _baseMapLayer.Busy;
         MapView.Map.Tapped += OnMapTapped;
         _pinsDirty = true;
         QueueRender();
@@ -91,6 +107,9 @@ public partial class MapSearchPage : ContentPage
         _model.FocusRequested -= OnFocusRequested;
         _model.PropertyChanged -= OnModelPropertyChanged;
         _model.Listings.CollectionChanged -= OnListingsChanged;
+        _baseMapLayer.PropertyChanged -= OnBaseMapPropertyChanged;
+        Connectivity.Current.ConnectivityChanged -= OnConnectivityChanged;
+        _locationCts?.Cancel();
         MapView.Map.Tapped -= OnMapTapped;
         _model.CancelPendingSearch();
         base.OnDisappearing();
@@ -251,28 +270,38 @@ public partial class MapSearchPage : ContentPage
                 area.Styles.Add(new VectorStyle
                 {
                     Fill = new MapsuiBrush(AccentFill),
-                    Outline = new Pen(AccentColor, 1.4)
+                    Outline = new Pen(AccentColor, 2.3)
                 });
                 features.Add(area);
             }
             else if (coordinates.Length >= 2)
             {
                 var line = new GeometryFeature(GeometryFactory.CreateLineString(coordinates));
-                line.Styles.Add(new VectorStyle { Line = new Pen(AccentColor, 1.4) });
+                line.Styles.Add(new VectorStyle { Line = new Pen(AccentColor, 2.3) });
                 features.Add(line);
             }
 
             var vertexStyle = new SymbolStyle
             {
                 SymbolType = SymbolType.Ellipse,
-                SymbolScale = 0.4,
-                Fill = new MapsuiBrush(SurfaceColor),
-                Outline = new Pen(AccentColor, 1.8)
+                SymbolScale = 0.42,
+                Fill = new MapsuiBrush(AccentColor),
+                Outline = new Pen(SurfaceColor, 2)
             };
             for (var index = 0; index < coordinates.Length; index++)
             {
                 var vertex = new GeometryFeature(new NtsPoint(coordinates[index]));
-                vertex.Styles.Add(vertexStyle);
+                // The latest point is the current drawing focus. Keep its white
+                // rim readable on both streets and the translucent blue region.
+                vertex.Styles.Add(_model.IsDrawing && index == coordinates.Length - 1
+                    ? new SymbolStyle
+                    {
+                        SymbolType = SymbolType.Ellipse,
+                        SymbolScale = 0.62,
+                        Fill = new MapsuiBrush(AccentColor),
+                        Outline = new Pen(SurfaceColor, 3)
+                    }
+                    : vertexStyle);
                 features.Add(vertex);
             }
         }
@@ -315,16 +344,16 @@ public partial class MapSearchPage : ContentPage
         pin.Styles.Add(new LabelStyle
         {
             Text = $"\u00a0 {pin["PriceLabel"]} \u00a0",
-            ForeColor = isSelected ? SurfaceColor : AccentColor,
+            ForeColor = isSelected ? SurfaceColor : InkColor,
             BackColor = new MapsuiBrush(isSelected ? AccentColor : SurfaceColor),
-            BorderColor = isSelected ? SurfaceColor : new MapsuiColor(213, 225, 217, 255),
+            BorderColor = isSelected ? SurfaceColor : new MapsuiColor(229, 223, 232, 255),
             BorderThickness = isSelected ? 2 : 1,
             CornerRounding = 12,
             Font = new Mapsui.Styles.Font { Size = 12, Bold = true },
             Halo = null,
             HorizontalAlignment = LabelStyle.HorizontalAlignmentEnum.Center,
             VerticalAlignment = LabelStyle.VerticalAlignmentEnum.Center,
-            CollisionDetection = false
+            CollisionDetection = !isSelected
         });
     }
 }

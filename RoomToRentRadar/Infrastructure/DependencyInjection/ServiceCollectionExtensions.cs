@@ -7,6 +7,8 @@ using RoomToRentRadar.Features.Home.ViewModels;
 using RoomToRentRadar.Features.Home.Views;
 using RoomToRentRadar.Features.Login.ViewModels;
 using RoomToRentRadar.Features.Login.Views;
+using RoomToRentRadar.Features.ListingManagement.ViewModels;
+using RoomToRentRadar.Features.ListingManagement.Views;
 using RoomToRentRadar.Features.RoomDetail.ViewModels;
 using RoomToRentRadar.Features.RoomDetail.Views;
 using RoomToRentRadar.Infrastructure.Api;
@@ -33,6 +35,12 @@ public static class ServiceCollectionExtensions
             });
         });
         services.AddSingleton<AuthService>();
+        services.AddSingleton<IListingManagementClient>(provider => new ListingManagementClient(new HttpClient(
+            provider.GetRequiredService<AuthenticatedHttpMessageHandler>())
+        {
+            BaseAddress = new Uri(ApiConstants.BaseAddress),
+            Timeout = TimeSpan.FromMinutes(3)
+        }));
         services.AddSingleton<IErrorHandler, ModalErrorHandler>();
         services.AddSingleton<IPreferences>(Preferences.Default);
         services.AddSingleton<ICampusSelectionStore, PreferencesCampusSelectionStore>();
@@ -62,6 +70,10 @@ public static class ServiceCollectionExtensions
         services.AddTransient<DirectionsPage>();
         services.AddTransient<LoginViewModel>();
         services.AddTransient<LoginPage>();
+        services.AddTransient<MyListingsViewModel>();
+        services.AddTransient<MyListingsPage>();
+        services.AddTransient<ListingEditorViewModel>();
+        services.AddTransient<ListingEditorPage>();
         return services;
     }
 }
