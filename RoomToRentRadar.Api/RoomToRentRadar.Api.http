@@ -1,6 +1,8 @@
-### RoomToRentRadar.Api — sample requests for US01 / T01.1 (Auth)
-### 1. Start the API:  dotnet run --project RoomToRentRadar.Api --urls http://localhost:5199
+### RoomToRentRadar.Api — sample requests for US01 / T01.1 (Auth + JWT)
+### 1. Start the API in Development (the dev JWT key lives in appsettings.Development.json):
+###      $env:ASPNETCORE_ENVIRONMENT = "Development"; dotnet run --project RoomToRentRadar.Api --urls http://localhost:5199
 ### 2. Click "Send Request" above each request (VS Code "REST Client" extension or Visual Studio).
+### 3. Send "Login OK (student)" first: its token is reused by the /me requests below.
 ### Demo accounts come from IctuSeedData (password 123456).
 
 @baseUrl = http://localhost:5199
@@ -8,7 +10,8 @@
 ### Health check (Web API + SQLite) → 200
 GET {{baseUrl}}/api/health
 
-### Login OK (student) → 200, user without password hash
+### Login OK (student) → 200 { accessToken, tokenType, expiresAtUtc, user } (no password hash)
+# @name login
 POST {{baseUrl}}/api/auth/login
 Content-Type: application/json
 
@@ -16,6 +19,17 @@ Content-Type: application/json
   "email": "student@ictu.edu.vn",
   "password": "123456"
 }
+
+### Who am I, with the token from "login" → 200
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+### Who am I, without a token → 401 "Bạn cần đăng nhập để thực hiện thao tác này."
+GET {{baseUrl}}/api/auth/me
+
+### Who am I, with a fake token → 401
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwicm9sZSI6IkFkbWluIn0.fake-signature
 
 ### Login OK (landlord) → 200
 POST {{baseUrl}}/api/auth/login
@@ -44,7 +58,7 @@ Content-Type: application/json
   "password": ""
 }
 
-### Register new student → 201 (send twice: the second time → 400, email already used)
+### Register new student → 201 with a token (send twice: the second time → 400, email already used)
 POST {{baseUrl}}/api/auth/register
 Content-Type: application/json
 
@@ -56,7 +70,7 @@ Content-Type: application/json
   "role": "Student"
 }
 
-### Register landlord (role is case-insensitive) → 201
+### Register landlord (role is case-insensitive) → 201 with a token
 POST {{baseUrl}}/api/auth/register
 Content-Type: application/json
 
