@@ -6,7 +6,7 @@ using RoomToRentRadar.Ports.Outbound.Repositories;
 namespace RoomToRentRadar.Application.UseCases.Campuses;
 
 /// <summary>
-/// Lists campuses ordered with the default campus (ICTU) first, then by name ascending (BR-CMP-01).
+/// Lists campuses ordered with the default campus (ICTU) first, then by SortOrder (BR-CMP-01, <c>docs/api/openapi.yaml:219</c>, <c>docs/erd.md</c> §4.1).
 /// </summary>
 public sealed class ListCampusesUseCase : IListCampusesUseCase
 {
@@ -28,7 +28,8 @@ public sealed class ListCampusesUseCase : IListCampusesUseCase
 
         return campuses
             .OrderByDescending(c => c.IsDefault)
-            .ThenBy(c => c.Name)
+            .ThenBy(c => c.SortOrder)
+            .ThenBy(c => c.Id)
             .Select(MapToDto)
             .ToList();
     }

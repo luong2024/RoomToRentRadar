@@ -19,7 +19,7 @@ public class ListCampusesUseCaseTests
     }
 
     [Test]
-    public async Task ExecuteAsync_WhenCampusesExist_ReturnsMappedDtosWithDefaultFirstThenByName()
+    public async Task ExecuteAsync_WhenCampusesExist_ReturnsMappedDtosWithDefaultFirstThenBySortOrder()
     {
         // Arrange: unordered list with default campus in the middle
         var campuses = new List<Campus>
@@ -48,10 +48,10 @@ public class ListCampusesUseCaseTests
             Assert.That(result[0].Latitude, Is.EqualTo(21.5851));
             Assert.That(result[0].Longitude, Is.EqualTo(105.8066));
 
-            // Others sorted by Name ascending
+            // Others sorted by SortOrder ascending (BR-CMP-01, openapi.yaml:219)
             Assert.That(result[1].Id, Is.EqualTo("TNUS"));
-            Assert.That(result[2].Id, Is.EqualTo("TUEBA"));
-            Assert.That(result[3].Id, Is.EqualTo("SFL"));
+            Assert.That(result[2].Id, Is.EqualTo("SFL"));
+            Assert.That(result[3].Id, Is.EqualTo("TUEBA"));
         });
     }
 

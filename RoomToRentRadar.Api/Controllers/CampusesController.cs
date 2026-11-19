@@ -23,7 +23,7 @@ public sealed class CampusesController : ControllerBase
 
     /// <summary>
     /// Campus reference list (BR-CMP-01, operationId: listCampuses). Open to guests.
-    /// Returns campuses ordered with the default campus (ICTU) first, then by name.
+    /// Returns campuses ordered with the default campus (ICTU) first, then by SortOrder.
     /// </summary>
     [HttpGet]
     [AllowAnonymous]

@@ -59,6 +59,11 @@ public class CampusesEndpointIntegrationTests
         {
             Assert.That(campuses!.Count, Is.EqualTo(8), "8 campuses from Thái Nguyên University seeded (BR-CMP-01)");
 
+            // Assert exact 8 IDs in SortOrder per contract (openapi.yaml:219, erd.md §4.1)
+            var expectedCampusIds = new[] { "ICTU", "TNUS", "SFL", "TUEBA", "TUAF", "TNUE", "TUMP", "TNUT" };
+            Assert.That(campuses.Select(c => c.Id).ToList(), Is.EqualTo(expectedCampusIds),
+                "Campuses must match exact SortOrder from Thái Nguyên University seed data (BR-CMP-01, openapi.yaml:219)");
+
             var firstCampus = campuses[0];
             Assert.That(firstCampus.Id, Is.EqualTo("ICTU"), "ICTU must be the first campus");
             Assert.That(firstCampus.IsDefault, Is.True, "ICTU isDefault must be true");
