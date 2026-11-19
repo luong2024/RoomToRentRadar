@@ -16,6 +16,7 @@ namespace RoomToRentRadar.Services
         public string DestinationName { get; set; } = Constants.IctuCampusName;
         public double DestinationLatitude { get; set; } = Constants.IctuLatitude;
         public double DestinationLongitude { get; set; } = Constants.IctuLongitude;
+        public string RouteSummary { get; set; } = string.Empty;
     }
 
     /// <summary>
@@ -41,6 +42,8 @@ namespace RoomToRentRadar.Services
         double CalculateStraightLineDistanceKm(double lat1, double lon1, double lat2, double lon2);
 
         void PopulateListingEstimates(RoomListing listing, double? destLat = null, double? destLon = null);
+
+        void PopulateListingsEstimates(IEnumerable<RoomListing> listings, double? destLat = null, double? destLon = null);
     }
 
     /// <summary>
@@ -49,26 +52,73 @@ namespace RoomToRentRadar.Services
     /// </summary>
     public class TravelTimeService : ITravelTimeService
     {
+        // Thai Nguyen urban terrain benchmarks
+        protected const double RoadWindingFactor = 1.25;       // Winding road distance multiplier
+        protected const double WalkSpeedKmH = 4.5;              // Average walking speed (km/h)
+        protected const double MotorbikeSpeedKmH = 28.0;        // Average motorbike urban speed (km/h)
+        protected const double BusSpeedKmH = 18.0;              // Average bus speed in Thai Nguyen (km/h)
+        protected const int MotorbikePrepMinutes = 1;           // Engine start & parking time
+        protected const int BusWaitMinutes = 8;                 // Average bus waiting time at stop
+
         /// <summary>
         /// AC1 &amp; AC2 &amp; AC3: Calculates distance and estimated travel time with ICTU campus as default destination.
+        /// When routing is unavailable, computes straight-line distance with realistic Thai Nguyen speed models as fallback.
         /// </summary>
         public virtual TravelEstimateResult EstimateTravelTime(
             double sourceLat, double sourceLon,
             double? destLat = null, double? destLon = null,
             string? destinationName = null)
         {
+            // AC2: Default destination is ICTU Campus
             var targetLat = destLat ?? Constants.IctuLatitude;
             var targetLon = destLon ?? Constants.IctuLongitude;
-            var targetName = destinationName ?? Constants.IctuCampusName;
+            var targetName = string.IsNullOrWhiteSpace(destinationName) ? Constants.IctuCampusName : destinationName.Trim();
 
+            // Sanitize coordinates
+            sourceLat = Math.Clamp(sourceLat, -90.0, 90.0);
+            sourceLon = Math.Clamp(sourceLon, -180.0, 180.0);
+            targetLat = Math.Clamp(targetLat, -90.0, 90.0);
+            targetLon = Math.Clamp(targetLon, -180.0, 180.0);
+
+            // AC3: Calculate straight-line distance via Haversine formula
             var straightLineKm = CalculateStraightLineDistanceKm(sourceLat, sourceLon, targetLat, targetLon);
 
-            // Baseline fallback calculation
-            var roadDistanceKm = Math.Round(straightLineKm * 1.25, 2);
+            // Edge case: Same location (distance is 0)
+            if (straightLineKm <= 0.0)
+            {
+                return new TravelEstimateResult
+                {
+                    DistanceKm = 0.0,
+                    MotorbikeMinutes = 0,
+                    BusMinutes = 0,
+                    WalkMinutes = 0,
+                    IsFallback = true,
+                    DestinationName = targetName,
+                    DestinationLatitude = targetLat,
+                    DestinationLongitude = targetLon,
+                    RouteSummary = $"Tại điểm đến: {targetName}"
+                };
+            }
 
-            int walkMins = straightLineKm <= 0 ? 0 : Math.Max(1, (int)Math.Ceiling((roadDistanceKm / 4.5) * 60.0));
-            int motorbikeMins = straightLineKm <= 0 ? 0 : Math.Max(1, (int)Math.Ceiling((roadDistanceKm / 28.0) * 60.0) + 1);
-            int busMins = straightLineKm <= 0 ? 0 : (straightLineKm < 0.6 ? walkMins : Math.Max(8, (int)Math.Ceiling(8 + (roadDistanceKm / 18.0) * 60.0)));
+            // AC1 & AC3: Compute realistic road-equivalent distance and transport mode times
+            var roadDistanceKm = Math.Round(straightLineKm * RoadWindingFactor, 2);
+
+            // Walk: 4.5 km/h -> ~13.3 mins/km
+            int walkMins = Math.Max(1, (int)Math.Ceiling((roadDistanceKm / WalkSpeedKmH) * 60.0));
+
+            // Motorbike: 28 km/h + 1 min prep
+            int motorbikeMins = Math.Max(1, (int)Math.Ceiling((roadDistanceKm / MotorbikeSpeedKmH) * 60.0) + MotorbikePrepMinutes);
+
+            // Bus: for very short distances (< 600m), walking is faster than waiting for a bus
+            int busMins;
+            if (straightLineKm < 0.6)
+            {
+                busMins = walkMins;
+            }
+            else
+            {
+                busMins = Math.Max(BusWaitMinutes, (int)Math.Ceiling(BusWaitMinutes + (roadDistanceKm / BusSpeedKmH) * 60.0));
+            }
 
             return new TravelEstimateResult
             {
@@ -76,19 +126,24 @@ namespace RoomToRentRadar.Services
                 MotorbikeMinutes = motorbikeMins,
                 BusMinutes = busMins,
                 WalkMinutes = walkMins,
-                IsFallback = true,
+                IsFallback = true, // Straight-line fallback per AC3
                 DestinationName = targetName,
                 DestinationLatitude = targetLat,
-                DestinationLongitude = targetLon
+                DestinationLongitude = targetLon,
+                RouteSummary = $"Khoảng cách: {straightLineKm:F1} km tới {targetName} (Ước lượng dự phòng)"
             };
         }
 
+        /// <summary>
+        /// Asynchronous overload for estimated travel time calculation.
+        /// </summary>
         public virtual Task<TravelEstimateResult> EstimateTravelTimeAsync(
             double sourceLat, double sourceLon,
             double? destLat = null, double? destLon = null,
             string? destinationName = null,
             CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var result = EstimateTravelTime(sourceLat, sourceLon, destLat, destLon, destinationName);
             return Task.FromResult(result);
         }
@@ -127,6 +182,19 @@ namespace RoomToRentRadar.Services
             listing.MotorbikeMinutes = estimate.MotorbikeMinutes;
             listing.BusMinutes = estimate.BusMinutes;
             listing.WalkMinutes = estimate.WalkMinutes;
+        }
+
+        /// <summary>
+        /// AC1: Populates distance and travel time fields on a collection of <see cref="RoomListing"/> entities.
+        /// </summary>
+        public virtual void PopulateListingsEstimates(IEnumerable<RoomListing> listings, double? destLat = null, double? destLon = null)
+        {
+            if (listings is null) return;
+
+            foreach (var listing in listings)
+            {
+                PopulateListingEstimates(listing, destLat, destLon);
+            }
         }
     }
 }
