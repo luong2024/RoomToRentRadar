@@ -44,6 +44,7 @@ public class RoomDetailPageModelTests
     [TearDown]
     public void TearDown()
     {
+        _sut?.Dispose();
         LocalizedStrings.Instance.SetCulture(new CultureInfo("en-US"));
     }
 
@@ -820,6 +821,36 @@ public class RoomDetailPageModelTests
         Assert.That(_sut.IsNotFound, Is.True);
         Assert.That(_sut.IsLoading, Is.False);
         Assert.That(_sut.IsContentVisible, Is.False);
+    }
+
+    [Test]
+    public async Task Dispose_UnsubscribesFromLocalizedStrings_NoLongerUpdatesOnCultureChange()
+    {
+        // Arrange
+        var testRoom = CreateSampleRoom(
+            status: ListingStatus.Available,
+            isVerified: true,
+            monthlyRent: 2500000,
+            deposit: 2500000,
+            areaM2: 25.0,
+            maxOccupants: 2,
+            furnishing: Furnishing.Full,
+            availableFrom: null,
+            distanceKm: 1.0,
+            landlordPhone: null);
+
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        await _sut.InitializeAsync();
+        Assert.That(_sut.StatusBadgeText, Is.EqualTo("Verified · Available"));
+
+        // Act - Dispose the ViewModel
+        _sut.Dispose();
+
+        // Change culture to Vietnamese
+        LocalizedStrings.Instance.SetCulture(new CultureInfo("vi-VN"));
+
+        // Assert - Badge text must NOT update because handler was unsubscribed on Dispose
+        Assert.That(_sut.StatusBadgeText, Is.EqualTo("Verified · Available"));
     }
 
     private static RoomDetailDto CreateSampleRoom(

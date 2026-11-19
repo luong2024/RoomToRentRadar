@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.Net;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -22,11 +23,13 @@ namespace RoomToRentRadar.PageModels;
 [QueryProperty(nameof(RoomId), "roomId")]
 [QueryProperty(nameof(CampusId), "campusId")]
 #endif
-public partial class RoomDetailPageModel : ObservableObject
+public partial class RoomDetailPageModel : ObservableObject, IDisposable
 {
     private readonly IRoomGateway _roomGateway;
     private readonly ISessionStore _sessionStore;
     private readonly IFavouriteGateway? _favouriteGateway;
+    private readonly PropertyChangedEventHandler _cultureChangedHandler;
+    private bool _disposed;
 
     private readonly List<AmenityDisplayItem> _allAmenities = [];
 
@@ -265,7 +268,8 @@ public partial class RoomDetailPageModel : ObservableObject
         _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
         _favouriteGateway = favouriteGateway;
 
-        LocalizedStrings.Instance.PropertyChanged += (_, _) => OnCultureChanged();
+        _cultureChangedHandler = (_, _) => OnCultureChanged();
+        LocalizedStrings.Instance.PropertyChanged += _cultureChangedHandler;
     }
 
     #region Initialization & Data Loading
@@ -1052,6 +1056,28 @@ public partial class RoomDetailPageModel : ObservableObject
         if (Room != null)
         {
             PopulateRoomDetails(Room);
+        }
+    }
+
+    #endregion
+
+    #region IDisposable
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                LocalizedStrings.Instance.PropertyChanged -= _cultureChangedHandler;
+            }
+            _disposed = true;
         }
     }
 
