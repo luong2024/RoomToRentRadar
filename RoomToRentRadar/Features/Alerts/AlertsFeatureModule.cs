@@ -1,3 +1,6 @@
+using RoomToRentRadar.Abstractions.Alerts;
+using RoomToRentRadar.Data;
+
 namespace RoomToRentRadar.Features.Alerts
 {
     /// <summary>
@@ -7,7 +10,10 @@ namespace RoomToRentRadar.Features.Alerts
     {
         public static IServiceCollection AddAlertsFeature(this IServiceCollection services)
         {
-            // T08.1 (Thuy): services.AddSingleton<ISavedSearchAlertRepository, SavedSearchAlertRepository>();
+            // T08.1 (Thuy): Register real SQLite SavedSearchAlertRepository
+            services.AddSingleton<SavedSearchAlertRepository>();
+            services.AddSingleton<ISavedSearchAlertRepository>(sp => sp.GetRequiredService<SavedSearchAlertRepository>());
+
             // T08.2 (Nam):  services.AddTransientWithShellRoute<SearchAlertsPage, SearchAlertsPageModel>(Constants.Routes.SearchAlerts);
             return services;
         }

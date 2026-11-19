@@ -21,6 +21,8 @@ namespace RoomToRentRadar.Data
             Database = database ?? throw new ArgumentNullException(nameof(database));
         }
 
+        #region AC1 & AC3: CRUD Operations
+
         /// <summary>
         /// AC1: Lists all saved search alerts for a given user, ordered by creation date descending.
         /// </summary>
@@ -188,6 +190,203 @@ namespace RoomToRentRadar.Data
             return rowsAffected > 0;
         }
 
+        #endregion
+
+        #region AC2: Criteria Matching Engine & Alert Badge APIs
+
+        /// <summary>
+        /// AC2: Determines whether a newly published listing matches a saved search alert's criteria.
+        /// Checks price range, area, room type, distance to campus, and spatial radius (Haversine).
+        /// </summary>
+        public virtual bool MatchesListing(SavedSearchAlert alert, RoomListing listing)
+        {
+            if (alert is null || listing is null) return false;
+
+            // Only active alerts that haven't exceeded daily rate limit are matched
+            if (!alert.IsEnabled) return false;
+            if (alert.AlertsSentToday >= alert.MaxDailyAlerts) return false;
+
+            // Must be available and verified
+            if (!listing.IsVerified || !string.Equals(listing.Status, Constants.ListingStatuses.Available, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            // Price filter
+            if (alert.MinPrice.HasValue && listing.MonthlyRent < alert.MinPrice.Value)
+            {
+                return false;
+            }
+            if (alert.MaxPrice.HasValue && listing.MonthlyRent > alert.MaxPrice.Value)
+            {
+                return false;
+            }
+
+            // Area filter
+            if (alert.MinArea.HasValue && listing.Area < alert.MinArea.Value)
+            {
+                return false;
+            }
+
+            // Distance to campus filter
+            if (alert.MaxDistanceKm.HasValue && listing.DistanceToCampusKm > alert.MaxDistanceKm.Value)
+            {
+                return false;
+            }
+
+            // Room type filter (case-insensitive, ignoring "Tất cả")
+            if (!string.IsNullOrWhiteSpace(alert.RoomType) && !string.Equals(alert.RoomType, "Tất cả", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!string.Equals(alert.RoomType.Trim(), listing.RoomType?.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+            }
+
+            // Spatial radius filter (CenterLatitude, CenterLongitude, RadiusKm)
+            if (alert.CenterLatitude.HasValue && alert.CenterLongitude.HasValue && alert.RadiusKm.HasValue && alert.RadiusKm.Value > 0)
+            {
+                var distance = CalculateDistanceKm(
+                    alert.CenterLatitude.Value, alert.CenterLongitude.Value,
+                    listing.Latitude, listing.Longitude);
+
+                if (distance > alert.RadiusKm.Value)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// AC2: Finds all active student alerts that match a newly published room listing.
+        /// Used by the system to trigger notifications and calculate badge updates.
+        /// </summary>
+        public virtual async Task<List<SavedSearchAlert>> FindMatchingAlertsForListingAsync(RoomListing listing)
+        {
+            var matchingAlerts = new List<SavedSearchAlert>();
+            if (listing is null) return matchingAlerts;
+
+            await using var connection = await Database.GetOpenConnectionAsync();
+            await using var cmd = connection.CreateCommand();
+            cmd.CommandText = @"
+                SELECT 
+                    Id, UserId, Name, MinPrice, MaxPrice, MinArea, MaxDistanceKm, RoomType,
+                    CenterLatitude, CenterLongitude, RadiusKm, PolygonJson,
+                    IsEnabled, AlertsSentToday, MaxDailyAlerts, CreatedAt
+                FROM SavedSearchAlert 
+                WHERE IsEnabled = 1 AND AlertsSentToday < MaxDailyAlerts;";
+
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                var alert = MapAlert(reader);
+                if (MatchesListing(alert, listing))
+                {
+                    matchingAlerts.Add(alert);
+                }
+            }
+            return matchingAlerts;
+        }
+
+        /// <summary>
+        /// AC2: Returns the count of active listings matching a specific saved search alert.
+        /// Powers the Alert Badge count displayed on UI items.
+        /// </summary>
+        public virtual async Task<int> GetMatchingListingCountAsync(int alertId)
+        {
+            var alert = await GetByIdAsync(alertId);
+            if (alert is null || !alert.IsEnabled) return 0;
+
+            await using var connection = await Database.GetOpenConnectionAsync();
+            await using var cmd = connection.CreateCommand();
+            cmd.CommandText = @"
+                SELECT 
+                    Id, MonthlyRent, Area, RoomType, DistanceToCampusKm, Latitude, Longitude, Status, IsVerified
+                FROM RoomListing 
+                WHERE Status = @Status AND IsVerified = 1;";
+            cmd.Parameters.AddWithValue("@Status", Constants.ListingStatuses.Available);
+
+            int matchCount = 0;
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                var listing = new RoomListing
+                {
+                    Id = Convert.ToInt32(reader["Id"]),
+                    MonthlyRent = Convert.ToDecimal(reader["MonthlyRent"]),
+                    Area = Convert.ToDouble(reader["Area"]),
+                    RoomType = Convert.ToString(reader["RoomType"]) ?? string.Empty,
+                    DistanceToCampusKm = Convert.ToDouble(reader["DistanceToCampusKm"]),
+                    Latitude = Convert.ToDouble(reader["Latitude"]),
+                    Longitude = Convert.ToDouble(reader["Longitude"]),
+                    Status = Convert.ToString(reader["Status"]) ?? Constants.ListingStatuses.Available,
+                    IsVerified = Convert.ToInt32(reader["IsVerified"]) != 0
+                };
+
+                if (MatchesListing(alert, listing))
+                {
+                    matchCount++;
+                }
+            }
+
+            return matchCount;
+        }
+
+        /// <summary>
+        /// AC2: Returns the total alert badge count for a user across all their active saved searches.
+        /// Powers the top-level notification badge counter.
+        /// </summary>
+        public virtual async Task<int> GetTotalMatchingBadgesForUserAsync(int userId)
+        {
+            var alerts = await ListByUserAsync(userId);
+            var enabledAlerts = alerts.Where(a => a.IsEnabled).ToList();
+            if (enabledAlerts.Count == 0) return 0;
+
+            int totalBadge = 0;
+            foreach (var alert in enabledAlerts)
+            {
+                totalBadge += await GetMatchingListingCountAsync(alert.Id);
+            }
+            return totalBadge;
+        }
+
+        /// <summary>
+        /// Increments the daily sent alert counter for rate limiting (MaxDailyAlerts).
+        /// </summary>
+        public virtual async Task<bool> IncrementAlertsSentCountAsync(int alertId)
+        {
+            await using var connection = await Database.GetOpenConnectionAsync();
+            await using var cmd = connection.CreateCommand();
+            cmd.CommandText = "UPDATE SavedSearchAlert SET AlertsSentToday = AlertsSentToday + 1 WHERE Id = @Id;";
+            cmd.Parameters.AddWithValue("@Id", alertId);
+
+            var rows = await cmd.ExecuteNonQueryAsync();
+            return rows > 0;
+        }
+
+        #endregion
+
+        #region Helper Methods
+
+        /// <summary>
+        /// Calculates great-circle distance between two coordinates in kilometers using Haversine formula.
+        /// </summary>
+        protected static double CalculateDistanceKm(double lat1, double lon1, double lat2, double lon2)
+        {
+            const double earthRadiusKm = 6371.0;
+            var dLat = (lat2 - lat1) * Math.PI / 180.0;
+            var dLon = (lon2 - lon1) * Math.PI / 180.0;
+
+            var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                    Math.Cos(lat1 * Math.PI / 180.0) * Math.Cos(lat2 * Math.PI / 180.0) *
+                    Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+
+            var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+            return earthRadiusKm * c;
+        }
+
         /// <summary>
         /// Maps an SQLite reader row to a <see cref="SavedSearchAlert"/> entity.
         /// </summary>
@@ -210,5 +409,7 @@ namespace RoomToRentRadar.Data
             MaxDailyAlerts = Convert.ToInt32(reader["MaxDailyAlerts"]),
             CreatedAt = Convert.ToString(reader["CreatedAt"]) ?? string.Empty
         };
+
+        #endregion
     }
 }
