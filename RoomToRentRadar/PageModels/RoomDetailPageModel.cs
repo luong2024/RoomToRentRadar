@@ -46,19 +46,24 @@ public partial class RoomDetailPageModel : ObservableObject
     #region State & Visibility Properties
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsContentVisible))]
     public partial bool IsLoading { get; set; } = true;
 
     [ObservableProperty]
     public partial bool IsBusy { get; set; } = false;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsContentVisible))]
     public partial bool HasError { get; set; } = false;
 
     [ObservableProperty]
     public partial string ErrorMessage { get; set; } = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsContentVisible))]
     public partial bool IsNotFound { get; set; } = false;
+
+    public bool IsContentVisible => !IsLoading && !HasError && !IsNotFound;
 
     [ObservableProperty]
     public partial bool IsAvailable { get; set; } = true;

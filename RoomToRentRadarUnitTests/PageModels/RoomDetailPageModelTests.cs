@@ -72,6 +72,7 @@ public class RoomDetailPageModelTests
         Assert.That(_sut.IsLoading, Is.False);
         Assert.That(_sut.HasError, Is.False);
         Assert.That(_sut.IsNotFound, Is.False);
+        Assert.That(_sut.IsContentVisible, Is.True);
         Assert.That(_sut.IsAvailable, Is.True);
         Assert.That(_sut.IsUnavailable, Is.False);
 
@@ -189,6 +190,7 @@ public class RoomDetailPageModelTests
         Assert.That(_sut.IsNotFound, Is.True);
         Assert.That(_sut.HasError, Is.False);
         Assert.That(_sut.IsLoading, Is.False);
+        Assert.That(_sut.IsContentVisible, Is.False);
         Assert.That(_sut.ErrorMessage, Is.EqualTo(AppResources.GetString("RoomDetail_NotFoundMessage")));
     }
 
@@ -206,6 +208,7 @@ public class RoomDetailPageModelTests
         Assert.That(_sut.HasError, Is.True);
         Assert.That(_sut.IsNotFound, Is.False);
         Assert.That(_sut.IsLoading, Is.False);
+        Assert.That(_sut.IsContentVisible, Is.False);
         Assert.That(_sut.ErrorMessage, Does.Contain("Network connection failed"));
     }
 

@@ -58,6 +58,10 @@ namespace RoomToRentRadar
             builder.Services.AddSingleton<PageModels.UiCatalogPageModel>();
             builder.Services.AddTransient<Pages.UiCatalogPage>();
 
+            // Room Detail Screen (US02 / T02.2)
+            builder.Services.AddTransient<PageModels.RoomDetailPageModel>();
+            builder.Services.AddTransient<Pages.RoomDetailPage>();
+
             // Auth Flow Services & Pages
             builder.Services.AddTransient<PageModels.LoginPageModel>();
             builder.Services.AddTransient<Pages.LoginPage>();

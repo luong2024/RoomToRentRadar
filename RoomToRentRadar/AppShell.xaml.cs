@@ -17,6 +17,7 @@ namespace RoomToRentRadar
             // Register modal/push routes
             Routing.RegisterRoute("register", typeof(Pages.RegisterPage));
             Routing.RegisterRoute("roleselection", typeof(Pages.RoleSelectionPage));
+            Routing.RegisterRoute("roomdetail", typeof(Pages.RoomDetailPage));
 
 #if !DEBUG
             // Hide UI Design System Catalog in production Release builds (M5)
