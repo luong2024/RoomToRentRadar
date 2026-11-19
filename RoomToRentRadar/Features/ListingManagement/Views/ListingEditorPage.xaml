@@ -80,7 +80,11 @@
             </cards:SfCardView>
 
             <!-- Step 01: Basic Info -->
-            <cards:SfCardView Padding="18" CornerRadius="22">
+            <Border Padding="18" StrokeThickness="0" StrokeShape="RoundRectangle 22"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+                <Border.Shadow>
+                    <Shadow Brush="{StaticResource InkBrush}" Offset="0,6" Radius="18" Opacity="0.06" />
+                </Border.Shadow>
                 <VerticalStackLayout Spacing="14" IsEnabled="{Binding IsNotBusy}">
                     <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
                         <Border WidthRequest="28" HeightRequest="28" StrokeThickness="0" StrokeShape="RoundRectangle 10"
@@ -148,10 +152,14 @@
                         <Label Text="{Binding RoomTypeError}" Style="{StaticResource FieldError}" />
                     </VerticalStackLayout>
                 </VerticalStackLayout>
-            </cards:SfCardView>
+            </Border>
 
             <!-- Step 02: Location -->
-            <cards:SfCardView Padding="18" CornerRadius="22">
+            <Border Padding="18" StrokeThickness="0" StrokeShape="RoundRectangle 22"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+                <Border.Shadow>
+                    <Shadow Brush="{StaticResource InkBrush}" Offset="0,6" Radius="18" Opacity="0.06" />
+                </Border.Shadow>
                 <VerticalStackLayout Spacing="12">
                     <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
                         <Border WidthRequest="28" HeightRequest="28" StrokeThickness="0" StrokeShape="RoundRectangle 10"
@@ -186,10 +194,14 @@
                         </VerticalStackLayout>
                     </Grid>
                 </VerticalStackLayout>
-            </cards:SfCardView>
+            </Border>
 
             <!-- Step 03: Photos -->
-            <cards:SfCardView Padding="18" CornerRadius="22">
+            <Border Padding="18" StrokeThickness="0" StrokeShape="RoundRectangle 22"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+                <Border.Shadow>
+                    <Shadow Brush="{StaticResource InkBrush}" Offset="0,6" Radius="18" Opacity="0.06" />
+                </Border.Shadow>
                 <VerticalStackLayout Spacing="12">
                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
                         <Border WidthRequest="28" HeightRequest="28" StrokeThickness="0" StrokeShape="RoundRectangle 10"
@@ -211,10 +223,8 @@
                     <VerticalStackLayout BindableLayout.ItemsSource="{Binding ExistingPhotos}" Spacing="8">
                         <BindableLayout.ItemTemplate>
                             <DataTemplate x:DataType="models:ExistingListingPhoto">
-                                <cards:SfCardView Padding="10" CornerRadius="16"
-                                                  Background="{AppThemeBinding Light={StaticResource SoftSurfaceBrush}, Dark={StaticResource SoftSurfaceDarkBrush}}"
-                                                  BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}"
-                                                  BorderWidth="0">
+                                <Border Padding="10" StrokeThickness="0" StrokeShape="RoundRectangle 16"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
                                     <Grid ColumnDefinitions="96,*" ColumnSpacing="12">
                                         <Border StrokeThickness="0" StrokeShape="RoundRectangle 12" HeightRequest="76" WidthRequest="96">
                                             <Image Source="{Binding ThumbnailUrl}" Aspect="AspectFill"
@@ -223,39 +233,45 @@
                                         <Label Grid.Column="1" Text="Ảnh đã lưu trên hệ thống" Style="{StaticResource Caption}"
                                                VerticalOptions="Center" />
                                     </Grid>
-                                </cards:SfCardView>
+                                </Border>
                             </DataTemplate>
                         </BindableLayout.ItemTemplate>
                     </VerticalStackLayout>
 
-                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding SelectedPhotos}" Spacing="8">
+                    <FlexLayout BindableLayout.ItemsSource="{Binding SelectedPhotos}" Wrap="Wrap" Direction="Row"
+                                AlignItems="Start" AutomationId="SelectedPhotoGrid">
                         <BindableLayout.ItemTemplate>
                             <DataTemplate x:DataType="models:SelectedListingPhoto">
-                                <cards:SfCardView Padding="10" CornerRadius="16"
-                                                  Background="{AppThemeBinding Light={StaticResource SoftSurfaceBrush}, Dark={StaticResource SoftSurfaceDarkBrush}}"
-                                                  BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}"
-                                                  BorderWidth="0">
-                                    <Grid ColumnDefinitions="96,*,Auto" ColumnSpacing="10">
-                                        <Border StrokeThickness="0" StrokeShape="RoundRectangle 12" HeightRequest="76" WidthRequest="96">
+                                <VerticalStackLayout WidthRequest="104" Margin="0,0,10,10" Spacing="4">
+                                    <Grid HeightRequest="84">
+                                        <Border StrokeThickness="0" StrokeShape="RoundRectangle 12"
+                                                BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
                                             <Image Source="{Binding Path}" Aspect="AspectFill"
                                                    SemanticProperties.Description="Ảnh mới được chọn" />
                                         </Border>
-                                        <Label Grid.Column="1" Text="{Binding FileName}" FontSize="13" VerticalOptions="Center"
-                                               LineBreakMode="TailTruncation" />
-                                        <buttons:SfButton Grid.Column="2" Text="Bỏ" Command="{Binding RemoveCommand}"
-                                                          Style="{StaticResource DangerSoftSfButton}" FontSize="11"
-                                                          Padding="12,6" MinimumHeightRequest="36" VerticalOptions="Center"
+                                        <buttons:SfButton Text="×" Command="{Binding RemoveCommand}"
+                                                          Style="{StaticResource DangerSoftSfButton}"
+                                                          WidthRequest="28" HeightRequest="28"
+                                                          MinimumWidthRequest="28" MinimumHeightRequest="28"
+                                                          Padding="0" FontSize="14"
+                                                          HorizontalOptions="End" VerticalOptions="Start" Margin="0,4,4,0"
                                                           SemanticProperties.Description="Bỏ ảnh đã chọn" />
                                     </Grid>
-                                </cards:SfCardView>
+                                    <Label Text="{Binding FileName}" FontSize="11" LineBreakMode="TailTruncation"
+                                           HorizontalTextAlignment="Center" />
+                                </VerticalStackLayout>
                             </DataTemplate>
                         </BindableLayout.ItemTemplate>
-                    </VerticalStackLayout>
+                    </FlexLayout>
                 </VerticalStackLayout>
-            </cards:SfCardView>
+            </Border>
 
             <!-- Step 04: Optional Description -->
-            <cards:SfCardView Padding="14,12" CornerRadius="22">
+            <Border Padding="14,12" StrokeThickness="0" StrokeShape="RoundRectangle 22"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+                <Border.Shadow>
+                    <Shadow Brush="{StaticResource InkBrush}" Offset="0,6" Radius="18" Opacity="0.06" />
+                </Border.Shadow>
                 <expander:SfExpander IsExpanded="True">
                     <expander:SfExpander.Header>
                         <HorizontalStackLayout Spacing="10" Padding="4,6" VerticalOptions="Center">
@@ -278,7 +294,90 @@
                         </VerticalStackLayout>
                     </expander:SfExpander.Content>
                 </expander:SfExpander>
-            </cards:SfCardView>
+            </Border>
+
+            <!-- Step 05: House Rules (edit mode only) -->
+            <Border Padding="18" StrokeThickness="0" StrokeShape="RoundRectangle 22"
+                    IsVisible="{Binding IsEditMode}"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}"
+                    AutomationId="HouseRulesEditor">
+                <Border.Shadow>
+                    <Shadow Brush="{StaticResource InkBrush}" Offset="0,6" Radius="18" Opacity="0.06" />
+                </Border.Shadow>
+                <VerticalStackLayout Spacing="14" IsEnabled="{Binding IsNotBusy}">
+                    <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+                        <Border WidthRequest="28" HeightRequest="28" StrokeThickness="0" StrokeShape="RoundRectangle 10"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}">
+                            <Label Text="05" FontSize="11" FontFamily="OpenSansSemibold"
+                                   TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}"
+                                   HorizontalTextAlignment="Center" VerticalTextAlignment="Center" />
+                        </Border>
+                        <Label Text="Nội quy tòa nhà" Style="{StaticResource SectionTitle}" FontSize="16" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+
+                    <Label Text="{Binding HouseRulesVersionText}" AutomationId="HouseRulesVersion"
+                           Style="{StaticResource HelperLabel}" />
+                    <Label Text="Nội quy hiển thị cho khách xem tin ngay sau khi lưu."
+                           Style="{StaticResource HelperLabel}" />
+
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Giờ yên tĩnh *" Style="{StaticResource SectionLabel}" FontSize="12.5" />
+                        <Border Padding="10,4" HeightRequest="96" StrokeThickness="1" StrokeShape="RoundRectangle 12"
+                                Stroke="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+                            <Editor Text="{Binding QuietHoursField.Text}"
+                                    MaxLength="300" Style="{StaticResource FormEditor}"
+                                    AutomationId="HouseRulesQuietHours"
+                                    SemanticProperties.Description="Giờ yên tĩnh của tòa nhà, bắt buộc" />
+                        </Border>
+                        <Label Text="{Binding QuietHoursField.Error}" Style="{StaticResource FieldError}" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Khách đến thăm *" Style="{StaticResource SectionLabel}" FontSize="12.5" />
+                        <Border Padding="10,4" HeightRequest="96" StrokeThickness="1" StrokeShape="RoundRectangle 12"
+                                Stroke="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+                            <Editor Text="{Binding GuestPolicyField.Text}"
+                                    MaxLength="300" Style="{StaticResource FormEditor}"
+                                    AutomationId="HouseRulesGuestPolicy"
+                                    SemanticProperties.Description="Quy định khách đến thăm, bắt buộc" />
+                        </Border>
+                        <Label Text="{Binding GuestPolicyField.Error}" Style="{StaticResource FieldError}" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Nấu ăn *" Style="{StaticResource SectionLabel}" FontSize="12.5" />
+                        <Border Padding="10,4" HeightRequest="96" StrokeThickness="1" StrokeShape="RoundRectangle 12"
+                                Stroke="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+                            <Editor Text="{Binding CookingRulesField.Text}"
+                                    MaxLength="300" Style="{StaticResource FormEditor}"
+                                    AutomationId="HouseRulesCooking"
+                                    SemanticProperties.Description="Quy định nấu ăn, bắt buộc" />
+                        </Border>
+                        <Label Text="{Binding CookingRulesField.Error}" Style="{StaticResource FieldError}" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Gửi xe *" Style="{StaticResource SectionLabel}" FontSize="12.5" />
+                        <Border Padding="10,4" HeightRequest="96" StrokeThickness="1" StrokeShape="RoundRectangle 12"
+                                Stroke="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+                            <Editor Text="{Binding ParkingRulesField.Text}"
+                                    MaxLength="300" Style="{StaticResource FormEditor}"
+                                    AutomationId="HouseRulesParking"
+                                    SemanticProperties.Description="Quy định gửi xe, bắt buộc" />
+                        </Border>
+                        <Label Text="{Binding ParkingRulesField.Error}" Style="{StaticResource FieldError}" />
+                    </VerticalStackLayout>
+
+                    <buttons:SfButton Text="Lưu nội quy" Command="{Binding SaveHouseRulesCommand}"
+                                      HorizontalOptions="Start" Style="{StaticResource SoftSfButton}"
+                                      AutomationId="HouseRulesSave"
+                                      SemanticProperties.Description="Lưu nội quy và tạo phiên bản mới" />
+                </VerticalStackLayout>
+            </Border>
 
         </VerticalStackLayout>
     </ScrollView>

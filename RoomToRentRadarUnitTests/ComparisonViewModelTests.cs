@@ -307,6 +307,7 @@ public class ComparisonViewModelTests
             new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc),
             amenities,
             Array.Empty<string>(),
+            null,
             "Chủ trọ");
 
     private static TravelEstimatesFetchResult Found(TravelEstimateDto estimate)

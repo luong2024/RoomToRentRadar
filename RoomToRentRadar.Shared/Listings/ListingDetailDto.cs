@@ -17,4 +17,5 @@ public sealed record ListingDetailDto(
     DateTime UpdatedAt,
     IReadOnlyList<AmenityCode> Amenities,
     IReadOnlyList<string> Rules,
+    HouseRulesDto? HouseRules,
     string LandlordName);

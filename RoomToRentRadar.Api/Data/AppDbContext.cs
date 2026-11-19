@@ -9,6 +9,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<ListingPhoto> ListingPhotos => Set<ListingPhoto>();
     public DbSet<ListingAmenity> ListingAmenities => Set<ListingAmenity>();
     public DbSet<ListingRule> ListingRules => Set<ListingRule>();
+    public DbSet<ListingHouseRules> ListingHouseRules => Set<ListingHouseRules>();
+    public DbSet<ListingHouseRuleVersion> ListingHouseRuleVersions => Set<ListingHouseRuleVersion>();
     public DbSet<User> Users => Set<User>();
     public DbSet<AuthSession> AuthSessions => Set<AuthSession>();
     public DbSet<SavedSearch> SavedSearches => Set<SavedSearch>();

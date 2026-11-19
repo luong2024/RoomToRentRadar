@@ -88,6 +88,8 @@ public sealed class ListingsApiFactory : WebApplicationFactory<Program>
         await dbContext.SavedSearches.ExecuteDeleteAsync();
         await dbContext.AuthSessions.ExecuteDeleteAsync();
         await dbContext.Users.ExecuteDeleteAsync();
+        await dbContext.ListingHouseRuleVersions.ExecuteDeleteAsync();
+        await dbContext.ListingHouseRules.ExecuteDeleteAsync();
         await dbContext.ListingAmenities.ExecuteDeleteAsync();
         await dbContext.ListingRules.ExecuteDeleteAsync();
         await dbContext.ListingPhotos.ExecuteDeleteAsync();

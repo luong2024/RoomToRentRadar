@@ -25,6 +25,10 @@ public partial class ListingEditorViewModel(IListingManagementClient client, Aut
     public ListingFormField LatitudeField { get; } = new();
     public ListingFormField LongitudeField { get; } = new();
     public ListingFormField DescriptionField { get; } = new();
+    public ListingFormField QuietHoursField { get; } = new();
+    public ListingFormField GuestPolicyField { get; } = new();
+    public ListingFormField CookingRulesField { get; } = new();
+    public ListingFormField ParkingRulesField { get; } = new();
     public ObservableCollection<SelectedListingPhoto> SelectedPhotos { get; } = [];
     public ObservableCollection<ExistingListingPhoto> ExistingPhotos { get; } = [];
     public IReadOnlyList<RoomTypeOption> RoomTypes { get; } =
@@ -42,15 +46,29 @@ public partial class ListingEditorViewModel(IListingManagementClient client, Aut
     [NotifyCanExecuteChangedFor(nameof(SaveCommand), nameof(PickPhotosCommand), nameof(UnpublishCommand))]
     public partial bool IsBusy { get; set; }
     [ObservableProperty] public partial bool CanUnpublish { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HouseRulesVersionText))]
+    public partial long? HouseRulesVersion { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HouseRulesVersionText))]
+    public partial DateTime? HouseRulesUpdatedAt { get; set; }
     public bool IsNotBusy => !IsBusy;
+    public bool IsEditMode => _listingId is not null;
     public string PageTitle => _listingId is null ? "Đăng tin cho thuê" : "Chỉnh sửa tin";
     public string PhotoCountText => $"{ExistingPhotos.Count + SelectedPhotos.Count} ảnh · cần ít nhất 3 ảnh";
+    public const int HouseRulesMaxLength = 300;
+    public string HouseRulesVersionText => HouseRulesVersion is { } version
+        ? HouseRulesUpdatedAt is { } updatedAt
+            ? $"Phiên bản {version} · cập nhật {updatedAt.ToLocalTime():dd/MM/yyyy HH:mm}"
+            : $"Phiên bản {version}"
+        : "Chưa thiết lập nội quy — lần lưu đầu tiên sẽ tạo phiên bản 1.";
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
         if (query.TryGetValue("id", out var value) && Guid.TryParse(value?.ToString(), out var id))
             _listingId = id;
         OnPropertyChanged(nameof(PageTitle));
+        OnPropertyChanged(nameof(IsEditMode));
     }
 
     [RelayCommand]
@@ -77,6 +95,7 @@ public partial class ListingEditorViewModel(IListingManagementClient client, Aut
             DescriptionField.Text = listing.Description;
             SelectedRoomType = RoomTypes.First(option => option.Value == listing.RoomType);
             ApplySavedListing(listing);
+            ApplyHouseRules(listing.HouseRules);
             _loaded = true;
             Message = string.Empty;
         }
@@ -183,6 +202,7 @@ public partial class ListingEditorViewModel(IListingManagementClient client, Aut
                 ? "Đã lưu tin. Tin đang chờ duyệt trước khi hiển thị công khai."
                 : "Đã lưu thay đổi.";
             OnPropertyChanged(nameof(PageTitle));
+            OnPropertyChanged(nameof(IsEditMode));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
         catch (Exception ex) { HandleFailure(ex); }
@@ -204,6 +224,85 @@ public partial class ListingEditorViewModel(IListingManagementClient client, Aut
         catch (Exception ex) { HandleFailure(ex); }
         finally { FinishOperation(); }
     }
+
+    [RelayCommand(CanExecute = nameof(IsNotBusy), AllowConcurrentExecutions = false)]
+    private async Task SaveHouseRulesAsync(CancellationToken cancellationToken)
+    {
+        if (_released || _listingId is not { } listingId) return;
+        Message = string.Empty;
+        if (!_loaded)
+        {
+            Message = "Tải lại thông tin tin đăng trước khi lưu nội quy.";
+            return;
+        }
+        ListingFormField[] fields = [QuietHoursField, GuestPolicyField, CookingRulesField, ParkingRulesField];
+        foreach (var field in fields) ValidateHouseRuleField(field);
+        if (fields.Any(field => field.Error.Length > 0))
+        {
+            Message = "Kiểm tra các trường nội quy được đánh dấu.";
+            return;
+        }
+
+        IsBusy = true;
+        try
+        {
+            IsAuthenticated = await auth.IsSignedInAsync(cancellationToken);
+            if (!IsAuthenticated) { _loaded = false; Message = "Đăng nhập để lưu nội quy."; return; }
+            var saved = await client.UpdateHouseRulesAsync(listingId, new UpdateHouseRulesRequest
+            {
+                QuietHours = QuietHoursField.Text.Trim(),
+                GuestPolicy = GuestPolicyField.Text.Trim(),
+                CookingRules = CookingRulesField.Text.Trim(),
+                ParkingRules = ParkingRulesField.Text.Trim()
+            }, cancellationToken);
+            ApplyHouseRules(saved);
+            Message = $"Đã lưu nội quy — phiên bản {saved.Version}.";
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
+        catch (Exception ex) { HandleHouseRulesFailure(ex); }
+        finally { FinishOperation(); }
+    }
+
+    private static void ValidateHouseRuleField(ListingFormField field)
+    {
+        var length = field.Text.Trim().Length;
+        field.Error = length == 0
+            ? "Vui lòng nhập thông tin này."
+            : length > HouseRulesMaxLength
+                ? $"Tối đa {HouseRulesMaxLength} ký tự."
+                : string.Empty;
+    }
+
+    private void ApplyHouseRules(HouseRulesDto? rules)
+    {
+        HouseRulesVersion = rules?.Version;
+        HouseRulesUpdatedAt = rules?.UpdatedAt;
+        QuietHoursField.Text = rules?.QuietHours ?? string.Empty;
+        GuestPolicyField.Text = rules?.GuestPolicy ?? string.Empty;
+        CookingRulesField.Text = rules?.CookingRules ?? string.Empty;
+        ParkingRulesField.Text = rules?.ParkingRules ?? string.Empty;
+        QuietHoursField.Error = string.Empty;
+        GuestPolicyField.Error = string.Empty;
+        CookingRulesField.Error = string.Empty;
+        ParkingRulesField.Error = string.Empty;
+    }
+
+    private void HandleHouseRulesFailure(Exception exception)
+    {
+        if (exception is ListingManagementException problem)
+        {
+            QuietHoursField.Error = ReadError(problem, "quiet_hours");
+            GuestPolicyField.Error = ReadError(problem, "guest_policy");
+            CookingRulesField.Error = ReadError(problem, "cooking_rules");
+            ParkingRulesField.Error = ReadError(problem, "parking_rules");
+            if (problem.StatusCode == HttpStatusCode.Unauthorized) { IsAuthenticated = false; _loaded = false; }
+            Message = problem.Message;
+        }
+        else Message = "Không thể kết nối. Nội quy vẫn được giữ; hãy thử lại.";
+    }
+
+    private static string ReadError(ListingManagementException problem, string key)
+        => problem.Errors.TryGetValue(key, out var messages) ? string.Join(" ", messages) : string.Empty;
 
     private void ApplySavedListing(ManagedListingDto listing)
     {
@@ -250,6 +349,7 @@ public partial class ListingEditorViewModel(IListingManagementClient client, Aut
         _released = true;
         LoadCommand.Cancel();
         SaveCommand.Cancel();
+        SaveHouseRulesCommand.Cancel();
         UnpublishCommand.Cancel();
         if (!IsBusy) ClearSelectedPhotos();
     }

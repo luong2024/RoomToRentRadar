@@ -212,6 +212,68 @@ public class ListingManagementClientTests
         Assert.That(exception.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
+    [Test]
+    public async Task UpdateHouseRulesAsync_PutsCamelCaseJsonAndReadsVersionedRules()
+    {
+        var id = Guid.NewGuid();
+        string? body = null;
+        var handler = new StubHandler(async request =>
+        {
+            Assert.That(request.Method, Is.EqualTo(HttpMethod.Put));
+            Assert.That(request.RequestUri!.AbsolutePath, Is.EqualTo($"/api/v1/listings/{id}/house-rules"));
+            body = await request.Content!.ReadAsStringAsync();
+            return JsonResponse(new HouseRulesDto(
+                "22:00 - 06:00",
+                "Guests leave before 22:00",
+                "Cook in the shared kitchen",
+                "Park on the ground floor",
+                4,
+                new DateTime(2026, 11, 19, 8, 30, 0, DateTimeKind.Utc)));
+        });
+
+        var result = await Client(handler).UpdateHouseRulesAsync(id, new UpdateHouseRulesRequest
+        {
+            QuietHours = "22:00 - 06:00",
+            GuestPolicy = "Guests leave before 22:00",
+            CookingRules = "Cook in the shared kitchen",
+            ParkingRules = "Park on the ground floor"
+        });
+
+        Assert.Multiple(() =>
+        {
+            using var document = JsonDocument.Parse(body!);
+            var root = document.RootElement;
+            Assert.That(root.GetProperty("quietHours").GetString(), Is.EqualTo("22:00 - 06:00"));
+            Assert.That(root.GetProperty("guestPolicy").GetString(), Is.EqualTo("Guests leave before 22:00"));
+            Assert.That(root.GetProperty("cookingRules").GetString(), Is.EqualTo("Cook in the shared kitchen"));
+            Assert.That(root.GetProperty("parkingRules").GetString(), Is.EqualTo("Park on the ground floor"));
+            Assert.That(result.Version, Is.EqualTo(4));
+            Assert.That(result.ParkingRules, Is.EqualTo("Park on the ground floor"));
+        });
+    }
+
+    [Test]
+    public void UpdateHouseRulesAsync_ValidationProblem_PreservesFieldErrors()
+    {
+        var handler = new StubHandler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
+        {
+            Content = new StringContent("""
+                {"title":"Invalid house rules","detail":"Correct the highlighted fields.","code":"invalid_house_rules",
+                 "errors":{"quiet_hours":["This field is required."],"guest_policy":["This field is required."]}}
+                """, Encoding.UTF8, "application/problem+json")
+        }));
+
+        var exception = Assert.ThrowsAsync<ListingManagementException>(() => Client(handler).UpdateHouseRulesAsync(
+            Guid.NewGuid(), new UpdateHouseRulesRequest()))!;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(exception.Errors["quiet_hours"], Is.EqualTo(new[] { "This field is required." }));
+            Assert.That(exception.Errors["guest_policy"], Is.EqualTo(new[] { "This field is required." }));
+        });
+    }
+
     private static ListingFormSubmission Form(IReadOnlyList<ListingPhotoUpload>? photos = null)
         => new(" Room ", " 10 Campus Road ", 2_500_000, 0, 20.5, RoomType.Studio, 10.75, 106.7,
             photos ?? [], " Near campus ");

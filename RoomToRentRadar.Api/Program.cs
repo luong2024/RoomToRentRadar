@@ -138,6 +138,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddScoped<ListingsQueryService>();
 builder.Services.AddScoped<ListingCandidatePageBuilder>();
 builder.Services.AddScoped<ListingManagementService>();
+builder.Services.AddScoped<HouseRulesService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services
     .AddAuthentication(BearerTokenAuthenticationHandler.SchemeName)

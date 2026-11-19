@@ -18,4 +18,5 @@ public sealed record ManagedListingDto(
     IReadOnlyList<AmenityCode> Amenities,
     IReadOnlyList<string> Rules,
     string LandlordName,
-    IReadOnlyList<ListingPhotoDto> Photos);
+    IReadOnlyList<ListingPhotoDto> Photos,
+    HouseRulesDto? HouseRules = null);

@@ -43,6 +43,17 @@ public sealed class ListingManagementClient(HttpClient httpClient) : IListingMan
         return await SendAsync<ManagedListingDto>(request, cancellationToken);
     }
 
+    public async Task<HouseRulesDto> UpdateHouseRulesAsync(
+        Guid id, UpdateHouseRulesRequest rules, CancellationToken cancellationToken = default)
+    {
+        using var content = JsonContent.Create(rules, options: ApiJson.Options);
+        using var request = new HttpRequestMessage(HttpMethod.Put, $"api/v1/listings/{id}/house-rules")
+        {
+            Content = content
+        };
+        return await SendAsync<HouseRulesDto>(request, cancellationToken);
+    }
+
     private async Task<ManagedListingDto> WriteAsync(
         HttpMethod method, string path, ListingFormSubmission form, CancellationToken cancellationToken)
     {

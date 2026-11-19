@@ -102,6 +102,7 @@ public sealed class ListingManagementService(
             .Include(x => x.Photos)
             .Include(x => x.Amenities)
             .Include(x => x.Rules)
+            .Include(x => x.HouseRules)
             .SingleOrDefaultAsync(x => x.Id == listingId, cancellationToken);
 
         if (listing is null || listing.OwnerId != ownerId)
@@ -170,6 +171,7 @@ public sealed class ListingManagementService(
             .Include(x => x.Photos)
             .Include(x => x.Amenities)
             .Include(x => x.Rules)
+            .Include(x => x.HouseRules)
             .SingleOrDefaultAsync(x => x.Id == listingId, cancellationToken);
 
         if (listing is null || listing.OwnerId != ownerId)
@@ -205,6 +207,7 @@ public sealed class ListingManagementService(
             .Include(x => x.Photos)
             .Include(x => x.Amenities)
             .Include(x => x.Rules)
+            .Include(x => x.HouseRules)
             .SingleOrDefaultAsync(
                 x => x.Id == listingId && x.OwnerId == ownerId,
                 cancellationToken);
@@ -277,5 +280,14 @@ public sealed class ListingManagementService(
                 photo.Alt,
                 photo.SortOrder,
                 photo.IsCover))
-            .ToList());
+            .ToList(),
+        listing.HouseRules is null
+            ? null
+            : new HouseRulesDto(
+                listing.HouseRules.QuietHours,
+                listing.HouseRules.GuestPolicy,
+                listing.HouseRules.CookingRules,
+                listing.HouseRules.ParkingRules,
+                listing.HouseRules.Version,
+                listing.HouseRules.UpdatedAt));
 }
