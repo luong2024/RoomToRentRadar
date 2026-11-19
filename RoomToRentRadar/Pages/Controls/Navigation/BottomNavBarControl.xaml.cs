@@ -1,5 +1,9 @@
+using System.Collections.ObjectModel;
 using System.Windows.Input;
+using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.Extensions.DependencyInjection;
 using RoomToRentRadar.Resources.Strings;
+using RoomToRentRadar.Services.Navigation.Core;
 
 namespace RoomToRentRadar.Pages.Controls.Navigation;
 
@@ -10,13 +14,17 @@ public partial class BottomNavBarControl : ContentView
     private static readonly Color DefaultInactiveLightColor = Color.FromArgb("#94A3B8");
     private static readonly Color DefaultInactiveDarkColor = Color.FromArgb("#94A3B8");
 
-    public static readonly BindableProperty ActiveTabProperty =
+    private readonly IAppSession? _appSession;
+    private readonly INavigationService? _navigation;
+    private IReadOnlyList<TabDescriptor> _currentDescriptors = Array.Empty<TabDescriptor>();
+
+    public static readonly BindableProperty ActiveRouteProperty =
         BindableProperty.Create(
-            nameof(ActiveTab),
-            typeof(BottomNavTab),
+            nameof(ActiveRoute),
+            typeof(string),
             typeof(BottomNavBarControl),
-            BottomNavTab.Explore,
-            propertyChanged: OnActiveTabChanged);
+            AppRoutes.Explore,
+            propertyChanged: OnActiveRouteChanged);
 
     public static readonly BindableProperty UnreadMessagesCountProperty =
         BindableProperty.Create(
@@ -26,10 +34,10 @@ public partial class BottomNavBarControl : ContentView
             0,
             propertyChanged: OnUnreadMessagesCountChanged);
 
-    public BottomNavTab ActiveTab
+    public string ActiveRoute
     {
-        get => (BottomNavTab)GetValue(ActiveTabProperty);
-        set => SetValue(ActiveTabProperty, value);
+        get => (string)GetValue(ActiveRouteProperty);
+        set => SetValue(ActiveRouteProperty, value);
     }
 
     public int UnreadMessagesCount
@@ -38,50 +46,32 @@ public partial class BottomNavBarControl : ContentView
         set => SetValue(UnreadMessagesCountProperty, value);
     }
 
-    public bool IsExploreSelected => ActiveTab == BottomNavTab.Explore;
-    public bool IsMapSelected => ActiveTab == BottomNavTab.Map;
-    public bool IsSavedSelected => ActiveTab == BottomNavTab.Saved;
-    public bool IsMessagesSelected => ActiveTab == BottomNavTab.Messages;
-    public bool IsAccountSelected => ActiveTab == BottomNavTab.Account;
-
-    public bool HasUnreadMessages => UnreadMessagesCount > 0;
-
-    public Color ExploreColor => IsExploreSelected ? GetActiveColor() : GetInactiveColor();
-    public Color MapColor => IsMapSelected ? GetActiveColor() : GetInactiveColor();
-    public Color SavedColor => IsSavedSelected ? GetActiveColor() : GetInactiveColor();
-    public Color MessagesColor => IsMessagesSelected ? GetActiveColor() : GetInactiveColor();
-    public Color AccountColor => IsAccountSelected ? GetActiveColor() : GetInactiveColor();
-
-    public FontAttributes ExploreFontAttributes => IsExploreSelected ? FontAttributes.Bold : FontAttributes.None;
-    public FontAttributes MapFontAttributes => IsMapSelected ? FontAttributes.Bold : FontAttributes.None;
-    public FontAttributes SavedFontAttributes => IsSavedSelected ? FontAttributes.Bold : FontAttributes.None;
-    public FontAttributes MessagesFontAttributes => IsMessagesSelected ? FontAttributes.Bold : FontAttributes.None;
-    public FontAttributes AccountFontAttributes => IsAccountSelected ? FontAttributes.Bold : FontAttributes.None;
-
-    public string NavExploreText => AppResources.GetString("Nav_Explore");
-    public string NavMapText => AppResources.GetString("Nav_Map");
-    public string NavSavedText => AppResources.GetString("Nav_Saved");
-    public string NavMessagesText => AppResources.GetString("Nav_Messages");
-    public string NavAccountText => AppResources.GetString("Nav_Account");
-
-    public string NavHintExploreText => AppResources.GetString("Nav_Hint_Explore");
-    public string NavHintMapText => AppResources.GetString("Nav_Hint_Map");
-    public string NavHintSavedText => AppResources.GetString("Nav_Hint_Saved");
-    public string NavHintMessagesText => AppResources.GetString("Nav_Hint_Messages");
-    public string NavHintAccountText => AppResources.GetString("Nav_Hint_Account");
+    public ObservableCollection<BottomNavItem> Tabs { get; } = new();
 
     public ICommand SelectTabCommand { get; }
 
     public BottomNavBarControl()
     {
-        SelectTabCommand = new Command<BottomNavTab>(async tab => await NavigateToTabAsync(tab));
+        SelectTabCommand = new Command<string>(async route => await NavigateToTabAsync(route));
         InitializeComponent();
+
+        // The control lives in XAML without ctor injection; resolve services from platform DI (T00.15).
+        var services = IPlatformApplication.Current?.Services;
+        _appSession = services?.GetService<IAppSession>();
+        _navigation = services?.GetService<INavigationService>();
+
+        RebuildTabs();
 
         LocalizedStrings.Instance.PropertyChanged += OnLocalizedStringsPropertyChanged;
 
         if (Microsoft.Maui.Controls.Application.Current != null)
         {
             Microsoft.Maui.Controls.Application.Current.RequestedThemeChanged += OnRequestedThemeChanged;
+        }
+
+        if (_appSession != null)
+        {
+            _appSession.RoleChanged += OnRoleChanged;
         }
 
         Unloaded += OnControlUnloaded;
@@ -95,20 +85,15 @@ public partial class BottomNavBarControl : ContentView
         {
             Microsoft.Maui.Controls.Application.Current.RequestedThemeChanged -= OnRequestedThemeChanged;
         }
+        if (_appSession != null)
+        {
+            _appSession.RoleChanged -= OnRoleChanged;
+        }
     }
 
     private void OnLocalizedStringsPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        OnPropertyChanged(nameof(NavExploreText));
-        OnPropertyChanged(nameof(NavMapText));
-        OnPropertyChanged(nameof(NavSavedText));
-        OnPropertyChanged(nameof(NavMessagesText));
-        OnPropertyChanged(nameof(NavAccountText));
-        OnPropertyChanged(nameof(NavHintExploreText));
-        OnPropertyChanged(nameof(NavHintMapText));
-        OnPropertyChanged(nameof(NavHintSavedText));
-        OnPropertyChanged(nameof(NavHintMessagesText));
-        OnPropertyChanged(nameof(NavHintAccountText));
+        RefreshTabStates();
     }
 
     private void OnRequestedThemeChanged(object? sender, AppThemeChangedEventArgs e)
@@ -116,7 +101,13 @@ public partial class BottomNavBarControl : ContentView
         RefreshTabStates();
     }
 
-    private static void OnActiveTabChanged(BindableObject bindable, object oldValue, object newValue)
+    private void OnRoleChanged(object? sender, EventArgs e)
+    {
+        // RoleChanged can fire from the thread pool; rebuild on the UI thread (T00.15 AC-2).
+        MainThread.BeginInvokeOnMainThread(RebuildTabs);
+    }
+
+    private static void OnActiveRouteChanged(BindableObject bindable, object oldValue, object newValue)
     {
         if (bindable is BottomNavBarControl control)
         {
@@ -128,53 +119,52 @@ public partial class BottomNavBarControl : ContentView
     {
         if (bindable is BottomNavBarControl control)
         {
-            control.OnPropertyChanged(nameof(HasUnreadMessages));
-            control.OnPropertyChanged(nameof(UnreadMessagesCount));
+            control.RefreshTabStates();
         }
     }
 
-    public void RefreshTabStates()
+    private void RebuildTabs()
     {
-        OnPropertyChanged(nameof(IsExploreSelected));
-        OnPropertyChanged(nameof(IsMapSelected));
-        OnPropertyChanged(nameof(IsSavedSelected));
-        OnPropertyChanged(nameof(IsMessagesSelected));
-        OnPropertyChanged(nameof(IsAccountSelected));
+        var descriptors = RoleTabsProvider.GetTabs(_appSession?.CurrentRole);
 
-        OnPropertyChanged(nameof(ExploreColor));
-        OnPropertyChanged(nameof(MapColor));
-        OnPropertyChanged(nameof(SavedColor));
-        OnPropertyChanged(nameof(MessagesColor));
-        OnPropertyChanged(nameof(AccountColor));
-
-        OnPropertyChanged(nameof(ExploreFontAttributes));
-        OnPropertyChanged(nameof(MapFontAttributes));
-        OnPropertyChanged(nameof(SavedFontAttributes));
-        OnPropertyChanged(nameof(MessagesFontAttributes));
-        OnPropertyChanged(nameof(AccountFontAttributes));
-    }
-
-    private async Task NavigateToTabAsync(BottomNavTab tab)
-    {
-        if (tab == ActiveTab)
+        // Rebuild only when the tab set actually changes, to avoid flicker on unrelated role events.
+        if (descriptors.Select(d => d.Route).SequenceEqual(_currentDescriptors.Select(d => d.Route)))
         {
             return;
         }
 
-        string route = tab switch
+        _currentDescriptors = descriptors;
+        Tabs.Clear();
+        foreach (var descriptor in descriptors)
         {
-            BottomNavTab.Explore => "//main",
-            BottomNavTab.Map => "//map",
-            BottomNavTab.Saved => "//saved",
-            BottomNavTab.Messages => "//messages",
-            BottomNavTab.Account => "//account",
-            _ => "//main"
-        };
-
-        if (Shell.Current != null)
-        {
-            await Shell.Current.GoToAsync(route);
+            Tabs.Add(new BottomNavItem(descriptor, SelectTabCommand));
         }
+
+        RefreshTabStates();
+    }
+
+    public void RefreshTabStates()
+    {
+        foreach (var item in Tabs)
+        {
+            item.IsSelected = item.Route == ActiveRoute;
+            item.IconColor = item.IsSelected ? GetActiveColor() : GetInactiveColor();
+            item.LabelFontAttributes = item.IsSelected ? FontAttributes.Bold : FontAttributes.None;
+            item.Title = AppResources.GetString(item.Descriptor.TitleKey);
+            item.Hint = AppResources.GetString(item.Descriptor.HintKey);
+            item.HasBadge = item.Route == AppRoutes.Messages && UnreadMessagesCount > 0;
+            item.BadgeCount = UnreadMessagesCount;
+        }
+    }
+
+    private async Task NavigateToTabAsync(string? route)
+    {
+        if (string.IsNullOrEmpty(route) || route == ActiveRoute || _navigation == null)
+        {
+            return;
+        }
+
+        await _navigation.GoToTabAsync(route);
     }
 
     private static Color GetActiveColor()
@@ -202,4 +192,52 @@ public partial class BottomNavBarControl : ContentView
 
         return isDark ? DefaultInactiveDarkColor : DefaultInactiveLightColor;
     }
+}
+
+/// <summary>One rendered bottom tab; the control pushes selection/theme/language state into it.</summary>
+public partial class BottomNavItem : ObservableObject
+{
+    public BottomNavItem(TabDescriptor descriptor, ICommand selectCommand)
+    {
+        Descriptor = descriptor;
+        SelectCommand = selectCommand;
+        Glyph = GetGlyph(descriptor.Icon);
+    }
+
+    public TabDescriptor Descriptor { get; }
+    public string Route => Descriptor.Route;
+    public string Glyph { get; }
+    public ICommand SelectCommand { get; }
+
+    [ObservableProperty]
+    public partial bool IsSelected { get; set; }
+
+    [ObservableProperty]
+    public partial string Title { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string Hint { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial Color IconColor { get; set; } = Colors.Transparent;
+
+    [ObservableProperty]
+    public partial FontAttributes LabelFontAttributes { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasBadge { get; set; }
+
+    [ObservableProperty]
+    public partial int BadgeCount { get; set; }
+
+    private static string GetGlyph(TabIcon icon) => icon switch
+    {
+        TabIcon.Map => Fonts.FluentUI.map_24_regular,
+        TabIcon.Saved => Fonts.FluentUI.heart_24_regular,
+        TabIcon.Listings => Fonts.FluentUI.building_24_regular,
+        TabIcon.Messages => Fonts.FluentUI.chat_24_regular,
+        TabIcon.Moderation => Fonts.FluentUI.shield_24_regular,
+        TabIcon.Account => Fonts.FluentUI.person_24_regular,
+        _ => Fonts.FluentUI.compass_northwest_24_regular
+    };
 }

@@ -84,6 +84,18 @@
   <data name="Nav_Hint_Account" xml:space="preserve">
     <value>Xem hồ sơ tài khoản và cài đặt ứng dụng</value>
   </data>
+  <data name="Nav_Listings" xml:space="preserve">
+    <value>Tin đăng của tôi</value>
+  </data>
+  <data name="Nav_Hint_Listings" xml:space="preserve">
+    <value>Quản lý tin đăng phòng trọ của bạn</value>
+  </data>
+  <data name="Nav_Moderation" xml:space="preserve">
+    <value>Kiểm duyệt</value>
+  </data>
+  <data name="Nav_Hint_Moderation" xml:space="preserve">
+    <value>Duyệt và kiểm duyệt tin đăng phòng trọ</value>
+  </data>
 
   <!-- Account Screen -->
   <data name="Account_Title" xml:space="preserve">
@@ -217,6 +229,23 @@
     <value>Nhấn vào biểu tượng trái tim trên bất kỳ phòng nào tại trang Khám phá để lưu lại, theo dõi biến động giá và so sánh phòng (US10).</value>
   </data>
 
+  <!-- Guest sign-in prompt (Saved / Messages tabs, BR-AUTH-07) -->
+  <data name="Prompt_SignIn_Title" xml:space="preserve">
+    <value>Đăng nhập để tiếp tục</value>
+  </data>
+  <data name="Prompt_SignIn_SavedMessage" xml:space="preserve">
+    <value>Đăng nhập để lưu phòng yêu thích, theo dõi biến động giá và so sánh phòng (US10).</value>
+  </data>
+  <data name="Prompt_SignIn_MessagesMessage" xml:space="preserve">
+    <value>Đăng nhập để trò chuyện với chủ trọ đã xác minh và đặt lịch xem phòng (US14).</value>
+  </data>
+  <data name="Prompt_SignIn_Button" xml:space="preserve">
+    <value>Đăng nhập</value>
+  </data>
+  <data name="Prompt_SignIn_NotNow" xml:space="preserve">
+    <value>Để sau</value>
+  </data>
+
   <!-- Common & Dialogs -->
   <data name="Common_Ok" xml:space="preserve">
     <value>Đồng ý</value>
@@ -238,5 +267,55 @@
   </data>
   <data name="Account_Alert_HelpMessage" xml:space="preserve">
     <value>RoomToRentRadar 1.0&#10;Dự án Radar Phòng trọ Sinh viên ICTU - Nhóm 2.</value>
+  </data>
+
+  <!-- Placeholder screens (T00.15): shared PlaceholderPage titles, "Coming in" and id text -->
+  <data name="Placeholder_ComingIn" xml:space="preserve">
+    <value>Sẽ có trong {0}</value>
+  </data>
+  <data name="Placeholder_IdFormat" xml:space="preserve">
+    <value>Mã: {0}</value>
+  </data>
+  <data name="Placeholder_SCR-ROOM-01_Title" xml:space="preserve">
+    <value>Chi tiết phòng</value>
+  </data>
+  <data name="Placeholder_SCR-ROOM-02_Title" xml:space="preserve">
+    <value>Thư viện ảnh</value>
+  </data>
+  <data name="Placeholder_SCR-SRCH-01_Title" xml:space="preserve">
+    <value>Bộ lọc tìm kiếm</value>
+  </data>
+  <data name="Placeholder_SCR-CMP-01_Title" xml:space="preserve">
+    <value>So sánh phòng</value>
+  </data>
+  <data name="Placeholder_SCR-CHAT-02_Title" xml:space="preserve">
+    <value>Cuộc trò chuyện</value>
+  </data>
+  <data name="Placeholder_SCR-SAVED-01_Title" xml:space="preserve">
+    <value>Tìm kiếm đã lưu</value>
+  </data>
+  <data name="Placeholder_SCR-NOTI-01_Title" xml:space="preserve">
+    <value>Thông báo</value>
+  </data>
+  <data name="Placeholder_SCR-ACC-02_Title" xml:space="preserve">
+    <value>Chọn trường</value>
+  </data>
+  <data name="Placeholder_SCR-ACC-03_Title" xml:space="preserve">
+    <value>Ngôn ngữ</value>
+  </data>
+  <data name="Placeholder_SCR-LL-01_Title" xml:space="preserve">
+    <value>Tin đăng của tôi</value>
+  </data>
+  <data name="Placeholder_SCR-LL-02_Title" xml:space="preserve">
+    <value>Trình soạn tin đăng</value>
+  </data>
+  <data name="Placeholder_SCR-ADM-01_Title" xml:space="preserve">
+    <value>Kiểm duyệt</value>
+  </data>
+  <data name="Placeholder_SCR-ADM-02_Title" xml:space="preserve">
+    <value>Duyệt tin đăng</value>
+  </data>
+  <data name="Placeholder_SCR-ADM-03_Title" xml:space="preserve">
+    <value>Chi tiết báo cáo</value>
   </data>
 </root>

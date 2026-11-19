@@ -29,7 +29,7 @@ Icons in the canvas are stroke placeholders — the app uses Fluent System Icons
 
 ## 2. Information architecture & navigation
 
-### 2.1 Bottom tabs (Shell `TabBar`, role-aware)
+### 2.1 Bottom tabs (role-aware bottom navigation control)
 
 | Tab (route) | Guest | Student | Landlord | Admin |
 |---|---|---|---|---|

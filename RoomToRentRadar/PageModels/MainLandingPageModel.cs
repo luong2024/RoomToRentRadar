@@ -2,12 +2,14 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Client.Adapters.Abstractions;
 using RoomToRentRadar.Ports.Contracts.Responses.Auth;
+using RoomToRentRadar.Services.Navigation.Core;
 
 namespace RoomToRentRadar.PageModels;
 
 public partial class MainLandingPageModel : ObservableObject
 {
     private readonly ISessionStore _sessionStore;
+    private readonly INavigationService _navigation;
 
     [ObservableProperty]
     public partial string WelcomeMessage { get; set; } = "Welcome to RoomToRentRadar!";
@@ -30,9 +32,10 @@ public partial class MainLandingPageModel : ObservableObject
     public bool IsDebugMode => false;
 #endif
 
-    public MainLandingPageModel(ISessionStore sessionStore)
+    public MainLandingPageModel(ISessionStore sessionStore, INavigationService navigation)
     {
         _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
+        _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
     }
 
     public async Task InitializeAsync()
@@ -59,13 +62,13 @@ public partial class MainLandingPageModel : ObservableObject
     private async Task SignOutAsync()
     {
         await _sessionStore.ClearSessionAsync();
-        await Shell.Current.GoToAsync("//login");
+        await _navigation.SignOutToGuestAsync();
     }
 
     [RelayCommand]
     private async Task OpenUiCatalogAsync()
     {
-        await Shell.Current.GoToAsync("//uicatalog");
+        await _navigation.GoToAsync("//uicatalog");
     }
 }
 
