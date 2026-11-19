@@ -70,8 +70,13 @@ public partial class MapSearchPageModel : ObservableObject
     {
         OnPropertyChanged(nameof(CanLoadMore));
         OnPropertyChanged(nameof(CanSaveCurrentArea));
+        NotifyPresentationChanged();
     }
-    partial void OnIsLoadingMoreChanged(bool value) => OnPropertyChanged(nameof(CanLoadMore));
+    partial void OnIsLoadingMoreChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanLoadMore));
+        NotifyPresentationChanged();
+    }
 
     [ObservableProperty]
     public partial string StatusMessage { get; set; }
@@ -157,9 +162,14 @@ public partial class MapSearchPageModel : ObservableObject
         OnPropertyChanged(nameof(CanFinishDrawing));
         OnPropertyChanged(nameof(CanSaveCurrentArea));
         OnPropertyChanged(nameof(ShowSearchButton));
+        NotifyPresentationChanged();
     }
 
-    partial void OnStatusMessageChanged(string value) => OnPropertyChanged(nameof(DrawingHint));
+    partial void OnStatusMessageChanged(string value)
+    {
+        OnPropertyChanged(nameof(DrawingHint));
+        NotifyPresentationChanged();
+    }
 
     partial void OnSelectedListingChanged(MapListingItem? value)
     {
@@ -168,9 +178,17 @@ public partial class MapSearchPageModel : ObservableObject
         MapDataChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    partial void OnIsSavedPanelOpenChanged(bool value) => OnPropertyChanged(nameof(ShowPreviewCard));
+    partial void OnIsSavedPanelOpenChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowPreviewCard));
+        NotifyPresentationChanged();
+    }
 
-    partial void OnIsNotificationsPanelOpenChanged(bool value) => OnPropertyChanged(nameof(ShowPreviewCard));
+    partial void OnIsNotificationsPanelOpenChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowPreviewCard));
+        NotifyPresentationChanged();
+    }
 
     partial void OnIsAlertBusyChanged(bool value) => OnPropertyChanged(nameof(CanToggleAlert));
 
@@ -186,6 +204,7 @@ public partial class MapSearchPageModel : ObservableObject
 
     partial void OnSelectedSortIndexChanged(int value)
     {
+        OnPropertyChanged(nameof(SelectedSortLabel));
         if (Draft.IsClosed && !_restoringArea)
             SearchCommand.Execute(null);
     }
@@ -218,6 +237,8 @@ public partial class MapSearchPageModel : ObservableObject
 
     private void ClearResults()
     {
+        HasCompletedSearch = false;
+        SearchFailed = false;
         SelectedListing = null;
         Listings.Clear();
         _listingIds.Clear();
@@ -319,6 +340,7 @@ public partial class MapSearchPageModel : ObservableObject
             _areaRejected = false;
             IsNotificationsPanelOpen = false;
         }
+        SearchFailed = false;
         IsLoadingMore = append;
         IsBusy = !append;
         StatusMessage = append ? "Đang tải thêm phòng…" : "Đang tìm phòng trong khu vực…";
@@ -349,6 +371,7 @@ public partial class MapSearchPageModel : ObservableObject
                     RoomListingService.DistanceKm(centroid.Lat, centroid.Lng, listing.Lat, listing.Lng)));
             }
 
+            HasCompletedSearch = true;
             _nextCursor = result.Pagination.HasMore ? result.Pagination.NextCursor : null;
             ResultsText = result.TotalCountCapped
                 ? $"Hiển thị {Listings.Count} / {result.TotalCount}+ phòng"
@@ -360,13 +383,17 @@ public partial class MapSearchPageModel : ObservableObject
         catch (OperationCanceledException)
         {
             if (!cts.IsCancellationRequested)
+            {
+                SearchFailed = true;
                 StatusMessage = "Tìm kiếm quá lâu. Vui lòng thử lại.";
+            }
         }
         catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.UnprocessableEntity)
         {
             if (!cts.IsCancellationRequested)
             {
                 _areaRejected = true;
+                SearchFailed = true;
                 StatusMessage = InvalidAreaStatusMessage(ex.Code);
             }
         }
@@ -375,7 +402,8 @@ public partial class MapSearchPageModel : ObservableObject
             if (cts.IsCancellationRequested)
                 return;
 
-            StatusMessage = "Không thể tìm phòng trong khu vực. Vui lòng thử lại.";
+            SearchFailed = true;
+            StatusMessage = "Không thể tìm phòng trong khu vực. Kiểm tra kết nối và thử lại.";
             _errorHandler.HandleError(ex);
         }
         finally
@@ -386,6 +414,7 @@ public partial class MapSearchPageModel : ObservableObject
                 IsBusy = false;
                 IsLoadingMore = false;
                 OnPropertyChanged(nameof(HasResults));
+                NotifyPresentationChanged();
                 MapDataChanged?.Invoke(this, EventArgs.Empty);
             }
 
@@ -732,6 +761,7 @@ public partial class MapSearchPageModel : ObservableObject
         OnPropertyChanged(nameof(CanFinishDrawing));
         OnPropertyChanged(nameof(CanSaveCurrentArea));
         OnPropertyChanged(nameof(ShowSearchButton));
+        NotifyPresentationChanged();
         MapDataChanged?.Invoke(this, EventArgs.Empty);
     }
 }

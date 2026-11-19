@@ -47,7 +47,7 @@ public static class PhotoProblemFactory
         InvalidPhoto,
         StatusCodes.Status400BadRequest,
         "Invalid photo",
-        "Every file must be a single-frame JPEG, PNG or WebP image within the pixel limit.");
+        "Every file must be a single-frame JPEG or PNG image within the pixel limit.");
 
     public static ProblemDetails KindInvalid() => Create(
         InvalidPhotoKind,
@@ -65,7 +65,7 @@ public static class PhotoProblemFactory
         UnsupportedPhotoType,
         StatusCodes.Status415UnsupportedMediaType,
         "Unsupported photo type",
-        "Only image/jpeg, image/png and image/webp uploads are supported.");
+        "Only image/jpeg and image/png uploads are supported.");
 
     public static ProblemDetails PhotoLimitReached() => Create(
         PhotoLimitExceeded,
