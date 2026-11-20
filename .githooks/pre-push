@@ -33,6 +33,20 @@ while read local_ref local_sha remote_ref remote_sha; do
     esac
 done
 
+# Ensure dotnet CLI is accessible on Windows (Git Bash / MSYS2 environment)
+if ! command -v dotnet >/dev/null 2>&1; then
+    for candidate in \
+        "/c/Program Files/dotnet" \
+        "/c/Program Files (x86)/dotnet" \
+        "$LOCALAPPDATA/Microsoft/dotnet" \
+        "$USERPROFILE/.dotnet"; do
+        if [ -x "$candidate/dotnet.exe" ] || [ -f "$candidate/dotnet.exe" ]; then
+            export PATH="$candidate:$PATH"
+            break
+        fi
+    done
+fi
+
 echo "[Group-5 Gatekeeper] Đang kiểm tra build & chạy API Contract / Unit Tests trước khi push '$current_branch'..."
 dotnet test RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj --nologo -v q --blame-hang-timeout 30s
 if [ $? -ne 0 ]; then
