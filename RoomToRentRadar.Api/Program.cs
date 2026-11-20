@@ -1,5 +1,6 @@
 using RoomToRentRadar;
 using RoomToRentRadar.Abstractions.Auth;
+using RoomToRentRadar.Abstractions.Rooms;
 using RoomToRentRadar.Api.Auth;
 using RoomToRentRadar.Api.Endpoints;
 using RoomToRentRadar.Data;
@@ -17,6 +18,10 @@ builder.Services.AddRentalInfrastructure($"Data Source={dbFile}");
 builder.Services.AddSingleton<UserRepository>();
 builder.Services.AddSingleton<IAuthService, AuthService>();
 builder.AddJwtAuth();
+
+// T02.1 (Thuy): real SQLite room listings (overrides InMemoryRoomListingRepository).
+// Partial methods not yet implemented by T03.1/T05.1/T09.2 still fall back to the in-memory base class.
+builder.Services.AddSingleton<IRoomListingRepository, RoomListingRepository>();
 
 var app = builder.Build();
 
