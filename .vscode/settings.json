@@ -1,0 +1,21 @@
+{
+    "dotnet.defaultSolution": "RoomToRentRadar.sln",
+    "omnisharp.dotnetPath":  "C:\\Program Files\\dotnet",
+    "omnisharp.dotNetCliPaths":  [
+                                     "C:\\Program Files\\dotnet"
+                                 ],
+    "dotnetAcquisitionExtension.sharedExistingDotnetPath":  "C:\\Program Files\\dotnet\\dotnet.exe",
+    "dotnetAcquisitionExtension.existingDotnetPath":  [
+        "C:\\Program Files\\dotnet\\dotnet.exe",
+        {
+            "extensionId": "ms-dotnettools.csharp",
+            "path": "C:\\Program Files\\dotnet\\dotnet.exe"
+        }
+    ],
+    "dotnet.server.environmentVariables":  {
+                                               "DOTNET_ROOT":  "C:\\Program Files\\dotnet",
+                                               "PATH":  "C:\\Program Files\\dotnet;C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\;C:\\Windows\\System32\\OpenSSH\\;C:\\Program Files\\Git\\cmd;C:\\Program Files\\dotnet\\;C:\\Program Files\\dotnet;C:\\Android\\android-sdk\\platform-tools;C:\\Android\\android-sdk\\cmdline-tools\\latest\\bin;C:\\Android\\jdk-17\\bin;C:\\dotnet;C:\\Users\\Admin\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\Admin\\AppData\\Local\\Programs\\Microsoft VS Code\\bin;C:\\Users\\Admin\\AppData\\Local\\Programs\\Microsoft VS Code\\bin\\copilot-shim;C:\\Users\\Admin\\.dotnet\\tools;C:\\Users\\Admin\\.dotnet\\tools"
+                                           },
+    "dotnet.projects.enableFileBasedPrograms":  false,
+    "dotnet.server.suppressMiscellaneousFilesToasts":  true
+}

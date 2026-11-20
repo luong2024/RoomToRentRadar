@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:rooms="clr-namespace:RoomToRentRadar.Features.Rooms"
+             x:Class="RoomToRentRadar.Features.Rooms.RoomFilterModalPage"
+             x:DataType="rooms:RoomFilterPageModel"
+             Title="Bộ lọc tìm kiếm (US05)">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="16">
+
+            <!-- Header Badge & Active Filter Counter -->
+            <Border Padding="16" StrokeThickness="1" StrokeShape="RoundRectangle 12">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Bộ lọc phòng trọ quanh ICTU" FontSize="20" FontAttributes="Bold" />
+                    <HorizontalStackLayout Spacing="8">
+                        <Border Padding="8,4" StrokeThickness="1" StrokeShape="RoundRectangle 8">
+                            <Label Text="{Binding ActiveFilterCount, StringFormat='Đang bật: {0} bộ lọc'}" 
+                                   FontSize="13" FontAttributes="Bold" />
+                        </Border>
+                        <Border Padding="8,4" StrokeThickness="1" StrokeShape="RoundRectangle 8">
+                            <Label Text="{Binding MatchedRoomCount, StringFormat='Tìm thấy: {0} phòng'}" 
+                                   FontSize="13" />
+                        </Border>
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Keyword Filter -->
+            <VerticalStackLayout Spacing="6">
+                <Label Text="Từ khóa (Tên phòng, địa chỉ, tiện ích)" FontAttributes="Bold" FontSize="14" />
+                <Border Padding="10,0" StrokeThickness="1" StrokeShape="RoundRectangle 8">
+                    <Entry Text="{Binding Keyword}" 
+                           Placeholder="Ví dụ: khép kín, điều hòa, Z115..." 
+                           ClearButtonVisibility="WhileEditing" />
+                </Border>
+            </VerticalStackLayout>
+
+            <!-- Price Range -->
+            <VerticalStackLayout Spacing="6">
+                <Label Text="Khoảng giá thuê (VNĐ / tháng)" FontAttributes="Bold" FontSize="14" />
+                <Grid ColumnDefinitions="*,16,*" ColumnSpacing="0">
+                    <Border Grid.Column="0" Padding="10,0" StrokeThickness="1" StrokeShape="RoundRectangle 8">
+                        <Entry Text="{Binding MinPrice}" 
+                               Placeholder="Tối thiểu (vd: 1000000)" 
+                               Keyboard="Numeric" />
+                    </Border>
+                    <Label Grid.Column="1" Text="-" VerticalOptions="Center" HorizontalOptions="Center" FontAttributes="Bold" />
+                    <Border Grid.Column="2" Padding="10,0" StrokeThickness="1" StrokeShape="RoundRectangle 8">
+                        <Entry Text="{Binding MaxPrice}" 
+                               Placeholder="Tối đa (vd: 2500000)" 
+                               Keyboard="Numeric" />
+                    </Border>
+                </Grid>
+            </VerticalStackLayout>
+
+            <!-- Area Range -->
+            <VerticalStackLayout Spacing="6">
+                <Label Text="Diện tích phòng (m²)" FontAttributes="Bold" FontSize="14" />
+                <Grid ColumnDefinitions="*,16,*" ColumnSpacing="0">
+                    <Border Grid.Column="0" Padding="10,0" StrokeThickness="1" StrokeShape="RoundRectangle 8">
+                        <Entry Text="{Binding MinArea}" 
+                               Placeholder="Từ (vd: 15)" 
+                               Keyboard="Numeric" />
+                    </Border>
+                    <Label Grid.Column="1" Text="-" VerticalOptions="Center" HorizontalOptions="Center" FontAttributes="Bold" />
+                    <Border Grid.Column="2" Padding="10,0" StrokeThickness="1" StrokeShape="RoundRectangle 8">
+                        <Entry Text="{Binding MaxArea}" 
+                               Placeholder="Đến (vd: 35)" 
+                               Keyboard="Numeric" />
+                    </Border>
+                </Grid>
+            </VerticalStackLayout>
+
+            <!-- Room Type -->
+            <VerticalStackLayout Spacing="6">
+                <Label Text="Loại phòng" FontAttributes="Bold" FontSize="14" />
+                <Border Padding="10,0" StrokeThickness="1" StrokeShape="RoundRectangle 8">
+                    <Picker ItemsSource="{Binding RoomTypes}" 
+                            SelectedItem="{Binding SelectedRoomType}" 
+                            Title="Chọn loại hình phòng trọ" />
+                </Border>
+            </VerticalStackLayout>
+
+            <!-- Distance to ICTU -->
+            <VerticalStackLayout Spacing="6">
+                <Label Text="Khoảng cách tối đa tới cổng ICTU (km)" FontAttributes="Bold" FontSize="14" />
+                <Border Padding="10,0" StrokeThickness="1" StrokeShape="RoundRectangle 8">
+                    <Entry Text="{Binding MaxDistanceKm}" 
+                           Placeholder="Ví dụ: 2.0 (tối đa 2km)" 
+                           Keyboard="Numeric" />
+                </Border>
+            </VerticalStackLayout>
+
+            <!-- Sort By -->
+            <VerticalStackLayout Spacing="6">
+                <Label Text="Thứ tự ưu tiên sắp xếp" FontAttributes="Bold" FontSize="14" />
+                <Border Padding="10,0" StrokeThickness="1" StrokeShape="RoundRectangle 8">
+                    <Picker ItemsSource="{Binding SortOptions}" 
+                            SelectedItem="{Binding SortBy}" 
+                            Title="Chọn tiêu chí sắp xếp" />
+                </Border>
+            </VerticalStackLayout>
+
+            <!-- Action Buttons -->
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12" Margin="0,10,0,20">
+                <Button Grid.Column="0" 
+                        Text="Đặt lại" 
+                        Command="{Binding ClearFiltersCommand}" />
+                <Button Grid.Column="1" 
+                        Text="Áp dụng bộ lọc" 
+                        FontAttributes="Bold" 
+                        Command="{Binding ApplyFiltersCommand}" />
+            </Grid>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>
+

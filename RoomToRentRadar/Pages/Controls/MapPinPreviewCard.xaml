@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="RoomToRentRadar.Pages.Controls.MapPinPreviewCard"
+             x:Name="ThisControl">
+
+    <Border StrokeThickness="1"
+            StrokeShape="RoundRectangle 16"
+            Padding="12"
+            Margin="12"
+            Shadow="{Shadow Brush=Black, Offset='0,4', Radius=10, Opacity=0.2}">
+
+        <Grid ColumnDefinitions="90,*,Auto" ColumnSpacing="12">
+
+            <!-- Thumbnail Image -->
+            <Border Grid.Column="0" 
+                    StrokeShape="RoundRectangle 10" 
+                    StrokeThickness="0"
+                    HeightRequest="85" 
+                    WidthRequest="85"
+                    HorizontalOptions="Center" 
+                    VerticalOptions="Center">
+                <Image Source="{Binding Room.ThumbnailUrl, Source={x:Reference ThisControl}}"
+                       Aspect="AspectFill" />
+            </Border>
+
+            <!-- Room Info -->
+            <VerticalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
+                <Label Text="{Binding Room.Title, Source={x:Reference ThisControl}}"
+                       FontAttributes="Bold"
+                       FontSize="14"
+                       MaxLines="2"
+                       LineBreakMode="TailTruncation" />
+
+                <Label Text="{Binding Room.MonthlyRent, Source={x:Reference ThisControl}, StringFormat='{0:N0} đ/tháng'}"
+                       FontSize="13"
+                       FontAttributes="Bold"
+                       TextColor="#2563eb" />
+
+                <HorizontalStackLayout Spacing="6">
+                    <Border Padding="6,2" StrokeThickness="1" StrokeShape="RoundRectangle 6">
+                        <Label Text="{Binding Room.DistanceToCampusKm, Source={x:Reference ThisControl}, StringFormat='{0:0.1} km tới ICTU'}"
+                               FontSize="11" />
+                    </Border>
+                    <Border Padding="6,2" StrokeThickness="1" StrokeShape="RoundRectangle 6">
+                        <Label Text="{Binding Room.RoomType, Source={x:Reference ThisControl}}"
+                               FontSize="11" />
+                    </Border>
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+
+            <!-- Actions: Close & View Detail -->
+            <Grid Grid.Column="2" RowDefinitions="Auto,*" VerticalOptions="Fill">
+                <Button Grid.Row="0"
+                        Text="✕"
+                        FontSize="12"
+                        Padding="0"
+                        HeightRequest="28"
+                        WidthRequest="28"
+                        CornerRadius="14"
+                        HorizontalOptions="End"
+                        Command="{Binding CloseCommand, Source={x:Reference ThisControl}}" />
+
+                <Button Grid.Row="1"
+                        Text="Xem"
+                        FontSize="12"
+                        FontAttributes="Bold"
+                        Padding="12,0"
+                        HeightRequest="36"
+                        VerticalOptions="End"
+                        Command="{Binding ViewDetailCommand, Source={x:Reference ThisControl}}" />
+            </Grid>
+
+        </Grid>
+    </Border>
+
+</ContentView>

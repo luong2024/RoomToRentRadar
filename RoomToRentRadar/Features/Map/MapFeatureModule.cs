@@ -1,3 +1,5 @@
+using Microsoft.Maui.Controls;
+
 namespace RoomToRentRadar.Features.Map
 {
     /// <summary>
@@ -7,8 +9,10 @@ namespace RoomToRentRadar.Features.Map
     {
         public static IServiceCollection AddMapFeature(this IServiceCollection services)
         {
-            // T06.1 (Hieu) & T06.2 (Nam):
-            // services.AddTransientWithShellRoute<RoomMapPage, RoomMapPageModel>(Constants.Routes.RoomMap);
+            services.AddSingleton<ICampusMapService, CampusMapService>();
+            services.AddTransient<RoomMapPageModel>();
+            services.AddTransient<RoomMapPage>();
+            Routing.RegisterRoute(Constants.Routes.RoomMap, typeof(RoomMapPage));
             return services;
         }
     }

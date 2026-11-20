@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:map="clr-namespace:RoomToRentRadar.Features.Map"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Pages.Controls"
+             x:Class="RoomToRentRadar.Features.Map.RoomMapPage"
+             x:DataType="map:RoomMapPageModel"
+             Title="Bản đồ phòng trọ ICTU">
+
+    <Grid RowDefinitions="Auto,*" RowSpacing="0">
+
+        <!-- Top Header & Controls -->
+        <Border Grid.Row="0" Padding="14,10" StrokeThickness="0" BackgroundColor="{AppThemeBinding Light=#f1f5f9, Dark=#1e293b}">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" VerticalOptions="Center">
+                
+                <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center">
+                    <Label Text="Bản đồ phòng trọ ICTU" FontSize="16" FontAttributes="Bold" />
+                    <Label Text="{Binding TotalPinsCount, StringFormat='Đang hiển thị {0} phòng quanh trường'}" 
+                           FontSize="12" TextColor="{AppThemeBinding Light=#64748b, Dark=#94a3b8}" />
+                </VerticalStackLayout>
+
+                <Button Grid.Column="1"
+                        Text="Tâm ICTU"
+                        FontSize="12"
+                        Padding="12,0"
+                        HeightRequest="36"
+                        Command="{Binding RecenterCampusCommand}" />
+
+                <Button Grid.Column="2"
+                        Text="Tải lại"
+                        FontSize="12"
+                        Padding="12,0"
+                        HeightRequest="36"
+                        Command="{Binding LoadMapDataCommand}" />
+
+            </Grid>
+        </Border>
+
+        <!-- Map & Floating Overlay Area -->
+        <Grid Grid.Row="1">
+
+            <!-- Interactive Leaflet WebView -->
+            <WebView x:Name="MapWebView"
+                     Source="{Binding MapHtmlSource}"
+                     Navigating="OnMapNavigating"
+                     HorizontalOptions="Fill"
+                     VerticalOptions="Fill" />
+
+            <!-- Loading Indicator -->
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               IsVisible="{Binding IsBusy}"
+                               Color="#2563eb"
+                               HeightRequest="48"
+                               WidthRequest="48"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center" />
+
+            <!-- Floating Room Preview Card (US06 / Task T06.2) -->
+            <controls:MapPinPreviewCard Room="{Binding SelectedRoom}"
+                                        CloseCommand="{Binding ClosePreviewCommand}"
+                                        ViewDetailCommand="{Binding ViewDetailCommand}"
+                                        IsVisible="{Binding IsPreviewVisible}"
+                                        VerticalOptions="End"
+                                        HorizontalOptions="Fill"
+                                        Margin="10,0,10,16" />
+
+        </Grid>
+
+    </Grid>
+
+</ContentPage>
