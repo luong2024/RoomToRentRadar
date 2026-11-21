@@ -124,6 +124,20 @@
   <data name="Filter_Amenity_Kitchen" xml:space="preserve"><value>Bếp nấu</value></data>
   <data name="Filter_ResetAll" xml:space="preserve"><value>Đặt lại</value></data>
   <data name="Filter_ShowResults_Format" xml:space="preserve"><value>Xem kết quả ({0})</value></data>
+  <data name="Filter_AreaRange" xml:space="preserve"><value>Khoảng diện tích</value></data>
+  <data name="Filter_MinArea" xml:space="preserve"><value>Diện tích từ</value></data>
+  <data name="Filter_MaxArea" xml:space="preserve"><value>Diện tích đến</value></data>
+  <data name="Filter_Distance" xml:space="preserve"><value>Bán kính quanh ICTU</value></data>
+  <data name="Filter_Distance_Format" xml:space="preserve"><value>Trong bán kính {0} km</value></data>
+  <data name="Filter_AllRooms" xml:space="preserve"><value>Tất cả</value></data>
+  <data name="Filter_Apartment" xml:space="preserve"><value>Căn hộ mini</value></data>
+  <data name="Filter_Apply" xml:space="preserve"><value>Áp dụng</value></data>
+  <data name="Validation_MinPriceGreaterThanMax" xml:space="preserve"><value>Giá tối thiểu không được lớn hơn giá tối đa.</value></data>
+  <data name="Validation_PriceNegative" xml:space="preserve"><value>Giá thuê không được nhỏ hơn 0.</value></data>
+  <data name="Validation_MinAreaGreaterThanMax" xml:space="preserve"><value>Diện tích tối thiểu không được lớn hơn diện tích tối đa.</value></data>
+  <data name="Validation_AreaNegative" xml:space="preserve"><value>Diện tích không được nhỏ hơn 0.</value></data>
+  <data name="ActiveFilter_ClearAll" xml:space="preserve"><value>Xóa tất cả bộ lọc</value></data>
+  <data name="Filter_DistanceDisabled" xml:space="preserve"><value>Tắt</value></data>
   <data name="CreateListing_PageTitle" xml:space="preserve"><value>Đăng tin cho thuê</value></data>
   <data name="Nav_CreateListing" xml:space="preserve"><value>Đăng tin</value></data>
   <data name="Nav_SignIn" xml:space="preserve"><value>Sign In / Register</value></data>

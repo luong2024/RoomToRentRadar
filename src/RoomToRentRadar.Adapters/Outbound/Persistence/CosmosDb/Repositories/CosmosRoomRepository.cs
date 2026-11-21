@@ -252,6 +252,19 @@ public class CosmosRoomRepository : IRoomRepository
             whereClauses.Add("(ST_DISTANCE(c.location, @location) <= (@radius * 1000) OR ST_DISTANCE(c.Location, @location) <= (@radius * 1000))");
         }
 
+        if (query.Amenities is { Count: > 0 })
+        {
+            var requestedAmenities = query.Amenities
+                .Where(a => !string.IsNullOrWhiteSpace(a))
+                .Select(a => a.Trim())
+                .ToList();
+
+            for (var i = 0; i < requestedAmenities.Count; i++)
+            {
+                whereClauses.Add($"ARRAY_CONTAINS(c.amenities, @amenity{i})");
+            }
+        }
+
         var whereSql = string.Join(" AND ", whereClauses);
 
         // Cross-partition count query with explicit QueryRequestOptions
@@ -288,7 +301,18 @@ public class CosmosRoomRepository : IRoomRepository
 
         var offset = (int)rawOffset;
 
-        var itemsSql = $"SELECT * FROM c WHERE {whereSql} ORDER BY c.id OFFSET @offset LIMIT @limit";
+        var normalizedSort = query.SortBy?.Trim().ToLowerInvariant();
+        var orderByClause = normalizedSort switch
+        {
+            "priceasc" or "price_asc" => "ORDER BY c.price ASC, c.id ASC",
+            "pricedesc" or "price_desc" => "ORDER BY c.price DESC, c.id DESC",
+            "distanceasc" or "distance_asc" when query.Latitude.HasValue && query.Longitude.HasValue =>
+                "ORDER BY ST_DISTANCE(c.location, @location) ASC",
+            "newest" => "ORDER BY c.createdAt DESC, c.id DESC",
+            _ => "ORDER BY c.id ASC"
+        };
+
+        var itemsSql = $"SELECT * FROM c WHERE {whereSql} {orderByClause} OFFSET @offset LIMIT @limit";
         var itemsQueryDef = new QueryDefinition(itemsSql);
         itemsQueryDef = BindParameters(itemsQueryDef, query);
         itemsQueryDef = itemsQueryDef.WithParameter("@offset", offset);
@@ -345,7 +369,7 @@ public class CosmosRoomRepository : IRoomRepository
             queryDef = queryDef.WithParameter("@keyword", query.Keyword.Trim());
         }
 
-        if (query.Latitude.HasValue && query.Longitude.HasValue && query.RadiusInKm.HasValue)
+        if (query.Latitude.HasValue && query.Longitude.HasValue)
         {
             var locationPoint = new
             {
@@ -353,7 +377,24 @@ public class CosmosRoomRepository : IRoomRepository
                 coordinates = new[] { query.Longitude.Value, query.Latitude.Value }
             };
             queryDef = queryDef.WithParameter("@location", locationPoint);
-            queryDef = queryDef.WithParameter("@radius", query.RadiusInKm.Value);
+
+            if (query.RadiusInKm.HasValue)
+            {
+                queryDef = queryDef.WithParameter("@radius", query.RadiusInKm.Value);
+            }
+        }
+
+        if (query.Amenities is { Count: > 0 })
+        {
+            var requestedAmenities = query.Amenities
+                .Where(a => !string.IsNullOrWhiteSpace(a))
+                .Select(a => a.Trim())
+                .ToList();
+
+            for (var i = 0; i < requestedAmenities.Count; i++)
+            {
+                queryDef = queryDef.WithParameter($"@amenity{i}", requestedAmenities[i]);
+            }
         }
 
         return queryDef;

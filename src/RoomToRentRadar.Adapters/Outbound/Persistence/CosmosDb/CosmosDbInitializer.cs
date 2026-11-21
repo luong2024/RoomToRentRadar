@@ -48,8 +48,30 @@ public sealed class CosmosDbInitializer
 
             var roomsContainerName = string.IsNullOrWhiteSpace(_settings.RoomsContainerName) ? "Rooms" : _settings.RoomsContainerName;
             _logger.LogInformation("Creating container '{RoomsContainerName}' (/id)...", roomsContainerName);
+            var roomsProps = new ContainerProperties(roomsContainerName, "/id");
+            roomsProps.IndexingPolicy.SpatialIndexes.Add(new SpatialPath
+            {
+                Path = "/location/*",
+                SpatialTypes = { SpatialType.Point }
+            });
+            roomsProps.IndexingPolicy.CompositeIndexes.Add(new System.Collections.ObjectModel.Collection<CompositePath>
+            {
+                new() { Path = "/price", Order = CompositePathSortOrder.Ascending },
+                new() { Path = "/id", Order = CompositePathSortOrder.Ascending }
+            });
+            roomsProps.IndexingPolicy.CompositeIndexes.Add(new System.Collections.ObjectModel.Collection<CompositePath>
+            {
+                new() { Path = "/price", Order = CompositePathSortOrder.Descending },
+                new() { Path = "/id", Order = CompositePathSortOrder.Descending }
+            });
+            roomsProps.IndexingPolicy.CompositeIndexes.Add(new System.Collections.ObjectModel.Collection<CompositePath>
+            {
+                new() { Path = "/createdAt", Order = CompositePathSortOrder.Descending },
+                new() { Path = "/id", Order = CompositePathSortOrder.Descending }
+            });
+
             var roomsRepositoryContainerResponse = await database.CreateContainerIfNotExistsAsync(
-                new ContainerProperties(roomsContainerName, "/id"),
+                roomsProps,
                 cancellationToken: cancellationToken);
 
             var syncOutboxContainerName = string.IsNullOrWhiteSpace(_settings.RoomProjectionSyncOutboxContainerName)
@@ -92,6 +114,10 @@ public sealed class CosmosDbInitializer
             await MigrateLegacyRoomsContainerIfPresentAsync(database, effectiveContainer, roomDetailsContainerResponse.Container, cancellationToken);
 
             await EnsureSpatialAndCompositeIndexesAsync(effectiveContainer, effectiveProperties, cancellationToken);
+            if (roomsRepositoryContainerResponse?.Container is { } roomsRepoContainer)
+            {
+                await EnsureRoomsContainerIndexesAsync(roomsRepoContainer, roomsRepositoryContainerResponse.Resource, cancellationToken);
+            }
 
             await SeedInitialDataAsync(campusesContainerResponse.Container, effectiveContainer, cancellationToken);
             if (roomsRepositoryContainerResponse?.Container is { } roomsRepositoryContainer)
@@ -554,6 +580,76 @@ public sealed class CosmosDbInitializer
             ci.Count >= 2 &&
             ci[0].Path.Equals(path1, StringComparison.Ordinal) &&
             ci[1].Path.Equals(path2, StringComparison.Ordinal));
+    }
+
+    private static bool HasCompositeIndex(IndexingPolicy policy, string path1, CompositePathSortOrder order1, string path2, CompositePathSortOrder order2)
+    {
+        return policy.CompositeIndexes.Any(ci =>
+            ci.Count >= 2 &&
+            string.Equals(ci[0].Path, path1, StringComparison.Ordinal) &&
+            ci[0].Order == order1 &&
+            string.Equals(ci[1].Path, path2, StringComparison.Ordinal) &&
+            ci[1].Order == order2);
+    }
+
+    private static async Task EnsureRoomsContainerIndexesAsync(Container container, ContainerProperties properties, CancellationToken cancellationToken)
+    {
+        var indexingPolicy = properties.IndexingPolicy ?? new IndexingPolicy();
+        properties.IndexingPolicy = indexingPolicy;
+        var modified = false;
+
+        var locationIndex = indexingPolicy.SpatialIndexes.FirstOrDefault(index =>
+            index.Path.Equals("/location/*", StringComparison.Ordinal));
+
+        if (locationIndex is null)
+        {
+            indexingPolicy.SpatialIndexes.Add(new SpatialPath
+            {
+                Path = "/location/*",
+                SpatialTypes = { SpatialType.Point }
+            });
+            modified = true;
+        }
+        else if (!locationIndex.SpatialTypes.Contains(SpatialType.Point))
+        {
+            locationIndex.SpatialTypes.Add(SpatialType.Point);
+            modified = true;
+        }
+
+        if (!HasCompositeIndex(indexingPolicy, "/price", CompositePathSortOrder.Ascending, "/id", CompositePathSortOrder.Ascending))
+        {
+            indexingPolicy.CompositeIndexes.Add(new System.Collections.ObjectModel.Collection<CompositePath>
+            {
+                new() { Path = "/price", Order = CompositePathSortOrder.Ascending },
+                new() { Path = "/id", Order = CompositePathSortOrder.Ascending }
+            });
+            modified = true;
+        }
+
+        if (!HasCompositeIndex(indexingPolicy, "/price", CompositePathSortOrder.Descending, "/id", CompositePathSortOrder.Descending))
+        {
+            indexingPolicy.CompositeIndexes.Add(new System.Collections.ObjectModel.Collection<CompositePath>
+            {
+                new() { Path = "/price", Order = CompositePathSortOrder.Descending },
+                new() { Path = "/id", Order = CompositePathSortOrder.Descending }
+            });
+            modified = true;
+        }
+
+        if (!HasCompositeIndex(indexingPolicy, "/createdAt", CompositePathSortOrder.Descending, "/id", CompositePathSortOrder.Descending))
+        {
+            indexingPolicy.CompositeIndexes.Add(new System.Collections.ObjectModel.Collection<CompositePath>
+            {
+                new() { Path = "/createdAt", Order = CompositePathSortOrder.Descending },
+                new() { Path = "/id", Order = CompositePathSortOrder.Descending }
+            });
+            modified = true;
+        }
+
+        if (modified)
+        {
+            await container.ReplaceContainerAsync(properties, cancellationToken: cancellationToken);
+        }
     }
 
     private async Task SeedInitialDataAsync(Container campusesContainer, Container roomsContainer, CancellationToken cancellationToken)

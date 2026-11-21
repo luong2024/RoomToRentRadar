@@ -151,6 +151,7 @@
                         Padding="10,5"
                         BackgroundColor="{StaticResource DistanceOverlayBg}"
                         HorizontalOptions="Start"
+                        IsVisible="{Binding HasDistance}"
                         StrokeShape="RoundRectangle 10"
                         StrokeThickness="0"
                         VerticalOptions="End">
