@@ -1,6 +1,6 @@
 using NUnit.Framework;
-using RoomToRentRadar.Features.MapSearch.Models;
-using RoomToRentRadar.Features.MapSearch.ViewModels;
+using RoomToRentRadar.Models.MapSearch;
+using RoomToRentRadar.ViewModels.MapSearch;
 
 namespace RoomToRentRadarUnitTests.Features.MapSearch;
 

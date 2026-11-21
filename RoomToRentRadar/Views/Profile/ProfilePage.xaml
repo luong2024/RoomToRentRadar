@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage x:Class="RoomToRentRadar.Views.Profile.ProfilePage"
+             xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.ViewModels.Profile"
+             x:DataType="vm:ProfileViewModel"
+             Title="My profile"
+             BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}">
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="18">
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
+            <Border Padding="20" BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" StrokeShape="RoundRectangle 18">
+                <VerticalStackLayout HorizontalOptions="Center" Spacing="10">
+                    <Border HeightRequest="104" WidthRequest="104" StrokeThickness="0" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}" StrokeShape="RoundRectangle 52">
+                        <Grid>
+                            <Label Text="👤" FontSize="42" HorizontalOptions="Center" VerticalOptions="Center" />
+                            <Image Source="{Binding AvatarPreview}" Aspect="AspectFill" />
+                        </Grid>
+                    </Border>
+                    <Button Text="Choose avatar" Command="{Binding ChooseAvatarCommand}" />
+                    <Label Text="{Binding RoleDisplay}" FontAttributes="Bold" HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Label Text="Personal information" FontAttributes="Bold" FontSize="18" />
+            <Label Text="{Binding StatusMessage}"
+                   TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+            <VerticalStackLayout Spacing="2">
+                <Label Text="Account" FontAttributes="Bold" />
+                <Label Text="{Binding AccountEmail}" />
+            </VerticalStackLayout>
+            <Entry Placeholder="Full name" Text="{Binding FullName}" />
+            <Entry Placeholder="Phone number" Keyboard="Telephone" Text="{Binding PhoneNumber}" />
+            <Editor Placeholder="Short bio" AutoSize="TextChanges" Text="{Binding Bio}" />
+
+            <VerticalStackLayout IsVisible="{Binding IsStudent}" Spacing="10">
+                <Label Text="Student information" FontAttributes="Bold" FontSize="18" />
+                <Entry Placeholder="Student ID" Text="{Binding StudentId}" />
+                <Entry Placeholder="University" Text="{Binding University}" />
+                <Entry Placeholder="Faculty" Text="{Binding Faculty}" />
+                <Entry Placeholder="Maximum monthly budget" Keyboard="Numeric" Text="{Binding MaxBudgetText}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout IsVisible="{Binding IsLandlord}" Spacing="10">
+                <Label Text="Landlord information" FontAttributes="Bold" FontSize="18" />
+                <Entry Placeholder="Business name" Text="{Binding BusinessName}" />
+                <Entry Placeholder="Property address" Text="{Binding Address}" />
+                <Label Text="{Binding VerificationStatus, StringFormat='Verification: {0}'}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout IsVisible="{Binding IsAdmin}" Spacing="10">
+                <Label Text="Administrator information" FontAttributes="Bold" FontSize="18" />
+                <Entry Placeholder="Staff code" Text="{Binding StaffCode}" />
+                <Entry Placeholder="Department" Text="{Binding Department}" />
+                <Entry Placeholder="Job title" Text="{Binding JobTitle}" />
+            </VerticalStackLayout>
+
+            <Button Text="Save profile" Command="{Binding SaveCommand}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

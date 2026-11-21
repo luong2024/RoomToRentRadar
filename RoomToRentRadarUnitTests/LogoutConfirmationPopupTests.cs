@@ -5,7 +5,7 @@ using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
 using NUnit.Framework;
 using RoomToRentRadar.Core.Localization;
-using RoomToRentRadar.Features.Authentication.Views;
+using RoomToRentRadar.Views.Authentication;
 
 namespace RoomToRentRadarUnitTests;
 
