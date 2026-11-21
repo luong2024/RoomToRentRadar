@@ -8,10 +8,10 @@ using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Core.Localization;
 using RoomToRentRadar.Core.Models.Authentication;
-using RoomToRentRadar.Features.Authentication.Views;
-using RoomToRentRadar.Features.Home.Views;
-using RoomToRentRadar.Features.Profile.Views;
-using RoomToRentRadar.Features.RoomListings.Views;
+using RoomToRentRadar.Views.Authentication;
+using RoomToRentRadar.Views.Home;
+using RoomToRentRadar.Views.Profile;
+using RoomToRentRadar.Views.RoomListings;
 using RoomToRentRadar.Infrastructure.Services;
 using Font = Microsoft.Maui.Font;
 
@@ -36,7 +36,7 @@ namespace RoomToRentRadar
             _sessionService = sessionService;
             _routeGuardService = routeGuardService;
             UpdateAuthVisibility();
-            Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(Features.RoomDetails.Views.RoomDetailPage));
+            Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(RoomToRentRadar.Views.RoomDetails.RoomDetailPage));
             Routing.RegisterRoute(AppRoutes.RoomDetails, typeof(RoomDetailsPage));
             Routing.RegisterRoute(AppRoutes.CreateListing, typeof(CreateListingPage));
 
@@ -66,7 +66,7 @@ namespace RoomToRentRadar
             AuthShellContent.Content = authPage;
             ProfileShellContent.Content = profilePage;
 
-            Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(Features.RoomDetails.Views.RoomDetailPage));
+            Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(RoomToRentRadar.Views.RoomDetails.RoomDetailPage));
             Routing.RegisterRoute(AppRoutes.RoomDetails, typeof(RoomDetailsPage));
             Routing.RegisterRoute(AppRoutes.CreateListing, typeof(CreateListingPage));
 

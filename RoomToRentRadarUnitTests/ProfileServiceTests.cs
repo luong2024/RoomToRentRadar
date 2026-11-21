@@ -1,5 +1,5 @@
-using RoomToRentRadar.Features.Profile.Models;
-using RoomToRentRadar.Features.Profile.Services;
+using RoomToRentRadar.Models.Profile;
+using RoomToRentRadar.Services.Profile;
 using RoomToRentRadar.Infrastructure.Api;
 
 namespace RoomToRentRadarUnitTests;

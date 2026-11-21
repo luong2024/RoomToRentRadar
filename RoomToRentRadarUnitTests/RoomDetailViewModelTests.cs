@@ -1,9 +1,9 @@
 using Moq;
 using NUnit.Framework;
 using RoomToRentRadar.Core.Interfaces;
-using RoomToRentRadar.Features.RoomDetails.Models;
-using RoomToRentRadar.Features.RoomDetails.Services;
-using RoomToRentRadar.Features.RoomDetails.ViewModels;
+using RoomToRentRadar.Models.RoomDetails;
+using RoomToRentRadar.Services.RoomDetails;
+using RoomToRentRadar.ViewModels.RoomDetails;
 
 namespace RoomToRentRadarUnitTests;
 

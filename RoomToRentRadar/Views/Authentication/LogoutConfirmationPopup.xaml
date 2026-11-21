@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<toolkit:Popup
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Views;assembly=CommunityToolkit.Maui"
+    xmlns:f="clr-namespace:Fonts"
+    xmlns:loc="clr-namespace:RoomToRentRadar.Core.Localization"
+    x:Class="RoomToRentRadar.Views.Authentication.LogoutConfirmationPopup"
+    CanBeDismissedByTappingOutsideOfPopup="True">
+
+    <VerticalStackLayout
+        Spacing="0"
+        WidthRequest="310"
+        Padding="20,24,20,20"
+        HorizontalOptions="Center"
+        VerticalOptions="Center">
+
+        <!-- Top Circular Badge with Door Exit Icon -->
+        <Border
+            BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}"
+            HeightRequest="68"
+            WidthRequest="68"
+            StrokeShape="RoundRectangle 34"
+            StrokeThickness="0"
+            HorizontalOptions="Center"
+            VerticalOptions="Center">
+            <Label
+                FontFamily="{x:Static f:FluentUI.FontFamily}"
+                FontSize="32"
+                Text="{x:Static f:FluentUI.door_arrow_right_28_regular}"
+                TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                HorizontalOptions="Center"
+                VerticalOptions="Center" />
+        </Border>
+
+        <!-- Confirmation Title (Bold) -->
+        <Label
+            Margin="0,18,0,24"
+            FontAttributes="Bold"
+            FontSize="17.5"
+            HorizontalTextAlignment="Center"
+            Text="{loc:Translate Logout_Confirm_Message}"
+            TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+
+        <!-- Action Buttons: Cancel (Outlined) & Logout (Solid Blue) -->
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="12" HorizontalOptions="Fill">
+            <Button
+                Grid.Column="0"
+                Text="{loc:Translate Logout_Confirm_No}"
+                Clicked="OnCancelClicked"
+                BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                BorderColor="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                BorderWidth="1.5"
+                CornerRadius="14"
+                FontAttributes="Bold"
+                FontSize="14"
+                HeightRequest="46"
+                Padding="0"
+                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+
+            <Button
+                Grid.Column="1"
+                Text="{loc:Translate Logout_Confirm_Yes}"
+                Clicked="OnConfirmClicked"
+                BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                BorderWidth="0"
+                CornerRadius="14"
+                FontAttributes="Bold"
+                FontSize="14"
+                HeightRequest="46"
+                Padding="0"
+                TextColor="{StaticResource White}" />
+        </Grid>
+    </VerticalStackLayout>
+
+</toolkit:Popup>

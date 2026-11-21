@@ -1,9 +1,9 @@
 using System.Globalization;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Core.Localization;
-using RoomToRentRadar.Features.RoomListings.Models;
-using RoomToRentRadar.Features.RoomListings.Services;
-using RoomToRentRadar.Features.RoomListings.ViewModels;
+using RoomToRentRadar.Models.RoomListings;
+using RoomToRentRadar.Services.RoomListings;
+using RoomToRentRadar.ViewModels.RoomListings;
 
 namespace RoomToRentRadarUnitTests.Features.RoomListings;
 
