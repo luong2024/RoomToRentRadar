@@ -10,6 +10,14 @@ public partial class ProfilePage : ContentPage
         BindingContext = viewModel;
     }
 
+    private void OnOpenMenuTapped(object? sender, TappedEventArgs e)
+    {
+        if (Shell.Current is not null)
+        {
+            Shell.Current.FlyoutIsPresented = true;
+        }
+    }
+
     protected override async void OnAppearing()
     {
         base.OnAppearing();

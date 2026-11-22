@@ -45,7 +45,8 @@ public partial class ProfileViewModel : ObservableObject
     public bool IsStudent => string.Equals(Role, "STUDENT", StringComparison.OrdinalIgnoreCase);
     public bool IsLandlord => string.Equals(Role, "LANDLORD", StringComparison.OrdinalIgnoreCase);
     public bool IsAdmin => string.Equals(Role, "ADMIN", StringComparison.OrdinalIgnoreCase);
-    public string RoleDisplay => IsStudent ? "Student" : IsLandlord ? "Landlord" : IsAdmin ? "Administrator" : Role;
+    public string RoleDisplay => IsStudent ? "Sinh viên" : IsLandlord ? "Chủ trọ" : IsAdmin ? "Quản trị viên" : Role;
+    public bool HasStatusMessage => !string.IsNullOrWhiteSpace(StatusMessage);
     public bool ShouldLoadOnAppearing
     {
         get
@@ -311,6 +312,8 @@ public partial class ProfileViewModel : ObservableObject
         OnPropertyChanged(nameof(IsStudent)); OnPropertyChanged(nameof(IsLandlord));
         OnPropertyChanged(nameof(IsAdmin)); OnPropertyChanged(nameof(RoleDisplay));
     }
+
+    partial void OnStatusMessageChanged(string value) => OnPropertyChanged(nameof(HasStatusMessage));
 
     partial void OnFullNameChanged(string value) => MarkDirty();
     partial void OnPhoneNumberChanged(string? value) => MarkDirty();
