@@ -251,11 +251,13 @@ The rate limiter row (429) is added by its own task; until then no code path pro
 |---|---|---|
 | `Jwt:*` | issuer, audience, lifetimes, `SigningKey` (secret) | no key → fail fast outside Dev |
 | `Sqlite:ConnectionString` | DB path | `Data Source=roomtorentradar.db` |
+| `Sqlite:SeedDemoRooms`, `Sqlite:SeedExtendedDemoData` | demo room & child-table seeding (H4) | `false` in Production (`true` in Dev) |
 | `Media:RootPath`, `Media:PublicBaseUrl` | photo storage | `media/` |
 | `Routing:OpenRouteServiceApiKey`, `Routing:UseMock` | ADR-007 | `UseMock=false` |
 | `Push:FirebaseCredentialsPath`, `Push:UseMock` | ADR-010 | `UseMock=false` |
 | `IctuSso:*`, `IctuSso:UseMockVerifier` | ADR-005 | `false` |
-| `Admin:SeedAccounts` | seeded admin e-mails | empty |
+| `Admin:SeedAccounts` | seeded admin accounts `[{Id?, Email, FullName, Password}]` | empty |
+| `DemoData:Accounts` | dev-only demo accounts `[{Id, Email, FullName, Role, IsVerified, PhoneNumber?, StudentCode?, Password}]` (ignored outside Dev) | empty |
 | Client `ApiOptions:BaseUrl` | per build/environment | emulator `http://10.0.2.2:5000` |
 
 ### 7.6 Localization (US15)
