@@ -1,8 +1,12 @@
-using RoomToRentRadar.Core.Interfaces;
-using RoomToRentRadar.Features.Map.ViewModels;
-using RoomToRentRadar.Infrastructure.Api;
-using RoomToRentRadar.Models;
 using RoomToRentRadar.Services;
+using RoomToRentRadar.Services.Auth;
+using RoomToRentRadar.Services.ErrorHandling;
+using RoomToRentRadar.Services.Interactions;
+using RoomToRentRadar.Services.Navigation;
+using RoomToRentRadar.Services.Storage;
+using RoomToRentRadar.ViewModels;
+using RoomToRentRadar.Services.Api;
+using RoomToRentRadar.Models;
 using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.Shared.Listings;
 using RoomToRentRadar.Shared.Notifications;
@@ -174,17 +178,17 @@ public class MapSearchCompletionTests
         });
     }
 
-    private static MapSearchPageModel Create(QueueApiClient api)
+    private static MapSearchViewModel Create(QueueApiClient api)
         => new(api, new MemoryStore(), new RecordingErrors());
 
-    private static void Draw(MapSearchPageModel model)
+    private static void Draw(MapSearchViewModel model)
     {
         model.StartDrawingCommand.Execute(null);
         foreach (var vertex in Vertices)
             model.AddVertex(vertex.Lat, vertex.Lng);
     }
 
-    private static async Task DrawAndSearch(MapSearchPageModel model)
+    private static async Task DrawAndSearch(MapSearchViewModel model)
     {
         Draw(model);
         await model.FinishDrawingCommand.ExecuteAsync(null);
@@ -194,7 +198,7 @@ public class MapSearchCompletionTests
         => new(Guid.NewGuid(), title, 1_000_000, 20, 1, "Test address", 10.772, 106.695, DateTime.UnixEpoch, null);
 
     private static SearchResultDto<ListingSummaryDto> Page(string? cursor, params ListingSummaryDto[] data)
-        => new(data, new PaginationInfo(MapSearchPageModel.ResultLimit, cursor, cursor is not null), data.Length, false);
+        => new(data, new PaginationInfo(MapSearchViewModel.ResultLimit, cursor, cursor is not null), data.Length, false);
 
     private sealed class MemoryStore : ISavedAreaSearchStore
     {

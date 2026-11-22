@@ -1,0 +1,109 @@
+using RoomToRentRadar.Ports.Models.Listings;
+using RoomToRentRadar.Shared.Listings;
+
+namespace RoomToRentRadar.UseCases.Listings;
+
+/// <summary>
+/// The columns needed to order and page materialized area-search candidates. It
+/// mirrors the subset of <c>Listing</c> ordered by the SqliteDataAccess
+/// <c>ListingsQueryRepository</c>.
+/// </summary>
+public readonly record struct ListingSortKey(
+    Guid Id,
+    DateTime CreatedAt,
+    long Price,
+    double AreaM2,
+    double? DistanceKm = null);
+
+/// <summary>
+/// In-memory counterpart of the SQL ordering for sequences that are already
+/// materialized (area search). Ordering and the cursor predicate use the same
+/// primary key direction and ascending <see cref="Guid.CompareTo(Guid)"/>
+/// tie-breaker as the list endpoint, applied in memory instead of SQL.
+/// </summary>
+public static class ListingSortKeyOrdering
+{
+    public static IComparer<ListingSortKey> Comparer(ListingSort sort) => sort switch
+    {
+        ListingSort.Newest => new SortKeyComparer(ListingSort.Newest),
+        ListingSort.PriceAsc => new SortKeyComparer(ListingSort.PriceAsc),
+        ListingSort.PriceDesc => new SortKeyComparer(ListingSort.PriceDesc),
+        ListingSort.AreaDesc => new SortKeyComparer(ListingSort.AreaDesc),
+        ListingSort.DistanceAsc => new SortKeyComparer(ListingSort.DistanceAsc),
+        _ => throw new ArgumentOutOfRangeException(nameof(sort), sort, null)
+    };
+
+    public static List<ListingSortKey> Sort(IEnumerable<ListingSortKey> keys, ListingSort sort)
+    {
+        var ordered = keys.ToList();
+        ordered.Sort(Comparer(sort));
+        return ordered;
+    }
+
+    /// <summary>
+    /// True when <paramref name="key"/> sorts after the cursor row for the cursor's
+    /// sort. Mirrors the SQL cursor predicate of the list endpoint.
+    /// </summary>
+    public static bool IsAfterCursor(ListingSortKey key, ListingCursor cursor)
+    {
+        var idComparison = key.Id.CompareTo(cursor.Id);
+
+        return cursor.Sort switch
+        {
+            ListingSort.Newest =>
+                key.CreatedAt < cursor.CreatedAt!.Value
+                || (key.CreatedAt == cursor.CreatedAt.Value && idComparison > 0),
+            ListingSort.PriceAsc =>
+                key.Price > cursor.Price!.Value
+                || (key.Price == cursor.Price.Value && idComparison > 0),
+            ListingSort.PriceDesc =>
+                key.Price < cursor.Price!.Value
+                || (key.Price == cursor.Price.Value && idComparison > 0),
+            ListingSort.AreaDesc =>
+                key.AreaM2 < cursor.AreaM2!.Value
+                || (key.AreaM2 == cursor.AreaM2.Value && idComparison > 0),
+            ListingSort.DistanceAsc => IsAfterDistanceCursor(key, cursor, idComparison),
+            _ => throw new ArgumentOutOfRangeException(nameof(cursor), cursor.Sort, null)
+        };
+    }
+
+    public static string EncodeCursor(ListingSort sort, ListingSortKey key, string filterFingerprint)
+        => ListingCursorCodec.Encode(
+            sort,
+            key.Id,
+            filterFingerprint,
+            key.CreatedAt,
+            key.Price,
+            key.AreaM2,
+            key.DistanceKm);
+
+    private static bool IsAfterDistanceCursor(ListingSortKey key, ListingCursor cursor, int idComparison)
+    {
+        if (key.DistanceKm is not { } distance || cursor.DistanceKm is not { } cursorDistance)
+        {
+            return false;
+        }
+
+        return distance > cursorDistance || (distance == cursorDistance && idComparison > 0);
+    }
+
+    private sealed class SortKeyComparer(ListingSort sort) : IComparer<ListingSortKey>
+    {
+        public int Compare(ListingSortKey x, ListingSortKey y)
+        {
+            var primary = sort switch
+            {
+                ListingSort.Newest => y.CreatedAt.CompareTo(x.CreatedAt),
+                ListingSort.PriceAsc => x.Price.CompareTo(y.Price),
+                ListingSort.PriceDesc => y.Price.CompareTo(x.Price),
+                ListingSort.AreaDesc => y.AreaM2.CompareTo(x.AreaM2),
+                ListingSort.DistanceAsc => NullSafeDistance(x.DistanceKm).CompareTo(NullSafeDistance(y.DistanceKm)),
+                _ => throw new ArgumentOutOfRangeException(nameof(sort), sort, null)
+            };
+
+            return primary != 0 ? primary : x.Id.CompareTo(y.Id);
+        }
+
+        private static double NullSafeDistance(double? distance) => distance ?? double.PositiveInfinity;
+    }
+}

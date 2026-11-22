@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using RoomToRentRadar.Infrastructure.Api;
+using RoomToRentRadar.Services.Api;
 using RoomToRentRadar.Shared.Listings;
 using RoomToRentRadar.Shared.Notifications;
 using RoomToRentRadar.Shared.SavedSearches;

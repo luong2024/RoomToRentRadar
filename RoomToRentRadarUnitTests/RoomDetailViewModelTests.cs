@@ -1,8 +1,12 @@
 using System.Globalization;
-using RoomToRentRadar.Core.Interfaces;
-using RoomToRentRadar.Features.RoomDetail.ViewModels;
-using RoomToRentRadar.Features.RoomReport.ViewModels;
-using RoomToRentRadar.Infrastructure.Api;
+using RoomToRentRadar.Services;
+using RoomToRentRadar.Services.Auth;
+using RoomToRentRadar.Services.ErrorHandling;
+using RoomToRentRadar.Services.Interactions;
+using RoomToRentRadar.Services.Navigation;
+using RoomToRentRadar.Services.Storage;
+using RoomToRentRadar.ViewModels;
+using RoomToRentRadar.Services.Api;
 using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.Shared.Favourites;
 using RoomToRentRadar.Shared.Listings;
@@ -1028,6 +1032,14 @@ public class RoomDetailViewModelTests
             Alerts.Add((title, message));
             return Task.CompletedTask;
         }
+
+        public Task<bool> ConfirmAsync(
+            string title,
+            string message,
+            string acceptText,
+            string cancelText,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(true);
     }
 
     private sealed class FakeListingReportsClient : IListingReportsClient
@@ -1059,6 +1071,8 @@ public class RoomDetailViewModelTests
 
     private sealed class FakeNavigationService : INavigationService
     {
+        public Task GoToListingEditorAsync(Guid? listingId = null) => Task.CompletedTask;
+
         public List<Guid> RequestedListingIds { get; } = new();
 
         public int GoBackCount { get; private set; }

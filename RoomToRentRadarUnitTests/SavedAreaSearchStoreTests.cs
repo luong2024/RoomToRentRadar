@@ -1,6 +1,7 @@
 using Microsoft.Maui.Storage;
 using RoomToRentRadar.Models;
 using RoomToRentRadar.Services;
+using RoomToRentRadar.Services.Storage;
 using RoomToRentRadar.Shared.SavedSearches;
 
 namespace RoomToRentRadarUnitTests;

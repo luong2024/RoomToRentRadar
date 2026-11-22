@@ -7,6 +7,7 @@ on:
       - main
       - 'feature/**'
       - 'fix/**'
+      - 'refactor/**'
       - 'ci/**'
       - 'chore/**'
   pull_request:
@@ -47,14 +48,14 @@ jobs:
             **/*.csproj
 
       - name: Restore API tests
-        run: dotnet restore RoomToRentRadar.Api.Tests/RoomToRentRadar.Api.Tests.csproj
+        run: dotnet restore backend/RoomToRentRadar.Api.Tests/RoomToRentRadar.Api.Tests.csproj
 
       - name: Build API tests
-        run: dotnet build RoomToRentRadar.Api.Tests/RoomToRentRadar.Api.Tests.csproj --configuration Release --no-restore
+        run: dotnet build backend/RoomToRentRadar.Api.Tests/RoomToRentRadar.Api.Tests.csproj --configuration Release --no-restore
 
       - name: Run API tests
         run: >
-          dotnet test RoomToRentRadar.Api.Tests/RoomToRentRadar.Api.Tests.csproj
+          dotnet test backend/RoomToRentRadar.Api.Tests/RoomToRentRadar.Api.Tests.csproj
           --configuration Release
           --no-build
           --logger "trx;LogFileName=api-tests.trx"

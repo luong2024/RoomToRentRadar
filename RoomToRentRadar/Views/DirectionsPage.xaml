@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="RoomToRentRadar.Views.DirectionsPage"
+             Title="Chỉ đường"
+             Shell.NavBarIsVisible="True"
+             SafeAreaEdges="All">
+
+    <Grid>
+        <WebView x:Name="MapWebView"
+                 Navigating="OnNavigating"
+                 Navigated="OnNavigated"
+                 AutomationId="DirectionsWebView"
+                 SemanticProperties.Description="Bản đồ chỉ đường tới phòng" />
+
+        <Border x:Name="LoadingPanel"
+                VerticalOptions="Center"
+                HorizontalOptions="Center"
+                Padding="18"
+                BackgroundColor="{StaticResource SoftSurface}"
+                StrokeThickness="0"
+                StrokeShape="RoundRectangle 18">
+            <VerticalStackLayout Spacing="10" HorizontalOptions="Center">
+                <ActivityIndicator IsRunning="True"
+                                   HorizontalOptions="Center"
+                                   SemanticProperties.Description="Đang tải bản đồ chỉ đường" />
+                <Label Text="Đang tải bản đồ chỉ đường..."
+                       Style="{StaticResource Caption}" />
+            </VerticalStackLayout>
+        </Border>
+    </Grid>
+</ContentPage>

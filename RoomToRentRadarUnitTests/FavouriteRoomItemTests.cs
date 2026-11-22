@@ -1,5 +1,5 @@
-using RoomToRentRadar.Core.Constants;
-using RoomToRentRadar.Features.Favourites.ViewModels;
+using RoomToRentRadar.Constants;
+using RoomToRentRadar.ViewModels;
 using RoomToRentRadar.Shared.Favourites;
 using RoomToRentRadar.Shared.Listings;
 

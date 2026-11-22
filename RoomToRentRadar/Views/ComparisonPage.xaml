@@ -1,0 +1,322 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.ViewModels"
+             xmlns:models="clr-namespace:RoomToRentRadar.Models"
+             xmlns:buttons="clr-namespace:Syncfusion.Maui.Toolkit.Buttons;assembly=Syncfusion.Maui.Toolkit"
+             x:Class="RoomToRentRadar.Views.ComparisonPage"
+             x:Name="ComparisonRoot"
+             x:DataType="vm:ComparisonViewModel"
+             Title="So sánh phòng"
+             Shell.NavBarIsVisible="False"
+             SafeAreaEdges="All"
+             BackgroundColor="{AppThemeBinding Light={StaticResource Canvas}, Dark={StaticResource CanvasDark}}">
+
+    <ContentPage.Resources>
+        <DataTemplate x:Key="ComparisonCellTemplate"
+                      x:DataType="models:ComparisonCell">
+            <Border FlexLayout.Basis="0"
+                    FlexLayout.Grow="1"
+                    Margin="2,0"
+                    Padding="3,8"
+                    StrokeThickness="0"
+                    StrokeShape="RoundRectangle 10"
+                    BackgroundColor="Transparent">
+                <Border.Triggers>
+                    <DataTrigger TargetType="Border"
+                                 Binding="{Binding IsBest}"
+                                 Value="True">
+                        <Setter Property="BackgroundColor"
+                                Value="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}" />
+                    </DataTrigger>
+                </Border.Triggers>
+                <Label Text="{Binding Text}"
+                       FontSize="11.5"
+                       LineHeight="1.15"
+                       MaxLines="3"
+                       LineBreakMode="TailTruncation"
+                       HorizontalTextAlignment="Center"
+                       VerticalOptions="Center"
+                       TextColor="{AppThemeBinding Light={StaticResource BodyInk}, Dark={StaticResource InkDark}}" />
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ComparisonColumnTemplate"
+                      x:DataType="models:ComparisonColumnHeader">
+            <VerticalStackLayout FlexLayout.Basis="0"
+                                 FlexLayout.Grow="1"
+                                 Margin="2,0"
+                                 Spacing="5">
+                <Grid HeightRequest="58">
+                    <Border StrokeThickness="0"
+                            StrokeShape="RoundRectangle 14"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
+                        <Image Source="{Binding PhotoSource}"
+                               IsVisible="{Binding HasPhoto}"
+                               Aspect="AspectFill"
+                               SemanticProperties.Description="{Binding Title}" />
+                    </Border>
+                    <buttons:SfButton Text="✕"
+                                      Command="{Binding BindingContext.RemoveRoomCommand, Source={x:Reference ComparisonRoot}}"
+                                      CommandParameter="{Binding Id}"
+                                      Style="{StaticResource IconActionButton}"
+                                      FontSize="12"
+                                      WidthRequest="26"
+                                      HeightRequest="26"
+                                      Padding="0"
+                                      CornerRadius="13"
+                                      HorizontalOptions="End"
+                                      VerticalOptions="Start"
+                                      Margin="0"
+                                      AutomationId="RemoveComparisonRoom"
+                                      SemanticProperties.Description="Bỏ phòng khỏi bảng so sánh" />
+                </Grid>
+                <Label Text="{Binding Title}"
+                       FontSize="11.5"
+                       FontFamily="OpenSansSemibold"
+                       MaxLines="2"
+                       LineBreakMode="TailTruncation"
+                       HeightRequest="30"
+                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                <Label Text="{Binding PriceText}"
+                       FontSize="12"
+                       FontFamily="OpenSansSemibold"
+                       TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
+            </VerticalStackLayout>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ComparisonRowTemplate"
+                      x:DataType="models:ComparisonRow">
+            <Grid ColumnDefinitions="84,*"
+                  Padding="0,3">
+                <Label Text="{Binding Label}"
+                       FontSize="12"
+                       FontFamily="OpenSansSemibold"
+                       VerticalOptions="Center"
+                       TextColor="{AppThemeBinding Light={StaticResource BodyInk}, Dark={StaticResource InkDark}}" />
+                <FlexLayout Grid.Column="1"
+                            Direction="Row"
+                            BindableLayout.ItemsSource="{Binding Cells}"
+                            BindableLayout.ItemTemplate="{StaticResource ComparisonCellTemplate}" />
+            </Grid>
+        </DataTemplate>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Page header (hidden while capturing the shared image) -->
+        <Grid x:Name="HeaderBar"
+              IsVisible="{Binding ShowChrome}"
+              Padding="12,8"
+              ColumnDefinitions="Auto,*,Auto"
+              ColumnSpacing="8">
+            <buttons:SfButton Text="‹"
+                              Command="{Binding GoBackCommand}"
+                              Style="{StaticResource IconActionButton}"
+                              FontSize="26"
+                              WidthRequest="42"
+                              HeightRequest="42"
+                              Padding="0"
+                              AutomationId="ComparisonBack"
+                              SemanticProperties.Description="Quay lại" />
+            <VerticalStackLayout Grid.Column="1"
+                                 Spacing="0"
+                                 VerticalOptions="Center">
+                <Label Text="So sánh phòng"
+                       FontSize="18"
+                       FontFamily="OpenSansSemibold"
+                       SemanticProperties.HeadingLevel="Level1"
+                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                <Label Text="{Binding ComparisonSummary}"
+                       Style="{StaticResource Caption}"
+                       FontSize="11" />
+            </VerticalStackLayout>
+            <buttons:SfButton Grid.Column="2"
+                              Text="Xoá hết"
+                              Command="{Binding ClearAllCommand}"
+                              IsVisible="{Binding ShowContent}"
+                              Style="{StaticResource TextActionButton}"
+                              Padding="8,0"
+                              AutomationId="ComparisonClearAll" />
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <!-- Loading -->
+            <VerticalStackLayout IsVisible="{Binding IsLoading}"
+                                 Spacing="10"
+                                 VerticalOptions="Center"
+                                 HorizontalOptions="Center">
+                <ActivityIndicator IsRunning="{Binding IsLoading}"
+                                   WidthRequest="32"
+                                   HeightRequest="32"
+                                   SemanticProperties.Description="Đang tải dữ liệu so sánh" />
+                <Label Text="Đang tải dữ liệu so sánh…"
+                       Style="{StaticResource Caption}" />
+            </VerticalStackLayout>
+
+            <!-- Empty -->
+            <VerticalStackLayout IsVisible="{Binding ShowEmptyState}"
+                                 Padding="24"
+                                 Spacing="12"
+                                 VerticalOptions="Center"
+                                 HorizontalOptions="Center"
+                                 MaximumWidthRequest="420">
+                <Border WidthRequest="72"
+                        HeightRequest="72"
+                        StrokeThickness="0"
+                        StrokeShape="RoundRectangle 20"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}"
+                        HorizontalOptions="Center">
+                    <Image Source="compare_icon.png"
+                           WidthRequest="32"
+                           HeightRequest="32"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center" />
+                </Border>
+                <Label Text="Chưa chọn phòng nào"
+                       FontSize="20"
+                       FontFamily="OpenSansSemibold"
+                       HorizontalTextAlignment="Center"
+                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                <Label Text="Quay lại Khám phá và bấm biểu tượng so sánh trên thẻ phòng. Bạn có thể chọn tối đa 3 phòng."
+                       Style="{StaticResource BodyText}"
+                       HorizontalTextAlignment="Center" />
+                <buttons:SfButton Text="Khám phá phòng trọ"
+                                  Command="{Binding GoBackCommand}"
+                                  HorizontalOptions="Center"
+                                  AutomationId="ComparisonEmptyBack"
+                                  SemanticProperties.Description="Quay lại danh sách phòng" />
+            </VerticalStackLayout>
+
+            <!-- Error -->
+            <VerticalStackLayout IsVisible="{Binding HasError}"
+                                 Padding="24"
+                                 Spacing="12"
+                                 VerticalOptions="Center"
+                                 HorizontalOptions="Center"
+                                 MaximumWidthRequest="420">
+                <Label Text="LỖI KẾT NỐI"
+                       Style="{StaticResource Eyebrow}"
+                       TextColor="{StaticResource Danger}" />
+                <Label Text="Chưa tải được bảng so sánh"
+                       FontSize="20"
+                       FontFamily="OpenSansSemibold"
+                       HorizontalTextAlignment="Center" />
+                <Label Text="{Binding ErrorMessage}"
+                       Style="{StaticResource BodyText}"
+                       HorizontalTextAlignment="Center" />
+                <buttons:SfButton Text="Thử lại"
+                                  Command="{Binding RetryCommand}"
+                                  HorizontalOptions="Center"
+                                  AutomationId="ComparisonRetry" />
+            </VerticalStackLayout>
+
+            <!-- Table -->
+            <ScrollView IsVisible="{Binding ShowContent}"
+                        VerticalScrollBarVisibility="Never">
+                <VerticalStackLayout Padding="16,0,16,20"
+                                     Spacing="12"
+                                     MaximumWidthRequest="760"
+                                     HorizontalOptions="Fill">
+                    <Border x:Name="ShareCard"
+                            Padding="14"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 20"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}"
+                            AutomationId="ComparisonTable">
+                        <VerticalStackLayout Spacing="10">
+                            <HorizontalStackLayout Spacing="6">
+                                <Image Source="radar_mark.png"
+                                       WidthRequest="18"
+                                       HeightRequest="18" />
+                                <Label Text="ROOM RADAR"
+                                       Style="{StaticResource Eyebrow}"
+                                       FontSize="9"
+                                       TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
+                            </HorizontalStackLayout>
+                            <VerticalStackLayout Spacing="2">
+                                <Label Text="So sánh phòng trọ"
+                                       FontSize="20"
+                                       FontFamily="OpenSansSemibold"
+                                       CharacterSpacing="-0.3"
+                                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                <Label Text="{Binding ComparisonSummary}"
+                                       Style="{StaticResource Caption}"
+                                       FontSize="11.5" />
+                                <Label Text="{Binding DistanceNote}"
+                                       IsVisible="{Binding HasDistanceNote}"
+                                       Style="{StaticResource Caption}"
+                                       FontSize="11"
+                                       TextColor="{AppThemeBinding Light={StaticResource Information}, Dark={StaticResource MutedDark}}" />
+                            </VerticalStackLayout>
+
+                            <Grid ColumnDefinitions="84,*">
+                                <Label Text="TIÊU CHÍ"
+                                       Style="{StaticResource Eyebrow}"
+                                       FontSize="9"
+                                       VerticalOptions="End"
+                                       TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                                <FlexLayout Grid.Column="1"
+                                            Direction="Row"
+                                            BindableLayout.ItemsSource="{Binding Columns}"
+                                            BindableLayout.ItemTemplate="{StaticResource ComparisonColumnTemplate}" />
+                            </Grid>
+
+                            <BoxView HeightRequest="1"
+                                     Color="{AppThemeBinding Light={StaticResource SubtleLine}, Dark={StaticResource LineDark}}" />
+
+                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Rows}"
+                                                 BindableLayout.ItemTemplate="{StaticResource ComparisonRowTemplate}" />
+
+                            <BoxView HeightRequest="1"
+                                     Color="{AppThemeBinding Light={StaticResource SubtleLine}, Dark={StaticResource LineDark}}" />
+
+                            <Label Text="Khoảng cách tính từ khu vực đã chọn. Điểm an ninh (0–100) là ước tính từ tiện nghi của phòng."
+                                   FontSize="10"
+                                   LineHeight="1.2"
+                                   TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <buttons:SfButton Text="Thêm phòng khác"
+                                      Command="{Binding GoBackCommand}"
+                                      Style="{StaticResource OutlineActionButton}"
+                                      HorizontalOptions="Fill"
+                                      AutomationId="ComparisonAddMore" />
+                </VerticalStackLayout>
+            </ScrollView>
+        </Grid>
+
+        <!-- Bottom bar (hidden while capturing the shared image) -->
+        <Border x:Name="BottomBar"
+                Grid.Row="2"
+                IsVisible="{Binding ShowBottomBar}"
+                Padding="16,10,16,14"
+                StrokeThickness="0"
+                StrokeShape="Rectangle"
+                BackgroundColor="Transparent">
+            <Grid ColumnDefinitions="*,Auto"
+                  ColumnSpacing="12"
+                  MaximumWidthRequest="760"
+                  HorizontalOptions="Fill">
+                <VerticalStackLayout Spacing="1"
+                                     VerticalOptions="Center">
+                    <Label Text="KHU VỰC CỦA BẠN"
+                           Style="{StaticResource Eyebrow}"
+                           FontSize="9" />
+                    <Picker Title="Chọn khu vực"
+                            ItemsSource="{Binding CampusNames}"
+                            SelectedItem="{Binding SelectedCampusName, Mode=TwoWay}"
+                            AutomationId="ComparisonCampusPicker"
+                            SemanticProperties.Description="Chọn khu vực để tính khoảng cách" />
+                </VerticalStackLayout>
+                <buttons:SfButton Grid.Column="1"
+                                  Text="Chia sẻ ảnh"
+                                  Clicked="OnShareClicked"
+                                  Style="{StaticResource PrimaryActionButton}"
+                                  AutomationId="ComparisonShare"
+                                  SemanticProperties.Description="Chia sẻ bảng so sánh dưới dạng ảnh"
+                                  SemanticProperties.Hint="Mở bảng chia sẻ ảnh của thiết bị" />
+            </Grid>
+        </Border>
+    </Grid>
+</ContentPage>

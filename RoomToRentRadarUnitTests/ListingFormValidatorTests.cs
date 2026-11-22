@@ -1,5 +1,5 @@
-using RoomToRentRadar.Features.ListingManagement.Models;
 using RoomToRentRadar.Shared.Listings;
+using RoomToRentRadar.Validations;
 
 namespace RoomToRentRadarUnitTests;
 

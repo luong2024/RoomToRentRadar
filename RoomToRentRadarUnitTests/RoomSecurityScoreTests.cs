@@ -1,4 +1,4 @@
-using RoomToRentRadar.Features.Comparison.Services;
+using RoomToRentRadar.Services;
 using RoomToRentRadar.Shared.Listings;
 
 namespace RoomToRentRadarUnitTests;

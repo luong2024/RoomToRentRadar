@@ -1,6 +1,11 @@
-using RoomToRentRadar.Core.Interfaces;
-using RoomToRentRadar.Features.RoomReport.ViewModels;
-using RoomToRentRadar.Infrastructure.Api;
+using RoomToRentRadar.Services;
+using RoomToRentRadar.Services.Auth;
+using RoomToRentRadar.Services.ErrorHandling;
+using RoomToRentRadar.Services.Interactions;
+using RoomToRentRadar.Services.Navigation;
+using RoomToRentRadar.Services.Storage;
+using RoomToRentRadar.ViewModels;
+using RoomToRentRadar.Services.Api;
 using RoomToRentRadar.Shared.Reports;
 
 namespace RoomToRentRadarUnitTests;
@@ -333,10 +338,20 @@ public class RoomReportViewModelTests
             Alerts.Add((title, message));
             return Task.CompletedTask;
         }
+
+        public Task<bool> ConfirmAsync(
+            string title,
+            string message,
+            string acceptText,
+            string cancelText,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(true);
     }
 
     private sealed class FakeNavigationService : INavigationService
     {
+        public Task GoToListingEditorAsync(Guid? listingId = null) => Task.CompletedTask;
+
         public int GoToLoginCount { get; private set; }
 
         public Task GoToLoginAsync()

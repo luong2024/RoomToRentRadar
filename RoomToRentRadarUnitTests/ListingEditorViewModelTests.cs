@@ -1,10 +1,14 @@
 using System.Net;
 using CommunityToolkit.Mvvm.Input;
-using RoomToRentRadar.Core.Interfaces;
-using RoomToRentRadar.Features.ListingManagement.Models;
-using RoomToRentRadar.Features.ListingManagement.ViewModels;
-using RoomToRentRadar.Infrastructure.Api;
-using RoomToRentRadar.Infrastructure.Auth;
+using RoomToRentRadar.Services;
+using RoomToRentRadar.Services.Auth;
+using RoomToRentRadar.Services.ErrorHandling;
+using RoomToRentRadar.Services.Interactions;
+using RoomToRentRadar.Services.Navigation;
+using RoomToRentRadar.Services.Storage;
+using RoomToRentRadar.Models;
+using RoomToRentRadar.ViewModels;
+using RoomToRentRadar.Services.Api;
 using RoomToRentRadar.Shared.Listings;
 
 namespace RoomToRentRadarUnitTests;
@@ -42,6 +46,24 @@ public class ListingEditorViewModelTests
             Assert.That(viewModel.CanUnpublish, Is.True);
             Assert.That(viewModel.IsBusy, Is.False);
             Assert.That(_temporaryPhotos.All(path => !File.Exists(path)), Is.True);
+        });
+    }
+
+    [Test]
+    public async Task UnpublishCommand_ConfirmationDeclined_DoesNotCallApi()
+    {
+        var client = new FakeClient();
+        var alerts = new FakeAlertPrompt { ConfirmResult = false };
+        var viewModel = CreateViewModel(client, alerts: alerts);
+        viewModel.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = client.Saved.Id.ToString() });
+        await viewModel.LoadCommand.ExecuteAsync(null);
+
+        await viewModel.UnpublishCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(alerts.ConfirmCalls, Is.EqualTo(1));
+            Assert.That(client.UnpublishCalls, Is.Zero);
         });
     }
 
@@ -352,8 +374,15 @@ public class ListingEditorViewModelTests
         Assert.That(viewModel.Message, Is.Empty);
     }
 
-    private static ListingEditorViewModel CreateViewModel(FakeClient client, bool signedIn = true)
-        => new(client, new AuthService(null!, new FakeTokenStore(signedIn)), new FakeNavigationService());
+    private static ListingEditorViewModel CreateViewModel(
+        FakeClient client,
+        bool signedIn = true,
+        FakeAlertPrompt? alerts = null)
+        => new(
+            client,
+            new AuthService(null!, new FakeTokenStore(signedIn)),
+            new FakeNavigationService(),
+            alerts ?? new FakeAlertPrompt());
 
     private static void PopulateForm(ListingEditorViewModel viewModel)
     {
@@ -387,6 +416,7 @@ public class ListingEditorViewModelTests
 
     private sealed class FakeNavigationService : INavigationService
     {
+        public Task GoToListingEditorAsync(Guid? listingId = null) => Task.CompletedTask;
         public Task GoToRoomDetailAsync(Guid listingId) => Task.CompletedTask;
         public Task GoToLoginAsync() => Task.CompletedTask;
         public Task GoToDirectionsAsync(double destinationLat, double destinationLng, double? originLat, double? originLng) => Task.CompletedTask;
@@ -394,10 +424,35 @@ public class ListingEditorViewModelTests
         public Task GoBackAsync() => Task.CompletedTask;
     }
 
+    private sealed class FakeAlertPrompt : IAlertPrompt
+    {
+        public bool ConfirmResult { get; set; } = true;
+        public int ConfirmCalls { get; private set; }
+
+        public Task ShowAsync(
+            string title,
+            string message,
+            string dismissText = "OK",
+            CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task<bool> ConfirmAsync(
+            string title,
+            string message,
+            string acceptText,
+            string cancelText,
+            CancellationToken cancellationToken = default)
+        {
+            ConfirmCalls++;
+            return Task.FromResult(ConfirmResult);
+        }
+    }
+
     private sealed class FakeClient : IListingManagementClient
     {
         public int CreateCalls { get; private set; }
         public int UpdateCalls { get; private set; }
+        public int UnpublishCalls { get; private set; }
         public int HouseRulesCalls { get; private set; }
         public ListingFormSubmission? LastSubmission { get; private set; }
         public UpdateHouseRulesRequest? LastHouseRulesRequest { get; private set; }
@@ -431,7 +486,10 @@ public class ListingEditorViewModelTests
             return Task.FromResult(Saved);
         }
         public Task<ManagedListingDto> UnpublishAsync(Guid id, CancellationToken cancellationToken = default)
-            => Task.FromResult(Saved with { Status = ListingStatus.Hidden });
+        {
+            UnpublishCalls++;
+            return Task.FromResult(Saved with { Status = ListingStatus.Hidden });
+        }
         public Task<HouseRulesDto> UpdateHouseRulesAsync(
             Guid id, UpdateHouseRulesRequest request, CancellationToken cancellationToken = default)
         {
