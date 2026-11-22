@@ -78,6 +78,10 @@ public sealed class SqliteDbContext : IDisposable
                 // Campuses is reference data: always seeded, in every environment (H4 / ADR-002).
                 SeedCampuses(conn);
 
+                // Configured accounts (Admin:SeedAccounts, plus DemoData:Accounts in Development)
+                // run before SeedDemoLandlordUserIfMissing so configured credentials take precedence.
+                SeedConfiguredAccounts(conn, _settings.SeedAccounts);
+
                 if (_settings.SeedDemoRooms)
                 {
                     // BR-LST-06: search only shows rooms whose landlord is verified, so the demo
@@ -137,6 +141,63 @@ public sealed class SqliteDbContext : IDisposable
                 longitude.Value = campus.Longitude;
                 isDefault.Value = campus.IsDefault ? 1 : 0;
                 sortOrder.Value = campus.SortOrder;
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        tx.Commit();
+    }
+
+    private static void SeedConfiguredAccounts(
+        SqliteConnection conn,
+        IReadOnlyList<SeedAccount>? seedAccounts)
+    {
+        if (seedAccounts is not { Count: > 0 })
+        {
+            return;
+        }
+
+        const string createdAtUtc = "2026-11-01T08:00:00.0000000Z";
+
+        using var tx = conn.BeginTransaction();
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.Transaction = tx;
+            cmd.CommandText = """
+                INSERT OR IGNORE INTO Users (
+                    Id, Email, NormalizedEmail, FullName, PasswordHash, Role, AuthProvider,
+                    SsoSubjectId, PhoneNumber, StudentCode, IsVerified, FailedLoginCount,
+                    LockoutEndUtc, CreatedAtUtc, UpdatedAtUtc
+                ) VALUES (
+                    @id, @email, @normalizedEmail, @fullName, @passwordHash, @role, 'Local',
+                    NULL, @phoneNumber, @studentCode, @isVerified, 0,
+                    NULL, @createdAtUtc, @createdAtUtc
+                );
+                """;
+
+            var idParam = cmd.Parameters.Add("@id", SqliteType.Text);
+            var emailParam = cmd.Parameters.Add("@email", SqliteType.Text);
+            var normalizedEmailParam = cmd.Parameters.Add("@normalizedEmail", SqliteType.Text);
+            var fullNameParam = cmd.Parameters.Add("@fullName", SqliteType.Text);
+            var passwordHashParam = cmd.Parameters.Add("@passwordHash", SqliteType.Text);
+            var roleParam = cmd.Parameters.Add("@role", SqliteType.Text);
+            var phoneNumberParam = cmd.Parameters.Add("@phoneNumber", SqliteType.Text);
+            var studentCodeParam = cmd.Parameters.Add("@studentCode", SqliteType.Text);
+            var isVerifiedParam = cmd.Parameters.Add("@isVerified", SqliteType.Integer);
+            cmd.Parameters.AddWithValue("@createdAtUtc", createdAtUtc);
+
+            foreach (var account in seedAccounts)
+            {
+                var trimmedEmail = account.Email.Trim();
+                idParam.Value = account.Id.Trim();
+                emailParam.Value = trimmedEmail;
+                normalizedEmailParam.Value = trimmedEmail.ToLowerInvariant();
+                fullNameParam.Value = account.FullName.Trim();
+                passwordHashParam.Value = account.PasswordHash;
+                roleParam.Value = account.Role.ToString();
+                phoneNumberParam.Value = (object?)account.PhoneNumber ?? DBNull.Value;
+                studentCodeParam.Value = (object?)account.StudentCode ?? DBNull.Value;
+                isVerifiedParam.Value = account.IsVerified ? 1 : 0;
                 cmd.ExecuteNonQuery();
             }
         }
