@@ -23,6 +23,22 @@
         Route="map"
         SemanticProperties.Description="Tìm phòng trên bản đồ"
         SemanticProperties.Hint="Khoanh vùng tìm phòng quanh ICTU"/>
+
+    <ShellContent
+        Title="Bộ lọc tìm kiếm"
+        Icon="{StaticResource IconProjects}"
+        ContentTemplate="{DataTemplate pages:FilterBottomSheet}"
+        Route="filter-search"
+        SemanticProperties.Description="Bộ lọc tìm kiếm phòng trọ"
+        SemanticProperties.Hint="Lọc phòng theo giá, diện tích, loại phòng và khoảng cách tới ICTU"/>
+
+    <ShellContent
+        Title="Chi tiết phòng"
+        Icon="{StaticResource IconRibbon}"
+        ContentTemplate="{DataTemplate pages:RoomDetailPage}"
+        Route="room-detail"
+        SemanticProperties.Description="Chi tiết phòng trọ"
+        SemanticProperties.Hint="Xem thông tin chi tiết phòng trọ, tiện ích, nội quy và liên hệ chủ trọ"/>
     <ShellContent
         Title="Dashboard"
         Icon="{StaticResource IconDashboard}"
