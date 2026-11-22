@@ -27,3 +27,10 @@ public sealed class RoomPhotoQuotaExceededException : RoomGalleryDomainException
     {
     }
 }
+
+public sealed class RoomGalleryAccessDeniedException : RoomGalleryDomainException
+{
+    public RoomGalleryAccessDeniedException(string message) : base(message)
+    {
+    }
+}

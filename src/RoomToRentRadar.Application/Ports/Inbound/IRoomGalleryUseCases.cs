@@ -14,7 +14,12 @@ public interface IUploadRoomPhotoUseCase
 
 public interface IDeleteRoomPhotoUseCase
 {
-    Task ExecuteAsync(string roomId, string photoId, CancellationToken cancellationToken = default);
+    Task ExecuteAsync(
+        string roomId,
+        string photoId,
+        Guid actorUserId,
+        bool isAdmin = false,
+        CancellationToken cancellationToken = default);
 }
 
 public interface IReorderRoomPhotosUseCase

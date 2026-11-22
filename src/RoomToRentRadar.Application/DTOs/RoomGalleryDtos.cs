@@ -30,12 +30,15 @@ public sealed record UploadRoomPhotoCommand(
     byte[] FileBytes,
     bool Is360 = false,
     bool IsCover = false,
-    string? Caption = null);
+    string? Caption = null,
+    bool IsAdmin = false);
 
 public sealed record ReorderRoomPhotosCommand(
     string RoomId,
+    Guid ActorUserId,
     IReadOnlyList<string> OrderedPhotoIds,
-    string? CoverPhotoId = null);
+    string? CoverPhotoId = null,
+    bool IsAdmin = false);
 
 public sealed record ProcessedImageResult(
     byte[] CompressedBytes,

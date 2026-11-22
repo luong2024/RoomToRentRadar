@@ -201,6 +201,12 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                 photoQuotaEx.Message,
                 null),
 
+            RoomGalleryAccessDeniedException galleryAccessDeniedEx => (
+                StatusCodes.Status403Forbidden,
+                "Gallery Access Denied",
+                galleryAccessDeniedEx.Message,
+                null),
+
             RateLimitExceededException rateLimitEx => (
                 StatusCodes.Status429TooManyRequests,
                 "Rate Limit Exceeded",

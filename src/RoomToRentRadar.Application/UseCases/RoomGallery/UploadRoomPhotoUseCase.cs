@@ -63,6 +63,8 @@ public sealed class UploadRoomPhotoUseCase : IUploadRoomPhotoUseCase
             throw new NotFoundException($"Room '{normalizedRoomId}' was not found.");
         }
 
+        RoomGalleryAuthorization.EnsureCanManageGallery(room, command.UploadedByUserId, command.IsAdmin);
+
         var existingPhotos = await _photoRepository.GetByRoomIdAsync(normalizedRoomId, cancellationToken);
         if (existingPhotos.Count >= RoomPhoto.MaxPhotosPerRoom)
         {
@@ -106,21 +108,59 @@ public sealed class UploadRoomPhotoUseCase : IUploadRoomPhotoUseCase
             uploadedByUserId: command.UploadedByUserId,
             uploadedAtUtc: _timeProvider.GetUtcNow());
 
+        var addedNewPhoto = false;
+        var demotedCovers = new List<RoomPhoto>();
+
         try
         {
+            await _photoRepository.AddAsync(newPhoto, cancellationToken);
+            addedNewPhoto = true;
+
             if (isCover)
             {
                 foreach (var previousCover in existingPhotos.Where(p => p.IsCover))
                 {
                     previousCover.SetAsCover(false);
-                    await _photoRepository.UpdateAsync(previousCover, cancellationToken);
+                    try
+                    {
+                        await _photoRepository.UpdateAsync(previousCover, cancellationToken);
+                        demotedCovers.Add(previousCover);
+                    }
+                    catch
+                    {
+                        previousCover.SetAsCover(true);
+                        throw;
+                    }
                 }
             }
-
-            await _photoRepository.AddAsync(newPhoto, cancellationToken);
         }
         catch
         {
+            foreach (var demotedCover in demotedCovers)
+            {
+                try
+                {
+                    demotedCover.SetAsCover(true);
+                    await _photoRepository.UpdateAsync(demotedCover, CancellationToken.None);
+                }
+                catch
+                {
+                    // Preserve original persistence exception when rollback cleanup fails.
+                }
+            }
+
+            if (addedNewPhoto)
+            {
+                try
+                {
+                    await _photoRepository.DeleteAsync(normalizedRoomId, newPhoto.Id, CancellationToken.None);
+                }
+                catch
+                {
+                    // Preserve original persistence exception when rollback cleanup fails.
+                }
+            }
+
             try
             {
                 await _storageService.DeleteAsync(

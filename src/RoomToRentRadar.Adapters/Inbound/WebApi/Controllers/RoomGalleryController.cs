@@ -126,7 +126,8 @@ public sealed class RoomGalleryController : ControllerBase
             FileBytes: fileBytes,
             Is360: form.Is360,
             IsCover: form.IsCover,
-            Caption: form.Caption);
+            Caption: form.Caption,
+            IsAdmin: IsCurrentUserAdmin());
 
         var created = await _uploadRoomPhotoUseCase.ExecuteAsync(command, cancellationToken);
         return Created($"/api/v1/rooms/{Uri.EscapeDataString(created.RoomId)}/gallery", created);
@@ -146,12 +147,12 @@ public sealed class RoomGalleryController : ControllerBase
         [FromRoute] string photoId,
         CancellationToken cancellationToken)
     {
-        if (!TryGetCurrentUserId(out _, out var authError))
+        if (!TryGetCurrentUserId(out var userId, out var authError))
         {
             return authError!;
         }
 
-        await _deleteRoomPhotoUseCase.ExecuteAsync(roomId, photoId, cancellationToken);
+        await _deleteRoomPhotoUseCase.ExecuteAsync(roomId, photoId, userId, IsCurrentUserAdmin(), cancellationToken);
         return NoContent();
     }
 
@@ -170,19 +171,24 @@ public sealed class RoomGalleryController : ControllerBase
         [FromBody] ReorderRoomPhotosRequest? request,
         CancellationToken cancellationToken)
     {
-        if (!TryGetCurrentUserId(out _, out var authError))
+        if (!TryGetCurrentUserId(out var userId, out var authError))
         {
             return authError!;
         }
 
         var command = new ReorderRoomPhotosCommand(
             RoomId: roomId,
+            ActorUserId: userId,
             OrderedPhotoIds: request?.OrderedPhotoIds ?? [],
-            CoverPhotoId: request?.CoverPhotoId);
+            CoverPhotoId: request?.CoverPhotoId,
+            IsAdmin: IsCurrentUserAdmin());
 
         var updated = await _reorderRoomPhotosUseCase.ExecuteAsync(command, cancellationToken);
         return Ok(updated);
     }
+
+    private bool IsCurrentUserAdmin() =>
+        User?.IsInRole(AuthorizationPolicies.Roles.Admin) == true;
 
     private bool TryGetCurrentUserId(out Guid userId, out IActionResult? errorResult)
     {

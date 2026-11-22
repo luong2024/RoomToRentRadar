@@ -1,9 +1,12 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Microsoft.Extensions.DependencyInjection;
 using RoomToRentRadar.Adapters.Inbound.WebApi.Contracts;
 using RoomToRentRadar.Application.DTOs;
+using RoomToRentRadar.Application.Ports.Outbound;
 using RoomToRentRadar.Domain.Entities;
+using RoomToRentRadar.Domain.ValueObjects;
 using SkiaSharp;
 using RoomDetailsStatus = RoomToRentRadar.Domain.Entities.RoomStatus;
 
@@ -93,7 +96,9 @@ public class RoomGalleryIntegrationTests
     [Test]
     public async Task FullGalleryLifecycle_UploadCompressReorderAndDelete_SucceedsEndToEnd()
     {
-        var landlordToken = await RegisterAndLoginAsync("landlord-gallery@ictu.edu.vn", "LANDLORD");
+        var landlordSession = await RegisterAndLoginSessionAsync("landlord-gallery@ictu.edu.vn", "LANDLORD");
+        AssignRoomOwner("room-gallery-001", landlordSession.UserId);
+        var landlordToken = landlordSession.AccessToken;
         var standardJpeg = CreateTestJpeg(2200, 1400);
         var panoramaJpeg = CreateTestJpeg(2000, 1000);
 
@@ -162,7 +167,90 @@ public class RoomGalleryIntegrationTests
         });
     }
 
+    [Test]
+    public async Task OwnershipAuthorization_RejectsOtherLandlordWith403AndAllowsAdmin()
+    {
+        var ownerSession = await RegisterAndLoginSessionAsync("owner-landlord@ictu.edu.vn", "LANDLORD");
+        var otherLandlordSession = await RegisterAndLoginSessionAsync("other-landlord@ictu.edu.vn", "LANDLORD");
+        var adminSession = await ProvisionAdminAndLoginAsync("admin-gallery@roomtorentradar.local", "AdminPass123!");
+
+        AssignRoomOwner("room-gallery-001", ownerSession.UserId);
+        var jpegBytes = CreateTestJpeg(800, 600);
+
+        // Owner uploads initial photo
+        using var ownerUploadReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/rooms/room-gallery-001/gallery/photos")
+        {
+            Content = CreateUploadForm(jpegBytes, "owner.jpg", "image/jpeg")
+        };
+        ownerUploadReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ownerSession.AccessToken);
+        var ownerUploadRes = await _client.SendAsync(ownerUploadReq);
+        Assert.That(ownerUploadRes.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+        var ownerPhoto = (await ownerUploadRes.Content.ReadFromJsonAsync<RoomPhotoDto>())!;
+
+        // Other landlord cannot upload, reorder, or delete
+        using var otherUploadReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/rooms/room-gallery-001/gallery/photos")
+        {
+            Content = CreateUploadForm(jpegBytes, "intruder.jpg", "image/jpeg")
+        };
+        otherUploadReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", otherLandlordSession.AccessToken);
+        var otherUploadRes = await _client.SendAsync(otherUploadReq);
+
+        using var otherReorderReq = new HttpRequestMessage(HttpMethod.Patch, "/api/v1/rooms/room-gallery-001/gallery/reorder")
+        {
+            Content = JsonContent.Create(new ReorderRoomPhotosRequest([ownerPhoto.Id], ownerPhoto.Id))
+        };
+        otherReorderReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", otherLandlordSession.AccessToken);
+        var otherReorderRes = await _client.SendAsync(otherReorderReq);
+
+        using var otherDeleteReq = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/rooms/room-gallery-001/gallery/photos/{ownerPhoto.Id}");
+        otherDeleteReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", otherLandlordSession.AccessToken);
+        var otherDeleteRes = await _client.SendAsync(otherDeleteReq);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(otherUploadRes.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+            Assert.That(otherReorderRes.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+            Assert.That(otherDeleteRes.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        });
+
+        // Admin retains access to upload, reorder, and delete on any room
+        using var adminUploadReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/rooms/room-gallery-001/gallery/photos")
+        {
+            Content = CreateUploadForm(jpegBytes, "admin.jpg", "image/jpeg")
+        };
+        adminUploadReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminSession.AccessToken);
+        var adminUploadRes = await _client.SendAsync(adminUploadReq);
+        Assert.That(adminUploadRes.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+        var adminPhoto = (await adminUploadRes.Content.ReadFromJsonAsync<RoomPhotoDto>())!;
+
+        using var adminReorderReq = new HttpRequestMessage(HttpMethod.Patch, "/api/v1/rooms/room-gallery-001/gallery/reorder")
+        {
+            Content = JsonContent.Create(new ReorderRoomPhotosRequest([adminPhoto.Id, ownerPhoto.Id], adminPhoto.Id))
+        };
+        adminReorderReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminSession.AccessToken);
+        var adminReorderRes = await _client.SendAsync(adminReorderReq);
+        Assert.That(adminReorderRes.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        using var adminDeleteReq = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/rooms/room-gallery-001/gallery/photos/{adminPhoto.Id}");
+        adminDeleteReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminSession.AccessToken);
+        var adminDeleteRes = await _client.SendAsync(adminDeleteReq);
+        Assert.That(adminDeleteRes.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+    }
+
+    private void AssignRoomOwner(string roomId, Guid landlordId)
+    {
+        var room = _factory.RoomRepository.GetByIdAsync(roomId).GetAwaiter().GetResult()!;
+        room.LandlordId = landlordId;
+        _factory.RoomRepository.Upsert(room);
+    }
+
     private async Task<string> RegisterAndLoginAsync(string email, string role)
+    {
+        var session = await RegisterAndLoginSessionAsync(email, role);
+        return session.AccessToken;
+    }
+
+    private async Task<AuthSessionResponse> RegisterAndLoginSessionAsync(string email, string role)
     {
         var registerRes = await _client.PostAsJsonAsync(
             "/api/v1/auth/register",
@@ -174,8 +262,32 @@ public class RoomGalleryIntegrationTests
             new LoginWithEmailRequest(email, "StrongPass123!"));
         Assert.That(loginRes.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
-        var session = await loginRes.Content.ReadFromJsonAsync<AuthSessionResponse>();
-        return session!.AccessToken;
+        return (await loginRes.Content.ReadFromJsonAsync<AuthSessionResponse>())!;
+    }
+
+    private async Task<AuthSessionResponse> ProvisionAdminAndLoginAsync(string email, string password)
+    {
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+            var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+
+            var admin = User.ProvisionAdminUser(
+                EmailAddress.Create(email),
+                passwordHasher.HashPassword(password),
+                DateTimeOffset.UtcNow);
+
+            await userRepository.AddAsync(admin);
+            await unitOfWork.SaveChangesAsync();
+        }
+
+        var loginRes = await _client.PostAsJsonAsync(
+            "/api/v1/auth/login",
+            new LoginWithEmailRequest(email, password));
+        Assert.That(loginRes.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        return (await loginRes.Content.ReadFromJsonAsync<AuthSessionResponse>())!;
     }
 
     private static MultipartFormDataContent CreateUploadForm(

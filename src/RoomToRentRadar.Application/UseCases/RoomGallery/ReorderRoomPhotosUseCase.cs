@@ -37,6 +37,8 @@ public sealed class ReorderRoomPhotosUseCase : IReorderRoomPhotosUseCase
             throw new NotFoundException($"Room '{normalizedRoomId}' was not found.");
         }
 
+        RoomGalleryAuthorization.EnsureCanManageGallery(room, command.ActorUserId, command.IsAdmin);
+
         var existingPhotos = await _photoRepository.GetByRoomIdAsync(normalizedRoomId, cancellationToken);
         var photosById = existingPhotos.ToDictionary(p => p.Id, StringComparer.Ordinal);
 
