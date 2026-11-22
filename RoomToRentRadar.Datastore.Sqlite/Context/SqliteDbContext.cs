@@ -88,6 +88,11 @@ public sealed class SqliteDbContext : IDisposable
                     // landlord must exist (and be verified) before the demo rooms are inserted.
                     SeedDemoLandlordUserIfMissing(conn);
                     SeedRoomsIfEmpty(conn);
+
+                    if (_settings.SeedExtendedDemoData)
+                    {
+                        DemoDataSeeder.Seed(conn);
+                    }
                 }
 
                 _schemaInitialized = true;

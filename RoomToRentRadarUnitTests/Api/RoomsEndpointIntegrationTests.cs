@@ -45,6 +45,7 @@ public class RoomsEndpointIntegrationTests
             webHost.UseSetting("DatabaseProvider", "Sqlite");
             webHost.UseSetting("Sqlite:ConnectionString", "Data Source=:memory:");
             webHost.UseSetting("Sqlite:SeedDemoRooms", seedDemoRooms ? "true" : "false");
+            webHost.UseSetting("Sqlite:SeedExtendedDemoData", "false");
             webHost.UseSetting("Jwt:SigningKey", JwtSigningKey);
             webHost.UseSetting("Jwt:Issuer", "RoomToRentRadar.Api");
             webHost.UseSetting("Jwt:Audience", "RoomToRentRadar.Client");
