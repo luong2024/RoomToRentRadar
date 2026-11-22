@@ -1,7 +1,7 @@
 using System.Globalization;
 using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Localization;
-using RoomToRentRadar.Features.Home.ViewModels;
+using RoomToRentRadar.ViewModels.Home;
 
 namespace RoomToRentRadarUnitTests.Features.Home;
 
