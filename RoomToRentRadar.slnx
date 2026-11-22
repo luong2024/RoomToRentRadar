@@ -1,6 +1,11 @@
 <Solution>
-  <Project Path="RoomToRentRadar.Api.Tests/RoomToRentRadar.Api.Tests.csproj" />
-  <Project Path="RoomToRentRadar.Api/RoomToRentRadar.Api.csproj" />
+  <Project Path="backend/RoomToRentRadar.Api.Tests/RoomToRentRadar.Api.Tests.csproj" />
+  <Project Path="backend/RoomToRentRadar.Api/RoomToRentRadar.Api.csproj" />
+  <Project Path="backend/RoomToRentRadar.Domain/RoomToRentRadar.Domain.csproj" />
+  <Project Path="backend/RoomToRentRadar.Infrastructure/RoomToRentRadar.Infrastructure.csproj" />
+  <Project Path="backend/RoomToRentRadar.Ports/RoomToRentRadar.Ports.csproj" />
+  <Project Path="backend/RoomToRentRadar.SqliteDataAccess/RoomToRentRadar.SqliteDataAccess.csproj" />
+  <Project Path="backend/RoomToRentRadar.UseCases/RoomToRentRadar.UseCases.csproj" />
   <Project Path="RoomToRentRadar.Shared/RoomToRentRadar.Shared.csproj" />
   <Project Path="RoomToRentRadar/RoomToRentRadar.csproj">
     <Deploy Solution="Debug|*" />

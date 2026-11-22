@@ -1,5 +1,5 @@
-using RoomToRentRadar.Core.Constants;
-using RoomToRentRadar.Features.ListingManagement.Models;
+using RoomToRentRadar.Constants;
+using RoomToRentRadar.Models;
 using RoomToRentRadar.Shared.Listings;
 
 namespace RoomToRentRadarUnitTests;

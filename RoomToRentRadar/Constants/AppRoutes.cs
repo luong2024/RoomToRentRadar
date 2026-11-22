@@ -1,0 +1,16 @@
+namespace RoomToRentRadar.Constants;
+
+public static class AppRoutes
+{
+    public const string Home = "home";
+
+    public const string RoomDetail = "listing-detail";
+
+    public const string Login = "login";
+
+    public const string ListingEditor = "listing-editor";
+
+    public const string Directions = "directions";
+
+    public const string Comparison = "compare";
+}

@@ -1,9 +1,12 @@
-using RoomToRentRadar.Core.Interfaces;
-using RoomToRentRadar.Features.Comparison.Models;
-using RoomToRentRadar.Features.Comparison.Services;
-using RoomToRentRadar.Features.Comparison.ViewModels;
-using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Services;
+using RoomToRentRadar.Services.Auth;
+using RoomToRentRadar.Services.ErrorHandling;
+using RoomToRentRadar.Services.Interactions;
+using RoomToRentRadar.Services.Navigation;
+using RoomToRentRadar.Services.Storage;
+using RoomToRentRadar.Models;
+using RoomToRentRadar.ViewModels;
+using RoomToRentRadar.Services.Api;
 using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.Shared.Listings;
 using RoomToRentRadar.Shared.Notifications;
@@ -432,6 +435,8 @@ public class ComparisonViewModelTests
 
     private sealed class FakeNavigationService : INavigationService
     {
+        public Task GoToListingEditorAsync(Guid? listingId = null) => Task.CompletedTask;
+
         public Task GoToRoomDetailAsync(Guid listingId) => Task.CompletedTask;
 
         public Task GoToLoginAsync() => Task.CompletedTask;

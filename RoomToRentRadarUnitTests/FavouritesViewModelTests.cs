@@ -1,7 +1,11 @@
-using RoomToRentRadar.Core.Interfaces;
-using RoomToRentRadar.Features.Favourites.ViewModels;
-using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Services;
+using RoomToRentRadar.Services.Auth;
+using RoomToRentRadar.Services.ErrorHandling;
+using RoomToRentRadar.Services.Interactions;
+using RoomToRentRadar.Services.Navigation;
+using RoomToRentRadar.Services.Storage;
+using RoomToRentRadar.ViewModels;
+using RoomToRentRadar.Services.Api;
 using RoomToRentRadar.Shared.Favourites;
 using RoomToRentRadar.Shared.Listings;
 
@@ -309,6 +313,8 @@ public class FavouritesViewModelTests
 
     private sealed class FakeNavigationService : INavigationService
     {
+        public Task GoToListingEditorAsync(Guid? listingId = null) => Task.CompletedTask;
+
         public List<Guid> RequestedListingIds { get; } = new();
 
         public int GoToLoginCount { get; private set; }

@@ -1,0 +1,841 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.ViewModels"
+             xmlns:views="clr-namespace:RoomToRentRadar.Controls"
+             xmlns:buttons="clr-namespace:Syncfusion.Maui.Toolkit.Buttons;assembly=Syncfusion.Maui.Toolkit"
+             xmlns:sheet="clr-namespace:Syncfusion.Maui.Toolkit.BottomSheet;assembly=Syncfusion.Maui.Toolkit"
+             xmlns:input="clr-namespace:Syncfusion.Maui.Toolkit.TextInputLayout;assembly=Syncfusion.Maui.Toolkit"
+             xmlns:shimmer="clr-namespace:Syncfusion.Maui.Toolkit.Shimmer;assembly=Syncfusion.Maui.Toolkit"
+             xmlns:refresh="clr-namespace:Syncfusion.Maui.Toolkit.PullToRefresh;assembly=Syncfusion.Maui.Toolkit"
+    x:Class="RoomToRentRadar.Views.HomePage"
+    x:Name="HomeRoot"
+    x:DataType="vm:HomeViewModel"
+    Title="Room Radar"
+    SafeAreaEdges="All">
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <Style x:Key="FilterEntry"
+                TargetType="Entry">
+                <Setter Property="FontSize"
+                    Value="15" />
+                <Setter Property="MinimumHeightRequest"
+                    Value="48" />
+                <Setter Property="BackgroundColor"
+                    Value="Transparent" />
+                <Setter Property="TextColor"
+                    Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+            </Style>
+            <DataTemplate x:Key="FilterChipTemplate"
+                x:DataType="vm:FilterChip">
+                <buttons:SfButton Text="{Binding Label}"
+                    Command="{Binding SelectCommand}" SemanticProperties.Description="{Binding AccessibilityLabel}"
+                    Style="{StaticResource OutlineActionButton}"
+                    Margin="0,0,8,8"
+                    Padding="14,0"
+                    HeightRequest="44"
+                    MinimumHeightRequest="44"
+                    FontSize="13"
+                    CornerRadius="13">
+                    <buttons:SfButton.Triggers>
+                        <DataTrigger TargetType="buttons:SfButton"
+                            Binding="{Binding IsSelected}"
+                            Value="True">
+                            <Setter Property="Background"
+                                Value="{AppThemeBinding Light={StaticResource AccentSoftBrush}, Dark={StaticResource AccentSoftDarkBrush}}" />
+                            <Setter Property="Stroke"
+                                Value="{StaticResource AccentBrush}" />
+                            <Setter Property="StrokeThickness"
+                                Value="1.5" />
+                        </DataTrigger>
+                    </buttons:SfButton.Triggers>
+                </buttons:SfButton>
+            </DataTemplate>
+            <DataTemplate x:Key="ActiveFilterChipTemplate"
+                x:DataType="vm:FilterSummaryChip">
+                <buttons:SfButton Text="{Binding DisplayLabel}"
+                    Command="{Binding RemoveCommand}"
+                    SemanticProperties.Description="{Binding AccessibilityLabel}"
+                    Style="{StaticResource SecondaryActionButton}"
+                    Margin="0,0,8,0"
+                    HeightRequest="44"
+                    MinimumHeightRequest="44"
+                    FontSize="12.5"
+                    Padding="12,0"
+                    CornerRadius="14" />
+            </DataTemplate>
+
+            <!-- Category tiles mirror the reference: label + photo thumbnail -->
+            <DataTemplate x:Key="CategoryTileTemplate"
+                x:DataType="vm:FilterChip">
+                <Border StrokeThickness="1"
+                    Stroke="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}"
+                    StrokeShape="RoundRectangle 16"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}"
+                    WidthRequest="158"
+                    HeightRequest="66"
+                    Padding="0"
+                    SemanticProperties.Description="{Binding AccessibilityLabel}">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding SelectCommand}" />
+                    </Border.GestureRecognizers>
+                    <Border.Triggers>
+                        <DataTrigger TargetType="Border"
+                            Binding="{Binding IsSelected}"
+                            Value="True">
+                            <Setter Property="Stroke"
+                                Value="{StaticResource AccentBrush}" />
+                            <Setter Property="StrokeThickness"
+                                Value="2" />
+                            <Setter Property="BackgroundColor"
+                                Value="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}" />
+                        </DataTrigger>
+                    </Border.Triggers>
+                    <Grid ColumnDefinitions="*,50"
+                        Padding="14,8,8,8"
+                        ColumnSpacing="8">
+                        <VerticalStackLayout Spacing="1"
+                            VerticalOptions="Center">
+                            <Label Text="{Binding Label}"
+                                FontFamily="OpenSansSemibold"
+                                FontSize="13.5"
+                                MaxLines="1"
+                                LineBreakMode="TailTruncation"
+                                TextColor="{AppThemeBinding Light={StaticResource BodyInk}, Dark={StaticResource InkDark}}" />
+                            <Label Text="Xem phòng"
+                                FontSize="10.5"
+                                TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                        </VerticalStackLayout>
+                        <Border Grid.Column="1"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 11"
+                            WidthRequest="50"
+                            HeightRequest="50"
+                            Padding="0">
+                            <Image Source="{Binding ImageSource}"
+                                Aspect="AspectFill" />
+                        </Border>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+
+            <DataTemplate x:Key="RecommendationCardTemplate"
+                x:DataType="vm:HomeListingItem">
+                <ContentView WidthRequest="252">
+                    <ContentView.GestureRecognizers>
+                        <TapGestureRecognizer
+                            Command="{Binding BindingContext.OpenListingCommand, Source={x:Reference HomeRoot}}"
+                            CommandParameter="{Binding .}" />
+                    </ContentView.GestureRecognizers>
+                    <views:HomePropertyCard
+                        CompareCommand="{Binding BindingContext.ToggleCompareCommand, Source={x:Reference HomeRoot}}" />
+                </ContentView>
+            </DataTemplate>
+
+            <DataTemplate x:Key="ListingRowTemplate"
+                x:DataType="vm:HomeListingItem">
+                <Border Margin="8,0,8,10"
+                    Padding="10"
+                    StrokeThickness="0"
+                    StrokeShape="RoundRectangle 18"
+                    SemanticProperties.Description="{Binding Title}">
+                    <Border.Shadow>
+                        <Shadow Brush="{StaticResource InkBrush}" Offset="0,5" Radius="16" Opacity="0.05" />
+                    </Border.Shadow>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer
+                            Command="{Binding BindingContext.OpenListingCommand, Source={x:Reference HomeRoot}}"
+                            CommandParameter="{Binding .}" />
+                    </Border.GestureRecognizers>
+                    <Grid ColumnDefinitions="96,*,Auto"
+                        ColumnSpacing="10">
+                        <Border StrokeThickness="0"
+                            StrokeShape="RoundRectangle 13"
+                            WidthRequest="96"
+                            HeightRequest="88"
+                            Padding="0">
+                            <Grid BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
+                                <Image Source="{Binding Illustration}"
+                                    Aspect="AspectFill"
+                                    SemanticProperties.Description="Hình minh họa khi chưa có ảnh phòng" />
+                                <Image Source="{Binding PhotoSource}"
+                                    IsVisible="{Binding HasCoverPhoto}"
+                                    Aspect="AspectFill"
+                                    SemanticProperties.Description="Ảnh phòng trọ" />
+                            </Grid>
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1"
+                            Spacing="3"
+                            VerticalOptions="Center">
+                            <Label Text="{Binding Title}"
+                                FontFamily="OpenSansSemibold"
+                                FontSize="15.5"
+                                CharacterSpacing="-0.2"
+                                MaxLines="1"
+                                LineBreakMode="TailTruncation"
+                                TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                            <Label Text="{Binding Address}"
+                                FontSize="12"
+                                MaxLines="1"
+                                LineBreakMode="TailTruncation"
+                                TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                            <Label Margin="0,4,0,0">
+                                <Label.FormattedText>
+                                    <FormattedString>
+                                        <Span Text="{Binding PriceText}"
+                                            FontSize="16"
+                                            FontFamily="OpenSansSemibold"
+                                            TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                        <Span Text=" / tháng"
+                                            FontSize="11"
+                                            TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                                    </FormattedString>
+                                </Label.FormattedText>
+                            </Label>
+                        </VerticalStackLayout>
+                        <Border Grid.Column="2"
+                            WidthRequest="36"
+                            HeightRequest="36"
+                            Padding="0"
+                            VerticalOptions="Center"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 18"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}"
+                            AutomationId="HomeRowCompare"
+                            SemanticProperties.Description="Thêm hoặc bỏ phòng khỏi bảng so sánh">
+                            <Border.Triggers>
+                                <DataTrigger TargetType="Border"
+                                    Binding="{Binding IsCompared}"
+                                    Value="True">
+                                    <Setter Property="BackgroundColor"
+                                        Value="{StaticResource Accent}" />
+                                </DataTrigger>
+                            </Border.Triggers>
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer
+                                    Command="{Binding BindingContext.ToggleCompareCommand, Source={x:Reference HomeRoot}}"
+                                    CommandParameter="{Binding .}" />
+                            </Border.GestureRecognizers>
+                            <Image Source="compare_icon.png"
+                                WidthRequest="18"
+                                HeightRequest="18"
+                                HorizontalOptions="Center"
+                                VerticalOptions="Center"
+                                InputTransparent="True">
+                                <Image.Triggers>
+                                    <DataTrigger TargetType="Image"
+                                        Binding="{Binding IsCompared}"
+                                        Value="True">
+                                        <Setter Property="Source"
+                                            Value="compare_icon_light.png" />
+                                    </DataTrigger>
+                                </Image.Triggers>
+                            </Image>
+                        </Border>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+    <sheet:SfBottomSheet x:Name="FilterSheet"
+        IsOpen="{Binding IsFilterPanelOpen, Mode=TwoWay}"
+        AllowedState="FullExpanded"
+        FullExpandedRatio="0.94"
+        IsModal="True"
+        ShowGrabber="True"
+        GrabberWidth="40"
+        GrabberHeight="4"
+        GrabberAreaHeight="20"
+        EnableSwiping="True"
+        SwipeFromHeaderOnly="True"
+        CollapseOnOverlayTap="True"
+        CornerRadius="26,26,0,0"
+        ContentPadding="0"
+        AnimationDuration="200"
+        Background="{AppThemeBinding Light={StaticResource SurfaceBrush}, Dark={StaticResource SurfaceDarkBrush}}">
+        <sheet:SfBottomSheet.Content>
+            <Grid RowDefinitions="Auto,*,Auto">
+                <VerticalStackLayout BackgroundColor="{AppThemeBinding Light={StaticResource Canvas}, Dark={StaticResource CanvasDark}}"
+                    Spacing="0">
+                    <!-- Reference header: brand mark, centered location, user avatar -->
+                    <Grid x:Name="TopBar"
+                        Padding="20,12,20,2"
+                        ColumnDefinitions="Auto,*,Auto"
+                        ColumnSpacing="10"
+                        MaximumWidthRequest="1280"
+                        HorizontalOptions="Fill">
+                        <Border WidthRequest="44"
+                            HeightRequest="44"
+                            Padding="5"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 15"
+                            VerticalOptions="Center">
+                            <Image Source="radar_mark.png" />
+                        </Border>
+                        <Grid Grid.Column="2"
+                            WidthRequest="44"
+                            HeightRequest="44"
+                            VerticalOptions="Center">
+                            <Border StrokeThickness="0"
+                                StrokeShape="RoundRectangle 22"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}">
+                                <Label Text="RR"
+                                    FontFamily="OpenSansSemibold"
+                                    FontSize="13"
+                                    TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}"
+                                    HorizontalTextAlignment="Center"
+                                    VerticalTextAlignment="Center" />
+                            </Border>
+                            <Border WidthRequest="11"
+                                HeightRequest="11"
+                                Margin="0,1,0,0"
+                                StrokeThickness="0"
+                                StrokeShape="RoundRectangle 6"
+                                HorizontalOptions="End"
+                                VerticalOptions="Start"
+                                BackgroundColor="{StaticResource Accent}" />
+                        </Grid>
+                    </Grid>
+                    <VerticalStackLayout x:Name="HomeChrome"
+                        Padding="20,8,20,8"
+                        Spacing="8"
+                        MaximumWidthRequest="1280"
+                        HorizontalOptions="Fill">
+                        <Grid ColumnDefinitions="*,Auto"
+                            ColumnSpacing="10">
+                            <buttons:SfButton Command="{Binding OpenSearchCommand}"
+                                Style="{StaticResource OutlineActionButton}"
+                                HeightRequest="52"
+                                CornerRadius="16"
+                                Padding="16,0"
+                                AutomationId="OpenHomeSearch"
+                                SemanticProperties.Description="Tìm phòng gần trường đại học">
+                                <buttons:SfButton.Content>
+                                    <DataTemplate x:DataType="vm:HomeViewModel">
+                                        <Grid ColumnDefinitions="22,*"
+                                            ColumnSpacing="10"
+                                            InputTransparent="True">
+                                            <Image Source="search_icon.png"
+                                                WidthRequest="22"
+                                                HeightRequest="22"
+                                                VerticalOptions="Center"
+                                                HorizontalOptions="Center" />
+                                            <Label Grid.Column="1"
+                                                Text="{Binding SearchDisplayText}"
+                                                FontSize="14"
+                                                VerticalOptions="Center"
+                                                MaxLines="1"
+                                                LineBreakMode="TailTruncation"
+                                                TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </buttons:SfButton.Content>
+                            </buttons:SfButton>
+                            <buttons:SfButton Grid.Column="1"
+                                Command="{Binding ToggleFilterPanelCommand}"
+                                Style="{StaticResource OutlineActionButton}"
+                                WidthRequest="52"
+                                HeightRequest="52"
+                                CornerRadius="16"
+                                Padding="0"
+                                AutomationId="ToggleFilters"
+                                SemanticProperties.Description="{Binding FilterButtonText}">
+                                <buttons:SfButton.Content>
+                                    <DataTemplate x:DataType="vm:HomeViewModel">
+                                        <Grid InputTransparent="True"
+                                            WidthRequest="40"
+                                            HeightRequest="40">
+                                            <Image Source="filter_icon.png"
+                                                WidthRequest="23"
+                                                HeightRequest="23" />
+                                            <Border IsVisible="{Binding HasActiveFilters}"
+                                                BackgroundColor="{StaticResource Accent}"
+                                                StrokeThickness="0"
+                                                StrokeShape="RoundRectangle 8"
+                                                HorizontalOptions="End"
+                                                VerticalOptions="Start"
+                                                WidthRequest="16"
+                                                HeightRequest="16"
+                                                Margin="0"
+                                                Padding="0">
+                                                <Label Text="{Binding ActiveFilterCount}"
+                                                    FontSize="9"
+                                                    FontFamily="OpenSansSemibold"
+                                                    TextColor="White"
+                                                    HorizontalTextAlignment="Center"
+                                                    VerticalTextAlignment="Center" />
+                                            </Border>
+                                        </Grid>
+                                    </DataTemplate>
+                                </buttons:SfButton.Content>
+                            </buttons:SfButton>
+                        </Grid>
+                        <ScrollView Orientation="Horizontal"
+                            HorizontalScrollBarVisibility="Never"
+                            IsVisible="{Binding HasActiveFilters}">
+                            <HorizontalStackLayout AutomationId="HomeActiveFilters"
+                                BindableLayout.ItemsSource="{Binding ActiveFilterChips}"
+                                BindableLayout.ItemTemplate="{StaticResource ActiveFilterChipTemplate}" />
+                        </ScrollView>
+                        <Grid ColumnDefinitions="*,Auto"
+                            ColumnSpacing="8">
+                            <VerticalStackLayout Spacing="1"
+                                VerticalOptions="Center">
+                                <Label Text="Khám phá phòng trọ"
+                                    Style="{StaticResource SectionTitle}"
+                                    FontSize="18" />
+                                <Label Text="{Binding ResultsText}"
+                                    AutomationId="HomeResultCount"
+                                    Style="{StaticResource Caption}"
+                                    FontSize="12"
+                                    MaxLines="1"
+                                    LineBreakMode="TailTruncation" />
+                            </VerticalStackLayout>
+                            <buttons:SfButton Grid.Column="1"
+                                Text="Xóa lọc"
+                                Command="{Binding ClearFiltersCommand}"
+                                IsVisible="{Binding HasActiveFilters}"
+                                AutomationId="ClearFilters"
+                                Style="{StaticResource TextActionButton}"
+                                Padding="10,0" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+                <Grid Grid.Row="1">
+                    <refresh:SfPullToRefresh x:Name="ListingRefresh"
+                        IsRefreshing="{Binding IsRefreshing}"
+                        RefreshCommand="{Binding RefreshCommand}"
+                        Margin="20,0,6,0"
+                        MaximumWidthRequest="1280"
+                        HorizontalOptions="Fill">
+                        <refresh:SfPullToRefresh.PullableContent>
+                            <ScrollView x:Name="ListingsView"
+                                Scrolled="OnListingsScrolled">
+                                <VerticalStackLayout Padding="0,2,14,16"
+                                    Spacing="16"
+                                    MaximumWidthRequest="720"
+                                    HorizontalOptions="Fill">
+                                    <!-- Category tiles -->
+                                    <ScrollView Orientation="Horizontal"
+                                        HorizontalScrollBarVisibility="Never"
+                                        Margin="0,0,-14,0">
+                                        <HorizontalStackLayout Spacing="10"
+                                            BindableLayout.ItemsSource="{Binding RoomTypeChips}"
+                                            BindableLayout.ItemTemplate="{StaticResource CategoryTileTemplate}" />
+                                    </ScrollView>
+
+                                    <!-- Recommendations carousel -->
+                                    <VerticalStackLayout Spacing="12"
+                                        IsVisible="{Binding HasListings}">
+                                        <Label Text="Gợi ý cho bạn"
+                                            Style="{StaticResource SectionTitle}"
+                                            FontSize="19" />
+                                        <ScrollView Orientation="Horizontal"
+                                            HorizontalScrollBarVisibility="Never"
+                                            Margin="0,0,-14,0">
+                                            <HorizontalStackLayout Spacing="12"
+                                                Padding="0,0,0,2"
+                                                BindableLayout.ItemsSource="{Binding Listings}"
+                                                BindableLayout.ItemTemplate="{StaticResource RecommendationCardTemplate}" />
+                                        </ScrollView>
+                                    </VerticalStackLayout>
+
+                                    <!-- New listings -->
+                                    <VerticalStackLayout Spacing="2"
+                                        IsVisible="{Binding HasListings}">
+                                        <Label Text="Phòng mới đăng"
+                                            Style="{StaticResource SectionTitle}"
+                                            FontSize="19" />
+                                    </VerticalStackLayout>
+
+                                    <VerticalStackLayout Spacing="2"
+                                        BindableLayout.ItemsSource="{Binding Listings}"
+                                        BindableLayout.ItemTemplate="{StaticResource ListingRowTemplate}" />
+
+                                    <ActivityIndicator IsRunning="{Binding IsLoadingMore}"
+                                        IsVisible="{Binding IsLoadingMore}"
+                                        HeightRequest="32" />
+                                    <buttons:SfButton Text="Xem thêm phòng"
+                                        Command="{Binding LoadMoreCommand}"
+                                        IsVisible="{Binding CanLoadMore}"
+                                        Style="{StaticResource OutlineActionButton}"
+                                        HorizontalOptions="Center"
+                                        Padding="28,0" />
+
+                                    <ContentView IsVisible="{Binding ShowEmptyState}"
+                                        AutomationId="HomeEmptyState">
+                                        <Border Padding="24,36"
+                                            StrokeShape="RoundRectangle 22">
+                                            <VerticalStackLayout Spacing="12"
+                                                HorizontalOptions="Center"
+                                                MaximumWidthRequest="340">
+                                                <Border Padding="16"
+                                                    StrokeThickness="0"
+                                                    StrokeShape="RoundRectangle 22"
+                                                    BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}"
+                                                    HorizontalOptions="Center">
+                                                    <Image Source="search_icon.png"
+                                                        WidthRequest="30"
+                                                        HeightRequest="30" />
+                                                </Border>
+                                                <Label Text="Chưa có phòng phù hợp"
+                                                    FontFamily="OpenSansSemibold"
+                                                    FontSize="18"
+                                                    HorizontalTextAlignment="Center" />
+                                                <Label Text="{Binding EmptyMessage}"
+                                                    AutomationId="HomeEmptyMessage"
+                                                    Style="{StaticResource Caption}"
+                                                    HorizontalTextAlignment="Center" />
+                                                <buttons:SfButton Text="Điều chỉnh bộ lọc"
+                                                    Command="{Binding ToggleFilterPanelCommand}"
+                                                    Style="{StaticResource SecondaryActionButton}" />
+                                            </VerticalStackLayout>
+                                        </Border>
+                                    </ContentView>
+                                </VerticalStackLayout>
+                            </ScrollView>
+                        </refresh:SfPullToRefresh.PullableContent>
+                    </refresh:SfPullToRefresh>
+                    <VerticalStackLayout IsVisible="{Binding ShowLoadingState}"
+                        Padding="20,8"
+                        Spacing="12"
+                        InputTransparent="True">
+                        <shimmer:SfShimmer IsActive="{Binding ShowLoadingState}"
+                            Type="Feed"
+                            HeightRequest="320" />
+                        <Label Text="Đang tìm không gian phù hợp…"
+                            Style="{StaticResource Caption}"
+                            HorizontalTextAlignment="Center" />
+                    </VerticalStackLayout>
+                </Grid>
+                <Border Grid.Row="2"
+                    IsVisible="{Binding HasError}"
+                    Margin="20,6,20,10"
+                    Padding="14,12"
+                    StrokeShape="RoundRectangle 16">
+                    <Grid ColumnDefinitions="*,Auto"
+                        ColumnSpacing="10">
+                        <VerticalStackLayout Spacing="3"
+                            VerticalOptions="Center">
+                            <Label Text="Chưa tải được kết quả"
+                                FontFamily="OpenSansSemibold"
+                                FontSize="14" />
+                            <Label Text="{Binding ErrorMessage}"
+                                Style="{StaticResource Caption}"
+                                FontSize="12" />
+                        </VerticalStackLayout>
+                        <buttons:SfButton Grid.Column="1"
+                            Text="Thử lại"
+                            Command="{Binding RetryCommand}"
+                            Style="{StaticResource SecondaryActionButton}"
+                            Padding="14,0" />
+                    </Grid>
+                </Border>
+                <VerticalStackLayout Grid.Row="1"
+                    Grid.RowSpan="2"
+                    Padding="16,0,16,14"
+                    Spacing="6"
+                    VerticalOptions="End"
+                    HorizontalOptions="Center"
+                    IsVisible="{Binding ShowComparisonBar}"
+                    ZIndex="6">
+                    <Border IsVisible="{Binding HasCompareHint}"
+                        Padding="12,7"
+                        HorizontalOptions="Center"
+                        StrokeThickness="0"
+                        StrokeShape="RoundRectangle 12"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}">
+                        <Label Text="{Binding CompareHint}"
+                            FontSize="11.5"
+                            TextColor="{AppThemeBinding Light={StaticResource Canvas}, Dark={StaticResource CanvasDark}}" />
+                    </Border>
+                    <buttons:SfButton Text="{Binding ComparisonBarText}"
+                        Command="{Binding OpenComparisonCommand}"
+                        Style="{StaticResource PrimaryActionButton}"
+                        HeightRequest="46"
+                        CornerRadius="23"
+                        Padding="22,0"
+                        AutomationId="OpenComparison"
+                        SemanticProperties.Description="Mở bảng so sánh phòng" />
+                </VerticalStackLayout>
+                <Grid Grid.RowSpan="3"
+                    IsVisible="{Binding IsSearchOpen}"
+                    RowDefinitions="Auto,Auto,*"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Canvas}, Dark={StaticResource CanvasDark}}"
+                    Padding="16,8">
+                    <Grid ColumnDefinitions="Auto,*,Auto"
+                        ColumnSpacing="8">
+                        <buttons:SfButton Text="‹"
+                            Command="{Binding CloseSearchCommand}"
+                            Style="{StaticResource IconActionButton}"
+                            FontSize="28"
+                            SemanticProperties.Description="Đóng tìm kiếm" />
+                        <Border x:Name="SearchInputBorder"
+                            Grid.Column="1"
+                            StrokeShape="RoundRectangle 16"
+                            Padding="12,0"
+                            MinimumHeightRequest="54">
+                            <Grid ColumnDefinitions="22,*"
+                                ColumnSpacing="8">
+                                <Image Source="search_icon.png"
+                                    WidthRequest="22"
+                                    HeightRequest="22"
+                                    VerticalOptions="Center"
+                                    HorizontalOptions="Center" />
+                                <Entry x:Name="CampusSearchEntry"
+                                    Grid.Column="1"
+                                    Text="{Binding SearchQuery}"
+                                    Placeholder="Tên trường đại học"
+                                    ReturnType="Search"
+                                    ReturnCommand="{Binding SubmitSearchCommand}"
+                                    FontSize="15"
+                                    VerticalOptions="Center"
+                                    BackgroundColor="Transparent"
+                                    Focused="OnSearchFocused"
+                                    Unfocused="OnSearchUnfocused"
+                                    SemanticProperties.Description="Nhập tên trường trong danh sách để tìm phòng gần trường" />
+                            </Grid>
+                        </Border>
+                        <buttons:SfButton Grid.Column="2"
+                            Command="{Binding ClearSearchQueryCommand}"
+                            Style="{StaticResource IconActionButton}"
+                            IsVisible="{Binding HasSearchQuery}"
+                            SemanticProperties.Description="Xóa nội dung tìm kiếm">
+                            <buttons:SfButton.Content>
+                                <DataTemplate x:DataType="vm:HomeViewModel">
+                                    <Image Source="close_icon.png"
+                                        WidthRequest="22"
+                                        HeightRequest="22"
+                                        InputTransparent="True" />
+                                </DataTemplate>
+                            </buttons:SfButton.Content>
+                        </buttons:SfButton>
+                    </Grid>
+                    <VerticalStackLayout Grid.Row="1"
+                        Padding="8,24,8,12"
+                        Spacing="5">
+                        <Label Text="Tìm phòng gần trường"
+                            Style="{StaticResource SectionTitle}" />
+                        <Label Text="Chọn trường để xem phòng lân cận. Các bộ lọc khác được giữ nguyên."
+                            Style="{StaticResource Caption}" />
+                    </VerticalStackLayout>
+                    <ScrollView Grid.Row="2">
+                        <VerticalStackLayout Padding="4,0,4,24"
+                            Spacing="10">
+                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding CampusSuggestions}"
+                                Spacing="10">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:CampusOption">
+                                        <buttons:SfButton Margin="4,0,4,10"
+                                            Padding="16,12"
+                                            HeightRequest="76"
+                                            CornerRadius="16"
+                                            Style="{StaticResource OutlineActionButton}"
+                                            CommandParameter="{Binding}"
+                                            Command="{Binding SelectSearchCampusCommand, Source={RelativeSource AncestorType={x:Type vm:HomeViewModel}}, x:DataType=vm:HomeViewModel}"
+                                            SemanticProperties.Description="{Binding Name, StringFormat='Tìm phòng gần trường {0}'}">
+                                            <buttons:SfButton.Content>
+                                                <DataTemplate x:DataType="vm:CampusOption">
+                                                    <Grid ColumnDefinitions="24,*,20"
+                                                        ColumnSpacing="12"
+                                                        InputTransparent="True">
+                                                        <Image Source="location_pin.png"
+                                                            WidthRequest="24"
+                                                            HeightRequest="24" />
+                                                        <VerticalStackLayout Grid.Column="1"
+                                                            Spacing="3"
+                                                            VerticalOptions="Center">
+                                                            <Label Text="{Binding Name}"
+                                                                FontFamily="OpenSansSemibold"
+                                                                FontSize="15" />
+                                                            <Label Text="Trường đại học · Tìm phòng lân cận"
+                                                                Style="{StaticResource Caption}"
+                                                                FontSize="12" />
+                                                        </VerticalStackLayout>
+                                                        <Image Grid.Column="2"
+                                                            Source="chevron_right.png"
+                                                            WidthRequest="20"
+                                                            HeightRequest="20" />
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </buttons:SfButton.Content>
+                                        </buttons:SfButton>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+                            <VerticalStackLayout IsVisible="{Binding HasNoSuggestions}"
+                                Padding="24,36"
+                                Spacing="10">
+                                <Label Text="Chưa tìm thấy trường"
+                                    Style="{StaticResource SectionTitle}"
+                                    HorizontalTextAlignment="Center" />
+                                <Label Text="Thử tên trường khác trong danh sách, hoặc khám phá khu vực trên bản đồ."
+                                    Style="{StaticResource Caption}"
+                                    HorizontalTextAlignment="Center" />
+                                <buttons:SfButton Text="Khám phá bản đồ"
+                                    Clicked="OnOpenMapClicked"
+                                    Style="{StaticResource SecondaryActionButton}" />
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </ScrollView>
+                </Grid>
+            </Grid>
+        </sheet:SfBottomSheet.Content>
+        <sheet:SfBottomSheet.BottomSheetContent>
+            <Grid x:Name="FilterPanel"
+                RowDefinitions="Auto,*,Auto"
+                SafeAreaEdges="All">
+                <Grid Padding="20,0,16,12"
+                    ColumnDefinitions="*,Auto">
+                    <VerticalStackLayout Spacing="3"
+                        VerticalOptions="Center">
+                        <Label Text="Bộ lọc"
+                            Style="{StaticResource ScreenTitle}" />
+                        <Label Text="Tùy chỉnh không gian sống của bạn"
+                            Style="{StaticResource Caption}" />
+                    </VerticalStackLayout>
+                    <buttons:SfButton Grid.Column="1"
+                        Command="{Binding ToggleFilterPanelCommand}"
+                        Style="{StaticResource IconActionButton}"
+                        SemanticProperties.Description="Đóng bộ lọc, bỏ thay đổi chưa áp dụng">
+                        <buttons:SfButton.Content>
+                            <DataTemplate x:DataType="vm:HomeViewModel">
+                                <Image Source="close_icon.png"
+                                    WidthRequest="22"
+                                    HeightRequest="22"
+                                    InputTransparent="True" />
+                            </DataTemplate>
+                        </buttons:SfButton.Content>
+                    </buttons:SfButton>
+                </Grid>
+                <ScrollView Grid.Row="1">
+                    <VerticalStackLayout Padding="20,4,20,20"
+                        Spacing="22">
+                        <VerticalStackLayout Spacing="10">
+                            <Label Text="Ngân sách mỗi tháng"
+                                Style="{StaticResource SectionTitle}" />
+                            <Label Text="Triệu đồng / tháng"
+                                Style="{StaticResource Caption}"
+                                FontSize="12" />
+                            <FlexLayout Wrap="Wrap"
+                                BindableLayout.ItemsSource="{Binding PriceChips}"
+                                BindableLayout.ItemTemplate="{StaticResource FilterChipTemplate}" />
+                            <Grid ColumnDefinitions="*,*"
+                                ColumnSpacing="12">
+                                <input:SfTextInputLayout Hint="Tối thiểu"
+                                    HelperText="Triệu đồng">
+                                    <Entry Text="{Binding PriceMinText}"
+                                        Keyboard="Numeric"
+                                        Style="{StaticResource FilterEntry}"
+                                        Placeholder="Không giới hạn"
+                                        SemanticProperties.Description="Giá thuê tối thiểu, triệu đồng" />
+                                </input:SfTextInputLayout>
+                                <input:SfTextInputLayout Grid.Column="1"
+                                    Hint="Tối đa"
+                                    HelperText="Triệu đồng">
+                                    <Entry Text="{Binding PriceMaxText}"
+                                        Keyboard="Numeric"
+                                        Style="{StaticResource FilterEntry}"
+                                        Placeholder="Không giới hạn"
+                                        SemanticProperties.Description="Giá thuê tối đa, triệu đồng" />
+                                </input:SfTextInputLayout>
+                            </Grid>
+                        </VerticalStackLayout>
+                        <BoxView HeightRequest="1"
+                            Color="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}" />
+                        <VerticalStackLayout Spacing="12">
+                            <Label Text="Diện tích (m²)"
+                                Style="{StaticResource SectionTitle}" />
+                            <Grid ColumnDefinitions="*,*"
+                                ColumnSpacing="12">
+                                <input:SfTextInputLayout Hint="Tối thiểu"
+                                    HelperText="m²">
+                                    <Entry Text="{Binding AreaMinText}"
+                                        Keyboard="Numeric"
+                                        Style="{StaticResource FilterEntry}"
+                                        Placeholder="Không giới hạn"
+                                        SemanticProperties.Description="Diện tích tối thiểu, mét vuông" />
+                                </input:SfTextInputLayout>
+                                <input:SfTextInputLayout Grid.Column="1"
+                                    Hint="Tối đa"
+                                    HelperText="m²">
+                                    <Entry Text="{Binding AreaMaxText}"
+                                        Keyboard="Numeric"
+                                        Style="{StaticResource FilterEntry}"
+                                        Placeholder="Không giới hạn"
+                                        SemanticProperties.Description="Diện tích tối đa, mét vuông" />
+                                </input:SfTextInputLayout>
+                            </Grid>
+                        </VerticalStackLayout>
+                        <BoxView HeightRequest="1"
+                            Color="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}" />
+                        <VerticalStackLayout Spacing="12">
+                            <Label Text="Loại phòng"
+                                Style="{StaticResource SectionTitle}" />
+                            <FlexLayout Wrap="Wrap"
+                                BindableLayout.ItemsSource="{Binding RoomTypeChips}"
+                                BindableLayout.ItemTemplate="{StaticResource FilterChipTemplate}" />
+                        </VerticalStackLayout>
+                        <BoxView HeightRequest="1"
+                            Color="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}" />
+                        <VerticalStackLayout Spacing="10">
+                            <Label Text="Gần trường của bạn"
+                                Style="{StaticResource SectionTitle}" />
+                            <FlexLayout Wrap="Wrap"
+                                BindableLayout.ItemsSource="{Binding CampusChips}"
+                                BindableLayout.ItemTemplate="{StaticResource FilterChipTemplate}" />
+                            <Label Text="Khoảng cách tối đa"
+                                FontFamily="OpenSansSemibold"
+                                FontSize="13" />
+                            <FlexLayout Wrap="Wrap"
+                                IsEnabled="{Binding IsDistanceEnabled}"
+                                BindableLayout.ItemsSource="{Binding DistanceChips}"
+                                BindableLayout.ItemTemplate="{StaticResource FilterChipTemplate}">
+                                <FlexLayout.Triggers>
+                                    <DataTrigger TargetType="FlexLayout"
+                                        Binding="{Binding IsDistanceEnabled}"
+                                        Value="False">
+                                        <Setter Property="Opacity"
+                                            Value="0.45" />
+                                    </DataTrigger>
+                                </FlexLayout.Triggers>
+                            </FlexLayout>
+                            <Label Text="Chọn trường để lọc theo khoảng cách đường chim bay."
+                                Style="{StaticResource Caption}"
+                                FontSize="12" />
+                        </VerticalStackLayout>
+                        <Border IsVisible="{Binding HasFilterError}"
+                            Padding="12"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 12"
+                            BackgroundColor="{StaticResource DangerSoft}">
+                            <Label Text="{Binding FilterError}"
+                                FontSize="13"
+                                TextColor="{StaticResource Danger}"
+                                SemanticProperties.Description="{Binding FilterError}" />
+                        </Border>
+                    </VerticalStackLayout>
+                </ScrollView>
+                <Border Grid.Row="2"
+                    StrokeShape="Rectangle"
+                    Padding="20,12,20,16"
+                    StrokeThickness="0">
+                    <Grid ColumnDefinitions="Auto,*"
+                        ColumnSpacing="16">
+                        <buttons:SfButton Text="Xóa bộ lọc"
+                            Command="{Binding ResetDraftCommand}"
+                            Style="{StaticResource TextActionButton}"
+                            Padding="4,0"
+                            SemanticProperties.Description="Đặt lại lựa chọn. Nhấn xem kết quả để áp dụng" />
+                        <buttons:SfButton Grid.Column="1"
+                            Text="Xem kết quả"
+                            Command="{Binding ApplyFiltersCommand}"
+                            Style="{StaticResource PrimaryActionButton}"
+                            SemanticProperties.Description="Áp dụng bộ lọc và xem kết quả"
+                            AutomationId="ApplyHomeFilters" />
+                    </Grid>
+                </Border>
+            </Grid>
+        </sheet:SfBottomSheet.BottomSheetContent>
+    </sheet:SfBottomSheet>
+</ContentPage>

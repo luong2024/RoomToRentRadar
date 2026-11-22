@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.ViewModels"
+             x:Class="RoomToRentRadar.Controls.HomePropertyCard"
+             x:Name="CardRoot"
+             x:DataType="vm:HomeListingItem">
+    <Border StrokeThickness="0" StrokeShape="RoundRectangle 18" Padding="0" WidthRequest="252"
+            SemanticProperties.Description="{Binding Title}">
+        <Border.Shadow>
+            <Shadow Brush="{StaticResource InkBrush}" Offset="0,6" Radius="18" Opacity="0.05" />
+        </Border.Shadow>
+        <VerticalStackLayout Spacing="0">
+            <Border StrokeThickness="0" StrokeShape="RoundRectangle 18,18,0,0" HeightRequest="152" Padding="0">
+                <Grid BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
+                    <Image Source="{Binding Illustration}" Aspect="AspectFill" SemanticProperties.Description="Hình minh họa khi chưa có ảnh phòng" />
+                    <Image Source="{Binding PhotoSource}" IsVisible="{Binding HasCoverPhoto}" Aspect="AspectFill" SemanticProperties.Description="Ảnh phòng trọ" />
+                    <Border Margin="10" Padding="11,6" HorizontalOptions="Start" VerticalOptions="End" StrokeThickness="0"
+                            StrokeShape="RoundRectangle 9" BackgroundColor="#BF3B332C">
+                        <Label Text="{Binding PriceText}" FontSize="13.5" FontFamily="OpenSansSemibold" TextColor="White" />
+                    </Border>
+                    <Border WidthRequest="34" HeightRequest="34" Margin="10" Padding="0"
+                            HorizontalOptions="End" VerticalOptions="Start"
+                            StrokeThickness="0" StrokeShape="RoundRectangle 17"
+                            BackgroundColor="#E6FFFFFF"
+                            AutomationId="HomeCardCompare"
+                            SemanticProperties.Description="Thêm hoặc bỏ phòng khỏi bảng so sánh">
+                        <Border.Triggers>
+                            <DataTrigger TargetType="Border" Binding="{Binding IsCompared}" Value="True">
+                                <Setter Property="BackgroundColor" Value="{StaticResource Accent}" />
+                            </DataTrigger>
+                        </Border.Triggers>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer
+                                Command="{Binding CompareCommand, Source={x:Reference CardRoot}}"
+                                CommandParameter="{Binding .}" />
+                        </Border.GestureRecognizers>
+                        <Image Source="compare_icon.png" WidthRequest="18" HeightRequest="18"
+                               HorizontalOptions="Center" VerticalOptions="Center"
+                               InputTransparent="True">
+                            <Image.Triggers>
+                                <DataTrigger TargetType="Image" Binding="{Binding IsCompared}" Value="True">
+                                    <Setter Property="Source" Value="compare_icon_light.png" />
+                                </DataTrigger>
+                            </Image.Triggers>
+                        </Image>
+                    </Border>
+                </Grid>
+            </Border>
+            <VerticalStackLayout Padding="14,12,14,14" Spacing="5">
+                <Label Text="{Binding Title}" FontFamily="OpenSansSemibold" FontSize="16" CharacterSpacing="-0.2"
+                       MaxLines="1" LineBreakMode="TailTruncation"
+                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                <Label Text="{Binding Address}" FontSize="12" MaxLines="1" LineBreakMode="TailTruncation"
+                       TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="10" Margin="0,5,0,0">
+                    <HorizontalStackLayout Spacing="6">
+                        <Border WidthRequest="28" HeightRequest="28" StrokeThickness="0" StrokeShape="RoundRectangle 14"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
+                            <Image Source="bed_icon.png" WidthRequest="15" HeightRequest="15" />
+                        </Border>
+                        <Label Text="{Binding BedroomsText}" FontSize="12" FontFamily="OpenSansSemibold" VerticalOptions="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource BodyInk}, Dark={StaticResource InkDark}}" />
+                    </HorizontalStackLayout>
+                    <HorizontalStackLayout Grid.Column="1" Spacing="6">
+                        <Border WidthRequest="28" HeightRequest="28" StrokeThickness="0" StrokeShape="RoundRectangle 14"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
+                            <Image Source="area_icon.png" WidthRequest="14" HeightRequest="14" />
+                        </Border>
+                        <Label Text="{Binding AreaText}" FontSize="12" FontFamily="OpenSansSemibold" VerticalOptions="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource BodyInk}, Dark={StaticResource InkDark}}" />
+                    </HorizontalStackLayout>
+                    <Label Grid.Column="2" Text="Còn trống" FontSize="11" HorizontalOptions="End" VerticalOptions="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource Available}, Dark={StaticResource AvailableDark}}" />
+                </Grid>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </Border>
+</ContentView>

@@ -1,8 +1,6 @@
 using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
-using RoomToRentRadar.Features.Map.ViewModels;
-using RoomToRentRadar.Features.Map.Views;
-using RoomToRentRadar.Infrastructure.DependencyInjection;
+using RoomToRentRadar.Extensions;
 using SkiaSharp.Views.Maui.Controls.Hosting;
 using Syncfusion.Maui.Toolkit.Hosting;
 
@@ -38,12 +36,7 @@ public static class MauiProgram
 
         builder.Services
             .AddMobileInfrastructure()
-            .AddMobileFeatures()
-            .AddSingleton<IRoomListingService>(_ => new RoomListingService(DemoRoomListings.Create()))
-            .AddTransient<RoomListingPageModel>()
-            .AddTransient<RoomListingPage>()
-            .AddTransient<MapSearchPageModel>()
-            .AddTransient<MapSearchPage>();
+            .AddMobileFeatures();
 
         return builder.Build();
     }

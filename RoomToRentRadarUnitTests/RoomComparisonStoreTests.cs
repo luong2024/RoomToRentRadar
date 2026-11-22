@@ -1,5 +1,5 @@
-using RoomToRentRadar.Features.Comparison.Models;
-using RoomToRentRadar.Features.Comparison.Services;
+using RoomToRentRadar.Models;
+using RoomToRentRadar.Services;
 
 namespace RoomToRentRadarUnitTests;
 

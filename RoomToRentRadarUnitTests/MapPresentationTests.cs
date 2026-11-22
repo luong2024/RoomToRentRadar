@@ -1,6 +1,6 @@
 namespace RoomToRentRadarUnitTests;
 
-public partial class MapSearchPageModelTests
+public partial class MapSearchViewModelTests
 {
     [Test]
     public void InitialMapState_DoesNotClaimAnEmptySearchOrAllowSearchAgain()

@@ -1,7 +1,7 @@
 using CommunityToolkit.Mvvm.Input;
-using RoomToRentRadar.Features.Comparison.Models;
-using RoomToRentRadar.Features.Comparison.Services;
-using RoomToRentRadar.Features.Home.ViewModels;
+using RoomToRentRadar.Models;
+using RoomToRentRadar.Services;
+using RoomToRentRadar.ViewModels;
 using RoomToRentRadar.Shared.Listings;
 
 namespace RoomToRentRadarUnitTests;

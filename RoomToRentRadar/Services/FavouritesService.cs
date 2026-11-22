@@ -1,5 +1,10 @@
-using RoomToRentRadar.Core.Interfaces;
-using RoomToRentRadar.Infrastructure.Api;
+using RoomToRentRadar.Services;
+using RoomToRentRadar.Services.Auth;
+using RoomToRentRadar.Services.ErrorHandling;
+using RoomToRentRadar.Services.Interactions;
+using RoomToRentRadar.Services.Navigation;
+using RoomToRentRadar.Services.Storage;
+using RoomToRentRadar.Services.Api;
 using RoomToRentRadar.Shared.Favourites;
 
 namespace RoomToRentRadar.Services;

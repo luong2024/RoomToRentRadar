@@ -1,5 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
-using RoomToRentRadar.Infrastructure.Auth;
+using RoomToRentRadar.Services.Auth;
 
 namespace RoomToRentRadar;
 
