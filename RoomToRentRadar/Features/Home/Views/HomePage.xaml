@@ -199,6 +199,7 @@
                             Grid.Column="1"
                             Text="Go to Sign In / Sign Up"
                             Command="{Binding NavigateToAuthCommand}"
+                            IsVisible="{Binding IsNotAuthenticated}"
                             BackgroundColor="{StaticResource HeroOverlayGlass}"
                             TextColor="{StaticResource White}"
                             CornerRadius="20"

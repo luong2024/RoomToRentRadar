@@ -44,6 +44,12 @@ public sealed class RoomListingDocument : IProjectionVersionedDocument
     [JsonProperty("verificationStatus")]
     public int VerificationStatus { get; set; }
 
+    [JsonProperty("roomType")]
+    public string? RoomType { get; set; }
+
+    [JsonProperty("amenities")]
+    public List<string> Amenities { get; set; } = [];
+
     [JsonProperty("thumbnailUrl")]
     public string? ThumbnailUrl { get; set; }
 

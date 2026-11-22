@@ -23,7 +23,9 @@ public sealed partial class RoomListItemModel : ObservableObject
 
     public string District { get; init; } = "Thai Nguyen City";
 
-    public double DistanceToCampusKm { get; init; }
+    public double? DistanceToCampusKm { get; init; }
+
+    public bool HasDistance => DistanceToCampusKm.HasValue;
 
     public string? ThumbnailUrl { get; init; }
 
@@ -36,11 +38,16 @@ public sealed partial class RoomListItemModel : ObservableObject
 
     public IReadOnlyList<string> Amenities { get; init; } = [];
 
+    public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
+
     public string FormattedPrice => string.Format(CultureInfo.InvariantCulture, "₫{0:N0}/month", Price);
 
     public string FormattedArea => string.Format(CultureInfo.InvariantCulture, "{0:0.#} m²", AreaSqm);
 
-    public string FormattedDistance => string.Format(CultureInfo.InvariantCulture, "{0:0.0} km to ICTU", DistanceToCampusKm);
+    public string FormattedDistance =>
+        DistanceToCampusKm.HasValue
+            ? string.Format(CultureInfo.InvariantCulture, "{0:0.0} km to ICTU", DistanceToCampusKm.Value)
+            : string.Empty;
 
     public string AvailabilityText => IsAvailable ? "Available" : "Rented";
 

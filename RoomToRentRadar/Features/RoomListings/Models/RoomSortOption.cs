@@ -10,7 +10,8 @@ public enum RoomSortOption
 {
     DistanceAsc,
     PriceAsc,
-    PriceDesc
+    PriceDesc,
+    Newest
 }
 
 /// <summary>

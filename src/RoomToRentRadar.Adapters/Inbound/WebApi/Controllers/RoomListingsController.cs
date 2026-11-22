@@ -11,10 +11,14 @@ using RoomToRentRadar.Application.Ports.Inbound;
 public sealed class RoomListingsController : ControllerBase
 {
     private readonly IGetRoomListingsUseCase _getRoomListingsUseCase;
+    private readonly ISearchRoomsInPolygonUseCase? _searchRoomsInPolygonUseCase;
 
-    public RoomListingsController(IGetRoomListingsUseCase getRoomListingsUseCase)
+    public RoomListingsController(
+        IGetRoomListingsUseCase getRoomListingsUseCase,
+        ISearchRoomsInPolygonUseCase? searchRoomsInPolygonUseCase = null)
     {
-        _getRoomListingsUseCase = getRoomListingsUseCase;
+        _getRoomListingsUseCase = getRoomListingsUseCase ?? throw new ArgumentNullException(nameof(getRoomListingsUseCase));
+        _searchRoomsInPolygonUseCase = searchRoomsInPolygonUseCase;
     }
 
     /// <summary>
@@ -54,6 +58,47 @@ public sealed class RoomListingsController : ControllerBase
             };
 
             return NotFound(problemDetails);
+        }
+    }
+
+    /// <summary>
+    /// Searches for verified room listings within a drawn geographic polygon boundary (US05 / T05.2).
+    /// </summary>
+    /// <param name="request">Polygon boundary coordinates and optional price/room filters.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Paged list of matching room listings with coordinates for map pin display.</returns>
+    [HttpPost("spatial-search")]
+    [ProducesResponseType(typeof(PagedResult<SpatialRoomSearchResultDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> SpatialSearchAsync(
+        [FromBody] SpatialRoomSearchRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        if (_searchRoomsInPolygonUseCase is null)
+        {
+            return StatusCode(StatusCodes.Status501NotImplemented, new ProblemDetails
+            {
+                Status = StatusCodes.Status501NotImplemented,
+                Title = "Service Unavailable",
+                Detail = "Spatial search service is not configured."
+            });
+        }
+
+        try
+        {
+            var result = await _searchRoomsInPolygonUseCase.ExecuteAsync(request, cancellationToken);
+            return Ok(result);
+        }
+        catch (ValidationException ex)
+        {
+            var problemDetails = new ValidationProblemDetails(ex.Errors.ToDictionary(k => k.Key, v => v.Value))
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Validation Failed",
+                Detail = ex.Message
+            };
+
+            return BadRequest(problemDetails);
         }
     }
 }

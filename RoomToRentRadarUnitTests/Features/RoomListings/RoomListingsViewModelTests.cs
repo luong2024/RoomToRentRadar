@@ -1,6 +1,9 @@
 using System.Globalization;
+using Moq;
+using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Core.Localization;
+using RoomToRentRadar.Core.Models.Authentication;
 using RoomToRentRadar.Features.RoomListings.Models;
 using RoomToRentRadar.Features.RoomListings.Services;
 using RoomToRentRadar.Features.RoomListings.ViewModels;
@@ -542,36 +545,45 @@ public class RoomListingsViewModelTests
     }
 
     [Test]
-    public async Task InitialAndResetFilters_PricePreset1MTo2M_MatchesMin1MAndMax2M()
+    public async Task ResetFiltersAsync_WhenExecuted_ClearsAllFilterCriteriaAndClearsActiveFilters()
     {
         // Arrange
         _fakeService.SetupPages(totalCount: 2, pageSize: 2, allRooms: CreateRooms(1, 2));
         var vm = CreateViewModel(pageSize: 2);
 
-        // Assert initial state matches "1m-2m" preset
-        Assert.Multiple(() =>
-        {
-            Assert.That(vm.SelectedPricePreset, Is.EqualTo("1m-2m"));
-            Assert.That(vm.FilterMinPriceText, Is.EqualTo("1,000,000"));
-            Assert.That(vm.FilterMaxPriceText, Is.EqualTo("2,000,000"));
-        });
+        // Mutate filters away from unfiltered state
+        vm.SelectPricePreset("1m-2m");
+        vm.SelectedRoomType = "private";
+        vm.FilterMinAreaText = "20";
+        vm.FilterMaxAreaText = "40";
+        vm.IsDistanceFilterActive = true;
+        vm.RadiusInKm = 3.0;
+        await vm.ApplyFiltersCommand.ExecuteAsync(null);
 
-        // Mutate filters away from defaults
-        vm.SelectPricePreset("2m-3m");
-        vm.FilterMaxPriceText = "5,000,000";
-        Assert.That(vm.SelectedPricePreset, Is.Empty);
+        Assert.That(vm.ActiveFilters, Is.Not.Empty);
 
         // Act: reset filters
         await vm.ResetFiltersCommand.ExecuteAsync(null);
 
-        // Assert reset state is synchronized with "1m-2m" preset
+        // Assert reset state is completely unfiltered (no hidden defaults sent to service/API)
         Assert.Multiple(() =>
         {
-            Assert.That(vm.SelectedPricePreset, Is.EqualTo("1m-2m"));
-            Assert.That(vm.FilterMinPriceText, Is.EqualTo("1,000,000"));
-            Assert.That(vm.FilterMaxPriceText, Is.EqualTo("2,000,000"));
-            Assert.That(_fakeService.LastRequestedFilter?.MinPrice, Is.EqualTo(1_000_000m));
-            Assert.That(_fakeService.LastRequestedFilter?.MaxPrice, Is.EqualTo(2_000_000m));
+            Assert.That(vm.SelectedPricePreset, Is.Empty);
+            Assert.That(vm.FilterMinPriceText, Is.Empty);
+            Assert.That(vm.FilterMaxPriceText, Is.Empty);
+            Assert.That(vm.MinPrice, Is.Null);
+            Assert.That(vm.MaxPrice, Is.Null);
+            Assert.That(vm.FilterMinAreaText, Is.Empty);
+            Assert.That(vm.FilterMaxAreaText, Is.Empty);
+            Assert.That(vm.MinArea, Is.Null);
+            Assert.That(vm.MaxArea, Is.Null);
+            Assert.That(vm.SelectedRoomType, Is.EqualTo("all"));
+            Assert.That(vm.IsDistanceFilterActive, Is.False);
+            Assert.That(vm.ActiveFilters, Is.Empty);
+            Assert.That(vm.HasActiveFilters, Is.False);
+            Assert.That(_fakeService.LastRequestedFilter?.MinPrice, Is.Null);
+            Assert.That(_fakeService.LastRequestedFilter?.MaxPrice, Is.Null);
+            Assert.That(_fakeService.LastRequestedFilter?.RoomType, Is.Null);
         });
     }
 
@@ -603,6 +615,67 @@ public class RoomListingsViewModelTests
             Assert.That(vm.ErrorMessage, Is.EqualTo("Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng."));
             Assert.That(vm.EmptyStateMessage, Is.EqualTo("Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng."));
         });
+    }
+
+    [Test]
+    public void IsLandlord_WhenNoSessionService_IsFalse()
+    {
+        var vm = CreateViewModel(pageSize: 6);
+        Assert.That(vm.IsLandlord, Is.False);
+    }
+
+    [Test]
+    public void IsLandlord_WhenCurrentUserIsLandlord_IsTrue()
+    {
+        var mockSessionService = new Mock<IAuthenticationSessionService>();
+        var landlord = new AuthUser(Guid.NewGuid(), "landlord@example.com", UserRoleConstants.Landlord, "LOCAL", true);
+        mockSessionService.Setup(s => s.CurrentUser).Returns(landlord);
+
+        var vm = new RoomListingsViewModel(_fakeService, _fakeErrorHandler, mockSessionService.Object);
+
+        Assert.That(vm.IsLandlord, Is.True);
+    }
+
+    [Test]
+    public void IsLandlord_WhenCurrentUserIsStudent_IsFalse()
+    {
+        var mockSessionService = new Mock<IAuthenticationSessionService>();
+        var student = new AuthUser(Guid.NewGuid(), "student@example.com", UserRoleConstants.Student, "LOCAL", true);
+        mockSessionService.Setup(s => s.CurrentUser).Returns(student);
+
+        var vm = new RoomListingsViewModel(_fakeService, _fakeErrorHandler, mockSessionService.Object);
+
+        Assert.That(vm.IsLandlord, Is.False);
+    }
+
+    [Test]
+    public void IsLandlord_WhenCurrentUserChangedToLandlord_UpdatesToTrue()
+    {
+        var mockSessionService = new Mock<IAuthenticationSessionService>();
+        mockSessionService.Setup(s => s.CurrentUser).Returns((AuthUser?)null);
+
+        var vm = new RoomListingsViewModel(_fakeService, _fakeErrorHandler, mockSessionService.Object);
+        Assert.That(vm.IsLandlord, Is.False);
+
+        var landlord = new AuthUser(Guid.NewGuid(), "landlord@example.com", UserRoleConstants.Landlord, "LOCAL", true);
+        mockSessionService.Raise(s => s.CurrentUserChanged += null, mockSessionService.Object, landlord);
+
+        Assert.That(vm.IsLandlord, Is.True);
+    }
+
+    [Test]
+    public void IsLandlord_WhenLandlordLogsOut_UpdatesToFalse()
+    {
+        var mockSessionService = new Mock<IAuthenticationSessionService>();
+        var landlord = new AuthUser(Guid.NewGuid(), "landlord@example.com", UserRoleConstants.Landlord, "LOCAL", true);
+        mockSessionService.Setup(s => s.CurrentUser).Returns(landlord);
+
+        var vm = new RoomListingsViewModel(_fakeService, _fakeErrorHandler, mockSessionService.Object);
+        Assert.That(vm.IsLandlord, Is.True);
+
+        mockSessionService.Raise(s => s.CurrentUserChanged += null, mockSessionService.Object, (AuthUser?)null);
+
+        Assert.That(vm.IsLandlord, Is.False);
     }
 
     private RoomListingsViewModel CreateViewModel(int pageSize) =>

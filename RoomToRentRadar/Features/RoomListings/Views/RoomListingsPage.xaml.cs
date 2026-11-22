@@ -27,11 +27,14 @@ public partial class RoomListingsPage : ContentPage
     {
         base.OnDisappearing();
         _viewModel.IsPriceMenuOpen = false;
+        _viewModel.IsFilterPanelOpen = false;
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(RoomListingsViewModel.IsPriceMenuOpen) && _viewModel.IsPriceMenuOpen)
+        if ((e.PropertyName == nameof(RoomListingsViewModel.IsPriceMenuOpen) ||
+             e.PropertyName == nameof(RoomListingsViewModel.IsFilterPanelOpen)) &&
+            (_viewModel.IsPriceMenuOpen || _viewModel.IsFilterPanelOpen))
         {
             Dispatcher.Dispatch(UpdatePriceMenuPosition);
         }
@@ -39,7 +42,7 @@ public partial class RoomListingsPage : ContentPage
 
     private void OnRootPageGridSizeChanged(object? sender, EventArgs e)
     {
-        if (_viewModel.IsPriceMenuOpen)
+        if (_viewModel.IsPriceMenuOpen || _viewModel.IsFilterPanelOpen)
         {
             UpdatePriceMenuPosition();
         }
@@ -49,7 +52,7 @@ public partial class RoomListingsPage : ContentPage
     {
         if (RootPageGrid.Height > 0)
         {
-            PriceDropdownMenu.HeightRequest = Math.Clamp(RootPageGrid.Height * 0.50, 320, 480);
+            FilterPanel.HeightRequest = Math.Clamp(RootPageGrid.Height * 0.55, 340, 520);
         }
     }
 }

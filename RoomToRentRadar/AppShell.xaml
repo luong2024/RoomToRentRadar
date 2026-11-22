@@ -9,6 +9,7 @@
     xmlns:authViews="clr-namespace:RoomToRentRadar.Features.Authentication.Views"
     xmlns:roomViews="clr-namespace:RoomToRentRadar.Features.RoomListings.Views"
     xmlns:profileViews="clr-namespace:RoomToRentRadar.Features.Profile.Views"
+    xmlns:mapViews="clr-namespace:RoomToRentRadar.Features.MapSearch.Views"
     Title="{loc:Translate App_Name}"
     FlyoutBackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource DesktopRailBackgroundDark}}"
     FlyoutVerticalScrollMode="{OnPlatform WinUI=Disabled, Default=Auto}"
@@ -208,7 +209,19 @@
         SemanticProperties.Description="{loc:Translate Nav_Rooms}"
         SemanticProperties.Hint="{loc:Translate Nav_Rooms_Hint}" />
 
-    <FlyoutItem Title="Sign In / Register" Route="auth" Icon="{StaticResource IconProjects}">
+    <ShellContent
+        Title="Map Search"
+        ContentTemplate="{DataTemplate mapViews:MapSearchPage}"
+        Icon="{StaticResource IconNavMap}"
+        Route="map"
+        SemanticProperties.Description="Search room listings on map"
+        SemanticProperties.Hint="Navigate to map to draw search area" />
+
+    <FlyoutItem
+        x:Name="AuthFlyoutItem"
+        Title="{loc:Translate Nav_SignIn}"
+        Route="auth"
+        Icon="{StaticResource IconProjects}">
         <ShellContent
             x:Name="AuthShellContent"
             Title="Authentication"
@@ -219,11 +232,28 @@
 
     <ShellContent
         x:Name="ProfileShellContent"
+        Shell.FlyoutItemIsVisible="False"
         Title="{loc:Translate Profile_Title}"
         Icon="{StaticResource IconProjects}"
         Route="profile"
         SemanticProperties.Description="View and edit your profile"
         SemanticProperties.Hint="Open your profile" />
+
+    <ShellContent
+        x:Name="CreateListingShellContent"
+        Title="Post Rental Listing"
+        Icon="ic_create_listing.png"
+        ContentTemplate="{DataTemplate roomViews:CreateListingPage}"
+        Route="create-listing"
+        SemanticProperties.Description="Post rental room listing"
+        SemanticProperties.Hint="Open rental listing creation form" />
+
+    <MenuItem
+        x:Name="LogoutMenuItem"
+        Text="{loc:Translate Nav_Logout}"
+        IconImageSource="{StaticResource IconLogout}"
+        Shell.FlyoutItemIsVisible="False"
+        Clicked="OnLogoutMenuItemClicked" />
 
     <Shell.FlyoutFooter>
         <VerticalStackLayout

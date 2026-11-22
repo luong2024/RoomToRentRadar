@@ -124,4 +124,28 @@
   <data name="Filter_Amenity_Kitchen" xml:space="preserve"><value>Kitchen</value></data>
   <data name="Filter_ResetAll" xml:space="preserve"><value>Reset All</value></data>
   <data name="Filter_ShowResults_Format" xml:space="preserve"><value>Show Results ({0})</value></data>
+  <data name="Filter_AreaRange" xml:space="preserve"><value>Area Range</value></data>
+  <data name="Filter_MinArea" xml:space="preserve"><value>Min Area</value></data>
+  <data name="Filter_MaxArea" xml:space="preserve"><value>Max Area</value></data>
+  <data name="Filter_Distance" xml:space="preserve"><value>Radius around ICTU</value></data>
+  <data name="Filter_Distance_Format" xml:space="preserve"><value>Within {0} km</value></data>
+  <data name="Filter_AllRooms" xml:space="preserve"><value>All</value></data>
+  <data name="Filter_Apartment" xml:space="preserve"><value>Mini Apartment</value></data>
+  <data name="Filter_Apply" xml:space="preserve"><value>Apply</value></data>
+  <data name="Validation_MinPriceGreaterThanMax" xml:space="preserve"><value>Minimum price cannot be greater than maximum price.</value></data>
+  <data name="Validation_PriceNegative" xml:space="preserve"><value>Price cannot be negative.</value></data>
+  <data name="Validation_MinAreaGreaterThanMax" xml:space="preserve"><value>Minimum area cannot be greater than maximum area.</value></data>
+  <data name="Validation_AreaNegative" xml:space="preserve"><value>Area cannot be negative.</value></data>
+  <data name="ActiveFilter_ClearAll" xml:space="preserve"><value>Clear all filters</value></data>
+  <data name="Filter_DistanceDisabled" xml:space="preserve"><value>Off</value></data>
+  <data name="CreateListing_PageTitle" xml:space="preserve"><value>Post a Room Listing</value></data>
+  <data name="Nav_CreateListing" xml:space="preserve"><value>Post Listing</value></data>
+  <data name="Nav_SignIn" xml:space="preserve"><value>Sign In / Register</value></data>
+  <data name="Nav_Logout" xml:space="preserve"><value>Log Out</value></data>
+  <data name="Logout_Confirm_Title" xml:space="preserve"><value>Log Out</value></data>
+  <data name="Logout_Confirm_Message" xml:space="preserve"><value>Are you sure you want to log out?</value></data>
+  <data name="Logout_Confirm_Subtitle" xml:space="preserve"><value>After logging out, you will need to sign in again to continue using the system.</value></data>
+  <data name="Logout_Confirm_Yes" xml:space="preserve"><value>Log Out</value></data>
+  <data name="Logout_Confirm_No" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Logout_Success" xml:space="preserve"><value>Logged out successfully</value></data>
 </root>

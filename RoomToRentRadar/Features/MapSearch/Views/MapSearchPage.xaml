@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:maps="clr-namespace:Microsoft.Maui.Controls.Maps;assembly=Microsoft.Maui.Controls.Maps"
+             xmlns:vm="clr-namespace:RoomToRentRadar.Features.MapSearch.ViewModels"
+             x:Class="RoomToRentRadar.Features.MapSearch.Views.MapSearchPage"
+             x:DataType="vm:MapSearchViewModel"
+             Title="Map Search"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{AppThemeBinding Light=#F8FAFC, Dark=#0F172A}">
+
+    <Grid>
+        <!-- Layer 0: Base Google Map (Edge-to-edge full screen) -->
+        <maps:Map x:Name="SearchMap"
+                  IsShowingUser="True"
+                  MapType="Street"
+                  HorizontalOptions="Fill"
+                  VerticalOptions="Fill" />
+
+        <!-- Layer 1: GraphicsView capturing freehand touch draw or anchor drag in edit mode -->
+        <GraphicsView x:Name="CanvasView"
+                      IsVisible="{Binding IsInteractingMode}"
+                      InputTransparent="False"
+                      StartInteraction="OnCanvasStart"
+                      DragInteraction="OnCanvasDrag"
+                      EndInteraction="OnCanvasEnd"
+                      HorizontalOptions="Fill"
+                      VerticalOptions="Fill"
+                      BackgroundColor="#0A2563EB" />
+
+        <!-- ============================================================== -->
+        <!-- FLOATING TOP BAR (Modern White Card with Shadow & Back Button) -->
+        <!-- ============================================================== -->
+        <Grid VerticalOptions="Start"
+              Margin="16,40,16,0"
+              ColumnDefinitions="Auto,*,Auto">
+
+            <!-- Left: Back / Home Button -->
+            <Border Grid.Column="0"
+                    StrokeThickness="1"
+                    Stroke="{AppThemeBinding Light=#E2E8F0, Dark=#334155}"
+                    BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E293B}"
+                    Padding="12,8"
+                    StrokeShape="RoundRectangle 20"
+                    VerticalOptions="Center"
+                    Shadow="{Shadow Brush='#1E3A8A', Offset='0,4', Radius=16, Opacity=0.10}">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding HandleBackCommand}" />
+                </Border.GestureRecognizers>
+                <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                    <Label Text="←"
+                           FontSize="15"
+                           FontFamily="SegoeSemibold"
+                           TextColor="{AppThemeBinding Light=#0F172A, Dark=#F8FAFC}"
+                           VerticalOptions="Center" />
+                    <Label Text="{Binding BackButtonText}"
+                           FontSize="13"
+                           FontFamily="SegoeSemibold"
+                           TextColor="{AppThemeBinding Light=#0F172A, Dark=#F8FAFC}"
+                           VerticalOptions="Center" />
+                </HorizontalStackLayout>
+            </Border>
+
+            <!-- Center: Status Card (Visible when in Drawing or Editing mode) -->
+            <Border Grid.Column="1"
+                    IsVisible="{Binding IsInteractingMode}"
+                    StrokeThickness="1"
+                    Stroke="{AppThemeBinding Light=#E2E8F0, Dark=#334155}"
+                    BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E293B}"
+                    Padding="14,8"
+                    Margin="8,0"
+                    StrokeShape="RoundRectangle 20"
+                    HorizontalOptions="Center"
+                    VerticalOptions="Center"
+                    Shadow="{Shadow Brush='#1E3A8A', Offset='0,4', Radius=16, Opacity=0.10}">
+                <Label Text="{Binding StatusMessage}"
+                       FontSize="12"
+                       FontFamily="SegoeSemibold"
+                       TextColor="{AppThemeBinding Light=#2563EB, Dark=#60A5FA}"
+                       HorizontalTextAlignment="Center"
+                       VerticalOptions="Center" />
+            </Border>
+
+            <!-- Right: Done Button (Visible when in Edit mode) -->
+            <Border Grid.Column="2"
+                    IsVisible="{Binding IsEditingMode}"
+                    StrokeThickness="0"
+                    Background="{StaticResource PrimaryBrandGradient}"
+                    Padding="14,8"
+                    StrokeShape="RoundRectangle 20"
+                    VerticalOptions="Center"
+                    Shadow="{Shadow Brush='#1E3A8A', Offset='0,4', Radius=16, Opacity=0.15}">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding FinishEditingCommand}" />
+                </Border.GestureRecognizers>
+                <Label Text="Done"
+                       FontSize="13"
+                       FontFamily="SegoeSemibold"
+                       TextColor="White"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center" />
+            </Border>
+        </Grid>
+
+        <!-- ============================================================== -->
+        <!-- FLOATING BOTTOM TOOLBAR (Rightmove & Auth Card Modern Style)   -->
+        <!-- ============================================================== -->
+        
+        <!-- STATE 1: Before Drawing -> Prominent 'Draw area' Action Button -->
+        <Border VerticalOptions="End"
+                HorizontalOptions="Center"
+                Margin="20,0,20,32"
+                IsVisible="{Binding CanStartDrawing}"
+                StrokeThickness="0"
+                StrokeShape="RoundRectangle 28"
+                Shadow="{Shadow Brush='#1E3A8A', Offset='0,10', Radius=24, Opacity=0.20}">
+            <Button Text="✏  Draw area"
+                    Command="{Binding StartDrawingCommand}"
+                    Background="{StaticResource PrimaryBrandGradient}"
+                    TextColor="White"
+                    CornerRadius="28"
+                    Padding="26,0"
+                    HeightRequest="50"
+                    FontFamily="SegoeSemibold"
+                    FontSize="15" />
+        </Border>
+
+        <!-- STATE 2: Completed Polygon -> Floating Action Toolbar -->
+        <Border VerticalOptions="End"
+                HorizontalOptions="Center"
+                Margin="16,0,16,28"
+                Padding="8,6"
+                IsVisible="{Binding ShowCompletedToolbar}"
+                StrokeShape="RoundRectangle 30"
+                Stroke="{AppThemeBinding Light=#E2E8F0, Dark=#334155}"
+                BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E293B}">
+            
+            <Border.Shadow>
+                <Shadow Brush="#1E3A8A" Offset="0,10" Radius="26" Opacity="0.14" />
+            </Border.Shadow>
+
+            <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                <!-- Action 1: Draw again -->
+                <Button Text="↺ Draw again"
+                        Command="{Binding DrawAgainCommand}"
+                        BackgroundColor="{AppThemeBinding Light=#F8FAFC, Dark=#1E293B}"
+                        TextColor="{AppThemeBinding Light=#334155, Dark=#E2E8F0}"
+                        BorderColor="{AppThemeBinding Light=#CBD5E1, Dark=#475569}"
+                        BorderWidth="1"
+                        CornerRadius="24"
+                        Padding="14,0"
+                        HeightRequest="44"
+                        FontFamily="SegoeSemibold"
+                        FontSize="13" />
+
+                <!-- Action 2: Edit area (Fine-tune polygon points) -->
+                <Button Text="⚲ Edit area"
+                        Command="{Binding StartEditingCommand}"
+                        BackgroundColor="{AppThemeBinding Light=#F1F5F9, Dark=#334155}"
+                        TextColor="{AppThemeBinding Light=#1E293B, Dark=#F8FAFC}"
+                        BorderColor="{AppThemeBinding Light=#CBD5E1, Dark=#475569}"
+                        BorderWidth="1"
+                        CornerRadius="24"
+                        Padding="14,0"
+                        HeightRequest="44"
+                        FontFamily="SegoeSemibold"
+                        FontSize="13" />
+
+                <!-- Action 3: Confirm Area (Boundary confirmation button) -->
+                <Button Text="Confirm Area ✓"
+                        Command="{Binding ConfirmAreaCommand}"
+                        Background="{StaticResource PrimaryBrandGradient}"
+                        TextColor="White"
+                        CornerRadius="24"
+                        Padding="18,0"
+                        HeightRequest="44"
+                        FontFamily="SegoeSemibold"
+                        FontSize="13" />
+
+                <!-- Action 4: Clear Polygon -->
+                <Button Text="🗑"
+                        Command="{Binding ClearPolygonCommand}"
+                        BackgroundColor="#FEF2F2"
+                        TextColor="#DC2626"
+                        CornerRadius="22"
+                        WidthRequest="44"
+                        HeightRequest="44"
+                        Padding="0"
+                        FontSize="14" />
+            </HorizontalStackLayout>
+        </Border>
+    </Grid>
+</ContentPage>

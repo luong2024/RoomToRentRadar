@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
     <TargetFrameworks>net10.0;net10.0-android</TargetFrameworks>
-    <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('linux'))">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('osx'))">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
     <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
     <OutputType Condition="'$(TargetFramework)' != 'net10.0'">Exe</OutputType>
 		<RootNamespace>RoomToRentRadar</RootNamespace>
@@ -19,6 +19,7 @@
 		       <MauiXaml Update="MyPage.xaml" Inflator="Runtime" /> (force runtime inflation) -->
 		<MauiXamlInflator>SourceGen</MauiXamlInflator>
 		<MauiEnableXamlCBindingWithSourceCompilation>true</MauiEnableXamlCBindingWithSourceCompilation>
+		<EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
 
 		<!-- Display name -->
 		<ApplicationTitle>RoomToRentRadar</ApplicationTitle>
@@ -39,6 +40,21 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
 	</PropertyGroup>
+
+	<!-- Import local secrets.props if present (ignored by Git) BEFORE evaluation -->
+	<Import Project="secrets.props" Condition="Exists('secrets.props')" />
+
+	<PropertyGroup>
+		<!-- Google Maps Android API Key injection from local secrets.props -->
+		<GoogleMapsApiKey Condition="'$(GoogleMapsApiKey)' == ''">NO_KEY</GoogleMapsApiKey>
+		<AndroidManifestPlaceholders>GoogleMapsApiKey=$(GoogleMapsApiKey)</AndroidManifestPlaceholders>
+	</PropertyGroup>
+
+	<!-- Validate Google Maps API Key on Android builds to prevent silent blank maps -->
+	<Target Name="ValidateGoogleMapsApiKey" BeforeTargets="BeforeBuild" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<Warning Condition="'$(GoogleMapsApiKey)' == '' or '$(GoogleMapsApiKey)' == 'NO_KEY' or '$(GoogleMapsApiKey)' == 'YOUR-ACTUAL-GOOGLE-MAPS-API-KEY-HERE'"
+		         Text="GoogleMapsApiKey is missing or set to placeholder in secrets.props! Google Maps tiles will not load on Android. Please configure 'secrets.props' with a valid key." />
+	</Target>
 
 	<ItemGroup>
 		<InternalsVisibleTo Include="RoomToRentRadarUnitTests" />
@@ -62,6 +78,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+		<PackageReference Include="Microsoft.Maui.Controls.Maps" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
 	</ItemGroup>
 

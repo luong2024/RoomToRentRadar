@@ -11,6 +11,8 @@ public record SearchRoomsQuery
     public double? Latitude { get; init; }
     public double? Longitude { get; init; }
     public double? RadiusInKm { get; init; }
+    public string? SortBy { get; init; }
+    public IReadOnlyList<string>? Amenities { get; init; }
     public int PageNumber { get; init; } = 1;
     public int PageSize { get; init; } = 10;
 
@@ -29,7 +31,9 @@ public record SearchRoomsQuery
         double? longitude = null,
         double? radiusInKm = null,
         int pageNumber = 1,
-        int pageSize = 10)
+        int pageSize = 10,
+        string? sortBy = null,
+        IReadOnlyList<string>? amenities = null)
     {
         MinPrice = minPrice;
         MaxPrice = maxPrice;
@@ -42,5 +46,7 @@ public record SearchRoomsQuery
         RadiusInKm = radiusInKm;
         PageNumber = pageNumber;
         PageSize = pageSize;
+        SortBy = sortBy;
+        Amenities = amenities;
     }
 }

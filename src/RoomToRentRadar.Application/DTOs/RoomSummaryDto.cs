@@ -7,5 +7,9 @@ public record RoomSummaryDto(
     double Area,
     string RoomType,
     bool IsVerified,
-    double? DistanceInKm
+    double? DistanceInKm,
+    string Address = "",
+    string? ThumbnailUrl = null,
+    IReadOnlyList<string>? Amenities = null,
+    DateTimeOffset? CreatedAt = null
 );

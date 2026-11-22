@@ -65,6 +65,9 @@ public sealed class RoomDocument : IProjectionVersionedDocument
     [JsonProperty("landlordPhone")]
     public string LandlordPhone { get; set; } = string.Empty;
 
+    [JsonProperty("createdAt")]
+    public DateTime CreatedAt { get; set; }
+
     [JsonProperty("lastUpdatedDate")]
     public DateTime? LastUpdatedDate { get; set; }
 
@@ -163,6 +166,7 @@ public sealed class RoomDocument : IProjectionVersionedDocument
             HouseRules = room.HouseRules.ToList(),
             LandlordPhone = room.LandlordPhone,
             LastUpdatedDate = room.LastUpdatedDate,
+            CreatedAt = room.CreatedAt != default ? room.CreatedAt : (room.LastUpdatedDate ?? DateTime.UtcNow),
             Latitude = room.Latitude,
             Longitude = room.Longitude,
             Location = location
@@ -200,6 +204,7 @@ public sealed class RoomDocument : IProjectionVersionedDocument
             HouseRules = HouseRules ?? [],
             LandlordPhone = LandlordPhone,
             LastUpdatedDate = LastUpdatedDate,
+            CreatedAt = CreatedAt != default ? CreatedAt : (LastUpdatedDate ?? DateTime.UtcNow),
             Latitude = lat,
             Longitude = lon
         };

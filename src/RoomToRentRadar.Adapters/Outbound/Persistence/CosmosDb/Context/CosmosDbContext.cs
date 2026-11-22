@@ -221,7 +221,23 @@ public sealed class CosmosDbContext : ICosmosDbContext
         var database = databaseResponse.Database;
 
         var listingsContainerName = string.IsNullOrWhiteSpace(_options.ContainerName) ? "RoomListings" : _options.ContainerName;
-        await database.CreateContainerIfNotExistsAsync(listingsContainerName, "/campusId", cancellationToken: cancellationToken);
+        var listingsContainerProperties = new ContainerProperties(listingsContainerName, "/campusId");
+        listingsContainerProperties.IndexingPolicy.SpatialIndexes.Add(new SpatialPath
+        {
+            Path = "/location/*",
+            SpatialTypes = { SpatialType.Point }
+        });
+        listingsContainerProperties.IndexingPolicy.SpatialIndexes.Add(new SpatialPath
+        {
+            Path = "/Location/*",
+            SpatialTypes = { SpatialType.Point }
+        });
+
+        var listingsResponse = await database.CreateContainerIfNotExistsAsync(
+            listingsContainerProperties,
+            cancellationToken: cancellationToken);
+
+        await EnsureSpatialIndexesAsync(listingsResponse.Container, listingsResponse.Resource, cancellationToken);
 
         var syncOutboxContainerName = string.IsNullOrWhiteSpace(_options.RoomProjectionSyncOutboxContainerName)
             ? "RoomProjectionSyncOutbox"
@@ -301,12 +317,27 @@ public sealed class CosmosDbContext : ICosmosDbContext
             Path = "/Location/*",
             SpatialTypes = { SpatialType.Point }
         });
+        roomsContainerProperties.IndexingPolicy.CompositeIndexes.Add(new Collection<CompositePath>
+        {
+            new() { Path = "/price", Order = CompositePathSortOrder.Ascending },
+            new() { Path = "/id", Order = CompositePathSortOrder.Ascending }
+        });
+        roomsContainerProperties.IndexingPolicy.CompositeIndexes.Add(new Collection<CompositePath>
+        {
+            new() { Path = "/price", Order = CompositePathSortOrder.Descending },
+            new() { Path = "/id", Order = CompositePathSortOrder.Descending }
+        });
+        roomsContainerProperties.IndexingPolicy.CompositeIndexes.Add(new Collection<CompositePath>
+        {
+            new() { Path = "/createdAt", Order = CompositePathSortOrder.Descending },
+            new() { Path = "/id", Order = CompositePathSortOrder.Descending }
+        });
 
         var roomsResponse = await database.CreateContainerIfNotExistsAsync(
             roomsContainerProperties,
             cancellationToken: cancellationToken);
 
-        await EnsureRoomsSpatialIndexesAsync(roomsResponse.Container, roomsResponse.Resource, cancellationToken);
+        await EnsureRoomsSpatialAndCompositeIndexesAsync(roomsResponse.Container, roomsResponse.Resource, cancellationToken);
     }
 
     private async Task EnsureFavouritesContainerOnDatabaseAsync(
@@ -332,6 +363,11 @@ public sealed class CosmosDbContext : ICosmosDbContext
                 {
                     new Collection<CompositePath>
                     {
+                        new CompositePath { Path = "/createdAtUtc", Order = CompositePathSortOrder.Descending },
+                        new CompositePath { Path = "/roomId", Order = CompositePathSortOrder.Ascending }
+                    },
+                    new Collection<CompositePath>
+                    {
                         new CompositePath { Path = "/userId", Order = CompositePathSortOrder.Ascending },
                         new CompositePath { Path = "/createdAtUtc", Order = CompositePathSortOrder.Descending },
                         new CompositePath { Path = "/roomId", Order = CompositePathSortOrder.Ascending }
@@ -340,9 +376,47 @@ public sealed class CosmosDbContext : ICosmosDbContext
             }
         };
 
-        await database.CreateContainerIfNotExistsAsync(
+        var response = await database.CreateContainerIfNotExistsAsync(
             favouritesContainerProperties,
             cancellationToken: cancellationToken);
+
+        await EnsureFavouritesCompositeIndexesAsync(response.Container, response.Resource, cancellationToken);
+    }
+
+    private static async Task EnsureFavouritesCompositeIndexesAsync(
+        Container container,
+        ContainerProperties properties,
+        CancellationToken cancellationToken)
+    {
+        var indexingPolicy = properties.IndexingPolicy ?? new IndexingPolicy();
+        properties.IndexingPolicy = indexingPolicy;
+        var modified = false;
+
+        if (!HasCompositeIndex(indexingPolicy, "/userId", CompositePathSortOrder.Ascending, "/createdAtUtc", CompositePathSortOrder.Descending))
+        {
+            indexingPolicy.CompositeIndexes.Add(new Collection<CompositePath>
+            {
+                new() { Path = "/userId", Order = CompositePathSortOrder.Ascending },
+                new() { Path = "/createdAtUtc", Order = CompositePathSortOrder.Descending },
+                new() { Path = "/roomId", Order = CompositePathSortOrder.Ascending }
+            });
+            modified = true;
+        }
+
+        if (!HasCompositeIndex(indexingPolicy, "/createdAtUtc", CompositePathSortOrder.Descending, "/roomId", CompositePathSortOrder.Ascending))
+        {
+            indexingPolicy.CompositeIndexes.Add(new Collection<CompositePath>
+            {
+                new() { Path = "/createdAtUtc", Order = CompositePathSortOrder.Descending },
+                new() { Path = "/roomId", Order = CompositePathSortOrder.Ascending }
+            });
+            modified = true;
+        }
+
+        if (modified)
+        {
+            await container.ReplaceContainerAsync(properties, cancellationToken: cancellationToken);
+        }
     }
 
     public async Task EnsureRoomPhotosContainerAsync(CancellationToken cancellationToken = default)
@@ -402,6 +476,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
     }
 
     private static async Task EnsureRoomsSpatialIndexesAsync(
+    private static async Task EnsureSpatialIndexesAsync(
         Container container,
         ContainerProperties properties,
         CancellationToken cancellationToken)
@@ -437,6 +512,89 @@ public sealed class CosmosDbContext : ICosmosDbContext
         {
             await container.ReplaceContainerAsync(properties, cancellationToken: cancellationToken);
         }
+    }
+
+    private static async Task EnsureRoomsSpatialAndCompositeIndexesAsync(
+        Container container,
+        ContainerProperties properties,
+        CancellationToken cancellationToken)
+    {
+        var indexingPolicy = properties.IndexingPolicy ?? new IndexingPolicy();
+        properties.IndexingPolicy = indexingPolicy;
+
+        var requiredPaths = new[] { "/location/*", "/Location/*" };
+        var modified = false;
+
+        foreach (var path in requiredPaths)
+        {
+            var existing = indexingPolicy.SpatialIndexes.FirstOrDefault(sp =>
+                string.Equals(sp.Path, path, StringComparison.Ordinal));
+
+            if (existing is null)
+            {
+                indexingPolicy.SpatialIndexes.Add(new SpatialPath
+                {
+                    Path = path,
+                    SpatialTypes = { SpatialType.Point }
+                });
+                modified = true;
+            }
+            else if (!existing.SpatialTypes.Contains(SpatialType.Point))
+            {
+                existing.SpatialTypes.Add(SpatialType.Point);
+                modified = true;
+            }
+        }
+
+        if (!HasCompositeIndex(indexingPolicy, "/price", CompositePathSortOrder.Ascending, "/id", CompositePathSortOrder.Ascending))
+        {
+            indexingPolicy.CompositeIndexes.Add(new Collection<CompositePath>
+            {
+                new() { Path = "/price", Order = CompositePathSortOrder.Ascending },
+                new() { Path = "/id", Order = CompositePathSortOrder.Ascending }
+            });
+            modified = true;
+        }
+
+        if (!HasCompositeIndex(indexingPolicy, "/price", CompositePathSortOrder.Descending, "/id", CompositePathSortOrder.Descending))
+        {
+            indexingPolicy.CompositeIndexes.Add(new Collection<CompositePath>
+            {
+                new() { Path = "/price", Order = CompositePathSortOrder.Descending },
+                new() { Path = "/id", Order = CompositePathSortOrder.Descending }
+            });
+            modified = true;
+        }
+
+        if (!HasCompositeIndex(indexingPolicy, "/createdAt", CompositePathSortOrder.Descending, "/id", CompositePathSortOrder.Descending))
+        {
+            indexingPolicy.CompositeIndexes.Add(new Collection<CompositePath>
+            {
+                new() { Path = "/createdAt", Order = CompositePathSortOrder.Descending },
+                new() { Path = "/id", Order = CompositePathSortOrder.Descending }
+            });
+            modified = true;
+        }
+
+        if (modified)
+        {
+            await container.ReplaceContainerAsync(properties, cancellationToken: cancellationToken);
+        }
+    }
+
+    private static bool HasCompositeIndex(
+        IndexingPolicy policy,
+        string path1,
+        CompositePathSortOrder order1,
+        string path2,
+        CompositePathSortOrder order2)
+    {
+        return policy.CompositeIndexes.Any(ci =>
+            ci.Count >= 2 &&
+            string.Equals(ci[0].Path, path1, StringComparison.Ordinal) &&
+            ci[0].Order == order1 &&
+            string.Equals(ci[1].Path, path2, StringComparison.Ordinal) &&
+            ci[1].Order == order2);
     }
 
     private static async Task EnsureUserProfileCompositeIndexesAsync(

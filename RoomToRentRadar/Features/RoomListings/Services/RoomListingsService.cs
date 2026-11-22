@@ -11,6 +11,8 @@ namespace RoomToRentRadar.Features.RoomListings.Services;
 public sealed class RoomListingsService : IRoomListingsService
 {
     public const string DefaultCampusId = "campus-ictu";
+    public const double IctuCampusLatitude = 21.5852;
+    public const double IctuCampusLongitude = 105.8073;
 
     private static readonly Dictionary<string, string[]> AmenityKeywords = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -105,6 +107,29 @@ public sealed class RoomListingsService : IRoomListingsService
         }
     }
 
+    public async Task<SearchRoomsResult> SearchRoomsAsync(
+        RoomSearchCriteria criteria,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(criteria);
+
+        var queryString = criteria.ToQueryString();
+        var endpoint = string.IsNullOrEmpty(queryString) ? "api/rooms" : $"api/rooms?{queryString}";
+
+        try
+        {
+            var response = await _apiClient.GetAsync<SearchRoomsResult>(endpoint, cancellationToken);
+            return response ?? new SearchRoomsResult([], 0, 0, criteria.PageNumber, []);
+        }
+        catch (Exception ex) when (
+            _enableDebugFallback &&
+            !cancellationToken.IsCancellationRequested &&
+            (ex is HttpRequestException or InvalidOperationException or TaskCanceledException))
+        {
+            return GetFallbackMockSearchResult(criteria);
+        }
+    }
+
     private static (string SortBy, string SortOrder) GetSortParameters(RoomSortOption sortBy) =>
         sortBy switch
         {
@@ -177,6 +202,107 @@ public sealed class RoomListingsService : IRoomListingsService
             Page: page,
             PageSize: pageSize,
             TotalCount: ordered.Count);
+    }
+
+    private static SearchRoomsResult GetFallbackMockSearchResult(RoomSearchCriteria criteria)
+    {
+        IEnumerable<RoomListItemModel> query = MockRooms;
+
+        if (!string.IsNullOrWhiteSpace(criteria.Keyword))
+        {
+            var keyword = criteria.Keyword.Trim();
+            query = query.Where(r => MatchesSearch(r, keyword));
+        }
+
+        if (criteria.MinPrice.HasValue)
+        {
+            query = query.Where(r => r.Price >= criteria.MinPrice.Value);
+        }
+
+        if (criteria.MaxPrice.HasValue)
+        {
+            query = query.Where(r => r.Price <= criteria.MaxPrice.Value);
+        }
+
+        if (criteria.MinArea.HasValue)
+        {
+            query = query.Where(r => r.AreaSqm >= criteria.MinArea.Value);
+        }
+
+        if (criteria.MaxArea.HasValue)
+        {
+            query = query.Where(r => r.AreaSqm <= criteria.MaxArea.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(criteria.RoomType) && !string.Equals(criteria.RoomType, "all", StringComparison.OrdinalIgnoreCase))
+        {
+            query = query.Where(r => string.Equals(r.RoomType, criteria.RoomType.Trim(), StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (criteria.RadiusInKm.HasValue)
+        {
+            query = query.Where(r => (r.DistanceToCampusKm ?? double.MaxValue) <= criteria.RadiusInKm.Value);
+        }
+
+        if (criteria.Amenities is { Count: > 0 })
+        {
+            foreach (var rawAmenity in criteria.Amenities)
+            {
+                if (!string.IsNullOrWhiteSpace(rawAmenity))
+                {
+                    var amenityKey = rawAmenity.Trim();
+                    query = query.Where(r => MatchesAmenity(r, amenityKey));
+                }
+            }
+        }
+
+        var sortBy = criteria.SortBy ?? RoomSortOption.Newest;
+        query = sortBy switch
+        {
+            RoomSortOption.PriceAsc => query.OrderBy(r => r.Price).ThenBy(r => r.Id),
+            RoomSortOption.PriceDesc => query.OrderByDescending(r => r.Price).ThenBy(r => r.Id),
+            RoomSortOption.DistanceAsc => query.OrderBy(r => r.DistanceToCampusKm ?? double.MaxValue).ThenBy(r => r.Id),
+            _ => query.OrderByDescending(r => r.CreatedAt).ThenBy(r => r.Id)
+        };
+
+        var list = query.ToList();
+        var totalCount = list.Count;
+        var pageSize = Math.Max(1, criteria.PageSize);
+        var pageNumber = Math.Max(1, criteria.PageNumber);
+        var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling((double)totalCount / pageSize);
+
+        var pagedItems = list
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .Select(r => new RoomSummaryDto(
+                r.Id,
+                r.Title,
+                r.Price,
+                r.AreaSqm,
+                r.RoomType,
+                r.IsVerified,
+                r.DistanceToCampusKm,
+                r.Address,
+                r.ThumbnailUrl,
+                r.Amenities,
+                r.CreatedAt))
+            .ToList();
+
+        var activeFilters = new List<string>();
+        if (criteria.MinPrice.HasValue) activeFilters.Add("MinPrice");
+        if (criteria.MaxPrice.HasValue) activeFilters.Add("MaxPrice");
+        if (criteria.MinArea.HasValue) activeFilters.Add("MinArea");
+        if (criteria.MaxArea.HasValue) activeFilters.Add("MaxArea");
+        if (!string.IsNullOrWhiteSpace(criteria.RoomType)) activeFilters.Add("RoomType");
+        if (!string.IsNullOrWhiteSpace(criteria.Keyword)) activeFilters.Add("Keyword");
+        if (criteria.RadiusInKm.HasValue) activeFilters.Add("RadiusInKm");
+
+        return new SearchRoomsResult(
+            pagedItems,
+            totalCount,
+            totalPages,
+            pageNumber,
+            activeFilters);
     }
 
     private static bool MatchesSearch(RoomListItemModel room, string term)

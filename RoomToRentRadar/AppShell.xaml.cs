@@ -1,6 +1,8 @@
 using System.Globalization;
 using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
+using CommunityToolkit.Maui.Extensions;
+using CommunityToolkit.Maui.Views;
 using Fonts;
 using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Interfaces;
@@ -33,8 +35,10 @@ namespace RoomToRentRadar
             InitializeComponent();
             _sessionService = sessionService;
             _routeGuardService = routeGuardService;
+            UpdateAuthVisibility();
             Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(Features.RoomDetails.Views.RoomDetailPage));
             Routing.RegisterRoute(AppRoutes.RoomDetails, typeof(RoomDetailsPage));
+            Routing.RegisterRoute(AppRoutes.CreateListing, typeof(CreateListingPage));
 
             if (_sessionService != null)
             {
@@ -55,6 +59,7 @@ namespace RoomToRentRadar
             InitializeComponent();
             _sessionService = sessionService;
             _routeGuardService = routeGuardService;
+            UpdateAuthVisibility();
 
             HomeShellContent.Content = homePage;
             RoomListingsShellContent.Content = roomListingsPage;
@@ -63,6 +68,7 @@ namespace RoomToRentRadar
 
             Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(Features.RoomDetails.Views.RoomDetailPage));
             Routing.RegisterRoute(AppRoutes.RoomDetails, typeof(RoomDetailsPage));
+            Routing.RegisterRoute(AppRoutes.CreateListing, typeof(CreateListingPage));
 
             if (_sessionService != null)
             {
@@ -75,13 +81,14 @@ namespace RoomToRentRadar
         {
             base.OnNavigating(args);
 
-            if (_isRedirecting || _routeGuardService == null || _sessionService == null)
+            if (_isRedirecting || _routeGuardService == null || _sessionService == null
+                || args.Source == ShellNavigationSource.Pop || args.Source == ShellNavigationSource.PopToRoot)
             {
                 return;
             }
 
             var targetUri = args.Target?.Location?.OriginalString;
-            if (string.IsNullOrWhiteSpace(targetUri))
+            if (string.IsNullOrWhiteSpace(targetUri) || targetUri == "..")
             {
                 return;
             }
@@ -204,8 +211,81 @@ namespace RoomToRentRadar
             UpdateProfileVisibility();
         }
 
-        private void UpdateProfileVisibility() =>
-            ProfileShellContent.IsVisible = _sessionService?.IsAuthenticated == true;
+        private void UpdateProfileVisibility() => UpdateAuthVisibility();
+        private void UpdateAuthVisibility()
+        {
+            var isAuthenticated = _sessionService?.IsAuthenticated == true;
+            if (ProfileShellContent != null)
+            {
+                ProfileShellContent.IsVisible = isAuthenticated;
+                Shell.SetFlyoutItemIsVisible(ProfileShellContent, isAuthenticated);
+            }
+
+            if (AuthFlyoutItem != null)
+            {
+                AuthFlyoutItem.IsVisible = !isAuthenticated;
+                Shell.SetFlyoutItemIsVisible(AuthFlyoutItem, !isAuthenticated);
+            }
+
+            if (AuthShellContent != null)
+            {
+                AuthShellContent.IsVisible = !isAuthenticated;
+                Shell.SetFlyoutItemIsVisible(AuthShellContent, !isAuthenticated);
+            }
+
+            if (LogoutMenuItem != null)
+            {
+                Shell.SetFlyoutItemIsVisible(LogoutMenuItem, isAuthenticated);
+            }
+
+            if (CreateListingShellContent != null)
+            {
+                var role = _sessionService?.CurrentUser?.Role;
+                var isLandlordOrAdmin = string.Equals(role, UserRoleConstants.Landlord, StringComparison.OrdinalIgnoreCase)
+                                        || string.Equals(role, UserRoleConstants.Admin, StringComparison.OrdinalIgnoreCase);
+                CreateListingShellContent.IsVisible = isLandlordOrAdmin;
+                Shell.SetFlyoutItemIsVisible(CreateListingShellContent, isLandlordOrAdmin);
+            }
+        }
+
+        private async void OnLogoutMenuItemClicked(object? sender, EventArgs e)
+        {
+            FlyoutIsPresented = false;
+
+            bool shouldLogout = false;
+            try
+            {
+                var popup = new LogoutConfirmationPopup();
+                var targetPage = CurrentPage ?? (Page)this;
+                targetPage.ShowPopup(popup);
+                shouldLogout = await popup.WaitForDecisionAsync();
+            }
+            catch
+            {
+                var confirmTitle = LocalizationResourceManager.Instance["Logout_Confirm_Title"] ?? "Log Out";
+                var confirmMessage = LocalizationResourceManager.Instance["Logout_Confirm_Message"] ?? "Are you sure you want to log out?";
+                var confirmYes = LocalizationResourceManager.Instance["Logout_Confirm_Yes"] ?? "Log Out";
+                var confirmNo = LocalizationResourceManager.Instance["Logout_Confirm_No"] ?? "Cancel";
+
+                var page = CurrentPage ?? this;
+                shouldLogout = await page.DisplayAlertAsync(confirmTitle, confirmMessage, confirmYes, confirmNo);
+            }
+
+            if (!shouldLogout)
+            {
+                return;
+            }
+
+            if (_sessionService != null)
+            {
+                await _sessionService.LogoutAsync();
+            }
+
+            await GoToAsync($"//{AppRoutes.Home}");
+
+            var successMsg = LocalizationResourceManager.Instance["Logout_Success"] ?? "Logged out successfully";
+            await DisplayToastAsync(successMsg);
+        }
 
         public void UpdateDesktopPaneCompactState(bool isCompact)
         {

@@ -152,7 +152,40 @@ public class InMemoryRoomRepository : IRoomRepository
                 CalculateHaversineDistanceKm(userLat, userLon, r.Latitude.Value, r.Longitude.Value) <= radius);
         }
 
-        var list = filtered.OrderBy(r => r.Id, StringComparer.Ordinal).ToList();
+        // 7. Lọc Tiện ích (Amenities) - Phòng phải chứa TẤT CẢ tiện ích được yêu cầu
+        if (query.Amenities is { Count: > 0 })
+        {
+            var requestedAmenities = query.Amenities
+                .Where(a => !string.IsNullOrWhiteSpace(a))
+                .Select(a => a.Trim())
+                .ToList();
+
+            if (requestedAmenities.Count > 0)
+            {
+                filtered = filtered.Where(r =>
+                    r.Amenities != null &&
+                    requestedAmenities.All(req =>
+                        r.Amenities.Any(amenity =>
+                            string.Equals(amenity, req, StringComparison.OrdinalIgnoreCase) ||
+                            amenity.Contains(req, StringComparison.OrdinalIgnoreCase))));
+            }
+        }
+
+        // Sắp xếp (Sorting) trước khi phân trang (Pagination)
+        var normalizedSort = query.SortBy?.Trim().ToLowerInvariant();
+        IEnumerable<Room> ordered = normalizedSort switch
+        {
+            "priceasc" or "price_asc" => filtered.OrderBy(r => r.Price).ThenBy(r => r.Id, StringComparer.Ordinal),
+            "pricedesc" or "price_desc" => filtered.OrderByDescending(r => r.Price).ThenBy(r => r.Id, StringComparer.Ordinal),
+            "distanceasc" or "distance_asc" when query.Latitude.HasValue && query.Longitude.HasValue =>
+                filtered.OrderBy(r => (r.Latitude.HasValue && r.Longitude.HasValue)
+                    ? CalculateHaversineDistanceKm(query.Latitude.Value, query.Longitude.Value, r.Latitude.Value, r.Longitude.Value)
+                    : double.MaxValue).ThenBy(r => r.Id, StringComparer.Ordinal),
+            "newest" => filtered.OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.Id, StringComparer.Ordinal),
+            _ => filtered.OrderBy(r => r.Id, StringComparer.Ordinal)
+        };
+
+        var list = ordered.ToList();
         var totalCount = list.Count;
 
         // 7. Phân trang (Pagination)

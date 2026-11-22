@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Core.Localization;
+using RoomToRentRadar.Core.Models.Authentication;
 using RoomToRentRadar.Features.RoomListings.Models;
 using RoomToRentRadar.Features.RoomListings.Services;
 
@@ -15,7 +16,7 @@ namespace RoomToRentRadar.Features.RoomListings.ViewModels;
 /// Manages presentation state, sorting, pull-to-refresh, and infinite scroll pagination
 /// for the room listings screen.
 /// </summary>
-public partial class RoomListingsViewModel : ObservableObject
+public partial class RoomListingsViewModel : SearchRoomsViewModel
 #if ANDROID || IOS || MACCATALYST || WINDOWS
     , IQueryAttributable
 #endif
@@ -24,6 +25,7 @@ public partial class RoomListingsViewModel : ObservableObject
 
     private readonly IRoomListingsService _roomListingsService;
     private readonly IErrorHandler _errorHandler;
+    private readonly IAuthenticationSessionService? _sessionService;
     private readonly Func<string, Task>? _navigateAsync;
     private readonly Dictionary<string, RoomListItemModel> _favoriteRoomsById = new(StringComparer.Ordinal);
     private readonly List<RoomListItemModel> _exploreSnapshot = [];
@@ -31,18 +33,31 @@ public partial class RoomListingsViewModel : ObservableObject
     private string? _lastErrorResourceKey;
     private bool _isInitialized;
     private bool _suppressAutoSortReload;
-    private bool _isUpdatingPricePreset;
+
+    [ObservableProperty]
+    public partial bool IsLandlord { get; set; }
 
     public RoomListingsViewModel(
         IRoomListingsService roomListingsService,
         IErrorHandler errorHandler,
         Func<string, Task>? navigateAsync = null)
+        : this(roomListingsService, errorHandler, null, navigateAsync)
+    {
+    }
+
+    public RoomListingsViewModel(
+        IRoomListingsService roomListingsService,
+        IErrorHandler errorHandler,
+        IAuthenticationSessionService? sessionService,
+        Func<string, Task>? navigateAsync = null)
+        : base(roomListingsService)
     {
         ArgumentNullException.ThrowIfNull(roomListingsService);
         ArgumentNullException.ThrowIfNull(errorHandler);
 
         _roomListingsService = roomListingsService;
         _errorHandler = errorHandler;
+        _sessionService = sessionService;
         _navigateAsync = navigateAsync;
         SortOptions = RoomSortOptionItem.CreateDefaults();
         PrimarySortOptions = SortOptions
@@ -54,8 +69,35 @@ public partial class RoomListingsViewModel : ObservableObject
         SelectedSortOptionItem = SortOptions[0];
         Rooms.CollectionChanged += (_, _) => NotifyStateProperties();
 
+        // Initial unfiltered state
+        FilterMinPriceText = string.Empty;
+        FilterMaxPriceText = string.Empty;
+        MinPrice = null;
+        MaxPrice = null;
+        SelectedRoomType = "all";
+        SelectedPricePreset = string.Empty;
+
         UpdateLocalizedStrings();
         LocalizationResourceManager.Instance.PropertyChanged += (_, _) => UpdateLocalizedStrings();
+
+        UpdateLandlordStatus();
+        if (_sessionService != null)
+        {
+            _sessionService.CurrentUserChanged += OnCurrentUserChanged;
+        }
+    }
+
+    private void OnCurrentUserChanged(object? sender, AuthUser? user)
+    {
+        IsLandlord = string.Equals(user?.Role, UserRoleConstants.Landlord, StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(user?.Role, UserRoleConstants.Admin, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void UpdateLandlordStatus()
+    {
+        var currentUser = _sessionService?.CurrentUser;
+        IsLandlord = string.Equals(currentUser?.Role, UserRoleConstants.Landlord, StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(currentUser?.Role, UserRoleConstants.Admin, StringComparison.OrdinalIgnoreCase);
     }
 
     private void UpdateLocalizedStrings()
@@ -146,17 +188,21 @@ public partial class RoomListingsViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsPriceMenuOpen { get; set; }
 
-    [ObservableProperty]
-    public partial string SelectedPricePreset { get; set; } = "1m-2m";
+    protected override void OnFilterPanelOpenStateChanged(bool isOpen)
+    {
+        if (IsPriceMenuOpen != isOpen)
+        {
+            IsPriceMenuOpen = isOpen;
+        }
+    }
 
-    [ObservableProperty]
-    public partial string FilterMinPriceText { get; set; } = "1,000,000";
-
-    [ObservableProperty]
-    public partial string FilterMaxPriceText { get; set; } = "2,000,000";
-
-    [ObservableProperty]
-    public partial string SelectedRoomType { get; set; } = "private";
+    partial void OnIsPriceMenuOpenChanged(bool value)
+    {
+        if (IsFilterPanelOpen != value)
+        {
+            IsFilterPanelOpen = value;
+        }
+    }
 
     [ObservableProperty]
     public partial bool IsAmenityAirConSelected { get; set; }
@@ -176,26 +222,11 @@ public partial class RoomListingsViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsAmenityKitchenSelected { get; set; }
 
-    public bool IsPriceUnder1MSelected =>
-        string.Equals(SelectedPricePreset, "under1m", StringComparison.OrdinalIgnoreCase);
-
-    public bool IsPrice1MTo2MSelected =>
-        string.Equals(SelectedPricePreset, "1m-2m", StringComparison.OrdinalIgnoreCase);
-
-    public bool IsPrice2MTo3MSelected =>
-        string.Equals(SelectedPricePreset, "2m-3m", StringComparison.OrdinalIgnoreCase);
-
-    public bool IsPrivateRoomSelected =>
-        string.Equals(SelectedRoomType, "private", StringComparison.OrdinalIgnoreCase);
-
-    public bool IsSharedRoomSelected =>
-        string.Equals(SelectedRoomType, "shared", StringComparison.OrdinalIgnoreCase);
-
     public string FilterShowResultsText =>
         string.Format(
             LocalizationResourceManager.Instance.CurrentCulture,
             LocalizationResourceManager.Instance["Filter_ShowResults_Format"],
-            TotalCount > 0 ? TotalCount : 24);
+            TotalCount);
 
     [ObservableProperty]
     public partial string SelectedBottomTab { get; set; } = "explore";
@@ -242,13 +273,22 @@ public partial class RoomListingsViewModel : ObservableObject
                     LocalizationResourceManager.Instance.CurrentCulture,
                     LocalizationResourceManager.Instance["Result_Summary_Format"],
                     TotalCount)
-                : LocalizationResourceManager.Instance["Result_Summary_Updating"];
+                : HasCompletedInitialLoad
+                    ? string.Format(
+                        LocalizationResourceManager.Instance.CurrentCulture,
+                        LocalizationResourceManager.Instance["Result_Summary_Format"],
+                        0)
+                    : LocalizationResourceManager.Instance["Result_Summary_Updating"];
 
     partial void OnIsLoadingChanged(bool value) => NotifyStateProperties();
 
     partial void OnHasErrorChanged(bool value) => NotifyStateProperties();
 
-    partial void OnHasCompletedInitialLoadChanged(bool value) => NotifyStateProperties();
+    partial void OnHasCompletedInitialLoadChanged(bool value)
+    {
+        NotifyStateProperties();
+        OnPropertyChanged(nameof(ResultSummaryText));
+    }
 
     private void NotifyStateProperties()
     {
@@ -267,44 +307,9 @@ public partial class RoomListingsViewModel : ObservableObject
 
     partial void OnTotalCountChanged(int value)
     {
+        TotalResultCount = value;
         OnPropertyChanged(nameof(ResultSummaryText));
         OnPropertyChanged(nameof(FilterShowResultsText));
-    }
-
-    partial void OnSelectedPricePresetChanged(string value)
-    {
-        OnPropertyChanged(nameof(IsPriceUnder1MSelected));
-        OnPropertyChanged(nameof(IsPrice1MTo2MSelected));
-        OnPropertyChanged(nameof(IsPrice2MTo3MSelected));
-    }
-
-    partial void OnFilterMinPriceTextChanged(string value) => SyncPricePresetFromInputs();
-
-    partial void OnFilterMaxPriceTextChanged(string value) => SyncPricePresetFromInputs();
-
-    private void SyncPricePresetFromInputs()
-    {
-        if (_isUpdatingPricePreset)
-        {
-            return;
-        }
-
-        var min = TryParsePrice(FilterMinPriceText);
-        var max = TryParsePrice(FilterMaxPriceText);
-
-        SelectedPricePreset = (min, max) switch
-        {
-            (0m, 1_000_000m) => "under1m",
-            (1_000_000m, 2_000_000m) => "1m-2m",
-            (2_000_000m, 3_000_000m) => "2m-3m",
-            _ => string.Empty
-        };
-    }
-
-    partial void OnSelectedRoomTypeChanged(string value)
-    {
-        OnPropertyChanged(nameof(IsPrivateRoomSelected));
-        OnPropertyChanged(nameof(IsSharedRoomSelected));
     }
 
     partial void OnSelectedBottomTabChanged(string value)
@@ -362,12 +367,14 @@ public partial class RoomListingsViewModel : ObservableObject
     [RelayCommand]
     public void TogglePriceMenu()
     {
-        IsPriceMenuOpen = !IsPriceMenuOpen;
+        IsFilterPanelOpen = !IsFilterPanelOpen;
+        IsPriceMenuOpen = IsFilterPanelOpen;
     }
 
     [RelayCommand]
     public void ClosePriceMenu()
     {
+        IsFilterPanelOpen = false;
         IsPriceMenuOpen = false;
     }
 
@@ -471,8 +478,33 @@ public partial class RoomListingsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    public async Task OpenCreateListingAsync()
+    {
+        if (Shell.Current != null)
+        {
+            try
+            {
+                await Shell.Current.GoToAsync(Core.Constants.AppRoutes.CreateListing);
+            }
+            catch
+            {
+                await Shell.Current.GoToAsync("//create-listing");
+            }
+        }
+    }
+
+    [RelayCommand]
     public async Task InitializeAsync()
     {
+        if (_sessionService != null)
+        {
+            if (!_sessionService.IsInitialized)
+            {
+                await _sessionService.EnsureInitializedAsync();
+            }
+            UpdateLandlordStatus();
+        }
+
         if (_isInitialized)
         {
             return;
@@ -489,43 +521,10 @@ public partial class RoomListingsViewModel : ObservableObject
         return LoadFirstPageAsync(isPullToRefresh: false);
     }
 
-    [RelayCommand]
-    public void SelectPricePreset(string? preset)
+    protected override Task ExecuteSearchAsync()
     {
-        var normalized = preset?.Trim().ToLowerInvariant() ?? string.Empty;
-        _isUpdatingPricePreset = true;
-        try
-        {
-            SelectedPricePreset = normalized;
-
-            switch (normalized)
-            {
-                case "under1m":
-                    FilterMinPriceText = "0";
-                    FilterMaxPriceText = "1,000,000";
-                    break;
-                case "1m-2m":
-                    FilterMinPriceText = "1,000,000";
-                    FilterMaxPriceText = "2,000,000";
-                    break;
-                case "2m-3m":
-                    FilterMinPriceText = "2,000,000";
-                    FilterMaxPriceText = "3,000,000";
-                    break;
-            }
-        }
-        finally
-        {
-            _isUpdatingPricePreset = false;
-        }
-    }
-
-    [RelayCommand]
-    public void SelectRoomType(string? roomType)
-    {
-        SelectedRoomType = string.IsNullOrWhiteSpace(roomType)
-            ? "private"
-            : roomType.Trim().ToLowerInvariant();
+        _isInitialized = true;
+        return LoadFirstPageAsync(isPullToRefresh: false);
     }
 
     [RelayCommand]
@@ -557,17 +556,14 @@ public partial class RoomListingsViewModel : ObservableObject
     [RelayCommand]
     public Task ApplyFilterSheetAsync()
     {
+        IsFilterPanelOpen = false;
         IsPriceMenuOpen = false;
-        _isInitialized = true;
-        return LoadFirstPageAsync(isPullToRefresh: false);
+        return ApplyFiltersAsync();
     }
 
-    [RelayCommand]
-    public Task ResetFiltersAsync()
+    public override async Task ResetFiltersAsync()
     {
         SearchQuery = string.Empty;
-        SelectPricePreset("1m-2m");
-        SelectedRoomType = "private";
         IsAmenityAirConSelected = false;
         IsAmenityWifiSelected = false;
         IsAmenityParkingSelected = false;
@@ -586,8 +582,8 @@ public partial class RoomListingsViewModel : ObservableObject
         }
 
         IsPriceMenuOpen = false;
-        _isInitialized = true;
-        return LoadFirstPageAsync(isPullToRefresh: false);
+
+        await base.ResetFiltersAsync();
     }
 
     [RelayCommand]
@@ -647,13 +643,37 @@ public partial class RoomListingsViewModel : ObservableObject
             IsLoadingMore = true;
 
             var sortOption = SelectedSortOptionItem?.Option ?? RoomSortOption.DistanceAsc;
-            var response = await _roomListingsService.GetRoomListingsAsync(
-                nextPage,
-                PageSize,
-                sortOption,
-                GetActiveSearchTerm(),
-                BuildFilterCriteria(),
-                token);
+            PagedResponse<RoomListItemModel> response;
+            if (HasActiveFilters && (MinArea.HasValue || MaxArea.HasValue || IsDistanceFilterActive))
+            {
+                var criteria = CreateSearchCriteria(
+                    pageNumber: nextPage,
+                    pageSize: PageSize,
+                    keyword: GetActiveSearchTerm(),
+                    sortBy: sortOption);
+
+                var searchResult = await _roomListingsService.SearchRoomsAsync(criteria, token);
+
+                var items = searchResult.Items
+                    .Select(dto => dto.ToListItemModel())
+                    .ToList();
+
+                response = new PagedResponse<RoomListItemModel>(
+                    items,
+                    searchResult.CurrentPage,
+                    PageSize,
+                    searchResult.TotalCount);
+            }
+            else
+            {
+                response = await _roomListingsService.GetRoomListingsAsync(
+                    nextPage,
+                    PageSize,
+                    sortOption,
+                    GetActiveSearchTerm(),
+                    BuildFilterCriteria(),
+                    token);
+            }
 
             if (token.IsCancellationRequested)
             {
@@ -760,13 +780,37 @@ public partial class RoomListingsViewModel : ObservableObject
             var sortOption = SelectedSortOptionItem?.Option ?? RoomSortOption.DistanceAsc;
 
             // Search and filter are executed server-side so results cover the whole catalog and stay paginated.
-            var response = await _roomListingsService.GetRoomListingsAsync(
-                page: 1,
-                pageSize: PageSize,
-                sortBy: sortOption,
-                search: GetActiveSearchTerm(),
-                filter: BuildFilterCriteria(),
-                cancellationToken: token);
+            PagedResponse<RoomListItemModel> response;
+            if (HasActiveFilters && (MinArea.HasValue || MaxArea.HasValue || IsDistanceFilterActive))
+            {
+                var criteria = CreateSearchCriteria(
+                    pageNumber: 1,
+                    pageSize: PageSize,
+                    keyword: GetActiveSearchTerm(),
+                    sortBy: sortOption);
+
+                var searchResult = await _roomListingsService.SearchRoomsAsync(criteria, token);
+
+                var items = searchResult.Items
+                    .Select(dto => dto.ToListItemModel())
+                    .ToList();
+
+                response = new PagedResponse<RoomListItemModel>(
+                    items,
+                    searchResult.CurrentPage,
+                    PageSize,
+                    searchResult.TotalCount);
+            }
+            else
+            {
+                response = await _roomListingsService.GetRoomListingsAsync(
+                    page: 1,
+                    pageSize: PageSize,
+                    sortBy: sortOption,
+                    search: GetActiveSearchTerm(),
+                    filter: BuildFilterCriteria(),
+                    cancellationToken: token);
+            }
 
             if (token.IsCancellationRequested || !ReferenceEquals(_paginationCts, currentCts))
             {
@@ -852,7 +896,7 @@ public partial class RoomListingsViewModel : ObservableObject
     {
         var minPrice = TryParsePrice(FilterMinPriceText);
         var maxPrice = TryParsePrice(FilterMaxPriceText);
-        var roomType = string.IsNullOrWhiteSpace(SelectedRoomType)
+        var roomType = string.IsNullOrWhiteSpace(SelectedRoomType) || string.Equals(SelectedRoomType, "all", StringComparison.OrdinalIgnoreCase)
             ? null
             : SelectedRoomType.Trim().ToLowerInvariant();
         var amenities = GetSelectedAmenities();
@@ -866,7 +910,101 @@ public partial class RoomListingsViewModel : ObservableObject
         };
     }
 
-    private IReadOnlyList<string> GetSelectedAmenities()
+    protected override void OnFilterRemoved(string key)
+    {
+        if (key.StartsWith("Amenity_", StringComparison.OrdinalIgnoreCase))
+        {
+            var amenity = key["Amenity_".Length..];
+            switch (amenity.ToLowerInvariant())
+            {
+                case "aircon":
+                    IsAmenityAirConSelected = false;
+                    break;
+                case "wifi":
+                    IsAmenityWifiSelected = false;
+                    break;
+                case "parking":
+                    IsAmenityParkingSelected = false;
+                    break;
+                case "bathroom":
+                    IsAmenityBathroomSelected = false;
+                    break;
+                case "washing":
+                    IsAmenityWashingSelected = false;
+                    break;
+                case "kitchen":
+                    IsAmenityKitchenSelected = false;
+                    break;
+            }
+        }
+    }
+
+    protected override void PopulateActiveFilters()
+    {
+        base.PopulateActiveFilters();
+
+        if (IsAmenityAirConSelected)
+        {
+            ActiveFilters.Add(new ActiveFilterItem
+            {
+                Key = "Amenity_aircon",
+                DisplayText = LocalizationResourceManager.Instance["Filter_Amenity_AirCon"],
+                FilterType = "amenity"
+            });
+        }
+
+        if (IsAmenityWifiSelected)
+        {
+            ActiveFilters.Add(new ActiveFilterItem
+            {
+                Key = "Amenity_wifi",
+                DisplayText = LocalizationResourceManager.Instance["Filter_Amenity_Wifi"],
+                FilterType = "amenity"
+            });
+        }
+
+        if (IsAmenityParkingSelected)
+        {
+            ActiveFilters.Add(new ActiveFilterItem
+            {
+                Key = "Amenity_parking",
+                DisplayText = LocalizationResourceManager.Instance["Filter_Amenity_Parking"],
+                FilterType = "amenity"
+            });
+        }
+
+        if (IsAmenityBathroomSelected)
+        {
+            ActiveFilters.Add(new ActiveFilterItem
+            {
+                Key = "Amenity_bathroom",
+                DisplayText = LocalizationResourceManager.Instance["Filter_Amenity_Bathroom"],
+                FilterType = "amenity"
+            });
+        }
+
+        if (IsAmenityWashingSelected)
+        {
+            ActiveFilters.Add(new ActiveFilterItem
+            {
+                Key = "Amenity_washing",
+                DisplayText = LocalizationResourceManager.Instance["Filter_Amenity_Washing"],
+                FilterType = "amenity"
+            });
+        }
+
+        if (IsAmenityKitchenSelected)
+        {
+            ActiveFilters.Add(new ActiveFilterItem
+            {
+                Key = "Amenity_kitchen",
+                DisplayText = LocalizationResourceManager.Instance["Filter_Amenity_Kitchen"],
+                FilterType = "amenity"
+            });
+        }
+    }
+
+    public override IReadOnlyList<string> GetSelectedAmenities()
     {
         var list = new List<string>(6);
         if (IsAmenityAirConSelected)
@@ -900,29 +1038,6 @@ public partial class RoomListingsViewModel : ObservableObject
         }
 
         return list;
-    }
-
-    private static decimal? TryParsePrice(string? priceText)
-    {
-        if (string.IsNullOrWhiteSpace(priceText))
-        {
-            return null;
-        }
-
-        var cleaned = priceText
-            .Replace(",", string.Empty, StringComparison.Ordinal)
-            .Replace(".", string.Empty, StringComparison.Ordinal)
-            .Replace(" ", string.Empty, StringComparison.Ordinal)
-            .Replace("đ", string.Empty, StringComparison.OrdinalIgnoreCase)
-            .Replace("₫", string.Empty, StringComparison.Ordinal)
-            .Trim();
-
-        if (decimal.TryParse(cleaned, NumberStyles.Number, CultureInfo.InvariantCulture, out var value) && value >= 0)
-        {
-            return value;
-        }
-
-        return null;
     }
 
     private void AttachRoomItem(RoomListItemModel room)
