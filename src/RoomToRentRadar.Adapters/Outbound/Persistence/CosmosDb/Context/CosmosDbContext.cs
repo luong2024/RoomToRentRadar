@@ -14,6 +14,8 @@ public sealed class CosmosDbContext : ICosmosDbContext
     private readonly bool _ownsCosmosClient;
     private readonly SemaphoreSlim _favouritesInitLock = new(1, 1);
     private volatile bool _favouritesContainerEnsured;
+    private readonly SemaphoreSlim _roomPhotosInitLock = new(1, 1);
+    private volatile bool _roomPhotosContainerEnsured;
 
     private readonly ICosmosContainer<UserDocument> _usersContainer;
     private readonly ICosmosContainer<RefreshTokenDocument> _refreshTokensContainer;
@@ -21,10 +23,12 @@ public sealed class CosmosDbContext : ICosmosDbContext
     private readonly ICosmosContainer<ExternalLoginIndexDocument> _externalLoginIndexContainer;
     private readonly ICosmosContainer<UserProfileDocument> _userProfilesContainer;
     private readonly ICosmosContainer<FavouriteDocument> _favouritesContainer;
+    private readonly ICosmosContainer<RoomPhotoDocument> _roomPhotosContainer;
     private readonly Container? _roomsCosmosContainer;
 
     public const string PartitionKeyPath = "/id";
     public const string FavouritesPartitionKeyPath = "/userId";
+    public const string RoomPhotosPartitionKeyPath = "/roomId";
     public const string UniqueTokenHashPath = "/tokenHash";
 
     public CosmosDbContext(IOptions<CosmosDbOptions> options)
@@ -54,8 +58,10 @@ public sealed class CosmosDbContext : ICosmosDbContext
             _externalLoginIndexContainer = new InMemoryCosmosContainer<ExternalLoginIndexDocument>();
             _userProfilesContainer = new InMemoryCosmosContainer<UserProfileDocument>();
             _favouritesContainer = new InMemoryCosmosContainer<FavouriteDocument>();
+            _roomPhotosContainer = new InMemoryCosmosContainer<RoomPhotoDocument>();
             _roomsCosmosContainer = null;
             _favouritesContainerEnsured = true;
+            _roomPhotosContainerEnsured = true;
         }
         else
         {
@@ -123,6 +129,9 @@ public sealed class CosmosDbContext : ICosmosDbContext
             var favouritesContainerName = string.IsNullOrWhiteSpace(options.FavouritesContainerName)
                 ? "Favourites"
                 : options.FavouritesContainerName;
+            var roomPhotosContainerName = string.IsNullOrWhiteSpace(options.RoomPhotosContainerName)
+                ? "RoomPhotos"
+                : options.RoomPhotosContainerName;
 
             var usersCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.UsersContainerName);
             var refreshTokensCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.RefreshTokensContainerName);
@@ -130,6 +139,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
             var externalLoginIndexCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.ExternalLoginIndexContainerName);
             var userProfilesCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.UserProfilesContainerName);
             var favouritesCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, favouritesContainerName);
+            var roomPhotosCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, roomPhotosContainerName);
             _roomsCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.RoomsContainerName);
 
             _usersContainer = new CosmosContainer<UserDocument>(usersCosmosContainer);
@@ -138,6 +148,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
             _externalLoginIndexContainer = new CosmosContainer<ExternalLoginIndexDocument>(externalLoginIndexCosmosContainer);
             _userProfilesContainer = new CosmosContainer<UserProfileDocument>(userProfilesCosmosContainer);
             _favouritesContainer = new CosmosContainer<FavouriteDocument>(favouritesCosmosContainer);
+            _roomPhotosContainer = new CosmosContainer<RoomPhotoDocument>(roomPhotosCosmosContainer);
         }
     }
 
@@ -152,6 +163,8 @@ public sealed class CosmosDbContext : ICosmosDbContext
     public ICosmosContainer<UserProfileDocument> UserProfiles => _userProfilesContainer;
 
     public ICosmosContainer<FavouriteDocument> Favourites => _favouritesContainer;
+
+    public ICosmosContainer<RoomPhotoDocument> RoomPhotos => _roomPhotosContainer;
 
     public Container? RoomsContainer => _roomsCosmosContainer;
 
@@ -272,7 +285,9 @@ public sealed class CosmosDbContext : ICosmosDbContext
         await EnsureUserProfileCompositeIndexesAsync(userProfilesResponse.Container, userProfilesResponse.Resource, cancellationToken);
 
         await EnsureFavouritesContainerOnDatabaseAsync(database, cancellationToken);
+        await EnsureRoomPhotosContainerOnDatabaseAsync(database, cancellationToken);
         _favouritesContainerEnsured = true;
+        _roomPhotosContainerEnsured = true;
 
         var roomsContainerName = string.IsNullOrWhiteSpace(_options.RoomsContainerName) ? "Rooms" : _options.RoomsContainerName;
         var roomsContainerProperties = new ContainerProperties(roomsContainerName, PartitionKeyPath);
@@ -327,6 +342,62 @@ public sealed class CosmosDbContext : ICosmosDbContext
 
         await database.CreateContainerIfNotExistsAsync(
             favouritesContainerProperties,
+            cancellationToken: cancellationToken);
+    }
+
+    public async Task EnsureRoomPhotosContainerAsync(CancellationToken cancellationToken = default)
+    {
+        if (_isInMemory || _cosmosClient is null || _roomPhotosContainerEnsured)
+        {
+            return;
+        }
+
+        await _roomPhotosInitLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (_roomPhotosContainerEnsured)
+            {
+                return;
+            }
+
+            var databaseResponse = await _cosmosClient.CreateDatabaseIfNotExistsAsync(
+                _options.DatabaseName,
+                cancellationToken: cancellationToken);
+
+            await EnsureRoomPhotosContainerOnDatabaseAsync(databaseResponse.Database, cancellationToken);
+            _roomPhotosContainerEnsured = true;
+        }
+        finally
+        {
+            _roomPhotosInitLock.Release();
+        }
+    }
+
+    private async Task EnsureRoomPhotosContainerOnDatabaseAsync(
+        Database database,
+        CancellationToken cancellationToken)
+    {
+        var roomPhotosContainerName = string.IsNullOrWhiteSpace(_options.RoomPhotosContainerName)
+            ? "RoomPhotos"
+            : _options.RoomPhotosContainerName;
+
+        var roomPhotosContainerProperties = new ContainerProperties(roomPhotosContainerName, RoomPhotosPartitionKeyPath)
+        {
+            IndexingPolicy = new IndexingPolicy
+            {
+                CompositeIndexes =
+                {
+                    new Collection<CompositePath>
+                    {
+                        new CompositePath { Path = "/roomId", Order = CompositePathSortOrder.Ascending },
+                        new CompositePath { Path = "/displayOrder", Order = CompositePathSortOrder.Ascending }
+                    }
+                }
+            }
+        };
+
+        await database.CreateContainerIfNotExistsAsync(
+            roomPhotosContainerProperties,
             cancellationToken: cancellationToken);
     }
 
@@ -398,6 +469,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
     public void Dispose()
     {
         _favouritesInitLock.Dispose();
+        _roomPhotosInitLock.Dispose();
         if (_ownsCosmosClient)
         {
             _cosmosClient?.Dispose();

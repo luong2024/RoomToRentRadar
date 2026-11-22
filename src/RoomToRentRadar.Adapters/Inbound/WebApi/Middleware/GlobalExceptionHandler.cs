@@ -165,6 +165,24 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                 profileDomainEx.Message,
                 null),
 
+            InvalidRoomPhotoException invalidPhotoEx => (
+                StatusCodes.Status400BadRequest,
+                "Invalid Room Photo",
+                invalidPhotoEx.Message,
+                null),
+
+            RoomPhotoNotFoundException photoNotFoundEx => (
+                StatusCodes.Status404NotFound,
+                "Room Photo Not Found",
+                photoNotFoundEx.Message,
+                null),
+
+            RoomPhotoQuotaExceededException photoQuotaEx => (
+                StatusCodes.Status409Conflict,
+                "Room Photo Quota Exceeded",
+                photoQuotaEx.Message,
+                null),
+
             RateLimitExceededException rateLimitEx => (
                 StatusCodes.Status429TooManyRequests,
                 "Rate Limit Exceeded",
