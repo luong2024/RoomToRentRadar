@@ -65,8 +65,8 @@ public sealed class UploadRoomPhotoUseCase : IUploadRoomPhotoUseCase
 
         RoomGalleryAuthorization.EnsureCanManageGallery(room, command.UploadedByUserId, command.IsAdmin);
 
-        var existingPhotos = await _photoRepository.GetByRoomIdAsync(normalizedRoomId, cancellationToken);
-        if (existingPhotos.Count >= RoomPhoto.MaxPhotosPerRoom)
+        var existingCount = await _photoRepository.CountByRoomIdAsync(normalizedRoomId, cancellationToken);
+        if (existingCount >= RoomPhoto.MaxPhotosPerRoom)
         {
             throw new RoomPhotoQuotaExceededException(
                 $"Room '{normalizedRoomId}' has reached the maximum limit of {RoomPhoto.MaxPhotosPerRoom} photos.");
@@ -85,82 +85,34 @@ public sealed class UploadRoomPhotoUseCase : IUploadRoomPhotoUseCase
             processedImage,
             cancellationToken);
 
-        var isCover = command.IsCover || existingPhotos.Count == 0;
-        var nextDisplayOrder = existingPhotos.Count == 0
-            ? 0
-            : existingPhotos.Max(p => p.DisplayOrder) + 1;
-
-        var newPhoto = RoomPhoto.Create(
-            id: photoId,
-            roomId: normalizedRoomId,
-            url: storedPhoto.Url,
-            thumbnailUrl: storedPhoto.ThumbnailUrl,
-            objectKey: storedPhoto.ObjectKey,
-            thumbnailObjectKey: storedPhoto.ThumbnailObjectKey,
-            contentType: processedImage.ContentType,
-            sizeBytes: processedImage.CompressedBytes.LongLength,
-            width: processedImage.Width,
-            height: processedImage.Height,
-            is360: command.Is360,
-            isCover: isCover,
-            displayOrder: nextDisplayOrder,
-            caption: command.Caption,
-            uploadedByUserId: command.UploadedByUserId,
-            uploadedAtUtc: _timeProvider.GetUtcNow());
-
-        var addedNewPhoto = false;
-        var demotedCovers = new List<RoomPhoto>();
-
+        RoomPhoto newPhoto;
         try
         {
-            await _photoRepository.AddAsync(newPhoto, cancellationToken);
-            addedNewPhoto = true;
-
-            if (isCover)
-            {
-                foreach (var previousCover in existingPhotos.Where(p => p.IsCover))
-                {
-                    previousCover.SetAsCover(false);
-                    try
-                    {
-                        await _photoRepository.UpdateAsync(previousCover, cancellationToken);
-                        demotedCovers.Add(previousCover);
-                    }
-                    catch
-                    {
-                        previousCover.SetAsCover(true);
-                        throw;
-                    }
-                }
-            }
+            newPhoto = await _photoRepository.AddWithinQuotaAsync(
+                normalizedRoomId,
+                RoomPhoto.MaxPhotosPerRoom,
+                command.IsCover,
+                (displayOrder, isCover) => RoomPhoto.Create(
+                    id: photoId,
+                    roomId: normalizedRoomId,
+                    url: storedPhoto.Url,
+                    thumbnailUrl: storedPhoto.ThumbnailUrl,
+                    objectKey: storedPhoto.ObjectKey,
+                    thumbnailObjectKey: storedPhoto.ThumbnailObjectKey,
+                    contentType: processedImage.ContentType,
+                    sizeBytes: processedImage.CompressedBytes.LongLength,
+                    width: processedImage.Width,
+                    height: processedImage.Height,
+                    is360: command.Is360,
+                    isCover: isCover,
+                    displayOrder: displayOrder,
+                    caption: command.Caption,
+                    uploadedByUserId: command.UploadedByUserId,
+                    uploadedAtUtc: _timeProvider.GetUtcNow()),
+                cancellationToken);
         }
         catch
         {
-            foreach (var demotedCover in demotedCovers)
-            {
-                try
-                {
-                    demotedCover.SetAsCover(true);
-                    await _photoRepository.UpdateAsync(demotedCover, CancellationToken.None);
-                }
-                catch
-                {
-                    // Preserve original persistence exception when rollback cleanup fails.
-                }
-            }
-
-            if (addedNewPhoto)
-            {
-                try
-                {
-                    await _photoRepository.DeleteAsync(normalizedRoomId, newPhoto.Id, CancellationToken.None);
-                }
-                catch
-                {
-                    // Preserve original persistence exception when rollback cleanup fails.
-                }
-            }
-
             try
             {
                 await _storageService.DeleteAsync(

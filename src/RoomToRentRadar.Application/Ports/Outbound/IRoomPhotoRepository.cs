@@ -12,6 +12,13 @@ public interface IRoomPhotoRepository
 
     Task AddAsync(RoomPhoto photo, CancellationToken cancellationToken = default);
 
+    Task<RoomPhoto> AddWithinQuotaAsync(
+        string roomId,
+        int maxPhotosPerRoom,
+        bool requestCover,
+        Func<int, bool, RoomPhoto> photoFactory,
+        CancellationToken cancellationToken = default);
+
     Task UpdateAsync(RoomPhoto photo, CancellationToken cancellationToken = default);
 
     Task DeleteAsync(string roomId, string photoId, CancellationToken cancellationToken = default);

@@ -237,6 +237,55 @@ public class RoomGalleryIntegrationTests
         Assert.That(adminDeleteRes.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
     }
 
+    [Test]
+    public async Task ConcurrentUploads_CompetingForFinalQuotaSlot_EnforcesMaxQuotaOf12AndSingleCover()
+    {
+        var ownerSession = await RegisterAndLoginSessionAsync("concurrent-landlord@ictu.edu.vn", "LANDLORD");
+        AssignRoomOwner("room-gallery-001", ownerSession.UserId);
+        var jpegBytes = CreateTestJpeg(400, 300);
+
+        // Fill 11 of 12 slots
+        for (var i = 0; i < RoomPhoto.MaxPhotosPerRoom - 1; i++)
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Post, "/api/v1/rooms/room-gallery-001/gallery/photos")
+            {
+                Content = CreateUploadForm(jpegBytes, $"seed-{i}.jpg", "image/jpeg")
+            };
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ownerSession.AccessToken);
+            var res = await _client.SendAsync(req);
+            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+        }
+
+        // Launch two concurrent uploads competing for the 12th slot, both requesting IsCover = true
+        async Task<HttpResponseMessage> SendRaceUploadAsync(string fileName)
+        {
+            var form = CreateUploadForm(jpegBytes, fileName, "image/jpeg");
+            form.Add(new StringContent("true"), "IsCover");
+            using var req = new HttpRequestMessage(HttpMethod.Post, "/api/v1/rooms/room-gallery-001/gallery/photos")
+            {
+                Content = form
+            };
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ownerSession.AccessToken);
+            return await _client.SendAsync(req);
+        }
+
+        var responses = await Task.WhenAll(
+            SendRaceUploadAsync("race-a.jpg"),
+            SendRaceUploadAsync("race-b.jpg"));
+
+        var statuses = responses.Select(r => r.StatusCode).ToList();
+        var gallery = await _client.GetFromJsonAsync<RoomGalleryResponse>("/api/v1/rooms/room-gallery-001/gallery");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(statuses.Count(s => s == HttpStatusCode.Created), Is.EqualTo(1));
+            Assert.That(statuses.Count(s => s == HttpStatusCode.Conflict), Is.EqualTo(1));
+            Assert.That(gallery!.TotalCount, Is.EqualTo(RoomPhoto.MaxPhotosPerRoom));
+            Assert.That(gallery.Photos.Count(p => p.IsCover), Is.EqualTo(1));
+            Assert.That(gallery.Photos.Select(p => p.DisplayOrder).Distinct().Count(), Is.EqualTo(RoomPhoto.MaxPhotosPerRoom));
+        });
+    }
+
     private void AssignRoomOwner(string roomId, Guid landlordId)
     {
         var room = _factory.RoomRepository.GetByIdAsync(roomId).GetAwaiter().GetResult()!;

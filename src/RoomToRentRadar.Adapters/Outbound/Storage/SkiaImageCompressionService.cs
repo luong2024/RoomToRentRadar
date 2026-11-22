@@ -15,6 +15,9 @@ public sealed class SkiaImageCompressionService : IImageCompressionService
     public const int StandardMaxDimensionPx = 1920;
     public const int PanoramaMaxWidthPx = 4096;
     public const int ThumbnailMaxWidthPx = 480;
+    public const int MaxDecodedWidthPx = 12000;
+    public const int MaxDecodedHeightPx = 12000;
+    public const long MaxDecodedPixelCount = 50_000_000L; // 50 MP max decoded budget (~200 MB RGBA)
     public const int StandardQuality = 82;
     public const int PanoramaQuality = 85;
     public const int ThumbnailQuality = 75;
@@ -61,12 +64,27 @@ public sealed class SkiaImageCompressionService : IImageCompressionService
             ?? throw new InvalidRoomPhotoException("Unable to decode image content. The file may be corrupted.");
 
         var origin = codec.EncodedOrigin;
-        var info = new SKImageInfo(codec.Info.Width, codec.Info.Height, SKColorType.Rgba8888, SKAlphaType.Premul);
-        if (info.Width <= 0 || info.Height <= 0)
+        var decodedWidth = codec.Info.Width;
+        var decodedHeight = codec.Info.Height;
+        if (decodedWidth <= 0 || decodedHeight <= 0)
         {
             throw new InvalidRoomPhotoException("Image dimensions must be positive.");
         }
 
+        if (decodedWidth > MaxDecodedWidthPx || decodedHeight > MaxDecodedHeightPx)
+        {
+            throw new InvalidRoomPhotoException(
+                $"Image dimensions ({decodedWidth}x{decodedHeight}) exceed the maximum allowed size of {MaxDecodedWidthPx}x{MaxDecodedHeightPx} pixels.");
+        }
+
+        var totalPixels = (long)decodedWidth * decodedHeight;
+        if (totalPixels > MaxDecodedPixelCount)
+        {
+            throw new InvalidRoomPhotoException(
+                $"Image pixel count ({totalPixels:N0}) exceeds the maximum allowed limit of {MaxDecodedPixelCount:N0} pixels.");
+        }
+
+        var info = new SKImageInfo(decodedWidth, decodedHeight, SKColorType.Rgba8888, SKAlphaType.Premul);
         using var decodedBitmap = new SKBitmap(info);
         var decodeResult = codec.GetPixels(decodedBitmap.Info, decodedBitmap.GetPixels());
         if (decodeResult != SKCodecResult.Success && decodeResult != SKCodecResult.IncompleteInput)

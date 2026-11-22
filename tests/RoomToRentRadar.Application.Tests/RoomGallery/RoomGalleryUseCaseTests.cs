@@ -324,6 +324,71 @@ public class RoomGalleryUseCaseTests
         Assert.That(remaining, Has.Count.EqualTo(1));
     }
 
+    [Test]
+    public async Task UploadRoomPhoto_ConcurrentUploadsForFinalSlot_AllowsOnlyOneAndRollsBackLoserStorage()
+    {
+        var uploadUseCase = new UploadRoomPhotoUseCase(_roomRepo, _photoRepo, _compressionService, _storageService);
+
+        // Fill 11 of 12 slots
+        for (var i = 0; i < RoomPhoto.MaxPhotosPerRoom - 1; i++)
+        {
+            await uploadUseCase.ExecuteAsync(new UploadRoomPhotoCommand(
+                RoomId: "room-001",
+                UploadedByUserId: _ownerLandlordId,
+                FileName: $"seed-{i}.jpg",
+                ContentType: "image/jpeg",
+                FileBytes: [0xFF, 0xD8, 0xFF, 0xE0]));
+        }
+
+        // Synchronize two concurrent uploads after the pre-upload count check so both compete for slot #12
+        var bothEnteredStorage = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var arrivedCount = 0;
+        _storageService.OnUploadAsync = async () =>
+        {
+            if (Interlocked.Increment(ref arrivedCount) == 2)
+            {
+                bothEnteredStorage.TrySetResult();
+            }
+
+            await bothEnteredStorage.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        };
+
+        var task1 = uploadUseCase.ExecuteAsync(new UploadRoomPhotoCommand(
+            RoomId: "room-001",
+            UploadedByUserId: _ownerLandlordId,
+            FileName: "race-1.jpg",
+            ContentType: "image/jpeg",
+            FileBytes: [0xFF, 0xD8, 0xFF, 0xE0],
+            IsCover: true));
+
+        var task2 = uploadUseCase.ExecuteAsync(new UploadRoomPhotoCommand(
+            RoomId: "room-001",
+            UploadedByUserId: _ownerLandlordId,
+            FileName: "race-2.jpg",
+            ContentType: "image/jpeg",
+            FileBytes: [0xFF, 0xD8, 0xFF, 0xE0],
+            IsCover: true));
+
+        var results = await Task.WhenAll(
+            task1.ContinueWith<object>(t => t.IsFaulted ? t.Exception!.InnerException! : t.Result),
+            task2.ContinueWith<object>(t => t.IsFaulted ? t.Exception!.InnerException! : t.Result));
+
+        var succeeded = results.OfType<RoomPhotoDto>().ToList();
+        var quotaErrors = results.OfType<RoomPhotoQuotaExceededException>().ToList();
+        var storedPhotos = await _photoRepo.GetByRoomIdAsync("room-001");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(succeeded, Has.Count.EqualTo(1));
+            Assert.That(quotaErrors, Has.Count.EqualTo(1));
+            Assert.That(storedPhotos, Has.Count.EqualTo(RoomPhoto.MaxPhotosPerRoom));
+            Assert.That(storedPhotos.Count(p => p.IsCover), Is.EqualTo(1));
+            Assert.That(storedPhotos.Select(p => p.DisplayOrder).Distinct().Count(), Is.EqualTo(RoomPhoto.MaxPhotosPerRoom));
+            // Losing upload rolled back its 2 storage keys (main + thumbnail)
+            Assert.That(_storageService.DeletedKeys, Has.Count.EqualTo(2));
+        });
+    }
+
     private sealed class FakeRoomRepository : IRoomRepository
     {
         private readonly Dictionary<string, Room> _rooms = new(StringComparer.OrdinalIgnoreCase);
@@ -345,48 +410,140 @@ public class RoomGalleryUseCaseTests
 
     private sealed class FakeRoomPhotoRepository : IRoomPhotoRepository
     {
+        private readonly object _sync = new();
         private readonly List<RoomPhoto> _photos = [];
         public bool FailNextAdd { get; set; }
         public bool FailNextUpdate { get; set; }
 
-        public Task<IReadOnlyList<RoomPhoto>> GetByRoomIdAsync(string roomId, CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<RoomPhoto>>(_photos.Where(p => p.RoomId == roomId).OrderBy(p => p.DisplayOrder).ToList());
+        public Task<IReadOnlyList<RoomPhoto>> GetByRoomIdAsync(string roomId, CancellationToken cancellationToken = default)
+        {
+            lock (_sync)
+            {
+                return Task.FromResult<IReadOnlyList<RoomPhoto>>(
+                    _photos.Where(p => p.RoomId == roomId).OrderBy(p => p.DisplayOrder).ToList());
+            }
+        }
 
-        public Task<RoomPhoto?> GetByIdAsync(string roomId, string photoId, CancellationToken cancellationToken = default) =>
-            Task.FromResult(_photos.FirstOrDefault(p => p.RoomId == roomId && p.Id == photoId));
+        public Task<RoomPhoto?> GetByIdAsync(string roomId, string photoId, CancellationToken cancellationToken = default)
+        {
+            lock (_sync)
+            {
+                return Task.FromResult(_photos.FirstOrDefault(p => p.RoomId == roomId && p.Id == photoId));
+            }
+        }
 
-        public Task<int> CountByRoomIdAsync(string roomId, CancellationToken cancellationToken = default) =>
-            Task.FromResult(_photos.Count(p => p.RoomId == roomId));
+        public Task<int> CountByRoomIdAsync(string roomId, CancellationToken cancellationToken = default)
+        {
+            lock (_sync)
+            {
+                return Task.FromResult(_photos.Count(p => p.RoomId == roomId));
+            }
+        }
 
         public Task AddAsync(RoomPhoto photo, CancellationToken cancellationToken = default)
         {
-            if (FailNextAdd)
+            lock (_sync)
             {
-                FailNextAdd = false;
-                throw new InvalidOperationException("Simulated DB write failure.");
+                if (FailNextAdd)
+                {
+                    FailNextAdd = false;
+                    throw new InvalidOperationException("Simulated DB write failure.");
+                }
+
+                _photos.Add(photo);
+                return Task.CompletedTask;
+            }
+        }
+
+        public async Task<RoomPhoto> AddWithinQuotaAsync(
+            string roomId,
+            int maxPhotosPerRoom,
+            bool requestCover,
+            Func<int, bool, RoomPhoto> photoFactory,
+            CancellationToken cancellationToken = default)
+        {
+            RoomPhoto newPhoto;
+            List<RoomPhoto> previousCovers;
+
+            lock (_sync)
+            {
+                var existing = _photos.Where(p => p.RoomId == roomId).ToList();
+                if (existing.Count >= maxPhotosPerRoom)
+                {
+                    throw new RoomPhotoQuotaExceededException(
+                        $"Room '{roomId}' has reached the maximum limit of {maxPhotosPerRoom} photos.");
+                }
+
+                var isCover = requestCover || existing.Count == 0;
+                var nextOrder = existing.Count == 0 ? 0 : existing.Max(p => p.DisplayOrder) + 1;
+                newPhoto = photoFactory(nextOrder, isCover);
+                previousCovers = isCover ? existing.Where(p => p.IsCover).ToList() : [];
+
+                if (FailNextAdd)
+                {
+                    FailNextAdd = false;
+                    throw new InvalidOperationException("Simulated DB write failure.");
+                }
+
+                _photos.Add(newPhoto);
             }
 
-            _photos.Add(photo);
-            return Task.CompletedTask;
+            var demoted = new List<RoomPhoto>();
+            try
+            {
+                foreach (var previousCover in previousCovers)
+                {
+                    previousCover.SetAsCover(false);
+                    try
+                    {
+                        await UpdateAsync(previousCover, cancellationToken);
+                        demoted.Add(previousCover);
+                    }
+                    catch
+                    {
+                        previousCover.SetAsCover(true);
+                        throw;
+                    }
+                }
+
+                return newPhoto;
+            }
+            catch
+            {
+                foreach (var cover in demoted)
+                {
+                    cover.SetAsCover(true);
+                    await UpdateAsync(cover, CancellationToken.None);
+                }
+
+                await DeleteAsync(roomId, newPhoto.Id, CancellationToken.None);
+                throw;
+            }
         }
 
         public Task UpdateAsync(RoomPhoto photo, CancellationToken cancellationToken = default)
         {
-            if (FailNextUpdate)
+            lock (_sync)
             {
-                FailNextUpdate = false;
-                throw new InvalidOperationException("Simulated DB update failure.");
-            }
+                if (FailNextUpdate)
+                {
+                    FailNextUpdate = false;
+                    throw new InvalidOperationException("Simulated DB update failure.");
+                }
 
-            var idx = _photos.FindIndex(p => p.Id == photo.Id);
-            if (idx >= 0) _photos[idx] = photo;
-            return Task.CompletedTask;
+                var idx = _photos.FindIndex(p => p.Id == photo.Id);
+                if (idx >= 0) _photos[idx] = photo;
+                return Task.CompletedTask;
+            }
         }
 
         public Task DeleteAsync(string roomId, string photoId, CancellationToken cancellationToken = default)
         {
-            _photos.RemoveAll(p => p.RoomId == roomId && p.Id == photoId);
-            return Task.CompletedTask;
+            lock (_sync)
+            {
+                _photos.RemoveAll(p => p.RoomId == roomId && p.Id == photoId);
+                return Task.CompletedTask;
+            }
         }
     }
 
@@ -412,37 +569,47 @@ public class RoomGalleryUseCaseTests
 
     private sealed class FakePhotoStorageService : IRoomPhotoStorageService
     {
+        private readonly object _sync = new();
         public List<string> DeletedKeys { get; } = [];
         public int FailDeleteCount { get; set; }
         public int DeleteAttemptCount { get; private set; }
+        public Func<Task>? OnUploadAsync { get; set; }
 
-        public Task<StoredPhotoResult> UploadAsync(
+        public async Task<StoredPhotoResult> UploadAsync(
             string roomId,
             string photoId,
             ProcessedImageResult processedImage,
             CancellationToken cancellationToken = default)
         {
+            if (OnUploadAsync is not null)
+            {
+                await OnUploadAsync();
+            }
+
             var key = $"rooms/{roomId}/{photoId}.jpg";
             var thumbKey = $"rooms/{roomId}/{photoId}_thumb.jpg";
-            return Task.FromResult(new StoredPhotoResult(
+            return new StoredPhotoResult(
                 Url: $"https://cdn.test/{key}",
                 ThumbnailUrl: $"https://cdn.test/{thumbKey}",
                 ObjectKey: key,
-                ThumbnailObjectKey: thumbKey));
+                ThumbnailObjectKey: thumbKey);
         }
 
         public Task DeleteAsync(string objectKey, string thumbnailObjectKey, CancellationToken cancellationToken = default)
         {
-            DeleteAttemptCount++;
-            if (FailDeleteCount > 0)
+            lock (_sync)
             {
-                FailDeleteCount--;
-                throw new IOException("Simulated R2 delete failure.");
-            }
+                DeleteAttemptCount++;
+                if (FailDeleteCount > 0)
+                {
+                    FailDeleteCount--;
+                    throw new IOException("Simulated R2 delete failure.");
+                }
 
-            DeletedKeys.Add(objectKey);
-            DeletedKeys.Add(thumbnailObjectKey);
-            return Task.CompletedTask;
+                DeletedKeys.Add(objectKey);
+                DeletedKeys.Add(thumbnailObjectKey);
+                return Task.CompletedTask;
+            }
         }
     }
 }

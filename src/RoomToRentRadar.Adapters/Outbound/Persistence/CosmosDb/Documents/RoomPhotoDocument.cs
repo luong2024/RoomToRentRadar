@@ -6,6 +6,9 @@ namespace RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Documents;
 
 public sealed class RoomPhotoDocument
 {
+    public const string PhotoDocumentType = "photo";
+    public const string GalleryStateDocumentType = "gallery-state";
+
     [JsonProperty("id")]
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
@@ -13,6 +16,30 @@ public sealed class RoomPhotoDocument
     [JsonProperty("roomId")]
     [JsonPropertyName("roomId")]
     public string RoomId { get; set; } = string.Empty;
+
+    [JsonProperty("documentType")]
+    [JsonPropertyName("documentType")]
+    public string DocumentType { get; set; } = PhotoDocumentType;
+
+    [JsonProperty("_etag")]
+    [JsonPropertyName("_etag")]
+    public string? ETag { get; set; }
+
+    [JsonProperty("photoCount")]
+    [JsonPropertyName("photoCount")]
+    public int PhotoCount { get; set; }
+
+    [JsonProperty("nextDisplayOrder")]
+    [JsonPropertyName("nextDisplayOrder")]
+    public int NextDisplayOrder { get; set; }
+
+    [JsonProperty("coverPhotoId")]
+    [JsonPropertyName("coverPhotoId")]
+    public string? CoverPhotoId { get; set; }
+
+    [JsonProperty("stateVersion")]
+    [JsonPropertyName("stateVersion")]
+    public long StateVersion { get; set; }
 
     [JsonProperty("url")]
     [JsonPropertyName("url")]
