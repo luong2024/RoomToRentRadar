@@ -475,7 +475,6 @@ public sealed class CosmosDbContext : ICosmosDbContext
             cancellationToken: cancellationToken);
     }
 
-    private static async Task EnsureRoomsSpatialIndexesAsync(
     private static async Task EnsureSpatialIndexesAsync(
         Container container,
         ContainerProperties properties,
