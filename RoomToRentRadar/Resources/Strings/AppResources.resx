@@ -824,7 +824,7 @@
     <value>From {0}</value>
   </data>
   <data name="Filters_Chip_RangeAmount" xml:space="preserve">
-    <value>{0} – {1}</value>
+    <value>{0}{2} – {1}{2}</value>
   </data>
   <data name="Filters_Chip_MinArea" xml:space="preserve">
     <value>≥ {0} m²</value>
@@ -846,6 +846,12 @@
   </data>
   <data name="Filters_PriceUnitThousand" xml:space="preserve">
     <value>{0}k</value>
+  </data>
+  <data name="Filters_UnitMillion" xml:space="preserve">
+    <value>M</value>
+  </data>
+  <data name="Filters_UnitThousand" xml:space="preserve">
+    <value>k</value>
   </data>
   <data name="Filters_ShowRoomsPlural" xml:space="preserve">
     <value>Show {0} rooms</value>

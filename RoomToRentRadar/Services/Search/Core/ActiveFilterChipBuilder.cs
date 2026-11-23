@@ -50,11 +50,28 @@ public static class ActiveFilterChipBuilder
     {
         if (minRent.HasValue && maxRent.HasValue)
         {
+            var minUnit = UnitKey(minRent.Value);
+            var maxUnit = UnitKey(maxRent.Value);
+            var template = AppResources.GetString("Filters_Chip_RangeAmount");
+
+            if (string.Equals(minUnit, maxUnit, StringComparison.Ordinal))
+            {
+                // "1.5M – 3M" (EN) / "1,5 – 3 tr" (VI) — the unit is placed by the template.
+                return string.Format(
+                    CultureInfo.CurrentCulture,
+                    template,
+                    FormatMoneyNumber(minRent.Value),
+                    FormatMoneyNumber(maxRent.Value),
+                    AppResources.GetString(minUnit));
+            }
+
+            // Mixed units (e.g. 950k – 1.5M): both bounds keep their own suffix.
             return string.Format(
                 CultureInfo.CurrentCulture,
-                AppResources.GetString("Filters_Chip_RangeAmount"),
+                template,
                 FormatMoney(minRent.Value),
-                FormatMoney(maxRent.Value));
+                FormatMoney(maxRent.Value),
+                string.Empty).TrimEnd();
         }
 
         if (maxRent.HasValue)
@@ -98,19 +115,20 @@ public static class ActiveFilterChipBuilder
 
     private static string FormatMoney(long amount)
     {
-        if (amount < 1_000_000)
-        {
-            return string.Format(
-                CultureInfo.CurrentCulture,
-                AppResources.GetString("Filters_PriceUnitThousand"),
-                (amount / 1000.0).ToString("0.#", CultureInfo.CurrentCulture));
-        }
-
+        var unitKey = UnitKey(amount);
         return string.Format(
             CultureInfo.CurrentCulture,
-            AppResources.GetString("Filters_PriceUnitMillion"),
-            (amount / 1_000_000.0).ToString("0.#", CultureInfo.CurrentCulture));
+            AppResources.GetString(
+                amount < 1_000_000 ? "Filters_PriceUnitThousand" : "Filters_PriceUnitMillion"),
+            FormatMoneyNumber(amount));
     }
+
+    private static string UnitKey(long amount) =>
+        amount < 1_000_000 ? "Filters_UnitThousand" : "Filters_UnitMillion";
+
+    private static string FormatMoneyNumber(long amount) =>
+        (amount < 1_000_000 ? amount / 1000.0 : amount / 1_000_000.0)
+            .ToString("0.#", CultureInfo.CurrentCulture);
 
     private static string FormatNumber(double value) =>
         value.ToString("0.#", CultureInfo.CurrentCulture);
