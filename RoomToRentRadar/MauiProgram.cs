@@ -92,6 +92,13 @@ namespace RoomToRentRadar
             builder.Services.AddSingleton<ISpatialSearchService, SpatialSearchService>();
             builder.Services.AddSingleton<MapSearchViewModel>();
             builder.Services.AddSingleton<MapSearchPage>();
+
+            // US02 / T02.2 & US04 / T04.2: RoomDetailPage & FilterBottomSheet
+            builder.Services.AddSingleton<RoomDetailViewModel>();
+            builder.Services.AddTransient<RoomDetailPage>();
+            builder.Services.AddSingleton<SearchFilterViewModel>();
+            builder.Services.AddTransient<FilterBottomSheet>();
+
             return builder.Build();
         }
     }
