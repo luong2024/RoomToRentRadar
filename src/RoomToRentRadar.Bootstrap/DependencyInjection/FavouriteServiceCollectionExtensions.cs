@@ -10,7 +10,7 @@ public static class FavouriteServiceCollectionExtensions
 {
     public static IServiceCollection AddFavouritesFeature(this IServiceCollection services)
     {
-        services.AddScoped<IFavouriteRepository, CosmosFavouriteRepository>();
+        services.AddSingleton<IFavouriteRepository, CosmosFavouriteRepository>();
         services.AddScoped<IGetMyFavouritesUseCase, GetMyFavouritesUseCase>();
         services.AddScoped<IGetMyFavouriteIdsUseCase, GetMyFavouriteIdsUseCase>();
         services.AddScoped<IAddFavouriteUseCase, AddFavouriteUseCase>();
