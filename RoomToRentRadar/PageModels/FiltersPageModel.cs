@@ -265,8 +265,15 @@ public partial class FiltersPageModel : BasePageModel, IDisposable
 
         var minOk = TryParseRent(MinRentText, out var min);
         var maxOk = TryParseRent(MaxRentText, out var max);
-        _rentTextInvalid = !minOk || !maxOk;
-        ApplyRentValues(minOk ? min : null, maxOk ? max : null, syncSliders: true);
+        if (!minOk || !maxOk)
+        {
+            _rentTextInvalid = true;
+            Revalidate(scheduleCount: false);
+            return;
+        }
+
+        _rentTextInvalid = false;
+        ApplyRentValues(min, max, syncSliders: true);
     }
 
     private void OnAreaTextChanged()
@@ -276,8 +283,15 @@ public partial class FiltersPageModel : BasePageModel, IDisposable
 
         var minOk = TryParseArea(MinAreaText, out var min);
         var maxOk = TryParseArea(MaxAreaText, out var max);
-        _areaTextInvalid = !minOk || !maxOk;
-        ApplyAreaValues(minOk ? min : null, maxOk ? max : null, syncSliders: true);
+        if (!minOk || !maxOk)
+        {
+            _areaTextInvalid = true;
+            Revalidate(scheduleCount: false);
+            return;
+        }
+
+        _areaTextInvalid = false;
+        ApplyAreaValues(min, max, syncSliders: true);
     }
 
     private void ApplyRentValues(long? min, long? max, bool syncSliders)

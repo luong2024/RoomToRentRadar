@@ -169,9 +169,14 @@ public partial class MainLandingPageModel : BasePageModel
     [RelayCommand]
     private Task ClearFiltersAsync()
     {
+        var current = _searchCriteriaStore.Current;
+        var cleared = current.ClearFiltersPreservingCampus();
         _searchCriteriaStore.ClearFilters();
-        // Reload even when the criteria were already default (keeps the empty-state action responsive).
-        return RunAsync(LoadRoomsAsync);
+
+        // Reload explicitly only when nothing changed (no CriteriaChanged event fired).
+        return current.IsEquivalentTo(cleared)
+            ? RunAsync(LoadRoomsAsync)
+            : Task.CompletedTask;
     }
 
     [RelayCommand]
@@ -215,7 +220,11 @@ public partial class MainLandingPageModel : BasePageModel
         return Rooms.Count > 0;
     }
 
-    internal void OnCriteriaChanged(RoomSearchCriteria criteria) => RefreshFilterState();
+    internal void OnCriteriaChanged(RoomSearchCriteria criteria)
+    {
+        RefreshFilterState();
+        _ = RunAsync(LoadRoomsAsync);
+    }
 
     private void RefreshFilterState()
     {
