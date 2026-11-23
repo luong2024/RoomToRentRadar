@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Pages.Controls.Search"
+             xmlns:searchcore="clr-namespace:RoomToRentRadar.Services.Search.Core"
+             xmlns:fonts="clr-namespace:Fonts"
+             x:Class="RoomToRentRadar.Pages.Controls.Search.ActiveFilterChipsControl"
+             x:DataType="controls:ActiveFilterChipsControl">
+
+    <Grid ColumnDefinitions="*, Auto"
+          ColumnSpacing="4"
+          IsVisible="{Binding HasActiveFilters}">
+
+        <FlexLayout Grid.Column="0"
+                    Direction="Row"
+                    Wrap="Wrap"
+                    AlignItems="Center"
+                    JustifyContent="Start"
+                    BindableLayout.ItemsSource="{Binding Chips}">
+            <BindableLayout.ItemTemplate>
+                <DataTemplate x:DataType="searchcore:ActiveFilterChipModel">
+                    <Grid HeightRequest="44"
+                          SemanticProperties.Description="{Binding RemoveAccessibilityLabel}">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer
+                                Command="{Binding Source={RelativeSource AncestorType={x:Type controls:ActiveFilterChipsControl}}, Path=RemoveChipCommand}"
+                                CommandParameter="{Binding .}" />
+                        </Grid.GestureRecognizers>
+                        <Border HeightRequest="32"
+                                Padding="10,0"
+                                Margin="0,0,8,0"
+                                VerticalOptions="Center"
+                                StrokeThickness="0"
+                                StrokeShape="RoundRectangle 16"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource ActionAccentSubtleLight}, Dark={StaticResource ActionAccentSubtleDark}}">
+                            <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                                <Label Text="{Binding Label}"
+                                       FontSize="13"
+                                       VerticalTextAlignment="Center"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}" />
+                                <Label Text="{x:Static fonts:FluentUI.dismiss_16_regular}"
+                                       FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                       FontSize="12"
+                                       VerticalTextAlignment="Center"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}" />
+                            </HorizontalStackLayout>
+                        </Border>
+                    </Grid>
+                </DataTemplate>
+            </BindableLayout.ItemTemplate>
+        </FlexLayout>
+
+        <Grid Grid.Column="1"
+              HeightRequest="44"
+              Padding="8,0"
+              VerticalOptions="Center"
+              IsVisible="{Binding HasActiveFilters}"
+              SemanticProperties.Description="{Binding ClearAllText}">
+            <Grid.GestureRecognizers>
+                <TapGestureRecognizer Command="{Binding ClearAllCommand}" />
+            </Grid.GestureRecognizers>
+            <Label Text="{Binding ClearAllText}"
+                   FontSize="13"
+                   FontAttributes="Bold"
+                   TextDecorations="Underline"
+                   HorizontalTextAlignment="Center"
+                   VerticalTextAlignment="Center"
+                   TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}" />
+        </Grid>
+    </Grid>
+</ContentView>
