@@ -8,7 +8,9 @@ public partial class ExploreFilterBarControl : ContentView
     public ExploreFilterBarControl()
     {
         InitializeComponent();
-        BindingContext = this;
+        // Bind the inner content to this control; keeping the control's own BindingContext free
+        // lets bindings from the host page (BindableProperties above) still resolve (T04.2).
+        Content.BindingContext = this;
     }
 
     public static readonly BindableProperty ActiveFilterCountProperty = BindableProperty.Create(
