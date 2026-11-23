@@ -25,7 +25,7 @@ namespace RoomToRentRadar
             // Register the 12 shared placeholder detail routes (T00.15 P4).
             AppRoutes.RegisterAll();
 
-            // Register real FiltersPage (US04 / T04.2) over the placeholder route.
+            // Register real FiltersPage (US04 / T04.2); RegisterAll() skips its placeholder route.
             Routing.RegisterRoute(AppRoutes.SearchFilters, typeof(Pages.FiltersPage));
 
             // Register real RoomDetailPage (US02 / T02.2)
