@@ -1,66 +1,37 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:controls="clr-namespace:RoomToRentRadar.Pages.Controls.Search"
-             x:Class="RoomToRentRadar.Pages.Controls.Search.RangeSliderControl"
-             x:DataType="controls:RangeSliderControl">
+             x:Class="RoomToRentRadar.Pages.Controls.Search.RangeSliderControl">
 
     <Grid x:Name="Host"
           HeightRequest="48"
+          BackgroundColor="Transparent"
           SizeChanged="OnHostSizeChanged">
 
-        <!-- Track spans the thumb centres (24 dp inset on both sides). -->
-        <Border x:Name="Track"
-                HeightRequest="4"
-                Margin="24,0"
-                VerticalOptions="Center"
-                StrokeThickness="0"
-                StrokeShape="RoundRectangle 2"
-                BackgroundColor="{Binding TrackColor}" />
-
-        <Border x:Name="ActiveTrack"
-                HeightRequest="4"
-                WidthRequest="0"
-                HorizontalOptions="Start"
-                VerticalOptions="Center"
-                StrokeThickness="0"
-                StrokeShape="RoundRectangle 2"
-                BackgroundColor="{Binding ActiveTrackColor}" />
+        <!-- Track + thumbs are drawn here; the transparent hosts above it capture drags. -->
+        <GraphicsView x:Name="Canvas"
+                      InputTransparent="True" />
 
         <Grid x:Name="LowerThumbHost"
               WidthRequest="48"
               HeightRequest="48"
               HorizontalOptions="Start"
-              VerticalOptions="Center">
+              VerticalOptions="Center"
+              BackgroundColor="Transparent">
             <Grid.GestureRecognizers>
                 <PanGestureRecognizer PanUpdated="OnLowerPanUpdated" />
             </Grid.GestureRecognizers>
-            <Border WidthRequest="24"
-                    HeightRequest="24"
-                    HorizontalOptions="Center"
-                    VerticalOptions="Center"
-                    StrokeShape="RoundRectangle 12"
-                    StrokeThickness="2"
-                    Stroke="{Binding ThumbStrokeColor}"
-                    BackgroundColor="{Binding ThumbFillColor}" />
         </Grid>
 
         <Grid x:Name="UpperThumbHost"
               WidthRequest="48"
               HeightRequest="48"
               HorizontalOptions="Start"
-              VerticalOptions="Center">
+              VerticalOptions="Center"
+              BackgroundColor="Transparent">
             <Grid.GestureRecognizers>
                 <PanGestureRecognizer PanUpdated="OnUpperPanUpdated" />
             </Grid.GestureRecognizers>
-            <Border WidthRequest="24"
-                    HeightRequest="24"
-                    HorizontalOptions="Center"
-                    VerticalOptions="Center"
-                    StrokeShape="RoundRectangle 12"
-                    StrokeThickness="2"
-                    Stroke="{Binding ThumbStrokeColor}"
-                    BackgroundColor="{Binding ThumbFillColor}" />
         </Grid>
     </Grid>
 </ContentView>

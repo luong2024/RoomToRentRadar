@@ -57,6 +57,12 @@
             </Grid>
         </Grid>
 
+        <!-- Header divider (design: Border bottom BorderSubtle) -->
+        <BoxView Grid.Row="0"
+                 VerticalOptions="End"
+                 HeightRequest="1"
+                 Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
+
         <!-- Body -->
         <ScrollView Grid.Row="1">
             <VerticalStackLayout Padding="18,20"
@@ -497,146 +503,103 @@
                            FontAttributes="Bold"
                            TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
 
-                    <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="4">
-                        <Border Grid.Column="0"
-                                HeightRequest="48"
-                                StrokeThickness="1"
-                                StrokeShape="RoundRectangle 12"
-                                Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
-                                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}">
-                            <Border.GestureRecognizers>
-                                <TapGestureRecognizer Command="{Binding SelectMaxDistanceCommand}" CommandParameter="1" />
-                            </Border.GestureRecognizers>
-                            <Border.Triggers>
-                                <DataTrigger TargetType="Border" Binding="{Binding IsDistance1Selected}" Value="True">
-                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}" />
-                                    <Setter Property="Stroke" Value="Transparent" />
-                                </DataTrigger>
-                            </Border.Triggers>
-                            <Label Text="{Binding Distance1Text}"
-                                   FontSize="13"
-                                   HorizontalTextAlignment="Center"
-                                   VerticalTextAlignment="Center"
-                                   TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}">
-                                <Label.Triggers>
-                                    <DataTrigger TargetType="Label" Binding="{Binding IsDistance1Selected}" Value="True">
-                                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextInverseLight}, Dark={StaticResource TextInverseDark}}" />
-                                    </DataTrigger>
-                                </Label.Triggers>
-                            </Label>
-                        </Border>
+                    <Grid HeightRequest="48">
+                        <search:SegmentedFillControl InputTransparent="True"
+                                                     IsOption1Selected="{Binding IsDistance1Selected}"
+                                                     IsOption2Selected="{Binding IsDistance2Selected}"
+                                                     IsOption3Selected="{Binding IsDistance3Selected}"
+                                                     IsOption5Selected="{Binding IsDistance5Selected}"
+                                                     IsOption10Selected="{Binding IsDistance10Selected}"
+                                                     FrameColor="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                                                     FillColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+                                                     SelectedFillColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}" />
 
-                        <Border Grid.Column="1"
-                                HeightRequest="48"
-                                StrokeThickness="1"
-                                StrokeShape="RoundRectangle 12"
-                                Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
-                                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}">
-                            <Border.GestureRecognizers>
-                                <TapGestureRecognizer Command="{Binding SelectMaxDistanceCommand}" CommandParameter="2" />
-                            </Border.GestureRecognizers>
-                            <Border.Triggers>
-                                <DataTrigger TargetType="Border" Binding="{Binding IsDistance2Selected}" Value="True">
-                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}" />
-                                    <Setter Property="Stroke" Value="Transparent" />
-                                </DataTrigger>
-                            </Border.Triggers>
-                            <Label Text="{Binding Distance2Text}"
-                                   FontSize="13"
-                                   HorizontalTextAlignment="Center"
-                                   VerticalTextAlignment="Center"
-                                   TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}">
-                                <Label.Triggers>
-                                    <DataTrigger TargetType="Label" Binding="{Binding IsDistance2Selected}" Value="True">
-                                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextInverseLight}, Dark={StaticResource TextInverseDark}}" />
-                                    </DataTrigger>
-                                </Label.Triggers>
-                            </Label>
-                        </Border>
+                        <Grid ColumnDefinitions="*,*,*,*,*">
+                            <Grid Grid.Column="0">
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SelectMaxDistanceCommand}" CommandParameter="1" />
+                                </Grid.GestureRecognizers>
+                                <Label Text="{Binding Distance1Text}"
+                                       FontSize="13"
+                                       HorizontalTextAlignment="Center"
+                                       VerticalTextAlignment="Center"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding IsDistance1Selected}" Value="True">
+                                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextInverseLight}, Dark={StaticResource TextInverseDark}}" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                            </Grid>
 
-                        <Border Grid.Column="2"
-                                HeightRequest="48"
-                                StrokeThickness="1"
-                                StrokeShape="RoundRectangle 12"
-                                Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
-                                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}">
-                            <Border.GestureRecognizers>
-                                <TapGestureRecognizer Command="{Binding SelectMaxDistanceCommand}" CommandParameter="3" />
-                            </Border.GestureRecognizers>
-                            <Border.Triggers>
-                                <DataTrigger TargetType="Border" Binding="{Binding IsDistance3Selected}" Value="True">
-                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}" />
-                                    <Setter Property="Stroke" Value="Transparent" />
-                                </DataTrigger>
-                            </Border.Triggers>
-                            <Label Text="{Binding Distance3Text}"
-                                   FontSize="13"
-                                   HorizontalTextAlignment="Center"
-                                   VerticalTextAlignment="Center"
-                                   TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}">
-                                <Label.Triggers>
-                                    <DataTrigger TargetType="Label" Binding="{Binding IsDistance3Selected}" Value="True">
-                                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextInverseLight}, Dark={StaticResource TextInverseDark}}" />
-                                    </DataTrigger>
-                                </Label.Triggers>
-                            </Label>
-                        </Border>
+                            <Grid Grid.Column="1">
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SelectMaxDistanceCommand}" CommandParameter="2" />
+                                </Grid.GestureRecognizers>
+                                <Label Text="{Binding Distance2Text}"
+                                       FontSize="13"
+                                       HorizontalTextAlignment="Center"
+                                       VerticalTextAlignment="Center"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding IsDistance2Selected}" Value="True">
+                                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextInverseLight}, Dark={StaticResource TextInverseDark}}" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                            </Grid>
 
-                        <Border Grid.Column="3"
-                                HeightRequest="48"
-                                StrokeThickness="1"
-                                StrokeShape="RoundRectangle 12"
-                                Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
-                                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}">
-                            <Border.GestureRecognizers>
-                                <TapGestureRecognizer Command="{Binding SelectMaxDistanceCommand}" CommandParameter="5" />
-                            </Border.GestureRecognizers>
-                            <Border.Triggers>
-                                <DataTrigger TargetType="Border" Binding="{Binding IsDistance5Selected}" Value="True">
-                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}" />
-                                    <Setter Property="Stroke" Value="Transparent" />
-                                </DataTrigger>
-                            </Border.Triggers>
-                            <Label Text="{Binding Distance5Text}"
-                                   FontSize="13"
-                                   HorizontalTextAlignment="Center"
-                                   VerticalTextAlignment="Center"
-                                   TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}">
-                                <Label.Triggers>
-                                    <DataTrigger TargetType="Label" Binding="{Binding IsDistance5Selected}" Value="True">
-                                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextInverseLight}, Dark={StaticResource TextInverseDark}}" />
-                                    </DataTrigger>
-                                </Label.Triggers>
-                            </Label>
-                        </Border>
+                            <Grid Grid.Column="2">
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SelectMaxDistanceCommand}" CommandParameter="3" />
+                                </Grid.GestureRecognizers>
+                                <Label Text="{Binding Distance3Text}"
+                                       FontSize="13"
+                                       HorizontalTextAlignment="Center"
+                                       VerticalTextAlignment="Center"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding IsDistance3Selected}" Value="True">
+                                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextInverseLight}, Dark={StaticResource TextInverseDark}}" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                            </Grid>
 
-                        <Border Grid.Column="4"
-                                HeightRequest="48"
-                                StrokeThickness="1"
-                                StrokeShape="RoundRectangle 12"
-                                Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
-                                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}">
-                            <Border.GestureRecognizers>
-                                <TapGestureRecognizer Command="{Binding SelectMaxDistanceCommand}" CommandParameter="10" />
-                            </Border.GestureRecognizers>
-                            <Border.Triggers>
-                                <DataTrigger TargetType="Border" Binding="{Binding IsDistance10Selected}" Value="True">
-                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}" />
-                                    <Setter Property="Stroke" Value="Transparent" />
-                                </DataTrigger>
-                            </Border.Triggers>
-                            <Label Text="{Binding Distance10Text}"
-                                   FontSize="13"
-                                   HorizontalTextAlignment="Center"
-                                   VerticalTextAlignment="Center"
-                                   TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}">
-                                <Label.Triggers>
-                                    <DataTrigger TargetType="Label" Binding="{Binding IsDistance10Selected}" Value="True">
-                                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextInverseLight}, Dark={StaticResource TextInverseDark}}" />
-                                    </DataTrigger>
-                                </Label.Triggers>
-                            </Label>
-                        </Border>
+                            <Grid Grid.Column="3">
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SelectMaxDistanceCommand}" CommandParameter="5" />
+                                </Grid.GestureRecognizers>
+                                <Label Text="{Binding Distance5Text}"
+                                       FontSize="13"
+                                       HorizontalTextAlignment="Center"
+                                       VerticalTextAlignment="Center"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding IsDistance5Selected}" Value="True">
+                                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextInverseLight}, Dark={StaticResource TextInverseDark}}" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                            </Grid>
+
+                            <Grid Grid.Column="4">
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SelectMaxDistanceCommand}" CommandParameter="10" />
+                                </Grid.GestureRecognizers>
+                                <Label Text="{Binding Distance10Text}"
+                                       FontSize="13"
+                                       HorizontalTextAlignment="Center"
+                                       VerticalTextAlignment="Center"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding IsDistance10Selected}" Value="True">
+                                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextInverseLight}, Dark={StaticResource TextInverseDark}}" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                            </Grid>
+                        </Grid>
                     </Grid>
 
                     <Label Text="{Binding DistanceErrorMessage}"
@@ -657,21 +620,13 @@
                         <Grid.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding SelectSortCommand}" CommandParameter="distance" />
                         </Grid.GestureRecognizers>
-                        <Border WidthRequest="20"
-                                HeightRequest="20"
-                                VerticalOptions="Center"
-                                StrokeThickness="2"
-                                StrokeShape="RoundRectangle 10"
-                                Stroke="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}">
-                            <Border WidthRequest="10"
-                                    HeightRequest="10"
-                                    StrokeThickness="0"
-                                    StrokeShape="RoundRectangle 5"
-                                    HorizontalOptions="Center"
-                                    VerticalOptions="Center"
-                                    IsVisible="{Binding IsSortDistanceSelected}"
-                                    BackgroundColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}" />
-                        </Border>
+                        <search:RadioIndicatorControl WidthRequest="20"
+                                                      HeightRequest="20"
+                                                      VerticalOptions="Center"
+                                                      IsSelected="{Binding IsSortDistanceSelected}"
+                                                      RingColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+                                                      SelectedColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}"
+                                                      HoleColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}" />
                         <Label Grid.Column="1"
                                Text="{Binding SortDistanceText}"
                                FontSize="14"
@@ -683,21 +638,13 @@
                         <Grid.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding SelectSortCommand}" CommandParameter="price_asc" />
                         </Grid.GestureRecognizers>
-                        <Border WidthRequest="20"
-                                HeightRequest="20"
-                                VerticalOptions="Center"
-                                StrokeThickness="2"
-                                StrokeShape="RoundRectangle 10"
-                                Stroke="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}">
-                            <Border WidthRequest="10"
-                                    HeightRequest="10"
-                                    StrokeThickness="0"
-                                    StrokeShape="RoundRectangle 5"
-                                    HorizontalOptions="Center"
-                                    VerticalOptions="Center"
-                                    IsVisible="{Binding IsSortPriceAscSelected}"
-                                    BackgroundColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}" />
-                        </Border>
+                        <search:RadioIndicatorControl WidthRequest="20"
+                                                      HeightRequest="20"
+                                                      VerticalOptions="Center"
+                                                      IsSelected="{Binding IsSortPriceAscSelected}"
+                                                      RingColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+                                                      SelectedColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}"
+                                                      HoleColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}" />
                         <Label Grid.Column="1"
                                Text="{Binding SortPriceAscText}"
                                FontSize="14"
@@ -709,21 +656,13 @@
                         <Grid.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding SelectSortCommand}" CommandParameter="price_desc" />
                         </Grid.GestureRecognizers>
-                        <Border WidthRequest="20"
-                                HeightRequest="20"
-                                VerticalOptions="Center"
-                                StrokeThickness="2"
-                                StrokeShape="RoundRectangle 10"
-                                Stroke="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}">
-                            <Border WidthRequest="10"
-                                    HeightRequest="10"
-                                    StrokeThickness="0"
-                                    StrokeShape="RoundRectangle 5"
-                                    HorizontalOptions="Center"
-                                    VerticalOptions="Center"
-                                    IsVisible="{Binding IsSortPriceDescSelected}"
-                                    BackgroundColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}" />
-                        </Border>
+                        <search:RadioIndicatorControl WidthRequest="20"
+                                                      HeightRequest="20"
+                                                      VerticalOptions="Center"
+                                                      IsSelected="{Binding IsSortPriceDescSelected}"
+                                                      RingColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+                                                      SelectedColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}"
+                                                      HoleColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}" />
                         <Label Grid.Column="1"
                                Text="{Binding SortPriceDescText}"
                                FontSize="14"
@@ -735,21 +674,13 @@
                         <Grid.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding SelectSortCommand}" CommandParameter="newest" />
                         </Grid.GestureRecognizers>
-                        <Border WidthRequest="20"
-                                HeightRequest="20"
-                                VerticalOptions="Center"
-                                StrokeThickness="2"
-                                StrokeShape="RoundRectangle 10"
-                                Stroke="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}">
-                            <Border WidthRequest="10"
-                                    HeightRequest="10"
-                                    StrokeThickness="0"
-                                    StrokeShape="RoundRectangle 5"
-                                    HorizontalOptions="Center"
-                                    VerticalOptions="Center"
-                                    IsVisible="{Binding IsSortNewestSelected}"
-                                    BackgroundColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}" />
-                        </Border>
+                        <search:RadioIndicatorControl WidthRequest="20"
+                                                      HeightRequest="20"
+                                                      VerticalOptions="Center"
+                                                      IsSelected="{Binding IsSortNewestSelected}"
+                                                      RingColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+                                                      SelectedColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}"
+                                                      HoleColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}" />
                         <Label Grid.Column="1"
                                Text="{Binding SortNewestText}"
                                FontSize="14"
@@ -799,5 +730,11 @@
                     BackgroundColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}"
                     TextColor="{AppThemeBinding Light={StaticResource TextInverseLight}, Dark={StaticResource TextInverseDark}}" />
         </VerticalStackLayout>
+
+        <!-- Sticky footer divider (design: Border top BorderSubtle), drawn after the footer so the background does not cover it -->
+        <BoxView Grid.Row="2"
+                 VerticalOptions="Start"
+                 HeightRequest="1"
+                 Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
     </Grid>
 </ContentPage>

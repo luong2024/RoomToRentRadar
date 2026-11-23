@@ -33,7 +33,7 @@
                     <Border WidthRequest="22"
                             HeightRequest="22"
                             StrokeThickness="0"
-                            StrokeShape="RoundRectangle 11"
+                            StrokeShape="RoundRectangle 10"
                             VerticalOptions="Center"
                             IsVisible="{Binding HasActiveFilters}"
                             BackgroundColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}">

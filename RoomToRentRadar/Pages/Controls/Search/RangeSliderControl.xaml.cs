@@ -9,12 +9,13 @@ public partial class RangeSliderControl : ContentView
 {
     public const double ThumbHitSize = 48;
 
+    private readonly SliderDrawable _drawable = new();
     private double _dragStartValue;
 
     public RangeSliderControl()
     {
         InitializeComponent();
-        BindingContext = this;
+        Canvas.Drawable = _drawable;
         UpdateVisual();
     }
 
@@ -39,16 +40,20 @@ public partial class RangeSliderControl : ContentView
         BindingMode.TwoWay, propertyChanged: OnValueChanged);
 
     public static readonly BindableProperty TrackColorProperty = BindableProperty.Create(
-        nameof(TrackColor), typeof(Color), typeof(RangeSliderControl), Color.FromArgb("#E2E8F0"));
+        nameof(TrackColor), typeof(Color), typeof(RangeSliderControl), Color.FromArgb("#E2E8F0"),
+        propertyChanged: OnVisualSettingChanged);
 
     public static readonly BindableProperty ActiveTrackColorProperty = BindableProperty.Create(
-        nameof(ActiveTrackColor), typeof(Color), typeof(RangeSliderControl), Color.FromArgb("#163A5F"));
+        nameof(ActiveTrackColor), typeof(Color), typeof(RangeSliderControl), Color.FromArgb("#163A5F"),
+        propertyChanged: OnVisualSettingChanged);
 
     public static readonly BindableProperty ThumbFillColorProperty = BindableProperty.Create(
-        nameof(ThumbFillColor), typeof(Color), typeof(RangeSliderControl), Colors.White);
+        nameof(ThumbFillColor), typeof(Color), typeof(RangeSliderControl), Colors.White,
+        propertyChanged: OnVisualSettingChanged);
 
     public static readonly BindableProperty ThumbStrokeColorProperty = BindableProperty.Create(
-        nameof(ThumbStrokeColor), typeof(Color), typeof(RangeSliderControl), Color.FromArgb("#163A5F"));
+        nameof(ThumbStrokeColor), typeof(Color), typeof(RangeSliderControl), Color.FromArgb("#163A5F"),
+        propertyChanged: OnVisualSettingChanged);
 
     public double Minimum
     {
@@ -147,8 +152,60 @@ public partial class RangeSliderControl : ContentView
         LowerThumbHost.TranslationX = lowerRatio * usable;
         UpperThumbHost.TranslationX = upperRatio * usable;
 
-        ActiveTrack.Margin = new Thickness(ThumbHitSize / 2 + lowerRatio * usable, 0, 0, 0);
-        ActiveTrack.WidthRequest = Math.Max(0, (upperRatio - lowerRatio) * usable);
+        _drawable.LowerRatio = lowerRatio;
+        _drawable.UpperRatio = upperRatio;
+        _drawable.TrackColor = TrackColor;
+        _drawable.ActiveColor = ActiveTrackColor;
+        _drawable.ThumbFill = ThumbFillColor;
+        _drawable.ThumbStroke = ThumbStrokeColor;
+        Canvas.Invalidate();
+    }
+
+    private sealed class SliderDrawable : IDrawable
+    {
+        public double LowerRatio { get; set; }
+        public double UpperRatio { get; set; }
+        public Color TrackColor { get; set; } = Color.FromArgb("#E2E8F0");
+        public Color ActiveColor { get; set; } = Color.FromArgb("#163A5F");
+        public Color ThumbFill { get; set; } = Colors.White;
+        public Color ThumbStroke { get; set; } = Color.FromArgb("#163A5F");
+
+        public void Draw(ICanvas canvas, RectF dirtyRect)
+        {
+            var inset = (float)(ThumbHitSize / 2);
+            var y = dirtyRect.Height / 2f;
+            var left = inset;
+            var right = dirtyRect.Width - inset;
+            var usable = Math.Max(1f, right - left);
+
+            canvas.Antialias = true;
+            canvas.StrokeLineCap = LineCap.Round;
+            canvas.StrokeSize = 4;
+
+            canvas.StrokeColor = TrackColor;
+            canvas.DrawLine(left, y, right, y);
+
+            var lowerX = left + (float)(LowerRatio * usable);
+            var upperX = left + (float)(UpperRatio * usable);
+            if (upperX > lowerX)
+            {
+                canvas.StrokeColor = ActiveColor;
+                canvas.DrawLine(lowerX, y, upperX, y);
+            }
+
+            DrawThumb(canvas, lowerX, y);
+            DrawThumb(canvas, upperX, y);
+        }
+
+        private void DrawThumb(ICanvas canvas, float x, float y)
+        {
+            const float radius = 11f;
+            canvas.FillColor = ThumbFill;
+            canvas.FillCircle(x, y, radius);
+            canvas.StrokeSize = 2;
+            canvas.StrokeColor = ThumbStroke;
+            canvas.DrawCircle(x, y, radius);
+        }
     }
 
     private void OnLowerPanUpdated(object? sender, PanUpdatedEventArgs e)
