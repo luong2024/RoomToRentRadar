@@ -4,15 +4,21 @@ using RoomToRentRadar.Application.Ports.Inbound;
 using RoomToRentRadar.Application.Ports.Outbound;
 using RoomToRentRadar.Domain.Entities;
 
+using RoomToRentRadar.Application.UseCases.HouseRules;
+
 namespace RoomToRentRadar.Application.UseCases;
 
 public class GetRoomDetailsUseCase : IGetRoomDetailsUseCase
 {
     private readonly IRoomRepository _roomRepository;
+    private readonly IHouseRulesRepository? _houseRulesRepository;
 
-    public GetRoomDetailsUseCase(IRoomRepository roomRepository)
+    public GetRoomDetailsUseCase(
+        IRoomRepository roomRepository,
+        IHouseRulesRepository? houseRulesRepository = null)
     {
         _roomRepository = roomRepository ?? throw new ArgumentNullException(nameof(roomRepository));
+        _houseRulesRepository = houseRulesRepository;
     }
 
     public async Task<RoomDetailsDto> ExecuteAsync(string roomId, bool isUserVerified, CancellationToken cancellationToken = default)
@@ -56,6 +62,20 @@ public class GetRoomDetailsUseCase : IGetRoomDetailsUseCase
             IsAvailable = isAvailable,
             UnavailableMessage = isAvailable ? null : "Phòng này hiện không khả dụng."
         };
+
+        if (_houseRulesRepository is not null)
+        {
+            var structuredRules = await _houseRulesRepository.GetByRoomIdAsync(room.Id, cancellationToken);
+            if (structuredRules is not null)
+            {
+                dto.StructuredHouseRules = structuredRules.ToDto();
+                dto.HouseRules = structuredRules.CurrentPolicy.ToSummaryLines().ToList();
+            }
+            else
+            {
+                dto.StructuredHouseRules = HouseRulesMappingExtensions.CreateLegacyFallbackDto(room);
+            }
+        }
 
         if (isAvailable && !isUserVerified)
         {

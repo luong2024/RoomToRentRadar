@@ -62,6 +62,9 @@ public sealed class RoomDocument : IProjectionVersionedDocument
     [JsonProperty("houseRules")]
     public List<string> HouseRules { get; set; } = [];
 
+    [JsonProperty("landlordId")]
+    public Guid? LandlordId { get; set; }
+
     [JsonProperty("landlordPhone")]
     public string LandlordPhone { get; set; } = string.Empty;
 
@@ -164,6 +167,7 @@ public sealed class RoomDocument : IProjectionVersionedDocument
             Bathrooms = room.Bathrooms,
             Amenities = room.Amenities.ToList(),
             HouseRules = room.HouseRules.ToList(),
+            LandlordId = room.LandlordId,
             LandlordPhone = room.LandlordPhone,
             LastUpdatedDate = room.LastUpdatedDate,
             CreatedAt = room.CreatedAt != default ? room.CreatedAt : (room.LastUpdatedDate ?? DateTime.UtcNow),
@@ -202,6 +206,7 @@ public sealed class RoomDocument : IProjectionVersionedDocument
             Bathrooms = Bathrooms,
             Amenities = Amenities ?? [],
             HouseRules = HouseRules ?? [],
+            LandlordId = LandlordId,
             LandlordPhone = LandlordPhone,
             LastUpdatedDate = LastUpdatedDate,
             CreatedAt = CreatedAt != default ? CreatedAt : (LastUpdatedDate ?? DateTime.UtcNow),

@@ -183,6 +183,18 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                 profileDomainEx.Message,
                 null),
 
+            HouseRulesOwnershipException houseRulesOwnershipEx => (
+                StatusCodes.Status403Forbidden,
+                "Forbidden",
+                houseRulesOwnershipEx.Message,
+                null),
+
+            HouseRulesDomainException houseRulesDomainEx => (
+                StatusCodes.Status400BadRequest,
+                "House Rules Validation Error",
+                houseRulesDomainEx.Message,
+                null),
+
             RateLimitExceededException rateLimitEx => (
                 StatusCodes.Status429TooManyRequests,
                 "Rate Limit Exceeded",

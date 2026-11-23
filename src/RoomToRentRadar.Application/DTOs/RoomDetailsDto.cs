@@ -19,6 +19,7 @@ public class RoomDetailsDto
     public int? Bathrooms { get; set; }
     public List<string> Amenities { get; set; } = [];
     public List<string> HouseRules { get; set; } = [];
+    public RoomHouseRulesDto? StructuredHouseRules { get; set; }
     public string LandlordPhone { get; set; } = string.Empty;
     public DateTime? LastUpdatedDate { get; set; }
     public bool IsVerified { get; set; }

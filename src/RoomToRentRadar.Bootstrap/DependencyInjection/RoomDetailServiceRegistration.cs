@@ -9,6 +9,7 @@ using RoomToRentRadar.Adapters.Outbound.Persistence.InMemory;
 using RoomToRentRadar.Application.Ports.Inbound;
 using RoomToRentRadar.Application.Ports.Outbound;
 using RoomToRentRadar.Application.UseCases;
+using RoomToRentRadar.Application.UseCases.HouseRules;
 
 namespace RoomToRentRadar.Bootstrap.DependencyInjection;
 
@@ -22,6 +23,11 @@ public static class RoomDetailServiceRegistration
         var endpoint = !string.IsNullOrWhiteSpace(cosmosOptions.AccountEndpoint)
             ? cosmosOptions.AccountEndpoint
             : configuration["CosmosDb:AccountEndpoint"];
+
+        services.AddScoped<IHouseRulesRepository, CosmosHouseRulesRepository>();
+        services.TryAddScoped<IGetRoomHouseRulesUseCase, GetRoomHouseRulesUseCase>();
+        services.TryAddScoped<IGetHouseRulesHistoryUseCase, GetHouseRulesHistoryUseCase>();
+        services.TryAddScoped<IUpdateRoomHouseRulesUseCase, UpdateRoomHouseRulesUseCase>();
 
         if (string.Equals(endpoint, "in-memory", StringComparison.OrdinalIgnoreCase))
         {

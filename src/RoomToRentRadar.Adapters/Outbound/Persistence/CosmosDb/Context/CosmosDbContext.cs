@@ -21,10 +21,12 @@ public sealed class CosmosDbContext : ICosmosDbContext
     private readonly ICosmosContainer<ExternalLoginIndexDocument> _externalLoginIndexContainer;
     private readonly ICosmosContainer<UserProfileDocument> _userProfilesContainer;
     private readonly ICosmosContainer<FavouriteDocument> _favouritesContainer;
+    private readonly ICosmosContainer<RoomHouseRulesDocument> _houseRulesContainer;
     private readonly Container? _roomsCosmosContainer;
 
     public const string PartitionKeyPath = "/id";
     public const string FavouritesPartitionKeyPath = "/userId";
+    public const string HouseRulesPartitionKeyPath = "/roomId";
     public const string UniqueTokenHashPath = "/tokenHash";
 
     public CosmosDbContext(IOptions<CosmosDbOptions> options)
@@ -54,6 +56,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
             _externalLoginIndexContainer = new InMemoryCosmosContainer<ExternalLoginIndexDocument>();
             _userProfilesContainer = new InMemoryCosmosContainer<UserProfileDocument>();
             _favouritesContainer = new InMemoryCosmosContainer<FavouriteDocument>();
+            _houseRulesContainer = new InMemoryCosmosContainer<RoomHouseRulesDocument>();
             _roomsCosmosContainer = null;
             _favouritesContainerEnsured = true;
         }
@@ -130,6 +133,10 @@ public sealed class CosmosDbContext : ICosmosDbContext
             var externalLoginIndexCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.ExternalLoginIndexContainerName);
             var userProfilesCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.UserProfilesContainerName);
             var favouritesCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, favouritesContainerName);
+            var houseRulesContainerName = string.IsNullOrWhiteSpace(options.HouseRulesContainerName)
+                ? "RoomHouseRules"
+                : options.HouseRulesContainerName;
+            var houseRulesCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, houseRulesContainerName);
             _roomsCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.RoomsContainerName);
 
             _usersContainer = new CosmosContainer<UserDocument>(usersCosmosContainer);
@@ -138,6 +145,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
             _externalLoginIndexContainer = new CosmosContainer<ExternalLoginIndexDocument>(externalLoginIndexCosmosContainer);
             _userProfilesContainer = new CosmosContainer<UserProfileDocument>(userProfilesCosmosContainer);
             _favouritesContainer = new CosmosContainer<FavouriteDocument>(favouritesCosmosContainer);
+            _houseRulesContainer = new CosmosContainer<RoomHouseRulesDocument>(houseRulesCosmosContainer);
         }
     }
 
@@ -152,6 +160,8 @@ public sealed class CosmosDbContext : ICosmosDbContext
     public ICosmosContainer<UserProfileDocument> UserProfiles => _userProfilesContainer;
 
     public ICosmosContainer<FavouriteDocument> Favourites => _favouritesContainer;
+
+    public ICosmosContainer<RoomHouseRulesDocument> HouseRules => _houseRulesContainer;
 
     public Container? RoomsContainer => _roomsCosmosContainer;
 
@@ -288,6 +298,11 @@ public sealed class CosmosDbContext : ICosmosDbContext
         await EnsureUserProfileCompositeIndexesAsync(userProfilesResponse.Container, userProfilesResponse.Resource, cancellationToken);
 
         await EnsureFavouritesContainerOnDatabaseAsync(database, cancellationToken);
+
+        var houseRulesContainerName = string.IsNullOrWhiteSpace(_options.HouseRulesContainerName)
+            ? "RoomHouseRules"
+            : _options.HouseRulesContainerName;
+        await database.CreateContainerIfNotExistsAsync(houseRulesContainerName, HouseRulesPartitionKeyPath, cancellationToken: cancellationToken);
         _favouritesContainerEnsured = true;
 
         var roomsContainerName = string.IsNullOrWhiteSpace(_options.RoomsContainerName) ? "Rooms" : _options.RoomsContainerName;
