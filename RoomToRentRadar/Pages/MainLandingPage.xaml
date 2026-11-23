@@ -8,6 +8,7 @@
              xmlns:feedback="clr-namespace:RoomToRentRadar.Pages.Controls.Feedback"
              xmlns:cards="clr-namespace:RoomToRentRadar.Pages.Controls.Cards"
              xmlns:cardmodels="clr-namespace:RoomToRentRadar.Pages.Controls.Cards.Models"
+             xmlns:search="clr-namespace:RoomToRentRadar.Pages.Controls.Search"
              x:Class="RoomToRentRadar.Pages.MainLandingPage"
              x:DataType="vm:MainLandingPageModel"
              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCanvasLight}, Dark={StaticResource SurfaceCanvasDark}}">
@@ -62,17 +63,23 @@
                             </Grid>
                         </Border>
 
-                        <!-- 3. Category & Filter Chips -->
-                        <VerticalStackLayout Spacing="8">
-                            <Label Text="Popular Categories"
-                                   Style="{StaticResource TextH3}" />
-                            <HorizontalStackLayout Spacing="8">
-                                <common:AmenityChip Title="Near ICTU" IsSelected="True" />
-                                <common:AmenityChip Title="Air Conditioner" />
-                                <common:AmenityChip Title="Private Bath" />
-                                <common:AmenityChip Title="Under 2M" />
-                            </HorizontalStackLayout>
-                        </VerticalStackLayout>
+                        <!-- 3. Filters bar, active chips & result count -->
+                        <search:ExploreFilterBarControl ActiveFilterCount="{Binding ActiveFilterCount}"
+                                                        HasActiveFilters="{Binding HasActiveFilters}"
+                                                        CurrentSortLabel="{Binding CurrentSortLabel}"
+                                                        FiltersButtonText="{Binding FiltersButtonText}"
+                                                        FiltersButtonDescription="{Binding FiltersButtonDescription}"
+                                                        SortButtonDescription="{Binding SortButtonDescription}"
+                                                        ResultCountText="{Binding ResultCountText}"
+                                                        VerifiedOnlySuffixText="{Binding VerifiedOnlySuffixText}"
+                                                        OpenFiltersCommand="{Binding OpenFiltersCommand}"
+                                                        OpenSortCommand="{Binding OpenSortCommand}" />
+
+                        <search:ActiveFilterChipsControl Chips="{Binding ActiveFilterChips}"
+                                                         HasActiveFilters="{Binding HasActiveFilters}"
+                                                         RemoveChipCommand="{Binding RemoveFilterChipCommand}"
+                                                         ClearAllCommand="{Binding ClearFiltersCommand}"
+                                                         ClearAllText="{Binding ClearAllText}" />
 
                         <!-- 4. Room feed -->
                         <VerticalStackLayout Spacing="0"

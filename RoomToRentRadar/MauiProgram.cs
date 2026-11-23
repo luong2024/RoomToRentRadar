@@ -7,6 +7,7 @@ using RoomToRentRadar.DeviceAdapters;
 using RoomToRentRadar.Services;
 using RoomToRentRadar.Services.Navigation;
 using RoomToRentRadar.Services.Navigation.Core;
+using RoomToRentRadar.Services.Search.Core;
 using Syncfusion.Maui.Toolkit.Hosting;
 
 namespace RoomToRentRadar
@@ -49,6 +50,7 @@ namespace RoomToRentRadar
             builder.Services.AddSingleton<ISessionStore, MauiSecureSessionStore>();
             builder.Services.AddSingleton<IAppSession, AppSession>();
             builder.Services.AddSingleton<INavigationService, NavigationService>();
+            builder.Services.AddSingleton<ISearchCriteriaStore, SearchCriteriaStore>();
 
             builder.Services.AddAppPages();
 

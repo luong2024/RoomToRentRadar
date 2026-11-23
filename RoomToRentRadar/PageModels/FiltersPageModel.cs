@@ -138,6 +138,7 @@ public partial class FiltersPageModel : BasePageModel, IDisposable
 
     // ---- Localized labels ----
     public string TitleText => AppResources.GetString("Filters_Title");
+    public string RetryText => AppResources.GetString("State_Retry");
     public string ClearText => AppResources.GetString("Filters_Clear");
     public string CloseDescription => AppResources.GetString("Filters_CloseDescription");
     public string MonthlyRentText => AppResources.GetString("Filters_MonthlyRent");
@@ -736,6 +737,7 @@ public partial class FiltersPageModel : BasePageModel, IDisposable
     {
         OnPropertyChanged(nameof(TitleText));
         OnPropertyChanged(nameof(ClearText));
+        OnPropertyChanged(nameof(RetryText));
         OnPropertyChanged(nameof(CloseDescription));
         OnPropertyChanged(nameof(MonthlyRentText));
         OnPropertyChanged(nameof(AreaText));

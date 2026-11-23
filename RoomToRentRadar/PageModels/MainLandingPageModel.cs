@@ -194,6 +194,16 @@ public partial class MainLandingPageModel : BasePageModel
     [RelayCommand]
     private void ApplySort(string? sortKey) => _searchCriteriaStore.SetSort(sortKey);
 
+    /// <summary>Set by the page to show the native sort ActionSheet.</summary>
+    public Func<Task>? SortSheetRequested { get; set; }
+
+    [RelayCommand]
+    private async Task OpenSortAsync()
+    {
+        if (SortSheetRequested is not null)
+            await SortSheetRequested();
+    }
+
     private async Task<bool> LoadRoomsAsync()
     {
         var page = await _roomGateway.SearchRoomsAsync(
