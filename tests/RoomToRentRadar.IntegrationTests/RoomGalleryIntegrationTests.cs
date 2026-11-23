@@ -326,7 +326,7 @@ public class RoomGalleryIntegrationTests
     }
 
     [Test]
-    public void AddRoomGalleryFeature_InProductionWithoutValidR2_ThrowsInvalidOperationException()
+    public void AddRoomGalleryFeature_InProductionWithoutValidR2_FailsFastOnOptionsValidation()
     {
         var prodEnv = new FakeHostEnvironment(Environments.Production);
         var devEnv = new FakeHostEnvironment(Environments.Development);
@@ -338,9 +338,22 @@ public class RoomGalleryIntegrationTests
             .AddInMemoryCollection(new Dictionary<string, string?> { ["PhotoStorage:Provider"] = "InMemory" })
             .Build();
 
-        Assert.Throws<InvalidOperationException>(() => new ServiceCollection().AddRoomGalleryFeature(missingR2Config, prodEnv));
-        Assert.Throws<InvalidOperationException>(() => new ServiceCollection().AddRoomGalleryFeature(inMemoryConfig, prodEnv));
-        Assert.DoesNotThrow(() => new ServiceCollection().AddRoomGalleryFeature(inMemoryConfig, devEnv));
+        using var prodMissingProvider = new ServiceCollection()
+            .AddRoomGalleryFeature(missingR2Config, prodEnv)
+            .BuildServiceProvider();
+        using var prodInMemoryProvider = new ServiceCollection()
+            .AddRoomGalleryFeature(inMemoryConfig, prodEnv)
+            .BuildServiceProvider();
+        using var devInMemoryProvider = new ServiceCollection()
+            .AddRoomGalleryFeature(inMemoryConfig, devEnv)
+            .BuildServiceProvider();
+
+        Assert.Throws<Microsoft.Extensions.Options.OptionsValidationException>(() =>
+            prodMissingProvider.GetRequiredService<IRoomPhotoStorageService>());
+        Assert.Throws<Microsoft.Extensions.Options.OptionsValidationException>(() =>
+            prodInMemoryProvider.GetRequiredService<IRoomPhotoStorageService>());
+        Assert.DoesNotThrow(() =>
+            devInMemoryProvider.GetRequiredService<IRoomPhotoStorageService>());
     }
 
     private sealed class FakeHostEnvironment(string environmentName) : IHostEnvironment
