@@ -6,7 +6,7 @@
     xmlns:f="clr-namespace:Fonts"
     xmlns:vm="clr-namespace:RoomToRentRadar.Features.Profile.ViewModels"
     x:DataType="vm:ProfileViewModel"
-    Title="Hồ sơ cá nhân"
+    Title="Profile"
     BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}"
     Shell.NavBarIsVisible="False">
 
@@ -18,7 +18,7 @@
                 HeightRequest="44"
                 MinimumHeightRequest="44"
                 MinimumWidthRequest="44"
-                SemanticProperties.Description="Mở menu chính"
+                SemanticProperties.Description="Open main menu"
                 Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
                 StrokeShape="RoundRectangle 14"
                 StrokeThickness="1"
@@ -40,11 +40,11 @@
                     FontAttributes="Bold"
                     FontFamily="OpenSansSemibold"
                     FontSize="20"
-                    Text="Hồ sơ cá nhân"
+                    Text="Profile"
                     TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
                 <Label
                     FontSize="12.5"
-                    Text="Quản lý thông tin tài khoản của bạn"
+                    Text="Manage your account information"
                     TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
             </VerticalStackLayout>
         </Grid>
@@ -92,7 +92,7 @@
                                 FontSize="20"
                                 LineBreakMode="TailTruncation"
                                 MaxLines="1"
-                                Text="{Binding FullName, TargetNullValue='Chưa cập nhật tên'}"
+                                Text="{Binding FullName, TargetNullValue='Name not provided'}"
                                 TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
                             <HorizontalStackLayout Spacing="6">
                                 <Label
@@ -138,7 +138,7 @@
                     CornerRadius="14"
                     FontAttributes="Bold"
                     HeightRequest="48"
-                    Text="Đổi ảnh đại diện"
+                    Text="Change profile picture"
                     TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
 
                 <Border
@@ -164,7 +164,7 @@
                             FontAttributes="Bold"
                             FontFamily="OpenSansSemibold"
                             FontSize="18"
-                            Text="Thông tin cá nhân"
+                            Text="Personal information"
                             TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
                     </HorizontalStackLayout>
                     <Border
@@ -175,16 +175,16 @@
                         StrokeThickness="1">
                         <VerticalStackLayout Spacing="14">
                             <VerticalStackLayout Spacing="5">
-                                <Label FontAttributes="Bold" FontSize="13" Text="Họ và tên" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
-                                <Entry ClearButtonVisibility="WhileEditing" Placeholder="Nhập họ và tên" Text="{Binding FullName}" />
+                                <Label FontAttributes="Bold" FontSize="13" Text="Full name" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+                                <Entry ClearButtonVisibility="WhileEditing" Placeholder="Enter your full name" Text="{Binding FullName}" />
                             </VerticalStackLayout>
                             <VerticalStackLayout Spacing="5">
-                                <Label FontAttributes="Bold" FontSize="13" Text="Số điện thoại" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
-                                <Entry ClearButtonVisibility="WhileEditing" Keyboard="Telephone" Placeholder="Ví dụ: 0912 345 678" Text="{Binding PhoneNumber}" />
+                                <Label FontAttributes="Bold" FontSize="13" Text="Phone number" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+                                <Entry ClearButtonVisibility="WhileEditing" Keyboard="Telephone" Placeholder="Example: 0912 345 678" Text="{Binding PhoneNumber}" />
                             </VerticalStackLayout>
                             <VerticalStackLayout Spacing="5">
-                                <Label FontAttributes="Bold" FontSize="13" Text="Giới thiệu ngắn" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
-                                <Editor AutoSize="TextChanges" HeightRequest="92" Placeholder="Giới thiệu về bạn để chủ trọ hoặc người thuê hiểu hơn" Text="{Binding Bio}" />
+                                <Label FontAttributes="Bold" FontSize="13" Text="Short bio" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+                                <Editor AutoSize="TextChanges" HeightRequest="92" Placeholder="Tell landlords or tenants a little about yourself" Text="{Binding Bio}" />
                             </VerticalStackLayout>
                         </VerticalStackLayout>
                     </Border>
@@ -194,14 +194,14 @@
                 <VerticalStackLayout IsVisible="{Binding IsStudent}" Spacing="10">
                     <HorizontalStackLayout Spacing="8">
                         <Label FontFamily="{x:Static f:FluentUI.FontFamily}" FontSize="20" Text="{x:Static f:FluentUI.hat_graduation_20_regular}" TextColor="{AppThemeBinding Light={StaticResource AccentHighlight}, Dark={StaticResource AccentHighlightDark}}" />
-                        <Label FontAttributes="Bold" FontFamily="OpenSansSemibold" FontSize="18" Text="Thông tin sinh viên" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                        <Label FontAttributes="Bold" FontFamily="OpenSansSemibold" FontSize="18" Text="Student information" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
                     </HorizontalStackLayout>
                     <Border Padding="16" BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}" Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" StrokeShape="RoundRectangle 18" StrokeThickness="1">
                         <VerticalStackLayout Spacing="14">
-                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="Mã sinh viên" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Placeholder="Nhập mã sinh viên" Text="{Binding StudentId}" /></VerticalStackLayout>
-                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="Trường / Đại học" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Placeholder="Nhập tên trường" Text="{Binding University}" /></VerticalStackLayout>
-                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="Khoa / Chuyên ngành" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Placeholder="Nhập khoa hoặc chuyên ngành" Text="{Binding Faculty}" /></VerticalStackLayout>
-                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="Ngân sách tối đa mỗi tháng" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Keyboard="Numeric" Placeholder="Ví dụ: 2500000" Text="{Binding MaxBudgetText}" /></VerticalStackLayout>
+                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="Student ID" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Placeholder="Enter your student ID" Text="{Binding StudentId}" /></VerticalStackLayout>
+                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="College / university" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Placeholder="Enter your school name" Text="{Binding University}" /></VerticalStackLayout>
+                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="Faculty / major" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Placeholder="Enter your faculty or major" Text="{Binding Faculty}" /></VerticalStackLayout>
+                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="Maximum monthly budget" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Keyboard="Numeric" Placeholder="Example: 2500000" Text="{Binding MaxBudgetText}" /></VerticalStackLayout>
                         </VerticalStackLayout>
                     </Border>
                 </VerticalStackLayout>
@@ -210,14 +210,14 @@
                 <VerticalStackLayout IsVisible="{Binding IsLandlord}" Spacing="10">
                     <HorizontalStackLayout Spacing="8">
                         <Label FontFamily="{x:Static f:FluentUI.FontFamily}" FontSize="20" Text="{x:Static f:FluentUI.building_20_regular}" TextColor="{AppThemeBinding Light={StaticResource AccentHighlight}, Dark={StaticResource AccentHighlightDark}}" />
-                        <Label FontAttributes="Bold" FontFamily="OpenSansSemibold" FontSize="18" Text="Thông tin chủ trọ" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                        <Label FontAttributes="Bold" FontFamily="OpenSansSemibold" FontSize="18" Text="Landlord information" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
                     </HorizontalStackLayout>
                     <Border Padding="16" BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}" Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" StrokeShape="RoundRectangle 18" StrokeThickness="1">
                         <VerticalStackLayout Spacing="14">
-                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="Tên cơ sở / doanh nghiệp" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Placeholder="Nhập tên cơ sở" Text="{Binding BusinessName}" /></VerticalStackLayout>
-                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="Địa chỉ liên hệ" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Placeholder="Nhập địa chỉ" Text="{Binding Address}" /></VerticalStackLayout>
+                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="Business / property name" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Placeholder="Enter your business name" Text="{Binding BusinessName}" /></VerticalStackLayout>
+                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="Contact address" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Placeholder="Enter your address" Text="{Binding Address}" /></VerticalStackLayout>
                             <Border Padding="12" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}" StrokeThickness="0">
-                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"><Label FontFamily="{x:Static f:FluentUI.FontFamily}" FontSize="18" Text="{x:Static f:FluentUI.shield_checkmark_16_regular}" TextColor="{AppThemeBinding Light={StaticResource AccentTeal}, Dark={StaticResource AccentTealDark}}" /><VerticalStackLayout Grid.Column="1" Spacing="1"><Label FontAttributes="Bold" FontSize="12" Text="Trạng thái xác minh" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Label FontSize="13" Text="{Binding VerificationStatus, TargetNullValue='Chưa gửi xác minh'}" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" /></VerticalStackLayout></Grid>
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"><Label FontFamily="{x:Static f:FluentUI.FontFamily}" FontSize="18" Text="{x:Static f:FluentUI.shield_checkmark_16_regular}" TextColor="{AppThemeBinding Light={StaticResource AccentTeal}, Dark={StaticResource AccentTealDark}}" /><VerticalStackLayout Grid.Column="1" Spacing="1"><Label FontAttributes="Bold" FontSize="12" Text="Verification status" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Label FontSize="13" Text="{Binding VerificationStatus, TargetNullValue='Verification not submitted'}" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" /></VerticalStackLayout></Grid>
                             </Border>
                         </VerticalStackLayout>
                     </Border>
@@ -227,13 +227,13 @@
                 <VerticalStackLayout IsVisible="{Binding IsAdmin}" Spacing="10">
                     <HorizontalStackLayout Spacing="8">
                         <Label FontFamily="{x:Static f:FluentUI.FontFamily}" FontSize="20" Text="{x:Static f:FluentUI.briefcase_20_regular}" TextColor="{AppThemeBinding Light={StaticResource AccentHighlight}, Dark={StaticResource AccentHighlightDark}}" />
-                        <Label FontAttributes="Bold" FontFamily="OpenSansSemibold" FontSize="18" Text="Thông tin quản trị" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                        <Label FontAttributes="Bold" FontFamily="OpenSansSemibold" FontSize="18" Text="Administrator information" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
                     </HorizontalStackLayout>
                     <Border Padding="16" BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}" Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" StrokeShape="RoundRectangle 18" StrokeThickness="1">
                         <VerticalStackLayout Spacing="14">
-                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="Mã nhân viên" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Placeholder="Nhập mã nhân viên" Text="{Binding StaffCode}" /></VerticalStackLayout>
-                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="Phòng ban" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Placeholder="Nhập phòng ban" Text="{Binding Department}" /></VerticalStackLayout>
-                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="Chức danh" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Placeholder="Nhập chức danh" Text="{Binding JobTitle}" /></VerticalStackLayout>
+                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="Staff ID" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Placeholder="Enter your staff ID" Text="{Binding StaffCode}" /></VerticalStackLayout>
+                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="Department" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Placeholder="Enter your department" Text="{Binding Department}" /></VerticalStackLayout>
+                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="Job title" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Placeholder="Enter your job title" Text="{Binding JobTitle}" /></VerticalStackLayout>
                         </VerticalStackLayout>
                     </Border>
                 </VerticalStackLayout>
@@ -244,7 +244,7 @@
                     CornerRadius="16"
                     FontAttributes="Bold"
                     HeightRequest="54"
-                    Text="Lưu thay đổi"
+                    Text="Save changes"
                     TextColor="White" />
             </VerticalStackLayout>
         </ScrollView>

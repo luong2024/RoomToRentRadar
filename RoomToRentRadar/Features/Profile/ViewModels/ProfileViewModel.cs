@@ -45,7 +45,7 @@ public partial class ProfileViewModel : ObservableObject
     public bool IsStudent => string.Equals(Role, "STUDENT", StringComparison.OrdinalIgnoreCase);
     public bool IsLandlord => string.Equals(Role, "LANDLORD", StringComparison.OrdinalIgnoreCase);
     public bool IsAdmin => string.Equals(Role, "ADMIN", StringComparison.OrdinalIgnoreCase);
-    public string RoleDisplay => IsStudent ? "Sinh viên" : IsLandlord ? "Chủ trọ" : IsAdmin ? "Quản trị viên" : Role;
+    public string RoleDisplay => IsStudent ? "Student" : IsLandlord ? "Landlord" : IsAdmin ? "Administrator" : Role;
     public bool HasStatusMessage => !string.IsNullOrWhiteSpace(StatusMessage);
     public bool ShouldLoadOnAppearing
     {
