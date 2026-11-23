@@ -19,6 +19,21 @@ public interface IRoomPhotoRepository
         Func<int, bool, RoomPhoto> photoFactory,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<RoomPhoto>> ReorderAsync(
+        string roomId,
+        IReadOnlyList<string> orderedPhotoIds,
+        string? coverPhotoId,
+        CancellationToken cancellationToken = default);
+
+    Task<RoomPhoto?> MarkPendingDeletionAsync(
+        string roomId,
+        string photoId,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<RoomPhoto>> GetPendingDeletionAsync(
+        string roomId,
+        CancellationToken cancellationToken = default);
+
     Task UpdateAsync(RoomPhoto photo, CancellationToken cancellationToken = default);
 
     Task DeleteAsync(string roomId, string photoId, CancellationToken cancellationToken = default);

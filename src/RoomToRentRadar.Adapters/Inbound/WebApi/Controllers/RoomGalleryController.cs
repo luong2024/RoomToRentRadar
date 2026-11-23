@@ -24,17 +24,20 @@ public sealed class RoomGalleryController : ControllerBase
     private readonly IUploadRoomPhotoUseCase _uploadRoomPhotoUseCase;
     private readonly IDeleteRoomPhotoUseCase _deleteRoomPhotoUseCase;
     private readonly IReorderRoomPhotosUseCase _reorderRoomPhotosUseCase;
+    private readonly IAssignRoomGalleryOwnerUseCase? _assignRoomGalleryOwnerUseCase;
 
     public RoomGalleryController(
         IGetRoomGalleryUseCase getRoomGalleryUseCase,
         IUploadRoomPhotoUseCase uploadRoomPhotoUseCase,
         IDeleteRoomPhotoUseCase deleteRoomPhotoUseCase,
-        IReorderRoomPhotosUseCase reorderRoomPhotosUseCase)
+        IReorderRoomPhotosUseCase reorderRoomPhotosUseCase,
+        IAssignRoomGalleryOwnerUseCase? assignRoomGalleryOwnerUseCase = null)
     {
         _getRoomGalleryUseCase = getRoomGalleryUseCase ?? throw new ArgumentNullException(nameof(getRoomGalleryUseCase));
         _uploadRoomPhotoUseCase = uploadRoomPhotoUseCase ?? throw new ArgumentNullException(nameof(uploadRoomPhotoUseCase));
         _deleteRoomPhotoUseCase = deleteRoomPhotoUseCase ?? throw new ArgumentNullException(nameof(deleteRoomPhotoUseCase));
         _reorderRoomPhotosUseCase = reorderRoomPhotosUseCase ?? throw new ArgumentNullException(nameof(reorderRoomPhotosUseCase));
+        _assignRoomGalleryOwnerUseCase = assignRoomGalleryOwnerUseCase;
     }
 
     /// <summary>
@@ -185,6 +188,33 @@ public sealed class RoomGalleryController : ControllerBase
 
         var updated = await _reorderRoomPhotosUseCase.ExecuteAsync(command, cancellationToken);
         return Ok(updated);
+    }
+
+    /// <summary>
+    /// Admin-only backfill endpoint to assign a verified Landlord owner to an existing room lacking LandlordId.
+    /// </summary>
+    [HttpPatch("owner")]
+    [Authorize(Roles = AuthorizationPolicies.Roles.Admin)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AssignOwner(
+        [FromRoute] string roomId,
+        [FromBody] AssignRoomOwnerRequest? request,
+        CancellationToken cancellationToken)
+    {
+        if (_assignRoomGalleryOwnerUseCase is null)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable);
+        }
+
+        await _assignRoomGalleryOwnerUseCase.ExecuteAsync(
+            roomId,
+            request?.LandlordId ?? Guid.Empty,
+            cancellationToken);
+        return NoContent();
     }
 
     private bool IsCurrentUserAdmin() =>

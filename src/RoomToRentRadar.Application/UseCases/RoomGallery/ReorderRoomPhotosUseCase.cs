@@ -39,62 +39,22 @@ public sealed class ReorderRoomPhotosUseCase : IReorderRoomPhotosUseCase
 
         RoomGalleryAuthorization.EnsureCanManageGallery(room, command.ActorUserId, command.IsAdmin);
 
-        var existingPhotos = await _photoRepository.GetByRoomIdAsync(normalizedRoomId, cancellationToken);
-        var photosById = existingPhotos.ToDictionary(p => p.Id, StringComparer.Ordinal);
-
         var orderedIds = (command.OrderedPhotoIds ?? [])
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .Select(id => id.Trim())
             .ToList();
 
-        if (orderedIds.Count > 0)
+        if (orderedIds.Distinct(StringComparer.Ordinal).Count() != orderedIds.Count)
         {
-            if (orderedIds.Distinct(StringComparer.Ordinal).Count() != orderedIds.Count)
-            {
-                throw new InvalidRoomPhotoException("Ordered photo IDs cannot contain duplicates.");
-            }
-
-            foreach (var photoId in orderedIds)
-            {
-                if (!photosById.ContainsKey(photoId))
-                {
-                    throw new RoomPhotoNotFoundException($"Photo '{photoId}' was not found in room '{normalizedRoomId}'.");
-                }
-            }
-
-            var nextOrder = 0;
-            foreach (var photoId in orderedIds)
-            {
-                photosById[photoId].SetDisplayOrder(nextOrder++);
-            }
-
-            foreach (var remainingPhoto in existingPhotos
-                         .Where(p => !orderedIds.Contains(p.Id, StringComparer.Ordinal))
-                         .OrderBy(p => p.DisplayOrder))
-            {
-                remainingPhoto.SetDisplayOrder(nextOrder++);
-            }
+            throw new InvalidRoomPhotoException("Ordered photo IDs cannot contain duplicates.");
         }
 
-        if (!string.IsNullOrWhiteSpace(command.CoverPhotoId))
-        {
-            var coverId = command.CoverPhotoId.Trim();
-            if (!photosById.ContainsKey(coverId))
-            {
-                throw new RoomPhotoNotFoundException($"Cover photo '{coverId}' was not found in room '{normalizedRoomId}'.");
-            }
+        var updatedPhotos = await _photoRepository.ReorderAsync(
+            normalizedRoomId,
+            orderedIds,
+            command.CoverPhotoId,
+            cancellationToken);
 
-            foreach (var photo in existingPhotos)
-            {
-                photo.SetAsCover(string.Equals(photo.Id, coverId, StringComparison.Ordinal));
-            }
-        }
-
-        foreach (var photo in existingPhotos)
-        {
-            await _photoRepository.UpdateAsync(photo, cancellationToken);
-        }
-
-        return RoomGalleryMapper.ToGalleryResponse(normalizedRoomId, existingPhotos);
+        return RoomGalleryMapper.ToGalleryResponse(normalizedRoomId, updatedPhotos);
     }
 }

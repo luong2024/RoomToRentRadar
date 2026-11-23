@@ -16,3 +16,5 @@ public sealed class UploadRoomPhotoFormRequest
 public sealed record ReorderRoomPhotosRequest(
     IReadOnlyList<string>? OrderedPhotoIds,
     string? CoverPhotoId = null);
+
+public sealed record AssignRoomOwnerRequest(Guid LandlordId);

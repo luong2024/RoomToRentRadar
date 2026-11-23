@@ -1,10 +1,14 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using RoomToRentRadar.Adapters.Inbound.WebApi.Contracts;
 using RoomToRentRadar.Application.DTOs;
 using RoomToRentRadar.Application.Ports.Outbound;
+using RoomToRentRadar.Bootstrap.DependencyInjection;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.ValueObjects;
 using SkiaSharp;
@@ -284,6 +288,67 @@ public class RoomGalleryIntegrationTests
             Assert.That(gallery.Photos.Count(p => p.IsCover), Is.EqualTo(1));
             Assert.That(gallery.Photos.Select(p => p.DisplayOrder).Distinct().Count(), Is.EqualTo(RoomPhoto.MaxPhotosPerRoom));
         });
+    }
+
+    [Test]
+    public async Task AssignOwner_AdminBackfillsLegacyRoomWithoutLandlordId_UnblocksLandlordWrites()
+    {
+        var landlordSession = await RegisterAndLoginSessionAsync("legacy-owner@ictu.edu.vn", "LANDLORD");
+        var adminSession = await ProvisionAdminAndLoginAsync("admin-backfill@roomtorentradar.local", "AdminPass123!");
+        var jpegBytes = CreateTestJpeg(600, 400);
+
+        // Room currently has no LandlordId (legacy seeded room) -> landlord is denied with 403
+        using var beforeAssignReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/rooms/room-gallery-001/gallery/photos")
+        {
+            Content = CreateUploadForm(jpegBytes, "before.jpg", "image/jpeg")
+        };
+        beforeAssignReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", landlordSession.AccessToken);
+        var beforeAssignRes = await _client.SendAsync(beforeAssignReq);
+        Assert.That(beforeAssignRes.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+
+        // Admin backfills verified landlord ownership
+        using var assignReq = new HttpRequestMessage(HttpMethod.Patch, "/api/v1/rooms/room-gallery-001/gallery/owner")
+        {
+            Content = JsonContent.Create(new AssignRoomOwnerRequest(landlordSession.UserId))
+        };
+        assignReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminSession.AccessToken);
+        var assignRes = await _client.SendAsync(assignReq);
+        Assert.That(assignRes.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+        // Landlord can now manage their room gallery
+        using var afterAssignReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/rooms/room-gallery-001/gallery/photos")
+        {
+            Content = CreateUploadForm(jpegBytes, "after.jpg", "image/jpeg")
+        };
+        afterAssignReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", landlordSession.AccessToken);
+        var afterAssignRes = await _client.SendAsync(afterAssignReq);
+        Assert.That(afterAssignRes.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+    }
+
+    [Test]
+    public void AddRoomGalleryFeature_InProductionWithoutValidR2_ThrowsInvalidOperationException()
+    {
+        var prodEnv = new FakeHostEnvironment(Environments.Production);
+        var devEnv = new FakeHostEnvironment(Environments.Development);
+
+        var missingR2Config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["PhotoStorage:Provider"] = "CloudflareR2" })
+            .Build();
+        var inMemoryConfig = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["PhotoStorage:Provider"] = "InMemory" })
+            .Build();
+
+        Assert.Throws<InvalidOperationException>(() => new ServiceCollection().AddRoomGalleryFeature(missingR2Config, prodEnv));
+        Assert.Throws<InvalidOperationException>(() => new ServiceCollection().AddRoomGalleryFeature(inMemoryConfig, prodEnv));
+        Assert.DoesNotThrow(() => new ServiceCollection().AddRoomGalleryFeature(inMemoryConfig, devEnv));
+    }
+
+    private sealed class FakeHostEnvironment(string environmentName) : IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = environmentName;
+        public string ApplicationName { get; set; } = "RoomToRentRadar.Tests";
+        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
     }
 
     private void AssignRoomOwner(string roomId, Guid landlordId)

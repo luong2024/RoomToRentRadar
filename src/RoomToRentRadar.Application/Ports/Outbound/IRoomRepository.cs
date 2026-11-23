@@ -43,4 +43,7 @@ public interface IRoomRepository
     Task<IReadOnlyList<Room>> GetSimilarRoomsAsync(string roomId, decimal price, double area, CancellationToken cancellationToken = default);
 
     Task<(IReadOnlyList<Room> Items, int TotalCount)> SearchAsync(SearchRoomsQuery query, CancellationToken ct = default);
+
+    Task<bool> AssignLandlordAsync(string roomId, Guid landlordId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(false);
 }

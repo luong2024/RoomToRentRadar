@@ -125,6 +125,9 @@ public sealed class RoomDocument : IProjectionVersionedDocument
             Coordinates = [listing.Longitude, listing.Latitude]
         };
 
+        // Preserve explicitly assigned room owner; backfill from trusted listing source only if missing.
+        detail.LandlordId ??= listing.LandlordId;
+
         // A new document has no gallery yet, so its thumbnail is a reasonable
         // initial image. Existing galleries are never replaced by listing data.
         if (existingDetail is null && !string.IsNullOrWhiteSpace(listing.ThumbnailUrl))

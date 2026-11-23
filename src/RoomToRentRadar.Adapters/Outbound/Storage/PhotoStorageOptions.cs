@@ -23,4 +23,7 @@ public sealed class PhotoStorageOptions
         !string.IsNullOrWhiteSpace(AccessKeyId) &&
         !string.IsNullOrWhiteSpace(SecretAccessKey) &&
         !string.IsNullOrWhiteSpace(PublicBaseUrl);
+
+    public bool IsInMemoryProvider() =>
+        string.Equals(Provider, "InMemory", StringComparison.OrdinalIgnoreCase);
 }

@@ -20,9 +20,18 @@ public interface IDeleteRoomPhotoUseCase
         Guid actorUserId,
         bool isAdmin = false,
         CancellationToken cancellationToken = default);
+
+    Task<int> CleanupPendingDeletionsAsync(
+        string roomId,
+        CancellationToken cancellationToken = default);
 }
 
 public interface IReorderRoomPhotosUseCase
 {
     Task<RoomGalleryResponse> ExecuteAsync(ReorderRoomPhotosCommand command, CancellationToken cancellationToken = default);
+}
+
+public interface IAssignRoomGalleryOwnerUseCase
+{
+    Task ExecuteAsync(string roomId, Guid landlordId, CancellationToken cancellationToken = default);
 }

@@ -71,31 +71,41 @@ public sealed class DeleteRoomPhotoUseCase : IDeleteRoomPhotoUseCase
 
         RoomGalleryAuthorization.EnsureCanManageGallery(room, actorUserId, isAdmin);
 
-        var targetPhoto = await _photoRepository.GetByIdAsync(normalizedRoomId, normalizedPhotoId, cancellationToken);
+        // Phase 1 (Atomic DB): Mark photo as pending deletion (IsDeleted = true), hide from gallery,
+        // free quota slot, and promote the next cover photo in one transactional batch.
+        var targetPhoto = await _photoRepository.MarkPendingDeletionAsync(normalizedRoomId, normalizedPhotoId, cancellationToken);
         if (targetPhoto is null)
         {
             throw new RoomPhotoNotFoundException($"Photo '{normalizedPhotoId}' was not found in room '{normalizedRoomId}'.");
         }
 
-        // Delete storage objects first (idempotent + retryable) so metadata remains intact
-        // and the delete operation can be safely retried if storage deletion fails.
+        // Phase 2 (Storage + Hard-delete): Delete R2 objects with retry; if storage fails or is cancelled,
+        // the photo stays hidden in pending-deletion state and can be cleaned up safely later without broken URLs.
         await DeleteStorageWithRetryAsync(targetPhoto.ObjectKey, targetPhoto.ThumbnailObjectKey, cancellationToken);
-        await _photoRepository.DeleteAsync(normalizedRoomId, normalizedPhotoId, cancellationToken);
+        await _photoRepository.DeleteAsync(normalizedRoomId, normalizedPhotoId, CancellationToken.None);
+    }
 
-        if (targetPhoto.IsCover)
+    public async Task<int> CleanupPendingDeletionsAsync(
+        string roomId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(roomId))
         {
-            var remaining = await _photoRepository.GetByRoomIdAsync(normalizedRoomId, cancellationToken);
-            var nextCover = remaining
-                .OrderBy(p => p.DisplayOrder)
-                .ThenBy(p => p.UploadedAtUtc)
-                .FirstOrDefault();
-
-            if (nextCover is not null && !nextCover.IsCover)
-            {
-                nextCover.SetAsCover(true);
-                await _photoRepository.UpdateAsync(nextCover, cancellationToken);
-            }
+            return 0;
         }
+
+        var normalizedRoomId = roomId.Trim();
+        var pending = await _photoRepository.GetPendingDeletionAsync(normalizedRoomId, cancellationToken);
+        var cleanedCount = 0;
+
+        foreach (var photo in pending)
+        {
+            await DeleteStorageWithRetryAsync(photo.ObjectKey, photo.ThumbnailObjectKey, cancellationToken);
+            await _photoRepository.DeleteAsync(normalizedRoomId, photo.Id, CancellationToken.None);
+            cleanedCount++;
+        }
+
+        return cleanedCount;
     }
 
     private async Task DeleteStorageWithRetryAsync(

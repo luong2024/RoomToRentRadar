@@ -207,28 +207,42 @@ public class RoomGalleryUseCaseTests
     }
 
     [Test]
-    public async Task DeleteRoomPhoto_WhenStorageDeleteFailsPersistently_PreservesMetadataAndAllowsRetry()
+    public async Task DeleteRoomPhoto_WhenStorageDeleteFailsPersistently_HidesFromGalleryAndAllowsPendingCleanup()
     {
         var uploadUseCase = new UploadRoomPhotoUseCase(_roomRepo, _photoRepo, _compressionService, _storageService);
         var deleteUseCase = new DeleteRoomPhotoUseCase(_roomRepo, _photoRepo, _storageService);
 
-        var photo = await uploadUseCase.ExecuteAsync(new UploadRoomPhotoCommand(
+        var first = await uploadUseCase.ExecuteAsync(new UploadRoomPhotoCommand(
             "room-001", _ownerLandlordId, "1.jpg", "image/jpeg", [0xFF, 0xD8, 0xFF]));
+        var second = await uploadUseCase.ExecuteAsync(new UploadRoomPhotoCommand(
+            "room-001", _ownerLandlordId, "2.jpg", "image/jpeg", [0xFF, 0xD8, 0xFF]));
 
         _storageService.FailDeleteCount = DeleteRoomPhotoUseCase.DefaultMaxStorageDeleteAttempts;
 
-        Assert.ThrowsAsync<IOException>(() => deleteUseCase.ExecuteAsync("room-001", photo.Id, _ownerLandlordId));
+        Assert.ThrowsAsync<IOException>(() => deleteUseCase.ExecuteAsync("room-001", first.Id, _ownerLandlordId));
 
-        // Metadata must still exist because storage deletion failed.
-        var stillPresent = await _photoRepo.GetByIdAsync("room-001", photo.Id);
-        Assert.That(stillPresent, Is.Not.Null);
-        Assert.That(_storageService.DeleteAttemptCount, Is.EqualTo(DeleteRoomPhotoUseCase.DefaultMaxStorageDeleteAttempts));
+        // Phase 1 already hid the photo from the gallery and promoted the next cover so no broken URL is served.
+        var activeGallery = await _photoRepo.GetByRoomIdAsync("room-001");
+        var pendingCleanup = await _photoRepo.GetPendingDeletionAsync("room-001");
+        Assert.Multiple(() =>
+        {
+            Assert.That(activeGallery, Has.Count.EqualTo(1));
+            Assert.That(activeGallery[0].Id, Is.EqualTo(second.Id));
+            Assert.That(activeGallery[0].IsCover, Is.True);
+            Assert.That(pendingCleanup, Has.Count.EqualTo(1));
+            Assert.That(pendingCleanup[0].Id, Is.EqualTo(first.Id));
+            Assert.That(_storageService.DeleteAttemptCount, Is.EqualTo(DeleteRoomPhotoUseCase.DefaultMaxStorageDeleteAttempts));
+        });
 
-        // Retrying after storage recovers deletes both storage and metadata cleanly.
-        await deleteUseCase.ExecuteAsync("room-001", photo.Id, _ownerLandlordId);
-        var afterRetry = await _photoRepo.GetByIdAsync("room-001", photo.Id);
-        Assert.That(afterRetry, Is.Null);
-        Assert.That(_storageService.DeletedKeys, Has.Count.EqualTo(2));
+        // Once storage recovers, pending cleanup deletes R2 objects and hard-deletes the tombstone.
+        var cleaned = await deleteUseCase.CleanupPendingDeletionsAsync("room-001");
+        var remainingPending = await _photoRepo.GetPendingDeletionAsync("room-001");
+        Assert.Multiple(() =>
+        {
+            Assert.That(cleaned, Is.EqualTo(1));
+            Assert.That(remainingPending, Is.Empty);
+            Assert.That(_storageService.DeletedKeys, Has.Count.EqualTo(2));
+        });
     }
 
     [Test]
@@ -412,6 +426,7 @@ public class RoomGalleryUseCaseTests
     {
         private readonly object _sync = new();
         private readonly List<RoomPhoto> _photos = [];
+        private readonly List<RoomPhoto> _pendingDeletion = [];
         public bool FailNextAdd { get; set; }
         public bool FailNextUpdate { get; set; }
 
@@ -521,6 +536,89 @@ public class RoomGalleryUseCaseTests
             }
         }
 
+        public Task<IReadOnlyList<RoomPhoto>> ReorderAsync(
+            string roomId,
+            IReadOnlyList<string> orderedPhotoIds,
+            string? coverPhotoId,
+            CancellationToken cancellationToken = default)
+        {
+            lock (_sync)
+            {
+                var existing = _photos.Where(p => p.RoomId == roomId).ToList();
+                var byId = existing.ToDictionary(p => p.Id, StringComparer.Ordinal);
+
+                foreach (var id in orderedPhotoIds)
+                {
+                    if (!byId.ContainsKey(id))
+                    {
+                        throw new RoomPhotoNotFoundException($"Photo '{id}' was not found in room '{roomId}'.");
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(coverPhotoId) && !byId.ContainsKey(coverPhotoId.Trim()))
+                {
+                    throw new RoomPhotoNotFoundException($"Cover photo '{coverPhotoId}' was not found in room '{roomId}'.");
+                }
+
+                if (orderedPhotoIds.Count > 0)
+                {
+                    var nextOrder = 0;
+                    foreach (var id in orderedPhotoIds)
+                    {
+                        byId[id].SetDisplayOrder(nextOrder++);
+                    }
+
+                    foreach (var rem in existing.Where(p => !orderedPhotoIds.Contains(p.Id, StringComparer.Ordinal)).OrderBy(p => p.DisplayOrder))
+                    {
+                        rem.SetDisplayOrder(nextOrder++);
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(coverPhotoId))
+                {
+                    var trimmedCover = coverPhotoId.Trim();
+                    foreach (var photo in existing)
+                    {
+                        photo.SetAsCover(string.Equals(photo.Id, trimmedCover, StringComparison.Ordinal));
+                    }
+                }
+
+                return Task.FromResult<IReadOnlyList<RoomPhoto>>(existing.OrderBy(p => p.DisplayOrder).ToList());
+            }
+        }
+
+        public Task<RoomPhoto?> MarkPendingDeletionAsync(string roomId, string photoId, CancellationToken cancellationToken = default)
+        {
+            lock (_sync)
+            {
+                var target = _photos.FirstOrDefault(p => p.RoomId == roomId && p.Id == photoId);
+                if (target is null)
+                {
+                    return Task.FromResult<RoomPhoto?>(null);
+                }
+
+                var wasCover = target.IsCover;
+                _photos.Remove(target);
+                _pendingDeletion.Add(target);
+
+                if (wasCover)
+                {
+                    var next = _photos.Where(p => p.RoomId == roomId).OrderBy(p => p.DisplayOrder).FirstOrDefault();
+                    next?.SetAsCover(true);
+                }
+
+                return Task.FromResult<RoomPhoto?>(target);
+            }
+        }
+
+        public Task<IReadOnlyList<RoomPhoto>> GetPendingDeletionAsync(string roomId, CancellationToken cancellationToken = default)
+        {
+            lock (_sync)
+            {
+                return Task.FromResult<IReadOnlyList<RoomPhoto>>(_pendingDeletion.Where(p => p.RoomId == roomId).ToList());
+            }
+        }
+
         public Task UpdateAsync(RoomPhoto photo, CancellationToken cancellationToken = default)
         {
             lock (_sync)
@@ -542,6 +640,7 @@ public class RoomGalleryUseCaseTests
             lock (_sync)
             {
                 _photos.RemoveAll(p => p.RoomId == roomId && p.Id == photoId);
+                _pendingDeletion.RemoveAll(p => p.RoomId == roomId && p.Id == photoId);
                 return Task.CompletedTask;
             }
         }

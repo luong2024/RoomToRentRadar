@@ -14,7 +14,7 @@ builder.Services
     .AddInboundAdapters(builder.Configuration)
     .AddProfileFeature()
     .AddFavouritesFeature()
-    .AddRoomGalleryFeature(builder.Configuration);
+    .AddRoomGalleryFeature(builder.Configuration, builder.Environment);
 
 var app = builder.Build();
 

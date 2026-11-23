@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Repositories;
 using RoomToRentRadar.Adapters.Outbound.Storage;
@@ -13,13 +14,20 @@ public static class RoomGalleryServiceCollectionExtensions
 {
     public static IServiceCollection AddRoomGalleryFeature(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentNullException.ThrowIfNull(environment);
+
         services.Configure<PhotoStorageOptions>(configuration.GetSection(PhotoStorageOptions.SectionName));
 
         var storageOptions = configuration
             .GetSection(PhotoStorageOptions.SectionName)
             .Get<PhotoStorageOptions>() ?? new PhotoStorageOptions();
+
+        var isDevOrTest = environment.IsDevelopment() || environment.IsEnvironment("Testing");
 
         if (storageOptions.IsCloudflareR2Configured())
         {
@@ -32,9 +40,21 @@ public static class RoomGalleryServiceCollectionExtensions
                 return new CloudflareR2PhotoStorageService(httpClient, options, sp.GetService<TimeProvider>());
             });
         }
-        else
+        else if (storageOptions.IsInMemoryProvider() && isDevOrTest)
         {
             services.AddSingleton<IRoomPhotoStorageService, InMemoryRoomPhotoStorageService>();
+        }
+        else if (storageOptions.IsInMemoryProvider())
+        {
+            throw new InvalidOperationException(
+                $"In-memory photo storage ('PhotoStorage:Provider=InMemory') is only permitted in Development or Testing environments, not '{environment.EnvironmentName}'. Configure valid Cloudflare R2 credentials.");
+        }
+        else
+        {
+            throw new InvalidOperationException(
+                $"Cloudflare R2 photo storage is not fully configured for environment '{environment.EnvironmentName}'. " +
+                "Provide PhotoStorage:AccountId, BucketName, AccessKeyId, SecretAccessKey, and PublicBaseUrl " +
+                "(or explicitly set PhotoStorage:Provider='InMemory' in Development/Testing).");
         }
 
         services.AddSingleton<IImageCompressionService, SkiaImageCompressionService>();
@@ -44,6 +64,7 @@ public static class RoomGalleryServiceCollectionExtensions
         services.AddScoped<IUploadRoomPhotoUseCase, UploadRoomPhotoUseCase>();
         services.AddScoped<IDeleteRoomPhotoUseCase, DeleteRoomPhotoUseCase>();
         services.AddScoped<IReorderRoomPhotosUseCase, ReorderRoomPhotosUseCase>();
+        services.AddScoped<IAssignRoomGalleryOwnerUseCase, AssignRoomGalleryOwnerUseCase>();
 
         return services;
     }
