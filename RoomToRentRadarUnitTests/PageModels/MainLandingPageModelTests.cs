@@ -13,6 +13,7 @@ using RoomToRentRadar.Ports.Contracts.Responses.Auth;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadar.Resources.Strings;
 using RoomToRentRadar.Services.Navigation.Core;
+using RoomToRentRadar.Services.Search.Core;
 
 namespace RoomToRentRadarUnitTests.PageModels;
 
@@ -217,5 +218,170 @@ public class MainLandingPageModelTests
             r.MinRentVnd == null &&
             r.MaxRentVnd == null &&
             r.Sort == null));
+    }
+
+    private MainLandingPageModel CreateModel(ISearchCriteriaStore store) =>
+        new(_roomGateway, _sessionStore, _navigation, store);
+
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(2);
+        while (!condition() && DateTime.UtcNow < deadline)
+            await Task.Delay(10);
+    }
+
+    [Test]
+    public async Task StoreChange_UpdatesChipsBadgeSortAndReloads()
+    {
+        var store = new SearchCriteriaStore();
+        GatewayReturnsRooms(Room());
+        var model = CreateModel(store);
+        await model.InitializeAsync();
+
+        store.Apply(new RoomSearchCriteria
+        {
+            MaxRentVnd = 2_000_000,
+            RoomTypes = new[] { RoomType.BoardingRoom },
+            MaxDistanceKm = 3,
+            Sort = "price_asc"
+        });
+
+        await WaitUntilAsync(() => model.ActiveFilterChips.Count == 3);
+
+        Assert.That(model.ActiveFilterCount, Is.EqualTo(3));
+        Assert.That(model.HasActiveFilters, Is.True);
+        Assert.That(model.ActiveFilterChips.Select(c => c.Label), Is.EqualTo(new[] { "Under 2M", "Boarding room", "≤ 3 km" }));
+        Assert.That(model.CurrentSortLabel, Is.EqualTo(AppResources.GetString("Sort_PriceAsc_Short")));
+
+        await WaitUntilAsync(() => _roomGateway.ReceivedCalls().Count() >= 2);
+        await _roomGateway.Received(2).SearchRoomsAsync(Arg.Any<RoomSearchRequest>());
+        await _roomGateway.Received(1).SearchRoomsAsync(Arg.Is<RoomSearchRequest>(r =>
+            r.MaxRentVnd == 2_000_000 &&
+            r.Sort == "price_asc" &&
+            r.PageSize == 20));
+    }
+
+    [Test]
+    public async Task RemoveFilterChipCommand_UpdatesStoreAndReloads()
+    {
+        var store = new SearchCriteriaStore();
+        store.Apply(new RoomSearchCriteria
+        {
+            MaxRentVnd = 2_000_000,
+            RoomTypes = new[] { RoomType.BoardingRoom }
+        });
+        GatewayReturnsRooms(Room());
+        var model = CreateModel(store);
+        await model.InitializeAsync();
+
+        var priceChip = model.ActiveFilterChips.Single(c => c.Kind == ActiveFilterChipKind.Price);
+        model.RemoveFilterChipCommand.Execute(priceChip);
+
+        Assert.That(store.Current.MaxRentVnd, Is.Null);
+        Assert.That(store.Current.RoomTypes, Is.EqualTo(new[] { RoomType.BoardingRoom }));
+        Assert.That(model.ActiveFilterCount, Is.EqualTo(1));
+
+        await WaitUntilAsync(() => _roomGateway.ReceivedCalls().Count() >= 2);
+        await _roomGateway.Received(2).SearchRoomsAsync(Arg.Any<RoomSearchRequest>());
+        await _roomGateway.Received(1).SearchRoomsAsync(Arg.Is<RoomSearchRequest>(r =>
+            r.MaxRentVnd == null && r.RoomTypes != null && r.RoomTypes.Count == 1));
+    }
+
+    [Test]
+    public async Task ApplySortCommand_UpdatesStoreAndShortLabel()
+    {
+        var store = new SearchCriteriaStore();
+        GatewayReturnsRooms(Room());
+        var model = CreateModel(store);
+        await model.InitializeAsync();
+
+        model.ApplySortCommand.Execute("price_desc");
+
+        Assert.That(store.Current.Sort, Is.EqualTo("price_desc"));
+        Assert.That(model.CurrentSortLabel, Is.EqualTo(AppResources.GetString("Sort_PriceDesc_Short")));
+    }
+
+    [Test]
+    public async Task ClearFiltersCommand_WithActiveFilters_ResetsStoreAndReloads()
+    {
+        var store = new SearchCriteriaStore();
+        store.Apply(new RoomSearchCriteria { MaxRentVnd = 2_000_000, MaxDistanceKm = 5 });
+        GatewayReturnsRooms(Room());
+        var model = CreateModel(store);
+        await model.InitializeAsync();
+
+        await model.ClearFiltersCommand.ExecuteAsync(null);
+
+        Assert.That(store.Current.HasActiveFilters, Is.False);
+        Assert.That(model.ActiveFilterChips, Is.Empty);
+        Assert.That(model.ActiveFilterCount, Is.EqualTo(0));
+        await _roomGateway.Received(2).SearchRoomsAsync(Arg.Any<RoomSearchRequest>());
+        await _roomGateway.Received(1).SearchRoomsAsync(Arg.Is<RoomSearchRequest>(r => r == new RoomSearchRequest()));
+    }
+
+    [Test]
+    public async Task TotalRoomCount_UsesGatewayTotalCountNotPageItems()
+    {
+        _roomGateway.SearchRoomsAsync(Arg.Any<RoomSearchRequest>())
+            .Returns(new PagedResult<RoomCardDto>(new[] { Room() }, 128, 1, 20));
+        var model = CreateModel();
+
+        await model.InitializeAsync();
+
+        Assert.That(model.TotalRoomCount, Is.EqualTo(128));
+        Assert.That(model.ResultCountText, Is.EqualTo("128 rooms"));
+        Assert.That(model.VerifiedOnlySuffixText, Is.EqualTo(" · verified only"));
+    }
+
+    [Test]
+    public async Task OpenFiltersCommand_NavigatesToFiltersRoute()
+    {
+        GatewayReturnsRooms(Room());
+        var model = CreateModel();
+        await model.InitializeAsync();
+
+        await model.OpenFiltersCommand.ExecuteAsync(null);
+
+        await _navigation.Received(1).GoToAsync(AppRoutes.SearchFilters);
+    }
+
+    [Test]
+    public async Task LanguageSwitch_UpdatesExploreFilterTexts()
+    {
+        _roomGateway.SearchRoomsAsync(Arg.Any<RoomSearchRequest>())
+            .Returns(new PagedResult<RoomCardDto>(new[] { Room() }, 128, 1, 20));
+        var model = CreateModel();
+        await model.InitializeAsync();
+
+        LocalizedStrings.Instance.SetCulture(new CultureInfo("vi-VN"));
+
+        Assert.That(model.FiltersButtonText, Is.EqualTo("Bộ lọc"));
+        Assert.That(model.ClearAllText, Is.EqualTo("Xoá tất cả"));
+        Assert.That(model.CurrentSortLabel, Is.EqualTo("Gần nhất"));
+        Assert.That(model.ResultCountText, Is.EqualTo("128 phòng"));
+        Assert.That(model.VerifiedOnlySuffixText, Is.EqualTo(" · đã xác minh"));
+    }
+
+    [Test]
+    public async Task DroppedModel_SubscribedToStore_IsCollectable()
+    {
+        var weak = CreateDroppedModelWithStore();
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        Assert.That(weak.IsAlive, Is.False);
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static WeakReference CreateDroppedModelWithStore()
+    {
+        var store = new SearchCriteriaStore();
+        return new WeakReference(new MainLandingPageModel(
+            Substitute.For<IRoomGateway>(),
+            Substitute.For<ISessionStore>(),
+            Substitute.For<INavigationService>(),
+            store));
     }
 }
