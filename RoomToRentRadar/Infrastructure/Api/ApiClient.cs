@@ -36,4 +36,10 @@ public class ApiClient : IApiClient
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<TResponse>(cancellationToken);
     }
+
+    public async Task DeleteAsync(string endpoint, CancellationToken cancellationToken = default)
+    {
+        using var response = await _httpClient.DeleteAsync(endpoint, cancellationToken);
+        response.EnsureSuccessStatusCode();
+    }
 }

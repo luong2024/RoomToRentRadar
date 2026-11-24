@@ -73,6 +73,8 @@ public static class ServiceCollectionExtensions
         services.AddTransient<AuthViewModel>();
         services.AddTransient<AuthPage>();
         services.AddTransient<IRoomListingsService, RoomListingsService>();
+        services.AddTransient<IFavouritesService, FavouritesService>();
+        services.AddTransient<IFavoriteFeedbackService, FavoriteFeedbackService>();
         services.AddTransient<RoomListingsViewModel>();
         services.AddTransient<RoomListingsPage>();
         services.AddTransient<RoomDetailsViewModel>();
