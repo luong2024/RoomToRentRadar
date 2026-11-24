@@ -1091,7 +1091,7 @@ public class RoomListingsViewModelTests
         var vm = new RoomListingsViewModel(_fakeService, _fakeErrorHandler, mockSessionService.Object);
         Assert.That(vm.IsLandlord, Is.True);
 
-        mockSessionService.Raise(s => s.CurrentUserChanged += null, mockSessionService.Object, (AuthUser?)null);
+        mockSessionService.Raise(s => s.CurrentUserChanged += null, mockSessionService.Object, null!);
 
         Assert.That(vm.IsLandlord, Is.False);
     }

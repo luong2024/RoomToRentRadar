@@ -382,7 +382,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     }
 
     /// <summary>
-    /// Placeholder action for scheduling a viewing (US02 scope covers room details & listing status).
+    /// Placeholder action for scheduling a viewing (US02 scope covers room details and listing status).
     /// Full appointment booking workflow is scheduled for the viewing management user story.
     /// </summary>
     [RelayCommand]
