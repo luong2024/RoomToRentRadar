@@ -6,6 +6,9 @@ using System.Net.Http.Json;
 using RoomToRentRadar.Adapters.Inbound.WebApi.Contracts;
 using RoomToRentRadar.Application.DTOs;
 using RoomToRentRadar.Domain.Entities;
+using RoomToRentRadar.Domain.ValueObjects;
+using ListingRoomStatus = RoomToRentRadar.Domain.Enums.RoomStatus;
+using VerificationStatus = RoomToRentRadar.Domain.Enums.VerificationStatus;
 
 public sealed class LandlordListingsIntegrationTests
 {
@@ -134,17 +137,36 @@ public sealed class LandlordListingsIntegrationTests
     {
         var landlord = await RegisterAndLoginAsync("LANDLORD");
         var created = await CreateListingAsync(landlord.AccessToken);
+        await _factory.RoomListingRepository.AddAsync(new RoomListing(
+            created.ListingId,
+            "Integration listing",
+            "Test description",
+            new Money(2_500_000m, "VND"),
+            22,
+            "1 Test Street",
+            new GeoLocation(21.5853, 105.8075),
+            ListingRoomStatus.Available,
+            VerificationStatus.Verified,
+            "campus-ictu",
+            created.ImageUrls.FirstOrDefault()));
         var room = await _factory.RoomRepository.GetByIdAsync(created.ListingId);
         room!.Status = RoomStatus.Available;
         room.IsVerified = true;
         _factory.RoomRepository.Upsert(room);
+        var initialPublicResponse = await _client.GetAsync("/api/v1/rooms?CampusId=campus-ictu");
+        var initialPublicListings = await initialPublicResponse.Content.ReadFromJsonAsync<PagedResult<RoomListingDto>>();
+        Assert.That(initialPublicListings!.Items.Any(item => item.Id == created.ListingId), Is.True,
+            "The initial public listing request should warm the versioned campus cache.");
         using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/landlord/listings/{created.ListingId}/unpublish");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", landlord.AccessToken);
 
         var response = await _client.SendAsync(request);
         var saved = await _factory.RoomRepository.GetByIdAsync(created.ListingId);
+        // Ensure the same route the app uses is refreshed after unpublish.
         var publicResponse = await _client.GetAsync("/api/rooms");
         var publicListings = await publicResponse.Content.ReadFromJsonAsync<SearchRoomsResult>();
+        var appPublicResponse = await _client.GetAsync("/api/v1/rooms?CampusId=campus-ictu");
+        var appPublicListings = await appPublicResponse.Content.ReadFromJsonAsync<PagedResult<RoomListingDto>>();
 
         Assert.Multiple(() =>
         {
@@ -153,6 +175,7 @@ public sealed class LandlordListingsIntegrationTests
             Assert.That(saved.IsVerified, Is.False);
             Assert.That(saved.ImageUrls, Is.EqualTo(created.ImageUrls));
             Assert.That(publicListings!.Items.Any(item => item.Id == created.ListingId), Is.False);
+            Assert.That(appPublicListings!.Items.Any(item => item.Id == created.ListingId), Is.False);
         });
     }
 

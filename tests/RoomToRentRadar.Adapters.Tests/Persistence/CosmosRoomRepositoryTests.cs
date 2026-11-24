@@ -277,6 +277,33 @@ public class CosmosRoomRepositoryTests
     }
 
     [Test]
+    public void MergeListingFields_WhenListingIsHidden_MapsToPendingDetailAndPreservesGallery()
+    {
+        var existing = new RoomDocument
+        {
+            Id = "room-hidden",
+            ImageUrls = ["image-1", "image-2", "image-3"],
+            IsVerified = true,
+            Status = (int)RoomStatus.Available
+        };
+        var listing = new RoomListingDocument
+        {
+            Id = existing.Id,
+            Status = (int)RoomToRentRadar.Domain.Enums.RoomStatus.Hidden,
+            VerificationStatus = (int)RoomToRentRadar.Domain.Enums.VerificationStatus.Unverified
+        };
+
+        var merged = RoomDocument.MergeListingFields(listing, existing);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(merged.Status, Is.EqualTo((int)RoomStatus.Pending));
+            Assert.That(merged.IsVerified, Is.False);
+            Assert.That(merged.ImageUrls, Is.EqualTo(existing.ImageUrls));
+        });
+    }
+
+    [Test]
     public async Task SearchAsync_WhenKeywordHasWhitespace_ShouldBindTrimmedKeywordParameter()
     {
         // Arrange

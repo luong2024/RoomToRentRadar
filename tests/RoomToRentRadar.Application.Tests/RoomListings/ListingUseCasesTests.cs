@@ -6,18 +6,25 @@ using RoomToRentRadar.Application.Ports.Inbound;
 using RoomToRentRadar.Application.Ports.Outbound;
 using RoomToRentRadar.Application.UseCases.RoomListings;
 using RoomToRentRadar.Domain.Entities;
+using RoomToRentRadar.Domain.ValueObjects;
+using ListingRoomStatus = RoomToRentRadar.Domain.Enums.RoomStatus;
+using VerificationStatus = RoomToRentRadar.Domain.Enums.VerificationStatus;
 
 public sealed class ListingUseCasesTests
 {
     private static readonly Guid OwnerId = Guid.Parse("c95a1a7d-9727-4db3-a2a4-637c99c8dba6");
     private FakeRoomRepository _repository = null!;
     private FakeImageStorage _storage = null!;
+    private FakeRoomListingRepository _listingRepository = null!;
+    private FakeCacheInvalidator _cacheInvalidator = null!;
 
     [SetUp]
     public void SetUp()
     {
         _repository = new FakeRoomRepository();
         _storage = new FakeImageStorage();
+        _listingRepository = new FakeRoomListingRepository();
+        _cacheInvalidator = new FakeCacheInvalidator();
     }
 
     [Test]
@@ -180,7 +187,9 @@ public sealed class ListingUseCasesTests
         listing.Status = RoomStatus.Available;
         listing.IsVerified = true;
         await _repository.CreateAsync(listing);
-        var useCase = new UnpublishListingUseCase(_repository);
+        var publicProjection = CreatePublicProjection(listing.Id);
+        await _listingRepository.AddAsync(publicProjection);
+        var useCase = new UnpublishListingUseCase(_repository, _listingRepository, _cacheInvalidator);
 
         await useCase.ExecuteAsync(OwnerId, listing.Id);
         await useCase.ExecuteAsync(OwnerId, listing.Id);
@@ -192,6 +201,9 @@ public sealed class ListingUseCasesTests
             Assert.That(saved.IsVerified, Is.False);
             Assert.That(saved.ImageUrls, Is.EqualTo(new[] { "one", "two", "three" }));
             Assert.That(saved.Title, Is.EqualTo("Original title"));
+            Assert.That(publicProjection.Status, Is.EqualTo(ListingRoomStatus.Hidden));
+            Assert.That(publicProjection.VerificationStatus, Is.EqualTo(VerificationStatus.Unverified));
+            Assert.That(_cacheInvalidator.CampusIds, Is.EqualTo(new[] { "campus-ictu", "campus-ictu" }));
         });
     }
 
@@ -203,9 +215,14 @@ public sealed class ListingUseCasesTests
         await _repository.CreateAsync(listing);
 
         Assert.ThrowsAsync<NotFoundException>(async () =>
-            await new UnpublishListingUseCase(_repository).ExecuteAsync(Guid.NewGuid(), listing.Id));
+            await new UnpublishListingUseCase(_repository, _listingRepository, _cacheInvalidator).ExecuteAsync(Guid.NewGuid(), listing.Id));
         Assert.That((await _repository.GetByIdAsync(listing.Id))!.Status, Is.EqualTo(RoomStatus.Available));
     }
+
+    private static RoomListing CreatePublicProjection(string id) => new(
+        id, "Original title", "Description", new Money(2_000_000m, "VND"), 20,
+        "Old address", new GeoLocation(21.58, 105.8), ListingRoomStatus.Available,
+        VerificationStatus.Verified, "campus-ictu", "thumbnail.jpg");
 
     private static ListingWriteRequest ValidRequest(int photoCount) => new(
         "Updated title", "10 Main Street", 2500000m, 0m, 24, "BoardingRoom", "Description",
@@ -272,5 +289,46 @@ public sealed class ListingUseCasesTests
 
         public Task<(IReadOnlyList<Room> Items, int TotalCount)> SearchAsync(SearchRoomsQuery query, CancellationToken ct = default) =>
             Task.FromResult<(IReadOnlyList<Room> Items, int TotalCount)>((_rooms.Values.ToList(), _rooms.Count));
+    }
+
+    private sealed class FakeRoomListingRepository : IRoomListingRepository
+    {
+        private readonly Dictionary<string, RoomListing> _listings = new(StringComparer.Ordinal);
+
+        public Task<RoomListing?> GetByIdAsync(string roomId, CancellationToken cancellationToken = default)
+        {
+            _listings.TryGetValue(roomId, out var listing);
+            return Task.FromResult(listing);
+        }
+
+        public Task AddAsync(RoomListing roomListing, CancellationToken cancellationToken = default)
+        {
+            _listings[roomListing.Id] = roomListing;
+            return Task.CompletedTask;
+        }
+
+        public Task DeleteAsync(string roomId, string campusId, CancellationToken cancellationToken = default)
+        {
+            _listings.Remove(roomId);
+            return Task.CompletedTask;
+        }
+
+        public Task<PagedResult<RoomListing>> GetAvailableVerifiedRoomsByCampusAsync(
+            string campusId, GeoLocation campusLocation, int page, int pageSize, string sortBy,
+            bool descending, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new PagedResult<RoomListing>(
+                _listings.Values.Where(listing => listing.CampusId == campusId && listing.IsDisplayable).ToList(),
+                page, pageSize, _listings.Values.Count(listing => listing.CampusId == campusId && listing.IsDisplayable)));
+    }
+
+    private sealed class FakeCacheInvalidator : IRoomListingCacheInvalidator
+    {
+        public List<string> CampusIds { get; } = [];
+
+        public Task InvalidateCampusAsync(string campusId, CancellationToken cancellationToken = default)
+        {
+            CampusIds.Add(campusId);
+            return Task.CompletedTask;
+        }
     }
 }

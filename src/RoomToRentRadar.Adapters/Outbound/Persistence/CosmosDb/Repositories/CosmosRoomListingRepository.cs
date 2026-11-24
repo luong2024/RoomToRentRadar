@@ -137,6 +137,29 @@ public sealed class CosmosRoomListingRepository : IRoomListingRepository
         return new PagedResult<RoomListing>(results, page, pageSize, totalCount);
     }
 
+    public async Task<RoomListing?> GetByIdAsync(string roomId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
+        var query = new QueryDefinition(
+                "SELECT TOP 1 * FROM c WHERE c.id = @id AND (NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false)")
+            .WithParameter("@id", roomId.Trim());
+        using var iterator = _listingsContainer.GetItemQueryIterator<RoomListingDocument>(
+            query,
+            requestOptions: new QueryRequestOptions { MaxItemCount = 1 });
+
+        while (iterator.HasMoreResults)
+        {
+            var page = await iterator.ReadNextAsync(cancellationToken);
+            var document = page.FirstOrDefault();
+            if (document is not null)
+            {
+                return document.ToDomain();
+            }
+        }
+
+        return null;
+    }
+
     public async Task<PagedResult<RoomListing>> SearchByPolygonAsync(
         GeoPolygon polygon,
         RoomSearchFilter filter,

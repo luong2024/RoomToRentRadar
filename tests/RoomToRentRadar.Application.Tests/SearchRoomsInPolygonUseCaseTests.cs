@@ -200,6 +200,9 @@ public class SearchRoomsInPolygonUseCaseTests
 
         public void SeedItems(IEnumerable<RoomListing> items) => _items.AddRange(items);
 
+        public Task<RoomListing?> GetByIdAsync(string roomId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<RoomListing?>(null);
+
         public Task<PagedResult<RoomListing>> GetAvailableVerifiedRoomsByCampusAsync(
             string campusId,
             GeoLocation campusLocation,

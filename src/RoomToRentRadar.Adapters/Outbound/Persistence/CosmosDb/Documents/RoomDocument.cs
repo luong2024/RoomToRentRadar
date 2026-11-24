@@ -114,7 +114,13 @@ public sealed class RoomDocument : IProjectionVersionedDocument
         detail.Address = listing.Address;
         detail.ThumbnailUrl = listing.ThumbnailUrl;
         detail.IsVerified = listing.VerificationStatus == 2;
-        detail.Status = listing.Status;
+        detail.Status = listing.Status switch
+        {
+            (int)RoomToRentRadar.Domain.Enums.RoomStatus.Available => (int)RoomToRentRadar.Domain.Entities.RoomStatus.Available,
+            (int)RoomToRentRadar.Domain.Enums.RoomStatus.Occupied => (int)RoomToRentRadar.Domain.Entities.RoomStatus.Rented,
+            (int)RoomToRentRadar.Domain.Enums.RoomStatus.Reserved => (int)RoomToRentRadar.Domain.Entities.RoomStatus.Pending,
+            _ => (int)RoomToRentRadar.Domain.Entities.RoomStatus.Pending
+        };
         // A listing's creation timestamp is only a valid initial value. It must
         // never overwrite the detail record's actual last-update timestamp.
         detail.LastUpdatedDate ??= listing.CreatedAtUtc;

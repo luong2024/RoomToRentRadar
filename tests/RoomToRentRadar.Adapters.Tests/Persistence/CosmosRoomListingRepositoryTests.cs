@@ -16,6 +16,52 @@ namespace RoomToRentRadar.Adapters.Tests.Persistence;
 public class CosmosRoomListingRepositoryTests
 {
     [Test]
+    public async Task GetByIdAsync_FindsProjectionByRoomIdAcrossCampusPartitions()
+    {
+        var listingsContainer = new Mock<Container>();
+        var response = new Mock<FeedResponse<RoomListingDocument>>();
+        response.Setup(item => item.GetEnumerator()).Returns(new List<RoomListingDocument>
+        {
+            new()
+            {
+                Id = "room-1",
+                CampusId = "campus-ictu",
+                Title = "Room 1",
+                MonthlyRentAmount = 2_500_000m,
+                MonthlyRentCurrency = "VND",
+                AreaSquareMeters = 25,
+                Address = "ICTU",
+                Latitude = 21.58,
+                Longitude = 105.81,
+                Status = (int)ListingRoomStatus.Available,
+                VerificationStatus = (int)VerificationStatus.Verified
+            }
+        }.GetEnumerator());
+        var iterator = new Mock<FeedIterator<RoomListingDocument>>();
+        iterator.SetupSequence(item => item.HasMoreResults).Returns(true).Returns(false);
+        iterator.Setup(item => item.ReadNextAsync(It.IsAny<CancellationToken>())).ReturnsAsync(response.Object);
+        QueryDefinition? capturedQuery = null;
+        listingsContainer
+            .Setup(container => container.GetItemQueryIterator<RoomListingDocument>(
+                It.IsAny<QueryDefinition>(), null, It.IsAny<QueryRequestOptions>()))
+            .Callback<QueryDefinition, string, QueryRequestOptions>((query, _, _) => capturedQuery = query)
+            .Returns(iterator.Object);
+
+        var repository = new CosmosRoomListingRepository(
+            listingsContainer.Object, new Mock<Container>().Object, CreateOutboxContainer().Object);
+
+        var result = await repository.GetByIdAsync("room-1");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result!.CampusId, Is.EqualTo("campus-ictu"));
+            Assert.That(capturedQuery!.QueryText, Does.Contain("c.id = @id"));
+            Assert.That(capturedQuery.GetQueryParameters().Single(parameter => parameter.Name == "@id").Value, Is.EqualTo("room-1"));
+        });
+    }
+
+    [Test]
     public async Task AddAsync_UpsertsListingAndCurrentDetailProjection()
     {
         var listingsContainer = new Mock<Container>();

@@ -8,8 +8,18 @@ using RoomToRentRadar.Domain.Entities;
 public sealed class UnpublishListingUseCase : IUnpublishListingUseCase
 {
     private readonly IRoomRepository _roomRepository;
+    private readonly IRoomListingRepository _roomListingRepository;
+    private readonly IRoomListingCacheInvalidator _cacheInvalidator;
 
-    public UnpublishListingUseCase(IRoomRepository roomRepository) => _roomRepository = roomRepository ?? throw new ArgumentNullException(nameof(roomRepository));
+    public UnpublishListingUseCase(
+        IRoomRepository roomRepository,
+        IRoomListingRepository roomListingRepository,
+        IRoomListingCacheInvalidator cacheInvalidator)
+    {
+        _roomRepository = roomRepository ?? throw new ArgumentNullException(nameof(roomRepository));
+        _roomListingRepository = roomListingRepository ?? throw new ArgumentNullException(nameof(roomListingRepository));
+        _cacheInvalidator = cacheInvalidator ?? throw new ArgumentNullException(nameof(cacheInvalidator));
+    }
 
     public async Task ExecuteAsync(Guid ownerId, string listingId, CancellationToken cancellationToken = default)
     {
@@ -21,10 +31,28 @@ public sealed class UnpublishListingUseCase : IUnpublishListingUseCase
             throw new NotFoundException("Listing was not found.");
         }
 
-        if (room.Status == RoomStatus.Pending) return;
-        room.Status = RoomStatus.Pending;
-        room.IsVerified = false;
-        room.LastUpdatedDate = DateTime.UtcNow;
-        await _roomRepository.UpdateAsync(room, cancellationToken);
+        if (room.Status != RoomStatus.Pending || room.IsVerified)
+        {
+            room.Status = RoomStatus.Pending;
+            room.IsVerified = false;
+            room.LastUpdatedDate = DateTime.UtcNow;
+            await _roomRepository.UpdateAsync(room, cancellationToken);
+        }
+
+        var listing = await _roomListingRepository.GetByIdAsync(listingId, cancellationToken);
+        if (listing is null)
+        {
+            return;
+        }
+
+        if (listing.Status != RoomToRentRadar.Domain.Enums.RoomStatus.Hidden ||
+            listing.VerificationStatus != RoomToRentRadar.Domain.Enums.VerificationStatus.Unverified)
+        {
+            listing.UpdateStatus(RoomToRentRadar.Domain.Enums.RoomStatus.Hidden);
+            listing.UpdateVerificationStatus(RoomToRentRadar.Domain.Enums.VerificationStatus.Unverified);
+            await _roomListingRepository.AddAsync(listing, cancellationToken);
+        }
+
+        await _cacheInvalidator.InvalidateCampusAsync(listing.CampusId, cancellationToken);
     }
 }

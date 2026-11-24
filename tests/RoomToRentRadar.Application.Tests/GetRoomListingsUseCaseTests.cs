@@ -317,6 +317,9 @@ public class GetRoomListingsUseCaseTests
         private readonly List<RoomListing> _items = [];
         public int GetCallCount { get; private set; }
 
+        public Task<RoomListing?> GetByIdAsync(string roomId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<RoomListing?>(null);
+
         public Task<PagedResult<RoomListing>> GetAvailableVerifiedRoomsByCampusAsync(string campusId, GeoLocation campusLocation, int page, int pageSize, string sortBy, bool descending, CancellationToken cancellationToken = default)
         {
             GetCallCount++;
