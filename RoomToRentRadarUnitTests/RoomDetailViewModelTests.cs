@@ -89,6 +89,45 @@ public class RoomDetailViewModelTests
     }
 
     [Test]
+    public async Task ToggleFavoriteAsync_WhenUnauthenticated_ShowsInlineFavoriteError()
+    {
+        var favourites = new Mock<IFavouritesService>();
+        _viewModel = new RoomDetailViewModel(_serviceMock.Object, _errorHandlerMock.Object, _sessionServiceMock.Object, favouritesService: favourites.Object)
+        {
+            Room = new RoomDetailModel { Id = "room-01", Status = ListingStatus.Available }
+        };
+
+        await _viewModel.ToggleFavoriteCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_viewModel.FavoriteErrorMessage, Is.EqualTo("Sign in to save favorite rooms."));
+            Assert.That(_viewModel.HasFavoriteError, Is.True);
+        });
+    }
+
+    [Test]
+    public async Task ToggleFavoriteAsync_WhenApiFails_ShowsInlineFavoriteError()
+    {
+        _sessionServiceMock.SetupGet(session => session.IsAuthenticated).Returns(true);
+        var favourites = new Mock<IFavouritesService>();
+        favourites.Setup(service => service.AddFavouriteAsync("room-01", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("offline"));
+        _viewModel = new RoomDetailViewModel(_serviceMock.Object, _errorHandlerMock.Object, _sessionServiceMock.Object, favouritesService: favourites.Object)
+        {
+            Room = new RoomDetailModel { Id = "room-01", Status = ListingStatus.Available }
+        };
+
+        await _viewModel.ToggleFavoriteCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_viewModel.FavoriteErrorMessage, Is.EqualTo("Unable to update favorites. Please try again."));
+            Assert.That(_viewModel.HasFavoriteError, Is.True);
+        });
+    }
+
+    [Test]
     public async Task LoadRoomDetailsAsync_WhenNewLoadStarts_ClearsPreviousRoomBeforeAwaitingApi()
     {
         var pendingRoom = new TaskCompletionSource<RoomDetailModel?>();

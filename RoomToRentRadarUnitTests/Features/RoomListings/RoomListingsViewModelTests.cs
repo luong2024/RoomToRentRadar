@@ -143,6 +143,76 @@ public class RoomListingsViewModelTests
     }
 
     [Test]
+    public async Task RefreshFavorites_WhenBackendNoLongerReturnsRoom_ClearsExploreCardState()
+    {
+        var room = CreateRoom("room-1");
+        _fakeService.SetupPages(1, 6, [room]);
+        var favourites = new FakeFavouritesService { FavouriteRooms = [room] };
+        var vm = CreateAuthenticatedViewModel(favourites);
+        await vm.InitializeAsync();
+
+        favourites.FavouriteRooms = [];
+        await vm.RefreshFavoritesAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(room.IsFavorite, Is.False);
+            Assert.That(vm.FavoriteCount, Is.Zero);
+        });
+    }
+
+    [Test]
+    public async Task SelectFavorites_WhileInitializeLoadsFavorites_UsesOneRequestAndDoesNotDuplicateRooms()
+    {
+        var roomPage = new TaskCompletionSource<PagedResponse<RoomListItemModel>>();
+        _fakeService.Handler = (_, pageSize, _, _) => roomPage.Task;
+        var favoriteResponse = new TaskCompletionSource<IReadOnlyList<RoomListItemModel>>();
+        var favourites = new FakeFavouritesService { Handler = _ => favoriteResponse.Task };
+        var vm = CreateAuthenticatedViewModel(favourites);
+
+        var initializeTask = vm.InitializeAsync();
+        var selectFavoritesTask = vm.SelectBottomTab("favorites");
+
+        roomPage.SetResult(new PagedResponse<RoomListItemModel>([CreateRoom("room-1")], 1, 6, 1));
+        favoriteResponse.SetResult([CreateRoom("room-1")]);
+        await Task.WhenAll(initializeTask, selectFavoritesTask);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(favourites.GetFavouritesCallCount, Is.EqualTo(1));
+            Assert.That(vm.Rooms.Select(room => room.Id), Is.EqualTo(new[] { "room-1" }));
+        });
+    }
+
+    [Test]
+    public async Task SelectFavorites_WhenSessionChangesDuringLoad_DoesNotRestoreOldSessionRooms()
+    {
+        var user = new AuthUser(Guid.NewGuid(), "student@example.com", UserRoleConstants.Student, "LOCAL", true);
+        var session = new Mock<IAuthenticationSessionService>();
+        session.SetupGet(item => item.IsAuthenticated).Returns(true);
+        session.SetupGet(item => item.CurrentUser).Returns(user);
+        session.SetupGet(item => item.SessionEpoch).Returns(1);
+        var favoriteResponse = new TaskCompletionSource<IReadOnlyList<RoomListItemModel>>();
+        var favourites = new FakeFavouritesService { Handler = _ => favoriteResponse.Task };
+        var vm = new RoomListingsViewModel(_fakeService, _fakeErrorHandler, session.Object, favourites);
+
+        var selectTask = vm.SelectBottomTab("favorites");
+        session.SetupGet(item => item.IsAuthenticated).Returns(false);
+        session.SetupGet(item => item.CurrentUser).Returns((AuthUser?)null);
+        session.SetupGet(item => item.SessionEpoch).Returns(2);
+        session.Raise(item => item.CurrentUserChanged += null!, session.Object, null!);
+        favoriteResponse.SetResult([CreateRoom("old-session-room")]);
+        await selectTask;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.Rooms, Is.Empty);
+            Assert.That(vm.FavoriteCount, Is.Zero);
+            Assert.That(vm.IsLoadingFavorites, Is.False);
+        });
+    }
+
+    [Test]
     public async Task LoadMoreRooms_WhenHasMoreItemsIsTrue_AppendsNextPageWithoutDuplicates()
     {
         // Arrange
@@ -857,11 +927,17 @@ public class RoomListingsViewModelTests
 
     private sealed class FakeFavouritesService : IFavouritesService
     {
-        public IReadOnlyList<RoomListItemModel> FavouriteRooms { get; init; } = [];
+        public IReadOnlyList<RoomListItemModel> FavouriteRooms { get; set; } = [];
         public List<string> AddedRoomIds { get; } = [];
         public List<string> RemovedRoomIds { get; } = [];
         public Exception? AddException { get; init; }
-        public Task<IReadOnlyList<RoomListItemModel>> GetMyFavouritesAsync(CancellationToken cancellationToken = default) => Task.FromResult(FavouriteRooms);
+        public Func<CancellationToken, Task<IReadOnlyList<RoomListItemModel>>>? Handler { get; init; }
+        public int GetFavouritesCallCount { get; private set; }
+        public Task<IReadOnlyList<RoomListItemModel>> GetMyFavouritesAsync(CancellationToken cancellationToken = default)
+        {
+            GetFavouritesCallCount++;
+            return Handler?.Invoke(cancellationToken) ?? Task.FromResult(FavouriteRooms);
+        }
         public Task<IReadOnlySet<string>> GetMyFavouriteIdsAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlySet<string>>(FavouriteRooms.Select(room => room.Id).ToHashSet(StringComparer.Ordinal));
         public Task AddFavouriteAsync(string roomId, CancellationToken cancellationToken = default)
         {

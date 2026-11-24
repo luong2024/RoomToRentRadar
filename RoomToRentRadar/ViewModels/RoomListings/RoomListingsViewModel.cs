@@ -32,6 +32,9 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
     private readonly Dictionary<string, RoomListItemModel> _favoriteRoomsById = new(StringComparer.Ordinal);
     private readonly List<RoomListItemModel> _exploreSnapshot = [];
     private CancellationTokenSource? _paginationCts;
+    private CancellationTokenSource? _favoriteLoadCts;
+    private Task? _favoritesLoadTask;
+    private long _favoriteSessionGeneration;
     private string? _lastErrorResourceKey;
     private bool _isInitialized;
     private bool _suppressAutoSortReload;
@@ -105,6 +108,11 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
 
     private void OnCurrentUserChanged(object? sender, AuthUser? user)
     {
+        _favoriteSessionGeneration++;
+        _favoriteLoadCts?.Cancel();
+        _favoriteLoadCts = null;
+        _favoritesLoadTask = null;
+        IsLoadingFavorites = false;
         IsLandlord = string.Equals(user?.Role, UserRoleConstants.Landlord, StringComparison.OrdinalIgnoreCase)
                      || string.Equals(user?.Role, UserRoleConstants.Admin, StringComparison.OrdinalIgnoreCase);
         _favoritesLoaded = false;
@@ -512,18 +520,11 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         else if (normalized == "favorites")
         {
             Rooms.Clear();
-            if (!_favoritesLoaded)
+            await LoadFavoritesAsync();
+            if (IsFavoritesTabSelected)
             {
-                await LoadFavoritesAsync();
+                PopulateFavoritesTab();
             }
-            foreach (var fav in _favoriteRoomsById.Values)
-            {
-                Rooms.Add(fav);
-            }
-
-            EmptyStateMessage = Rooms.Count == 0
-                ? "No favorite rooms yet. Tap the heart icon on any room card to save it!"
-                : string.Empty;
         }
         else if (normalized == "messages")
         {
@@ -541,7 +542,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
     {
         if (_sessionService?.IsAuthenticated == true && _favouritesService is not null)
         {
-            await LoadFavoritesAsync();
+            await LoadFavoritesAsync(forceRefresh: true);
             if (IsFavoritesTabSelected)
             {
                 PopulateFavoritesTab();
@@ -549,20 +550,52 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         }
     }
 
-    private async Task LoadFavoritesAsync()
+    private Task LoadFavoritesAsync(bool forceRefresh = false)
     {
+        if (!forceRefresh && _favoritesLoaded)
+        {
+            return Task.CompletedTask;
+        }
+        if (_favoritesLoadTask is { IsCompleted: false } inFlightTask)
+        {
+            return inFlightTask;
+        }
         if (_favouritesService is null || _sessionService?.IsAuthenticated != true)
         {
             _favoriteRoomsById.Clear();
             _favoritesLoaded = true;
-            return;
+            return Task.CompletedTask;
         }
 
+        var requestCts = new CancellationTokenSource();
+        var sessionGeneration = _favoriteSessionGeneration;
+        var sessionEpoch = _sessionService.SessionEpoch;
+        var userId = _sessionService.CurrentUser?.Id;
+        _favoriteLoadCts = requestCts;
         IsLoadingFavorites = true;
         FavoriteErrorMessage = string.Empty;
+        _favoritesLoadTask = LoadFavoritesCoreAsync(requestCts, sessionGeneration, sessionEpoch, userId);
+        return _favoritesLoadTask;
+    }
+
+    private async Task LoadFavoritesCoreAsync(
+        CancellationTokenSource requestCts,
+        long sessionGeneration,
+        long sessionEpoch,
+        Guid? userId)
+    {
         try
         {
-            var favourites = await _favouritesService.GetMyFavouritesAsync();
+            var favourites = await _favouritesService!.GetMyFavouritesAsync(requestCts.Token);
+            if (!IsCurrentFavoriteRequest(sessionGeneration, sessionEpoch, userId, requestCts))
+            {
+                return;
+            }
+
+            foreach (var room in _exploreSnapshot)
+            {
+                room.IsFavorite = false;
+            }
             _favoriteRoomsById.Clear();
             foreach (var favourite in favourites)
             {
@@ -579,14 +612,34 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         }
         catch (Exception ex)
         {
-            FavoriteErrorMessage = "Unable to load favorite rooms. Please try again.";
-            _errorHandler.HandleError(ex);
+            if (IsCurrentFavoriteRequest(sessionGeneration, sessionEpoch, userId, requestCts))
+            {
+                FavoriteErrorMessage = "Unable to load favorite rooms. Please try again.";
+                _errorHandler.HandleError(ex);
+            }
         }
         finally
         {
-            IsLoadingFavorites = false;
+            if (ReferenceEquals(_favoriteLoadCts, requestCts))
+            {
+                _favoriteLoadCts = null;
+                _favoritesLoadTask = null;
+                IsLoadingFavorites = false;
+            }
+            requestCts.Dispose();
         }
     }
+
+    private bool IsCurrentFavoriteRequest(
+        long sessionGeneration,
+        long sessionEpoch,
+        Guid? userId,
+        CancellationTokenSource requestCts) =>
+        !requestCts.IsCancellationRequested
+        && sessionGeneration == _favoriteSessionGeneration
+        && _sessionService?.IsAuthenticated == true
+        && _sessionService.SessionEpoch == sessionEpoch
+        && _sessionService.CurrentUser?.Id == userId;
 
     private void PopulateFavoritesTab()
     {

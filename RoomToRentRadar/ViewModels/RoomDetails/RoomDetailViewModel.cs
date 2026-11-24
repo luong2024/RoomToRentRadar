@@ -241,9 +241,10 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         }
         if (!_sessionService.IsAuthenticated)
         {
-            StatusMessage = "Sign in to save favorite rooms.";
+            FavoriteErrorMessage = "Sign in to save favorite rooms.";
             return;
         }
+        FavoriteErrorMessage = string.Empty;
         IsFavoriteBusy = true;
         try
         {
@@ -268,7 +269,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         }
         catch (Exception ex)
         {
-            StatusMessage = "Unable to update favorites. Please try again.";
+            FavoriteErrorMessage = "Unable to update favorites. Please try again.";
             _errorHandler.HandleError(ex);
         }
         finally
