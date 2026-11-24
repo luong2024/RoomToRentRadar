@@ -29,6 +29,8 @@ public sealed class AuthWebApplicationFactory : WebApplicationFactory<Program>
 
     public StubRoutingProvider RoutingProvider { get; } = new();
 
+    public FakeListingImageStorageService ListingImageStorage { get; } = new();
+
     public AuthWebApplicationFactory(int authPermitLimit = 100, int routingPermitLimit = 100)
     {
         _authPermitLimit = authPermitLimit;
@@ -71,6 +73,9 @@ public sealed class AuthWebApplicationFactory : WebApplicationFactory<Program>
             services.RemoveAll<IRoomRepository>();
             services.AddSingleton<IRoomRepository>(RoomRepository);
 
+            services.RemoveAll<IListingImageStorageService>();
+            services.AddSingleton<IListingImageStorageService>(ListingImageStorage);
+
             services.RemoveAll<IRoutingProvider>();
             services.AddSingleton<IRoutingProvider>(RoutingProvider);
 
@@ -90,6 +95,25 @@ public sealed class AuthWebApplicationFactory : WebApplicationFactory<Program>
         {
             CosmosDb.Dispose();
         }
+    }
+}
+
+public sealed class FakeListingImageStorageService : IListingImageStorageService
+{
+    public List<string> StoredUrls { get; } = [];
+    public List<string> DeletedUrls { get; } = [];
+
+    public Task<string> StoreAsync(Guid ownerId, string listingId, Stream content, string fileName, string contentType, long length, CancellationToken cancellationToken = default)
+    {
+        var url = $"https://listing-images.test/{ownerId:D}/{listingId}/{Guid.NewGuid():N}.png";
+        StoredUrls.Add(url);
+        return Task.FromResult(url);
+    }
+
+    public Task DeleteAsync(string imageUrl, CancellationToken cancellationToken = default)
+    {
+        DeletedUrls.Add(imageUrl);
+        return Task.CompletedTask;
     }
 }
 

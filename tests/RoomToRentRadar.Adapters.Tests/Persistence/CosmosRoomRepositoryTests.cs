@@ -108,6 +108,49 @@ public class CosmosRoomRepositoryTests
     }
 
     [Test]
+    public void RoomDocument_FromDomainAndToDomain_PreservesLandlordOwnerId()
+    {
+        var ownerId = Guid.NewGuid().ToString("D");
+        var room = new Room { Id = "owned-listing", LandlordId = ownerId };
+
+        var roundTripped = RoomDocument.FromDomain(room).ToDomain();
+
+        Assert.That(roundTripped.LandlordId, Is.EqualTo(ownerId));
+    }
+
+    [Test]
+    public async Task UpdateAsync_UsesExistingEtagAndPersistsOwnerAndNewContent()
+    {
+        var existing = new RoomDocument { Id = "owned-listing", ETag = "etag-current" };
+        var readResponse = new Mock<ItemResponse<RoomDocument>>();
+        readResponse.SetupGet(response => response.Resource).Returns(existing);
+        _containerMock.Setup(container => container.ReadItemAsync<RoomDocument>(
+                "owned-listing", It.IsAny<PartitionKey>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(readResponse.Object);
+
+        RoomDocument? replacedDocument = null;
+        ItemRequestOptions? replacedOptions = null;
+        _containerMock.Setup(container => container.ReplaceItemAsync(
+                It.IsAny<RoomDocument>(), "owned-listing", It.IsAny<PartitionKey?>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .Callback<RoomDocument, string, PartitionKey?, ItemRequestOptions, CancellationToken>((document, _, _, options, _) =>
+            {
+                replacedDocument = document;
+                replacedOptions = options;
+            })
+            .ReturnsAsync(new Mock<ItemResponse<RoomDocument>>().Object);
+
+        var room = new Room { Id = "owned-listing", LandlordId = Guid.NewGuid().ToString("D"), Title = "Updated" };
+        await _repository.UpdateAsync(room);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(replacedDocument!.LandlordId, Is.EqualTo(room.LandlordId));
+            Assert.That(replacedDocument.Title, Is.EqualTo("Updated"));
+            Assert.That(replacedOptions!.IfMatchEtag, Is.EqualTo("etag-current"));
+        });
+    }
+
+    [Test]
     public async Task GetByIdAsync_WhenProjectionIsTombstoned_ReturnsNull()
     {
         var response = new Mock<ItemResponse<RoomDocument>>();

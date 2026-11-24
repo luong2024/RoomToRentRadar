@@ -17,6 +17,7 @@ using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Configurations;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Context;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Repositories;
 using RoomToRentRadar.Adapters.Outbound.Routing;
+using RoomToRentRadar.Adapters.Outbound.Storage;
 using RoomToRentRadar.Application.Ports.Outbound;
 using RoomToRentRadar.Application.UseCases;
 using RoomToRentRadar.Application.UseCases.Authentication;
@@ -39,6 +40,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISearchRoomsUseCase, SearchRoomsUseCase>();
         services.AddScoped<ISearchRoomsInPolygonUseCase, SearchRoomsInPolygonUseCase>();
         services.AddScoped<IRoutingService, RoutingService>();
+        services.AddScoped<ICreateListingUseCase, CreateListingUseCase>();
+        services.AddScoped<IUpdateListingUseCase, UpdateListingUseCase>();
+        services.AddScoped<IUnpublishListingUseCase, UnpublishListingUseCase>();
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<IRegisterUserUseCase, RegisterUserUseCase>();
         services.AddScoped<ILoginWithEmailUseCase, LoginWithEmailUseCase>();
@@ -52,6 +56,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddOutboundAdapters(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment? environment = null)
     {
         services.AddCachingAdapters();
+        services.AddScoped<IListingImageStorageService, ListingImageStorageService>();
         services.AddCosmosDbPersistence(configuration);
         services
             .AddOptions<RoutingOptions>()
