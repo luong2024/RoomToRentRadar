@@ -1,5 +1,7 @@
 namespace RoomToRentRadar.Adapters.Tests.Storage;
 
+using System.Buffers.Binary;
+using System.IO.Compression;
 using RoomToRentRadar.Adapters.Outbound.Storage;
 using SkiaSharp;
 
@@ -86,6 +88,18 @@ public sealed class ListingImageValidatorTests
     }
 
     [Test]
+    public void ReadAndValidateAsync_OversizedDecodedImage_RejectsBeforeBitmapDecode()
+    {
+        var bytes = CreatePngWithDimensions(6000, 5000);
+
+        var exception = Assert.ThrowsAsync<RoomToRentRadar.Application.Exceptions.RequestValidationException>(async () =>
+            await ListingImageValidator.ReadAndValidateAsync(
+                new MemoryStream(bytes), "large.png", "image/png", bytes.Length, CancellationToken.None));
+
+        Assert.That(exception!.Errors["photos"].Single(), Does.Contain("25000000 total pixels"));
+    }
+
+    [Test]
     public void BuildBlobName_MaliciousAndDuplicateOriginalNames_UsesSafeUniqueStorageNames()
     {
         var ownerId = Guid.NewGuid();
@@ -107,5 +121,54 @@ public sealed class ListingImageValidatorTests
         using var image = SKImage.FromBitmap(bitmap);
         using var data = image.Encode(format, 90);
         return data.ToArray();
+    }
+
+    private static byte[] CreatePngWithDimensions(int width, int height)
+    {
+        using var compressed = new MemoryStream();
+        using (var zlib = new ZLibStream(compressed, CompressionLevel.Fastest, leaveOpen: true))
+        {
+            var scanline = new byte[checked(width * 3 + 1)];
+            for (var row = 0; row < height; row++)
+            {
+                zlib.Write(scanline);
+            }
+        }
+
+        using var png = new MemoryStream();
+        png.Write([137, 80, 78, 71, 13, 10, 26, 10]);
+        var header = new byte[13];
+        BinaryPrimitives.WriteUInt32BigEndian(header.AsSpan(0, 4), (uint)width);
+        BinaryPrimitives.WriteUInt32BigEndian(header.AsSpan(4, 4), (uint)height);
+        header[8] = 8;
+        header[9] = 2;
+        WritePngChunk(png, "IHDR", header);
+        WritePngChunk(png, "IDAT", compressed.ToArray());
+        WritePngChunk(png, "IEND", []);
+        return png.ToArray();
+    }
+
+    private static void WritePngChunk(Stream destination, string type, byte[] data)
+    {
+        Span<byte> length = stackalloc byte[4];
+        BinaryPrimitives.WriteUInt32BigEndian(length, (uint)data.Length);
+        destination.Write(length);
+        var typeBytes = System.Text.Encoding.ASCII.GetBytes(type);
+        destination.Write(typeBytes);
+        destination.Write(data);
+
+        var crc = 0xFFFFFFFFu;
+        foreach (var value in typeBytes.Concat(data))
+        {
+            crc ^= value;
+            for (var bit = 0; bit < 8; bit++)
+            {
+                crc = (crc & 1) != 0 ? (crc >> 1) ^ 0xEDB88320u : crc >> 1;
+            }
+        }
+
+        Span<byte> checksum = stackalloc byte[4];
+        BinaryPrimitives.WriteUInt32BigEndian(checksum, ~crc);
+        destination.Write(checksum);
     }
 }

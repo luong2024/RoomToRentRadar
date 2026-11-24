@@ -87,6 +87,9 @@ internal sealed record ValidatedListingImage(byte[] Bytes, string Extension, str
 
 internal static class ListingImageValidator
 {
+    private const int MaxImageDimension = 10_000;
+    private const long MaxImagePixels = 25_000_000;
+
     public static async Task<ValidatedListingImage> ReadAndValidateAsync(
         Stream content,
         string fileName,
@@ -126,10 +129,27 @@ internal static class ListingImageValidator
         if ((isJpeg && !hasJpegSignature) || (isPng && !hasPngSignature))
             throw new RequestValidationException("photos", "The image content does not match its declared format.");
 
+        using var encodedStream = new MemoryStream(bytes, writable: false);
+        using var codec = SKCodec.Create(encodedStream);
+        if (codec is null)
+        {
+            throw new RequestValidationException("photos", "The image content is corrupted or unsupported.");
+        }
+
+        var imageInfo = codec.Info;
+        if (imageInfo.Width <= 0 || imageInfo.Height <= 0 ||
+            imageInfo.Width > MaxImageDimension || imageInfo.Height > MaxImageDimension ||
+            (long)imageInfo.Width * imageInfo.Height > MaxImagePixels)
+        {
+            throw new RequestValidationException(
+                "photos",
+                $"Image dimensions must not exceed {MaxImageDimension} pixels per side or {MaxImagePixels} total pixels.");
+        }
+
         SKBitmap? bitmap;
         try
         {
-            bitmap = SKBitmap.Decode(bytes);
+            bitmap = SKBitmap.Decode(codec);
         }
         catch (ArgumentNullException)
         {
