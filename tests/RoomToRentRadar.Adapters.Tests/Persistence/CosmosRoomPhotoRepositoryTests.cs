@@ -3,6 +3,7 @@ using Microsoft.Azure.Cosmos;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Context;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Documents;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Repositories;
+using RoomToRentRadar.Application.Exceptions;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Exceptions;
 
@@ -195,6 +196,50 @@ public class CosmosRoomPhotoRepositoryTests
             Assert.That(photos[1].Id, Is.EqualTo(p2.Id));
             Assert.That(photos[1].DisplayOrder, Is.EqualTo(1));
             Assert.That(photos[1].IsCover, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task ExhaustedConcurrencyRetries_ThrowsConcurrencyConflictExceptionForUploadReorderAndDelete()
+    {
+        var repo = new CosmosRoomPhotoRepository(_dbContext);
+        var p1 = await repo.AddWithinQuotaAsync("room-001", 12, true, (o, c) => CreatePhoto("p1", "room-001", o, c));
+        var p2 = await repo.AddWithinQuotaAsync("room-001", 12, false, (o, c) => CreatePhoto("p2", "room-001", o, c));
+
+        // Force every transactional batch attempt (including the final 12th attempt) to fail with 412 PreconditionFailed.
+        _container.OnBeforeBatchAsync = _ => throw new CosmosException(
+            "Simulated persistent ETag conflict.",
+            HttpStatusCode.PreconditionFailed,
+            0,
+            "activity-412",
+            1.0);
+
+        Assert.Multiple(() =>
+        {
+            Assert.ThrowsAsync<ConcurrencyConflictException>(() =>
+                repo.AddWithinQuotaAsync("room-001", 12, false, (o, c) => CreatePhoto("p3", "room-001", o, c)));
+            Assert.ThrowsAsync<ConcurrencyConflictException>(() =>
+                repo.ReorderAsync("room-001", [p2.Id, p1.Id], p2.Id));
+            Assert.ThrowsAsync<ConcurrencyConflictException>(() =>
+                repo.MarkPendingDeletionAsync("room-001", p1.Id));
+        });
+    }
+
+    [Test]
+    public async Task MarkPendingDeletionAsync_WhenAlreadyPendingDeletion_ReturnsPendingPhotoForRetryableDelete()
+    {
+        var repo = new CosmosRoomPhotoRepository(_dbContext);
+        var p1 = await repo.AddWithinQuotaAsync("room-001", 12, true, (o, c) => CreatePhoto("p1", "room-001", o, c));
+
+        var firstMark = await repo.MarkPendingDeletionAsync("room-001", p1.Id);
+        var retryMark = await repo.MarkPendingDeletionAsync("room-001", p1.Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(firstMark, Is.Not.Null);
+            Assert.That(retryMark, Is.Not.Null);
+            Assert.That(retryMark!.Id, Is.EqualTo(p1.Id));
+            Assert.That(retryMark.ObjectKey, Is.EqualTo(p1.ObjectKey));
         });
     }
 

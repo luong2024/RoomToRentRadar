@@ -234,15 +234,19 @@ public class RoomGalleryUseCaseTests
             Assert.That(_storageService.DeleteAttemptCount, Is.EqualTo(DeleteRoomPhotoUseCase.DefaultMaxStorageDeleteAttempts));
         });
 
-        // Once storage recovers, pending cleanup deletes R2 objects and hard-deletes the tombstone.
-        var cleaned = await deleteUseCase.CleanupPendingDeletionsAsync("room-001");
+        // Once storage recovers, retrying DELETE directly on the same photoId resumes Phase 2 cleanup
+        // without returning 404, deletes R2 objects, and hard-deletes the tombstone.
+        await deleteUseCase.ExecuteAsync("room-001", first.Id, _ownerLandlordId);
         var remainingPending = await _photoRepo.GetPendingDeletionAsync("room-001");
         Assert.Multiple(() =>
         {
-            Assert.That(cleaned, Is.EqualTo(1));
             Assert.That(remainingPending, Is.Empty);
             Assert.That(_storageService.DeletedKeys, Has.Count.EqualTo(2));
         });
+
+        // Calling DELETE again after cleanup completed now properly returns not found.
+        Assert.ThrowsAsync<RoomPhotoNotFoundException>(() =>
+            deleteUseCase.ExecuteAsync("room-001", first.Id, _ownerLandlordId));
     }
 
     [Test]

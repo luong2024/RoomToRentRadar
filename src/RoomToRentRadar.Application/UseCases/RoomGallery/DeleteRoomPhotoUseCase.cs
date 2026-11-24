@@ -73,7 +73,15 @@ public sealed class DeleteRoomPhotoUseCase : IDeleteRoomPhotoUseCase
 
         // Phase 1 (Atomic DB): Mark photo as pending deletion (IsDeleted = true), hide from gallery,
         // free quota slot, and promote the next cover photo in one transactional batch.
+        // If a previous DELETE already marked it pending deletion before R2 failed/cancelled,
+        // resume cleanup for that pending tombstone instead of returning 404.
         var targetPhoto = await _photoRepository.MarkPendingDeletionAsync(normalizedRoomId, normalizedPhotoId, cancellationToken);
+        if (targetPhoto is null)
+        {
+            var pending = await _photoRepository.GetPendingDeletionAsync(normalizedRoomId, cancellationToken);
+            targetPhoto = pending.FirstOrDefault(p => string.Equals(p.Id, normalizedPhotoId, StringComparison.Ordinal));
+        }
+
         if (targetPhoto is null)
         {
             throw new RoomPhotoNotFoundException($"Photo '{normalizedPhotoId}' was not found in room '{normalizedRoomId}'.");

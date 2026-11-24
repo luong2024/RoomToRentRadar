@@ -147,14 +147,20 @@ public sealed class CosmosRoomPhotoRepository : IRoomPhotoRepository
                 await _dbContext.RoomPhotos.ExecuteTransactionalBatchAsync(normalizedRoomId, batch, cancellationToken);
                 return newPhoto;
             }
-            catch (CosmosException ex) when (IsRetryableConcurrencyStatus(ex.StatusCode) && attempt < MaxConcurrencyRetries)
+            catch (CosmosException ex) when (IsRetryableConcurrencyStatus(ex.StatusCode))
             {
-                continue;
+                if (attempt < MaxConcurrencyRetries)
+                {
+                    continue;
+                }
+
+                throw new ConcurrencyConflictException(
+                    $"Room '{normalizedRoomId}' could not complete the upload due to concurrent gallery updates. Please retry.");
             }
         }
 
-        throw new RoomPhotoQuotaExceededException(
-            $"Room '{normalizedRoomId}' could not complete the upload due to concurrent gallery updates.");
+        throw new ConcurrencyConflictException(
+            $"Room '{normalizedRoomId}' could not complete the upload due to concurrent gallery updates. Please retry.");
     }
 
     public async Task<IReadOnlyList<RoomPhoto>> ReorderAsync(
@@ -262,9 +268,15 @@ public sealed class CosmosRoomPhotoRepository : IRoomPhotoRepository
                     .Select(d => d.ToDomain())
                     .ToList();
             }
-            catch (CosmosException ex) when (IsRetryableConcurrencyStatus(ex.StatusCode) && attempt < MaxConcurrencyRetries)
+            catch (CosmosException ex) when (IsRetryableConcurrencyStatus(ex.StatusCode))
             {
-                continue;
+                if (attempt < MaxConcurrencyRetries)
+                {
+                    continue;
+                }
+
+                throw new ConcurrencyConflictException(
+                    $"Room '{normalizedRoomId}' gallery could not be reordered due to concurrent updates. Please retry.");
             }
         }
 
@@ -295,6 +307,16 @@ public sealed class CosmosRoomPhotoRepository : IRoomPhotoRepository
             var targetDoc = existingDocs.FirstOrDefault(d => string.Equals(d.Id, normalizedPhotoId, StringComparison.Ordinal));
             if (targetDoc is null)
             {
+                // If the photo is already marked pending deletion (IsDeleted == true), return it so
+                // retrying DELETE can complete R2 object cleanup and hard-delete the tombstone.
+                var rawDoc = await _dbContext.RoomPhotos.ReadItemAsync(normalizedPhotoId, normalizedRoomId, cancellationToken);
+                if (rawDoc is not null &&
+                    rawDoc.IsDeleted &&
+                    !string.Equals(rawDoc.DocumentType, RoomPhotoDocument.GalleryStateDocumentType, StringComparison.OrdinalIgnoreCase))
+                {
+                    return rawDoc.ToDomain();
+                }
+
                 return null;
             }
 
@@ -355,14 +377,20 @@ public sealed class CosmosRoomPhotoRepository : IRoomPhotoRepository
                 await _dbContext.RoomPhotos.ExecuteTransactionalBatchAsync(normalizedRoomId, batch, cancellationToken);
                 return targetSnapshot;
             }
-            catch (CosmosException ex) when (IsRetryableConcurrencyStatus(ex.StatusCode) && attempt < MaxConcurrencyRetries)
+            catch (CosmosException ex) when (IsRetryableConcurrencyStatus(ex.StatusCode))
             {
-                continue;
+                if (attempt < MaxConcurrencyRetries)
+                {
+                    continue;
+                }
+
+                throw new ConcurrencyConflictException(
+                    $"Photo '{normalizedPhotoId}' in room '{normalizedRoomId}' could not be deleted due to concurrent updates. Please retry.");
             }
         }
 
         throw new ConcurrencyConflictException(
-            $"Photo '{normalizedPhotoId}' in room '{normalizedRoomId}' could not be deleted due to concurrent updates.");
+            $"Photo '{normalizedPhotoId}' in room '{normalizedRoomId}' could not be deleted due to concurrent updates. Please retry.");
     }
 
     public async Task<IReadOnlyList<RoomPhoto>> GetPendingDeletionAsync(

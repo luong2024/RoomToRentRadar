@@ -87,9 +87,9 @@ public sealed class SkiaImageCompressionService : IImageCompressionService
         var info = new SKImageInfo(decodedWidth, decodedHeight, SKColorType.Rgba8888, SKAlphaType.Premul);
         using var decodedBitmap = new SKBitmap(info);
         var decodeResult = codec.GetPixels(decodedBitmap.Info, decodedBitmap.GetPixels());
-        if (decodeResult != SKCodecResult.Success && decodeResult != SKCodecResult.IncompleteInput)
+        if (decodeResult != SKCodecResult.Success)
         {
-            throw new InvalidRoomPhotoException("Unable to decode image pixels.");
+            throw new InvalidRoomPhotoException("Unable to decode image pixels completely. The image file may be truncated or corrupted.");
         }
 
         using var orientedBitmap = ApplyExifOrientation(decodedBitmap, origin);
