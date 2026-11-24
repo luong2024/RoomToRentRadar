@@ -70,7 +70,7 @@ public sealed class LandlordListingsController : ControllerBase
         return NoContent();
     }
 
-    private static ListingWriteRequest ToCommand(ListingFormRequest request, IReadOnlyList<string> retainedUrls)
+    private static ListingWriteRequest ToCommand(ListingFormRequest request, IReadOnlyList<string>? retainedUrls)
     {
         var photos = request.Photos.Select(file => new ListingImageUpload(
             file.OpenReadStream,

@@ -133,6 +133,27 @@ public sealed class LandlordListingsIntegrationTests
     }
 
     [Test]
+    public async Task UpdateListing_OmittedRetainImageField_PreservesExistingGallery()
+    {
+        var landlord = await RegisterAndLoginAsync("LANDLORD");
+        var created = await CreateListingAsync(landlord.AccessToken);
+        using var form = CreateForm(0, "Updated without changing images");
+        using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/landlord/listings/{created.ListingId}") { Content = form };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", landlord.AccessToken);
+
+        var response = await _client.SendAsync(request);
+        var updated = await response.Content.ReadFromJsonAsync<ListingWriteResponse>();
+        var saved = await _factory.RoomRepository.GetByIdAsync(created.ListingId);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(updated!.ImageUrls, Is.EqualTo(created.ImageUrls));
+            Assert.That(saved!.Title, Is.EqualTo("Updated without changing images"));
+        });
+    }
+
+    [Test]
     public async Task UnpublishListing_OwnerRequest_PreservesImagesAndRemovesListingFromPublicSearch()
     {
         var landlord = await RegisterAndLoginAsync("LANDLORD");
@@ -198,10 +219,10 @@ public sealed class LandlordListingsIntegrationTests
         return (await response.Content.ReadFromJsonAsync<ListingWriteResponse>())!;
     }
 
-    private static MultipartFormDataContent CreateForm(int photoCount)
+    private static MultipartFormDataContent CreateForm(int photoCount, string title = "Integration listing")
     {
         var content = new MultipartFormDataContent();
-        content.Add(new StringContent("Integration listing"), "title");
+        content.Add(new StringContent(title), "title");
         content.Add(new StringContent("1 Test Street"), "address");
         content.Add(new StringContent("2500000"), "monthlyRentVnd");
         content.Add(new StringContent("0"), "depositVnd");

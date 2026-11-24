@@ -127,6 +127,23 @@ public sealed class ListingUseCasesTests
     }
 
     [Test]
+    public async Task UpdateListing_WhenRetainImageFieldIsOmitted_KeepsExistingGallery()
+    {
+        var listing = ExistingListing(OwnerId, ["one", "two", "three"]);
+        await _repository.CreateAsync(listing);
+
+        var result = await new UpdateListingUseCase(_repository, _storage).ExecuteAsync(
+            OwnerId, listing.Id, ValidRequest(0));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.ImageUrls, Is.EqualTo(new[] { "one", "two", "three" }));
+            Assert.That(_storage.StoredUrls, Is.Empty);
+            Assert.That(_storage.DeletedUrls, Is.Empty);
+        });
+    }
+
+    [Test]
     public async Task UpdateListing_AnotherLandlordCannotModifyListing()
     {
         var listing = ExistingListing(OwnerId, ["one", "two", "three"]);

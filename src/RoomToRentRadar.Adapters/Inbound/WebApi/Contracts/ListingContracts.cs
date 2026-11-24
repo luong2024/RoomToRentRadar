@@ -10,7 +10,7 @@ public sealed class ListingFormRequest
     public string? RoomType { get; set; }
     public string? Description { get; set; }
     public List<Microsoft.AspNetCore.Http.IFormFile> Photos { get; set; } = [];
-    public List<string> ImageUrlsToRetain { get; set; } = [];
+    public List<string>? ImageUrlsToRetain { get; set; }
 }
 
 public sealed record ListingWriteResponse(
