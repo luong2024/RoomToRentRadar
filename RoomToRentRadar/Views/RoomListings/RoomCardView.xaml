@@ -99,50 +99,38 @@
                         </Border>
 
                         <!-- Favorite Heart Button (44x44 Touch Target) -->
-                        <Border
+                        <Button
                             Grid.Column="2"
                             Padding="0"
+                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:RoomListingsViewModel}}, Path=ToggleFavoriteCommand, x:DataType=vm:RoomListingsViewModel}"
+                            CommandParameter="{Binding .}"
+                            BorderColor="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
                             BackgroundColor="{AppThemeBinding Light={StaticResource FavoriteButtonBg}, Dark={StaticResource FavoriteButtonBgDark}}"
                             HeightRequest="44"
                             HorizontalOptions="End"
                             MinimumHeightRequest="44"
                             MinimumWidthRequest="44"
-                            SemanticProperties.Description="Favorite room"
-                            Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
-                            StrokeShape="RoundRectangle 22"
-                            StrokeThickness="1"
+                            IsEnabled="{Binding CanToggleFavorite}"
+                            FontFamily="{x:Static f:FluentUI.FontFamily}"
+                            FontSize="20"
+                            SemanticProperties.Description="{Binding FavoriteAccessibilityText}"
+                            Text="{x:Static f:FluentUI.heart_20_regular}"
+                            TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                            CornerRadius="22"
+                            BorderWidth="1"
                             VerticalOptions="Start"
                             WidthRequest="44">
-                            <Border.Triggers>
+                            <Button.Triggers>
                                 <DataTrigger
                                     Binding="{Binding IsFavorite}"
-                                    TargetType="Border"
+                                    TargetType="Button"
                                     Value="True">
                                     <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource FavoriteButtonActiveBg}, Dark={StaticResource FavoriteButtonActiveBgDark}}" />
-                                    <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource FavoriteHeartActive}, Dark={StaticResource FavoriteHeartActiveDark}}" />
+                                    <Setter Property="BorderColor" Value="{AppThemeBinding Light={StaticResource FavoriteHeartActive}, Dark={StaticResource FavoriteHeartActiveDark}}" />
+                                    <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource FavoriteHeartActive}, Dark={StaticResource FavoriteHeartActiveDark}}" />
                                 </DataTrigger>
-                            </Border.Triggers>
-                            <Border.GestureRecognizers>
-                                <TapGestureRecognizer Command="{Binding ToggleFavoriteCommand}" />
-                            </Border.GestureRecognizers>
-
-                            <Label
-                                FontFamily="{x:Static f:FluentUI.FontFamily}"
-                                FontSize="20"
-                                HorizontalOptions="Center"
-                                Text="{x:Static f:FluentUI.heart_20_regular}"
-                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
-                                VerticalOptions="Center">
-                                <Label.Triggers>
-                                    <DataTrigger
-                                        Binding="{Binding IsFavorite}"
-                                        TargetType="Label"
-                                        Value="True">
-                                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource FavoriteHeartActive}, Dark={StaticResource FavoriteHeartActiveDark}}" />
-                                    </DataTrigger>
-                                </Label.Triggers>
-                            </Label>
-                        </Border>
+                            </Button.Triggers>
+                        </Button>
                     </Grid>
 
                     <!-- Bottom Overlay: Subtle Distance Pill -->

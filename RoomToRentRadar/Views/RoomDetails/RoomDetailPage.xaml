@@ -380,6 +380,31 @@
                                 </VerticalStackLayout>
                             </Grid>
 
+                            <Button
+                                BackgroundColor="{AppThemeBinding Light={StaticResource FavoriteButtonBg}, Dark={StaticResource FavoriteButtonBgDark}}"
+                                BorderColor="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                BorderWidth="1"
+                                Command="{Binding ToggleFavoriteCommand}"
+                                CornerRadius="14"
+                                IsEnabled="{Binding CanToggleFavorite}"
+                                MinimumHeightRequest="48"
+                                SemanticProperties.Description="{Binding FavoriteAccessibilityText}"
+                                Text="Save to favorites"
+                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}">
+                                <Button.Triggers>
+                                    <DataTrigger Binding="{Binding IsFavorite}" TargetType="Button" Value="True">
+                                        <Setter Property="Text" Value="Remove from favorites" />
+                                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource FavoriteHeartActive}, Dark={StaticResource FavoriteHeartActiveDark}}" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+
+                            <Label
+                                FontSize="12"
+                                IsVisible="{Binding HasFavoriteError}"
+                                Text="{Binding FavoriteErrorMessage}"
+                                TextColor="{AppThemeBinding Light={StaticResource AccentHighlight}, Dark={StaticResource AccentHighlightDark}}" />
+
                             <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" />
 
                             <!-- Quick Specs Grid (only fields supplied by RoomDetailModel) -->

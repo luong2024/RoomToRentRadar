@@ -26,6 +26,8 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
     private readonly IRoomListingsService _roomListingsService;
     private readonly IErrorHandler _errorHandler;
     private readonly IAuthenticationSessionService? _sessionService;
+    private readonly IFavouritesService? _favouritesService;
+    private readonly IFavoriteFeedbackService? _favoriteFeedbackService;
     private readonly Func<string, Task>? _navigateAsync;
     private readonly Dictionary<string, RoomListItemModel> _favoriteRoomsById = new(StringComparer.Ordinal);
     private readonly List<RoomListItemModel> _exploreSnapshot = [];
@@ -33,6 +35,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
     private string? _lastErrorResourceKey;
     private bool _isInitialized;
     private bool _suppressAutoSortReload;
+    private bool _favoritesLoaded;
 
     [ObservableProperty]
     public partial bool IsLandlord { get; set; }
@@ -50,6 +53,17 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         IErrorHandler errorHandler,
         IAuthenticationSessionService? sessionService,
         Func<string, Task>? navigateAsync = null)
+        : this(roomListingsService, errorHandler, sessionService, null, null, navigateAsync)
+    {
+    }
+
+    public RoomListingsViewModel(
+        IRoomListingsService roomListingsService,
+        IErrorHandler errorHandler,
+        IAuthenticationSessionService? sessionService,
+        IFavouritesService? favouritesService,
+        IFavoriteFeedbackService? favoriteFeedbackService = null,
+        Func<string, Task>? navigateAsync = null)
         : base(roomListingsService)
     {
         ArgumentNullException.ThrowIfNull(roomListingsService);
@@ -58,6 +72,8 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         _roomListingsService = roomListingsService;
         _errorHandler = errorHandler;
         _sessionService = sessionService;
+        _favouritesService = favouritesService;
+        _favoriteFeedbackService = favoriteFeedbackService;
         _navigateAsync = navigateAsync;
         SortOptions = RoomSortOptionItem.CreateDefaults();
         PrimarySortOptions = SortOptions
@@ -91,6 +107,18 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
     {
         IsLandlord = string.Equals(user?.Role, UserRoleConstants.Landlord, StringComparison.OrdinalIgnoreCase)
                      || string.Equals(user?.Role, UserRoleConstants.Admin, StringComparison.OrdinalIgnoreCase);
+        _favoritesLoaded = false;
+        _favoriteRoomsById.Clear();
+        foreach (var room in _exploreSnapshot)
+        {
+            room.IsFavorite = false;
+        }
+        if (IsFavoritesTabSelected)
+        {
+            Rooms.Clear();
+        }
+        OnPropertyChanged(nameof(FavoriteCount));
+        OnPropertyChanged(nameof(HasFavorites));
     }
 
     private void UpdateLandlordStatus()
@@ -156,11 +184,12 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
     [ObservableProperty]
     public partial bool HasCompletedInitialLoad { get; set; }
 
-    public bool ShowLoadingState => IsLoading && Rooms.Count == 0;
+    public bool ShowLoadingState => (IsLoading && Rooms.Count == 0) || (IsFavoritesTabSelected && IsLoadingFavorites && Rooms.Count == 0);
 
-    public bool ShowErrorState => !IsLoading && HasError && Rooms.Count == 0;
+    public bool ShowErrorState => (!IsLoading && HasError && Rooms.Count == 0)
+        || (IsFavoritesTabSelected && !IsLoadingFavorites && Rooms.Count == 0 && !string.IsNullOrEmpty(FavoriteErrorMessage));
 
-    public bool ShowEmptyState => !IsLoading && !HasError && HasCompletedInitialLoad && Rooms.Count == 0;
+    public bool ShowEmptyState => !IsLoading && !IsLoadingFavorites && !HasError && string.IsNullOrEmpty(FavoriteErrorMessage) && HasCompletedInitialLoad && Rooms.Count == 0;
 
     public bool ShowContentState => !IsLoading && !HasError && Rooms.Count > 0;
 
@@ -181,6 +210,12 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
 
     [ObservableProperty]
     public partial string EmptyStateMessage { get; set; } = "No matching rooms found.";
+
+    [ObservableProperty]
+    public partial bool IsLoadingFavorites { get; set; }
+
+    [ObservableProperty]
+    public partial string FavoriteErrorMessage { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial string SearchQuery { get; set; } = string.Empty;
@@ -282,6 +317,17 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
 
     partial void OnIsLoadingChanged(bool value) => NotifyStateProperties();
 
+    partial void OnIsLoadingFavoritesChanged(bool value) => NotifyStateProperties();
+
+    partial void OnFavoriteErrorMessageChanged(string value)
+    {
+        if (IsFavoritesTabSelected && !string.IsNullOrWhiteSpace(value))
+        {
+            ErrorMessage = value;
+        }
+        NotifyStateProperties();
+    }
+
     partial void OnHasErrorChanged(bool value) => NotifyStateProperties();
 
     partial void OnHasCompletedInitialLoadChanged(bool value)
@@ -378,15 +424,48 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         IsPriceMenuOpen = false;
     }
 
-    [RelayCommand]
-    public void ToggleFavorite(RoomListItemModel? room)
+    [RelayCommand(AllowConcurrentExecutions = false)]
+    public async Task ToggleFavorite(RoomListItemModel? room)
     {
-        if (room is null)
+        if (room is null || room.IsFavoriteBusy || _favouritesService is null)
         {
             return;
         }
 
-        room.ToggleFavorite();
+        if (_sessionService?.IsAuthenticated != true)
+        {
+            FavoriteErrorMessage = "Sign in to save favorite rooms.";
+            await ShowFavoriteMessageAsync(FavoriteErrorMessage);
+            return;
+        }
+
+        var wasFavorite = room.IsFavorite;
+        room.IsFavoriteBusy = true;
+        FavoriteErrorMessage = string.Empty;
+        try
+        {
+            if (wasFavorite)
+            {
+                await _favouritesService.RemoveFavouriteAsync(room.Id);
+                ApplyFavoriteState(room, false);
+                await ShowUndoSnackbarAsync(room);
+            }
+            else
+            {
+                await _favouritesService.AddFavouriteAsync(room.Id);
+                ApplyFavoriteState(room, true);
+            }
+        }
+        catch (Exception ex)
+        {
+            FavoriteErrorMessage = "Unable to update favorites. Please try again.";
+            await ShowFavoriteMessageAsync(FavoriteErrorMessage);
+            _errorHandler.HandleError(ex);
+        }
+        finally
+        {
+            room.IsFavoriteBusy = false;
+        }
     }
 
     [RelayCommand]
@@ -407,7 +486,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
     }
 
     [RelayCommand]
-    public void SelectBottomTab(string? tabKey)
+    public async Task SelectBottomTab(string? tabKey)
     {
         var normalized = string.IsNullOrWhiteSpace(tabKey) ? "explore" : tabKey.Trim().ToLowerInvariant();
         if (string.Equals(SelectedBottomTab, normalized, StringComparison.OrdinalIgnoreCase))
@@ -433,6 +512,10 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         else if (normalized == "favorites")
         {
             Rooms.Clear();
+            if (!_favoritesLoaded)
+            {
+                await LoadFavoritesAsync();
+            }
             foreach (var fav in _favoriteRoomsById.Values)
             {
                 Rooms.Add(fav);
@@ -454,6 +537,148 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         }
     }
 
+    public async Task RefreshFavoritesAsync()
+    {
+        if (_sessionService?.IsAuthenticated == true && _favouritesService is not null)
+        {
+            await LoadFavoritesAsync();
+            if (IsFavoritesTabSelected)
+            {
+                PopulateFavoritesTab();
+            }
+        }
+    }
+
+    private async Task LoadFavoritesAsync()
+    {
+        if (_favouritesService is null || _sessionService?.IsAuthenticated != true)
+        {
+            _favoriteRoomsById.Clear();
+            _favoritesLoaded = true;
+            return;
+        }
+
+        IsLoadingFavorites = true;
+        FavoriteErrorMessage = string.Empty;
+        try
+        {
+            var favourites = await _favouritesService.GetMyFavouritesAsync();
+            _favoriteRoomsById.Clear();
+            foreach (var favourite in favourites)
+            {
+                var room = _exploreSnapshot.FirstOrDefault(item => string.Equals(item.Id, favourite.Id, StringComparison.Ordinal)) ?? favourite;
+                room.IsFavorite = true;
+                room.PropertyChanged -= OnRoomItemPropertyChanged;
+                room.PropertyChanged += OnRoomItemPropertyChanged;
+                _favoriteRoomsById[room.Id] = room;
+            }
+            _favoritesLoaded = true;
+            FavoriteErrorMessage = string.Empty;
+            OnPropertyChanged(nameof(FavoriteCount));
+            OnPropertyChanged(nameof(HasFavorites));
+        }
+        catch (Exception ex)
+        {
+            FavoriteErrorMessage = "Unable to load favorite rooms. Please try again.";
+            _errorHandler.HandleError(ex);
+        }
+        finally
+        {
+            IsLoadingFavorites = false;
+        }
+    }
+
+    private void PopulateFavoritesTab()
+    {
+        Rooms.Clear();
+        foreach (var favourite in _favoriteRoomsById.Values)
+        {
+            Rooms.Add(favourite);
+        }
+        EmptyStateMessage = Rooms.Count == 0
+            ? "No favorite rooms yet. Tap the heart icon on any room card to save it!"
+            : string.Empty;
+    }
+
+    private void ApplyFavoriteState(RoomListItemModel room, bool isFavorite)
+    {
+        var matchingRooms = _exploreSnapshot
+            .Where(item => string.Equals(item.Id, room.Id, StringComparison.Ordinal))
+            .Append(room)
+            .Distinct()
+            .ToArray();
+        foreach (var matchingRoom in matchingRooms)
+        {
+            matchingRoom.PropertyChanged -= OnRoomItemPropertyChanged;
+            matchingRoom.IsFavorite = isFavorite;
+            matchingRoom.PropertyChanged += OnRoomItemPropertyChanged;
+        }
+        if (isFavorite)
+        {
+            _favoriteRoomsById[room.Id] = matchingRooms.FirstOrDefault(_exploreSnapshot.Contains) ?? room;
+        }
+        else
+        {
+            _favoriteRoomsById.Remove(room.Id);
+            if (IsFavoritesTabSelected)
+            {
+                Rooms.Remove(room);
+                EmptyStateMessage = Rooms.Count == 0
+                    ? "No favorite rooms yet. Tap the heart icon on any room card to save it!"
+                    : string.Empty;
+            }
+        }
+        OnPropertyChanged(nameof(FavoriteCount));
+        OnPropertyChanged(nameof(HasFavorites));
+    }
+
+    private async Task ShowUndoSnackbarAsync(RoomListItemModel room)
+    {
+        if (_favoriteFeedbackService is not null)
+        {
+            await _favoriteFeedbackService.ShowUndoAsync(
+                $"Removed {room.Title} from favorites",
+                "Undo",
+                () => RestoreFavouriteAsync(room));
+        }
+    }
+
+    private async Task RestoreFavouriteAsync(RoomListItemModel room)
+    {
+        if (_favouritesService is null || _sessionService?.IsAuthenticated != true || room.IsFavoriteBusy)
+        {
+            return;
+        }
+        room.IsFavoriteBusy = true;
+        try
+        {
+            await _favouritesService.AddFavouriteAsync(room.Id);
+            ApplyFavoriteState(room, true);
+            if (IsFavoritesTabSelected && !Rooms.Contains(room))
+            {
+                Rooms.Add(room);
+            }
+        }
+        catch (Exception ex)
+        {
+            FavoriteErrorMessage = "Unable to restore this favorite. Please try again.";
+            await ShowFavoriteMessageAsync(FavoriteErrorMessage);
+            _errorHandler.HandleError(ex);
+        }
+        finally
+        {
+            room.IsFavoriteBusy = false;
+        }
+    }
+
+    private async Task ShowFavoriteMessageAsync(string message)
+    {
+        if (_favoriteFeedbackService is not null)
+        {
+            await _favoriteFeedbackService.ShowMessageAsync(message);
+        }
+    }
+
     [RelayCommand]
     public void OpenMenu()
     {
@@ -472,9 +697,9 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
     }
 
     [RelayCommand]
-    public void OpenProfile()
+    public async Task OpenProfile()
     {
-        SelectBottomTab("profile");
+        await SelectBottomTab("profile");
     }
 
     [RelayCommand]
@@ -507,18 +732,26 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
 
         if (_isInitialized)
         {
+            await RefreshFavoritesAsync();
             return;
         }
 
         _isInitialized = true;
         await LoadFirstPageAsync(isPullToRefresh: false);
+        await RefreshFavoritesAsync();
     }
 
     [RelayCommand]
-    public Task RetryAsync()
+    public async Task RetryAsync()
     {
         _isInitialized = true;
-        return LoadFirstPageAsync(isPullToRefresh: false);
+        if (IsFavoritesTabSelected)
+        {
+            await RefreshFavoritesAsync();
+            PopulateFavoritesTab();
+            return;
+        }
+        await LoadFirstPageAsync(isPullToRefresh: false);
     }
 
     protected override Task ExecuteSearchAsync()

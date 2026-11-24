@@ -4,6 +4,7 @@ using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Models.RoomDetails;
 using RoomToRentRadar.Services.RoomDetails;
+using RoomToRentRadar.Services.RoomListings;
 
 namespace RoomToRentRadar.ViewModels.RoomDetails;
 
@@ -14,6 +15,8 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     private readonly IAuthenticationSessionService _sessionService;
     private readonly Func<string, Task>? _navigateAsync;
     private readonly Func<string, string, string, string?, Task<bool>>? _displayAlertAsync;
+    private readonly IFavouritesService? _favouritesService;
+    private readonly IFavoriteFeedbackService? _favoriteFeedbackService;
     private CancellationTokenSource? _loadCts;
 
     [ObservableProperty]
@@ -33,6 +36,23 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
 
     [ObservableProperty]
     public partial string RoomId { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool IsFavorite { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsFavoriteBusy { get; set; }
+
+    [ObservableProperty]
+    public partial string FavoriteErrorMessage { get; set; } = string.Empty;
+
+    public bool CanToggleFavorite => !IsFavoriteBusy;
+    public bool HasFavoriteError => !string.IsNullOrWhiteSpace(FavoriteErrorMessage);
+    public string FavoriteAccessibilityText => IsFavorite ? "Remove room from favorites" : "Add room to favorites";
+
+    partial void OnIsFavoriteChanged(bool value) => OnPropertyChanged(nameof(FavoriteAccessibilityText));
+    partial void OnIsFavoriteBusyChanged(bool value) => OnPropertyChanged(nameof(CanToggleFavorite));
+    partial void OnFavoriteErrorMessageChanged(string value) => OnPropertyChanged(nameof(HasFavoriteError));
 
     [ObservableProperty]
     public partial RoomDetailModel? Room { get; set; }
@@ -69,13 +89,17 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         IErrorHandler errorHandler,
         IAuthenticationSessionService sessionService,
         Func<string, Task>? navigateAsync = null,
-        Func<string, string, string, string?, Task<bool>>? displayAlertAsync = null)
+        Func<string, string, string, string?, Task<bool>>? displayAlertAsync = null,
+        IFavouritesService? favouritesService = null,
+        IFavoriteFeedbackService? favoriteFeedbackService = null)
     {
         _roomDetailService = roomDetailService ?? throw new ArgumentNullException(nameof(roomDetailService));
         _errorHandler = errorHandler ?? throw new ArgumentNullException(nameof(errorHandler));
         _sessionService = sessionService ?? throw new ArgumentNullException(nameof(sessionService));
         _navigateAsync = navigateAsync;
         _displayAlertAsync = displayAlertAsync;
+        _favouritesService = favouritesService;
+        _favoriteFeedbackService = favoriteFeedbackService;
     }
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
@@ -156,6 +180,20 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
 
             Room = room;
             Title = room.Title;
+            IsFavorite = false;
+            FavoriteErrorMessage = string.Empty;
+            if (_sessionService.IsAuthenticated && _favouritesService is not null)
+            {
+                try
+                {
+                    IsFavorite = (await _favouritesService.GetMyFavouriteIdsAsync(token)).Contains(roomId);
+                }
+                catch (Exception ex)
+                {
+                    FavoriteErrorMessage = "Unable to load favorite status.";
+                    _errorHandler.HandleError(ex);
+                }
+            }
             IsNotFound = false;
             HasLoadError = false;
 
@@ -191,6 +229,75 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
             }
 
             currentCts.Dispose();
+        }
+    }
+
+    [RelayCommand(AllowConcurrentExecutions = false)]
+    public async Task ToggleFavoriteAsync()
+    {
+        if (Room is null || IsFavoriteBusy || _favouritesService is null)
+        {
+            return;
+        }
+        if (!_sessionService.IsAuthenticated)
+        {
+            StatusMessage = "Sign in to save favorite rooms.";
+            return;
+        }
+        IsFavoriteBusy = true;
+        try
+        {
+            if (IsFavorite)
+            {
+                await _favouritesService.RemoveFavouriteAsync(Room.Id);
+                IsFavorite = false;
+                if (_favoriteFeedbackService is not null)
+                {
+                    var removedRoom = Room;
+                    await _favoriteFeedbackService.ShowUndoAsync(
+                        $"Removed {removedRoom.Title} from favorites",
+                        "Undo",
+                        () => RestoreFavouriteAsync(removedRoom.Id));
+                }
+            }
+            else
+            {
+                await _favouritesService.AddFavouriteAsync(Room.Id);
+                IsFavorite = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Unable to update favorites. Please try again.";
+            _errorHandler.HandleError(ex);
+        }
+        finally
+        {
+            IsFavoriteBusy = false;
+        }
+    }
+
+    private async Task RestoreFavouriteAsync(string roomId)
+    {
+        if (_favouritesService is null || !_sessionService.IsAuthenticated || IsFavoriteBusy)
+        {
+            return;
+        }
+        IsFavoriteBusy = true;
+        try
+        {
+            await _favouritesService.AddFavouriteAsync(roomId);
+            IsFavorite = true;
+            FavoriteErrorMessage = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            FavoriteErrorMessage = "Unable to restore this favorite. Please try again.";
+            _errorHandler.HandleError(ex);
+        }
+        finally
+        {
+            IsFavoriteBusy = false;
         }
     }
 
