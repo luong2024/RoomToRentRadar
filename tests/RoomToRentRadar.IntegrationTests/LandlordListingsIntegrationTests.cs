@@ -154,6 +154,30 @@ public sealed class LandlordListingsIntegrationTests
     }
 
     [Test]
+    public async Task UpdateListing_ExplicitReplaceGallery_SavesOnlyNewPhotos()
+    {
+        var landlord = await RegisterAndLoginAsync("LANDLORD");
+        var created = await CreateListingAsync(landlord.AccessToken);
+        using var form = CreateForm(3);
+        form.Add(new StringContent("true"), "replaceGallery");
+        using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/landlord/listings/{created.ListingId}") { Content = form };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", landlord.AccessToken);
+
+        using var response = await _client.SendAsync(request);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var updated = await response.Content.ReadFromJsonAsync<ListingWriteResponse>();
+        var saved = await _factory.RoomRepository.GetByIdAsync(created.ListingId);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(updated!.ImageUrls, Has.Count.EqualTo(3));
+            Assert.That(updated.ImageUrls.Intersect(created.ImageUrls), Is.Empty);
+            Assert.That(saved!.ImageUrls, Is.EqualTo(updated.ImageUrls));
+            Assert.That(_factory.ListingImageStorage.DeletedUrls, Is.EquivalentTo(created.ImageUrls));
+        });
+    }
+
+    [Test]
     public async Task UnpublishListing_OwnerRequest_PreservesImagesAndRemovesListingFromPublicSearch()
     {
         var landlord = await RegisterAndLoginAsync("LANDLORD");

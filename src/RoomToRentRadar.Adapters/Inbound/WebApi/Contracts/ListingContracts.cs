@@ -11,6 +11,8 @@ public sealed class ListingFormRequest
     public string? Description { get; set; }
     public List<Microsoft.AspNetCore.Http.IFormFile> Photos { get; set; } = [];
     public List<string>? ImageUrlsToRetain { get; set; }
+    /// <summary>On update, replace all existing photos with the uploaded photos.</summary>
+    public bool ReplaceGallery { get; set; }
 }
 
 public sealed record ListingWriteResponse(

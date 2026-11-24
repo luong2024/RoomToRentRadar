@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using RoomToRentRadar.Adapters.Inbound.WebApi.Authorization;
 using RoomToRentRadar.Adapters.Inbound.WebApi.Contracts;
+using RoomToRentRadar.Application.Exceptions;
 using RoomToRentRadar.Application.Ports.Inbound;
 
 [ApiController]
@@ -57,7 +58,13 @@ public sealed class LandlordListingsController : ControllerBase
     public async Task<IActionResult> Update(string listingId, [FromForm] ListingFormRequest request, CancellationToken cancellationToken)
     {
         if (!TryGetLandlordId(out var ownerId)) return Unauthorized();
-        var result = await _updateListing.ExecuteAsync(ownerId, listingId, ToCommand(request, request.ImageUrlsToRetain), cancellationToken);
+        if (request.ReplaceGallery && request.ImageUrlsToRetain is { Count: > 0 })
+        {
+            throw new RequestValidationException("imageUrlsToRetain", "Do not send retained images when replacing the gallery.");
+        }
+
+        IReadOnlyList<string>? retainedUrls = request.ReplaceGallery ? [] : request.ImageUrlsToRetain;
+        var result = await _updateListing.ExecuteAsync(ownerId, listingId, ToCommand(request, retainedUrls), cancellationToken);
         return Ok(new ListingWriteResponse(result.ListingId, result.ListingId, result.Status, result.ImageUrls));
     }
 
