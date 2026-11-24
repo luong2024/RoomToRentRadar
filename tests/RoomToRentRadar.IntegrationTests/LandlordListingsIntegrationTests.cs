@@ -99,13 +99,13 @@ public sealed class LandlordListingsIntegrationTests
     }
 
     [Test]
-    public async Task CreateListing_ThreeTenMebibytePhotos_FitsConfiguredMultipartLimit()
+    public async Task CreateListing_FiveNineMebibytePhotos_ExceedsFormerLimitAndFitsConfiguredMultipartLimit()
     {
         var landlord = await RegisterAndLoginAsync("LANDLORD");
         using var form = CreateForm(0);
-        for (var i = 0; i < 3; i++)
+        for (var i = 0; i < 5; i++)
         {
-            var photo = new ByteArrayContent(new byte[10 * 1024 * 1024]);
+            var photo = new ByteArrayContent(new byte[9 * 1024 * 1024]);
             photo.Headers.ContentType = new MediaTypeHeaderValue("image/png");
             form.Add(photo, "photos", $"large-{i}.png");
         }

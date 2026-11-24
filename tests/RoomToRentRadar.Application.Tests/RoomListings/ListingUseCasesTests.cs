@@ -104,6 +104,14 @@ public sealed class ListingUseCasesTests
     }
 
     [Test]
+    public void CreateListing_MoreThanTwentyPhotos_IsRejectedBeforeStorage()
+    {
+        Assert.ThrowsAsync<RequestValidationException>(async () =>
+            await new CreateListingUseCase(_repository, _storage).ExecuteAsync(OwnerId, ValidRequest(21)));
+        Assert.That(_storage.StoredUrls, Is.Empty);
+    }
+
+    [Test]
     public async Task UpdateListing_ValidOwnerRetainsExistingImagesAndAddsPhoto()
     {
         var listing = ExistingListing(OwnerId, ["one", "two", "three"]);
@@ -141,6 +149,18 @@ public sealed class ListingUseCasesTests
             Assert.That(_storage.StoredUrls, Is.Empty);
             Assert.That(_storage.DeletedUrls, Is.Empty);
         });
+    }
+
+    [Test]
+    public async Task UpdateListing_FinalGalleryAboveTwenty_IsRejectedBeforeStorage()
+    {
+        var listing = ExistingListing(OwnerId, Enumerable.Range(0, 20).Select(i => $"image-{i}").ToList());
+        await _repository.CreateAsync(listing);
+
+        Assert.ThrowsAsync<RequestValidationException>(async () =>
+            await new UpdateListingUseCase(_repository, _storage).ExecuteAsync(
+                OwnerId, listing.Id, ValidRequest(1) with { ImageUrlsToRetain = listing.ImageUrls }));
+        Assert.That(_storage.StoredUrls, Is.Empty);
     }
 
     [Test]

@@ -35,6 +35,10 @@ public sealed class UpdateListingUseCase : IUpdateListingUseCase
         }
         var oldUrls = existing.ImageUrls.ToList();
         var finalImageCount = retained.Distinct(StringComparer.Ordinal).Count() + request.Photos.Count;
+        if (finalImageCount > ListingRequestValidator.MaxPhotoCount)
+        {
+            throw new RequestValidationException("photos", $"A listing cannot have more than {ListingRequestValidator.MaxPhotoCount} photos.");
+        }
         if (finalImageCount < 3)
         {
             throw new RequestValidationException("photos", "The listing must have at least three valid photos after the update.");

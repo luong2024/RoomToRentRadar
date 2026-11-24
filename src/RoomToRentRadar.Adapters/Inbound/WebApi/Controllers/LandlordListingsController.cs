@@ -14,7 +14,8 @@ using RoomToRentRadar.Application.Ports.Inbound;
 [Produces("application/json")]
 public sealed class LandlordListingsController : ControllerBase
 {
-    private const long MaxRequestSizeBytes = 40L * 1024 * 1024;
+    // The mobile form allows 20 images at up to 10 MiB each, plus multipart fields and boundaries.
+    private const long MaxRequestSizeBytes = 210L * 1024 * 1024;
     private readonly ICreateListingUseCase _createListing;
     private readonly IUpdateListingUseCase _updateListing;
     private readonly IUnpublishListingUseCase _unpublishListing;
