@@ -18,11 +18,13 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     private readonly IFavouritesService? _favouritesService;
     private readonly IFavoriteFeedbackService? _favoriteFeedbackService;
     private CancellationTokenSource? _loadCts;
+    private (string RoomId, long SessionEpoch, Guid? UserId)? _loadedFavoriteStatus;
 
     [ObservableProperty]
     public partial string Title { get; set; } = "Room details";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanToggleFavorite))]
     public partial bool IsBusy { get; set; }
 
     [ObservableProperty]
@@ -46,7 +48,9 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty]
     public partial string FavoriteErrorMessage { get; set; } = string.Empty;
 
-    public bool CanToggleFavorite => !IsFavoriteBusy;
+    public bool CanToggleFavorite =>
+        !IsBusy && !IsFavoriteBusy && _favouritesService is not null && Room is { } room &&
+        (!_sessionService.IsAuthenticated || HasCurrentFavoriteStatus(room.Id));
     public bool HasFavoriteError => !string.IsNullOrWhiteSpace(FavoriteErrorMessage);
     public string FavoriteAccessibilityText => IsFavorite ? "Remove room from favorites" : "Add room to favorites";
 
@@ -55,6 +59,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     partial void OnFavoriteErrorMessageChanged(string value) => OnPropertyChanged(nameof(HasFavoriteError));
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanToggleFavorite))]
     public partial RoomDetailModel? Room { get; set; }
 
     [ObservableProperty]
@@ -129,6 +134,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         var currentCts = new CancellationTokenSource();
         var previousCts = Interlocked.Exchange(ref _loadCts, currentCts);
         previousCts?.Cancel();
+        _loadedFavoriteStatus = null;
 
         if (string.IsNullOrWhiteSpace(RoomId))
         {
@@ -184,16 +190,35 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
             FavoriteErrorMessage = string.Empty;
             if (_sessionService.IsAuthenticated && _favouritesService is not null)
             {
+                var sessionEpoch = _sessionService.SessionEpoch;
+                var userId = _sessionService.CurrentUser?.Id;
                 try
                 {
                     var favouriteIds = await _favouritesService.GetMyFavouriteIdsAsync(token);
                     token.ThrowIfCancellationRequested();
-                    IsFavorite = favouriteIds.Contains(roomId);
+                    if (!ReferenceEquals(_loadCts, currentCts) || RoomId != roomId || !ReferenceEquals(Room, room))
+                    {
+                        return;
+                    }
+
+                    if (IsCurrentFavoriteSession(sessionEpoch, userId) && !HasCurrentFavoriteStatus(room.Id))
+                    {
+                        SetFavoriteStatus(room.Id, sessionEpoch, userId, favouriteIds.Contains(room.Id));
+                    }
                 }
                 catch (Exception ex) when (!token.IsCancellationRequested)
                 {
-                    FavoriteErrorMessage = "Unable to load favorite status.";
-                    _errorHandler.HandleError(ex);
+                    if (ReferenceEquals(_loadCts, currentCts) && RoomId == roomId && ReferenceEquals(Room, room) &&
+                        IsCurrentFavoriteSession(sessionEpoch, userId) && !HasCurrentFavoriteStatus(room.Id))
+                    {
+                        FavoriteErrorMessage = "Unable to load favorite status. Reopen this room to try again.";
+                        _errorHandler.HandleError(ex);
+                    }
+                }
+
+                if (_sessionService.IsAuthenticated && !IsCurrentFavoriteSession(sessionEpoch, userId) && !HasCurrentFavoriteStatus(room.Id))
+                {
+                    FavoriteErrorMessage = "Sign-in session changed. Reopen this room to load favorite status.";
                 }
             }
             IsNotFound = false;
@@ -237,7 +262,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     [RelayCommand(AllowConcurrentExecutions = false)]
     public async Task ToggleFavoriteAsync()
     {
-        if (Room is not { } room || IsFavoriteBusy || _favouritesService is null)
+        if (!CanToggleFavorite || Room is not { } room || _favouritesService is null)
         {
             return;
         }
@@ -298,6 +323,18 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         && _sessionService.SessionEpoch == sessionEpoch
         && _sessionService.CurrentUser?.Id == userId;
 
+    private bool HasCurrentFavoriteStatus(string roomId) =>
+        _loadedFavoriteStatus is { } status &&
+        status.RoomId == roomId &&
+        IsCurrentFavoriteSession(status.SessionEpoch, status.UserId);
+
+    private void SetFavoriteStatus(string roomId, long sessionEpoch, Guid? userId, bool isFavorite)
+    {
+        _loadedFavoriteStatus = (roomId, sessionEpoch, userId);
+        IsFavorite = isFavorite;
+        OnPropertyChanged(nameof(CanToggleFavorite));
+    }
+
     private async Task RestoreFavouriteAsync(RoomDetailModel room, long sessionEpoch, Guid userId)
     {
         if (_favouritesService is null || !IsCurrentFavoriteSession(sessionEpoch, userId) || IsFavoriteBusy)
@@ -315,7 +352,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
 
             if (Room?.Id == room.Id)
             {
-                IsFavorite = true;
+                SetFavoriteStatus(room.Id, sessionEpoch, userId, true);
                 FavoriteErrorMessage = string.Empty;
             }
 

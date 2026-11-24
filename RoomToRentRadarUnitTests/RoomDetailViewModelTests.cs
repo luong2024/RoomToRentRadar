@@ -78,11 +78,14 @@ public class RoomDetailViewModelTests
     {
         _sessionServiceMock.SetupGet(session => session.IsAuthenticated).Returns(true);
         var favourites = new Mock<IFavouritesService>();
+        favourites.Setup(service => service.GetMyFavouriteIdsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new HashSet<string>());
         _viewModel = new RoomDetailViewModel(_serviceMock.Object, _errorHandlerMock.Object, _sessionServiceMock.Object, favouritesService: favourites.Object)
         {
-            Room = new RoomDetailModel { Id = "room-01", Status = ListingStatus.Available }
+            RoomId = SetupFavoriteRoom()
         };
 
+        await _viewModel.LoadRoomDetailsAsync();
         await _viewModel.ToggleFavoriteCommand.ExecuteAsync(null);
 
         Assert.That(_viewModel.IsFavorite, Is.True);
@@ -99,6 +102,8 @@ public class RoomDetailViewModelTests
         _sessionServiceMock.SetupGet(session => session.IsAuthenticated).Returns(true);
         _sessionServiceMock.SetupGet(session => session.SessionEpoch).Returns(1);
         var favourites = new Mock<IFavouritesService>();
+        favourites.Setup(service => service.GetMyFavouriteIdsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new HashSet<string> { "room-01" });
         var feedback = new Mock<IFavoriteFeedbackService>();
         Func<Task>? undo = null;
         feedback.Setup(service => service.ShowUndoAsync(It.IsAny<string>(), "Undo", It.IsAny<Func<Task>>()))
@@ -108,10 +113,10 @@ public class RoomDetailViewModelTests
             _serviceMock.Object, _errorHandlerMock.Object, _sessionServiceMock.Object,
             favouritesService: favourites.Object, favoriteFeedbackService: feedback.Object)
         {
-            Room = new RoomDetailModel { Id = "room-01", Status = ListingStatus.Available },
-            IsFavorite = true
+            RoomId = SetupFavoriteRoom()
         };
 
+        await _viewModel.LoadRoomDetailsAsync();
         await _viewModel.ToggleFavoriteCommand.ExecuteAsync(null);
         favourites.Verify(service => service.RemoveFavouriteAsync("room-01", It.IsAny<CancellationToken>()), Times.Once);
         Assert.That(undo, Is.Not.Null);
@@ -157,13 +162,16 @@ public class RoomDetailViewModelTests
     {
         _sessionServiceMock.SetupGet(session => session.IsAuthenticated).Returns(true);
         var favourites = new Mock<IFavouritesService>();
+        favourites.Setup(service => service.GetMyFavouriteIdsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new HashSet<string>());
         favourites.Setup(service => service.AddFavouriteAsync("room-01", It.IsAny<CancellationToken>()))
             .ThrowsAsync(new HttpRequestException("offline"));
         _viewModel = new RoomDetailViewModel(_serviceMock.Object, _errorHandlerMock.Object, _sessionServiceMock.Object, favouritesService: favourites.Object)
         {
-            Room = new RoomDetailModel { Id = "room-01", Status = ListingStatus.Available }
+            RoomId = SetupFavoriteRoom()
         };
 
+        await _viewModel.LoadRoomDetailsAsync();
         await _viewModel.ToggleFavoriteCommand.ExecuteAsync(null);
 
         Assert.Multiple(() =>
@@ -171,6 +179,117 @@ public class RoomDetailViewModelTests
             Assert.That(_viewModel.FavoriteErrorMessage, Is.EqualTo("Unable to update favorites. Please try again."));
             Assert.That(_viewModel.HasFavoriteError, Is.True);
         });
+    }
+
+    [Test]
+    public async Task ToggleFavoriteAsync_WhileStatusIsUnknown_WaitsForServerStatusBeforeAllowingRemove()
+    {
+        _sessionServiceMock.SetupGet(session => session.IsAuthenticated).Returns(true);
+        var pendingStatus = new TaskCompletionSource<IReadOnlySet<string>>();
+        var favourites = new Mock<IFavouritesService>();
+        favourites.Setup(service => service.GetMyFavouriteIdsAsync(It.IsAny<CancellationToken>())).Returns(pendingStatus.Task);
+        _viewModel = new RoomDetailViewModel(_serviceMock.Object, _errorHandlerMock.Object, _sessionServiceMock.Object, favouritesService: favourites.Object)
+        {
+            RoomId = SetupFavoriteRoom()
+        };
+
+        var load = _viewModel.LoadRoomDetailsAsync();
+        Assert.That(_viewModel.Room, Is.Not.Null);
+        Assert.That(_viewModel.CanToggleFavorite, Is.False);
+        await _viewModel.ToggleFavoriteCommand.ExecuteAsync(null);
+        favourites.Verify(service => service.AddFavouriteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        favourites.Verify(service => service.RemoveFavouriteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        pendingStatus.SetResult(new HashSet<string> { "room-01" });
+        await load;
+        Assert.That(_viewModel.CanToggleFavorite, Is.True);
+        await _viewModel.ToggleFavoriteCommand.ExecuteAsync(null);
+
+        favourites.Verify(service => service.RemoveFavouriteAsync("room-01", It.IsAny<CancellationToken>()), Times.Once);
+        Assert.That(_viewModel.IsFavorite, Is.False);
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task ToggleFavoriteAsync_WhenStatusRequestFailsOrSessionChanges_BlocksMutation(bool sessionChanged)
+    {
+        _sessionServiceMock.SetupGet(session => session.IsAuthenticated).Returns(true);
+        _sessionServiceMock.SetupGet(session => session.SessionEpoch).Returns(1);
+        var pendingStatus = new TaskCompletionSource<IReadOnlySet<string>>();
+        var favourites = new Mock<IFavouritesService>();
+        favourites.Setup(service => service.GetMyFavouriteIdsAsync(It.IsAny<CancellationToken>())).Returns(pendingStatus.Task);
+        _viewModel = new RoomDetailViewModel(_serviceMock.Object, _errorHandlerMock.Object, _sessionServiceMock.Object, favouritesService: favourites.Object)
+        {
+            RoomId = SetupFavoriteRoom()
+        };
+
+        var load = _viewModel.LoadRoomDetailsAsync();
+        if (sessionChanged)
+        {
+            _sessionServiceMock.SetupGet(session => session.SessionEpoch).Returns(2);
+            pendingStatus.SetResult(new HashSet<string> { "room-01" });
+        }
+        else
+        {
+            pendingStatus.SetException(new HttpRequestException("offline"));
+        }
+
+        await load;
+        await _viewModel.ToggleFavoriteCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_viewModel.CanToggleFavorite, Is.False);
+            Assert.That(_viewModel.IsFavorite, Is.False);
+            Assert.That(_viewModel.HasFavoriteError, Is.True);
+        });
+        favourites.Verify(service => service.AddFavouriteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        favourites.Verify(service => service.RemoveFavouriteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Test]
+    public async Task LoadRoomDetailsAsync_WhenUndoCompletesDuringStatusLoad_KeepsRestoredFavorite()
+    {
+        var user = new AuthUser(Guid.NewGuid(), "student@example.com", UserRoleConstants.Student, "LOCAL", true);
+        _sessionServiceMock.SetupGet(session => session.CurrentUser).Returns(user);
+        _sessionServiceMock.SetupGet(session => session.IsAuthenticated).Returns(true);
+        var pendingStatus = new TaskCompletionSource<IReadOnlySet<string>>();
+        var favourites = new Mock<IFavouritesService>();
+        favourites.SetupSequence(service => service.GetMyFavouriteIdsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new HashSet<string> { "room-01" })
+            .Returns(pendingStatus.Task);
+        var feedback = new Mock<IFavoriteFeedbackService>();
+        Func<Task>? undo = null;
+        feedback.Setup(service => service.ShowUndoAsync(It.IsAny<string>(), "Undo", It.IsAny<Func<Task>>()))
+            .Callback<string, string, Func<Task>>((_, _, action) => undo = action)
+            .Returns(Task.CompletedTask);
+        _viewModel = new RoomDetailViewModel(
+            _serviceMock.Object, _errorHandlerMock.Object, _sessionServiceMock.Object,
+            favouritesService: favourites.Object, favoriteFeedbackService: feedback.Object)
+        {
+            RoomId = SetupFavoriteRoom()
+        };
+
+        await _viewModel.LoadRoomDetailsAsync();
+        await _viewModel.ToggleFavoriteCommand.ExecuteAsync(null);
+        Assert.That(undo, Is.Not.Null);
+
+        var load = _viewModel.LoadRoomDetailsAsync();
+        Assert.That(load.IsCompleted, Is.False);
+        await undo!();
+        pendingStatus.SetResult(new HashSet<string>());
+        await load;
+
+        Assert.That(_viewModel.IsFavorite, Is.True);
+        favourites.Verify(service => service.AddFavouriteAsync("room-01", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    private string SetupFavoriteRoom()
+    {
+        const string roomId = "room-01";
+        _serviceMock.Setup(service => service.GetRoomDetailAsync(roomId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RoomDetailModel { Id = roomId, Status = ListingStatus.Available });
+        return roomId;
     }
 
     [Test]

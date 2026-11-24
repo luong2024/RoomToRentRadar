@@ -180,6 +180,191 @@ public class RoomListingsViewModelTests
         Assert.That(vm.Rooms.Select(item => item.Id), Is.EqualTo(new[] { "room-1" }));
     }
 
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task LoadMoreRooms_WhenFavoritesIsSelected_DoesNotAppendExploreRooms(bool alreadyInFlight)
+    {
+        var firstPage = CreateRooms(1, 6);
+        var nextPage = new TaskCompletionSource<PagedResponse<RoomListItemModel>>();
+        _fakeService.Handler = (page, _, _, _) => page == 1
+            ? Task.FromResult(new PagedResponse<RoomListItemModel>(firstPage, 1, 6, 7))
+            : nextPage.Task;
+        var vm = CreateAuthenticatedViewModel(new FakeFavouritesService { FavouriteRooms = [CreateRoom("room-1")] });
+        await vm.InitializeAsync();
+        Assert.That(vm.HasMoreItems, Is.True);
+
+        var pending = alreadyInFlight ? vm.LoadMoreRoomsCommand.ExecuteAsync(null) : Task.CompletedTask;
+        await vm.SelectBottomTabCommand.ExecuteAsync("favorites");
+        Assert.That(vm.IsLoadingMore, Is.False);
+        nextPage.SetResult(new PagedResponse<RoomListItemModel>([CreateRoom("room-7")], 2, 6, 7));
+        await pending;
+        if (!alreadyInFlight)
+        {
+            await vm.LoadMoreRoomsCommand.ExecuteAsync(null);
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.Rooms.Select(room => room.Id), Is.EqualTo(new[] { "room-1" }));
+            Assert.That(vm.CurrentPage, Is.EqualTo(1));
+            Assert.That(vm.IsLoadingMore, Is.False);
+            Assert.That(_fakeService.CallCount, Is.EqualTo(alreadyInFlight ? 2 : 1));
+        });
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task RefreshFavorites_WhenExploreHasOlderCard_KeepsFavoriteApiDataAfterReloadAndUndo(bool removeFromExplore)
+    {
+        const string roomId = "room-1";
+        var exploreRoom = CreateRoom(roomId, price: 2_000_000m);
+        var currentFavorite = new RoomListItemModel
+        {
+            Id = roomId,
+            Title = "Updated room",
+            Address = "Updated address",
+            Price = 2_500_000m,
+            IsAvailable = false
+        };
+        _fakeService.SetupPages(1, 6, [exploreRoom]);
+        var favourites = new FakeFavouritesService { FavouriteRooms = [currentFavorite] };
+        var feedback = new FakeFavoriteFeedbackService();
+        var vm = CreateAuthenticatedViewModel(favourites, feedback);
+        await vm.InitializeAsync();
+
+        await vm.SelectBottomTabCommand.ExecuteAsync("favorites");
+        Assert.That(vm.Rooms.Single(), Is.SameAs(currentFavorite));
+        await vm.SelectBottomTabCommand.ExecuteAsync("explore");
+        await vm.RefreshRoomsCommand.ExecuteAsync(null);
+        await vm.SelectBottomTabCommand.ExecuteAsync("favorites");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.Rooms.Single().Price, Is.EqualTo(2_500_000m));
+            Assert.That(vm.Rooms.Single().IsAvailable, Is.False);
+            Assert.That(exploreRoom.IsFavorite, Is.True);
+        });
+
+        if (removeFromExplore)
+        {
+            await vm.SelectBottomTabCommand.ExecuteAsync("explore");
+        }
+        await vm.ToggleFavoriteCommand.ExecuteAsync(removeFromExplore ? exploreRoom : currentFavorite);
+        await vm.SelectBottomTabCommand.ExecuteAsync("favorites");
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.Rooms, Is.Empty);
+            Assert.That(exploreRoom.IsFavorite, Is.False);
+        });
+
+        await feedback.InvokeUndoAsync();
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.Rooms.Single(), Is.SameAs(currentFavorite));
+            Assert.That(exploreRoom.IsFavorite, Is.True);
+        });
+    }
+
+    [Test]
+    public async Task SelectExplore_WhenFavoritesLoadFailed_ShowsExploreEmptyState()
+    {
+        _fakeService.SetupPages(0, 6, []);
+        var favourites = new FakeFavouritesService
+        {
+            Handler = _ => Task.FromException<IReadOnlyList<RoomListItemModel>>(new HttpRequestException("offline"))
+        };
+        var vm = CreateAuthenticatedViewModel(favourites);
+        await vm.InitializeAsync();
+        await vm.SelectBottomTabCommand.ExecuteAsync("favorites");
+        Assert.That(vm.ShowErrorState, Is.True);
+        Assert.That(vm.ErrorMessage, Does.Contain("favorite rooms"));
+
+        await vm.SelectBottomTabCommand.ExecuteAsync("explore");
+        await vm.ApplySearchAsync("no match");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.FavoriteErrorMessage, Does.Contain("favorite rooms"));
+            Assert.That(vm.ShowEmptyState, Is.True);
+            Assert.That(vm.ShowLoadingState, Is.False);
+            Assert.That(vm.ShowErrorState, Is.False);
+            Assert.That(vm.ErrorMessage, Is.Empty);
+        });
+    }
+
+    [Test]
+    public async Task SelectFavorites_WhenExploreLoadIsPendingOrFails_KeepsFavoriteContentVisible()
+    {
+        var explorePage = new TaskCompletionSource<PagedResponse<RoomListItemModel>>();
+        _fakeService.Handler = (_, _, _, _) => explorePage.Task;
+        var vm = CreateAuthenticatedViewModel(new FakeFavouritesService { FavouriteRooms = [CreateRoom("saved-room")] });
+
+        var pendingExplore = vm.ApplySearchAsync("test");
+        await vm.SelectBottomTabCommand.ExecuteAsync("favorites");
+        Assert.That(vm.ShowContentState, Is.True);
+
+        explorePage.SetException(new HttpRequestException("offline"));
+        await pendingExplore;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.IsFavoritesTabSelected, Is.True);
+            Assert.That(vm.Rooms.Select(room => room.Id), Is.EqualTo(new[] { "saved-room" }));
+            Assert.That(vm.ShowContentState, Is.True);
+            Assert.That(vm.ShowErrorState, Is.False);
+            Assert.That(vm.ErrorMessage, Is.Empty);
+        });
+
+        await vm.SelectBottomTabCommand.ExecuteAsync("explore");
+        Assert.That(vm.ShowErrorState, Is.True);
+        Assert.That(vm.ErrorMessage, Is.Not.Empty);
+    }
+
+    [Test]
+    public async Task RefreshRooms_WhenFavoritesIsSelected_RefreshesOnlyFavoriteRooms()
+    {
+        _fakeService.SetupPages(1, 6, [CreateRoom("explore-room")]);
+        var favourites = new FakeFavouritesService { FavouriteRooms = [CreateRoom("first-favorite")] };
+        var vm = CreateAuthenticatedViewModel(favourites);
+        await vm.InitializeAsync();
+        await vm.SelectBottomTabCommand.ExecuteAsync("favorites");
+        favourites.FavouriteRooms = [CreateRoom("updated-favorite")];
+
+        await vm.RefreshRoomsCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.IsFavoritesTabSelected, Is.True);
+            Assert.That(vm.IsRefreshing, Is.False);
+            Assert.That(vm.Rooms.Select(room => room.Id), Is.EqualTo(new[] { "updated-favorite" }));
+            Assert.That(_fakeService.CallCount, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task RefreshRooms_WhenSwitchingToFavoritesDuringExploreRefresh_KeepsFavoritesVisible()
+    {
+        var refreshedPage = new TaskCompletionSource<PagedResponse<RoomListItemModel>>();
+        _fakeService.SetupPages(1, 6, [CreateRoom("initial-room")]);
+        var vm = CreateAuthenticatedViewModel(new FakeFavouritesService { FavouriteRooms = [CreateRoom("saved-room")] });
+        await vm.InitializeAsync();
+        _fakeService.Handler = (_, _, _, _) => refreshedPage.Task;
+
+        var refresh = vm.RefreshRoomsCommand.ExecuteAsync(null);
+        Assert.That(vm.IsRefreshing, Is.True);
+        await vm.SelectBottomTabCommand.ExecuteAsync("favorites");
+        Assert.That(vm.IsRefreshing, Is.False);
+
+        refreshedPage.SetResult(new PagedResponse<RoomListItemModel>([CreateRoom("updated-room")], 1, 6, 1));
+        await refresh;
+        Assert.That(vm.IsFavoritesTabSelected, Is.True);
+        Assert.That(vm.Rooms.Select(room => room.Id), Is.EqualTo(new[] { "saved-room" }));
+
+        await vm.SelectBottomTabCommand.ExecuteAsync("explore");
+        Assert.That(vm.IsRefreshing, Is.False);
+        Assert.That(vm.Rooms.Select(room => room.Id), Is.EqualTo(new[] { "updated-room" }));
+    }
+
     [Test]
     public async Task RefreshFavorites_WhenBackendNoLongerReturnsRoom_ClearsExploreCardState()
     {

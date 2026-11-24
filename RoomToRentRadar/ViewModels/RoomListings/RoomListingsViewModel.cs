@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -30,6 +29,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
     private readonly IFavoriteFeedbackService? _favoriteFeedbackService;
     private readonly Func<string, Task>? _navigateAsync;
     private readonly Dictionary<string, RoomListItemModel> _favoriteRoomsById = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _favoriteMutationsInFlight = new(StringComparer.Ordinal);
     private readonly List<RoomListItemModel> _exploreSnapshot = [];
     private CancellationTokenSource? _paginationCts;
     private CancellationTokenSource? _favoriteLoadCts;
@@ -37,7 +37,11 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
     private long _favoriteSessionGeneration;
     private long _favoriteMutationVersion;
     private string? _lastErrorResourceKey;
+    private string _exploreErrorMessage = string.Empty;
     private bool _isInitialized;
+    private bool _isLoadingMore;
+    private bool _isRefreshingExplore;
+    private bool _isRefreshingFavorites;
     private bool _suppressAutoSortReload;
     private bool _favoritesLoaded;
 
@@ -114,6 +118,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         _favoriteLoadCts = null;
         _favoritesLoadTask = null;
         IsLoadingFavorites = false;
+        FavoriteErrorMessage = string.Empty;
         IsLandlord = string.Equals(user?.Role, UserRoleConstants.Landlord, StringComparison.OrdinalIgnoreCase)
                      || string.Equals(user?.Role, UserRoleConstants.Admin, StringComparison.OrdinalIgnoreCase);
         _favoritesLoaded = false;
@@ -143,13 +148,13 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
 
         if (HasError && !string.IsNullOrEmpty(_lastErrorResourceKey))
         {
-            ErrorMessage = LocalizationResourceManager.Instance[_lastErrorResourceKey];
-            if (Rooms.Count == 0)
+            ExploreErrorMessage = LocalizationResourceManager.Instance[_lastErrorResourceKey];
+            if (IsExploreTabSelected && Rooms.Count == 0)
             {
                 EmptyStateMessage = ErrorMessage;
             }
         }
-        else if (Rooms.Count == 0)
+        else if (IsExploreTabSelected && Rooms.Count == 0)
         {
             EmptyStateMessage = LocalizationResourceManager.Instance["Empty_NoRooms"];
         }
@@ -187,26 +192,53 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
     [ObservableProperty]
     public partial bool HasError { get; set; }
 
-    [ObservableProperty]
-    public partial string ErrorMessage { get; set; } = string.Empty;
+    private string ExploreErrorMessage
+    {
+        get => _exploreErrorMessage;
+        set => SetProperty(ref _exploreErrorMessage, value, nameof(ErrorMessage));
+    }
+
+    public string ErrorMessage => IsFavoritesTabSelected ? FavoriteErrorMessage : ExploreErrorMessage;
 
     [ObservableProperty]
     public partial bool HasCompletedInitialLoad { get; set; }
 
-    public bool ShowLoadingState => (IsLoading && Rooms.Count == 0) || (IsFavoritesTabSelected && IsLoadingFavorites && Rooms.Count == 0);
+    public bool ShowLoadingState => Rooms.Count == 0 && (IsFavoritesTabSelected ? IsLoadingFavorites : IsExploreTabSelected && IsLoading);
 
-    public bool ShowErrorState => (!IsLoading && HasError && Rooms.Count == 0)
-        || (IsFavoritesTabSelected && !IsLoadingFavorites && Rooms.Count == 0 && !string.IsNullOrEmpty(FavoriteErrorMessage));
+    public bool ShowErrorState => Rooms.Count == 0 && (IsFavoritesTabSelected
+        ? !IsLoadingFavorites && !string.IsNullOrEmpty(FavoriteErrorMessage)
+        : IsExploreTabSelected && !IsLoading && HasError);
 
-    public bool ShowEmptyState => !IsLoading && !IsLoadingFavorites && !HasError && string.IsNullOrEmpty(FavoriteErrorMessage) && HasCompletedInitialLoad && Rooms.Count == 0;
+    public bool ShowEmptyState => Rooms.Count == 0 && (SelectedBottomTab switch
+    {
+        "favorites" => !IsLoadingFavorites && string.IsNullOrEmpty(FavoriteErrorMessage),
+        "explore" => !IsLoading && !HasError && HasCompletedInitialLoad,
+        _ => HasCompletedInitialLoad
+    });
 
-    public bool ShowContentState => !IsLoading && !HasError && Rooms.Count > 0;
+    public bool ShowContentState => Rooms.Count > 0 && (IsFavoritesTabSelected || (IsExploreTabSelected && !IsLoading && !HasError));
 
-    [ObservableProperty]
-    public partial bool IsRefreshing { get; set; }
+    public bool IsRefreshing
+    {
+        get => IsFavoritesTabSelected ? _isRefreshingFavorites : IsExploreTabSelected && _isRefreshingExplore;
+        set
+        {
+            if (IsFavoritesTabSelected)
+            {
+                SetProperty(ref _isRefreshingFavorites, value);
+            }
+            else if (IsExploreTabSelected)
+            {
+                SetProperty(ref _isRefreshingExplore, value);
+            }
+        }
+    }
 
-    [ObservableProperty]
-    public partial bool IsLoadingMore { get; set; }
+    public bool IsLoadingMore
+    {
+        get => IsExploreTabSelected && _isLoadingMore;
+        private set => SetProperty(ref _isLoadingMore, value);
+    }
 
     [ObservableProperty]
     public partial bool HasMoreItems { get; set; } = true;
@@ -330,10 +362,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
 
     partial void OnFavoriteErrorMessageChanged(string value)
     {
-        if (IsFavoritesTabSelected && !string.IsNullOrWhiteSpace(value))
-        {
-            ErrorMessage = value;
-        }
+        OnPropertyChanged(nameof(ErrorMessage));
         NotifyStateProperties();
     }
 
@@ -373,6 +402,10 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         OnPropertyChanged(nameof(IsFavoritesTabSelected));
         OnPropertyChanged(nameof(IsMessagesTabSelected));
         OnPropertyChanged(nameof(IsProfileTabSelected));
+        OnPropertyChanged(nameof(ErrorMessage));
+        OnPropertyChanged(nameof(IsLoadingMore));
+        OnPropertyChanged(nameof(IsRefreshing));
+        NotifyStateProperties();
     }
 
     partial void OnSelectedSortOptionItemChanged(RoomSortOptionItem value)
@@ -436,7 +469,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
     [RelayCommand(AllowConcurrentExecutions = false)]
     public async Task ToggleFavorite(RoomListItemModel? room)
     {
-        if (room is null || room.IsFavoriteBusy || _favouritesService is null)
+        if (room is null || _favoriteMutationsInFlight.Contains(room.Id) || _favouritesService is null)
         {
             return;
         }
@@ -451,22 +484,24 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         var sessionEpoch = _sessionService.SessionEpoch;
         var userId = _sessionService.CurrentUser?.Id;
         var wasFavorite = room.IsFavorite;
-        room.IsFavoriteBusy = true;
+        SetFavoriteMutationInFlight(room, true);
         FavoriteErrorMessage = string.Empty;
         try
         {
             if (wasFavorite)
             {
+                var removedRoom = _favoriteRoomsById.GetValueOrDefault(room.Id, room);
                 await _favouritesService.RemoveFavouriteAsync(room.Id);
                 if (!IsCurrentFavoriteSession(sessionEpoch, userId))
                 {
                     return;
                 }
 
+                removedRoom = _favoriteRoomsById.GetValueOrDefault(room.Id, removedRoom);
                 ApplyFavoriteState(room, false);
                 if (userId is Guid removedByUserId)
                 {
-                    await ShowUndoSnackbarAsync(room, sessionEpoch, removedByUserId);
+                    await ShowUndoSnackbarAsync(removedRoom, sessionEpoch, removedByUserId);
                 }
             }
             else
@@ -486,7 +521,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         }
         finally
         {
-            room.IsFavoriteBusy = false;
+            SetFavoriteMutationInFlight(room, false);
         }
     }
 
@@ -521,15 +556,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
 
         if (normalized == "explore")
         {
-            Rooms.Clear();
-            foreach (var item in _exploreSnapshot)
-            {
-                Rooms.Add(item);
-            }
-
-            EmptyStateMessage = Rooms.Count == 0
-                ? LocalizationResourceManager.Instance["Empty_NoRooms"]
-                : string.Empty;
+            PopulateExploreTab();
         }
         else if (normalized == "favorites")
         {
@@ -613,18 +640,17 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
             }
             while (mutationVersion != _favoriteMutationVersion);
 
-            foreach (var room in _exploreSnapshot)
-            {
-                room.IsFavorite = false;
-            }
             _favoriteRoomsById.Clear();
             foreach (var favourite in favourites)
             {
-                var room = _exploreSnapshot.FirstOrDefault(item => string.Equals(item.Id, favourite.Id, StringComparison.Ordinal)) ?? favourite;
-                room.IsFavorite = true;
-                room.PropertyChanged -= OnRoomItemPropertyChanged;
-                room.PropertyChanged += OnRoomItemPropertyChanged;
-                _favoriteRoomsById[room.Id] = room;
+                favourite.IsFavorite = true;
+                favourite.IsFavoriteBusy = _favoriteMutationsInFlight.Contains(favourite.Id);
+                _favoriteRoomsById[favourite.Id] = favourite;
+            }
+
+            foreach (var room in _exploreSnapshot)
+            {
+                ApplyCachedFavoriteState(room);
             }
             _favoritesLoaded = true;
             FavoriteErrorMessage = string.Empty;
@@ -665,6 +691,18 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         && _sessionService.SessionEpoch == sessionEpoch
         && _sessionService.CurrentUser?.Id == userId;
 
+    private void PopulateExploreTab()
+    {
+        Rooms.Clear();
+        foreach (var room in _exploreSnapshot)
+        {
+            Rooms.Add(room);
+        }
+        EmptyStateMessage = Rooms.Count == 0
+            ? HasError ? ExploreErrorMessage : LocalizationResourceManager.Instance["Empty_NoRooms"]
+            : string.Empty;
+    }
+
     private void PopulateFavoritesTab()
     {
         Rooms.Clear();
@@ -680,27 +718,31 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
     private void ApplyFavoriteState(RoomListItemModel room, bool isFavorite)
     {
         _favoriteMutationVersion++;
-        var matchingRooms = _exploreSnapshot
-            .Where(item => string.Equals(item.Id, room.Id, StringComparison.Ordinal))
-            .Append(room)
-            .Distinct()
-            .ToArray();
-        foreach (var matchingRoom in matchingRooms)
+        room.IsFavorite = isFavorite;
+        foreach (var exploreRoom in _exploreSnapshot.Where(item => item.Id == room.Id))
         {
-            matchingRoom.PropertyChanged -= OnRoomItemPropertyChanged;
-            matchingRoom.IsFavorite = isFavorite;
-            matchingRoom.PropertyChanged += OnRoomItemPropertyChanged;
+            exploreRoom.IsFavorite = isFavorite;
         }
+
         if (isFavorite)
         {
-            _favoriteRoomsById[room.Id] = matchingRooms.FirstOrDefault(_exploreSnapshot.Contains) ?? room;
+            _favoriteRoomsById.TryAdd(room.Id, room);
+            if (IsFavoritesTabSelected && !Rooms.Any(item => item.Id == room.Id))
+            {
+                Rooms.Add(_favoriteRoomsById[room.Id]);
+                EmptyStateMessage = string.Empty;
+            }
         }
         else
         {
-            _favoriteRoomsById.Remove(room.Id);
-            if (IsFavoritesTabSelected)
+            if (_favoriteRoomsById.Remove(room.Id, out var favoriteRoom))
             {
-                Rooms.Remove(room);
+                favoriteRoom.IsFavorite = false;
+                favoriteRoom.IsFavoriteBusy = false;
+            }
+            if (IsFavoritesTabSelected && Rooms.FirstOrDefault(item => item.Id == room.Id) is { } displayedRoom)
+            {
+                Rooms.Remove(displayedRoom);
                 EmptyStateMessage = Rooms.Count == 0
                     ? "No favorite rooms yet. Tap the heart icon on any room card to save it!"
                     : string.Empty;
@@ -708,6 +750,28 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         }
         OnPropertyChanged(nameof(FavoriteCount));
         OnPropertyChanged(nameof(HasFavorites));
+    }
+
+    private void SetFavoriteMutationInFlight(RoomListItemModel room, bool isBusy)
+    {
+        if (isBusy)
+        {
+            _favoriteMutationsInFlight.Add(room.Id);
+        }
+        else
+        {
+            _favoriteMutationsInFlight.Remove(room.Id);
+        }
+
+        room.IsFavoriteBusy = isBusy;
+        if (_favoriteRoomsById.TryGetValue(room.Id, out var favoriteRoom))
+        {
+            favoriteRoom.IsFavoriteBusy = isBusy;
+        }
+        foreach (var exploreRoom in _exploreSnapshot.Where(item => item.Id == room.Id))
+        {
+            exploreRoom.IsFavoriteBusy = isBusy;
+        }
     }
 
     private async Task ShowUndoSnackbarAsync(RoomListItemModel room, long sessionEpoch, Guid userId)
@@ -723,11 +787,11 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
 
     private async Task RestoreFavouriteAsync(RoomListItemModel room, long sessionEpoch, Guid userId)
     {
-        if (_favouritesService is null || !IsCurrentFavoriteSession(sessionEpoch, userId) || room.IsFavoriteBusy)
+        if (_favouritesService is null || !IsCurrentFavoriteSession(sessionEpoch, userId) || _favoriteMutationsInFlight.Contains(room.Id))
         {
             return;
         }
-        room.IsFavoriteBusy = true;
+        SetFavoriteMutationInFlight(room, true);
         try
         {
             await _favouritesService.AddFavouriteAsync(room.Id);
@@ -737,10 +801,6 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
             }
 
             ApplyFavoriteState(room, true);
-            if (IsFavoritesTabSelected && !Rooms.Contains(room))
-            {
-                Rooms.Add(room);
-            }
             await ShowFavoriteMessageAsync($"Restored {room.Title} to favorites");
         }
         catch (Exception ex)
@@ -751,7 +811,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         }
         finally
         {
-            room.IsFavoriteBusy = false;
+            SetFavoriteMutationInFlight(room, false);
         }
     }
 
@@ -832,7 +892,6 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         if (IsFavoritesTabSelected)
         {
             await RefreshFavoritesAsync();
-            PopulateFavoritesTab();
             return;
         }
         await LoadFirstPageAsync(isPullToRefresh: false);
@@ -904,15 +963,30 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
     }
 
     [RelayCommand]
-    public Task RefreshRoomsAsync()
+    public async Task RefreshRoomsAsync()
     {
+        if (IsFavoritesTabSelected)
+        {
+            SetProperty(ref _isRefreshingFavorites, true, nameof(IsRefreshing));
+            try
+            {
+                await RefreshFavoritesAsync();
+            }
+            finally
+            {
+                SetProperty(ref _isRefreshingFavorites, false, nameof(IsRefreshing));
+            }
+            return;
+        }
+
         _isInitialized = true;
-        return LoadFirstPageAsync(isPullToRefresh: true);
+        await LoadFirstPageAsync(isPullToRefresh: true);
     }
 
     [RelayCommand]
     public Task ApplySearchAsync(string? query)
     {
+        SelectedBottomTab = "explore";
         SearchQuery = query?.Trim() ?? string.Empty;
         _isInitialized = true;
         return LoadFirstPageAsync(isPullToRefresh: false);
@@ -946,7 +1020,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
     public async Task LoadMoreRoomsAsync()
     {
         // Rule 1: Re-entrancy and boundary guard
-        if (IsLoading || IsRefreshing || IsLoadingMore || !HasMoreItems || CurrentPage < 1)
+        if (!IsExploreTabSelected || IsLoading || IsRefreshing || IsLoadingMore || !HasMoreItems || CurrentPage < 1)
         {
             return;
         }
@@ -992,7 +1066,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
                     token);
             }
 
-            if (token.IsCancellationRequested)
+            if (token.IsCancellationRequested || !IsExploreTabSelected || !ReferenceEquals(_paginationCts, cts))
             {
                 return;
             }
@@ -1003,9 +1077,9 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
             {
                 if (existingIds.Add(room.Id))
                 {
-                    AttachRoomItem(room);
-                    Rooms.Add(room);
+                    ApplyCachedFavoriteState(room);
                     _exploreSnapshot.Add(room);
+                    Rooms.Add(room);
                 }
             }
 
@@ -1078,18 +1152,21 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         {
             HasError = false;
             _lastErrorResourceKey = null;
-            ErrorMessage = string.Empty;
+            ExploreErrorMessage = string.Empty;
 
             if (isPullToRefresh)
             {
-                IsRefreshing = true;
+                SetProperty(ref _isRefreshingExplore, true, nameof(IsRefreshing));
                 IsLoading = false;
             }
             else
             {
                 IsLoading = true;
-                IsRefreshing = false;
-                Rooms.Clear();
+                SetProperty(ref _isRefreshingExplore, false, nameof(IsRefreshing));
+                if (IsExploreTabSelected)
+                {
+                    Rooms.Clear();
+                }
             }
 
             IsLoadingMore = false;
@@ -1134,39 +1211,27 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
                 return;
             }
 
-            if (!IsExploreTabSelected)
-            {
-                SelectedBottomTab = "explore";
-            }
-
-            foreach (var oldRoom in _exploreSnapshot)
-            {
-                oldRoom.PropertyChanged -= OnRoomItemPropertyChanged;
-            }
-
             _exploreSnapshot.Clear();
-            Rooms.Clear();
             var existingIds = new HashSet<string>(StringComparer.Ordinal);
             foreach (var room in response.Items)
             {
                 if (existingIds.Add(room.Id))
                 {
-                    AttachRoomItem(room);
-                    Rooms.Add(room);
+                    ApplyCachedFavoriteState(room);
                     _exploreSnapshot.Add(room);
                 }
             }
 
             CurrentPage = 1;
             TotalCount = response.TotalCount;
-            HasMoreItems = response.Items.Count >= PageSize && Rooms.Count < response.TotalCount;
+            HasMoreItems = response.Items.Count >= PageSize && _exploreSnapshot.Count < response.TotalCount;
             HasCompletedInitialLoad = true;
             HasError = false;
             _lastErrorResourceKey = null;
-            ErrorMessage = string.Empty;
-            EmptyStateMessage = Rooms.Count == 0
-                ? LocalizationResourceManager.Instance["Empty_NoRooms"]
-                : string.Empty;
+            if (IsExploreTabSelected)
+            {
+                PopulateExploreTab();
+            }
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
@@ -1179,9 +1244,9 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
             _lastErrorResourceKey = ex is HttpRequestException
                 ? "State_ErrorNetwork"
                 : "State_ErrorServer";
-            ErrorMessage = LocalizationResourceManager.Instance[_lastErrorResourceKey];
+            ExploreErrorMessage = LocalizationResourceManager.Instance[_lastErrorResourceKey];
 
-            if (Rooms.Count == 0)
+            if (IsExploreTabSelected && Rooms.Count == 0)
             {
                 EmptyStateMessage = ErrorMessage;
             }
@@ -1194,7 +1259,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
             {
                 if (isPullToRefresh)
                 {
-                    IsRefreshing = false;
+                    SetProperty(ref _isRefreshingExplore, false, nameof(IsRefreshing));
                 }
                 else
                 {
@@ -1357,43 +1422,9 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         return list;
     }
 
-    private void AttachRoomItem(RoomListItemModel room)
+    private void ApplyCachedFavoriteState(RoomListItemModel room)
     {
-        room.PropertyChanged -= OnRoomItemPropertyChanged;
         room.IsFavorite = _favoriteRoomsById.ContainsKey(room.Id);
-        if (room.IsFavorite)
-        {
-            _favoriteRoomsById[room.Id] = room;
-        }
-
-        room.PropertyChanged += OnRoomItemPropertyChanged;
-    }
-
-    private void OnRoomItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (sender is not RoomListItemModel room || e.PropertyName != nameof(RoomListItemModel.IsFavorite))
-        {
-            return;
-        }
-
-        if (room.IsFavorite)
-        {
-            _favoriteRoomsById[room.Id] = room;
-        }
-        else
-        {
-            _favoriteRoomsById.Remove(room.Id);
-            if (IsFavoritesTabSelected)
-            {
-                Rooms.Remove(room);
-                if (Rooms.Count == 0)
-                {
-                    EmptyStateMessage = "No favorite rooms yet. Tap the heart icon on any room card to save it!";
-                }
-            }
-        }
-
-        OnPropertyChanged(nameof(FavoriteCount));
-        OnPropertyChanged(nameof(HasFavorites));
+        room.IsFavoriteBusy = _favoriteMutationsInFlight.Contains(room.Id);
     }
 }
