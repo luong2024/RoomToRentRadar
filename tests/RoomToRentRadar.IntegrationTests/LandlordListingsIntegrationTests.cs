@@ -99,22 +99,28 @@ public sealed class LandlordListingsIntegrationTests
     }
 
     [Test]
-    public async Task CreateListing_FiveNineMebibytePhotos_ExceedsFormerLimitAndFitsConfiguredMultipartLimit()
+    public async Task CreateListing_TwentyTenMebibytePhotos_FitsKestrelMultipartLimits()
     {
-        var landlord = await RegisterAndLoginAsync("LANDLORD");
+        using var kestrelFactory = new AuthWebApplicationFactory();
+        kestrelFactory.UseKestrel(0);
+        using var kestrelClient = kestrelFactory.CreateClient();
+        var landlord = await RegisterAndLoginAsync("LANDLORD", kestrelClient);
         using var form = CreateForm(0);
-        for (var i = 0; i < 5; i++)
+        var fileBytes = new byte[10 * 1024 * 1024];
+        for (var i = 0; i < 20; i++)
         {
-            var photo = new ByteArrayContent(new byte[9 * 1024 * 1024]);
+            var photo = new ByteArrayContent(fileBytes);
             photo.Headers.ContentType = new MediaTypeHeaderValue("image/png");
             form.Add(photo, "photos", $"large-{i}.png");
         }
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/landlord/listings") { Content = form };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", landlord.AccessToken);
 
-        var response = await _client.SendAsync(request);
+        using var response = await kestrelClient.SendAsync(request);
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+        var result = await response.Content.ReadFromJsonAsync<ListingWriteResponse>();
+        Assert.That(result!.ImageUrls, Has.Count.EqualTo(20));
     }
 
     [Test]
@@ -224,12 +230,13 @@ public sealed class LandlordListingsIntegrationTests
         });
     }
 
-    private async Task<AuthSessionResponse> RegisterAndLoginAsync(string role)
+    private async Task<AuthSessionResponse> RegisterAndLoginAsync(string role, HttpClient? client = null)
     {
+        client ??= _client;
         var email = $"listing-{Guid.NewGuid():N}@example.test";
-        var registration = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterUserRequest(email, "StrongPassword123!", role));
+        var registration = await client.PostAsJsonAsync("/api/v1/auth/register", new RegisterUserRequest(email, "StrongPassword123!", role));
         Assert.That(registration.StatusCode, Is.EqualTo(HttpStatusCode.Created));
-        var response = await _client.PostAsJsonAsync("/api/v1/auth/login", new LoginWithEmailRequest(email, "StrongPassword123!"));
+        var response = await client.PostAsJsonAsync("/api/v1/auth/login", new LoginWithEmailRequest(email, "StrongPassword123!"));
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         return (await response.Content.ReadFromJsonAsync<AuthSessionResponse>())!;
     }

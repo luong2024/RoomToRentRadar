@@ -45,8 +45,6 @@ public sealed class CreateListingUseCase : ICreateListingUseCase
 
 internal static class ListingRequestValidator
 {
-    public const int MaxPhotoCount = 20;
-
     private static readonly HashSet<string> RoomTypes = new(StringComparer.Ordinal)
     {
         "BoardingRoom", "MiniApartment", "WholeHouse", "Dormitory"
@@ -64,7 +62,8 @@ internal static class ListingRequestValidator
         if (string.IsNullOrWhiteSpace(request.RoomType) || !RoomTypes.Contains(request.RoomType)) errors["roomType"] = ["Room type is invalid."];
         if (request.Photos is null) errors["photos"] = ["At least three valid photos are required."];
         if (requireNewPhotos && request.Photos is { Count: < 3 }) errors["photos"] = ["At least three valid photos are required."];
-        if (request.Photos is { Count: > MaxPhotoCount }) errors["photos"] = [$"No more than {MaxPhotoCount} photos are allowed."];
+        if (request.Photos is { Count: > ListingPhotoLimits.MaxCount })
+            errors["photos"] = [$"No more than {ListingPhotoLimits.MaxCount} photos are allowed."];
         if (errors.Count > 0) throw new RequestValidationException(errors);
     }
 

@@ -15,8 +15,8 @@ using RoomToRentRadar.Application.Ports.Inbound;
 [Produces("application/json")]
 public sealed class LandlordListingsController : ControllerBase
 {
-    // The mobile form allows 20 images at up to 10 MiB each, plus multipart fields and boundaries.
-    private const long MaxRequestSizeBytes = 210L * 1024 * 1024;
+    // Leave room for multipart fields and boundaries beyond the photo payload.
+    private const long MaxRequestSizeBytes = ListingPhotoLimits.MaxCount * ListingPhotoLimits.MaxBytesPerPhoto + 10L * 1024 * 1024;
     private readonly ICreateListingUseCase _createListing;
     private readonly IUpdateListingUseCase _updateListing;
     private readonly IUnpublishListingUseCase _unpublishListing;
@@ -34,7 +34,7 @@ public sealed class LandlordListingsController : ControllerBase
     [HttpPost]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(MaxRequestSizeBytes)]
-    [RequestFormLimits(MultipartBodyLengthLimit = MaxRequestSizeBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = ListingPhotoLimits.MaxBytesPerPhoto)]
     [ProducesResponseType(typeof(ListingWriteResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -51,7 +51,7 @@ public sealed class LandlordListingsController : ControllerBase
     [HttpPut("{listingId}")]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(MaxRequestSizeBytes)]
-    [RequestFormLimits(MultipartBodyLengthLimit = MaxRequestSizeBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = ListingPhotoLimits.MaxBytesPerPhoto)]
     [ProducesResponseType(typeof(ListingWriteResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]

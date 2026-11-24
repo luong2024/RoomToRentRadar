@@ -6,12 +6,13 @@ using Azure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using RoomToRentRadar.Application.Exceptions;
+using RoomToRentRadar.Application.Ports.Inbound;
 using RoomToRentRadar.Application.Ports.Outbound;
 using SkiaSharp;
 
 public sealed class ListingImageStorageService : IListingImageStorageService
 {
-    public const long MaxImageSizeBytes = 10L * 1024 * 1024;
+    public const long MaxImageSizeBytes = ListingPhotoLimits.MaxBytesPerPhoto;
 
     private readonly BlobContainerClient _container;
 

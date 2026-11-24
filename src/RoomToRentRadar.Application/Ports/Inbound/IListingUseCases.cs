@@ -1,5 +1,11 @@
 namespace RoomToRentRadar.Application.Ports.Inbound;
 
+public static class ListingPhotoLimits
+{
+    public const int MaxCount = 20;
+    public const long MaxBytesPerPhoto = 10L * 1024 * 1024;
+}
+
 public sealed record ListingImageUpload(Func<Stream> OpenReadStream, string FileName, string ContentType, long Length);
 
 public sealed record ListingWriteRequest(
