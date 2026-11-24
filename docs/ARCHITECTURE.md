@@ -174,6 +174,13 @@ root (`AddDataAccess`, `AddUseCases`, `AddInfrastructure`).
 - Schema changes use EF Core migrations. Never use `EnsureCreated`.
 - Development startup applies migrations and seeds sample data; this is a documented exception.
 
+### 4.4 Authentication and roles
+
+- `POST /api/v1/auth/register` is public and accepts `student` or `landlord` only; admin accounts are provisioned by the system (demo seed / configuration), never self-registered.
+- `POST /api/v1/auth/login` issues an opaque server-side session token (32 random bytes, stored as a SHA-256 hash, 7-day expiry). The bearer handler resolves it to claims on every request.
+- Role wire values are `student`, `landlord`, `moderator` and `admin`; the token's role claim drives `ModeratorOrAdmin` RBAC.
+- Passwords are stored as PBKDF2-SHA256 (100k iterations, 16-byte salt, fixed-time comparison).
+
 ## 5. Testing
 
 - NUnit 4 with `NUnit3TestAdapter` in all test projects. Do not add xUnit.

@@ -2,7 +2,8 @@ namespace RoomToRentRadar.Domain.Entities;
 
 public enum UserRole
 {
-    User,
+    Student,
+    Landlord,
     Moderator,
     Admin
 }
@@ -10,18 +11,27 @@ public enum UserRole
 /// <summary>Wire values for <see cref="UserRole"/>, also used for role claims.</summary>
 public static class UserRoleWire
 {
-    public const string User = "user";
+    public const string Student = "student";
+    public const string Landlord = "landlord";
     public const string Moderator = "moderator";
     public const string Admin = "admin";
 
-    public static readonly IReadOnlyList<string> All = [User, Moderator, Admin];
+    /// <summary>Roles a user can pick when registering. Admin accounts are provisioned.</summary>
+    public static readonly IReadOnlyList<string> SelfService =
+        [Student, Landlord];
+
+    public static readonly IReadOnlyList<string> All =
+        [Student, Landlord, Moderator, Admin];
 
     public static bool TryParse(string? value, out UserRole role)
     {
         switch (value)
         {
-            case User:
-                role = UserRole.User;
+            case Student:
+                role = UserRole.Student;
+                return true;
+            case Landlord:
+                role = UserRole.Landlord;
                 return true;
             case Moderator:
                 role = UserRole.Moderator;
@@ -37,7 +47,8 @@ public static class UserRoleWire
 
     public static string ToWireValue(UserRole role) => role switch
     {
-        UserRole.User => User,
+        UserRole.Student => Student,
+        UserRole.Landlord => Landlord,
         UserRole.Moderator => Moderator,
         UserRole.Admin => Admin,
         _ => throw new ArgumentOutOfRangeException(nameof(role), role, null)

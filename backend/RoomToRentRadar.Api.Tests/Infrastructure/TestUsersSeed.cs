@@ -11,7 +11,7 @@ public static class TestUsersSeed
     public const string Password = "Demo-password-123";
     public const string DisplayName = "Demo Tester";
 
-    public static async Task<User> SeedAsync(AppDbContext dbContext, UserRole role = UserRole.User)
+    public static async Task<User> SeedAsync(AppDbContext dbContext, UserRole role = UserRole.Student)
     {
         var user = Create(
             new Guid("aaaaaaaa-0000-0000-0000-000000000001"),
@@ -29,7 +29,7 @@ public static class TestUsersSeed
         AppDbContext dbContext,
         Guid id,
         string email,
-        UserRole role = UserRole.User,
+        UserRole role = UserRole.Student,
         string displayName = "Secondary Tester",
         string password = Password)
     {

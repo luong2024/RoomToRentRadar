@@ -39,7 +39,7 @@ public class AuthServiceTests
         var expiresAt = new DateTime(2026, 11, 18, 8, 0, 0, DateTimeKind.Utc);
         var apiClient = new FakeApiClient
         {
-            DemoLoginResult = new LoginResponse("demo-token", expiresAt, "Demo Renter")
+            DemoLoginResult = new LoginResponse("demo-token", expiresAt, "Demo Renter", "student")
         };
         var tokenStore = new FakeTokenStore();
         var service = new AuthService(apiClient, tokenStore);

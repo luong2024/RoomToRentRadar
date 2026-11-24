@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RoomToRentRadar.Ports.Inbound;
+using RoomToRentRadar.Ports.Models.Auth;
 using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.SqliteDataAccess.Seed;
 
@@ -32,6 +33,28 @@ public sealed class AuthController(
 
         var response = await authUseCase.LoginAsync(email, password, cancellationToken);
         return response is null ? NotFound() : Ok(response);
+    }
+
+    [HttpPost("register")]
+    [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status201Created, "application/json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict, "application/problem+json")]
+    public async Task<ActionResult<RegisterResponse>> Register(
+        [FromBody] RegisterRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!RegistrationValidator.TryCreate(request, out var command, out var validationProblem))
+        {
+            return ToProblem(validationProblem!);
+        }
+
+        var result = await authUseCase.RegisterAsync(command, cancellationToken);
+        if (result.Outcome == RegisterUserOutcome.EmailAlreadyRegistered)
+        {
+            return ToProblem(AuthProblemFactory.EmailAlreadyRegisteredProblem());
+        }
+
+        return StatusCode(StatusCodes.Status201Created, result.Response);
     }
 
     [HttpPost("login")]

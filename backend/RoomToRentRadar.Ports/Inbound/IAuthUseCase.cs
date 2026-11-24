@@ -1,10 +1,15 @@
 using RoomToRentRadar.Domain.Entities;
+using RoomToRentRadar.Ports.Models.Auth;
 using RoomToRentRadar.Shared.Auth;
 
 namespace RoomToRentRadar.Ports.Inbound;
 
 public interface IAuthUseCase
 {
+    Task<RegisterUserResult> RegisterAsync(
+        RegisterUserCommand command,
+        CancellationToken cancellationToken);
+
     Task<LoginResponse?> LoginAsync(
         string email,
         string password,

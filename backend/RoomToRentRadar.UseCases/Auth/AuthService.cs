@@ -1,5 +1,6 @@
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Ports.Inbound;
+using RoomToRentRadar.Ports.Models.Auth;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 using RoomToRentRadar.Ports.Outbound.Services;
 using RoomToRentRadar.Shared.Auth;
@@ -14,6 +15,39 @@ public sealed class AuthService(
     IUnitOfWork unitOfWork) : IAuthUseCase
 {
     private static readonly TimeSpan SessionLifetime = TimeSpan.FromDays(7);
+
+    public async Task<RegisterUserResult> RegisterAsync(
+        RegisterUserCommand command,
+        CancellationToken cancellationToken)
+    {
+        var email = User.NormalizeEmail(command.Email);
+        var existing = await userRepository.FindByEmailAsync(email, cancellationToken);
+        if (existing is not null)
+        {
+            return RegisterUserResult.DuplicateEmail();
+        }
+
+        var (hash, salt) = passwordHasher.Hash(command.Password);
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = email,
+            DisplayName = command.DisplayName,
+            PasswordHash = hash,
+            PasswordSalt = salt,
+            Role = command.Role,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await userRepository.AddAsync(user, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return RegisterUserResult.Created(new RegisterResponse(
+            user.Id,
+            user.Email,
+            user.DisplayName,
+            UserRoleWire.ToWireValue(user.Role)));
+    }
 
     public async Task<LoginResponse?> LoginAsync(
         string email,
@@ -45,7 +79,11 @@ public sealed class AuthService(
             cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new LoginResponse(token, expiresAt, user.DisplayName);
+        return new LoginResponse(
+            token,
+            expiresAt,
+            user.DisplayName,
+            UserRoleWire.ToWireValue(user.Role));
     }
 
     public Task<User?> AuthenticateAsync(string token, CancellationToken cancellationToken)

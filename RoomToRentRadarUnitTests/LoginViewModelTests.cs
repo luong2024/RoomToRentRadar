@@ -23,7 +23,7 @@ public class LoginViewModelTests
         var expiresAt = new DateTime(2026, 11, 18, 8, 0, 0, DateTimeKind.Utc);
         var apiClient = new FakeApiClient
         {
-            LoginResult = new LoginResponse("token-123", expiresAt, "Demo Tester")
+            LoginResult = new LoginResponse("token-123", expiresAt, "Demo Tester", "student")
         };
         var tokenStore = new FakeTokenStore();
         var navigationService = new FakeNavigationService();
@@ -77,7 +77,7 @@ public class LoginViewModelTests
     {
         var apiClient = new FakeApiClient
         {
-            LoginResult = new LoginResponse("token-123", DateTime.UtcNow.AddDays(7), "Demo Tester")
+            LoginResult = new LoginResponse("token-123", DateTime.UtcNow.AddDays(7), "Demo Tester", "student")
         };
         var tokenStore = new FakeTokenStore();
         var navigationService = new FakeNavigationService();

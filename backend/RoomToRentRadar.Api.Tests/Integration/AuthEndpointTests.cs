@@ -2,7 +2,10 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using RoomToRentRadar.Infrastructure.Auth;
+using RoomToRentRadar.Ports.Models.Auth;
 using RoomToRentRadar.SqliteDataAccess;
 using RoomToRentRadar.Api.Tests.Infrastructure;
 using RoomToRentRadar.Shared.Auth;
@@ -53,6 +56,7 @@ public sealed class AuthEndpointTests
             Assert.That(login, Is.Not.Null);
             Assert.That(login!.AccessToken, Is.Not.Empty);
             Assert.That(login.DisplayName, Is.EqualTo(TestUsersSeed.DisplayName));
+            Assert.That(login.Role, Is.EqualTo("student"));
             Assert.That(login.ExpiresAt, Is.GreaterThan(DateTime.UtcNow));
         });
     }
@@ -90,6 +94,88 @@ public sealed class AuthEndpointTests
     }
 
     [Test]
+    public async Task Register_Student_ReturnsCreatedAndLoginReturnsStudentRole()
+    {
+        var response = await RegisterAsync("New.Student@Example.test", "Password1", "New Student", "student");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+
+        var registered = await response.Content.ReadFromJsonAsync<RegisterResponse>(ApiJson.Options);
+        Assert.Multiple(() =>
+        {
+            Assert.That(registered, Is.Not.Null);
+            Assert.That(registered!.UserId, Is.Not.EqualTo(Guid.Empty));
+            Assert.That(registered.Email, Is.EqualTo("new.student@example.test"));
+            Assert.That(registered.DisplayName, Is.EqualTo("New Student"));
+            Assert.That(registered.Role, Is.EqualTo("student"));
+        });
+
+        var login = await LoginAndReadAsync("NEW.STUDENT@EXAMPLE.TEST", "Password1");
+        Assert.That(login.Role, Is.EqualTo("student"));
+    }
+
+    [Test]
+    public async Task Register_Landlord_ReturnsLandlordRoleOnLogin()
+    {
+        var response = await RegisterAsync("landlord@example.test", "Password1", "Landlord One", "landlord");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+
+        var login = await LoginAndReadAsync("landlord@example.test", "Password1");
+        Assert.That(login.Role, Is.EqualTo("landlord"));
+    }
+
+    [Test]
+    public async Task Register_DuplicateEmail_IsCaseInsensitive()
+    {
+        var response = await RegisterAsync(
+            TestUsersSeed.Email.ToUpperInvariant(),
+            "Password1",
+            "Duplicate User",
+            "student");
+
+        await AssertProblemAsync(response, HttpStatusCode.Conflict, "email_already_registered");
+    }
+
+    [TestCase("Short1")]
+    [TestCase("abcdefgh")]
+    [TestCase("12345678")]
+    public async Task Register_WeakPassword_ReturnsBadRequestProblem(string password)
+    {
+        var response = await RegisterAsync("weak@example.test", password, "Weak User", "student");
+
+        await AssertProblemAsync(response, HttpStatusCode.BadRequest, "weak_password");
+    }
+
+    [TestCase("admin")]
+    [TestCase("moderator")]
+    public async Task Register_NonSelfServiceRole_ReturnsBadRequestProblem(string role)
+    {
+        var response = await RegisterAsync("admin@example.test", "Password1", "Admin User", role);
+
+        await AssertProblemAsync(response, HttpStatusCode.BadRequest, "invalid_role");
+    }
+
+    [Test]
+    public async Task Register_StoresHashedPassword()
+    {
+        const string password = "Password1";
+        var response = await RegisterAsync("hashed@example.test", password, "Hashed User", "student");
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var user = await dbContext.Users.SingleAsync(candidate => candidate.Email == "hashed@example.test");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(user.PasswordHash, Is.Not.EqualTo(password));
+            Assert.That(user.PasswordSalt, Is.Not.Empty);
+            Assert.That(new PasswordHasher().Verify(password, user.PasswordHash, user.PasswordSalt), Is.True);
+        });
+    }
+
+    [Test]
     public async Task Logout_ValidToken_InvalidatesTheSession()
     {
         var login = await LoginAndReadAsync();
@@ -122,6 +208,16 @@ public sealed class AuthEndpointTests
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
+    private async Task<HttpResponseMessage> RegisterAsync(
+        string email,
+        string password,
+        string displayName,
+        string role)
+        => await _client.PostAsJsonAsync(
+            "/api/v1/auth/register",
+            new RegisterRequest(email, password, displayName, role),
+            ApiJson.Options);
+
     private async Task<HttpResponseMessage> LoginAsync(string email, string password)
     {
         var response = await _client.PostAsJsonAsync(
@@ -132,8 +228,11 @@ public sealed class AuthEndpointTests
     }
 
     private async Task<LoginResponse> LoginAndReadAsync()
+        => await LoginAndReadAsync(TestUsersSeed.Email, TestUsersSeed.Password);
+
+    private async Task<LoginResponse> LoginAndReadAsync(string email, string password)
     {
-        var response = await LoginAsync(TestUsersSeed.Email, TestUsersSeed.Password);
+        var response = await LoginAsync(email, password);
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var login = await response.Content.ReadFromJsonAsync<LoginResponse>(ApiJson.Options);
