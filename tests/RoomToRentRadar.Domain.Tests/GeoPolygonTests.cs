@@ -12,6 +12,39 @@ public class GeoPolygonTests
     private static readonly GeoLocation PointC = new(21.5860, 105.8080);
     private static readonly GeoLocation PointD = new(21.5850, 105.8080);
 
+    [TestCase(false)]
+    [TestCase(true)]
+    public void Constructor_WithNestedLoops_StoresOuterRingFirstAndSubtractsHole(bool reverse)
+    {
+        GeoLocation junction = new(0, 0);
+        GeoLocation[] outer = [junction, new(0, .04), new(.04, .04), new(.04, 0)];
+        GeoLocation[] inner = [junction, new(.01, .02), new(.02, .01)];
+        var outline = reverse ? inner.Concat(outer) : outer.Concat(inner);
+
+        var polygon = new GeoPolygon(outline);
+
+        Assert.That(polygon.HasHole, Is.True);
+        Assert.That(polygon.SearchRings[0], Has.Count.EqualTo(5));
+        Assert.That(polygon.SearchRings[1], Has.Count.EqualTo(4));
+        Assert.That(polygon.AreaSquareMeters,
+            Is.EqualTo(new GeoPolygon(outer).AreaSquareMeters - new GeoPolygon(inner).AreaSquareMeters).Within(0.01));
+    }
+
+    [Test]
+    public void Constructor_WithCrossedOutline_CreatesTwoClosedSearchRings()
+    {
+        var shape = new GeoPolygon([new(0, 0), new(.01, .01), new(0, .01), new(.01, 0)]);
+
+        Assert.That(shape.DistinctVertices, Has.Count.EqualTo(4));
+        Assert.That(shape.SearchRings, Has.Count.EqualTo(2));
+        foreach (var ring in shape.SearchRings)
+        {
+            Assert.That(ring, Has.Count.EqualTo(4));
+            Assert.That(ring[0], Is.EqualTo(ring[^1]));
+        }
+        Assert.That(shape.AreaSquareMeters, Is.GreaterThan(400));
+    }
+
     [Test]
     public void Constructor_WithValidCoordinates_CreatesClosedCCWPolygon()
     {

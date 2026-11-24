@@ -148,13 +148,21 @@ public sealed class CosmosRoomListingRepository : IRoomListingRepository
         ArgumentNullException.ThrowIfNull(filter);
 
         var totalRu = 0.0;
-        var positions = polygon.Vertices.Select(v => new Position(v.Longitude, v.Latitude)).ToList();
-        var linearRing = new LinearRing(positions);
-        var cosmosPolygon = new Microsoft.Azure.Cosmos.Spatial.Polygon([linearRing]);
+        var spatialPolygons = polygon.SearchRings.Select(ring =>
+        {
+            var positions = ring.Select(point => new Position(point.Longitude, point.Latitude)).ToList();
+            return new Microsoft.Azure.Cosmos.Spatial.Polygon([new LinearRing(positions)]);
+        }).ToList();
+        var spatialFilter = (spatialPolygons.Count, polygon.HasHole) switch
+        {
+            (1, _) => "ST_WITHIN(c.location, @polygon)",
+            (_, true) => "(ST_WITHIN(c.location, @polygon) AND NOT ST_WITHIN(c.location, @secondPolygon))",
+            _ => "(ST_WITHIN(c.location, @polygon) OR ST_WITHIN(c.location, @secondPolygon))"
+        };
 
         var whereClauses = new List<string>
         {
-            "ST_WITHIN(c.location, @polygon)",
+            spatialFilter,
             "c.status = @status",
             "c.verificationStatus = @verificationStatus",
             "(NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false)"
@@ -193,9 +201,12 @@ public sealed class CosmosRoomListingRepository : IRoomListingRepository
 
         // 1. Cross-partition count query
         var countDefinition = new QueryDefinition($"SELECT VALUE COUNT(1) FROM c WHERE {whereSql}")
-            .WithParameter("@polygon", cosmosPolygon)
+            .WithParameter("@polygon", spatialPolygons[0])
             .WithParameter("@status", (int)ListingRoomStatus.Available)
             .WithParameter("@verificationStatus", (int)VerificationStatus.Verified);
+
+        if (spatialPolygons.Count > 1)
+            countDefinition.WithParameter("@secondPolygon", spatialPolygons[1]);
 
         if (filter.MinPrice.HasValue)
         {
@@ -247,11 +258,14 @@ public sealed class CosmosRoomListingRepository : IRoomListingRepository
 
         var offset = checked((long)(pageIndex - 1) * pageSize);
         var itemsDefinition = new QueryDefinition($"SELECT * FROM c WHERE {whereSql} {orderByClause} OFFSET @offset LIMIT @limit")
-            .WithParameter("@polygon", cosmosPolygon)
+            .WithParameter("@polygon", spatialPolygons[0])
             .WithParameter("@status", (int)ListingRoomStatus.Available)
             .WithParameter("@verificationStatus", (int)VerificationStatus.Verified)
             .WithParameter("@offset", offset)
             .WithParameter("@limit", pageSize);
+
+        if (spatialPolygons.Count > 1)
+            itemsDefinition.WithParameter("@secondPolygon", spatialPolygons[1]);
 
         if (filter.MinPrice.HasValue)
         {

@@ -645,18 +645,23 @@ public class CosmosRoomListingRepositoryTests
         verificationStatus: VerificationStatus.Verified,
         campusId: campusId);
 
-    [Test]
-    public async Task SearchByPolygonAsync_QueriesListingsContainerWithSpatialFilterAndReturnsPagedResults()
+    [TestCase(false, false)]
+    [TestCase(true, false)]
+    [TestCase(false, true)]
+    public async Task SearchByPolygonAsync_QueriesListingsContainerWithSpatialFilterAndReturnsPagedResults(bool crossed, bool hasHole)
     {
         var listingsContainer = new Mock<Container>();
         var roomsContainer = new Mock<Container>();
         var outboxContainer = CreateOutboxContainer();
 
-        var polygon = new GeoPolygon([
+        var polygon = hasHole
+            ? new GeoPolygon([new(0, 0), new(0, .04), new(.04, .04), new(.04, 0),
+                new(0, 0), new(.01, .02), new(.02, .01)])
+            : new GeoPolygon([
             new GeoLocation(21.585, 105.807),
-            new GeoLocation(21.586, 105.807),
-            new GeoLocation(21.586, 105.808),
-            new GeoLocation(21.585, 105.808)
+            new GeoLocation(21.586, crossed ? 105.808 : 105.807),
+            new GeoLocation(crossed ? 21.585 : 21.586, 105.808),
+            new GeoLocation(crossed ? 21.586 : 21.585, crossed ? 105.807 : 105.808)
         ]);
 
         var countResponse = new Mock<FeedResponse<int>>();
@@ -721,6 +726,14 @@ public class CosmosRoomListingRepositoryTests
             Assert.That(capturedItemsQuery, Is.Not.Null);
             Assert.That(capturedItemsQuery!.QueryText, Does.Contain("ST_WITHIN(c.location, @polygon)"));
             Assert.That(capturedItemsQuery.QueryText, Does.Contain("ORDER BY c.monthlyRentAmount"));
+            if (crossed || hasHole)
+            {
+                var secondCondition = hasHole ? "AND NOT ST_WITHIN" : "OR ST_WITHIN";
+                Assert.That(capturedCountQuery.QueryText, Does.Contain($"{secondCondition}(c.location, @secondPolygon)"));
+                Assert.That(capturedItemsQuery.QueryText, Does.Contain($"{secondCondition}(c.location, @secondPolygon)"));
+                Assert.That(capturedCountQuery.GetQueryParameters().Select(parameter => parameter.Name), Does.Contain("@secondPolygon"));
+                Assert.That(capturedItemsQuery.GetQueryParameters().Select(parameter => parameter.Name), Does.Contain("@secondPolygon"));
+            }
             Assert.That(repository.LastRequestCharge, Is.EqualTo(6.5));
         });
     }

@@ -15,10 +15,21 @@ public class DrawingCanvasDrawable : IDrawable
 
     public void AddPoint(PointF point)
     {
-        if (!float.IsNaN(point.X) && !float.IsNaN(point.Y))
+        if (!float.IsFinite(point.X) || !float.IsFinite(point.Y))
+            return;
+
+        // A stationary finger can emit many samples that draw the same segment.
+        if (_touchPoints.Count > 0)
         {
-            _touchPoints.Add(point);
+            var previous = _touchPoints[^1];
+            float dx = point.X - previous.X;
+            float dy = point.Y - previous.Y;
+            const float minimumSampleDistance = 2f;
+            if (dx * dx + dy * dy < minimumSampleDistance * minimumSampleDistance)
+                return;
         }
+
+        _touchPoints.Add(point);
     }
 
     public void Clear()
@@ -82,7 +93,7 @@ public class DrawingCanvasDrawable : IDrawable
                 polyPath.LineTo(_anchorPoints[i]);
             }
             polyPath.Close();
-            canvas.FillPath(polyPath);
+            canvas.FillPath(polyPath, WindingMode.EvenOdd);
 
             // Polygon boundary outline
             canvas.StrokeColor = StrokeColor;

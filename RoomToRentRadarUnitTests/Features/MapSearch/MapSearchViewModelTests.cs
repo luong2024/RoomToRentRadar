@@ -9,6 +9,100 @@ public class MapSearchViewModelTests
 {
     private MapSearchViewModel _viewModel = null!;
 
+    [Test]
+    public async Task CancelDrawing_DuringInvalidEdit_RestoresConfirmedBoundary()
+    {
+        GeoCoordinate[] original = [new(0, 0), new(0, .01), new(.01, 0)];
+        _viewModel.AlertHandler = (_, _, _) => Task.CompletedTask;
+        _viewModel.CompleteDrawing(original);
+        await _viewModel.ConfirmAreaAsync();
+        _viewModel.StartEditing();
+        _viewModel.UpdateAnchorPosition(1, original[0]);
+
+        _viewModel.FinishEditing();
+        Assert.That(_viewModel.IsEditingMode, Is.True);
+        _viewModel.CancelDrawing();
+
+        Assert.That(_viewModel.IsEditingMode, Is.False);
+        Assert.That(_viewModel.IsAreaConfirmed, Is.True);
+        Assert.That(_viewModel.PolygonCoordinates, Is.EqualTo(original));
+        Assert.That(_viewModel.CurrentArea.Vertices, Is.EqualTo(original));
+    }
+
+    [Test]
+    public async Task CollapsedBoundary_StaysEditableAndCannotBeConfirmed()
+    {
+        _viewModel.CompleteDrawing(new List<GeoCoordinate> { new(0, 0), new(0, .01), new(.01, 0) });
+        _viewModel.StartEditing();
+        _viewModel.UpdateAnchorPosition(1, _viewModel.PolygonCoordinates[0]);
+
+        _viewModel.FinishEditing();
+        await _viewModel.ConfirmAreaAsync();
+
+        Assert.That(_viewModel.IsEditingMode, Is.True);
+        Assert.That(_viewModel.IsAreaConfirmed, Is.False);
+        _viewModel.UpdateAnchorPosition(1, new(0, .01));
+        _viewModel.FinishEditing();
+        Assert.That(_viewModel.IsEditingMode, Is.False);
+    }
+
+    [Test]
+    public void CompleteDrawing_ShortOvershootAtStart_KeepsMainLoop()
+    {
+        _viewModel.CompleteDrawing(new List<GeoCoordinate>
+        {
+            new(0, 0), new(0, .01), new(.01, .01), new(.01, 0),
+            new(-.0001, .0001)
+        });
+
+        Assert.That(_viewModel.HasDrawnPolygon, Is.True);
+        Assert.That(_viewModel.VertexCount, Is.EqualTo(4));
+    }
+
+    [Test]
+    public void IsSelfIntersecting_SegmentsSeparatedBySmallGap_ReturnsFalse()
+    {
+        GeoCoordinate[] points =
+        {
+            new(0, 0), new(0, .000003), new(.000020, .000015),
+            new(.000020, .0000025), new(.00000025, .0000015), new(.000010, .0000015)
+        };
+        Assert.That(MapSearchViewModel.IsSelfIntersecting(points), Is.False);
+    }
+
+    [Test]
+    public void CompleteDrawing_OpenNarrowRectangle_PreservesValidAreaAfterSimplification()
+    {
+        var points = Enumerable.Range(0, 15)
+            .Select(i => new GeoCoordinate(0, .0009 * i / 14)).ToList();
+        points.Add(new GeoCoordinate(.000045, .0009));
+        points.Add(new GeoCoordinate(.000045, 0));
+        _viewModel.CompleteDrawing(points);
+
+        Assert.That(_viewModel.HasDrawnPolygon, Is.True);
+        Assert.That(_viewModel.VertexCount, Is.LessThanOrEqualTo(10));
+        Assert.That(MapSearchViewModel.CalculatePolygonAreaSquareMeters(_viewModel.PolygonCoordinates),
+            Is.GreaterThanOrEqualTo(400));
+    }
+    [Test]
+    public void FailedStroke_AllowsImmediateRetryAndClearRemovesBoundary()
+    {
+        _viewModel.StartDrawing();
+        _viewModel.CompleteDrawing(Array.Empty<GeoCoordinate>());
+        Assert.That(_viewModel.IsDrawingMode, Is.True);
+        Assert.That(_viewModel.IsInteractingMode, Is.True);
+
+        // An eight with a sampled vertex exactly at the shared junction.
+        _viewModel.CompleteDrawing(new List<GeoCoordinate>
+        {
+            new(0, 0), new(.01, .01), new(.01, -.01), new(0, 0),
+            new(-.01, .01), new(-.01, -.01)
+        });
+        Assert.That(_viewModel.IsDrawingMode, Is.False);
+        Assert.That(MapSearchViewModel.IsSelfIntersecting(_viewModel.PolygonCoordinates), Is.True);
+        _viewModel.ClearPolygon();
+        Assert.That(_viewModel.PolygonCoordinates, Is.Empty);
+    }
     [SetUp]
     public void SetUp()
     {
@@ -607,7 +701,7 @@ public class MapSearchViewModelTests
     }
 
     [Test]
-    public void CompleteDrawing_WithSelfIntersectingPolygon_ShouldRejectWithWarning()
+    public void CompleteDrawing_WithBowTie_ShouldKeepOneOrderedBoundary()
     {
         // Arrange: Hourglass/bow-tie
         var bowTie = new List<GeoCoordinate>
@@ -622,9 +716,9 @@ public class MapSearchViewModelTests
         _viewModel.CompleteDrawing(bowTie);
 
         // Assert
-        Assert.That(_viewModel.HasDrawnPolygon, Is.False);
-        Assert.That(_viewModel.VertexCount, Is.EqualTo(0));
-        Assert.That(_viewModel.StatusMessage, Does.Contain("crosses over itself"));
+        Assert.That(_viewModel.HasDrawnPolygon, Is.True);
+        Assert.That(MapSearchViewModel.IsSelfIntersecting(_viewModel.PolygonCoordinates), Is.True);
+        Assert.That(_viewModel.PolygonCoordinates, Is.EqualTo(bowTie));
     }
 
     [Test]

@@ -13,7 +13,7 @@ public partial class MapSearchViewModel : ObservableObject
     public const double DefaultDistanceKm = 2.0;
 
     /// <summary>
-    /// Minimum enclosed search area in square meters (approx 20m x 20m = 400 m²).
+    /// Minimum enclosed search area in square meters (approx 20m x 20m = 400 mÂ²).
     /// </summary>
     public const double MinimumPolygonAreaSquareMeters = 400.0;
 
@@ -55,6 +55,8 @@ public partial class MapSearchViewModel : ObservableObject
     [ObservableProperty]
     private bool _isAreaConfirmed;
 
+    private (GeoCoordinate[] Points, bool Confirmed)? _boundaryBeforeEdit;
+
     public DrawnPolygonArea CurrentArea { get; } = new();
 
     public ObservableCollection<GeoCoordinate> PolygonCoordinates { get; } = new();
@@ -72,6 +74,8 @@ public partial class MapSearchViewModel : ObservableObject
     [RelayCommand]
     public void StartDrawing()
     {
+        if (IsEditingMode)
+            CancelDrawing();
         IsEditingMode = false;
         IsDrawingMode = true;
         StatusMessage = "Draw a freehand loop around the area you care about";
@@ -80,10 +84,11 @@ public partial class MapSearchViewModel : ObservableObject
     [RelayCommand]
     public void StartEditing()
     {
-        if (!HasDrawnPolygon)
+        if (!HasDrawnPolygon || IsEditingMode)
             return;
 
         IsDrawingMode = false;
+        _boundaryBeforeEdit = (PolygonCoordinates.ToArray(), IsAreaConfirmed);
         IsEditingMode = true;
         BuildEditAnchors();
         StatusMessage = "Drag pins to adjust boundary shape";
@@ -92,6 +97,13 @@ public partial class MapSearchViewModel : ObservableObject
     [RelayCommand]
     public void FinishEditing()
     {
+        if (!HasValidBoundary())
+        {
+            SetInvalidBoundaryStatus();
+            return;
+        }
+
+        _boundaryBeforeEdit = null;
         IsEditingMode = false;
         StatusMessage = "Boundary updated";
     }
@@ -105,7 +117,7 @@ public partial class MapSearchViewModel : ObservableObject
         }
         else if (IsEditingMode)
         {
-            IsEditingMode = false;
+            FinishEditing();
         }
         else
         {
@@ -116,6 +128,17 @@ public partial class MapSearchViewModel : ObservableObject
     [RelayCommand]
     public void CancelDrawing()
     {
+        if (_boundaryBeforeEdit is { } snapshot)
+        {
+            for (int i = 0; i < snapshot.Points.Length; i++)
+            {
+                PolygonCoordinates[i] = snapshot.Points[i];
+                CurrentArea.Vertices[i] = snapshot.Points[i];
+            }
+            BuildEditAnchors();
+            IsAreaConfirmed = snapshot.Confirmed;
+            _boundaryBeforeEdit = null;
+        }
         IsDrawingMode = false;
         IsEditingMode = false;
         StatusMessage = HasDrawnPolygon
@@ -126,6 +149,7 @@ public partial class MapSearchViewModel : ObservableObject
     [RelayCommand]
     public void ClearPolygon()
     {
+        _boundaryBeforeEdit = null;
         CurrentArea.Clear();
         PolygonCoordinates.Clear();
         EditAnchorPins.Clear();
@@ -157,6 +181,13 @@ public partial class MapSearchViewModel : ObservableObject
             return;
         }
 
+        if (!HasValidBoundary())
+        {
+            StartEditing();
+            SetInvalidBoundaryStatus();
+            return;
+        }
+
         IsAreaConfirmed = true;
         StatusMessage = $"Area confirmed with {VertexCount} vertices. Ready for search integration (T05.2).";
 
@@ -176,6 +207,16 @@ public partial class MapSearchViewModel : ObservableObject
         }
     }
 
+    private bool HasValidBoundary() =>
+        TryMeasureBoundary(PolygonCoordinates.ToList(), out double area, out _) &&
+        area >= MinimumPolygonAreaSquareMeters;
+
+    private void SetInvalidBoundaryStatus()
+    {
+        IsAreaConfirmed = false;
+        StatusMessage = "Adjust the points to form a valid search area.";
+    }
+
     /// <summary>
     /// Alias for backwards compatibility with ViewProperties command.
     /// </summary>
@@ -184,6 +225,8 @@ public partial class MapSearchViewModel : ObservableObject
 
     public void CompleteDrawing(IEnumerable<GeoCoordinate> geoPoints)
     {
+        _boundaryBeforeEdit = null;
+        IsAreaConfirmed = false;
         PolygonCoordinates.Clear();
         CurrentArea.Clear();
 
@@ -199,66 +242,223 @@ public partial class MapSearchViewModel : ObservableObject
             HasDrawnPolygon = false;
             VertexCount = 0;
             StatusMessage = "Area is too small. Please draw at least 3 distinct points.";
-            IsDrawingMode = false;
+            IsDrawingMode = true;
             return;
         }
 
-        // 3. Validate against self-intersection (e.g. bow-tie / figure-8 polygon)
-        if (IsSelfIntersecting(distinctOriginal))
+        if (IsSelfIntersecting(cleanedPoints))
+            TryTrimClosingTail(cleanedPoints);
+
+        if (!TryMeasureBoundary(cleanedPoints, out double area, out BoundaryKind kind))
         {
             HasDrawnPolygon = false;
             VertexCount = 0;
-            StatusMessage = "The drawn area crosses over itself. Please draw a simple loop without intersecting lines.";
-            IsDrawingMode = false;
+            StatusMessage = "Draw a clearer outline and try again.";
+            IsDrawingMode = true;
             return;
         }
 
-        // 4. Check polygon geometric area using localized metric projection Shoelace formula (m²)
-        double initialAreaM2 = CalculatePolygonAreaSquareMeters(distinctOriginal);
-        if (initialAreaM2 < MinimumPolygonAreaSquareMeters)
+        if (area < MinimumPolygonAreaSquareMeters)
         {
             HasDrawnPolygon = false;
             VertexCount = 0;
-            StatusMessage = $"Drawn area is too flat or small ({initialAreaM2:F0} m²). Minimum required area is {MinimumPolygonAreaSquareMeters:F0} m².";
-            IsDrawingMode = false;
+            StatusMessage = $"Drawn area is too flat or small. Draw at least {MinimumPolygonAreaSquareMeters:F0} m² and try again.";
+            IsDrawingMode = true;
             return;
         }
 
-        // 5. Simplify points using the closed-loop Ramer-Douglas-Peucker (RDP) algorithm
-        var simplified = SimplifyPolygon(cleanedPoints, targetMaxCount: 16);
-
-        // 6. Post-RDP validation: ensure at least 3 distinct vertices, non-intersecting, and non-degenerate area
-        var distinctSimplified = GetDistinctVertices(simplified);
-        double simplifiedAreaM2 = CalculatePolygonAreaSquareMeters(distinctSimplified);
-
-        if (distinctSimplified.Count >= 3 &&
-            !IsSelfIntersecting(distinctSimplified) &&
-            simplifiedAreaM2 >= MinimumPolygonAreaSquareMeters)
+        const int targetEditPoints = 10;
+        var simplified = SimplifyPolygon(cleanedPoints, targetEditPoints);
+        if (!TryMeasureBoundary(simplified, out double simplifiedArea, out BoundaryKind simplifiedKind) ||
+            simplifiedKind != kind || simplifiedArea < MinimumPolygonAreaSquareMeters)
         {
-            foreach (var pt in distinctSimplified)
+            simplified = cleanedPoints;
+        }
+
+        const int maxRefinementPoints = 48;
+        while (simplified.Count > targetEditPoints && simplified.Count <= maxRefinementPoints)
+        {
+            // Remove the least prominent vertex that preserves the outline's topology and area threshold.
+            int count = simplified.Count;
+            var removalOrder = Enumerable.Range(0, count).OrderBy(index => PerpendicularDistance(
+                simplified[index], simplified[(index + count - 1) % count], simplified[(index + 1) % count]));
+            List<GeoCoordinate>? reduced = null;
+            foreach (int index in removalOrder)
             {
-                PolygonCoordinates.Add(pt);
-                CurrentArea.Vertices.Add(pt);
+                var candidate = new List<GeoCoordinate>(simplified);
+                candidate.RemoveAt(index);
+                if (TryMeasureBoundary(candidate, out double candidateArea, out BoundaryKind candidateKind) &&
+                    candidateKind == kind && candidateArea >= MinimumPolygonAreaSquareMeters)
+                {
+                    reduced = candidate;
+                    break;
+                }
             }
-
-            HasDrawnPolygon = true;
-            VertexCount = distinctSimplified.Count;
-            StatusMessage = $"Search area defined ({VertexCount} points, {simplifiedAreaM2:F0} m²)";
+            if (reduced is null)
+                break;
+            simplified = reduced;
         }
-        else
+
+        TryMeasureBoundary(simplified, out area, out _);
+        foreach (var point in simplified)
         {
-            HasDrawnPolygon = false;
-            VertexCount = 0;
-            StatusMessage = "Area could not form a valid boundary. Please try drawing again.";
+            PolygonCoordinates.Add(point);
+            CurrentArea.Vertices.Add(point);
         }
 
+        HasDrawnPolygon = true;
+        VertexCount = simplified.Count;
+        StatusMessage = $"Search area defined ({VertexCount} points, {area:F0} m²)";
         IsDrawingMode = false;
+    }
+
+    private enum BoundaryKind { Simple, Crossed, WithHole }
+
+    private static bool TryMeasureBoundary(List<GeoCoordinate> boundary, out double area, out BoundaryKind kind)
+    {
+        // Measure the lobes separately so their opposite winding directions do not cancel out.
+        // The selected boundary itself keeps the original traversal order.
+        kind = BoundaryKind.Simple;
+        area = 0;
+        if (boundary.Count < 3 || boundary.Any(point =>
+                !double.IsFinite(point.Latitude) || !double.IsFinite(point.Longitude)))
+            return false;
+
+        for (int i = 0; i < boundary.Count; i++)
+        {
+            if (IsSameLocation(boundary[i], boundary[(i + 1) % boundary.Count]))
+                return false;
+        }
+
+        if (!IsSelfIntersecting(boundary))
+        {
+            area = CalculatePolygonAreaSquareMeters(boundary);
+            return true;
+        }
+
+        if (!TrySplitLoops(boundary, out var first, out var second))
+            return false;
+
+        double firstArea = CalculatePolygonAreaSquareMeters(first);
+        double secondArea = CalculatePolygonAreaSquareMeters(second);
+        bool hasHole = ContainsPoint(first, second[1]) || ContainsPoint(second, first[1]);
+        kind = hasHole ? BoundaryKind.WithHole : BoundaryKind.Crossed;
+        area = hasHole ? Math.Abs(firstArea - secondArea) : firstArea + secondArea;
+        return firstArea > 0 && secondArea > 0;
+    }
+
+    private static bool ContainsPoint(IReadOnlyList<GeoCoordinate> ring, GeoCoordinate point)
+    {
+        bool inside = false;
+        for (int i = 0; i < ring.Count; i++)
+        {
+            var a = ring[i];
+            var b = ring[(i + 1) % ring.Count];
+            if ((a.Latitude > point.Latitude) == (b.Latitude > point.Latitude))
+                continue;
+
+            double intersection = a.Longitude + (point.Latitude - a.Latitude) *
+                (b.Longitude - a.Longitude) / (b.Latitude - a.Latitude);
+            if (point.Longitude < intersection)
+                inside = !inside;
+        }
+        return inside;
+    }
+
+    private static bool TrySplitLoops(List<GeoCoordinate> path, out List<GeoCoordinate> first,
+        out List<GeoCoordinate> second)
+    {
+        first = new();
+        second = new();
+        for (int i = 0; i < path.Count; i++)
+        {
+            var a = path[i];
+            var b = path[(i + 1) % path.Count];
+            for (int j = i + 2; j < path.Count; j++)
+            {
+                if (i == 0 && j == path.Count - 1) continue;
+                var c = path[j];
+                var d = path[(j + 1) % path.Count];
+                if (!DoSegmentsIntersect(a, b, c, d)) continue;
+
+                double dx = b.Longitude - a.Longitude, dy = b.Latitude - a.Latitude;
+                double ex = d.Longitude - c.Longitude, ey = d.Latitude - c.Latitude;
+                double denominator = dx * ey - dy * ex;
+                if (denominator == 0) continue;
+                double t = ((c.Longitude - a.Longitude) * ey - (c.Latitude - a.Latitude) * ex) / denominator;
+                var cross = new GeoCoordinate(a.Latitude + t * dy, a.Longitude + t * dx);
+                first = NormalizePolygonPoints(path.GetRange(i + 1, j - i).Prepend(cross).ToList());
+                second = NormalizePolygonPoints(path.Skip(j + 1).Concat(path.Take(i + 1)).Prepend(cross).ToList());
+                return first.Count >= 3 && second.Count >= 3 &&
+                    !IsSelfIntersecting(first) && !IsSelfIntersecting(second) &&
+                    !LoopsCrossAwayFromJunction(first, second, cross);
+            }
+        }
+        return false;
+    }
+
+    private static bool LoopsCrossAwayFromJunction(List<GeoCoordinate> first,
+        List<GeoCoordinate> second, GeoCoordinate junction)
+    {
+        for (int i = 0; i < first.Count; i++)
+        {
+            var a = first[i];
+            var b = first[(i + 1) % first.Count];
+            for (int j = 0; j < second.Count; j++)
+            {
+                var c = second[j];
+                var d = second[(j + 1) % second.Count];
+                if (!DoSegmentsIntersect(a, b, c, d))
+                    continue;
+
+                if ((a != junction && b != junction) || (c != junction && d != junction))
+                    return true;
+
+                var firstEnd = a == junction ? b : a;
+                var secondEnd = c == junction ? d : c;
+                if (GetOrientation(junction, firstEnd, secondEnd) == 0 &&
+                    (IsPointOnSegment(junction, firstEnd, secondEnd) ||
+                     IsPointOnSegment(junction, secondEnd, firstEnd)))
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    private static bool TryTrimClosingTail(List<GeoCoordinate> vertices)
+    {
+        // Limit automatic closure to a short tail around the starting point.
+        var start = vertices[0];
+        double longitudeScale = Math.Cos(start.Latitude * Math.PI / 180);
+        double DistanceSquared(GeoCoordinate point)
+        {
+            double dx = (point.Longitude - start.Longitude) * longitudeScale;
+            double dy = point.Latitude - start.Latitude;
+            return dx * dx + dy * dy;
+        }
+
+        const double closingFraction = 0.03;
+        double threshold = vertices.Max(DistanceSquared) * closingFraction * closingFraction;
+        int count = vertices.Count;
+        while (count > 3 && DistanceSquared(vertices[count - 1]) <= threshold)
+            count--;
+
+        if (count == vertices.Count || IsSelfIntersecting(vertices.GetRange(0, count)))
+            return false;
+
+        vertices.RemoveRange(count, vertices.Count - count);
+        return true;
     }
 
     public void UpdateAnchorPosition(int index, GeoCoordinate newCoord)
     {
         if (index >= 0 && index < PolygonCoordinates.Count)
         {
+            if (!double.IsFinite(newCoord.Latitude) || !double.IsFinite(newCoord.Longitude) ||
+                PolygonCoordinates[index] == newCoord)
+                return;
+
+            IsAreaConfirmed = false;
             PolygonCoordinates[index] = newCoord;
             if (index < CurrentArea.Vertices.Count)
             {
@@ -275,9 +475,9 @@ public partial class MapSearchViewModel : ObservableObject
     private void BuildEditAnchors()
     {
         EditAnchorPins.Clear();
-        for (int i = 0; i < PolygonCoordinates.Count; i++)
+        foreach (var p in PolygonCoordinates)
         {
-            var p = PolygonCoordinates[i];
+            int i = EditAnchorPins.Count;
             EditAnchorPins.Add(new EditableAnchorPin(i, p.Latitude, p.Longitude));
         }
     }
@@ -386,13 +586,19 @@ public partial class MapSearchViewModel : ObservableObject
 
     private static bool DoSegmentsIntersect(GeoCoordinate p1, GeoCoordinate q1, GeoCoordinate p2, GeoCoordinate q2)
     {
+        if (Math.Max(p1.Longitude, q1.Longitude) < Math.Min(p2.Longitude, q2.Longitude) ||
+            Math.Max(p2.Longitude, q2.Longitude) < Math.Min(p1.Longitude, q1.Longitude) ||
+            Math.Max(p1.Latitude, q1.Latitude) < Math.Min(p2.Latitude, q2.Latitude) ||
+            Math.Max(p2.Latitude, q2.Latitude) < Math.Min(p1.Latitude, q1.Latitude))
+            return false;
+
         int o1 = GetOrientation(p1, q1, p2);
         int o2 = GetOrientation(p1, q1, q2);
         int o3 = GetOrientation(p2, q2, p1);
         int o4 = GetOrientation(p2, q2, q1);
 
         // General case: segments cross each other
-        if (o1 != o2 && o3 != o4)
+        if (o1 * o2 < 0 && o3 * o4 < 0)
             return true;
 
         // Special collinear cases:
@@ -409,20 +615,19 @@ public partial class MapSearchViewModel : ObservableObject
         double val = (q.Longitude - p.Longitude) * (r.Latitude - p.Latitude) -
                      (q.Latitude - p.Latitude) * (r.Longitude - p.Longitude);
 
-        if (Math.Abs(val) < 1e-12) return 0; // Collinear
-        return (val > 0) ? 1 : 2; // 1 = Clockwise / CCW, 2 = Opposite
+        return Math.Sign(val);
     }
 
     private static bool IsPointOnSegment(GeoCoordinate p, GeoCoordinate q, GeoCoordinate r)
     {
-        return q.Longitude <= Math.Max(p.Longitude, r.Longitude) + 1e-9 &&
-               q.Longitude >= Math.Min(p.Longitude, r.Longitude) - 1e-9 &&
-               q.Latitude <= Math.Max(p.Latitude, r.Latitude) + 1e-9 &&
-               q.Latitude >= Math.Min(p.Latitude, r.Latitude) - 1e-9;
+        return q.Longitude <= Math.Max(p.Longitude, r.Longitude) &&
+               q.Longitude >= Math.Min(p.Longitude, r.Longitude) &&
+               q.Latitude <= Math.Max(p.Latitude, r.Latitude) &&
+               q.Latitude >= Math.Min(p.Latitude, r.Latitude);
     }
 
     /// <summary>
-    /// Calculates the enclosed geographic area in square meters (m²) using localized metric projection and Shoelace formula.
+    /// Calculates the enclosed geographic area in square meters (mÂ²) using localized metric projection and Shoelace formula.
     /// Accurately reflects real-world ground area regardless of latitude.
     /// </summary>
     public static double CalculatePolygonAreaSquareMeters(IReadOnlyList<GeoCoordinate> points)
@@ -460,7 +665,7 @@ public partial class MapSearchViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Calculates the enclosed geographic area. Defaults to square meters (m²).
+    /// Calculates the enclosed geographic area. Defaults to square meters (mÂ²).
     /// </summary>
     public static double CalculatePolygonArea(IReadOnlyList<GeoCoordinate> points)
     {

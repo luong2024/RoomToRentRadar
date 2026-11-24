@@ -108,11 +108,7 @@ public partial class MapSearchPage : ContentPage
         }
         else if (e.PropertyName == nameof(MapSearchViewModel.HasDrawnPolygon) && !_viewModel.HasDrawnPolygon)
         {
-            if (_activeMapPolygon is not null && SearchMap.MapElements.Contains(_activeMapPolygon))
-            {
-                SearchMap.MapElements.Remove(_activeMapPolygon);
-            }
-            _activeMapPolygon = null;
+            ClearMapPolygon();
             _drawable.Clear();
             _drawable.SetAnchors(Enumerable.Empty<PointF>());
             CanvasView.Invalidate();
@@ -125,10 +121,7 @@ public partial class MapSearchPage : ContentPage
         if (isEditing && _viewModel is not null)
         {
             // Temporarily hide map polygon and transfer vertices to screen anchors on canvas
-            if (_activeMapPolygon is not null && SearchMap.MapElements.Contains(_activeMapPolygon))
-            {
-                SearchMap.MapElements.Remove(_activeMapPolygon);
-            }
+            ClearMapPolygon();
 
             var screenPoints = ConvertGeoLocationsToScreenPoints(_viewModel.PolygonCoordinates);
             _drawable.SetAnchors(screenPoints);
@@ -332,13 +325,18 @@ public partial class MapSearchPage : ContentPage
         return screenPoints;
     }
 
-    private void RenderPolygonOnMap(IEnumerable<GeoCoordinate> locations)
+    private void ClearMapPolygon()
     {
-        if (_activeMapPolygon is not null && SearchMap.MapElements.Contains(_activeMapPolygon))
+        if (_activeMapPolygon is not null)
         {
             SearchMap.MapElements.Remove(_activeMapPolygon);
+            _activeMapPolygon = null;
         }
+    }
 
+    private void RenderPolygonOnMap(IEnumerable<GeoCoordinate> locations)
+    {
+        ClearMapPolygon();
         var polygon = new Microsoft.Maui.Controls.Maps.Polygon
         {
             StrokeColor = Color.FromArgb("#2563EB"),
@@ -351,7 +349,8 @@ public partial class MapSearchPage : ContentPage
             polygon.Geopath.Add(new Location(loc.Latitude, loc.Longitude));
         }
 
+        if (polygon.Geopath.Count < 3) return;
         _activeMapPolygon = polygon;
-        SearchMap.MapElements.Add(_activeMapPolygon);
+        SearchMap.MapElements.Add(polygon);
     }
 }
