@@ -10,11 +10,6 @@ using RoomToRentRadar.Application.DTOs;
 public interface IRoomListingRepository
 {
     /// <summary>
-    /// Finds a listing projection by its globally unique room ID.
-    /// </summary>
-    Task<RoomListing?> GetByIdAsync(string roomId, CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Gets one database-paginated page of available and verified room listings for a campus (AC4).
     /// </summary>
     Task<PagedResult<RoomListing>> GetAvailableVerifiedRoomsByCampusAsync(

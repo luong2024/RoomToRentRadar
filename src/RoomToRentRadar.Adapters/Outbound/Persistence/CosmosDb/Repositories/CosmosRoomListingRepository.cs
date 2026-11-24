@@ -1,5 +1,6 @@
 namespace RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Repositories;
 
+using System.Net;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Spatial;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,7 +17,7 @@ using RoomToRentRadar.Domain.ValueObjects;
 using RoomToRentRadar.Application.DTOs;
 using ListingRoomStatus = RoomToRentRadar.Domain.Enums.RoomStatus;
 
-public sealed class CosmosRoomListingRepository : IRoomListingRepository
+public sealed class CosmosRoomListingRepository : IRoomListingRepository, IRoomListingVisibilityWriter
 {
     private const int MaxWriteAttempts = 3;
     private const string UpsertOperation = "upsert";
@@ -137,27 +138,48 @@ public sealed class CosmosRoomListingRepository : IRoomListingRepository
         return new PagedResult<RoomListing>(results, page, pageSize, totalCount);
     }
 
-    public async Task<RoomListing?> GetByIdAsync(string roomId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<string>> HideAsync(string roomId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
-        var query = new QueryDefinition(
-                "SELECT TOP 1 * FROM c WHERE c.id = @id AND (NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false)")
-            .WithParameter("@id", roomId.Trim());
-        using var iterator = _listingsContainer.GetItemQueryIterator<RoomListingDocument>(
-            query,
-            requestOptions: new QueryRequestOptions { MaxItemCount = 1 });
+        const string activeProjection = "(NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false)";
+        var query = new QueryDefinition($"SELECT VALUE c.campusId FROM c WHERE c.id = @id AND {activeProjection}")
+            .WithParameter("@id", roomId);
+        var campusIds = new HashSet<string>(StringComparer.Ordinal);
+        using var iterator = _listingsContainer.GetItemQueryIterator<string>(query);
 
         while (iterator.HasMoreResults)
         {
             var page = await iterator.ReadNextAsync(cancellationToken);
-            var document = page.FirstOrDefault();
-            if (document is not null)
+            campusIds.UnionWith(page);
+        }
+
+        var patch = new[]
+        {
+            PatchOperation.Set("/status", (int)ListingRoomStatus.Hidden),
+            PatchOperation.Set("/verificationStatus", (int)VerificationStatus.Unverified)
+        };
+
+        foreach (var campusId in campusIds)
+        {
+            try
             {
-                return document.ToDomain();
+                await ExecuteWriteAsync(roomId, "hide-listing-projection", () =>
+                    _listingsContainer.PatchItemAsync<RoomListingDocument>(
+                        roomId, new PartitionKey(campusId), patch,
+                        new PatchItemRequestOptions
+                        {
+                            FilterPredicate = $"FROM c WHERE {activeProjection}",
+                            EnableContentResponseOnWrite = false
+                        },
+                        cancellationToken), cancellationToken);
+            }
+            catch (CosmosException ex) when (ex.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.PreconditionFailed)
+            {
+                // The projection was removed or tombstoned. Its cached page still needs invalidation.
             }
         }
 
-        return null;
+        return campusIds.ToList();
     }
 
     public async Task<PagedResult<RoomListing>> SearchByPolygonAsync(

@@ -330,14 +330,19 @@ public sealed class ListingUseCasesTests
             Task.FromResult<(IReadOnlyList<Room> Items, int TotalCount)>((_rooms.Values.ToList(), _rooms.Count));
     }
 
-    private sealed class FakeRoomListingRepository : IRoomListingRepository
+    private sealed class FakeRoomListingRepository : IRoomListingVisibilityWriter
     {
         private readonly Dictionary<string, RoomListing> _listings = new(StringComparer.Ordinal);
 
-        public Task<RoomListing?> GetByIdAsync(string roomId, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<string>> HideAsync(string roomId, CancellationToken cancellationToken = default)
         {
-            _listings.TryGetValue(roomId, out var listing);
-            return Task.FromResult(listing);
+            if (!_listings.TryGetValue(roomId, out var listing))
+            {
+                return Task.FromResult<IReadOnlyList<string>>([]);
+            }
+            listing.UpdateStatus(ListingRoomStatus.Hidden);
+            listing.UpdateVerificationStatus(VerificationStatus.Unverified);
+            return Task.FromResult<IReadOnlyList<string>>([listing.CampusId]);
         }
 
         public Task AddAsync(RoomListing roomListing, CancellationToken cancellationToken = default)
@@ -346,18 +351,6 @@ public sealed class ListingUseCasesTests
             return Task.CompletedTask;
         }
 
-        public Task DeleteAsync(string roomId, string campusId, CancellationToken cancellationToken = default)
-        {
-            _listings.Remove(roomId);
-            return Task.CompletedTask;
-        }
-
-        public Task<PagedResult<RoomListing>> GetAvailableVerifiedRoomsByCampusAsync(
-            string campusId, GeoLocation campusLocation, int page, int pageSize, string sortBy,
-            bool descending, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new PagedResult<RoomListing>(
-                _listings.Values.Where(listing => listing.CampusId == campusId && listing.IsDisplayable).ToList(),
-                page, pageSize, _listings.Values.Count(listing => listing.CampusId == campusId && listing.IsDisplayable)));
     }
 
     private sealed class FakeCacheInvalidator : IRoomListingCacheInvalidator

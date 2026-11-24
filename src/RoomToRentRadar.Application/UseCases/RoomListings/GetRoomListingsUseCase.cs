@@ -9,7 +9,7 @@ using RoomToRentRadar.Domain.Enums;
 /// <summary>
 /// Implements the use case for browsing verified rental rooms near a campus (US01).
 /// </summary>
-public sealed class GetRoomListingsUseCase : IGetRoomListingsUseCase, IRoomListingCacheInvalidator
+public sealed class GetRoomListingsUseCase : IGetRoomListingsUseCase
 {
     // Reduced TTL from 10 minutes to 2 minutes for faster convergence with real-time updates
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(2);
@@ -50,7 +50,8 @@ public sealed class GetRoomListingsUseCase : IGetRoomListingsUseCase, IRoomListi
         // AC3: Cache-aside pattern with campus versioning for instant invalidation
         var normalizedSortBy = string.IsNullOrWhiteSpace(query.SortBy) ? "distance" : query.SortBy.Trim().ToLowerInvariant();
         var normalizedSortOrder = string.IsNullOrWhiteSpace(query.SortOrder) ? "asc" : query.SortOrder.Trim().ToLowerInvariant();
-        var campusVersion = await GetCampusCacheVersionAsync(query.CampusId, cancellationToken);
+        var campusVersion = await _cacheService.GetAsync<string>(
+            RoomListingCacheInvalidator.VersionKey(query.CampusId), cancellationToken) ?? "1";
         var cacheKey = $"rooms:campus:{query.CampusId}:v{campusVersion}:p{query.Page}:s{query.PageSize}:sort{normalizedSortBy}_{normalizedSortOrder}";
 
         var cachedResult = await _cacheService.GetAsync<PagedResult<RoomListingDto>>(cacheKey, cancellationToken);
@@ -112,37 +113,6 @@ public sealed class GetRoomListingsUseCase : IGetRoomListingsUseCase, IRoomListi
         await _cacheService.SetAsync(cacheKey, result, CacheTtl, cancellationToken);
 
         return result;
-    }
-
-    private static long _invalidationSequence;
-
-    /// <summary>
-    /// Implements IRoomListingCacheInvalidator for outbound cache invalidation from write use cases.
-    /// Instantly and atomically invalidates all cached listing pages for a given campus using a strictly
-    /// monotonic timestamp token, completely eliminating read-modify-write lost-update race conditions.
-    /// </summary>
-    public async Task InvalidateCampusAsync(string campusId, CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(campusId))
-        {
-            return;
-        }
-
-        var versionKey = $"rooms:campus:{campusId}:version";
-        var newVersion = $"{DateTimeOffset.UtcNow.Ticks}_{Interlocked.Increment(ref _invalidationSequence)}";
-        await _cacheService.SetAsync(versionKey, newVersion, TimeSpan.FromDays(7), cancellationToken);
-    }
-
-    private async Task<string> GetCampusCacheVersionAsync(string campusId, CancellationToken cancellationToken)
-    {
-        var versionKey = $"rooms:campus:{campusId}:version";
-        var version = await _cacheService.GetAsync<string>(versionKey, cancellationToken);
-        if (string.IsNullOrEmpty(version))
-        {
-            version = "1";
-            await _cacheService.SetAsync(versionKey, version, TimeSpan.FromDays(7), cancellationToken);
-        }
-        return version;
     }
 
     private static void ValidateQuery(GetRoomListingsQuery query)

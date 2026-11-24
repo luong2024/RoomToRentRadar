@@ -80,6 +80,8 @@ public sealed class AuthWebApplicationFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IRoomListingRepository>();
             services.AddSingleton<IRoomListingRepository>(RoomListingRepository);
+            services.RemoveAll<IRoomListingVisibilityWriter>();
+            services.AddSingleton<IRoomListingVisibilityWriter>(RoomListingRepository);
             services.RemoveAll<ICampusRepository>();
             services.AddSingleton<ICampusRepository, IntegrationCampusRepository>();
 
@@ -108,14 +110,19 @@ public sealed class AuthWebApplicationFactory : WebApplicationFactory<Program>
     }
 }
 
-public sealed class InMemoryRoomListingRepository : IRoomListingRepository
+public sealed class InMemoryRoomListingRepository : IRoomListingRepository, IRoomListingVisibilityWriter
 {
     private readonly Dictionary<string, RoomListing> _listings = new(StringComparer.Ordinal);
 
-    public Task<RoomListing?> GetByIdAsync(string roomId, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<string>> HideAsync(string roomId, CancellationToken cancellationToken = default)
     {
-        _listings.TryGetValue(roomId, out var listing);
-        return Task.FromResult(listing);
+        if (!_listings.TryGetValue(roomId, out var listing))
+        {
+            return Task.FromResult<IReadOnlyList<string>>([]);
+        }
+        listing.UpdateStatus(ListingRoomStatus.Hidden);
+        listing.UpdateVerificationStatus(VerificationStatus.Unverified);
+        return Task.FromResult<IReadOnlyList<string>>([listing.CampusId]);
     }
 
     public Task AddAsync(RoomListing roomListing, CancellationToken cancellationToken = default)

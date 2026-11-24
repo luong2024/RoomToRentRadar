@@ -8,16 +8,16 @@ using RoomToRentRadar.Domain.Entities;
 public sealed class UnpublishListingUseCase : IUnpublishListingUseCase
 {
     private readonly IRoomRepository _roomRepository;
-    private readonly IRoomListingRepository _roomListingRepository;
+    private readonly IRoomListingVisibilityWriter _visibilityWriter;
     private readonly IRoomListingCacheInvalidator _cacheInvalidator;
 
     public UnpublishListingUseCase(
         IRoomRepository roomRepository,
-        IRoomListingRepository roomListingRepository,
+        IRoomListingVisibilityWriter visibilityWriter,
         IRoomListingCacheInvalidator cacheInvalidator)
     {
         _roomRepository = roomRepository ?? throw new ArgumentNullException(nameof(roomRepository));
-        _roomListingRepository = roomListingRepository ?? throw new ArgumentNullException(nameof(roomListingRepository));
+        _visibilityWriter = visibilityWriter ?? throw new ArgumentNullException(nameof(visibilityWriter));
         _cacheInvalidator = cacheInvalidator ?? throw new ArgumentNullException(nameof(cacheInvalidator));
     }
 
@@ -39,20 +39,10 @@ public sealed class UnpublishListingUseCase : IUnpublishListingUseCase
             await _roomRepository.UpdateAsync(room, cancellationToken);
         }
 
-        var listing = await _roomListingRepository.GetByIdAsync(listingId, cancellationToken);
-        if (listing is null)
+        var campusIds = await _visibilityWriter.HideAsync(room.Id, cancellationToken);
+        foreach (var campusId in campusIds)
         {
-            return;
+            await _cacheInvalidator.InvalidateCampusAsync(campusId, cancellationToken);
         }
-
-        if (listing.Status != RoomToRentRadar.Domain.Enums.RoomStatus.Hidden ||
-            listing.VerificationStatus != RoomToRentRadar.Domain.Enums.VerificationStatus.Unverified)
-        {
-            listing.UpdateStatus(RoomToRentRadar.Domain.Enums.RoomStatus.Hidden);
-            listing.UpdateVerificationStatus(RoomToRentRadar.Domain.Enums.VerificationStatus.Unverified);
-            await _roomListingRepository.AddAsync(listing, cancellationToken);
-        }
-
-        await _cacheInvalidator.InvalidateCampusAsync(listing.CampusId, cancellationToken);
     }
 }

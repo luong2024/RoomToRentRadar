@@ -278,9 +278,6 @@ public class RoomListingsApplicationPerformanceTests
     {
         private readonly List<RoomListing> _rooms = [];
 
-        public Task<RoomListing?> GetByIdAsync(string roomId, CancellationToken cancellationToken = default) =>
-            Task.FromResult<RoomListing?>(null);
-
         public Task<PagedResult<RoomListing>> GetAvailableVerifiedRoomsByCampusAsync(string campusId, GeoLocation campusLocation, int page, int pageSize, string sortBy, bool descending, CancellationToken cancellationToken = default)
         {
             var result = _rooms.Where(r => r.CampusId == campusId && r.Status == ListingRoomStatus.Available && r.VerificationStatus == VerificationStatus.Verified).ToList();

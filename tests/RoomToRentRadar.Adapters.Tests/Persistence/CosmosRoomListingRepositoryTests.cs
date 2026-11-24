@@ -16,49 +16,49 @@ namespace RoomToRentRadar.Adapters.Tests.Persistence;
 public class CosmosRoomListingRepositoryTests
 {
     [Test]
-    public async Task GetByIdAsync_FindsProjectionByRoomIdAcrossCampusPartitions()
+    public async Task HideAsync_PatchesVisibilityInEachCampusWithoutRewritingDetails()
     {
         var listingsContainer = new Mock<Container>();
-        var response = new Mock<FeedResponse<RoomListingDocument>>();
-        response.Setup(item => item.GetEnumerator()).Returns(new List<RoomListingDocument>
-        {
-            new()
-            {
-                Id = "room-1",
-                CampusId = "campus-ictu",
-                Title = "Room 1",
-                MonthlyRentAmount = 2_500_000m,
-                MonthlyRentCurrency = "VND",
-                AreaSquareMeters = 25,
-                Address = "ICTU",
-                Latitude = 21.58,
-                Longitude = 105.81,
-                Status = (int)ListingRoomStatus.Available,
-                VerificationStatus = (int)VerificationStatus.Verified
-            }
-        }.GetEnumerator());
-        var iterator = new Mock<FeedIterator<RoomListingDocument>>();
+        var roomsContainer = new Mock<Container>(MockBehavior.Strict);
+        var response = new Mock<FeedResponse<string>>();
+        response.Setup(item => item.GetEnumerator()).Returns(() =>
+            new List<string> { "campus-a", "campus-b" }.GetEnumerator());
+        var iterator = new Mock<FeedIterator<string>>();
         iterator.SetupSequence(item => item.HasMoreResults).Returns(true).Returns(false);
         iterator.Setup(item => item.ReadNextAsync(It.IsAny<CancellationToken>())).ReturnsAsync(response.Object);
         QueryDefinition? capturedQuery = null;
         listingsContainer
-            .Setup(container => container.GetItemQueryIterator<RoomListingDocument>(
-                It.IsAny<QueryDefinition>(), null, It.IsAny<QueryRequestOptions>()))
+            .Setup(container => container.GetItemQueryIterator<string>(It.IsAny<QueryDefinition>(), null, null))
             .Callback<QueryDefinition, string, QueryRequestOptions>((query, _, _) => capturedQuery = query)
             .Returns(iterator.Object);
+        listingsContainer
+            .Setup(container => container.PatchItemAsync<RoomListingDocument>(
+                "room-1", It.IsAny<PartitionKey>(), It.IsAny<IReadOnlyList<PatchOperation>>(),
+                It.IsAny<PatchItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Mock<ItemResponse<RoomListingDocument>>().Object);
 
         var repository = new CosmosRoomListingRepository(
-            listingsContainer.Object, new Mock<Container>().Object, CreateOutboxContainer().Object);
+            listingsContainer.Object, roomsContainer.Object, new Mock<Container>(MockBehavior.Strict).Object);
 
-        var result = await repository.GetByIdAsync("room-1");
+        var result = await repository.HideAsync("room-1");
 
         Assert.Multiple(() =>
         {
-            Assert.That(result, Is.Not.Null);
-            Assert.That(result!.CampusId, Is.EqualTo("campus-ictu"));
+            Assert.That(result, Is.EquivalentTo(new[] { "campus-a", "campus-b" }));
             Assert.That(capturedQuery!.QueryText, Does.Contain("c.id = @id"));
             Assert.That(capturedQuery.GetQueryParameters().Single(parameter => parameter.Name == "@id").Value, Is.EqualTo("room-1"));
         });
+
+        foreach (var campusId in result)
+        {
+            listingsContainer.Verify(container => container.PatchItemAsync<RoomListingDocument>(
+                "room-1", new PartitionKey(campusId),
+                It.Is<IReadOnlyList<PatchOperation>>(patch => patch.Select(operation => operation.Path)
+                    .SequenceEqual(new[] { "/status", "/verificationStatus" })),
+                It.Is<PatchItemRequestOptions>(options => options.FilterPredicate!.Contains("c.isDeleted = false")),
+                It.IsAny<CancellationToken>()), Times.Once);
+        }
+        roomsContainer.VerifyNoOtherCalls();
     }
 
     [Test]

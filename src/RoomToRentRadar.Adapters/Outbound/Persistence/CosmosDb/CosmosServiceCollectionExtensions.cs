@@ -64,7 +64,15 @@ public static class CosmosServiceCollectionExtensions
         services.AddScoped<IRoomListingRepository>(serviceProvider => serviceProvider.GetRequiredService<CosmosRoomListingRepository>());
         services.AddScoped<ICampusRepository, CosmosCampusRepository>();
         services.AddScoped<CosmosDbInitializer>();
-        services.AddHostedService<RoomProjectionReconciliationService>();
+        if (string.Equals(configuration["CosmosDb:AccountEndpoint"], "in-memory", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddSingleton<IRoomListingVisibilityWriter, InMemoryListingVisibilityWriter>();
+        }
+        else
+        {
+            services.AddScoped<IRoomListingVisibilityWriter>(sp => sp.GetRequiredService<CosmosRoomListingRepository>());
+            services.AddHostedService<RoomProjectionReconciliationService>();
+        }
 
         return services;
     }
@@ -74,5 +82,12 @@ public static class CosmosServiceCollectionExtensions
         services.AddMemoryCache();
         services.AddSingleton<ICacheService, MemoryCacheService>();
         return services;
+    }
+
+    // In-memory mode has room details but no campus projections to hide.
+    private sealed class InMemoryListingVisibilityWriter : IRoomListingVisibilityWriter
+    {
+        public Task<IReadOnlyList<string>> HideAsync(string roomId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<string>>([]);
     }
 }

@@ -35,7 +35,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<GetRoomListingsUseCase>();
         services.AddScoped<IGetRoomListingsUseCase>(sp => sp.GetRequiredService<GetRoomListingsUseCase>());
-        services.AddScoped<IRoomListingCacheInvalidator>(sp => sp.GetRequiredService<GetRoomListingsUseCase>());
+        services.AddScoped<IRoomListingCacheInvalidator, RoomListingCacheInvalidator>();
         services.AddScoped<IGetRoomDetailsUseCase, GetRoomDetailsUseCase>();
         services.AddScoped<ISearchRoomsUseCase, SearchRoomsUseCase>();
         services.AddScoped<ISearchRoomsInPolygonUseCase, SearchRoomsInPolygonUseCase>();
