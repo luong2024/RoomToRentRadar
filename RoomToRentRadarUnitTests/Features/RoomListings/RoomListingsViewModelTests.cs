@@ -113,6 +113,44 @@ public class RoomListingsViewModelTests
         });
     }
 
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task Undo_WhenSessionChangesAfterRemoval_DoesNotAddFavourite(bool sameUser)
+    {
+        var room = CreateRoom("room-1");
+        _fakeService.SetupPages(1, 6, [room]);
+        var favourites = new FakeFavouritesService { FavouriteRooms = [CreateRoom(room.Id)] };
+        var feedback = new FakeFavoriteFeedbackService();
+        var session = new Mock<IAuthenticationSessionService>();
+        var originalUser = new AuthUser(Guid.NewGuid(), "student@example.com", UserRoleConstants.Student, "LOCAL", true);
+        session.SetupGet(item => item.CurrentUser).Returns(originalUser);
+        session.SetupGet(item => item.IsAuthenticated).Returns(true);
+        session.SetupGet(item => item.IsInitialized).Returns(true);
+        session.SetupGet(item => item.SessionEpoch).Returns(1);
+        var vm = new RoomListingsViewModel(_fakeService, _fakeErrorHandler, session.Object, favourites, feedback);
+        await vm.InitializeAsync();
+        await vm.ToggleFavoriteCommand.ExecuteAsync(room);
+        Assert.That(favourites.RemovedRoomIds, Is.EqualTo(new[] { room.Id }));
+
+        session.SetupGet(item => item.CurrentUser).Returns((AuthUser?)null);
+        session.SetupGet(item => item.IsAuthenticated).Returns(false);
+        session.SetupGet(item => item.SessionEpoch).Returns(2);
+        session.Raise(item => item.CurrentUserChanged += null!, session.Object, null!);
+        var signedInUser = sameUser ? originalUser : originalUser with { Id = Guid.NewGuid() };
+        session.SetupGet(item => item.CurrentUser).Returns(signedInUser);
+        session.SetupGet(item => item.IsAuthenticated).Returns(true);
+        session.SetupGet(item => item.SessionEpoch).Returns(3);
+        session.Raise(item => item.CurrentUserChanged += null!, session.Object, signedInUser);
+        await feedback.InvokeUndoAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(favourites.AddedRoomIds, Is.Empty);
+            Assert.That(room.IsFavorite, Is.False);
+            Assert.That(vm.FavoriteCount, Is.Zero);
+        });
+    }
+
     [Test]
     public async Task ToggleFavorite_WhenAddFails_LeavesFavouriteStateUnchanged()
     {
@@ -158,6 +196,46 @@ public class RoomListingsViewModelTests
         {
             Assert.That(room.IsFavorite, Is.False);
             Assert.That(vm.FavoriteCount, Is.Zero);
+        });
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task RefreshFavorites_WhenMutationSucceedsDuringLoad_PreservesLatestFavoriteState(bool initiallySaved)
+    {
+        var room = CreateRoom("room-1");
+        var otherFavorite = CreateRoom("room-2");
+        _fakeService.SetupPages(1, 6, [room]);
+        var staleResponse = new TaskCompletionSource<IReadOnlyList<RoomListItemModel>>();
+        IReadOnlyList<RoomListItemModel> initialFavorites = initiallySaved ? [CreateRoom(room.Id)] : [];
+        IReadOnlyList<RoomListItemModel> updatedFavorites = initiallySaved ? [otherFavorite] : [CreateRoom(room.Id), otherFavorite];
+        var reads = 0;
+        var favourites = new FakeFavouritesService
+        {
+            Handler = _ => (++reads) switch
+            {
+                1 => Task.FromResult(initialFavorites),
+                2 => staleResponse.Task,
+                _ => Task.FromResult(updatedFavorites)
+            }
+        };
+        var vm = CreateAuthenticatedViewModel(favourites);
+        await vm.InitializeAsync();
+        var refresh = vm.RefreshFavoritesAsync();
+        Assert.That(refresh.IsCompleted, Is.False);
+
+        await vm.ToggleFavoriteCommand.ExecuteAsync(room);
+        staleResponse.SetResult(initialFavorites);
+        await refresh;
+        await vm.SelectBottomTabCommand.ExecuteAsync("favorites");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(favourites.AddedRoomIds, Has.Count.EqualTo(initiallySaved ? 0 : 1));
+            Assert.That(favourites.RemovedRoomIds, Has.Count.EqualTo(initiallySaved ? 1 : 0));
+            Assert.That(room.IsFavorite, Is.EqualTo(!initiallySaved));
+            Assert.That(vm.Rooms.Select(item => item.Id), Is.EquivalentTo(updatedFavorites.Select(item => item.Id)));
+            Assert.That(favourites.GetFavouritesCallCount, Is.EqualTo(3));
         });
     }
 
@@ -850,6 +928,8 @@ public class RoomListingsViewModelTests
         var session = new Mock<IAuthenticationSessionService>();
         session.SetupGet(item => item.IsAuthenticated).Returns(true);
         session.SetupGet(item => item.IsInitialized).Returns(true);
+        session.SetupGet(item => item.CurrentUser)
+            .Returns(new AuthUser(Guid.NewGuid(), "student@example.com", UserRoleConstants.Student, "LOCAL", true));
         return new RoomListingsViewModel(_fakeService, _fakeErrorHandler, session.Object, favourites, feedback ?? new FakeFavoriteFeedbackService());
     }
 

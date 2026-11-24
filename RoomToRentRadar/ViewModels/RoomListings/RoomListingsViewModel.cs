@@ -35,6 +35,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
     private CancellationTokenSource? _favoriteLoadCts;
     private Task? _favoritesLoadTask;
     private long _favoriteSessionGeneration;
+    private long _favoriteMutationVersion;
     private string? _lastErrorResourceKey;
     private bool _isInitialized;
     private bool _suppressAutoSortReload;
@@ -447,6 +448,8 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
             return;
         }
 
+        var sessionEpoch = _sessionService.SessionEpoch;
+        var userId = _sessionService.CurrentUser?.Id;
         var wasFavorite = room.IsFavorite;
         room.IsFavoriteBusy = true;
         FavoriteErrorMessage = string.Empty;
@@ -455,13 +458,24 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
             if (wasFavorite)
             {
                 await _favouritesService.RemoveFavouriteAsync(room.Id);
+                if (!IsCurrentFavoriteSession(sessionEpoch, userId))
+                {
+                    return;
+                }
+
                 ApplyFavoriteState(room, false);
-                await ShowUndoSnackbarAsync(room);
+                if (userId is Guid removedByUserId)
+                {
+                    await ShowUndoSnackbarAsync(room, sessionEpoch, removedByUserId);
+                }
             }
             else
             {
                 await _favouritesService.AddFavouriteAsync(room.Id);
-                ApplyFavoriteState(room, true);
+                if (IsCurrentFavoriteSession(sessionEpoch, userId))
+                {
+                    ApplyFavoriteState(room, true);
+                }
             }
         }
         catch (Exception ex)
@@ -586,11 +600,18 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
     {
         try
         {
-            var favourites = await _favouritesService!.GetMyFavouritesAsync(requestCts.Token);
-            if (!IsCurrentFavoriteRequest(sessionGeneration, sessionEpoch, userId, requestCts))
+            IReadOnlyList<RoomListItemModel> favourites;
+            long mutationVersion;
+            do
             {
-                return;
+                mutationVersion = _favoriteMutationVersion;
+                favourites = await _favouritesService!.GetMyFavouritesAsync(requestCts.Token);
+                if (!IsCurrentFavoriteRequest(sessionGeneration, sessionEpoch, userId, requestCts))
+                {
+                    return;
+                }
             }
+            while (mutationVersion != _favoriteMutationVersion);
 
             foreach (var room in _exploreSnapshot)
             {
@@ -637,7 +658,10 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         CancellationTokenSource requestCts) =>
         !requestCts.IsCancellationRequested
         && sessionGeneration == _favoriteSessionGeneration
-        && _sessionService?.IsAuthenticated == true
+        && IsCurrentFavoriteSession(sessionEpoch, userId);
+
+    private bool IsCurrentFavoriteSession(long sessionEpoch, Guid? userId) =>
+        _sessionService?.IsAuthenticated == true
         && _sessionService.SessionEpoch == sessionEpoch
         && _sessionService.CurrentUser?.Id == userId;
 
@@ -655,6 +679,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
 
     private void ApplyFavoriteState(RoomListItemModel room, bool isFavorite)
     {
+        _favoriteMutationVersion++;
         var matchingRooms = _exploreSnapshot
             .Where(item => string.Equals(item.Id, room.Id, StringComparison.Ordinal))
             .Append(room)
@@ -685,20 +710,20 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         OnPropertyChanged(nameof(HasFavorites));
     }
 
-    private async Task ShowUndoSnackbarAsync(RoomListItemModel room)
+    private async Task ShowUndoSnackbarAsync(RoomListItemModel room, long sessionEpoch, Guid userId)
     {
         if (_favoriteFeedbackService is not null)
         {
             await _favoriteFeedbackService.ShowUndoAsync(
                 $"Removed {room.Title} from favorites",
                 "Undo",
-                () => RestoreFavouriteAsync(room));
+                () => RestoreFavouriteAsync(room, sessionEpoch, userId));
         }
     }
 
-    private async Task RestoreFavouriteAsync(RoomListItemModel room)
+    private async Task RestoreFavouriteAsync(RoomListItemModel room, long sessionEpoch, Guid userId)
     {
-        if (_favouritesService is null || _sessionService?.IsAuthenticated != true || room.IsFavoriteBusy)
+        if (_favouritesService is null || !IsCurrentFavoriteSession(sessionEpoch, userId) || room.IsFavoriteBusy)
         {
             return;
         }
@@ -706,6 +731,11 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
         try
         {
             await _favouritesService.AddFavouriteAsync(room.Id);
+            if (!IsCurrentFavoriteSession(sessionEpoch, userId))
+            {
+                return;
+            }
+
             ApplyFavoriteState(room, true);
             if (IsFavoritesTabSelected && !Rooms.Contains(room))
             {

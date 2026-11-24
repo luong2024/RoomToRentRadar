@@ -186,9 +186,11 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
             {
                 try
                 {
-                    IsFavorite = (await _favouritesService.GetMyFavouriteIdsAsync(token)).Contains(roomId);
+                    var favouriteIds = await _favouritesService.GetMyFavouriteIdsAsync(token);
+                    token.ThrowIfCancellationRequested();
+                    IsFavorite = favouriteIds.Contains(roomId);
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (!token.IsCancellationRequested)
                 {
                     FavoriteErrorMessage = "Unable to load favorite status.";
                     _errorHandler.HandleError(ex);
@@ -235,7 +237,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     [RelayCommand(AllowConcurrentExecutions = false)]
     public async Task ToggleFavoriteAsync()
     {
-        if (Room is null || IsFavoriteBusy || _favouritesService is null)
+        if (Room is not { } room || IsFavoriteBusy || _favouritesService is null)
         {
             return;
         }
@@ -244,27 +246,40 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
             FavoriteErrorMessage = "Sign in to save favorite rooms.";
             return;
         }
+        var sessionEpoch = _sessionService.SessionEpoch;
+        var userId = _sessionService.CurrentUser?.Id;
         FavoriteErrorMessage = string.Empty;
         IsFavoriteBusy = true;
         try
         {
             if (IsFavorite)
             {
-                await _favouritesService.RemoveFavouriteAsync(Room.Id);
-                IsFavorite = false;
-                if (_favoriteFeedbackService is not null)
+                await _favouritesService.RemoveFavouriteAsync(room.Id);
+                if (!IsCurrentFavoriteSession(sessionEpoch, userId))
                 {
-                    var removedRoom = Room;
+                    return;
+                }
+
+                if (Room?.Id == room.Id)
+                {
+                    IsFavorite = false;
+                }
+
+                if (_favoriteFeedbackService is not null && userId is Guid removedByUserId)
+                {
                     await _favoriteFeedbackService.ShowUndoAsync(
-                        $"Removed {removedRoom.Title} from favorites",
+                        $"Removed {room.Title} from favorites",
                         "Undo",
-                        () => RestoreFavouriteAsync(removedRoom.Id));
+                        () => RestoreFavouriteAsync(room, sessionEpoch, removedByUserId));
                 }
             }
             else
             {
-                await _favouritesService.AddFavouriteAsync(Room.Id);
-                IsFavorite = true;
+                await _favouritesService.AddFavouriteAsync(room.Id);
+                if (IsCurrentFavoriteSession(sessionEpoch, userId) && Room?.Id == room.Id)
+                {
+                    IsFavorite = true;
+                }
             }
         }
         catch (Exception ex)
@@ -278,21 +293,35 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         }
     }
 
-    private async Task RestoreFavouriteAsync(string roomId)
+    private bool IsCurrentFavoriteSession(long sessionEpoch, Guid? userId) =>
+        _sessionService.IsAuthenticated
+        && _sessionService.SessionEpoch == sessionEpoch
+        && _sessionService.CurrentUser?.Id == userId;
+
+    private async Task RestoreFavouriteAsync(RoomDetailModel room, long sessionEpoch, Guid userId)
     {
-        if (_favouritesService is null || !_sessionService.IsAuthenticated || IsFavoriteBusy)
+        if (_favouritesService is null || !IsCurrentFavoriteSession(sessionEpoch, userId) || IsFavoriteBusy)
         {
             return;
         }
         IsFavoriteBusy = true;
         try
         {
-            await _favouritesService.AddFavouriteAsync(roomId);
-            IsFavorite = true;
-            FavoriteErrorMessage = string.Empty;
+            await _favouritesService.AddFavouriteAsync(room.Id);
+            if (!IsCurrentFavoriteSession(sessionEpoch, userId))
+            {
+                return;
+            }
+
+            if (Room?.Id == room.Id)
+            {
+                IsFavorite = true;
+                FavoriteErrorMessage = string.Empty;
+            }
+
             if (_favoriteFeedbackService is not null)
             {
-                await _favoriteFeedbackService.ShowMessageAsync($"Restored {Room?.Title ?? "room"} to favorites");
+                await _favoriteFeedbackService.ShowMessageAsync($"Restored {room.Title} to favorites");
             }
         }
         catch (Exception ex)

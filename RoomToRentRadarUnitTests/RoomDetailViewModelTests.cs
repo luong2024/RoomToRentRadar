@@ -1,6 +1,7 @@
 using Moq;
 using NUnit.Framework;
 using RoomToRentRadar.Core.Interfaces;
+using RoomToRentRadar.Core.Models.Authentication;
 using RoomToRentRadar.Models.RoomDetails;
 using RoomToRentRadar.Services.RoomDetails;
 using RoomToRentRadar.Services.RoomListings;
@@ -88,6 +89,51 @@ public class RoomDetailViewModelTests
         favourites.Verify(service => service.AddFavouriteAsync("room-01", It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [TestCase(false, false)]
+    [TestCase(true, false)]
+    [TestCase(true, true)]
+    public async Task Undo_AfterRemoval_RestoresOnlyInOriginalSession(bool signedInAgain, bool sameUser)
+    {
+        var originalUser = new AuthUser(Guid.NewGuid(), "student@example.com", UserRoleConstants.Student, "LOCAL", true);
+        _sessionServiceMock.SetupGet(session => session.CurrentUser).Returns(originalUser);
+        _sessionServiceMock.SetupGet(session => session.IsAuthenticated).Returns(true);
+        _sessionServiceMock.SetupGet(session => session.SessionEpoch).Returns(1);
+        var favourites = new Mock<IFavouritesService>();
+        var feedback = new Mock<IFavoriteFeedbackService>();
+        Func<Task>? undo = null;
+        feedback.Setup(service => service.ShowUndoAsync(It.IsAny<string>(), "Undo", It.IsAny<Func<Task>>()))
+            .Callback<string, string, Func<Task>>((_, _, action) => undo = action)
+            .Returns(Task.CompletedTask);
+        _viewModel = new RoomDetailViewModel(
+            _serviceMock.Object, _errorHandlerMock.Object, _sessionServiceMock.Object,
+            favouritesService: favourites.Object, favoriteFeedbackService: feedback.Object)
+        {
+            Room = new RoomDetailModel { Id = "room-01", Status = ListingStatus.Available },
+            IsFavorite = true
+        };
+
+        await _viewModel.ToggleFavoriteCommand.ExecuteAsync(null);
+        favourites.Verify(service => service.RemoveFavouriteAsync("room-01", It.IsAny<CancellationToken>()), Times.Once);
+        Assert.That(undo, Is.Not.Null);
+
+        if (signedInAgain)
+        {
+            _sessionServiceMock.SetupGet(session => session.CurrentUser).Returns((AuthUser?)null);
+            _sessionServiceMock.SetupGet(session => session.IsAuthenticated).Returns(false);
+            _sessionServiceMock.SetupGet(session => session.SessionEpoch).Returns(2);
+            var signedInUser = sameUser ? originalUser : originalUser with { Id = Guid.NewGuid() };
+            _sessionServiceMock.SetupGet(session => session.CurrentUser).Returns(signedInUser);
+            _sessionServiceMock.SetupGet(session => session.IsAuthenticated).Returns(true);
+            _sessionServiceMock.SetupGet(session => session.SessionEpoch).Returns(3);
+        }
+
+        await undo!();
+
+        favourites.Verify(service => service.AddFavouriteAsync("room-01", It.IsAny<CancellationToken>()),
+            signedInAgain ? Times.Never() : Times.Once());
+        Assert.That(_viewModel.IsFavorite, Is.EqualTo(!signedInAgain));
+    }
+
     [Test]
     public async Task ToggleFavoriteAsync_WhenUnauthenticated_ShowsInlineFavoriteError()
     {
@@ -166,6 +212,64 @@ public class RoomDetailViewModelTests
         await firstLoad;
 
         Assert.That(_viewModel.Room!.Id, Is.EqualTo("room-B"));
+        _errorHandlerMock.Verify(handler => handler.HandleError(It.IsAny<Exception>()), Times.Never);
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task ApplyQueryAttributes_WhenFavoriteStatusLoadIsSuperseded_KeepsNewRoomState(bool returnsDespiteCancellation)
+    {
+        var previousStatus = new TaskCompletionSource<IReadOnlySet<string>>();
+        var previousToken = CancellationToken.None;
+        var favourites = new Mock<IFavouritesService>();
+        var readCount = 0;
+        favourites.Setup(service => service.GetMyFavouriteIdsAsync(It.IsAny<CancellationToken>()))
+            .Returns((CancellationToken token) =>
+            {
+                if (++readCount == 1)
+                {
+                    previousToken = token;
+                    return previousStatus.Task;
+                }
+
+                return Task.FromResult<IReadOnlySet<string>>(new HashSet<string> { "room-B" });
+            });
+        _sessionServiceMock.SetupGet(session => session.IsAuthenticated).Returns(true);
+        _viewModel = new RoomDetailViewModel(
+            _serviceMock.Object, _errorHandlerMock.Object, _sessionServiceMock.Object, favouritesService: favourites.Object);
+        _serviceMock.Setup(service => service.GetRoomDetailAsync("room-A", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RoomDetailModel { Id = "room-A", SimilarRooms = [new SimilarRoomModel { Id = "similar-A" }] });
+        _serviceMock.Setup(service => service.GetRoomDetailAsync("room-B", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RoomDetailModel { Id = "room-B", SimilarRooms = [new SimilarRoomModel { Id = "similar-B" }] });
+
+        _viewModel.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "room-A" });
+        var previousLoad = _viewModel.LoadRoomDetailsCommand.ExecutionTask!;
+        Assert.That(readCount, Is.EqualTo(1));
+        Assert.That(previousLoad.IsCompleted, Is.False);
+
+        _viewModel.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "room-B" });
+        await _viewModel.LoadRoomDetailsCommand.ExecutionTask!;
+        Assert.That(previousToken.IsCancellationRequested, Is.True);
+
+        if (returnsDespiteCancellation)
+        {
+            previousStatus.SetResult(new HashSet<string>());
+        }
+        else
+        {
+            previousStatus.SetCanceled(previousToken);
+        }
+
+        await previousLoad;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_viewModel.Room?.Id, Is.EqualTo("room-B"));
+            Assert.That(_viewModel.IsFavorite, Is.True);
+            Assert.That(_viewModel.FavoriteErrorMessage, Is.Empty);
+            Assert.That(_viewModel.SimilarRooms.Select(room => room.Id), Is.EqualTo(new[] { "similar-B" }));
+            Assert.That(_viewModel.IsBusy, Is.False);
+        });
         _errorHandlerMock.Verify(handler => handler.HandleError(It.IsAny<Exception>()), Times.Never);
     }
 
