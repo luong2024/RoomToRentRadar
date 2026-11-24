@@ -46,6 +46,8 @@ public sealed class FavouritesServiceTests
     public async Task RemoveFavouriteAsync_DeletesEscapedRoomIdFromExistingApiRoute()
     {
         var apiClient = new Mock<IApiClient>();
+        apiClient.Setup(client => client.DeleteAsync("api/v1/favourites/room%20%2F%201", It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         await new FavouritesService(apiClient.Object).RemoveFavouriteAsync("room / 1");
 
