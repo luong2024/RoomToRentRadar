@@ -3,6 +3,7 @@ using NUnit.Framework;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Models.RoomDetails;
 using RoomToRentRadar.Services.RoomDetails;
+using RoomToRentRadar.Services.RoomListings;
 using RoomToRentRadar.ViewModels.RoomDetails;
 
 namespace RoomToRentRadarUnitTests;
@@ -52,6 +53,39 @@ public class RoomDetailViewModelTests
         Assert.That(_viewModel.Room!.Title, Is.EqualTo("Phòng trọ đẹp"));
         Assert.That(_viewModel.IsAvailable, Is.True);
         Assert.That(_viewModel.CanBookOrContact, Is.True);
+    }
+
+    [Test]
+    public async Task LoadRoomDetailsAsync_WhenUserHasFavourite_RestoresFavouriteButtonState()
+    {
+        _sessionServiceMock.SetupGet(session => session.IsAuthenticated).Returns(true);
+        var favourites = new Mock<IFavouritesService>();
+        favourites.Setup(service => service.GetMyFavouriteIdsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlySet<string>)new HashSet<string>(["room-01"], StringComparer.Ordinal));
+        _viewModel = new RoomDetailViewModel(_serviceMock.Object, _errorHandlerMock.Object, _sessionServiceMock.Object, favouritesService: favourites.Object);
+        _serviceMock.Setup(service => service.GetRoomDetailAsync("room-01", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RoomDetailModel { Id = "room-01", Status = ListingStatus.Available });
+        _viewModel.RoomId = "room-01";
+
+        await _viewModel.LoadRoomDetailsAsync();
+
+        Assert.That(_viewModel.IsFavorite, Is.True);
+    }
+
+    [Test]
+    public async Task ToggleFavoriteAsync_WhenAddingFavourite_PersistsAndUpdatesButtonState()
+    {
+        _sessionServiceMock.SetupGet(session => session.IsAuthenticated).Returns(true);
+        var favourites = new Mock<IFavouritesService>();
+        _viewModel = new RoomDetailViewModel(_serviceMock.Object, _errorHandlerMock.Object, _sessionServiceMock.Object, favouritesService: favourites.Object)
+        {
+            Room = new RoomDetailModel { Id = "room-01", Status = ListingStatus.Available }
+        };
+
+        await _viewModel.ToggleFavoriteCommand.ExecuteAsync(null);
+
+        Assert.That(_viewModel.IsFavorite, Is.True);
+        favourites.Verify(service => service.AddFavouriteAsync("room-01", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]

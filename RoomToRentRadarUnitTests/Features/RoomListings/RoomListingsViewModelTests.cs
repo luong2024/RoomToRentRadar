@@ -58,6 +58,90 @@ public class RoomListingsViewModelTests
     }
 
     [Test]
+    public async Task Initialize_WhenAuthenticated_LoadsFavouriteStateIntoExploreRoom()
+    {
+        var room = CreateRoom("room-1");
+        _fakeService.SetupPages(1, 6, [room]);
+        var favourites = new FakeFavouritesService { FavouriteRooms = [CreateRoom("room-1")] };
+        var vm = CreateAuthenticatedViewModel(favourites);
+
+        await vm.InitializeCommand.ExecuteAsync(null);
+
+        Assert.That(room.IsFavorite, Is.True);
+    }
+
+    [Test]
+    public async Task ToggleFavorite_WhenAddSucceeds_PersistsAndUpdatesSharedRoomState()
+    {
+        var room = CreateRoom("room-1");
+        _fakeService.SetupPages(1, 6, [room]);
+        var favourites = new FakeFavouritesService();
+        var vm = CreateAuthenticatedViewModel(favourites);
+        await vm.InitializeCommand.ExecuteAsync(null);
+
+        await vm.ToggleFavoriteCommand.ExecuteAsync(room);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(favourites.AddedRoomIds, Is.EqualTo(new[] { "room-1" }));
+            Assert.That(room.IsFavorite, Is.True);
+            Assert.That(vm.FavoriteCount, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task ToggleFavorite_WhenRemoveSucceeds_UndoRestoresPersistedFavourite()
+    {
+        var room = CreateRoom("room-1");
+        room.IsFavorite = true;
+        _fakeService.SetupPages(1, 6, [room]);
+        var favourites = new FakeFavouritesService { FavouriteRooms = [CreateRoom("room-1")] };
+        var feedback = new FakeFavoriteFeedbackService();
+        var vm = CreateAuthenticatedViewModel(favourites, feedback);
+        await vm.InitializeCommand.ExecuteAsync(null);
+
+        await vm.ToggleFavoriteCommand.ExecuteAsync(room);
+        await feedback.InvokeUndoAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(favourites.RemovedRoomIds, Is.EqualTo(new[] { "room-1" }));
+            Assert.That(favourites.AddedRoomIds, Is.EqualTo(new[] { "room-1" }));
+            Assert.That(room.IsFavorite, Is.True);
+            Assert.That(vm.FavoriteCount, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task ToggleFavorite_WhenAddFails_LeavesFavouriteStateUnchanged()
+    {
+        var room = CreateRoom("room-1");
+        _fakeService.SetupPages(1, 6, [room]);
+        var favourites = new FakeFavouritesService { AddException = new HttpRequestException("offline") };
+        var vm = CreateAuthenticatedViewModel(favourites);
+        await vm.InitializeCommand.ExecuteAsync(null);
+
+        await vm.ToggleFavoriteCommand.ExecuteAsync(room);
+
+        Assert.That(room.IsFavorite, Is.False);
+        Assert.That(_fakeErrorHandler.HandledExceptions, Has.Count.EqualTo(1));
+    }
+
+    [Test]
+    public async Task SelectFavoritesTab_ShowsBackendFavouritesAndEmptyState()
+    {
+        var room = CreateRoom("room-1");
+        _fakeService.SetupPages(1, 6, CreateRooms(1, 2));
+        var favourites = new FakeFavouritesService { FavouriteRooms = [room] };
+        var vm = CreateAuthenticatedViewModel(favourites);
+        await vm.InitializeCommand.ExecuteAsync(null);
+
+        await vm.SelectBottomTabCommand.ExecuteAsync("favorites");
+
+        Assert.That(vm.Rooms.Select(item => item.Id), Is.EqualTo(new[] { "room-1" }));
+    }
+
+    [Test]
     public async Task LoadMoreRooms_WhenHasMoreItemsIsTrue_AppendsNextPageWithoutDuplicates()
     {
         // Arrange
@@ -688,6 +772,16 @@ public class RoomListingsViewModelTests
             PageSize = pageSize
         };
 
+    private RoomListingsViewModel CreateAuthenticatedViewModel(
+        FakeFavouritesService favourites,
+        FakeFavoriteFeedbackService? feedback = null)
+    {
+        var session = new Mock<IAuthenticationSessionService>();
+        session.SetupGet(item => item.IsAuthenticated).Returns(true);
+        session.SetupGet(item => item.IsInitialized).Returns(true);
+        return new RoomListingsViewModel(_fakeService, _fakeErrorHandler, session.Object, favourites, feedback ?? new FakeFavoriteFeedbackService());
+    }
+
     private static List<RoomListItemModel> CreateRooms(int startIndex, int count) =>
         Enumerable.Range(startIndex, count)
             .Select(i => CreateRoom($"room-{i}", price: 1_500_000m + (i * 100_000m)))
@@ -758,5 +852,38 @@ public class RoomListingsViewModelTests
         public List<Exception> HandledExceptions { get; } = [];
 
         public void HandleError(Exception ex) => HandledExceptions.Add(ex);
+    }
+
+    private sealed class FakeFavouritesService : IFavouritesService
+    {
+        public IReadOnlyList<RoomListItemModel> FavouriteRooms { get; init; } = [];
+        public List<string> AddedRoomIds { get; } = [];
+        public List<string> RemovedRoomIds { get; } = [];
+        public Exception? AddException { get; init; }
+        public Task<IReadOnlyList<RoomListItemModel>> GetMyFavouritesAsync(CancellationToken cancellationToken = default) => Task.FromResult(FavouriteRooms);
+        public Task<IReadOnlySet<string>> GetMyFavouriteIdsAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlySet<string>>(FavouriteRooms.Select(room => room.Id).ToHashSet(StringComparer.Ordinal));
+        public Task AddFavouriteAsync(string roomId, CancellationToken cancellationToken = default)
+        {
+            if (AddException is not null) throw AddException;
+            AddedRoomIds.Add(roomId);
+            return Task.CompletedTask;
+        }
+        public Task RemoveFavouriteAsync(string roomId, CancellationToken cancellationToken = default)
+        {
+            RemovedRoomIds.Add(roomId);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeFavoriteFeedbackService : IFavoriteFeedbackService
+    {
+        private Func<Task>? _undo;
+        public Task ShowMessageAsync(string message) => Task.CompletedTask;
+        public Task ShowUndoAsync(string message, string actionText, Func<Task> action)
+        {
+            _undo = action;
+            return Task.CompletedTask;
+        }
+        public Task InvokeUndoAsync() => _undo?.Invoke() ?? Task.CompletedTask;
     }
 }
