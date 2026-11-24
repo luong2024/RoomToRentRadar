@@ -197,6 +197,57 @@
                     Text="{Binding ResultSummaryText}"
                     TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
 
+                <!-- Quick switch between room discovery and saved favourites -->
+                <Border
+                    Padding="4"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}"
+                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                    StrokeShape="RoundRectangle 14"
+                    StrokeThickness="1">
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="4">
+                        <Button
+                            Grid.Column="0"
+                            Padding="10,8"
+                            BackgroundColor="Transparent"
+                            BorderWidth="0"
+                            Command="{Binding SelectBottomTabCommand}"
+                            CommandParameter="explore"
+                            CornerRadius="11"
+                            FontAttributes="Bold"
+                            FontSize="13"
+                            SemanticProperties.Description="Show all room listings"
+                            Text="Explore"
+                            TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}">
+                            <Button.Triggers>
+                                <DataTrigger Binding="{Binding IsExploreTabSelected}" TargetType="Button" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}" />
+                                    <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                        <Button
+                            Grid.Column="1"
+                            Padding="10,8"
+                            BackgroundColor="Transparent"
+                            BorderWidth="0"
+                            Command="{Binding SelectBottomTabCommand}"
+                            CommandParameter="favorites"
+                            CornerRadius="11"
+                            FontAttributes="Bold"
+                            FontSize="13"
+                            SemanticProperties.Description="Show my favorite rooms"
+                            Text="{Binding FavoriteCount, StringFormat='Favorites ({0})'}"
+                            TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}">
+                            <Button.Triggers>
+                                <DataTrigger Binding="{Binding IsFavoritesTabSelected}" TargetType="Button" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}" />
+                                    <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                    </Grid>
+                </Border>
+
                 <!-- 2. Search Bar + Separate Filter Button (SlidersHorizontal) -->
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" VerticalOptions="Center">
                     <!-- Redesigned Search Bar with Search Icon -->

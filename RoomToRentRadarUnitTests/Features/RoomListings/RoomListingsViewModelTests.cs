@@ -109,6 +109,7 @@ public class RoomListingsViewModelTests
             Assert.That(favourites.AddedRoomIds, Is.EqualTo(new[] { "room-1" }));
             Assert.That(room.IsFavorite, Is.True);
             Assert.That(vm.FavoriteCount, Is.EqualTo(1));
+            Assert.That(feedback.Messages, Does.Contain("Restored Phòng room-1 to favorites"));
         });
     }
 
@@ -878,7 +879,12 @@ public class RoomListingsViewModelTests
     private sealed class FakeFavoriteFeedbackService : IFavoriteFeedbackService
     {
         private Func<Task>? _undo;
-        public Task ShowMessageAsync(string message) => Task.CompletedTask;
+        public List<string> Messages { get; } = [];
+        public Task ShowMessageAsync(string message)
+        {
+            Messages.Add(message);
+            return Task.CompletedTask;
+        }
         public Task ShowUndoAsync(string message, string actionText, Func<Task> action)
         {
             _undo = action;

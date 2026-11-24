@@ -658,6 +658,7 @@ public partial class RoomListingsViewModel : SearchRoomsViewModel
             {
                 Rooms.Add(room);
             }
+            await ShowFavoriteMessageAsync($"Restored {room.Title} to favorites");
         }
         catch (Exception ex)
         {

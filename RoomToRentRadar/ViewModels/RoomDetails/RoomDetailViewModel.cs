@@ -289,6 +289,10 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
             await _favouritesService.AddFavouriteAsync(roomId);
             IsFavorite = true;
             FavoriteErrorMessage = string.Empty;
+            if (_favoriteFeedbackService is not null)
+            {
+                await _favoriteFeedbackService.ShowMessageAsync($"Restored {Room?.Title ?? "room"} to favorites");
+            }
         }
         catch (Exception ex)
         {
