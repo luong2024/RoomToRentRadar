@@ -71,26 +71,28 @@ public sealed class DeleteRoomPhotoUseCase : IDeleteRoomPhotoUseCase
 
         RoomGalleryAuthorization.EnsureCanManageGallery(room, actorUserId, isAdmin);
 
+        var canonicalRoomId = room.Id;
+
         // Phase 1 (Atomic DB): Mark photo as pending deletion (IsDeleted = true), hide from gallery,
         // free quota slot, and promote the next cover photo in one transactional batch.
         // If a previous DELETE already marked it pending deletion before R2 failed/cancelled,
         // resume cleanup for that pending tombstone instead of returning 404.
-        var targetPhoto = await _photoRepository.MarkPendingDeletionAsync(normalizedRoomId, normalizedPhotoId, cancellationToken);
+        var targetPhoto = await _photoRepository.MarkPendingDeletionAsync(canonicalRoomId, normalizedPhotoId, cancellationToken);
         if (targetPhoto is null)
         {
-            var pending = await _photoRepository.GetPendingDeletionAsync(normalizedRoomId, cancellationToken);
+            var pending = await _photoRepository.GetPendingDeletionAsync(canonicalRoomId, cancellationToken);
             targetPhoto = pending.FirstOrDefault(p => string.Equals(p.Id, normalizedPhotoId, StringComparison.Ordinal));
         }
 
         if (targetPhoto is null)
         {
-            throw new RoomPhotoNotFoundException($"Photo '{normalizedPhotoId}' was not found in room '{normalizedRoomId}'.");
+            throw new RoomPhotoNotFoundException($"Photo '{normalizedPhotoId}' was not found in room '{canonicalRoomId}'.");
         }
 
         // Phase 2 (Storage + Hard-delete): Delete R2 objects with retry; if storage fails or is cancelled,
         // the photo stays hidden in pending-deletion state and can be cleaned up safely later without broken URLs.
         await DeleteStorageWithRetryAsync(targetPhoto.ObjectKey, targetPhoto.ThumbnailObjectKey, cancellationToken);
-        await _photoRepository.DeleteAsync(normalizedRoomId, normalizedPhotoId, CancellationToken.None);
+        await _photoRepository.DeleteAsync(canonicalRoomId, normalizedPhotoId, CancellationToken.None);
     }
 
     public async Task<int> CleanupPendingDeletionsAsync(

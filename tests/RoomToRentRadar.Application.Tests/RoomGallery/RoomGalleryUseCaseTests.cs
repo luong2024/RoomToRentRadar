@@ -60,6 +60,75 @@ public class RoomGalleryUseCaseTests
     }
 
     [Test]
+    public async Task GetRoomGallery_WhenRoomIsNotAvailable_HidesPhotosConsistentlyWithRoomDetails()
+    {
+        var uploadUseCase = new UploadRoomPhotoUseCase(_roomRepo, _photoRepo, _compressionService, _storageService);
+        var galleryUseCase = new GetRoomGalleryUseCase(_roomRepo, _photoRepo);
+
+        await uploadUseCase.ExecuteAsync(new UploadRoomPhotoCommand(
+            "room-001", _ownerLandlordId, "1.jpg", "image/jpeg", [0xFF, 0xD8, 0xFF]));
+
+        // Change room status to Rented (unavailable)
+        var room = (await _roomRepo.GetByIdAsync("room-001"))!;
+        room.Status = RoomStatus.Rented;
+
+        var rentedGallery = await galleryUseCase.ExecuteAsync("room-001");
+        Assert.Multiple(() =>
+        {
+            Assert.That(rentedGallery.RoomId, Is.EqualTo("room-001"));
+            Assert.That(rentedGallery.TotalCount, Is.EqualTo(0));
+            Assert.That(rentedGallery.HasPhotos, Is.False);
+            Assert.That(rentedGallery.Has360Photos, Is.False);
+            Assert.That(rentedGallery.Photos, Is.Empty);
+        });
+
+        // Photos still exist in repository when room becomes Available again
+        room.Status = RoomStatus.Available;
+        var availableGallery = await galleryUseCase.ExecuteAsync("room-001");
+        Assert.That(availableGallery.TotalCount, Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task GalleryUseCases_WhenRequestRoomIdDiffersInCase_AlwaysUseCanonicalRoomId()
+    {
+        var uploadUseCase = new UploadRoomPhotoUseCase(_roomRepo, _photoRepo, _compressionService, _storageService);
+        var galleryUseCase = new GetRoomGalleryUseCase(_roomRepo, _photoRepo);
+        var reorderUseCase = new ReorderRoomPhotosUseCase(_roomRepo, _photoRepo);
+        var deleteUseCase = new DeleteRoomPhotoUseCase(_roomRepo, _photoRepo, _storageService);
+
+        var p1 = await uploadUseCase.ExecuteAsync(new UploadRoomPhotoCommand(
+            "ROOM-001", _ownerLandlordId, "1.jpg", "image/jpeg", [0xFF, 0xD8, 0xFF]));
+        var p2 = await uploadUseCase.ExecuteAsync(new UploadRoomPhotoCommand(
+            "RoOm-001", _ownerLandlordId, "2.jpg", "image/jpeg", [0xFF, 0xD8, 0xFF]));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(p1.RoomId, Is.EqualTo("room-001"));
+            Assert.That(p2.RoomId, Is.EqualTo("room-001"));
+        });
+
+        var gallery = await galleryUseCase.ExecuteAsync("ROOM-001");
+        Assert.Multiple(() =>
+        {
+            Assert.That(gallery.RoomId, Is.EqualTo("room-001"));
+            Assert.That(gallery.TotalCount, Is.EqualTo(2));
+        });
+
+        var reordered = await reorderUseCase.ExecuteAsync(new ReorderRoomPhotosCommand(
+            "ROOM-001", _ownerLandlordId, [p2.Id, p1.Id], p2.Id));
+        Assert.Multiple(() =>
+        {
+            Assert.That(reordered.RoomId, Is.EqualTo("room-001"));
+            Assert.That(reordered.Photos[0].Id, Is.EqualTo(p2.Id));
+        });
+
+        await deleteUseCase.ExecuteAsync("ROOM-001", p1.Id, _ownerLandlordId);
+        var remaining = await _photoRepo.GetByRoomIdAsync("room-001");
+        Assert.That(remaining, Has.Count.EqualTo(1));
+        Assert.That(remaining[0].Id, Is.EqualTo(p2.Id));
+    }
+
+    [Test]
     public async Task UploadRoomPhoto_AC1_SupportsAtLeast8PhotosAndEnforcesMaxQuotaOf12()
     {
         var uploadUseCase = new UploadRoomPhotoUseCase(_roomRepo, _photoRepo, _compressionService, _storageService);

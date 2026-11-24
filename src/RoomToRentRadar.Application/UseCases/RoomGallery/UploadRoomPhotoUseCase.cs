@@ -65,11 +65,13 @@ public sealed class UploadRoomPhotoUseCase : IUploadRoomPhotoUseCase
 
         RoomGalleryAuthorization.EnsureCanManageGallery(room, command.UploadedByUserId, command.IsAdmin);
 
-        var existingCount = await _photoRepository.CountByRoomIdAsync(normalizedRoomId, cancellationToken);
+        var canonicalRoomId = room.Id;
+
+        var existingCount = await _photoRepository.CountByRoomIdAsync(canonicalRoomId, cancellationToken);
         if (existingCount >= RoomPhoto.MaxPhotosPerRoom)
         {
             throw new RoomPhotoQuotaExceededException(
-                $"Room '{normalizedRoomId}' has reached the maximum limit of {RoomPhoto.MaxPhotosPerRoom} photos.");
+                $"Room '{canonicalRoomId}' has reached the maximum limit of {RoomPhoto.MaxPhotosPerRoom} photos.");
         }
 
         var processedImage = await _compressionService.ProcessAsync(
@@ -80,7 +82,7 @@ public sealed class UploadRoomPhotoUseCase : IUploadRoomPhotoUseCase
 
         var photoId = $"photo-{Guid.NewGuid():N}";
         var storedPhoto = await _storageService.UploadAsync(
-            normalizedRoomId,
+            canonicalRoomId,
             photoId,
             processedImage,
             cancellationToken);
@@ -89,12 +91,12 @@ public sealed class UploadRoomPhotoUseCase : IUploadRoomPhotoUseCase
         try
         {
             newPhoto = await _photoRepository.AddWithinQuotaAsync(
-                normalizedRoomId,
+                canonicalRoomId,
                 RoomPhoto.MaxPhotosPerRoom,
                 command.IsCover,
                 (displayOrder, isCover) => RoomPhoto.Create(
                     id: photoId,
-                    roomId: normalizedRoomId,
+                    roomId: canonicalRoomId,
                     url: storedPhoto.Url,
                     thumbnailUrl: storedPhoto.ThumbnailUrl,
                     objectKey: storedPhoto.ObjectKey,

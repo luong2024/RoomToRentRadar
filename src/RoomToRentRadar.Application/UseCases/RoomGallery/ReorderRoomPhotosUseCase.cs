@@ -39,6 +39,8 @@ public sealed class ReorderRoomPhotosUseCase : IReorderRoomPhotosUseCase
 
         RoomGalleryAuthorization.EnsureCanManageGallery(room, command.ActorUserId, command.IsAdmin);
 
+        var canonicalRoomId = room.Id;
+
         var orderedIds = (command.OrderedPhotoIds ?? [])
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .Select(id => id.Trim())
@@ -50,11 +52,11 @@ public sealed class ReorderRoomPhotosUseCase : IReorderRoomPhotosUseCase
         }
 
         var updatedPhotos = await _photoRepository.ReorderAsync(
-            normalizedRoomId,
+            canonicalRoomId,
             orderedIds,
             command.CoverPhotoId,
             cancellationToken);
 
-        return RoomGalleryMapper.ToGalleryResponse(normalizedRoomId, updatedPhotos);
+        return RoomGalleryMapper.ToGalleryResponse(canonicalRoomId, updatedPhotos);
     }
 }

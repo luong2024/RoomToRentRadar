@@ -326,7 +326,40 @@ public class RoomGalleryIntegrationTests
     }
 
     [Test]
-    public void AddRoomGalleryFeature_InProductionWithoutValidR2_FailsFastOnOptionsValidation()
+    public async Task GetGallery_WhenRoomIsNotAvailable_ReturnsEmptyGalleryForPublicAccess()
+    {
+        var ownerSession = await RegisterAndLoginSessionAsync("status-owner@ictu.edu.vn", "LANDLORD");
+        AssignRoomOwner("room-gallery-001", ownerSession.UserId);
+        var jpegBytes = CreateTestJpeg(600, 400);
+
+        using var uploadReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/rooms/room-gallery-001/gallery/photos")
+        {
+            Content = CreateUploadForm(jpegBytes, "room.jpg", "image/jpeg")
+        };
+        uploadReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ownerSession.AccessToken);
+        var uploadRes = await _client.SendAsync(uploadReq);
+        Assert.That(uploadRes.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+
+        var availableGallery = await _client.GetFromJsonAsync<RoomGalleryResponse>("/api/v1/rooms/room-gallery-001/gallery");
+        Assert.That(availableGallery!.TotalCount, Is.EqualTo(1));
+
+        // Transition room to Rented (unavailable)
+        var room = (await _factory.RoomRepository.GetByIdAsync("room-gallery-001"))!;
+        room.Status = RoomDetailsStatus.Rented;
+        _factory.RoomRepository.Upsert(room);
+
+        var unavailableGallery = await _client.GetFromJsonAsync<RoomGalleryResponse>("/api/v1/rooms/room-gallery-001/gallery");
+        Assert.Multiple(() =>
+        {
+            Assert.That(unavailableGallery!.RoomId, Is.EqualTo("room-gallery-001"));
+            Assert.That(unavailableGallery.TotalCount, Is.EqualTo(0));
+            Assert.That(unavailableGallery.HasPhotos, Is.False);
+            Assert.That(unavailableGallery.Photos, Is.Empty);
+        });
+    }
+
+    [Test]
+    public void AddRoomGalleryFeature_InProductionWithoutValidR2_DoesNotBlockStartupAndRejectsStorageMutations()
     {
         var prodEnv = new FakeHostEnvironment(Environments.Production);
         var devEnv = new FakeHostEnvironment(Environments.Development);
@@ -348,12 +381,21 @@ public class RoomGalleryIntegrationTests
             .AddRoomGalleryFeature(inMemoryConfig, devEnv)
             .BuildServiceProvider();
 
-        Assert.Throws<Microsoft.Extensions.Options.OptionsValidationException>(() =>
-            prodMissingProvider.GetRequiredService<IRoomPhotoStorageService>());
-        Assert.Throws<Microsoft.Extensions.Options.OptionsValidationException>(() =>
-            prodInMemoryProvider.GetRequiredService<IRoomPhotoStorageService>());
-        Assert.DoesNotThrow(() =>
-            devInMemoryProvider.GetRequiredService<IRoomPhotoStorageService>());
+        var prodMissingStorage = prodMissingProvider.GetRequiredService<IRoomPhotoStorageService>();
+        var prodInMemoryStorage = prodInMemoryProvider.GetRequiredService<IRoomPhotoStorageService>();
+        var devInMemoryStorage = devInMemoryProvider.GetRequiredService<IRoomPhotoStorageService>();
+
+        var sampleImage = new ProcessedImageResult([1, 2, 3], [1, 2], "image/jpeg", ".jpg", 100, 100);
+
+        Assert.Multiple(() =>
+        {
+            Assert.ThrowsAsync<RoomToRentRadar.Domain.Exceptions.PhotoStorageNotConfiguredException>(() =>
+                prodMissingStorage.UploadAsync("room-1", "p-1", sampleImage));
+            Assert.ThrowsAsync<RoomToRentRadar.Domain.Exceptions.PhotoStorageNotConfiguredException>(() =>
+                prodInMemoryStorage.UploadAsync("room-1", "p-1", sampleImage));
+            Assert.DoesNotThrowAsync(() =>
+                devInMemoryStorage.UploadAsync("room-1", "p-1", sampleImage));
+        });
     }
 
     private sealed class FakeHostEnvironment(string environmentName) : IHostEnvironment

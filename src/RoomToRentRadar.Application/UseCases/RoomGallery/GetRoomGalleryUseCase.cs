@@ -2,6 +2,7 @@ using RoomToRentRadar.Application.DTOs;
 using RoomToRentRadar.Application.Exceptions;
 using RoomToRentRadar.Application.Ports.Inbound;
 using RoomToRentRadar.Application.Ports.Outbound;
+using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Exceptions;
 
 namespace RoomToRentRadar.Application.UseCases.RoomGallery;
@@ -35,7 +36,16 @@ public sealed class GetRoomGalleryUseCase : IGetRoomGalleryUseCase
             throw new NotFoundException($"Room '{normalizedRoomId}' was not found.");
         }
 
-        var photos = await _photoRepository.GetByRoomIdAsync(normalizedRoomId, cancellationToken);
-        return RoomGalleryMapper.ToGalleryResponse(normalizedRoomId, photos);
+        var canonicalRoomId = room.Id;
+
+        // Keep public gallery visibility aligned with GetRoomDetailsUseCase:
+        // hide room photos whenever the room is no longer Available.
+        if (room.Status != RoomStatus.Available)
+        {
+            return RoomGalleryMapper.ToGalleryResponse(canonicalRoomId, Array.Empty<RoomPhoto>());
+        }
+
+        var photos = await _photoRepository.GetByRoomIdAsync(canonicalRoomId, cancellationToken);
+        return RoomGalleryMapper.ToGalleryResponse(canonicalRoomId, photos);
     }
 }

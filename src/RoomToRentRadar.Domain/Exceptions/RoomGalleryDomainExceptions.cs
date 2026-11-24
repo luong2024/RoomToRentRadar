@@ -34,3 +34,10 @@ public sealed class RoomGalleryAccessDeniedException : RoomGalleryDomainExceptio
     {
     }
 }
+
+public sealed class PhotoStorageNotConfiguredException : RoomGalleryDomainException
+{
+    public PhotoStorageNotConfiguredException(string message) : base(message)
+    {
+    }
+}

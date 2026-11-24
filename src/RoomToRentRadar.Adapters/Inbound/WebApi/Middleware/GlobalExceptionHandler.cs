@@ -207,6 +207,12 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                 galleryAccessDeniedEx.Message,
                 null),
 
+            PhotoStorageNotConfiguredException storageNotConfiguredEx => (
+                StatusCodes.Status503ServiceUnavailable,
+                "Photo Storage Unavailable",
+                storageNotConfiguredEx.Message,
+                null),
+
             RateLimitExceededException rateLimitEx => (
                 StatusCodes.Status429TooManyRequests,
                 "Rate Limit Exceeded",

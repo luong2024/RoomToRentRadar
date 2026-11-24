@@ -25,13 +25,7 @@ public static class RoomGalleryServiceCollectionExtensions
 
         services
             .AddOptions<PhotoStorageOptions>()
-            .Bind(configuration.GetSection(PhotoStorageOptions.SectionName))
-            .Validate(
-                options => options.IsCloudflareR2Configured() || (options.IsInMemoryProvider() && isDevOrTest),
-                $"Invalid PhotoStorage configuration for environment '{environment.EnvironmentName}'. " +
-                "Provide valid Cloudflare R2 credentials (AccountId, BucketName, AccessKeyId, SecretAccessKey, PublicBaseUrl), " +
-                "or explicitly set PhotoStorage:Provider='InMemory' in Development/Testing.")
-            .ValidateOnStart();
+            .Bind(configuration.GetSection(PhotoStorageOptions.SectionName));
 
         services.AddHttpClient<CloudflareR2PhotoStorageService>();
         services.AddSingleton<InMemoryRoomPhotoStorageService>();
@@ -52,9 +46,10 @@ public static class RoomGalleryServiceCollectionExtensions
                 return sp.GetRequiredService<InMemoryRoomPhotoStorageService>();
             }
 
-            throw new InvalidOperationException(
-                $"Invalid PhotoStorage configuration for environment '{environment.EnvironmentName}'. " +
-                "Cloudflare R2 credentials are required outside Development/Testing.");
+            return new UnconfiguredRoomPhotoStorageService(
+                $"Photo storage is not configured for environment '{environment.EnvironmentName}'. " +
+                "Configure valid Cloudflare R2 credentials (AccountId, BucketName, AccessKeyId, SecretAccessKey, PublicBaseUrl) " +
+                "or explicitly set PhotoStorage:Provider='InMemory' in Development/Testing.");
         });
 
         services.AddSingleton<IImageCompressionService, SkiaImageCompressionService>();
