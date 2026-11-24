@@ -9,11 +9,19 @@ public sealed class UpdateListingUseCase : IUpdateListingUseCase
 {
     private readonly IRoomRepository _roomRepository;
     private readonly IListingImageStorageService _imageStorage;
+    private readonly IRoomListingVisibilityWriter _visibilityWriter;
+    private readonly IRoomListingCacheInvalidator _cacheInvalidator;
 
-    public UpdateListingUseCase(IRoomRepository roomRepository, IListingImageStorageService imageStorage)
+    public UpdateListingUseCase(
+        IRoomRepository roomRepository,
+        IListingImageStorageService imageStorage,
+        IRoomListingVisibilityWriter visibilityWriter,
+        IRoomListingCacheInvalidator cacheInvalidator)
     {
         _roomRepository = roomRepository ?? throw new ArgumentNullException(nameof(roomRepository));
         _imageStorage = imageStorage ?? throw new ArgumentNullException(nameof(imageStorage));
+        _visibilityWriter = visibilityWriter ?? throw new ArgumentNullException(nameof(visibilityWriter));
+        _cacheInvalidator = cacheInvalidator ?? throw new ArgumentNullException(nameof(cacheInvalidator));
     }
 
     public async Task<ListingWriteResult> ExecuteAsync(Guid ownerId, string listingId, ListingWriteRequest request, CancellationToken cancellationToken = default)
@@ -45,6 +53,7 @@ public sealed class UpdateListingUseCase : IUpdateListingUseCase
         }
 
         var storedUrls = new List<string>();
+        Room updated;
         try
         {
             foreach (var photo in request.Photos)
@@ -56,7 +65,7 @@ public sealed class UpdateListingUseCase : IUpdateListingUseCase
             var finalUrls = retained.Concat(storedUrls).Distinct(StringComparer.Ordinal).ToList();
             if (finalUrls.Count < 3) throw new RequestValidationException("photos", "The listing must have at least three valid photos after the update.");
 
-            var updated = CopyRoom(existing);
+            updated = CopyRoom(existing);
             updated.Title = request.Title!.Trim();
             updated.Address = request.Address!.Trim();
             updated.Price = request.MonthlyRentVnd;
@@ -70,16 +79,23 @@ public sealed class UpdateListingUseCase : IUpdateListingUseCase
             updated.IsVerified = false;
             updated.LastUpdatedDate = DateTime.UtcNow;
             await _roomRepository.UpdateAsync(updated, cancellationToken);
-
-            var removed = oldUrls.Except(finalUrls, StringComparer.Ordinal).ToList();
-            await ListingImageCleanup.DeleteBestEffortAsync(_imageStorage, removed, cancellationToken);
-            return new ListingWriteResult(updated.Id, updated.Status.ToString(), finalUrls);
         }
         catch
         {
             await ListingImageCleanup.DeleteBestEffortAsync(_imageStorage, storedUrls, cancellationToken);
             throw;
         }
+
+        // Finish updating public visibility after the save, even if the client disconnected.
+        var campusIds = await _visibilityWriter.HideAsync(updated.Id, CancellationToken.None);
+        foreach (var campusId in campusIds)
+        {
+            await _cacheInvalidator.InvalidateCampusAsync(campusId, CancellationToken.None);
+        }
+
+        var removed = oldUrls.Except(updated.ImageUrls, StringComparer.Ordinal);
+        await ListingImageCleanup.DeleteBestEffortAsync(_imageStorage, removed, CancellationToken.None);
+        return new ListingWriteResult(updated.Id, updated.Status.ToString(), updated.ImageUrls);
     }
 
     private static Room CopyRoom(Room room) => new()

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Configurations;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Documents;
+using DetailRoomStatus = RoomToRentRadar.Domain.Entities.RoomStatus;
 
 public sealed class CosmosDbInitializer
 {
@@ -858,6 +859,16 @@ public sealed class CosmosDbInitializer
                     if (existingDetail.ProjectionVersion > listing.ProjectionVersion)
                     {
                         _logger.LogDebug("Skipped stale listing {RoomId} during startup synchronization.", listing.Id);
+                        continue;
+                    }
+
+                    if (existingDetail.ProjectionVersion == listing.ProjectionVersion &&
+                        !string.IsNullOrWhiteSpace(existingDetail.LandlordId) &&
+                        existingDetail.Status == (int)DetailRoomStatus.Pending &&
+                        !existingDetail.IsVerified)
+                    {
+                        // Landlord edits keep the last projection version until a new review is published.
+                        _logger.LogDebug("Preserved pending landlord listing {RoomId} during startup synchronization.", listing.Id);
                         continue;
                     }
 

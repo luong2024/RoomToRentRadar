@@ -187,26 +187,44 @@ public sealed class LandlordListingsIntegrationTests
     }
 
     [Test]
+    public async Task UpdateListing_PublishedListing_IsPendingAndAbsentFromCachedAndFreshSearch()
+    {
+        const string publicSearch = "/api/v1/rooms?CampusId=campus-ictu";
+        var landlord = await RegisterAndLoginAsync("LANDLORD");
+        var created = await CreateListingAsync(landlord.AccessToken);
+        await PublishListingForTestAsync(created);
+
+        var before = await _client.GetFromJsonAsync<PagedResult<RoomListingDto>>(publicSearch);
+        Assert.That(before!.Items.Select(item => item.Id), Does.Contain(created.ListingId));
+
+        using var form = CreateForm(0, "Updated published listing");
+        using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/landlord/listings/{created.ListingId}") { Content = form };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", landlord.AccessToken);
+        using var response = await _client.SendAsync(request);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        var saved = await _factory.RoomRepository.GetByIdAsync(created.ListingId);
+        var warmedQuery = await _client.GetFromJsonAsync<PagedResult<RoomListingDto>>(publicSearch);
+        // A different sort uses a new cache key and reads the projection again.
+        var freshQuery = await _client.GetFromJsonAsync<PagedResult<RoomListingDto>>(publicSearch + "&sortBy=price");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(saved!.Title, Is.EqualTo("Updated published listing"));
+            Assert.That(saved.Status, Is.EqualTo(RoomStatus.Pending));
+            Assert.That(saved.IsVerified, Is.False);
+            Assert.That(saved.ImageUrls, Is.EqualTo(created.ImageUrls));
+            Assert.That(warmedQuery!.Items.Select(item => item.Id), Does.Not.Contain(created.ListingId));
+            Assert.That(freshQuery!.Items.Select(item => item.Id), Does.Not.Contain(created.ListingId));
+        });
+    }
+
+    [Test]
     public async Task UnpublishListing_OwnerRequest_PreservesImagesAndRemovesListingFromPublicSearch()
     {
         var landlord = await RegisterAndLoginAsync("LANDLORD");
         var created = await CreateListingAsync(landlord.AccessToken);
-        await _factory.RoomListingRepository.AddAsync(new RoomListing(
-            created.ListingId,
-            "Integration listing",
-            "Test description",
-            new Money(2_500_000m, "VND"),
-            22,
-            "1 Test Street",
-            new GeoLocation(21.5853, 105.8075),
-            ListingRoomStatus.Available,
-            VerificationStatus.Verified,
-            "campus-ictu",
-            created.ImageUrls.FirstOrDefault()));
-        var room = await _factory.RoomRepository.GetByIdAsync(created.ListingId);
-        room!.Status = RoomStatus.Available;
-        room.IsVerified = true;
-        _factory.RoomRepository.Upsert(room);
+        await PublishListingForTestAsync(created);
         var initialPublicResponse = await _client.GetAsync("/api/v1/rooms?CampusId=campus-ictu");
         var initialPublicListings = await initialPublicResponse.Content.ReadFromJsonAsync<PagedResult<RoomListingDto>>();
         Assert.That(initialPublicListings!.Items.Any(item => item.Id == created.ListingId), Is.True,
@@ -231,6 +249,20 @@ public sealed class LandlordListingsIntegrationTests
             Assert.That(publicListings!.Items.Any(item => item.Id == created.ListingId), Is.False);
             Assert.That(appPublicListings!.Items.Any(item => item.Id == created.ListingId), Is.False);
         });
+    }
+
+    private async Task PublishListingForTestAsync(ListingWriteResponse created)
+    {
+        var room = await _factory.RoomRepository.GetByIdAsync(created.ListingId);
+        Assert.That(room, Is.Not.Null);
+        room!.Status = RoomStatus.Available;
+        room.IsVerified = true;
+        _factory.RoomRepository.Upsert(room);
+
+        await _factory.RoomListingRepository.AddAsync(new RoomListing(
+            room.Id, room.Title, room.Description, new Money(room.Price, "VND"), room.Area,
+            room.Address, new GeoLocation(21.5853, 105.8075), ListingRoomStatus.Available,
+            VerificationStatus.Verified, "campus-ictu", room.ThumbnailUrl));
     }
 
     private async Task<AuthSessionResponse> RegisterAndLoginAsync(string role)
