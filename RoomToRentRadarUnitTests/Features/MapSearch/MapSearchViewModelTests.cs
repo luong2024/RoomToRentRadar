@@ -9,8 +9,33 @@ public class MapSearchViewModelTests
 {
     private MapSearchViewModel _viewModel = null!;
 
+    [TestCase(.01, true)]
+    [TestCase(1.0, true)]
+    [TestCase(.000102, false)]
+    public void CompleteDrawing_WithDenseCircle_EnforcesEditAnchorLimit(double radius, bool accepted)
+    {
+        var points = Enumerable.Range(0, 180).Select(i =>
+        {
+            double angle = i * 2 * Math.PI / 180;
+            return new GeoCoordinate(radius * Math.Sin(angle), radius * Math.Cos(angle));
+        });
+
+        _viewModel.CompleteDrawing(points);
+        _viewModel.StartEditing();
+
+        Assert.That(_viewModel.HasDrawnPolygon, Is.EqualTo(accepted));
+        if (accepted)
+            Assert.That(_viewModel.EditAnchorPins.Count, Is.InRange(3, 10));
+        else
+        {
+            Assert.That(_viewModel.IsDrawingMode, Is.True);
+            Assert.That(_viewModel.PolygonCoordinates, Is.Empty);
+            Assert.That(_viewModel.StatusMessage, Does.Contain("fewer turns"));
+        }
+    }
+
     [Test]
-    public async Task CancelDrawing_DuringInvalidEdit_RestoresConfirmedBoundary()
+    public async Task HandleBack_DuringInvalidEdit_RestoresConfirmedBoundary()
     {
         GeoCoordinate[] original = [new(0, 0), new(0, .01), new(.01, 0)];
         _viewModel.AlertHandler = (_, _, _) => Task.CompletedTask;
@@ -21,7 +46,7 @@ public class MapSearchViewModelTests
 
         _viewModel.FinishEditing();
         Assert.That(_viewModel.IsEditingMode, Is.True);
-        _viewModel.CancelDrawing();
+        _viewModel.HandleBack();
 
         Assert.That(_viewModel.IsEditingMode, Is.False);
         Assert.That(_viewModel.IsAreaConfirmed, Is.True);

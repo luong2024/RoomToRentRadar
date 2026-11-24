@@ -9,7 +9,6 @@ namespace RoomToRentRadar.Views.MapSearch;
 public partial class MapSearchPage : ContentPage
 {
     private readonly DrawingCanvasDrawable _drawable = new();
-    private Microsoft.Maui.Controls.Maps.Polygon? _activeMapPolygon;
     private int _draggedAnchorIndex = -1;
     private MapSearchViewModel? _viewModel;
 
@@ -40,6 +39,9 @@ public partial class MapSearchPage : ContentPage
         CanvasView.Drawable = _drawable;
 
         SearchMap.Loaded += OnSearchMapLoaded;
+        SearchMap.PropertyChanged += OnMapPropertyChanged;
+        CanvasView.SizeChanged += (_, _) => RefreshBoundary();
+        RefreshBoundary();
         viewModel.PropertyChanged += OnViewModelPropertyChanged;
     }
 
@@ -100,40 +102,45 @@ public partial class MapSearchPage : ContentPage
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (_viewModel is null) return;
+        if (e.PropertyName is nameof(MapSearchViewModel.IsDrawingMode) or
+            nameof(MapSearchViewModel.IsEditingMode) or nameof(MapSearchViewModel.HasDrawnPolygon))
+        {
+            if (_viewModel?.IsEditingMode != true)
+            {
+                _draggedAnchorIndex = -1;
+                _drawable.DraggingAnchorIndex = -1;
+            }
 
-        if (e.PropertyName == nameof(MapSearchViewModel.IsEditingMode))
-        {
-            OnEditingModeChanged(_viewModel.IsEditingMode);
-        }
-        else if (e.PropertyName == nameof(MapSearchViewModel.HasDrawnPolygon) && !_viewModel.HasDrawnPolygon)
-        {
-            ClearMapPolygon();
-            _drawable.Clear();
-            _drawable.SetAnchors(Enumerable.Empty<PointF>());
-            CanvasView.Invalidate();
+            RefreshBoundary();
         }
     }
 
-    private void OnEditingModeChanged(bool isEditing)
+    private void OnMapPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        _drawable.IsEditingMode = isEditing;
-        if (isEditing && _viewModel is not null)
-        {
-            // Temporarily hide map polygon and transfer vertices to screen anchors on canvas
-            ClearMapPolygon();
+        if (e.PropertyName == nameof(SearchMap.VisibleRegion))
+            RefreshBoundary();
+    }
 
-            var screenPoints = ConvertGeoLocationsToScreenPoints(_viewModel.PolygonCoordinates);
-            _drawable.SetAnchors(screenPoints);
-            CanvasView.Invalidate();
-        }
-        else if (!isEditing && _viewModel is not null)
-        {
-            // Finish editing -> re-render polygon on map
-            _drawable.SetAnchors(Enumerable.Empty<PointF>());
-            CanvasView.Invalidate();
-            RenderPolygonOnMap(_viewModel.PolygonCoordinates);
-        }
+    private void RefreshBoundary()
+    {
+        if (_viewModel is null)
+            return;
+
+        _drawable.IsEditingMode = _viewModel.IsEditingMode;
+        CanvasView.InputTransparent = !_viewModel.IsInteractingMode;
+        CanvasView.IsVisible = _viewModel.IsInteractingMode || _viewModel.HasDrawnPolygon;
+        CanvasView.BackgroundColor = _viewModel.IsInteractingMode
+            ? Color.FromArgb("#0A2563EB")
+            : Colors.Transparent;
+
+        if (!_viewModel.IsDrawingMode)
+            _drawable.Clear();
+
+        var boundary = _viewModel.HasDrawnPolygon && !_viewModel.IsDrawingMode
+            ? ConvertGeoLocationsToScreenPoints(_viewModel.PolygonCoordinates)
+            : new List<PointF>();
+        _drawable.SetAnchors(boundary);
+        CanvasView.Invalidate();
     }
 
     private void OnCanvasStart(object? sender, TouchEventArgs e)
@@ -192,7 +199,6 @@ public partial class MapSearchPage : ContentPage
             {
                 var geoLocations = ConvertScreenPointsToGeoLocations(points);
                 _viewModel.CompleteDrawing(geoLocations);
-                RenderPolygonOnMap(_viewModel.PolygonCoordinates);
             }
             else
             {
@@ -323,34 +329,5 @@ public partial class MapSearchPage : ContentPage
         }
 
         return screenPoints;
-    }
-
-    private void ClearMapPolygon()
-    {
-        if (_activeMapPolygon is not null)
-        {
-            SearchMap.MapElements.Remove(_activeMapPolygon);
-            _activeMapPolygon = null;
-        }
-    }
-
-    private void RenderPolygonOnMap(IEnumerable<GeoCoordinate> locations)
-    {
-        ClearMapPolygon();
-        var polygon = new Microsoft.Maui.Controls.Maps.Polygon
-        {
-            StrokeColor = Color.FromArgb("#2563EB"),
-            StrokeWidth = 3,
-            FillColor = Color.FromArgb("#332563EB")
-        };
-
-        foreach (var loc in locations)
-        {
-            polygon.Geopath.Add(new Location(loc.Latitude, loc.Longitude));
-        }
-
-        if (polygon.Geopath.Count < 3) return;
-        _activeMapPolygon = polygon;
-        SearchMap.MapElements.Add(polygon);
     }
 }

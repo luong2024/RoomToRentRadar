@@ -117,7 +117,7 @@ public partial class MapSearchViewModel : ObservableObject
         }
         else if (IsEditingMode)
         {
-            FinishEditing();
+            CancelDrawing();
         }
         else
         {
@@ -276,6 +276,25 @@ public partial class MapSearchViewModel : ObservableObject
         }
 
         const int maxRefinementPoints = 48;
+        if (simplified.Count > maxRefinementPoints)
+        {
+            double latitudeSpan = cleanedPoints.Max(point => point.Latitude) - cleanedPoints.Min(point => point.Latitude);
+            double longitudeSpan = cleanedPoints.Max(point => point.Longitude) - cleanedPoints.Min(point => point.Longitude);
+            double span = Math.Max(latitudeSpan, longitudeSpan);
+            for (double fraction = 0.005; fraction <= 0.16; fraction *= 2)
+            {
+                var candidate = SimplifyClosedPolygonRDP(cleanedPoints, fraction * span);
+                if (candidate.Count < simplified.Count &&
+                    TryMeasureBoundary(candidate, out double candidateArea, out BoundaryKind candidateKind) &&
+                    candidateKind == kind && candidateArea >= MinimumPolygonAreaSquareMeters)
+                {
+                    simplified = candidate;
+                    if (simplified.Count <= targetEditPoints)
+                        break;
+                }
+            }
+        }
+
         while (simplified.Count > targetEditPoints && simplified.Count <= maxRefinementPoints)
         {
             // Remove the least prominent vertex that preserves the outline's topology and area threshold.
@@ -297,6 +316,15 @@ public partial class MapSearchViewModel : ObservableObject
             if (reduced is null)
                 break;
             simplified = reduced;
+        }
+
+        if (simplified.Count > targetEditPoints)
+        {
+            HasDrawnPolygon = false;
+            VertexCount = 0;
+            StatusMessage = "Draw a simpler outline with fewer turns and try again.";
+            IsDrawingMode = true;
+            return;
         }
 
         TryMeasureBoundary(simplified, out area, out _);

@@ -79,8 +79,8 @@ public class DrawingCanvasDrawable : IDrawable
 
     public void Draw(ICanvas canvas, RectF dirtyRect)
     {
-        // 1. Edit mode: Draw polygon connecting anchor points and render circular anchor pins
-        if (IsEditingMode && _anchorPoints.Count >= 3)
+        // The same even-odd fill is used for editing and the completed preview.
+        if (_anchorPoints.Count >= 3)
         {
             canvas.SaveState();
 
@@ -101,7 +101,7 @@ public class DrawingCanvasDrawable : IDrawable
             canvas.DrawPath(polyPath);
 
             // Render circular anchor pins with dark border (Rightmove style)
-            for (int i = 0; i < _anchorPoints.Count; i++)
+            for (int i = 0; IsEditingMode && i < _anchorPoints.Count; i++)
             {
                 var pt = _anchorPoints[i];
                 bool isDragging = (i == DraggingAnchorIndex);

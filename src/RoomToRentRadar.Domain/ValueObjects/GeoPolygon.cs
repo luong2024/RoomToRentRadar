@@ -4,8 +4,7 @@ using RoomToRentRadar.Domain.Exceptions;
 
 /// <summary>
 /// Immutable value object representing a closed search outline and its valid geographic rings.
-/// Vertices are normalized to Counter-Clockwise (CCW) winding order per GeoJSON RFC 7946
-/// and Azure Cosmos DB spatial standards.
+/// The search rings use counter-clockwise winding for GeoJSON spatial queries.
 /// </summary>
 public sealed class GeoPolygon : IEquatable<GeoPolygon>
 {
@@ -17,13 +16,13 @@ public sealed class GeoPolygon : IEquatable<GeoPolygon>
     private const double ProximityTolerance = 1e-6;
 
     /// <summary>
-    /// Closed ring vertices where the first and last vertex are identical (V_0 == V_n).
-    /// Simple outlines are normalized counter-clockwise (CCW).
+    /// Closed outline of the selection. It may self-intersect and is not a spatial query ring.
+    /// Simple outlines are normalized counter-clockwise.
     /// </summary>
-    public IReadOnlyList<GeoLocation> Vertices { get; }
+    public IReadOnlyList<GeoLocation> RawOutline { get; }
 
     /// <summary>
-    /// Distinct non-closing vertices (V_0 through V_{n-1}).
+    /// Outline vertices without the closing point. A shared junction may be repeated.
     /// </summary>
     public IReadOnlyList<GeoLocation> DistinctVertices { get; }
 
@@ -98,7 +97,7 @@ public sealed class GeoPolygon : IEquatable<GeoPolygon>
                 $"Polygon area is too small ({AreaSquareMeters:F1} m²). Minimum required area is {MinimumAreaSquareMeters} m².");
 
         DistinctVertices = distinct.AsReadOnly();
-        Vertices = SearchRings.Count == 1 ? SearchRings[0] : CloseRing(distinct);
+        RawOutline = SearchRings.Count == 1 ? SearchRings[0] : CloseRing(distinct);
     }
 
     private static IReadOnlyList<GeoLocation> CloseRing(List<GeoLocation> vertices)
@@ -337,11 +336,11 @@ public sealed class GeoPolygon : IEquatable<GeoPolygon>
     {
         if (other is null) return false;
         if (ReferenceEquals(this, other)) return true;
-        if (Vertices.Count != other.Vertices.Count) return false;
+        if (RawOutline.Count != other.RawOutline.Count) return false;
 
-        for (int i = 0; i < Vertices.Count; i++)
+        for (int i = 0; i < RawOutline.Count; i++)
         {
-            if (!IsSameLocation(Vertices[i], other.Vertices[i]))
+            if (!IsSameLocation(RawOutline[i], other.RawOutline[i]))
             {
                 return false;
             }

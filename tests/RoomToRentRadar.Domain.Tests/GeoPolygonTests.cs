@@ -35,7 +35,8 @@ public class GeoPolygonTests
     {
         var shape = new GeoPolygon([new(0, 0), new(.01, .01), new(0, .01), new(.01, 0)]);
 
-        Assert.That(shape.DistinctVertices, Has.Count.EqualTo(4));
+        Assert.That(shape.RawOutline, Has.Count.EqualTo(5));
+        Assert.That(shape.RawOutline[0], Is.EqualTo(shape.RawOutline[^1]));
         Assert.That(shape.SearchRings, Has.Count.EqualTo(2));
         foreach (var ring in shape.SearchRings)
         {
@@ -56,9 +57,9 @@ public class GeoPolygonTests
         Assert.Multiple(() =>
         {
             Assert.That(polygon.DistinctVertices, Has.Count.EqualTo(4));
-            Assert.That(polygon.Vertices, Has.Count.EqualTo(5)); // Closed ring
-            Assert.That(polygon.Vertices[0].Latitude, Is.EqualTo(polygon.Vertices[^1].Latitude));
-            Assert.That(polygon.Vertices[0].Longitude, Is.EqualTo(polygon.Vertices[^1].Longitude));
+            Assert.That(polygon.SearchRings[0], Has.Count.EqualTo(5)); // Closed ring
+            Assert.That(polygon.SearchRings[0][0].Latitude, Is.EqualTo(polygon.SearchRings[0][^1].Latitude));
+            Assert.That(polygon.SearchRings[0][0].Longitude, Is.EqualTo(polygon.SearchRings[0][^1].Longitude));
             Assert.That(polygon.AreaSquareMeters, Is.GreaterThanOrEqualTo(400.0));
         });
     }
@@ -75,7 +76,7 @@ public class GeoPolygonTests
         var polygonFromCcw = new GeoPolygon(ccwCoords);
 
         Assert.That(polygonFromCw.AreaSquareMeters, Is.EqualTo(polygonFromCcw.AreaSquareMeters).Within(1.0));
-        Assert.That(polygonFromCw.Vertices, Has.Count.EqualTo(5));
+        Assert.That(polygonFromCw.SearchRings[0], Has.Count.EqualTo(5));
     }
 
     [Test]
@@ -89,7 +90,7 @@ public class GeoPolygonTests
         Assert.Multiple(() =>
         {
             Assert.That(polygon.DistinctVertices, Has.Count.EqualTo(4));
-            Assert.That(polygon.Vertices, Has.Count.EqualTo(5));
+            Assert.That(polygon.SearchRings[0], Has.Count.EqualTo(5));
         });
     }
 
