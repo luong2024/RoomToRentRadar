@@ -151,6 +151,36 @@ public class CosmosRoomRepositoryTests
     }
 
     [Test]
+    public async Task UpdateAsync_UsesEtagFromRoomSnapshotInsteadOfFreshReadEtag()
+    {
+        var latest = new RoomDocument { Id = "owned-listing", ETag = "etag-newer" };
+        var readResponse = new Mock<ItemResponse<RoomDocument>>();
+        readResponse.SetupGet(response => response.Resource).Returns(latest);
+        _containerMock.Setup(container => container.ReadItemAsync<RoomDocument>(
+                "owned-listing", It.IsAny<PartitionKey>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(readResponse.Object);
+
+        ItemRequestOptions? replacedOptions = null;
+        _containerMock.Setup(container => container.ReplaceItemAsync(
+                It.IsAny<RoomDocument>(), "owned-listing", It.IsAny<PartitionKey?>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .Callback<RoomDocument, string, PartitionKey?, ItemRequestOptions, CancellationToken>((_, _, _, options, _) => replacedOptions = options)
+            .ReturnsAsync(new Mock<ItemResponse<RoomDocument>>().Object);
+
+        var room = new Room { Id = "owned-listing", ConcurrencyToken = "etag-snapshot" };
+        await _repository.UpdateAsync(room);
+
+        Assert.That(replacedOptions!.IfMatchEtag, Is.EqualTo("etag-snapshot"));
+    }
+
+    [Test]
+    public void RoomDocument_ToDomain_CarriesEtagAsConcurrencyToken()
+    {
+        var room = new RoomDocument { Id = "etag-room", ETag = "etag-read" }.ToDomain();
+
+        Assert.That(room.ConcurrencyToken, Is.EqualTo("etag-read"));
+    }
+
+    [Test]
     public async Task GetByIdAsync_WhenProjectionIsTombstoned_ReturnsNull()
     {
         var response = new Mock<ItemResponse<RoomDocument>>();

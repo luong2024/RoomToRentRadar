@@ -214,6 +214,7 @@ public sealed class RoomDocument : IProjectionVersionedDocument
             HouseRules = HouseRules ?? [],
             LandlordPhone = LandlordPhone,
             LandlordId = LandlordId,
+            ConcurrencyToken = ETag,
             LastUpdatedDate = LastUpdatedDate,
             CreatedAt = CreatedAt != default ? CreatedAt : (LastUpdatedDate ?? DateTime.UtcNow),
             Latitude = lat,

@@ -93,6 +93,7 @@ public sealed class UpdateListingUseCase : IUpdateListingUseCase
         Status = room.Status,
         Deposit = room.Deposit,
         RoomType = room.RoomType,
+        ConcurrencyToken = room.ConcurrencyToken,
         Bedrooms = room.Bedrooms,
         Bathrooms = room.Bathrooms,
         Amenities = room.Amenities.ToList(),

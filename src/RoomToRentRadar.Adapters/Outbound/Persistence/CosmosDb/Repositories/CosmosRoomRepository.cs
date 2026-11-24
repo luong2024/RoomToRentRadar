@@ -34,6 +34,10 @@ public class CosmosRoomRepository : IRoomRepository
             throw new NotFoundException($"Room '{room.Id}' was not found.");
         }
 
+        var expectedETag = string.IsNullOrWhiteSpace(room.ConcurrencyToken)
+            ? existing.ETag
+            : room.ConcurrencyToken;
+
         var document = RoomDocument.FromDomain(room);
         try
         {
@@ -41,7 +45,7 @@ public class CosmosRoomRepository : IRoomRepository
                 document,
                 document.Id,
                 new PartitionKey(document.Id),
-                new ItemRequestOptions { IfMatchEtag = existing.ETag },
+                new ItemRequestOptions { IfMatchEtag = expectedETag },
                 cancellationToken);
         }
         catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.PreconditionFailed)

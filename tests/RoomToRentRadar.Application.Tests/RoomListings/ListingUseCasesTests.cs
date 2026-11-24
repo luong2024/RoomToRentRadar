@@ -107,6 +107,7 @@ public sealed class ListingUseCasesTests
     public async Task UpdateListing_ValidOwnerRetainsExistingImagesAndAddsPhoto()
     {
         var listing = ExistingListing(OwnerId, ["one", "two", "three"]);
+        listing.ConcurrencyToken = "etag-before-upload";
         await _repository.CreateAsync(listing);
         var request = ValidRequest(1) with { ImageUrlsToRetain = ["one", "two"] };
 
@@ -120,6 +121,7 @@ public sealed class ListingUseCasesTests
             Assert.That(updated!.Title, Is.EqualTo("Updated title"));
             Assert.That(updated.Status, Is.EqualTo(RoomStatus.Pending));
             Assert.That(updated.IsVerified, Is.False);
+            Assert.That(updated.ConcurrencyToken, Is.EqualTo("etag-before-upload"));
             Assert.That(_storage.DeletedUrls, Is.EqualTo(new[] { "three" }));
         });
     }
