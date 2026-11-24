@@ -28,24 +28,26 @@ public class CosmosRoomRepository : IRoomRepository
     public async Task UpdateAsync(Room room, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(room);
+        if (string.IsNullOrWhiteSpace(room.ConcurrencyToken))
+        {
+            throw new ConcurrencyConflictException("The listing version is missing. Reload it and retry.");
+        }
+
         var existing = await ReadDocumentOrNullAsync(room.Id, cancellationToken);
         if (existing is null || existing.IsDeleted)
         {
             throw new NotFoundException($"Room '{room.Id}' was not found.");
         }
 
-        var expectedETag = string.IsNullOrWhiteSpace(room.ConcurrencyToken)
-            ? existing.ETag
-            : room.ConcurrencyToken;
-
         var document = RoomDocument.FromDomain(room);
+        document.ProjectionVersion = existing.ProjectionVersion;
         try
         {
             await _container.ReplaceItemAsync(
                 document,
                 document.Id,
                 new PartitionKey(document.Id),
-                new ItemRequestOptions { IfMatchEtag = expectedETag },
+                new ItemRequestOptions { IfMatchEtag = room.ConcurrencyToken },
                 cancellationToken);
         }
         catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.PreconditionFailed)
@@ -85,7 +87,9 @@ public class CosmosRoomRepository : IRoomRepository
 
             if (response?.Resource is { IsDeleted: false } document)
             {
-                return document.ToDomain();
+                var room = document.ToDomain();
+                room.ConcurrencyToken = response.ETag ?? document.ETag;
+                return room;
             }
 
             if (response?.Resource is { IsDeleted: true })

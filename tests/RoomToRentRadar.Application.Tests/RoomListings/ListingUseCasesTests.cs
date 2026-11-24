@@ -199,14 +199,17 @@ public sealed class ListingUseCasesTests
         Assert.That(_storage.StoredUrls, Is.Empty);
     }
 
-    [Test]
-    public async Task UpdateListing_SaveFailureCleansNewImagesAndPreservesExistingData()
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task UpdateListing_SaveFailureCleansNewImagesAndPreservesExistingData(bool concurrencyConflict)
     {
         var listing = ExistingListing(OwnerId, ["one", "two", "three"]);
         await _repository.CreateAsync(listing);
-        _repository.FailUpdate = true;
+        _repository.UpdateError = concurrencyConflict
+            ? new ConcurrencyConflictException("Listing was changed.")
+            : new InvalidOperationException("Persistence failed.");
 
-        Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        Assert.ThrowsAsync(_repository.UpdateError.GetType(), async () =>
             await new UpdateListingUseCase(_repository, _storage).ExecuteAsync(OwnerId, listing.Id,
                 ValidRequest(1) with { ImageUrlsToRetain = ["one", "two", "three"] }));
 
@@ -214,8 +217,9 @@ public sealed class ListingUseCasesTests
         Assert.Multiple(() =>
         {
             Assert.That(persisted!.Title, Is.EqualTo("Original title"));
-            Assert.That(_storage.DeletedUrls, Has.Count.EqualTo(1));
-            Assert.That(_storage.DeletedUrls[0], Does.StartWith("https://images.test/"));
+            Assert.That(persisted.ImageUrls, Is.EqualTo(new[] { "one", "two", "three" }));
+            Assert.That(_storage.StoredUrls, Has.Count.EqualTo(1));
+            Assert.That(_storage.DeletedUrls, Is.EqualTo(_storage.StoredUrls));
         });
     }
 
@@ -302,7 +306,7 @@ public sealed class ListingUseCasesTests
     {
         private readonly Dictionary<string, Room> _rooms = new(StringComparer.Ordinal);
         public IReadOnlyCollection<Room> Rooms => _rooms.Values;
-        public bool FailUpdate { get; set; }
+        public Exception? UpdateError { get; set; }
 
         public Task<Room> CreateAsync(Room room, CancellationToken cancellationToken = default)
         {
@@ -312,7 +316,7 @@ public sealed class ListingUseCasesTests
 
         public Task UpdateAsync(Room room, CancellationToken cancellationToken = default)
         {
-            if (FailUpdate) throw new InvalidOperationException("Persistence failed.");
+            if (UpdateError is not null) throw UpdateError;
             _rooms[room.Id] = room;
             return Task.CompletedTask;
         }

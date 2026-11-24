@@ -3,7 +3,9 @@ using Moq;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Documents;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Repositories;
 using RoomToRentRadar.Application.DTOs;
+using RoomToRentRadar.Application.Exceptions;
 using RoomToRentRadar.Domain.Entities;
+using System.Net;
 
 namespace RoomToRentRadar.Adapters.Tests.Persistence;
 
@@ -119,9 +121,9 @@ public class CosmosRoomRepositoryTests
     }
 
     [Test]
-    public async Task UpdateAsync_UsesExistingEtagAndPersistsOwnerAndNewContent()
+    public async Task UpdateAsync_PreservesOwnerAndProjectionVersion()
     {
-        var existing = new RoomDocument { Id = "owned-listing", ETag = "etag-current" };
+        var existing = new RoomDocument { Id = "owned-listing", ETag = "etag-current", ProjectionVersion = 42 };
         var readResponse = new Mock<ItemResponse<RoomDocument>>();
         readResponse.SetupGet(response => response.Resource).Returns(existing);
         _containerMock.Setup(container => container.ReadItemAsync<RoomDocument>(
@@ -139,37 +141,53 @@ public class CosmosRoomRepositoryTests
             })
             .ReturnsAsync(new Mock<ItemResponse<RoomDocument>>().Object);
 
-        var room = new Room { Id = "owned-listing", LandlordId = Guid.NewGuid().ToString("D"), Title = "Updated" };
+        var room = new Room
+        {
+            Id = "owned-listing", LandlordId = Guid.NewGuid().ToString("D"), Title = "Updated",
+            ConcurrencyToken = "etag-current"
+        };
         await _repository.UpdateAsync(room);
 
         Assert.Multiple(() =>
         {
             Assert.That(replacedDocument!.LandlordId, Is.EqualTo(room.LandlordId));
             Assert.That(replacedDocument.Title, Is.EqualTo("Updated"));
+            Assert.That(replacedDocument.ProjectionVersion, Is.EqualTo(42));
             Assert.That(replacedOptions!.IfMatchEtag, Is.EqualTo("etag-current"));
         });
     }
 
     [Test]
-    public async Task UpdateAsync_UsesEtagFromRoomSnapshotInsteadOfFreshReadEtag()
+    public async Task UpdateAsync_WhenSnapshotIsStale_UsesOriginalEtagAndReportsConflict()
     {
+        var original = new RoomDocument { Id = "owned-listing", ImageUrls = ["old-url"] };
+        var originalResponse = new Mock<ItemResponse<RoomDocument>>();
+        originalResponse.SetupGet(response => response.Resource).Returns(original);
+        originalResponse.SetupGet(response => response.ETag).Returns("etag-snapshot");
         var latest = new RoomDocument { Id = "owned-listing", ETag = "etag-newer" };
         var readResponse = new Mock<ItemResponse<RoomDocument>>();
         readResponse.SetupGet(response => response.Resource).Returns(latest);
-        _containerMock.Setup(container => container.ReadItemAsync<RoomDocument>(
+        _containerMock.SetupSequence(container => container.ReadItemAsync<RoomDocument>(
                 "owned-listing", It.IsAny<PartitionKey>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(originalResponse.Object)
             .ReturnsAsync(readResponse.Object);
 
-        ItemRequestOptions? replacedOptions = null;
         _containerMock.Setup(container => container.ReplaceItemAsync(
-                It.IsAny<RoomDocument>(), "owned-listing", It.IsAny<PartitionKey?>(), It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()))
-            .Callback<RoomDocument, string, PartitionKey?, ItemRequestOptions, CancellationToken>((_, _, _, options, _) => replacedOptions = options)
-            .ReturnsAsync(new Mock<ItemResponse<RoomDocument>>().Object);
+                It.IsAny<RoomDocument>(), "owned-listing", It.IsAny<PartitionKey?>(),
+                It.Is<ItemRequestOptions>(options => options.IfMatchEtag == "etag-snapshot"), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new CosmosException("Stale snapshot", HttpStatusCode.PreconditionFailed, 0, "activity", 0));
 
-        var room = new Room { Id = "owned-listing", ConcurrencyToken = "etag-snapshot" };
-        await _repository.UpdateAsync(room);
+        var room = await _repository.GetByIdAsync("owned-listing");
 
-        Assert.That(replacedOptions!.IfMatchEtag, Is.EqualTo("etag-snapshot"));
+        Assert.That(room!.ConcurrencyToken, Is.EqualTo("etag-snapshot"));
+        Assert.ThrowsAsync<ConcurrencyConflictException>(() => _repository.UpdateAsync(room));
+    }
+
+    [Test]
+    public void UpdateAsync_WithoutOriginalEtag_DoesNotReadOrReplaceTheDocument()
+    {
+        Assert.ThrowsAsync<ConcurrencyConflictException>(() => _repository.UpdateAsync(new Room { Id = "owned-listing" }));
+        _containerMock.VerifyNoOtherCalls();
     }
 
     [Test]
