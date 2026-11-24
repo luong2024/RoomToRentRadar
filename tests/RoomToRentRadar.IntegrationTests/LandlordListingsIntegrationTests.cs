@@ -21,6 +21,12 @@ public sealed class LandlordListingsIntegrationTests
         Environment.SetEnvironmentVariable("CosmosDb__AccountEndpoint", "in-memory");
         Environment.SetEnvironmentVariable("CosmosDb__DatabaseName", "IntegrationTestDb");
         _factory = new AuthWebApplicationFactory();
+        if (TestContext.CurrentContext.Test.MethodName == nameof(CreateListing_TwentyTenMebibytePhotos_FitsKestrelMultipartLimits))
+        {
+            _factory.UseKestrel(0);
+            // Avoid copying the full upload into RAM for automatic redirects.
+            _factory.ClientOptions.AllowAutoRedirect = false;
+        }
         _client = _factory.CreateClient();
     }
 
@@ -101,10 +107,7 @@ public sealed class LandlordListingsIntegrationTests
     [Test]
     public async Task CreateListing_TwentyTenMebibytePhotos_FitsKestrelMultipartLimits()
     {
-        using var kestrelFactory = new AuthWebApplicationFactory();
-        kestrelFactory.UseKestrel(0);
-        using var kestrelClient = kestrelFactory.CreateClient();
-        var landlord = await RegisterAndLoginAsync("LANDLORD", kestrelClient);
+        var landlord = await RegisterAndLoginAsync("LANDLORD");
         using var form = CreateForm(0);
         var fileBytes = new byte[10 * 1024 * 1024];
         for (var i = 0; i < 20; i++)
@@ -116,7 +119,7 @@ public sealed class LandlordListingsIntegrationTests
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/landlord/listings") { Content = form };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", landlord.AccessToken);
 
-        using var response = await kestrelClient.SendAsync(request);
+        using var response = await _client.SendAsync(request);
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         var result = await response.Content.ReadFromJsonAsync<ListingWriteResponse>();
@@ -230,13 +233,12 @@ public sealed class LandlordListingsIntegrationTests
         });
     }
 
-    private async Task<AuthSessionResponse> RegisterAndLoginAsync(string role, HttpClient? client = null)
+    private async Task<AuthSessionResponse> RegisterAndLoginAsync(string role)
     {
-        client ??= _client;
         var email = $"listing-{Guid.NewGuid():N}@example.test";
-        var registration = await client.PostAsJsonAsync("/api/v1/auth/register", new RegisterUserRequest(email, "StrongPassword123!", role));
+        var registration = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterUserRequest(email, "StrongPassword123!", role));
         Assert.That(registration.StatusCode, Is.EqualTo(HttpStatusCode.Created));
-        var response = await client.PostAsJsonAsync("/api/v1/auth/login", new LoginWithEmailRequest(email, "StrongPassword123!"));
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/login", new LoginWithEmailRequest(email, "StrongPassword123!"));
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         return (await response.Content.ReadFromJsonAsync<AuthSessionResponse>())!;
     }

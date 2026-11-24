@@ -330,6 +330,7 @@ public class RoomListingsApplicationPerformanceTests
         }
     }
 }
+
 /// <summary>
 /// Group 2: Integration tests with real Cosmos DB (or Cosmos DB Emulator).
 /// Measures real SQL queries, latency, pagination consistency, Partition Key efficiency, and Request Charge (RU).
