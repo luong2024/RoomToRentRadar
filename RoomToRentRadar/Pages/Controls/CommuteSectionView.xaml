@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Border xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+        xmlns:pageModels="clr-namespace:RoomToRentRadar.PageModels"
+        x:Class="RoomToRentRadar.Pages.Controls.CommuteSectionView"
+        x:DataType="pageModels:CommuteViewModel"
+        BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark={StaticResource DarkSecondaryBackground}}"
+        Stroke="{AppThemeBinding Light=#E2E8F0, Dark=#32323C}"
+        StrokeThickness="1"
+        StrokeShape="RoundRectangle 12"
+        Padding="16">
+
+    <VerticalStackLayout Spacing="12">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <VerticalStackLayout Grid.Column="0" Spacing="2">
+                <Label Text="Thời gian di chuyển ước tính"
+                       FontSize="15"
+                       FontAttributes="Bold"
+                       TextColor="{AppThemeBinding Light=#0F172A, Dark=#F8FAFC}" />
+                <Label Text="Chọn cơ sở học để xem thời gian đi lại"
+                       FontSize="12"
+                       TextColor="{AppThemeBinding Light=#64748B, Dark={StaticResource Gray400}}" />
+            </VerticalStackLayout>
+
+            <ActivityIndicator Grid.Column="1"
+                               IsRunning="{Binding IsLoading}"
+                               IsVisible="{Binding IsLoading}"
+                               VerticalOptions="Center" />
+        </Grid>
+
+        <!-- Bộ chọn cơ sở đích (AC2) -->
+        <Border Padding="10,2"
+                MinimumHeightRequest="42"
+                BackgroundColor="{AppThemeBinding Light=#F8FAFC, Dark=#1E293B}"
+                Stroke="#CBD5E1"
+                StrokeThickness="1"
+                StrokeShape="RoundRectangle 8">
+            <Picker AutomationId="CommuteCampusPicker"
+                    Title="Chọn cơ sở trường"
+                    ItemsSource="{Binding Campuses}"
+                    SelectedItem="{Binding SelectedCampus}"
+                    FontSize="13.5" />
+        </Border>
+
+        <!-- 3 phương tiện di chuyển chính (AC1) -->
+        <VerticalStackLayout Spacing="8"
+                             IsVisible="{Binding ShowTransportTimes}">
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                <Border Grid.Column="0"
+                        Padding="10"
+                        BackgroundColor="{AppThemeBinding Light=#EFF6FF, Dark=#1E293B}"
+                        Stroke="#BFDBFE"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 8">
+                    <VerticalStackLayout Spacing="4" HorizontalOptions="Center">
+                        <Label Text="🏍️" FontSize="18" HorizontalTextAlignment="Center" />
+                        <Label AutomationId="MotorbikeTimeLabel"
+                               Text="{Binding MotorbikeText}"
+                               FontSize="12.5"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=#1E3A8A, Dark=#93C5FD}"
+                               HorizontalTextAlignment="Center" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border Grid.Column="1"
+                        Padding="10"
+                        BackgroundColor="{AppThemeBinding Light=#ECFDF5, Dark=#1E293B}"
+                        Stroke="#A7F3D0"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 8">
+                    <VerticalStackLayout Spacing="4" HorizontalOptions="Center">
+                        <Label Text="🚌" FontSize="18" HorizontalTextAlignment="Center" />
+                        <Label AutomationId="BusTimeLabel"
+                               Text="{Binding BusText}"
+                               FontSize="12.5"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=#065F46, Dark=#6EE7B7}"
+                               HorizontalTextAlignment="Center" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border Grid.Column="2"
+                        Padding="10"
+                        BackgroundColor="{AppThemeBinding Light=#FFFBEB, Dark=#1E293B}"
+                        Stroke="#FDE68A"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 8">
+                    <VerticalStackLayout Spacing="4" HorizontalOptions="Center">
+                        <Label Text="🚶" FontSize="18" HorizontalTextAlignment="Center" />
+                        <Label AutomationId="WalkTimeLabel"
+                               Text="{Binding WalkText}"
+                               FontSize="12.5"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=#92400E, Dark=#FCD34D}"
+                               HorizontalTextAlignment="Center" />
+                    </VerticalStackLayout>
+                </Border>
+            </Grid>
+
+            <Label Text="{Binding RouteDistanceText}"
+                   FontSize="12"
+                   TextColor="{AppThemeBinding Light=#64748B, Dark={StaticResource Gray400}}" />
+        </VerticalStackLayout>
+
+        <!-- Fallback khoảng cách đường chim bay Haversine khi API định tuyến lỗi (AC3) -->
+        <Border IsVisible="{Binding IsFallbackStraightLine}"
+                BackgroundColor="#FEF3C7"
+                Stroke="#F59E0B"
+                StrokeThickness="1"
+                StrokeShape="RoundRectangle 8"
+                Padding="12">
+            <VerticalStackLayout Spacing="4">
+                <Label Text="Dịch vụ định tuyến tạm thời gián đoạn — đang dùng khoảng cách Haversine"
+                       FontSize="11.5"
+                       TextColor="#92400E" />
+                <Label AutomationId="FallbackDistanceLabel"
+                       Text="{Binding FallbackDistanceText}"
+                       FontSize="13.5"
+                       FontAttributes="Bold"
+                       TextColor="#78350F" />
+            </VerticalStackLayout>
+        </Border>
+
+        <Label Text="{Binding ErrorMessage}"
+               IsVisible="{Binding HasError}"
+               FontSize="12"
+               TextColor="#DC2626" />
+    </VerticalStackLayout>
+</Border>
