@@ -590,6 +590,12 @@
   <data name="RoomDetail_StraightLineNotice" xml:space="preserve">
     <value>Straight-line distance: {0} km to {1} · travel times are unavailable right now</value>
   </data>
+  <data name="RoomDetail_DistanceKm" xml:space="preserve">
+    <value>{0} km</value>
+  </data>
+  <data name="RoomDetail_DistanceMeters" xml:space="preserve">
+    <value>{0} m</value>
+  </data>
   <data name="RoomDetail_SimilarRoomsNearby" xml:space="preserve">
     <value>Similar rooms nearby</value>
   </data>

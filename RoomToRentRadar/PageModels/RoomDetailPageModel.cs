@@ -12,6 +12,7 @@ using RoomToRentRadar.Ports.Contracts.Common;
 using RoomToRentRadar.Ports.Contracts.Responses.Photos;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadar.Resources.Strings;
+using RoomToRentRadar.Services.Search.Core;
 
 namespace RoomToRentRadar.PageModels;
 
@@ -28,6 +29,7 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
     private readonly IRoomGateway _roomGateway;
     private readonly ISessionStore _sessionStore;
     private readonly IFavouriteGateway? _favouriteGateway;
+    private readonly ISearchCriteriaStore? _searchCriteriaStore;
     private readonly PropertyChangedEventHandler _cultureChangedHandler;
     private bool _disposed;
 
@@ -265,11 +267,13 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
     public RoomDetailPageModel(
         IRoomGateway roomGateway,
         ISessionStore sessionStore,
-        IFavouriteGateway? favouriteGateway = null)
+        IFavouriteGateway? favouriteGateway = null,
+        ISearchCriteriaStore? searchCriteriaStore = null)
     {
         _roomGateway = roomGateway ?? throw new ArgumentNullException(nameof(roomGateway));
         _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
         _favouriteGateway = favouriteGateway;
+        _searchCriteriaStore = searchCriteriaStore;
 
         _cultureChangedHandler = (_, _) => OnCultureChanged();
         LocalizedStrings.Instance.PropertyChanged += _cultureChangedHandler;
@@ -753,9 +757,9 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
 
                     var commuteItem = item.Mode switch
                     {
-                        TravelMode.Motorbike => new CommuteModeItem(item.Mode, FluentUI.vehicle_motorcycle_24_regular, timeFormatted, AppResources.GetString("TravelMode_Motorbike")),
-                        TravelMode.Bus => new CommuteModeItem(item.Mode, FluentUI.vehicle_bus_24_regular, timeFormatted, AppResources.GetString("TravelMode_Bus")),
-                        _ => new CommuteModeItem(item.Mode, FluentUI.person_walking_24_regular, timeFormatted, AppResources.GetString("TravelMode_Walking"))
+                        TravelMode.Motorbike => new CommuteModeItem(item.Mode, FluentUI.vehicle_motorcycle_24_regular, timeFormatted, string.Empty, AppResources.GetString("TravelMode_Motorbike")),
+                        TravelMode.Bus => new CommuteModeItem(item.Mode, FluentUI.vehicle_bus_24_regular, timeFormatted, string.Empty, AppResources.GetString("TravelMode_Bus")),
+                        _ => new CommuteModeItem(item.Mode, FluentUI.person_walking_24_regular, timeFormatted, string.Empty, AppResources.GetString("TravelMode_Walking"))
                     };
                     CommuteTimes.Add(commuteItem);
                 }
@@ -781,9 +785,9 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
         int busMins = (int)Math.Max(5, Math.Round(distanceKm / 15.0 * 60 + 5));
         int walkMins = (int)Math.Max(2, Math.Round(distanceKm / 5.0 * 60));
 
-        CommuteTimes.Add(new CommuteModeItem(TravelMode.Motorbike, FluentUI.vehicle_motorcycle_24_regular, string.Format(AppResources.GetString("RoomDetail_Minutes"), motorbikeMins), AppResources.GetString("TravelMode_Motorbike")));
-        CommuteTimes.Add(new CommuteModeItem(TravelMode.Bus, FluentUI.vehicle_bus_24_regular, string.Format(AppResources.GetString("RoomDetail_MinutesEst"), busMins), AppResources.GetString("TravelMode_Bus")));
-        CommuteTimes.Add(new CommuteModeItem(TravelMode.Walking, FluentUI.person_walking_24_regular, string.Format(AppResources.GetString("RoomDetail_Minutes"), walkMins), AppResources.GetString("TravelMode_Walking")));
+        CommuteTimes.Add(new CommuteModeItem(TravelMode.Motorbike, FluentUI.vehicle_motorcycle_24_regular, string.Format(AppResources.GetString("RoomDetail_Minutes"), motorbikeMins), string.Empty, AppResources.GetString("TravelMode_Motorbike")));
+        CommuteTimes.Add(new CommuteModeItem(TravelMode.Bus, FluentUI.vehicle_bus_24_regular, string.Format(AppResources.GetString("RoomDetail_MinutesEst"), busMins), string.Empty, AppResources.GetString("TravelMode_Bus")));
+        CommuteTimes.Add(new CommuteModeItem(TravelMode.Walking, FluentUI.person_walking_24_regular, string.Format(AppResources.GetString("RoomDetail_Minutes"), walkMins), string.Empty, AppResources.GetString("TravelMode_Walking")));
         HasTravelTimes = true;
     }
 

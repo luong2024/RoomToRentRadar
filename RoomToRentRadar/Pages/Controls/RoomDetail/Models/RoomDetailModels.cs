@@ -34,7 +34,12 @@ public sealed record HouseRuleItem(string IconGlyph, string Title, string Detail
 /// <summary>
 /// Display model for a commute mode estimate (motorbike, bus, walking).
 /// </summary>
-public sealed record CommuteModeItem(TravelMode Mode, string IconGlyph, string TimeFormatted, string Label);
+public sealed record CommuteModeItem(
+    TravelMode Mode,
+    string IconGlyph,
+    string TimeFormatted,
+    string DistanceFormatted,
+    string Label);
 
 /// <summary>
 /// Lightweight card model for similar rooms shown when target listing is unavailable.
