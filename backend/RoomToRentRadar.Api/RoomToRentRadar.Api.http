@@ -1,4 +1,4 @@
-### RoomToRentRadar.Api — sample requests for US01 / T01.1 (MVC AuthController + JWT)
+### RoomToRentRadar.Api — sample requests: US01 / T01.1 (AuthController + JWT), US02 / T02.1 (RoomListingController)
 ### 1. Start the backend, either way (both listen on port 8080):
 ###    a) Docker (recommended, same as the demo):
 ###         cd backend; Copy-Item .env.example .env   # once, then set JWT_SIGNING_KEY in backend/.env
@@ -110,3 +110,31 @@ Content-Type: application/json
   "phone": "0900000001",
   "role": "Student"
 }
+
+### ===========================================================================
+### US02 / T02.1 — GET /api/rooms (public, no token needed)
+### Only Available + Verified rooms (AC4); each card has title, rent, area, distance, isVerified (AC2).
+### ===========================================================================
+
+### Default page: sorted by distance to ICTU (AC1) → 200 + ETag + Cache-Control: no-cache
+# @name rooms
+GET {{baseUrl}}/api/rooms
+
+### Same request with the ETag from "rooms" → 304 Not Modified (no body: the client keeps its cached copy)
+GET {{baseUrl}}/api/rooms
+If-None-Match: {{rooms.response.headers.ETag}}
+
+### Sort by price, cheapest first (sortBy is case-insensitive) → 200
+GET {{baseUrl}}/api/rooms?sortBy=PriceAsc&pageSize=3
+
+### Sort by price, most expensive first, second page of 2 → 200, hasMore tells if a next page exists
+GET {{baseUrl}}/api/rooms?sortBy=PriceDesc&pageSize=2&pageIndex=1
+
+### Page past the end → 200 with an empty list and hasMore = false
+GET {{baseUrl}}/api/rooms?pageIndex=50
+
+### Unsupported sort → 400 "sortBy không hợp lệ. Chỉ hỗ trợ: DistanceAsc, PriceAsc, PriceDesc."
+GET {{baseUrl}}/api/rooms?sortBy=Newest
+
+### pageSize out of range (1..100) → 400
+GET {{baseUrl}}/api/rooms?pageSize=0
