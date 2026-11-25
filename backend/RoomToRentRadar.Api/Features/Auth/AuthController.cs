@@ -71,6 +71,7 @@ public sealed class AuthController(
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.Email)
+            || request.Email.Length > AuthLimits.EmailMaxLength
             || string.IsNullOrWhiteSpace(request.Password)
             || request.Password.Length > AuthLimits.PasswordMaxLength)
         {

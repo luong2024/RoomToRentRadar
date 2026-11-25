@@ -13,8 +13,7 @@ public sealed class AuthServiceTests
     public async Task Register_WithNonSelfServiceRole_ReturnsRoleNotAllowed()
     {
         var repository = new FakeUserRepository();
-        var unitOfWork = new FakeUnitOfWork();
-        var service = CreateService(repository, unitOfWork);
+        var service = CreateService(repository, new FakeUnitOfWork());
 
         var result = await service.RegisterAsync(
             new RegisterUserCommand("admin@example.test", "Password1", "Wannabe Admin", UserRole.Admin),
@@ -24,20 +23,32 @@ public sealed class AuthServiceTests
         {
             Assert.That(result.Outcome, Is.EqualTo(RegisterUserOutcome.RoleNotAllowed));
             Assert.That(result.Response, Is.Null);
-            Assert.That(repository.AddedUser, Is.Null);
-            Assert.That(unitOfWork.SaveCount, Is.Zero);
+            Assert.That(repository.AttemptedUser, Is.Null);
+        });
+    }
+
+    [Test]
+    public async Task Register_WithUndefinedRole_ReturnsRoleNotAllowed()
+    {
+        var repository = new FakeUserRepository();
+        var service = CreateService(repository, new FakeUnitOfWork());
+
+        var result = await service.RegisterAsync(
+            new RegisterUserCommand("weird@example.test", "Password1", "Weird Role", (UserRole)42),
+            CancellationToken.None);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Outcome, Is.EqualTo(RegisterUserOutcome.RoleNotAllowed));
+            Assert.That(repository.AttemptedUser, Is.Null);
         });
     }
 
     [Test]
     public async Task Register_WhenUniqueEmailRaceIsLost_ReturnsDuplicateEmail()
     {
-        var repository = new FakeUserRepository();
-        var unitOfWork = new FakeUnitOfWork
-        {
-            SaveException = new DuplicateEmailException(new InvalidOperationException("race"))
-        };
-        var service = CreateService(repository, unitOfWork);
+        var repository = new FakeUserRepository { TryAddResult = false };
+        var service = CreateService(repository, new FakeUnitOfWork());
 
         var result = await service.RegisterAsync(
             new RegisterUserCommand("new@example.test", "Password1", "New User", UserRole.Student),
@@ -47,8 +58,7 @@ public sealed class AuthServiceTests
         {
             Assert.That(result.Outcome, Is.EqualTo(RegisterUserOutcome.EmailAlreadyRegistered));
             Assert.That(result.Response, Is.Null);
-            Assert.That(repository.AddedUser, Is.Not.Null);
-            Assert.That(unitOfWork.SaveCount, Is.EqualTo(1));
+            Assert.That(repository.AttemptedUser, Is.Not.Null);
         });
     }
 
@@ -65,9 +75,9 @@ public sealed class AuthServiceTests
         Assert.Multiple(() =>
         {
             Assert.That(result.Outcome, Is.EqualTo(RegisterUserOutcome.Created));
-            Assert.That(repository.AddedUser, Is.Not.Null);
-            Assert.That(repository.AddedUser!.Email, Is.EqualTo("land.lord@example.test"));
-            Assert.That(repository.AddedUser.Role, Is.EqualTo(UserRole.Landlord));
+            Assert.That(repository.AttemptedUser, Is.Not.Null);
+            Assert.That(repository.AttemptedUser!.Email, Is.EqualTo("land.lord@example.test"));
+            Assert.That(repository.AttemptedUser.Role, Is.EqualTo(UserRole.Landlord));
         });
     }
 
@@ -134,15 +144,17 @@ public sealed class AuthServiceTests
     {
         public User? ExistingUser { get; init; }
 
-        public User? AddedUser { get; private set; }
+        public bool TryAddResult { get; init; } = true;
+
+        public User? AttemptedUser { get; private set; }
 
         public Task<User?> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken)
             => Task.FromResult(ExistingUser);
 
-        public Task AddAsync(User user, CancellationToken cancellationToken)
+        public Task<bool> TryAddAsync(User user, CancellationToken cancellationToken)
         {
-            AddedUser = user;
-            return Task.CompletedTask;
+            AttemptedUser = user;
+            return Task.FromResult(TryAddResult);
         }
     }
 
@@ -202,15 +214,8 @@ public sealed class AuthServiceTests
 
     private sealed class FakeUnitOfWork : IUnitOfWork
     {
-        public Exception? SaveException { get; init; }
-
-        public int SaveCount { get; private set; }
-
         public Task SaveChangesAsync(CancellationToken cancellationToken)
-        {
-            SaveCount++;
-            return SaveException is null ? Task.CompletedTask : Task.FromException(SaveException);
-        }
+            => Task.CompletedTask;
 
         public Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken)
             => throw new NotSupportedException();

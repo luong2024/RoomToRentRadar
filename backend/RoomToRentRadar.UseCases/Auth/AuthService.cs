@@ -20,7 +20,7 @@ public sealed class AuthService(
         RegisterUserCommand command,
         CancellationToken cancellationToken)
     {
-        if (!UserRoleWire.SelfService.Contains(UserRoleWire.ToWireValue(command.Role)))
+        if (!UserRoleWire.IsSelfService(command.Role))
         {
             return RegisterUserResult.RoleNotAllowed();
         }
@@ -44,12 +44,7 @@ public sealed class AuthService(
             CreatedAt = DateTime.UtcNow
         };
 
-        await userRepository.AddAsync(user, cancellationToken);
-        try
-        {
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-        }
-        catch (DuplicateEmailException)
+        if (!await userRepository.TryAddAsync(user, cancellationToken))
         {
             return RegisterUserResult.DuplicateEmail();
         }

@@ -17,8 +17,8 @@ public static class UserRoleWire
     public const string Admin = "admin";
 
     /// <summary>Roles a user can pick when registering. Admin accounts are provisioned.</summary>
-    public static readonly IReadOnlyList<string> SelfService =
-        [Student, Landlord];
+    public static bool IsSelfService(UserRole role)
+        => role is UserRole.Student or UserRole.Landlord;
 
     public static readonly IReadOnlyList<string> All =
         [Student, Landlord, Moderator, Admin];

@@ -107,6 +107,16 @@ public sealed class AuthEndpointTests
     }
 
     [Test]
+    public async Task Login_EmailTooLong_ReturnsBadRequestProblem()
+    {
+        var response = await LoginAsync(
+            new string('a', AuthLimits.EmailMaxLength + 1),
+            TestUsersSeed.Password);
+
+        await AssertProblemAsync(response, HttpStatusCode.BadRequest, "invalid_login_request");
+    }
+
+    [Test]
     public async Task Register_Student_ReturnsCreatedAndLoginReturnsStudentRole()
     {
         var response = await RegisterAsync("New.Student@Example.test", "Password1", "New Student", "student");
@@ -236,19 +246,27 @@ public sealed class AuthEndpointTests
     }
 
     [Test]
-    public async Task SaveChanges_WhenEmailUniqueIndexRaceIsLost_ThrowsDuplicateEmailException()
+    public async Task TryAddAsync_WhenEmailAlreadyInserted_ReturnsFalse()
     {
         await using var scope = _factory.Services.CreateAsyncScope();
         var users = scope.ServiceProvider.GetRequiredService<IUserRepository>();
-        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var (hash, salt) = new PasswordHasher().Hash("Password1");
 
-        await users.AddAsync(CreateUser("race@example.test", hash, salt), CancellationToken.None);
-        await unitOfWork.SaveChangesAsync(CancellationToken.None);
-        await users.AddAsync(CreateUser("race@example.test", hash, salt), CancellationToken.None);
+        var first = await users.TryAddAsync(
+            CreateUser("race@example.test", hash, salt),
+            CancellationToken.None);
+        var second = await users.TryAddAsync(
+            CreateUser("race@example.test", hash, salt),
+            CancellationToken.None);
+        var storedCount = await dbContext.Users.CountAsync(user => user.Email == "race@example.test");
 
-        Assert.ThrowsAsync<DuplicateEmailException>(
-            () => unitOfWork.SaveChangesAsync(CancellationToken.None));
+        Assert.Multiple(() =>
+        {
+            Assert.That(first, Is.True);
+            Assert.That(second, Is.False);
+            Assert.That(storedCount, Is.EqualTo(1));
+        });
     }
 
     [Test]
