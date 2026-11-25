@@ -25,6 +25,14 @@
         SemanticProperties.Hint="Khoanh vùng tìm phòng quanh ICTU"/>
 
     <ShellContent
+        Title="Di chuyển"
+        Icon="{StaticResource IconCommute}"
+        ContentTemplate="{DataTemplate pages:CommutePreviewPage}"
+        Route="commute"
+        SemanticProperties.Description="Ước tính thời gian di chuyển"
+        SemanticProperties.Hint="Xem thời gian xe máy, xe buýt, đi bộ và khoảng cách đường chim bay"/>
+
+    <ShellContent
         Title="Bộ lọc tìm kiếm"
         Icon="{StaticResource IconProjects}"
         ContentTemplate="{DataTemplate pages:FilterBottomSheet}"

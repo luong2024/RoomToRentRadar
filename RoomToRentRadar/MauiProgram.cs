@@ -99,6 +99,22 @@ namespace RoomToRentRadar
             builder.Services.AddSingleton<SearchFilterViewModel>();
             builder.Services.AddTransient<FilterBottomSheet>();
 
+            // US09 / T09.2: Commute & Haversine Fallback + PreviewPage
+            builder.Services
+                .AddRefitClient<ICommuteApiService>()
+                .ConfigureHttpClient(client =>
+                {
+                    var baseUrl = DeviceInfo.Platform == DevicePlatform.Android
+                        ? "http://10.0.2.2:5000"
+                        : "http://localhost:5000";
+                    client.BaseAddress = new Uri(baseUrl);
+                    client.Timeout = TimeSpan.FromSeconds(5);
+                });
+            builder.Services.AddSingleton<MockCommuteService>();
+            builder.Services.AddSingleton<ICommuteService, CommuteService>();
+            builder.Services.AddTransient<CommuteViewModel>();
+            builder.Services.AddTransient<CommutePreviewPage>();
+
             return builder.Build();
         }
     }
