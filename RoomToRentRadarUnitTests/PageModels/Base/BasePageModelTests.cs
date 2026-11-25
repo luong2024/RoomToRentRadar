@@ -106,7 +106,7 @@ public class BasePageModelTests
     }
 
     [Test]
-    public async Task RunAsync_SecondCallWhileRunning_Ignored()
+    public async Task RunAsync_SecondCallWhileRunning_QueuesLatestLoad()
     {
         var model = new BasePageModel();
         var pending = new TaskCompletionSource<bool>();
@@ -123,13 +123,44 @@ public class BasePageModelTests
             return Task.FromResult(false);
         });
 
-        Assert.That(second.IsCompleted, Is.True);
+        Assert.That(second.IsCompleted, Is.True, "A queued call returns immediately.");
+        Assert.That(calls, Is.EqualTo(1));
 
         pending.SetResult(true);
         await first;
         await second;
 
-        Assert.That(calls, Is.EqualTo(1));
+        Assert.That(calls, Is.EqualTo(2));
+        Assert.That(model.State, Is.EqualTo(ViewState.Empty));
+    }
+
+    [Test]
+    public async Task RunAsync_MultipleCallsWhileRunning_OnlyLatestPendingLoadRuns()
+    {
+        var model = new BasePageModel();
+        var pending = new TaskCompletionSource<bool>();
+        var calls = 0;
+
+        var first = model.RunAsync(() =>
+        {
+            calls++;
+            return pending.Task;
+        });
+        _ = model.RunAsync(() =>
+        {
+            calls++;
+            return Task.FromResult(false);
+        });
+        _ = model.RunAsync(() =>
+        {
+            calls++;
+            return Task.FromResult(true);
+        });
+
+        pending.SetResult(true);
+        await first;
+
+        Assert.That(calls, Is.EqualTo(2));
         Assert.That(model.State, Is.EqualTo(ViewState.Content));
     }
 
