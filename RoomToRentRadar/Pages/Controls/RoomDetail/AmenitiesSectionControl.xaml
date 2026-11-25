@@ -23,40 +23,69 @@
                    TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
 
             <!-- Amenities 2-Column Grid -->
-            <FlexLayout BindableLayout.ItemsSource="{Binding AmenitiesDisplayList}"
-                        Wrap="Wrap"
-                        JustifyContent="SpaceBetween"
-                        AlignContent="Start">
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding AmenityRows}"
+                                 Spacing="10">
                 <BindableLayout.ItemTemplate>
-                    <DataTemplate x:DataType="models:AmenityDisplayItem">
-                        <Grid FlexLayout.Basis="48%"
-                              ColumnDefinitions="28, *"
-                              ColumnSpacing="8"
-                              Margin="0,5"
+                    <DataTemplate x:DataType="models:AmenityRowItem">
+                        <Grid ColumnDefinitions="*, *"
+                              ColumnSpacing="16"
                               VerticalOptions="Center">
-                            <Image Grid.Column="0"
-                                   WidthRequest="20"
-                                   HeightRequest="20"
-                                   HorizontalOptions="Start"
-                                   VerticalOptions="Center">
-                                <Image.Source>
-                                    <FontImageSource Glyph="{Binding IconGlyph}"
-                                                     FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                                                     Size="20"
-                                                     Color="{AppThemeBinding Light={StaticResource ActionAccentLight}, Dark={StaticResource ActionAccentDark}}" />
-                                </Image.Source>
-                            </Image>
-                            <Label Grid.Column="1"
-                                   Text="{Binding Name}"
-                                   FontFamily="{StaticResource FontFamilyRegular}"
-                                   FontSize="{StaticResource FontSizeBodyMedium}"
-                                   TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
-                                   LineBreakMode="TailTruncation"
-                                   VerticalTextAlignment="Center" />
+                            <!-- Left Item -->
+                            <Grid Grid.Column="0"
+                                  ColumnDefinitions="28, *"
+                                  ColumnSpacing="8"
+                                  VerticalOptions="Center">
+                                <Image Grid.Column="0"
+                                       WidthRequest="20"
+                                       HeightRequest="20"
+                                       HorizontalOptions="Start"
+                                       VerticalOptions="Center">
+                                    <Image.Source>
+                                        <FontImageSource Glyph="{Binding Left.IconGlyph}"
+                                                         FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                         Size="20"
+                                                         Color="{AppThemeBinding Light={StaticResource ActionAccentLight}, Dark={StaticResource ActionAccentDark}}" />
+                                    </Image.Source>
+                                </Image>
+                                <Label Grid.Column="1"
+                                       Text="{Binding Left.Name}"
+                                       FontFamily="{StaticResource FontFamilyRegular}"
+                                       FontSize="{StaticResource FontSizeBodyMedium}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+                                       LineBreakMode="TailTruncation"
+                                       VerticalTextAlignment="Center" />
+                            </Grid>
+
+                            <!-- Right Item -->
+                            <Grid Grid.Column="1"
+                                  ColumnDefinitions="28, *"
+                                  ColumnSpacing="8"
+                                  VerticalOptions="Center"
+                                  IsVisible="{Binding HasRight}">
+                                <Image Grid.Column="0"
+                                       WidthRequest="20"
+                                       HeightRequest="20"
+                                       HorizontalOptions="Start"
+                                       VerticalOptions="Center">
+                                    <Image.Source>
+                                        <FontImageSource Glyph="{Binding Right.IconGlyph}"
+                                                         FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                         Size="20"
+                                                         Color="{AppThemeBinding Light={StaticResource ActionAccentLight}, Dark={StaticResource ActionAccentDark}}" />
+                                    </Image.Source>
+                                </Image>
+                                <Label Grid.Column="1"
+                                       Text="{Binding Right.Name}"
+                                       FontFamily="{StaticResource FontFamilyRegular}"
+                                       FontSize="{StaticResource FontSizeBodyMedium}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+                                       LineBreakMode="TailTruncation"
+                                       VerticalTextAlignment="Center" />
+                            </Grid>
                         </Grid>
                     </DataTemplate>
                 </BindableLayout.ItemTemplate>
-            </FlexLayout>
+            </VerticalStackLayout>
 
             <!-- See All Amenities Expand / Collapse Button (Touch Target 48dp) -->
             <Border IsVisible="{Binding HasMoreAmenities}"

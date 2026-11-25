@@ -166,6 +166,8 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
 
     public ObservableCollection<AmenityDisplayItem> AmenitiesDisplayList { get; } = [];
 
+    public ObservableCollection<AmenityRowItem> AmenityRows { get; } = [];
+
     [ObservableProperty]
     public partial bool IsAllAmenitiesExpanded { get; set; } = false;
 
@@ -543,6 +545,18 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
         {
             AmenitiesDisplayList.Add(item);
         }
+        UpdateAmenityRows();
+    }
+
+    private void UpdateAmenityRows()
+    {
+        AmenityRows.Clear();
+        for (int i = 0; i < AmenitiesDisplayList.Count; i += 2)
+        {
+            var left = AmenitiesDisplayList[i];
+            var right = i + 1 < AmenitiesDisplayList.Count ? AmenitiesDisplayList[i + 1] : null;
+            AmenityRows.Add(new AmenityRowItem(left, right));
+        }
     }
 
     private static AmenityDisplayItem CreateAmenityItem(Amenity amenity) => amenity switch
@@ -889,6 +903,7 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
         {
             AmenitiesDisplayList.Add(item);
         }
+        UpdateAmenityRows();
         SeeAllAmenitiesText = IsAllAmenitiesExpanded
             ? AppResources.GetString("RoomDetail_CollapseAmenities")
             : string.Format(AppResources.GetString("RoomDetail_SeeAllAmenities"), _allAmenities.Count);

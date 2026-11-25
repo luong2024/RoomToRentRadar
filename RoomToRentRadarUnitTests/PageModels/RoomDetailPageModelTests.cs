@@ -264,6 +264,7 @@ public class RoomDetailPageModelTests
         await _sut.InitializeAsync();
 
         Assert.That(_sut.AmenitiesDisplayList, Has.Count.EqualTo(8));
+        Assert.That(_sut.AmenityRows, Has.Count.EqualTo(4));
         Assert.That(_sut.IsAllAmenitiesExpanded, Is.False);
 
         // Act 1 - Expand
@@ -272,6 +273,7 @@ public class RoomDetailPageModelTests
         // Assert 1
         Assert.That(_sut.IsAllAmenitiesExpanded, Is.True);
         Assert.That(_sut.AmenitiesDisplayList, Has.Count.EqualTo(11));
+        Assert.That(_sut.AmenityRows, Has.Count.EqualTo(6));
         Assert.That(_sut.SeeAllAmenitiesText, Is.EqualTo("Collapse amenities"));
 
         // Act 2 - Collapse
@@ -280,6 +282,7 @@ public class RoomDetailPageModelTests
         // Assert 2
         Assert.That(_sut.IsAllAmenitiesExpanded, Is.False);
         Assert.That(_sut.AmenitiesDisplayList, Has.Count.EqualTo(8));
+        Assert.That(_sut.AmenityRows, Has.Count.EqualTo(4));
         Assert.That(_sut.SeeAllAmenitiesText, Is.EqualTo("See all 11 amenities"));
     }
 

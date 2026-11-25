@@ -19,6 +19,14 @@ public sealed record CostRowItem(string Label, string ValueFormatted, bool IsHig
 public sealed record AmenityDisplayItem(Amenity Amenity, string Name, string IconGlyph);
 
 /// <summary>
+/// Display row model pairing two amenities into a 2-column grid row to guarantee stable layout without wrapping bugs.
+/// </summary>
+public sealed record AmenityRowItem(AmenityDisplayItem Left, AmenityDisplayItem? Right)
+{
+    public bool HasRight => Right is not null;
+}
+
+/// <summary>
 /// Display model for a safety verification item (CCTV, fire extinguisher, secure entrance, etc.).
 /// </summary>
 public sealed record SafetyCheckItem(SafetyFeature Feature, string Description, bool IsVerified, string IconGlyph)
