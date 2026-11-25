@@ -18,7 +18,7 @@
         <Border StrokeShape="Rectangle" StrokeThickness="0"
                 BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
             <VerticalStackLayout Spacing="0">
-                <Grid Padding="16,14" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <Grid Padding="16,14" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                     <VerticalStackLayout Spacing="2" VerticalOptions="Center">
                         <Label Text="Tin của tôi" Style="{StaticResource ScreenTitle}" FontSize="22"
                                SemanticProperties.HeadingLevel="Level1" />
@@ -26,7 +26,11 @@
                     </VerticalStackLayout>
                     <buttons:SfButton Grid.Column="1" Text="+ Đăng tin" Command="{Binding CreateCommand}"
                                       IsVisible="{Binding IsAuthenticated}" VerticalOptions="Center"
-                                      HeightRequest="50" WidthRequest="110" Padding="12,0" />
+                                      HeightRequest="44" WidthRequest="104" Padding="10,0" />
+                    <buttons:SfButton Grid.Column="2" Text="Đăng xuất" Command="{Binding SignOutCommand}"
+                                      IsVisible="{Binding IsAuthenticated}" Style="{StaticResource SoftSfButton}"
+                                      VerticalOptions="Center" HeightRequest="44" WidthRequest="96" Padding="8,0"
+                                      AutomationId="MyListingsSignOut" />
                 </Grid>
                 <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}" />
             </VerticalStackLayout>

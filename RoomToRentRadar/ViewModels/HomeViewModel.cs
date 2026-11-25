@@ -24,6 +24,10 @@ public partial class HomeViewModel : ObservableObject
     private readonly IErrorHandler _errorHandler;
     private readonly INavigationService _navigationService;
     private readonly IRoomComparisonStore _comparisonStore;
+    private readonly AuthService? _authService;
+    private readonly IAlertPrompt? _alertPrompt;
+    private readonly SynchronizationContext? _uiContext;
+    private bool _isAuthSubscribed;
     private CancellationTokenSource? _searchCancellation;
     private CancellationTokenSource? _compareHintCancellation;
     private readonly HashSet<Guid> _listingIds = new();
@@ -92,16 +96,31 @@ public partial class HomeViewModel : ObservableObject
     [ObservableProperty]
     public partial string CompareHint { get; set; } = string.Empty;
 
+    [ObservableProperty]
+    public partial bool IsSignedIn { get; set; }
+
+    [ObservableProperty]
+    public partial string SignedInBadgeText { get; set; } = string.Empty;
+
     public HomeViewModel(
         IApiClient apiClient,
         IErrorHandler errorHandler,
         INavigationService navigationService,
-        IRoomComparisonStore comparisonStore)
+        IRoomComparisonStore comparisonStore,
+        AuthService? authService = null,
+        IAlertPrompt? alertPrompt = null)
     {
         _apiClient = apiClient;
         _errorHandler = errorHandler;
         _navigationService = navigationService;
         _comparisonStore = comparisonStore;
+        _authService = authService;
+        _alertPrompt = alertPrompt;
+        _uiContext = SynchronizationContext.Current;
+        if (_authService is not null)
+        {
+            AttachAuthSession();
+        }
         ResultsText = "Đang tải phòng trọ…";
         EmptyMessage = "Đang tải phòng trọ…";
         ErrorMessage = string.Empty;
@@ -479,6 +498,100 @@ public partial class HomeViewModel : ObservableObject
             _errorHandler.HandleError(ex);
         }
     }
+
+    [RelayCommand(AllowConcurrentExecutions = false)]
+    private async Task OpenAuthAsync()
+    {
+        try
+        {
+            if (_authService is null || !_authService.IsSignedIn || _alertPrompt is null)
+            {
+                await _navigationService.GoToLoginAsync();
+                return;
+            }
+
+            var displayName = string.IsNullOrWhiteSpace(_authService.CurrentDisplayName)
+                ? "Người dùng"
+                : _authService.CurrentDisplayName;
+            var roleLabel = FormatRoleLabel(_authService.CurrentRole);
+            var signOut = await _alertPrompt.ConfirmAsync(
+                "Tài khoản của bạn",
+                $"Đang đăng nhập: {displayName}\nVai trò: {roleLabel}",
+                "Đăng xuất",
+                "Đóng");
+
+            if (signOut)
+            {
+                await _authService.SignOutAsync();
+                await _navigationService.GoToRoleRootAsync(null);
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorHandler.HandleError(ex);
+        }
+    }
+
+    public void AttachAuthSession()
+    {
+        if (_authService is null)
+        {
+            return;
+        }
+
+        if (!_isAuthSubscribed)
+        {
+            _authService.SessionChanged += OnAuthSessionChanged;
+            _isAuthSubscribed = true;
+        }
+
+        SyncAuthState();
+    }
+
+    public void DetachAuthSession()
+    {
+        if (_authService is null || !_isAuthSubscribed)
+        {
+            return;
+        }
+
+        _authService.SessionChanged -= OnAuthSessionChanged;
+        _isAuthSubscribed = false;
+    }
+
+    private void OnAuthSessionChanged(object? sender, EventArgs e)
+    {
+        if (_uiContext is not null && SynchronizationContext.Current != _uiContext)
+        {
+            _uiContext.Post(_ => SyncAuthState(), null);
+            return;
+        }
+
+        SyncAuthState();
+    }
+
+    public void SyncAuthState()
+    {
+        if (_authService is null || !_authService.IsSignedIn)
+        {
+            IsSignedIn = false;
+            SignedInBadgeText = string.Empty;
+            return;
+        }
+
+        IsSignedIn = true;
+        SignedInBadgeText = string.IsNullOrWhiteSpace(_authService.CurrentDisplayName)
+            ? FormatRoleLabel(_authService.CurrentRole)
+            : _authService.CurrentDisplayName;
+    }
+
+    private static string FormatRoleLabel(AppUserRole? role) => role switch
+    {
+        AppUserRole.Landlord => "Chủ phòng",
+        AppUserRole.Moderator => "Kiểm duyệt viên",
+        AppUserRole.Admin => "Quản trị viên",
+        _ => "Sinh viên"
+    };
 
     public void RefreshComparisonState()
     {

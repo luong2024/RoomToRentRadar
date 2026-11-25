@@ -10,6 +10,8 @@ public interface INavigationService
 
     Task GoToRegisterAsync();
 
+    Task GoToRegisterAsync(AppUserRole? initialRole) => GoToRegisterAsync();
+
     /// <summary>Navigates to the home tab for the signed-in role.</summary>
     Task GoToRoleRootAsync(AppUserRole? role);
 

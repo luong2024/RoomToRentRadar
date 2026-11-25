@@ -25,6 +25,15 @@ public partial class MyListingsViewModel(IListingManagementClient client, AuthSe
     [RelayCommand] private Task EditAsync(OwnedListingItem item) => navigation.GoToListingEditorAsync(item.Id);
 
     [RelayCommand(AllowConcurrentExecutions = false)]
+    private async Task SignOutAsync(CancellationToken cancellationToken)
+    {
+        await auth.SignOutAsync(cancellationToken);
+        IsAuthenticated = false;
+        Listings.Clear();
+        await navigation.GoToRoleRootAsync(null);
+    }
+
+    [RelayCommand(AllowConcurrentExecutions = false)]
     private async Task LoadAsync(CancellationToken cancellationToken)
     {
         IsBusy = true;

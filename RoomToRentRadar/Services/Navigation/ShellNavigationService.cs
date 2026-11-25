@@ -20,13 +20,24 @@ public sealed class ShellNavigationService : INavigationService
     public Task GoToRegisterAsync()
         => GetShell().GoToAsync(AppRoutes.Register);
 
+    public Task GoToRegisterAsync(AppUserRole? initialRole)
+    {
+        if (initialRole is AppUserRole.Student or AppUserRole.Landlord)
+        {
+            var wireRole = AppUserRoleWire.ToWireValue(initialRole.Value);
+            return GetShell().GoToAsync($"{AppRoutes.Register}?role={Uri.EscapeDataString(wireRole)}");
+        }
+
+        return GoToRegisterAsync();
+    }
+
     public Task GoToRoleRootAsync(AppUserRole? role)
-        => GetShell().GoToAsync(role switch
+        => MainThread.InvokeOnMainThreadAsync(() => GetShell().GoToAsync(role switch
         {
             AppUserRole.Landlord => $"//{AppRoutes.MyListings}",
             AppUserRole.Moderator or AppUserRole.Admin => $"//{AppRoutes.Moderation}",
             _ => $"//{AppRoutes.Home}"
-        });
+        }));
 
     public Task GoToListingEditorAsync(Guid? listingId = null)
         => GetShell().GoToAsync(listingId is { } id

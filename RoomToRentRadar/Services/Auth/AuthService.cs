@@ -9,6 +9,10 @@ public sealed class AuthService(IApiClient apiClient, ITokenStore tokenStore)
 {
     public AppUserRole? CurrentRole { get; private set; }
 
+    public string? CurrentDisplayName { get; private set; }
+
+    public bool IsSignedIn => CurrentRole is not null;
+
     public event EventHandler? SessionChanged;
 
     public async Task SignInAsync(
@@ -109,6 +113,7 @@ public sealed class AuthService(IApiClient apiClient, ITokenStore tokenStore)
         {
             await tokenStore.ClearAsync(cancellationToken);
             CurrentRole = null;
+            CurrentDisplayName = null;
             SessionChanged?.Invoke(this, EventArgs.Empty);
         }
     }
@@ -121,6 +126,9 @@ public sealed class AuthService(IApiClient apiClient, ITokenStore tokenStore)
         var role = AppUserRoleWire.TryParse(response.Role) ?? AppUserRole.Student;
         await tokenStore.SaveAsync(response.AccessToken, response.ExpiresAt, role, cancellationToken);
         CurrentRole = role;
+        CurrentDisplayName = string.IsNullOrWhiteSpace(response.DisplayName)
+            ? null
+            : response.DisplayName.Trim();
         SessionChanged?.Invoke(this, EventArgs.Empty);
     }
 }

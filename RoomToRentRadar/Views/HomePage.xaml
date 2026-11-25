@@ -272,29 +272,52 @@
                             VerticalOptions="Center">
                             <Image Source="radar_mark.png" />
                         </Border>
-                        <Grid Grid.Column="2"
-                            WidthRequest="44"
-                            HeightRequest="44"
-                            VerticalOptions="Center">
-                            <Border StrokeThickness="0"
-                                StrokeShape="RoundRectangle 22"
-                                BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}">
-                                <Label Text="RR"
-                                    FontFamily="OpenSansSemibold"
-                                    FontSize="13"
-                                    TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}"
-                                    HorizontalTextAlignment="Center"
-                                    VerticalTextAlignment="Center" />
-                            </Border>
-                            <Border WidthRequest="11"
-                                HeightRequest="11"
-                                Margin="0,1,0,0"
+                        <HorizontalStackLayout Grid.Column="2"
+                            Spacing="8"
+                            VerticalOptions="Center"
+                            AutomationId="OpenHomeAuth"
+                            SemanticProperties.Description="Tài khoản, đăng nhập hoặc đăng ký"
+                            SemanticProperties.Hint="Mở màn hình đăng nhập hoặc xem tài khoản đang đăng nhập">
+                            <HorizontalStackLayout.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenAuthCommand}" />
+                            </HorizontalStackLayout.GestureRecognizers>
+                            <Border IsVisible="{Binding IsSignedIn}"
+                                Padding="10,6"
                                 StrokeThickness="0"
-                                StrokeShape="RoundRectangle 6"
-                                HorizontalOptions="End"
-                                VerticalOptions="Start"
-                                BackgroundColor="{StaticResource Accent}" />
-                        </Grid>
+                                StrokeShape="RoundRectangle 14"
+                                VerticalOptions="Center"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource AvailableBg}, Dark={StaticResource AvailableBgDark}}">
+                                <Label Text="{Binding SignedInBadgeText}"
+                                    FontFamily="OpenSansSemibold"
+                                    FontSize="12"
+                                    MaxLines="1"
+                                    MaximumWidthRequest="140"
+                                    LineBreakMode="TailTruncation"
+                                    TextColor="{AppThemeBinding Light={StaticResource Available}, Dark={StaticResource AvailableDark}}" />
+                            </Border>
+                            <Grid WidthRequest="44"
+                                HeightRequest="44"
+                                VerticalOptions="Center">
+                                <Border StrokeThickness="0"
+                                    StrokeShape="RoundRectangle 22"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}">
+                                    <Image Source="person_icon.png"
+                                        WidthRequest="22"
+                                        HeightRequest="22"
+                                        HorizontalOptions="Center"
+                                        VerticalOptions="Center" />
+                                </Border>
+                                <Border IsVisible="{Binding IsSignedIn}"
+                                    WidthRequest="11"
+                                    HeightRequest="11"
+                                    Margin="0,1,0,0"
+                                    StrokeThickness="0"
+                                    StrokeShape="RoundRectangle 6"
+                                    HorizontalOptions="End"
+                                    VerticalOptions="Start"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource Available}, Dark={StaticResource AvailableDark}}" />
+                            </Grid>
+                        </HorizontalStackLayout>
                     </Grid>
                     <VerticalStackLayout x:Name="HomeChrome"
                         Padding="20,8,20,8"

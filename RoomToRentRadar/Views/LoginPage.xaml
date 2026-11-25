@@ -20,46 +20,88 @@
         </Style>
     </ContentPage.Resources>
     <ScrollView>
-        <VerticalStackLayout x:Name="LoginContent" Padding="24,28,24,28" Spacing="24"
+        <VerticalStackLayout x:Name="LoginContent" Padding="20,16,20,16" Spacing="14"
                              MaximumWidthRequest="460" HorizontalOptions="Fill">
-            <!-- Brand Intro -->
-            <VerticalStackLayout Spacing="12">
-                <Border WidthRequest="64" HeightRequest="64" Padding="13" StrokeThickness="0"
-                        BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}"
-                        StrokeShape="RoundRectangle 20" HorizontalOptions="Start">
-                    <Image Source="radar_mark.png" SemanticProperties.Description="Room Radar" />
-                </Border>
-                <Label Text="KẾT NỐI VỚI CHỦ PHÒNG" Style="{StaticResource Eyebrow}"
-                       TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
-                <Label Text="Một bước nữa,&#10;gần nơi ở mới hơn." FontSize="28" FontFamily="OpenSansSemibold"
-                       CharacterSpacing="-0.6" LineHeight="1.12" SemanticProperties.HeadingLevel="Level1" />
-                <Label Text="Đăng nhập để xem số điện thoại, lưu khu vực yêu thích và quản lý tin cho thuê của bạn."
-                       Style="{StaticResource Caption}" FontSize="14" LineHeight="1.35" />
-            </VerticalStackLayout>
+            <Label Text="Đăng nhập" FontSize="24" FontFamily="OpenSansSemibold"
+                   CharacterSpacing="-0.4" SemanticProperties.HeadingLevel="Level1" />
 
             <!-- Login Form Card -->
-            <Border Padding="22,24" StrokeShape="RoundRectangle 22">
+            <Border Padding="18,16" StrokeShape="RoundRectangle 20">
                 <Border.Shadow>
                     <Shadow Brush="{StaticResource InkBrush}" Offset="0,4" Radius="12" Opacity="0.05" />
                 </Border.Shadow>
-                <VerticalStackLayout Spacing="16">
-                    <inputLayout:SfTextInputLayout Hint="Email" ShowHelperText="False">
-                        <Entry Text="{Binding Email}" Keyboard="Email" ReturnType="Next"
-                               IsSpellCheckEnabled="False" IsTextPredictionEnabled="False"
-                               Placeholder="ban@example.com" ClearButtonVisibility="WhileEditing"
-                               AutomationId="LoginEmail" SemanticProperties.Description="Địa chỉ email"
-                               Style="{StaticResource LoginEntry}" />
-                    </inputLayout:SfTextInputLayout>
+                <VerticalStackLayout Spacing="12">
+                    <!-- Role Flow Selector -->
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <Border Padding="10,8" StrokeThickness="1.5" StrokeShape="RoundRectangle 14"
+                                Stroke="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}"
+                                BackgroundColor="Transparent"
+                                AutomationId="LoginRoleStudent"
+                                SemanticProperties.Description="Đăng nhập với tư cách sinh viên">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding SelectStudentCommand}" />
+                            </Border.GestureRecognizers>
+                            <Border.Triggers>
+                                <DataTrigger TargetType="Border" Binding="{Binding IsStudent}" Value="True">
+                                    <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
+                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}" />
+                                </DataTrigger>
+                            </Border.Triggers>
+                            <VerticalStackLayout Spacing="1">
+                                <Label Text="Sinh viên" FontFamily="OpenSansSemibold" FontSize="13.5" HorizontalTextAlignment="Center" />
+                                <Label Text="Tìm &amp; lưu phòng" Style="{StaticResource Caption}" FontSize="11" HorizontalTextAlignment="Center" />
+                            </VerticalStackLayout>
+                        </Border>
 
-                    <inputLayout:SfTextInputLayout Hint="Mật khẩu" EnablePasswordVisibilityToggle="True">
-                        <Entry Text="{Binding Password}" IsPassword="True" ReturnType="Go"
-                               ReturnCommand="{Binding SignInCommand}" Placeholder="Nhập mật khẩu của bạn"
-                               AutomationId="LoginPassword" SemanticProperties.Description="Mật khẩu"
-                               Style="{StaticResource LoginEntry}" />
-                    </inputLayout:SfTextInputLayout>
+                        <Border Grid.Column="1" Padding="10,8" StrokeThickness="1.5" StrokeShape="RoundRectangle 14"
+                                Stroke="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}"
+                                BackgroundColor="Transparent"
+                                AutomationId="LoginRoleLandlord"
+                                SemanticProperties.Description="Đăng nhập với tư cách chủ phòng">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding SelectLandlordCommand}" />
+                            </Border.GestureRecognizers>
+                            <Border.Triggers>
+                                <DataTrigger TargetType="Border" Binding="{Binding IsLandlord}" Value="True">
+                                    <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
+                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}" />
+                                </DataTrigger>
+                            </Border.Triggers>
+                            <VerticalStackLayout Spacing="1">
+                                <Label Text="Chủ phòng" FontFamily="OpenSansSemibold" FontSize="13.5" HorizontalTextAlignment="Center" />
+                                <Label Text="Quản lý tin đăng" Style="{StaticResource Caption}" FontSize="11" HorizontalTextAlignment="Center" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </Grid>
 
-                    <Border IsVisible="{Binding HasError}" Padding="14,10" StrokeThickness="0"
-                            StrokeShape="RoundRectangle 14"
+                    <VerticalStackLayout Spacing="3">
+                        <inputLayout:SfTextInputLayout Hint="Email" ShowHelperText="False" HasError="{Binding HasEmailError}">
+                            <Entry Text="{Binding Email}" Keyboard="Email" ReturnType="Next" MaxLength="200"
+                                   IsSpellCheckEnabled="False" IsTextPredictionEnabled="False"
+                                   Placeholder="ban@example.com" ClearButtonVisibility="WhileEditing"
+                                   AutomationId="LoginEmail" SemanticProperties.Description="Địa chỉ email"
+                                   Style="{StaticResource LoginEntry}" />
+                        </inputLayout:SfTextInputLayout>
+                        <Label Text="{Binding EmailError}" IsVisible="{Binding HasEmailError}"
+                               AutomationId="LoginEmailError" FontSize="12"
+                               TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="3">
+                        <inputLayout:SfTextInputLayout Hint="Mật khẩu" ShowHelperText="False" EnablePasswordVisibilityToggle="True"
+                                                       HasError="{Binding HasPasswordError}">
+                            <Entry Text="{Binding Password}" IsPassword="True" ReturnType="Go" MaxLength="128"
+                                   ReturnCommand="{Binding SignInCommand}" Placeholder="Nhập mật khẩu của bạn"
+                                   AutomationId="LoginPassword" SemanticProperties.Description="Mật khẩu"
+                                   Style="{StaticResource LoginEntry}" />
+                        </inputLayout:SfTextInputLayout>
+                        <Label Text="{Binding PasswordError}" IsVisible="{Binding HasPasswordError}"
+                               AutomationId="LoginPasswordError" FontSize="12"
+                               TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                    </VerticalStackLayout>
+
+                    <Border IsVisible="{Binding HasError}" Padding="12,8" StrokeThickness="0"
+                            StrokeShape="RoundRectangle 12"
                             BackgroundColor="{AppThemeBinding Light={StaticResource DangerSoft}, Dark={StaticResource DangerSoftDark}}">
                         <Label Text="{Binding ErrorMessage}"
                                TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
@@ -68,11 +110,11 @@
 
                     <progressBar:SfLinearProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" />
 
-                    <Grid HeightRequest="50">
+                    <Grid HeightRequest="48">
                         <buttons:SfButton Text="Đăng nhập" Command="{Binding SignInCommand}" IsEnabled="{Binding IsNotBusy}"
                                           AutomationId="LoginSignIn" HorizontalOptions="Fill" Padding="40,0"
                                           SemanticProperties.Description="Đăng nhập"
-                                          SemanticProperties.Hint="Đăng nhập để xem liên hệ của chủ phòng">
+                                          SemanticProperties.Hint="Đăng nhập và chuyển đến màn hình theo vai trò">
                             <buttons:SfButton.Triggers>
                                 <DataTrigger TargetType="buttons:SfButton" Binding="{Binding IsBusy}" Value="True">
                                     <Setter Property="Text" Value="Đang đăng nhập…" />
@@ -91,10 +133,10 @@
                               SemanticProperties.Description="Đăng ký tài khoản mới"
                               SemanticProperties.Hint="Mở trang đăng ký tài khoản sinh viên hoặc chủ phòng" />
 
-            <buttons:SfButton Text="←  Quay lại phòng đang xem" Command="{Binding CancelCommand}"
+            <buttons:SfButton Text="←  Quay lại" Command="{Binding CancelCommand}"
                               Style="{StaticResource GhostSfButton}" HorizontalOptions="Center"
                               SemanticProperties.Description="Hủy đăng nhập"
-                              SemanticProperties.Hint="Quay lại trang thông tin phòng" />
+                              SemanticProperties.Hint="Quay lại màn hình trước" />
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

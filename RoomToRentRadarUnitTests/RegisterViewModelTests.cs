@@ -57,7 +57,7 @@ public class RegisterViewModelTests
             Assert.That(apiClient.Registrations[0].Role, Is.EqualTo(AppUserRoleWire.Landlord));
             Assert.That(tokenStore.AccessToken, Is.EqualTo("register-token"));
             Assert.That(tokenStore.Role, Is.EqualTo(AppUserRole.Landlord));
-            Assert.That(navigationService.RoleRootRoles, Is.EqualTo(new[] { AppUserRole.Landlord }));
+            Assert.That(navigationService.RoleRootRoles, Is.EqualTo(new[] { AppUserRole.Student }));
         });
     }
 
@@ -157,7 +157,76 @@ public class RegisterViewModelTests
             Assert.That(
                 viewModel.ErrorMessage,
                 Is.EqualTo("Email này đã được đăng ký. Hãy đăng nhập hoặc dùng email khác."));
+            Assert.That(
+                viewModel.EmailError,
+                Is.EqualTo("Email này đã được đăng ký. Hãy đăng nhập hoặc dùng email khác."));
+            Assert.That(viewModel.HasEmailError, Is.True);
             Assert.That(navigationService.RoleRootRoles, Is.Empty);
+        });
+    }
+
+    [Test]
+    public async Task Register_WhenMultipleFieldsInvalid_PopulatesInlineFieldErrorsAndClearsOnEdit()
+    {
+        var apiClient = new FakeApiClient();
+        var viewModel = CreateViewModel(apiClient, new FakeTokenStore(), new FakeNavigationService());
+        viewModel.DisplayName = string.Empty;
+        viewModel.Email = "invalid-email";
+        viewModel.Password = "lettersonly";
+        viewModel.ConfirmPassword = "other";
+
+        await viewModel.RegisterCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasDisplayNameError, Is.True);
+            Assert.That(viewModel.HasEmailError, Is.True);
+            Assert.That(viewModel.HasPasswordError, Is.True);
+            Assert.That(viewModel.HasConfirmPasswordError, Is.True);
+            Assert.That(apiClient.Registrations, Is.Empty);
+        });
+
+        viewModel.Email = "valid@example.test";
+        viewModel.Password = "Room1234";
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasEmailError, Is.False);
+            Assert.That(viewModel.HasPasswordError, Is.False);
+            Assert.That(viewModel.HasMinPasswordLength, Is.True);
+            Assert.That(viewModel.HasPasswordLetter, Is.True);
+            Assert.That(viewModel.HasPasswordDigit, Is.True);
+        });
+    }
+
+    [Test]
+    public async Task Register_WhenRateLimited_ShowsFriendlyMessageWithoutErrorHandler()
+    {
+        var apiClient = new FakeApiClient
+        {
+            RegisterException = new ApiException(
+                HttpStatusCode.TooManyRequests,
+                "Too many requests.",
+                "rate_limit_exceeded")
+        };
+        var errorHandler = new FakeErrorHandler();
+        var viewModel = CreateViewModel(
+            apiClient,
+            new FakeTokenStore(),
+            new FakeNavigationService(),
+            errorHandler);
+        viewModel.DisplayName = "New Student";
+        viewModel.Email = "student@example.test";
+        viewModel.Password = "Password-123";
+        viewModel.ConfirmPassword = "Password-123";
+
+        await viewModel.RegisterCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasError, Is.True);
+            Assert.That(viewModel.ErrorMessage, Does.Contain("quá nhanh"));
+            Assert.That(errorHandler.HandledExceptions, Is.Empty);
         });
     }
 
@@ -233,6 +302,18 @@ public class RegisterViewModelTests
             Assert.That(viewModel.IsStudent, Is.True);
             Assert.That(viewModel.IsLandlord, Is.False);
         });
+    }
+
+    [Test]
+    public void ApplyQueryAttributes_WithLandlordRole_PreselectsLandlordAndIgnoresAdmin()
+    {
+        var viewModel = CreateViewModel(new FakeApiClient(), new FakeTokenStore(), new FakeNavigationService());
+
+        viewModel.ApplyQueryAttributes(new Dictionary<string, object> { ["role"] = AppUserRoleWire.Landlord });
+        Assert.That(viewModel.SelectedRole, Is.EqualTo(AppUserRole.Landlord));
+
+        viewModel.ApplyQueryAttributes(new Dictionary<string, object> { ["role"] = AppUserRoleWire.Admin });
+        Assert.That(viewModel.SelectedRole, Is.EqualTo(AppUserRole.Landlord));
     }
 
     [Test]
