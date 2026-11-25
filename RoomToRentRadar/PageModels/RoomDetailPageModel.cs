@@ -481,6 +481,9 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
             ?? orderedPhotos.FirstOrDefault()?.MediumUrl;
         Is360Available = orderedPhotos.Any(p => p.Kind == PhotoKind.Panorama);
 
+        // Resolve campus label before building Key Facts and Commute sections (BR-CMP-02)
+        CampusName = !string.IsNullOrWhiteSpace(CampusId) ? CampusId : "ICTU";
+
         // Key Facts Grid (2x3)
         PopulateKeyFacts(detail);
 
@@ -498,7 +501,6 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
 
         // Address & Commute
         AddressFormatted = $"{detail.Address.AddressLine}, {detail.Address.Ward}, {detail.Address.District}";
-        CampusName = !string.IsNullOrWhiteSpace(CampusId) ? CampusId : "ICTU";
         UpdateCommuteNotices(detail.DistanceKm);
 
         // Landlord contact block

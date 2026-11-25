@@ -1400,6 +1400,39 @@ public class RoomDetailPageModelTests
         });
     }
 
+    [Test]
+    public async Task InitializeAsync_WithNonDefaultCampusId_UpdatesKeyFactsCampusLabelOnFirstLoad()
+    {
+        var testRoom = CreateSampleRoom(
+            status: ListingStatus.Available,
+            isVerified: true,
+            monthlyRent: 2500000,
+            deposit: 2500000,
+            areaM2: 25.0,
+            maxOccupants: 2,
+            furnishing: Furnishing.Full,
+            availableFrom: null,
+            distanceKm: 1.8,
+            landlordPhone: null);
+        _roomGateway.GetRoomDetailAsync("room-test-1", "TNUT").Returns(testRoom);
+
+        using var sut = new RoomDetailPageModel(_roomGateway, _sessionStore, _favouriteGateway)
+        {
+            RoomId = "room-test-1",
+            CampusId = "TNUT"
+        };
+
+        await sut.InitializeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(sut.CampusName, Is.EqualTo("TNUT"));
+            Assert.That(sut.KeyFacts[5].Label, Is.EqualTo("To TNUT"));
+            Assert.That(sut.KeyFacts[5].Value, Is.EqualTo("1.8 km"));
+            Assert.That(sut.CommuteHeaderFormatted, Does.StartWith("Getting to TNUT"));
+        });
+    }
+
     private static TravelTimesDto CreateSampleTravelTimes(string campusId, double straightLineKm) => new(
         CampusId: campusId,
         StraightLineDistanceKm: straightLineKm,
