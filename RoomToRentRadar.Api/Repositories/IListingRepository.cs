@@ -19,4 +19,11 @@ public interface IListingRepository
     Task<(IReadOnlyList<ListingDocument> Items, int TotalCount)> GetPagedAsync(
         ListingQueryRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ListingDocument>> GetAllCanonicalAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<ListingDocument> UpsertAsync(
+        ListingDocument listing,
+        CancellationToken cancellationToken = default);
 }

@@ -131,6 +131,62 @@ public static class ListingSeedData
                 HouseRules = rules,
                 Landlord = new LandlordDocument { Id = "usr-landlord-12", Name = "Chú Hùng", Phone = "0933456789" },
                 UpdatedAt = DateTimeOffset.Parse("2026-11-19T09:00:00Z")
+            },
+            new()
+            {
+                Id = "room-2026-006",
+                CampusId = "ictu-main",
+                Title = "Phòng mới đăng chờ duyệt gần ngã ba Z115",
+                Description = "Phòng mới sơn sửa, đầy đủ nóng lạnh, điều hòa, đang chờ kiểm duyệt (US08 T08.3).",
+                Status = "PendingReview",
+                IsVerified = false,
+                ModerationStatus = "PendingReview",
+                Rent = 1_850_000m,
+                Deposit = 1_850_000m,
+                Area = 21,
+                RoomType = "Studio",
+                Address = "Ngõ 45 Đường Z115, Quyết Thắng, TP. Thái Nguyên",
+                DistanceMeters = 480,
+                Location = new GeoJsonPoint { Coordinates = [105.8072, 21.5858] },
+                Amenities = ["Wifi", "WaterHeater", "AirConditioner", "PrivateWC"],
+                SecurityScore = 4.1,
+                Photos =
+                [
+                    new PhotoDocument { Url = "https://cdn.example/p6-1.jpg", Is360 = false, Order = 1 },
+                    new PhotoDocument { Url = "https://cdn.example/p6-2.jpg", Is360 = false, Order = 2 },
+                    new PhotoDocument { Url = "https://cdn.example/p6-3.jpg", Is360 = false, Order = 3 }
+                ],
+                HouseRules = rules,
+                Landlord = new LandlordDocument { Id = "usr-landlord-09", Name = "Cô Nguyễn Thị Lan", Phone = "0987654321" },
+                UpdatedAt = DateTimeOffset.Parse("2026-11-24T10:00:00Z")
+            },
+            new()
+            {
+                Id = "room-2026-007",
+                CampusId = "ictu-main",
+                Title = "Phòng trọ khu Tân Thịnh (bị từ chối kiểm duyệt)",
+                Description = "Mẫu tin đăng bị từ chối do ảnh mờ, cần chủ trọ cập nhật lại (US08 T08.3).",
+                Status = "Rejected",
+                IsVerified = false,
+                ModerationStatus = "Rejected",
+                Rent = 1_500_000m,
+                Deposit = 1_500_000m,
+                Area = 18,
+                RoomType = "Khép kín",
+                Address = "Tổ 7, Tân Thịnh, TP. Thái Nguyên",
+                DistanceMeters = 900,
+                Location = new GeoJsonPoint { Coordinates = [105.8095, 21.5872] },
+                Amenities = ["Wifi", "WaterHeater"],
+                SecurityScore = 3.5,
+                Photos =
+                [
+                    new PhotoDocument { Url = "https://cdn.example/p7-1.jpg", Is360 = false, Order = 1 },
+                    new PhotoDocument { Url = "https://cdn.example/p7-2.jpg", Is360 = false, Order = 2 },
+                    new PhotoDocument { Url = "https://cdn.example/p7-3.jpg", Is360 = false, Order = 3 }
+                ],
+                HouseRules = rules,
+                Landlord = new LandlordDocument { Id = "usr-landlord-10", Name = "Anh Minh", Phone = "0912345678" },
+                UpdatedAt = DateTimeOffset.Parse("2026-11-24T08:30:00Z")
             }
         };
 
