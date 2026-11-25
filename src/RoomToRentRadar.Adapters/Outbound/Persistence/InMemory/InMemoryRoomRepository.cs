@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using RoomToRentRadar.Application.DTOs;
+using RoomToRentRadar.Application.Exceptions;
 using RoomToRentRadar.Application.Ports.Outbound;
 using RoomToRentRadar.Domain.Entities;
 
@@ -35,6 +36,27 @@ public class InMemoryRoomRepository : IRoomRepository
         }
 
         return _rooms.TryRemove(id.Trim(), out _);
+    }
+
+    public Task<Room> CreateAsync(Room room, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(room);
+        if (!_rooms.TryAdd(room.Id, room))
+        {
+            throw new InvalidOperationException($"A room with id '{room.Id}' already exists.");
+        }
+        return Task.FromResult(room);
+    }
+
+    public Task UpdateAsync(Room room, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(room);
+        if (!_rooms.ContainsKey(room.Id))
+        {
+            throw new NotFoundException($"Room '{room.Id}' was not found.");
+        }
+        _rooms[room.Id] = room;
+        return Task.CompletedTask;
     }
 
     public Task<Room?> GetByIdAsync(string id, CancellationToken cancellationToken = default)

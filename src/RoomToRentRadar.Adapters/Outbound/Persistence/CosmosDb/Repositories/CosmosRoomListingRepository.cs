@@ -1,5 +1,6 @@
 namespace RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Repositories;
 
+using System.Net;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Spatial;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,7 +17,7 @@ using RoomToRentRadar.Domain.ValueObjects;
 using RoomToRentRadar.Application.DTOs;
 using ListingRoomStatus = RoomToRentRadar.Domain.Enums.RoomStatus;
 
-public sealed class CosmosRoomListingRepository : IRoomListingRepository
+public sealed class CosmosRoomListingRepository : IRoomListingRepository, IRoomListingVisibilityWriter
 {
     private const int MaxWriteAttempts = 3;
     private const string UpsertOperation = "upsert";
@@ -135,6 +136,120 @@ public sealed class CosmosRoomListingRepository : IRoomListingRepository
 
         LastRequestCharge = totalRu;
         return new PagedResult<RoomListing>(results, page, pageSize, totalCount);
+    }
+
+    public Task<IReadOnlyList<string>> HideAsync(string roomId, CancellationToken cancellationToken = default) =>
+        HideAsync(roomId, maximumProjectionVersion: null, cancellationToken);
+
+    private async Task<IReadOnlyList<string>> HideAsync(
+        string roomId, long? maximumProjectionVersion, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
+        const string activeProjection = "(NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false)";
+        var patchFilter = $"FROM c WHERE {activeProjection}";
+        if (maximumProjectionVersion is long version)
+        {
+            patchFilter += FormattableString.Invariant(
+                $" AND (NOT IS_DEFINED(c.projectionVersion) OR c.projectionVersion <= {version})");
+        }
+        var query = new QueryDefinition($"SELECT VALUE c.campusId FROM c WHERE c.id = @id AND {activeProjection}")
+            .WithParameter("@id", roomId);
+        var campusIds = new HashSet<string>(StringComparer.Ordinal);
+        using var iterator = _listingsContainer.GetItemQueryIterator<string>(query);
+
+        while (iterator.HasMoreResults)
+        {
+            var page = await iterator.ReadNextAsync(cancellationToken);
+            campusIds.UnionWith(page);
+        }
+
+        var patch = new[]
+        {
+            PatchOperation.Set("/status", (int)ListingRoomStatus.Hidden),
+            PatchOperation.Set("/verificationStatus", (int)VerificationStatus.Unverified)
+        };
+
+        foreach (var campusId in campusIds)
+        {
+            try
+            {
+                await ExecuteWriteAsync(roomId, "hide-listing-projection", () =>
+                    _listingsContainer.PatchItemAsync<RoomListingDocument>(
+                        roomId, new PartitionKey(campusId), patch,
+                        new PatchItemRequestOptions
+                        {
+                            FilterPredicate = patchFilter,
+                            EnableContentResponseOnWrite = false
+                        },
+                        cancellationToken), cancellationToken);
+            }
+            catch (CosmosException ex) when (ex.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.PreconditionFailed)
+            {
+                // A missing, deleted or newer projection doesn't need to be hidden by this request.
+            }
+        }
+
+        return campusIds.ToList();
+    }
+
+    public async Task ReconcilePendingVisibilityAsync(
+        IRoomListingCacheInvalidator cacheInvalidator, CancellationToken cancellationToken = default)
+    {
+        var query = new QueryDefinition(
+                "SELECT c.id, c.projectionVersion, c.pendingVisibilitySyncId FROM c " +
+                "WHERE IS_STRING(c.pendingVisibilitySyncId) AND c.status = @pending AND c.isVerified = false " +
+                "AND (NOT IS_DEFINED(c.isDeleted) OR c.isDeleted = false)")
+            .WithParameter("@pending", (int)RoomToRentRadar.Domain.Entities.RoomStatus.Pending);
+        using var iterator = _roomsContainer.GetItemQueryIterator<RoomDocument>(
+            query, requestOptions: new QueryRequestOptions { MaxItemCount = 100 });
+
+        while (iterator.HasMoreResults)
+        {
+            var page = await iterator.ReadNextAsync(cancellationToken);
+            foreach (var room in page)
+            {
+                if (room.PendingVisibilitySyncId is not Guid syncId)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    var campusIds = await HideAsync(room.Id, room.ProjectionVersion, cancellationToken);
+                    foreach (var campusId in campusIds)
+                    {
+                        await cacheInvalidator.InvalidateCampusAsync(campusId, cancellationToken);
+                    }
+
+                    await CompleteVisibilitySyncAsync(room.Id, syncId, cancellationToken);
+                }
+                catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+                {
+                    _logger.LogWarning(ex, "Could not synchronize visibility for room {RoomId}; it will be retried.", room.Id);
+                }
+            }
+        }
+    }
+
+    private async Task CompleteVisibilitySyncAsync(string roomId, Guid syncId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await ExecuteWriteAsync(roomId, "complete-visibility-sync", () =>
+                _roomsContainer.PatchItemAsync<RoomDocument>(
+                    roomId, new PartitionKey(roomId), [PatchOperation.Remove("/pendingVisibilitySyncId")],
+                    new PatchItemRequestOptions
+                    {
+                        // A concurrent save may have queued a different visibility change.
+                        FilterPredicate = $"FROM c WHERE c.pendingVisibilitySyncId = \"{syncId:D}\"",
+                        EnableContentResponseOnWrite = false
+                    },
+                    cancellationToken), cancellationToken);
+        }
+        catch (CosmosException ex) when (ex.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.PreconditionFailed)
+        {
+            // The detail was removed or this intent was superseded.
+        }
     }
 
     public async Task<PagedResult<RoomListing>> SearchByPolygonAsync(

@@ -7,7 +7,10 @@ using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Context;
 using RoomToRentRadar.Adapters.Outbound.Persistence.InMemory;
 using RoomToRentRadar.Application.DTOs;
 using RoomToRentRadar.Application.Ports.Outbound;
+using RoomToRentRadar.Domain.Entities;
+using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.ValueObjects;
+using ListingRoomStatus = RoomToRentRadar.Domain.Enums.RoomStatus;
 using RoomToRentRadar.IntegrationTests.TestControllers;
 
 namespace RoomToRentRadar.IntegrationTests;
@@ -27,7 +30,11 @@ public sealed class AuthWebApplicationFactory : WebApplicationFactory<Program>
 
     public InMemoryRoomRepository RoomRepository { get; } = new();
 
+    public InMemoryRoomListingRepository RoomListingRepository { get; } = new();
+
     public StubRoutingProvider RoutingProvider { get; } = new();
+
+    public FakeListingImageStorageService ListingImageStorage { get; } = new();
 
     public AuthWebApplicationFactory(int authPermitLimit = 100, int routingPermitLimit = 100)
     {
@@ -72,6 +79,16 @@ public sealed class AuthWebApplicationFactory : WebApplicationFactory<Program>
             services.RemoveAll<IRoomRepository>();
             services.AddSingleton<IRoomRepository>(RoomRepository);
 
+            services.RemoveAll<IRoomListingRepository>();
+            services.AddSingleton<IRoomListingRepository>(RoomListingRepository);
+            services.RemoveAll<IRoomListingVisibilityWriter>();
+            services.AddSingleton<IRoomListingVisibilityWriter>(RoomListingRepository);
+            services.RemoveAll<ICampusRepository>();
+            services.AddSingleton<ICampusRepository, IntegrationCampusRepository>();
+
+            services.RemoveAll<IListingImageStorageService>();
+            services.AddSingleton<IListingImageStorageService>(ListingImageStorage);
+
             services.RemoveAll<IRoutingProvider>();
             services.AddSingleton<IRoutingProvider>(RoutingProvider);
 
@@ -91,6 +108,79 @@ public sealed class AuthWebApplicationFactory : WebApplicationFactory<Program>
         {
             CosmosDb.Dispose();
         }
+    }
+}
+
+public sealed class InMemoryRoomListingRepository : IRoomListingRepository, IRoomListingVisibilityWriter
+{
+    private readonly Dictionary<string, RoomListing> _listings = new(StringComparer.Ordinal);
+
+    public Task<IReadOnlyList<string>> HideAsync(string roomId, CancellationToken cancellationToken = default)
+    {
+        if (!_listings.TryGetValue(roomId, out var listing))
+        {
+            return Task.FromResult<IReadOnlyList<string>>([]);
+        }
+        listing.UpdateStatus(ListingRoomStatus.Hidden);
+        listing.UpdateVerificationStatus(VerificationStatus.Unverified);
+        return Task.FromResult<IReadOnlyList<string>>([listing.CampusId]);
+    }
+
+    public Task AddAsync(RoomListing roomListing, CancellationToken cancellationToken = default)
+    {
+        _listings[roomListing.Id] = roomListing;
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteAsync(string roomId, string campusId, CancellationToken cancellationToken = default)
+    {
+        _listings.Remove(roomId);
+        return Task.CompletedTask;
+    }
+
+    public Task<PagedResult<RoomListing>> GetAvailableVerifiedRoomsByCampusAsync(
+        string campusId,
+        GeoLocation campusLocation,
+        int page,
+        int pageSize,
+        string sortBy,
+        bool descending,
+        CancellationToken cancellationToken = default)
+    {
+        var matching = _listings.Values
+            .Where(listing => listing.CampusId == campusId && listing.IsDisplayable)
+            .ToList();
+        return Task.FromResult(new PagedResult<RoomListing>(matching, page, pageSize, matching.Count));
+    }
+}
+
+public sealed class IntegrationCampusRepository : ICampusRepository
+{
+    private static readonly Campus Campus = new(
+        "campus-ictu", "ICTU", "ICTU", new GeoLocation(21.5852, 105.8074), "Integration test campus");
+
+    public Task<Campus?> GetByIdAsync(string campusId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(string.Equals(campusId, Campus.Id, StringComparison.Ordinal) ? Campus : null);
+
+    public Task AddAsync(Campus campus, CancellationToken cancellationToken = default) => Task.CompletedTask;
+}
+
+public sealed class FakeListingImageStorageService : IListingImageStorageService
+{
+    public List<string> StoredUrls { get; } = [];
+    public List<string> DeletedUrls { get; } = [];
+
+    public Task<string> StoreAsync(Guid ownerId, string listingId, Stream content, string fileName, string contentType, long length, CancellationToken cancellationToken = default)
+    {
+        var url = $"https://listing-images.test/{ownerId:D}/{listingId}/{Guid.NewGuid():N}.png";
+        StoredUrls.Add(url);
+        return Task.FromResult(url);
+    }
+
+    public Task DeleteAsync(string imageUrl, CancellationToken cancellationToken = default)
+    {
+        DeletedUrls.Add(imageUrl);
+        return Task.CompletedTask;
     }
 }
 

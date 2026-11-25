@@ -9,6 +9,9 @@ using NUnit.Framework;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Configurations;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Documents;
+using DetailRoomStatus = RoomToRentRadar.Domain.Entities.RoomStatus;
+using ListingRoomStatus = RoomToRentRadar.Domain.Enums.RoomStatus;
+using VerificationStatus = RoomToRentRadar.Domain.Enums.VerificationStatus;
 
 [TestFixture]
 public class CosmosStartupSynchronizationTests
@@ -294,8 +297,45 @@ public class CosmosStartupSynchronizationTests
         });
     }
 
-    [Test]
-    public async Task Synchronize_WhenDetailHasOlderVersion_UpdatesDetailAndPreservesDetailOnlyFields()
+    [TestCase(ListingRoomStatus.Available, VerificationStatus.Verified)]
+    [TestCase(ListingRoomStatus.Hidden, VerificationStatus.Unverified)]
+    public async Task Synchronize_WhenLandlordEditIsPending_PreservesItAgainstSameVersionProjection(
+        ListingRoomStatus status, VerificationStatus verificationStatus)
+    {
+        var projection = new RoomListingDocument
+        {
+            Id = "room-edited",
+            CampusId = "campus-ictu",
+            Title = "Published title",
+            ThumbnailUrl = "https://img.test/old.jpg",
+            ProjectionVersion = 10,
+            Status = (int)status,
+            VerificationStatus = (int)verificationStatus
+        };
+        var editedDetail = new RoomDocument
+        {
+            Id = projection.Id,
+            LandlordId = Guid.NewGuid(),
+            Title = "New title waiting for review",
+            ThumbnailUrl = "https://img.test/new.jpg",
+            Status = (int)DetailRoomStatus.Pending,
+            IsVerified = false,
+            ProjectionVersion = 10
+        };
+        SetupListings(projection);
+        SetupExistingDetail(editedDetail);
+
+        await (Task)_synchronizeMethod.Invoke(_initializer, [_mockListingsContainer.Object, _mockRoomDetailsContainer.Object, CancellationToken.None])!;
+
+        _mockRoomDetailsContainer.Verify(container => container.ReplaceItemAsync(
+            It.IsAny<RoomDocument>(), It.IsAny<string>(), It.IsAny<PartitionKey?>(),
+            It.IsAny<ItemRequestOptions>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.That(editedDetail.Title, Is.EqualTo("New title waiting for review"));
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task Synchronize_WhenDetailHasOlderVersion_UpdatesDetailAndPreservesDetailOnlyFields(bool isLandlordEditPending)
     {
         var listing = new RoomListingDocument
         {
@@ -317,13 +357,14 @@ public class CosmosStartupSynchronizationTests
         var olderDetail = new RoomDocument
         {
             Id = "room-older",
+            LandlordId = isLandlordEditPending ? Guid.NewGuid() : null,
             Title = "Old Title",
             Price = 2_000_000m,
             Area = 20.0,
             Address = "Old Road",
             ThumbnailUrl = "https://img.test/old.jpg",
             IsVerified = false,
-            Status = 0,
+            Status = isLandlordEditPending ? (int)DetailRoomStatus.Pending : (int)DetailRoomStatus.Available,
             ProjectionVersion = 10,
             Amenities = ["Washing machine", "Balcony"],
             HouseRules = ["No smoking"],
@@ -350,6 +391,8 @@ public class CosmosStartupSynchronizationTests
             Assert.That(updatedDoc!.Title, Is.EqualTo("Brand New Title"));
             Assert.That(updatedDoc.Price, Is.EqualTo(3_000_000m));
             Assert.That(updatedDoc.ProjectionVersion, Is.EqualTo(15));
+            Assert.That(updatedDoc.IsVerified, Is.True);
+            Assert.That(updatedDoc.Status, Is.EqualTo((int)DetailRoomStatus.Available));
             Assert.That(updatedDoc.Amenities, Is.EqualTo(new[] { "Washing machine", "Balcony" }));
             Assert.That(updatedDoc.HouseRules, Is.EqualTo(new[] { "No smoking" }));
             Assert.That(updatedDoc.LandlordPhone, Is.EqualTo("0912345678"));

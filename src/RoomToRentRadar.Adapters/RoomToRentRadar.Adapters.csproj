@@ -13,6 +13,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="RoomToRentRadar.Adapters.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\RoomToRentRadar.Application\RoomToRentRadar.Application.csproj" />
     <ProjectReference Include="..\RoomToRentRadar.Domain\RoomToRentRadar.Domain.csproj" />
   </ItemGroup>

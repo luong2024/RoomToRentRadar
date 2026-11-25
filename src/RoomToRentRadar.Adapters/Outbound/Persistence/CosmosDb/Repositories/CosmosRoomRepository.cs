@@ -2,6 +2,7 @@ using System.Net;
 using Microsoft.Azure.Cosmos;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Documents;
 using RoomToRentRadar.Application.DTOs;
+using RoomToRentRadar.Application.Exceptions;
 using RoomToRentRadar.Application.Ports.Outbound;
 using RoomToRentRadar.Domain.Entities;
 
@@ -22,6 +23,56 @@ public class CosmosRoomRepository : IRoomRepository
         var document = RoomDocument.FromDomain(room);
         var response = await _container.CreateItemAsync(document, new PartitionKey(document.Id), cancellationToken: cancellationToken);
         return response.Resource.ToDomain();
+    }
+
+    public async Task UpdateAsync(Room room, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(room);
+        if (string.IsNullOrWhiteSpace(room.ConcurrencyToken))
+        {
+            throw new ConcurrencyConflictException("The listing version is missing. Reload it and retry.");
+        }
+
+        var existing = await ReadDocumentOrNullAsync(room.Id, cancellationToken);
+        if (existing is null || existing.IsDeleted)
+        {
+            throw new NotFoundException($"Room '{room.Id}' was not found.");
+        }
+
+        var document = RoomDocument.FromDomain(room);
+        document.ProjectionVersion = existing.ProjectionVersion;
+        if (room.Status == RoomStatus.Pending && !room.IsVerified &&
+            room.LandlordId is Guid landlordId && landlordId != Guid.Empty)
+        {
+            // Store the visibility intent atomically with the landlord's edit or unpublish.
+            document.PendingVisibilitySyncId = Guid.NewGuid();
+        }
+        try
+        {
+            await _container.ReplaceItemAsync(
+                document,
+                document.Id,
+                new PartitionKey(document.Id),
+                new ItemRequestOptions { IfMatchEtag = room.ConcurrencyToken },
+                cancellationToken);
+        }
+        catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.PreconditionFailed)
+        {
+            throw new ConcurrencyConflictException("The listing was changed by another request. Reload it and retry.", ex);
+        }
+    }
+
+    private async Task<RoomDocument?> ReadDocumentOrNullAsync(string id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var response = await _container.ReadItemAsync<RoomDocument>(id, new PartitionKey(id), cancellationToken: cancellationToken);
+            return response.Resource;
+        }
+        catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
     }
 
     public async Task<bool> AssignLandlordAsync(string roomId, Guid landlordId, CancellationToken cancellationToken = default)
@@ -82,7 +133,9 @@ public class CosmosRoomRepository : IRoomRepository
 
             if (response?.Resource is { IsDeleted: false } document)
             {
-                return document.ToDomain();
+                var room = document.ToDomain();
+                room.ConcurrencyToken = response.ETag ?? document.ETag;
+                return room;
             }
 
             if (response?.Resource is { IsDeleted: true })
