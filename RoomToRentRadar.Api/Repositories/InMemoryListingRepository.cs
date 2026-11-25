@@ -5,7 +5,7 @@ using RoomToRentRadar.Shared.Dtos;
 
 namespace RoomToRentRadar.Api.Repositories;
 
-public sealed class InMemoryListingRepository : IListingRepository
+public sealed class InMemoryListingRepository : IListingRepository, ILandlordListingRepository
 {
     private readonly Lock _sync = new();
     private readonly ConcurrentDictionary<string, ListingDocument> _byId;
@@ -23,7 +23,7 @@ public sealed class InMemoryListingRepository : IListingRepository
             all.ToDictionary(l => l.Id, StringComparer.OrdinalIgnoreCase),
             StringComparer.OrdinalIgnoreCase);
         _canonical = all
-            .Where(l => l.Id.StartsWith("room-2026-", StringComparison.OrdinalIgnoreCase))
+            .Where(l => IsCanonicalId(l.Id))
             .ToList();
     }
 
@@ -218,9 +218,42 @@ public sealed class InMemoryListingRepository : IListingRepository
         return Task.FromResult(((IReadOnlyList<ListingDocument>)items, totalCount));
     }
 
+    /// <summary>US08 / T08.2 — thêm tin mới của chủ trọ (vào cả danh sách canonical để T08.3 thấy trong hàng đợi duyệt).</summary>
+    public Task AddAsync(ListingDocument listing, CancellationToken cancellationToken = default)
+    {
+        lock (_sync)
+        {
+            if (!_byId.TryAdd(listing.Id, listing))
+            {
+                throw new InvalidOperationException($"Listing '{listing.Id}' already exists.");
+            }
+
+            UpdateCanonicalList(listing);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>US08 / T08.2 — rollback khi upload ảnh lúc tạo tin thất bại.</summary>
+    public Task<bool> RemoveAsync(string id, CancellationToken cancellationToken = default)
+    {
+        lock (_sync)
+        {
+            var removed = _byId.TryRemove(id, out _);
+            _canonical.RemoveAll(l => string.Equals(l.Id, id, StringComparison.OrdinalIgnoreCase));
+            return Task.FromResult(removed);
+        }
+    }
+
+    /// <summary>
+    /// Bản ghi canonical = mọi id trừ alias <c>room-ictu-XXX</c> (seed <c>room-2026-XXX</c> + tin chủ trọ mới đăng).
+    /// </summary>
+    private static bool IsCanonicalId(string id) =>
+        !id.StartsWith("room-ictu-", StringComparison.OrdinalIgnoreCase);
+
     private void UpdateCanonicalList(ListingDocument listing)
     {
-        if (!listing.Id.StartsWith("room-2026-", StringComparison.OrdinalIgnoreCase))
+        if (!IsCanonicalId(listing.Id))
         {
             return;
         }

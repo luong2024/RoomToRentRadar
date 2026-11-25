@@ -1,6 +1,7 @@
 using RoomToRentRadar.Api;
 using RoomToRentRadar.Api.Repositories;
 using RoomToRentRadar.Api.Services;
+using RoomToRentRadar.Api.Services.Landlord;
 using RoomToRentRadar.Api.Services.Moderation;
 using RoomToRentRadar.Api.Services.SavedSearches;
 
@@ -10,6 +11,7 @@ var builder = WebApplication.CreateBuilder(args);
 // và inject một danh sách RỖNG => API chạy không có dữ liệu seed.
 builder.Services.AddSingleton(_ => new InMemoryListingRepository());
 builder.Services.AddSingleton<IListingRepository>(sp => sp.GetRequiredService<InMemoryListingRepository>());
+builder.Services.AddSingleton<ILandlordListingRepository>(sp => sp.GetRequiredService<InMemoryListingRepository>());
 builder.Services.AddSingleton<IModerationAuditRepository, InMemoryModerationAuditRepository>();
 builder.Services.AddScoped<IListingService, ListingService>();
 builder.Services.AddScoped<IListingDetailService, ListingDetailService>();
@@ -21,6 +23,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<ISavedSearchRepository, InMemorySavedSearchRepository>();
 builder.Services.AddScoped<ISavedSearchService, SavedSearchService>();
 builder.Services.AddScoped<ISavedSearchAlertRules, SavedSearchAlertRules>();
+builder.Services.AddScoped<ILandlordListingService, LandlordListingService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

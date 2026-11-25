@@ -16,7 +16,11 @@ public sealed class ListingDetailService(IListingRepository repository) : IListi
         CancellationToken cancellationToken = default)
     {
         var listing = await repository.GetByIdAsync(id, cancellationToken);
-        if (listing is null)
+        // US08 AC2: tin chưa được duyệt (PendingReview / Rejected) hoặc đã xóa mềm không hiển thị công khai;
+        // chủ trọ xem tin của mình qua GET /api/v1/landlord/listings/{id}.
+        if (listing is null
+            || !string.Equals(listing.ModerationStatus, ListingModerationStatus.Approved, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(listing.Status, ListingAvailabilityStatus.Archived, StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }
