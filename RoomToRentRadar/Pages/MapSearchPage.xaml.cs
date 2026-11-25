@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.Controls.Maps;
 using Microsoft.Maui.Devices.Sensors;
 using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Maps;
@@ -26,13 +28,23 @@ public partial class MapSearchPage : ContentPage
 
         PolygonCanvas.Drawable = _drawable;
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        _viewModel.MapPinsChanged += OnMapPinsChanged;
+        _viewModel.SavedAreaPolygonApplied += OnSavedAreaPolygonApplied;
+        _viewModel.RoomDetailNavigationRequested += OnRoomDetailNavigationRequested;
 
         CenterMapOnIctu();
     }
 
     private void CenterMapOnIctu()
     {
-        CampusMap.MoveToRegion(MapSpan.FromCenterAndRadius(IctuCenter, Distance.FromKilometers(1.2)));
+        try
+        {
+            CampusMap.MoveToRegion(MapSpan.FromCenterAndRadius(IctuCenter, Distance.FromKilometers(1.2)));
+        }
+        catch
+        {
+            // Ignore map camera errors when running in headless or unsupported preview contexts
+        }
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -53,6 +65,7 @@ public partial class MapSearchPage : ContentPage
             return;
 
         CampusMap.MapElements.Clear();
+        CampusMap.Pins.Clear();
         _drawable.Reset(e.Touches[0]);
         PolygonCanvas.Invalidate();
     }
@@ -119,9 +132,113 @@ public partial class MapSearchPage : ContentPage
         await _viewModel.ExecuteSpatialSearchAsync(closedGeoJsonRing);
     }
 
+    private void OnMapPinsChanged()
+    {
+        try
+        {
+            CampusMap.Pins.Clear();
+            foreach (var item in _viewModel.MapPins)
+            {
+                var capturedRoomId = item.Id;
+                var mapPin = new Pin
+                {
+                    Label = $"{item.PriceShortLabel} • {item.Title}",
+                    Address = item.Address,
+                    Type = PinType.Place,
+                    Location = new Location(item.Latitude, item.Longitude)
+                };
+
+                mapPin.MarkerClicked += (_, args) =>
+                {
+                    args.HideInfoWindow = false;
+                    _viewModel.SelectPinById(capturedRoomId);
+                };
+
+                mapPin.InfoWindowClicked += (_, args) =>
+                {
+                    args.HideInfoWindow = true;
+                    _viewModel.SelectPinById(capturedRoomId);
+                    if (_viewModel.OpenSelectedPinDetailCommand.CanExecute(null))
+                    {
+                        _viewModel.OpenSelectedPinDetailCommand.Execute(null);
+                    }
+                };
+
+                CampusMap.Pins.Add(mapPin);
+            }
+        }
+        catch
+        {
+            // Ignore native map pin rendering failures in headless/Windows environments
+        }
+    }
+
+    private void OnSavedAreaPolygonApplied(IReadOnlyList<double[]> ring)
+    {
+        if (ring.Count < 4)
+            return;
+
+        try
+        {
+            var mapPolygon = new MapPolygon
+            {
+                StrokeColor = Color.FromArgb("#512BD4"),
+                StrokeWidth = 6,
+                FillColor = Color.FromRgba(81, 43, 212, 48)
+            };
+
+            double sumLat = 0;
+            double sumLng = 0;
+            int vertexCount = 0;
+
+            foreach (var coord in ring)
+            {
+                if (coord.Length < 2)
+                    continue;
+
+                var loc = new Location(coord[1], coord[0]);
+                mapPolygon.Geopath.Add(loc);
+                sumLat += coord[1];
+                sumLng += coord[0];
+                vertexCount++;
+            }
+
+            CampusMap.MapElements.Clear();
+            CampusMap.MapElements.Add(mapPolygon);
+            _drawable.Clear();
+            PolygonCanvas.Invalidate();
+
+            if (vertexCount > 0)
+            {
+                var center = new Location(sumLat / vertexCount, sumLng / vertexCount);
+                CampusMap.MoveToRegion(MapSpan.FromCenterAndRadius(center, Distance.FromKilometers(0.9)));
+            }
+        }
+        catch
+        {
+            // Ignore native map polygon failures in headless/Windows environments
+        }
+    }
+
+    private async void OnRoomDetailNavigationRequested(MapPinItemModel pin)
+    {
+        try
+        {
+            if (Shell.Current is not null)
+            {
+                await Shell.Current.GoToAsync($"//room-detail?id={Uri.EscapeDataString(pin.Id)}");
+            }
+        }
+        catch
+        {
+            // Ignore navigation errors when hosted outside Shell
+        }
+    }
+
     private void OnClearPolygonClicked(object? sender, EventArgs e)
     {
         CampusMap.MapElements.Clear();
+        CampusMap.Pins.Clear();
         _drawable.Clear();
         PolygonCanvas.Invalidate();
     }
