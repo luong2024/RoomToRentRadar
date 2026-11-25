@@ -55,8 +55,20 @@ public partial class RoomCardView : ContentView
     public RoomCardView()
     {
         InitializeComponent();
-        BindingContext = this;
+        if (Content != null)
+        {
+            Content.BindingContext = this;
+        }
         UpdateBookmarkState();
+    }
+
+    protected override void OnBindingContextChanged()
+    {
+        base.OnBindingContextChanged();
+        if (Content != null)
+        {
+            Content.BindingContext = this;
+        }
     }
 
     private void UpdateBookmarkState()

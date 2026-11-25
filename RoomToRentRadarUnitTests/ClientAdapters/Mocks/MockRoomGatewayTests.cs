@@ -231,10 +231,47 @@ public class MockRoomGatewayTests
             Assert.That(detail.IsVerified, Is.True);
             Assert.That(detail.DistanceKm, Is.EqualTo(
                 HaversineDistanceCalculator.CalculateDistanceKm(IctuLatitude, IctuLongitude, seed.Latitude, seed.Longitude)));
-            Assert.That(detail.Photos, Is.Empty);
-            Assert.That(detail.HouseRules, Is.Null);
+            Assert.That(detail.Photos, Has.Count.EqualTo(3));
+            Assert.That(detail.HouseRules, Is.Not.Null);
+            Assert.That(detail.Safety.Score, Is.EqualTo(3));
+            Assert.That(detail.Safety.Features, Has.Count.EqualTo(3));
+            Assert.That(detail.Utilities.EstimatedMonthlyTotalVnd, Is.EqualTo(2_060_000L));
             Assert.That(detail.Landlord.Id, Is.EqualTo("seed-landlord"));
             Assert.That(detail.PublishedAtUtc, Is.EqualTo(seed.PublishedAtUtc));
+        });
+    }
+
+    [Test]
+    public async Task GetRoomDetailAsync_SeedRooms_FollowsBrLst03EstimatedMonthlyFormula()
+    {
+        var perPerson = await _gateway.GetRoomDetailAsync("seed-z115");
+        var perM3 = await _gateway.GetRoomDetailAsync("seed-tan-thinh");
+        var included = await _gateway.GetRoomDetailAsync("seed-thinh-dan");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(perPerson.Utilities.EstimatedMonthlyTotalVnd, Is.EqualTo(2_060_000L));
+            Assert.That(perM3.Utilities.EstimatedMonthlyTotalVnd, Is.EqualTo(3_450_000L));
+            Assert.That(included.Utilities.EstimatedMonthlyTotalVnd, Is.EqualTo(4_000_000L));
+        });
+    }
+
+    [Test]
+    public async Task GetRoomDetailAsync_SeedRentedRoom_ReturnsRentedStatusAndSimilarRooms()
+    {
+        var seed = RoomSeedData.CreateRooms().Single(r => r.Id == "seed-da-thue");
+
+        var detail = await _gateway.GetRoomDetailAsync("seed-da-thue");
+        var similar = await _gateway.GetSimilarRoomsAsync("seed-da-thue");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(detail.Id, Is.EqualTo(seed.Id));
+            Assert.That(detail.Title, Is.EqualTo(seed.Title));
+            Assert.That(detail.Status, Is.EqualTo(ListingStatus.Rented));
+            Assert.That(detail.MonthlyRentVnd, Is.EqualTo(seed.MonthlyRentVnd));
+            Assert.That(similar, Is.Not.Empty);
+            Assert.That(similar.All(c => c.Status == ListingStatus.Available), Is.True);
         });
     }
 

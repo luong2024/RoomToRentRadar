@@ -256,6 +256,24 @@ public partial class MainLandingPageModel : BasePageModel
         OnPropertyChanged(nameof(ResultCountText));
 
     [RelayCommand]
+    private async Task ViewRoomDetailsAsync(string? roomId)
+    {
+        if (string.IsNullOrWhiteSpace(roomId))
+        {
+            return;
+        }
+
+        var route = $"{AppRoutes.RoomDetail}?roomId={Uri.EscapeDataString(roomId)}";
+        var campusId = _searchCriteriaStore.Current.CampusId;
+        if (!string.IsNullOrWhiteSpace(campusId))
+        {
+            route += $"&campusId={Uri.EscapeDataString(campusId)}";
+        }
+
+        await _navigation.GoToAsync(route);
+    }
+
+    [RelayCommand]
     private async Task SignOutAsync()
     {
         await _sessionStore.ClearSessionAsync();

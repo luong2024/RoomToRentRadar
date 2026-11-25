@@ -7,20 +7,25 @@
              x:DataType="vm:RoomDetailPageModel">
 
     <Border IsVisible="{Binding IsUnavailable}"
-            StrokeShape="RoundRectangle 8"
-            StrokeThickness="1"
-            Stroke="{AppThemeBinding Light={StaticResource StatusWarningLight}, Dark={StaticResource StatusWarningDark}}"
+            StrokeShape="RoundRectangle 0"
+            StrokeThickness="0"
             BackgroundColor="{AppThemeBinding Light={StaticResource StatusWarningSubtleLight}, Dark={StaticResource StatusWarningSubtleDark}}"
-            Padding="14,12"
-            Margin="0,0,0,12">
-        <Grid ColumnDefinitions="28, *" VerticalOptions="Center">
-            <!-- Warning / Info Icon -->
-            <Label Grid.Column="0"
-                   Text="{x:Static fonts:FluentUI.warning_24_regular}"
-                   FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                   FontSize="22"
-                   TextColor="{AppThemeBinding Light={StaticResource StatusWarningTextLight}, Dark={StaticResource StatusWarningDark}}"
-                   VerticalTextAlignment="Center" />
+            Padding="16,12"
+            Margin="0">
+        <Grid ColumnDefinitions="24, *" ColumnSpacing="10" VerticalOptions="Center">
+            <!-- Info Icon -->
+            <Image Grid.Column="0"
+                   WidthRequest="20"
+                   HeightRequest="20"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center">
+                <Image.Source>
+                    <FontImageSource Glyph="{x:Static fonts:FluentUI.info_24_regular}"
+                                     FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                     Size="20"
+                                     Color="{AppThemeBinding Light={StaticResource StatusWarningTextLight}, Dark={StaticResource StatusWarningDark}}" />
+                </Image.Source>
+            </Image>
 
             <!-- Unavailable Notice Message -->
             <Label Grid.Column="1"

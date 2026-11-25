@@ -5,6 +5,7 @@ using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.Exceptions;
 using RoomToRentRadar.Ports.Contracts.Common;
+using RoomToRentRadar.Ports.Contracts.Responses.Photos;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadar.Ports.Inbound.UseCases.Rooms;
 using RoomToRentRadar.Ports.Outbound.ExternalServices;
@@ -31,12 +32,12 @@ public sealed class GetRoomDetailUseCase : IGetRoomDetailUseCase
         IRoomPhotoRepository photoRepository,
         IPhotoStoragePort photoStorage)
     {
-        _photoRepository = photoRepository ?? throw new ArgumentNullException(nameof(photoRepository));
-        _photoStorage = photoStorage ?? throw new ArgumentNullException(nameof(photoStorage));
         _roomRepository = roomRepository ?? throw new ArgumentNullException(nameof(roomRepository));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _campusRepository = campusRepository ?? throw new ArgumentNullException(nameof(campusRepository));
         _currentUserContext = currentUserContext ?? throw new ArgumentNullException(nameof(currentUserContext));
+        _photoRepository = photoRepository ?? throw new ArgumentNullException(nameof(photoRepository));
+        _photoStorage = photoStorage ?? throw new ArgumentNullException(nameof(photoStorage));
     }
 
     public async Task<RoomDetailDto> ExecuteAsync(
@@ -70,6 +71,7 @@ public sealed class GetRoomDetailUseCase : IGetRoomDetailUseCase
         // Read only after the visibility check above, so hidden listings never expose photos (BR-LST-04a).
         var photos = (await _photoRepository.ListByRoomAsync(room.Id, ct))
             .OrderBy(photo => photo.SortOrder)
+            .ThenBy(photo => photo.Id, StringComparer.Ordinal)
             .Select(photo => LandlordListingMapper.ToPhotoDto(photo, _photoStorage))
             .ToList();
 

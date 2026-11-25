@@ -7,11 +7,13 @@ using CommunityToolkit.Mvvm.Input;
 using Fonts;
 using RoomToRentRadar.Client.Adapters.Abstractions;
 using RoomToRentRadar.Domain.Enums;
+using RoomToRentRadar.PageModels.Base;
 using RoomToRentRadar.Pages.Controls.RoomDetail.Models;
 using RoomToRentRadar.Ports.Contracts.Common;
 using RoomToRentRadar.Ports.Contracts.Responses.Photos;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadar.Resources.Strings;
+using RoomToRentRadar.Services.Navigation.Core;
 
 namespace RoomToRentRadar.PageModels;
 
@@ -70,10 +72,20 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
     public bool IsContentVisible => !IsLoading && !HasError && !IsNotFound;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowUnavailableDebugPreview))]
+    [NotifyPropertyChangedFor(nameof(ShowDescription))]
     public partial bool IsAvailable { get; set; } = true;
 
     [ObservableProperty]
     public partial bool IsUnavailable { get; set; } = false;
+
+#if DEBUG
+    public bool IsDebugMode => true;
+#else
+    public bool IsDebugMode => false;
+#endif
+
+    public bool ShowUnavailableDebugPreview => IsDebugMode && IsAvailable;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsGuest))]
@@ -83,11 +95,9 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(FavouriteIconGlyph))]
-    [NotifyPropertyChangedFor(nameof(FavouriteIconColor))]
     public partial bool IsFavourite { get; set; } = false;
 
     public string FavouriteIconGlyph => FluentUI.heart_24_regular;
-    public string FavouriteIconColor => IsFavourite ? "#DC2626" : "#1E293B";
 
     [ObservableProperty]
     public partial RoomDetailDto? Room { get; set; }
@@ -97,7 +107,28 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
     #region Hero Gallery Properties
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CurrentPhotoIndexZeroBased))]
     public partial int CurrentPhotoIndex { get; set; } = 1;
+
+    public int CurrentPhotoIndexZeroBased
+    {
+        get => Math.Max(0, CurrentPhotoIndex - 1);
+        set
+        {
+            int oneBased = Photos.Count == 0
+                ? 1
+                : Math.Clamp(value + 1, 1, Photos.Count);
+            if (CurrentPhotoIndex != oneBased)
+            {
+                CurrentPhotoIndex = oneBased;
+            }
+        }
+    }
+
+    partial void OnCurrentPhotoIndexChanged(int value)
+    {
+        PhotoCounterText = $"{value} / {TotalPhotosCount}";
+    }
 
     [ObservableProperty]
     public partial int TotalPhotosCount { get; set; } = 1;
@@ -127,6 +158,15 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
     public partial string Title { get; set; } = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDescription))]
+    [NotifyPropertyChangedFor(nameof(ShowDescription))]
+    public partial string Description { get; set; } = string.Empty;
+
+    public bool HasDescription => !string.IsNullOrWhiteSpace(Description);
+
+    public bool ShowDescription => IsAvailable && HasDescription;
+
+    [ObservableProperty]
     public partial string PriceFormatted { get; set; } = string.Empty;
 
     [ObservableProperty]
@@ -153,6 +193,8 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
 
     public ObservableCollection<KeyFactItem> KeyFacts { get; } = [];
 
+    public ObservableCollection<KeyFactRowItem> KeyFactRows { get; } = [];
+
     public ObservableCollection<CostRowItem> CostBreakdownRows { get; } = [];
 
     [ObservableProperty]
@@ -161,11 +203,19 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
     [ObservableProperty]
     public partial string EstimateNoteFormatted { get; set; } = string.Empty;
 
+    [ObservableProperty]
+    public partial string OtherFeesNoteFormatted { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool HasOtherFeesNote { get; set; }
+
     #endregion
 
     #region Amenities Properties
 
     public ObservableCollection<AmenityDisplayItem> AmenitiesDisplayList { get; } = [];
+
+    public ObservableCollection<AmenityRowItem> AmenityRows { get; } = [];
 
     [ObservableProperty]
     public partial bool IsAllAmenitiesExpanded { get; set; } = false;
@@ -182,6 +232,9 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     public partial string SafetyScoreFormatted { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool IsSafetyVerified { get; set; } = false;
 
     public ObservableCollection<SafetyCheckItem> SafetyChecklist { get; } = [];
 
@@ -254,6 +307,9 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
     public partial string UnavailableBannerText { get; set; } = string.Empty;
 
     [ObservableProperty]
+    public partial string UnavailableSummaryFormatted { get; set; } = string.Empty;
+
+    [ObservableProperty]
     public partial string ContactDisabledText { get; set; } = string.Empty;
 
     [ObservableProperty]
@@ -279,18 +335,31 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
     #region Initialization & Data Loading
 
     [RelayCommand]
-    public async Task InitializeAsync()
+    public Task InitializeAsync() => LoadRoomAsync(showSkeleton: true);
+
+    [RelayCommand]
+    public Task RefreshAsync() => LoadRoomAsync(showSkeleton: false);
+
+    private async Task LoadRoomAsync(bool showSkeleton)
     {
         if (string.IsNullOrWhiteSpace(RoomId))
         {
             IsLoading = false;
+            IsBusy = false;
             IsNotFound = true;
             return;
         }
 
         try
         {
-            IsLoading = true;
+            if (showSkeleton)
+            {
+                IsLoading = true;
+            }
+            else
+            {
+                IsBusy = true;
+            }
             HasError = false;
             IsNotFound = false;
             ErrorMessage = string.Empty;
@@ -323,23 +392,25 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             HasError = true;
-            ErrorMessage = !string.IsNullOrWhiteSpace(ex.Message) ? ex.Message : AppResources.GetString("RoomDetail_NotFoundMessage");
+            ErrorMessage = ErrorMessageMapper.Map(ex, null);
         }
         finally
         {
-            IsLoading = false;
+            if (showSkeleton)
+            {
+                IsLoading = false;
+            }
+            else
+            {
+                IsBusy = false;
+            }
         }
-    }
-
-    [RelayCommand]
-    public async Task RefreshAsync()
-    {
-        await InitializeAsync();
     }
 
     private void PopulateRoomDetails(RoomDetailDto detail)
     {
         Title = detail.Title;
+        Description = detail.Description?.Trim() ?? string.Empty;
         IsFavourite = detail.IsFavourite;
         Latitude = detail.Location.Latitude;
         Longitude = detail.Location.Longitude;
@@ -347,24 +418,35 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
         // Availability state mapping (BR-LST-04a)
         IsAvailable = detail.Status == ListingStatus.Available;
         IsUnavailable = detail.Status is ListingStatus.Rented or ListingStatus.Unpublished;
+        if (!IsUnavailable)
+        {
+            SimilarRooms.Clear();
+            HasSimilarRooms = false;
+        }
 
         // Pricing formatting
         PriceFormatted = $"{detail.MonthlyRentVnd:N0} đ";
         PeriodFormatted = AppResources.GetString("RoomDetail_PerMonth");
-        PriceShortFormatted = $"{FormatShortMoney(detail.MonthlyRentVnd)}/mo";
+        PriceShortFormatted = FormatShortMonthlyPrice(detail.MonthlyRentVnd);
+        UnavailableSummaryFormatted = $"{PriceFormatted} {PeriodFormatted} · {detail.AreaM2:0.#} m² · {FormatRoomType(detail.RoomType)}";
 
         int depositMonths = detail.MonthlyRentVnd > 0 ? (int)Math.Round((double)detail.DepositVnd / detail.MonthlyRentVnd) : 1;
         string monthWord = depositMonths <= 1
             ? AppResources.GetString("RoomDetail_DepositMonth")
             : AppResources.GetString("RoomDetail_DepositMonths");
-        string depositPeriod = string.Format(monthWord, depositMonths);
-        DepositFormatted = string.Format(AppResources.GetString("RoomDetail_Deposit"), $"{detail.DepositVnd:N0} đ", depositPeriod);
-        DepositShortFormatted = string.Format(AppResources.GetString("RoomDetail_DepositShort"), FormatShortMoney(detail.DepositVnd));
+        string depositPeriod = string.Format(CultureInfo.CurrentCulture, monthWord, depositMonths);
+        DepositFormatted = string.Format(CultureInfo.CurrentCulture, AppResources.GetString("RoomDetail_Deposit"), $"{detail.DepositVnd:N0} đ", depositPeriod);
+        DepositShortFormatted = string.Format(CultureInfo.CurrentCulture, AppResources.GetString("RoomDetail_DepositShort"), FormatShortMoney(detail.DepositVnd));
 
         // Status badge & relative updated text
-        StatusBadgeText = detail.IsVerified && IsAvailable
-            ? AppResources.GetString("RoomDetail_VerifiedAvailable")
-            : (IsAvailable ? AppResources.GetString("RoomDetail_StatusAvailable") : AppResources.GetString("RoomDetail_StatusRented"));
+        StatusBadgeText = detail.Status switch
+        {
+            ListingStatus.Available when detail.IsVerified => AppResources.GetString("RoomDetail_VerifiedAvailable"),
+            ListingStatus.Available => AppResources.GetString("RoomDetail_StatusAvailable"),
+            ListingStatus.Rented => AppResources.GetString("RoomDetail_StatusRented"),
+            ListingStatus.Unpublished => AppResources.GetString("RoomDetail_StatusUnpublished"),
+            _ => AppResources.GetString("RoomDetail_StatusRented")
+        };
 
         int daysAgo = Math.Max(0, (DateTime.UtcNow.Date - detail.LastUpdatedAtUtc.Date).Days);
         UpdatedAgoText = daysAgo == 0
@@ -373,25 +455,35 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
                 ? AppResources.GetString("RoomDetail_UpdatedYesterday")
                 : string.Format(AppResources.GetString("RoomDetail_UpdatedDaysAgo"), daysAgo));
 
-        // Unavailable banner text (Image 4)
-        UnavailableBannerText = string.Format(AppResources.GetString("RoomDetail_UnavailableBanner"), daysAgo == 0 ? AppResources.GetString("RoomDetail_UpdatedToday").ToLowerInvariant() : $"{daysAgo} days ago");
+        // Unavailable banner text (SCR-ROOM-01-UNAVAILABLE)
+        string relativeTime = daysAgo switch
+        {
+            0 => AppResources.GetString("RoomDetail_RelativeToday"),
+            1 => AppResources.GetString("RoomDetail_RelativeYesterday"),
+            _ => string.Format(AppResources.GetString("RoomDetail_RelativeDaysAgo"), daysAgo)
+        };
+        UnavailableBannerText = detail.Status == ListingStatus.Unpublished
+            ? AppResources.GetString("RoomDetail_UnavailableBannerGeneral")
+            : string.Format(AppResources.GetString("RoomDetail_UnavailableBanner"), relativeTime);
         ContactDisabledText = AppResources.GetString("RoomDetail_ContactDisabled");
 
-        // Photos gallery setup
+        // Photos gallery setup (sorted by SortOrder so carousel starts on cover)
         Photos.Clear();
-        foreach (var photo in detail.Photos)
+        var orderedPhotos = detail.Photos.OrderBy(p => p.SortOrder).ToList();
+        foreach (var photo in orderedPhotos)
         {
             Photos.Add(photo);
         }
-        TotalPhotosCount = Math.Max(1, detail.Photos.Count);
+        TotalPhotosCount = Math.Max(1, orderedPhotos.Count);
         CurrentPhotoIndex = 1;
         PhotoCounterText = $"{CurrentPhotoIndex} / {TotalPhotosCount}";
-        HasPhotos = detail.Photos.Count > 0;
-        HeroCoverUrl = detail.Photos.OrderBy(p => p.SortOrder).FirstOrDefault()?.OriginalUrl
-            ?? detail.Photos.OrderBy(p => p.SortOrder).FirstOrDefault()?.MediumUrl
-            ?? detail.Photos.FirstOrDefault()?.OriginalUrl
-            ?? detail.Photos.FirstOrDefault()?.MediumUrl;
-        Is360Available = detail.Photos.Any(p => p.Kind == PhotoKind.Panorama);
+        HasPhotos = orderedPhotos.Count > 0;
+        HeroCoverUrl = orderedPhotos.FirstOrDefault()?.OriginalUrl
+            ?? orderedPhotos.FirstOrDefault()?.MediumUrl;
+        Is360Available = orderedPhotos.Any(p => p.Kind == PhotoKind.Panorama);
+
+        // Resolve campus label before building Key Facts and Commute sections (BR-CMP-02)
+        CampusName = !string.IsNullOrWhiteSpace(CampusId) ? CampusId : "ICTU";
 
         // Key Facts Grid (2x3)
         PopulateKeyFacts(detail);
@@ -410,7 +502,6 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
 
         // Address & Commute
         AddressFormatted = $"{detail.Address.AddressLine}, {detail.Address.Ward}, {detail.Address.District}";
-        CampusName = !string.IsNullOrWhiteSpace(CampusId) ? CampusId : "ICTU";
         UpdateCommuteNotices(detail.DistanceKm);
 
         // Landlord contact block
@@ -428,16 +519,10 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
             $"{detail.AreaM2:0.#} m²"));
 
         // 2. Room Type
-        string roomTypeString = detail.RoomType switch
-        {
-            RoomType.BoardingRoom => AppResources.GetString("RoomType_BoardingRoom"),
-            RoomType.Dormitory => AppResources.GetString("RoomType_Dormitory"),
-            _ => detail.RoomType.ToString()
-        };
         KeyFacts.Add(new KeyFactItem(
             FluentUI.home_24_regular,
             AppResources.GetString("RoomDetail_RoomType"),
-            roomTypeString));
+            FormatRoomType(detail.RoomType)));
 
         // 3. Max Occupants
         string occupantsValue = detail.MaxOccupants is > 0
@@ -462,7 +547,7 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
 
         // 5. Available From
         string availableFromText = detail.AvailableFrom.HasValue
-            ? detail.AvailableFrom.Value.ToString("d MMM", CultureInfo.InvariantCulture)
+            ? detail.AvailableFrom.Value.ToString("d MMM", CultureInfo.CurrentCulture)
             : AppResources.GetString("RoomDetail_StatusAvailable");
         KeyFacts.Add(new KeyFactItem(
             FluentUI.calendar_ltr_24_regular,
@@ -472,9 +557,32 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
         // 6. Distance to Campus
         KeyFacts.Add(new KeyFactItem(
             FluentUI.location_24_regular,
-            string.Format(AppResources.GetString("RoomDetail_ToCampus"), CampusName),
-            $"{detail.DistanceKm:0.0} km"));
+            string.Format(CultureInfo.CurrentCulture, AppResources.GetString("RoomDetail_ToCampus"), CampusName),
+            $"{detail.DistanceKm.ToString("0.0", CultureInfo.CurrentCulture)} km"));
+
+        UpdateKeyFactRows();
     }
+
+    private void UpdateKeyFactRows()
+    {
+        KeyFactRows.Clear();
+        for (int i = 0; i < KeyFacts.Count; i += 3)
+        {
+            var first = KeyFacts[i];
+            var second = i + 1 < KeyFacts.Count ? KeyFacts[i + 1] : null;
+            var third = i + 2 < KeyFacts.Count ? KeyFacts[i + 2] : null;
+            KeyFactRows.Add(new KeyFactRowItem(first, second, third));
+        }
+    }
+
+    private static string FormatRoomType(RoomType roomType) => roomType switch
+    {
+        RoomType.BoardingRoom => AppResources.GetString("RoomType_BoardingRoom"),
+        RoomType.MiniApartment => AppResources.GetString("RoomType_MiniApartment"),
+        RoomType.WholeHouse => AppResources.GetString("RoomType_WholeHouse"),
+        RoomType.Dormitory => AppResources.GetString("RoomType_Dormitory"),
+        _ => roomType.ToString()
+    };
 
     private void PopulateMonthlyCosts(RoomDetailDto detail)
     {
@@ -520,9 +628,13 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
             : AppResources.GetString("RoomDetail_Free");
         CostBreakdownRows.Add(new CostRowItem(AppResources.GetString("RoomDetail_MotorbikeParking"), parkingValue));
 
-        // Total
-        EstimatedTotalFormatted = string.Format(AppResources.GetString("RoomDetail_EstimatedMonthlyFormat"), FormatShortMoney(utils.EstimatedMonthlyTotalVnd));
+        // Total & Other Fees Note (BR-LST-03)
+        EstimatedTotalFormatted = string.Format(CultureInfo.CurrentCulture, AppResources.GetString("RoomDetail_EstimatedMonthlyFormat"), FormatShortMoney(utils.EstimatedMonthlyTotalVnd));
         EstimateNoteFormatted = AppResources.GetString("RoomDetail_EstimateNote");
+        HasOtherFeesNote = !string.IsNullOrWhiteSpace(utils.OtherFeesNote);
+        OtherFeesNoteFormatted = HasOtherFeesNote
+            ? string.Format(CultureInfo.CurrentCulture, AppResources.GetString("RoomDetail_OtherFeesFormat"), utils.OtherFeesNote!.Trim())
+            : string.Empty;
     }
 
     private void PopulateAmenities(IReadOnlyList<Amenity> amenities)
@@ -544,6 +656,18 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
         {
             AmenitiesDisplayList.Add(item);
         }
+        UpdateAmenityRows();
+    }
+
+    private void UpdateAmenityRows()
+    {
+        AmenityRows.Clear();
+        for (int i = 0; i < AmenitiesDisplayList.Count; i += 2)
+        {
+            var left = AmenitiesDisplayList[i];
+            var right = i + 1 < AmenitiesDisplayList.Count ? AmenitiesDisplayList[i + 1] : null;
+            AmenityRows.Add(new AmenityRowItem(left, right));
+        }
     }
 
     private static AmenityDisplayItem CreateAmenityItem(Amenity amenity) => amenity switch
@@ -561,13 +685,18 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
         Amenity.Window => new AmenityDisplayItem(amenity, AppResources.GetString("Amenity_Window"), FluentUI.window_24_regular),
         Amenity.WashingMachine => new AmenityDisplayItem(amenity, AppResources.GetString("Amenity_WashingMachine"), FluentUI.drop_24_regular),
         Amenity.Kitchen => new AmenityDisplayItem(amenity, AppResources.GetString("Amenity_Kitchen"), FluentUI.food_24_regular),
+        Amenity.Elevator => new AmenityDisplayItem(amenity, AppResources.GetString("Amenity_Elevator"), FluentUI.arrow_sort_up_24_regular),
+        Amenity.DryingArea => new AmenityDisplayItem(amenity, AppResources.GetString("Amenity_DryingArea"), FluentUI.weather_sunny_high_24_regular),
         _ => new AmenityDisplayItem(amenity, amenity.ToString(), FluentUI.home_24_regular)
     };
 
     private void PopulateSafety(SafetyDto safety)
     {
         SafetyChecklist.Clear();
-        int score = safety.Score > 0 ? (safety.Score <= 5 ? safety.Score : (int)Math.Round(safety.Score / 20.0)) : 4;
+        IsSafetyVerified = safety.IsVerified;
+        int score = safety.Score <= 0
+            ? 0
+            : (safety.Score <= 5 ? safety.Score : Math.Clamp((int)Math.Round(safety.Score / 20.0), 0, 5));
         string scoreFormat = safety.IsVerified
             ? AppResources.GetString("RoomDetail_SafetyScoreVerified")
             : AppResources.GetString("RoomDetail_SafetyScoreUnverified");
@@ -652,6 +781,10 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
             GuestPolicy.Allowed => AppResources.GetString("HouseRule_GuestsAllowed"),
             _ => AppResources.GetString("HouseRule_GuestsNotAllowed")
         };
+        if (!string.IsNullOrWhiteSpace(rules.GuestPolicyNote))
+        {
+            guestDetail = $"{guestDetail} · {rules.GuestPolicyNote.Trim()}";
+        }
         HouseRulesList.Add(new HouseRuleItem(
             FluentUI.people_20_regular,
             AppResources.GetString("HouseRule_Guests"),
@@ -669,22 +802,51 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
             AppResources.GetString("HouseRule_Cooking"),
             cookingDetail));
 
-        // Parking
-        string parkingDetail = !string.IsNullOrWhiteSpace(rules.ParkingRules)
-            ? rules.ParkingRules
-            : AppResources.GetString("HouseRule_ParkingYard");
+        // Parking (BR-HR-01)
+        string parkingDetail;
+        if (!rules.ParkingAvailable)
+        {
+            parkingDetail = AppResources.GetString("HouseRule_ParkingUnavailable");
+        }
+        else
+        {
+            parkingDetail = !string.IsNullOrWhiteSpace(rules.ParkingRules)
+                ? rules.ParkingRules.Trim()
+                : AppResources.GetString("HouseRule_ParkingYard");
+        }
         HouseRulesList.Add(new HouseRuleItem(
             FluentUI.vehicle_car_20_regular,
             AppResources.GetString("HouseRule_Parking"),
             parkingDetail));
+
+        // Pets
+        HouseRulesList.Add(new HouseRuleItem(
+            FluentUI.animal_cat_20_regular,
+            AppResources.GetString("HouseRule_Pets"),
+            AppResources.GetString(rules.PetsAllowed ? "HouseRule_PetsAllowed" : "HouseRule_PetsNotAllowed")));
+
+        // Smoking
+        HouseRulesList.Add(new HouseRuleItem(
+            FluentUI.prohibited_20_regular,
+            AppResources.GetString("HouseRule_Smoking"),
+            AppResources.GetString(rules.SmokingAllowed ? "HouseRule_SmokingAllowed" : "HouseRule_SmokingNotAllowed")));
+
+        // Other Rules
+        if (!string.IsNullOrWhiteSpace(rules.OtherRules))
+        {
+            HouseRulesList.Add(new HouseRuleItem(
+                FluentUI.document_endnote_20_regular,
+                AppResources.GetString("HouseRule_OtherRules"),
+                rules.OtherRules.Trim()));
+        }
     }
 
     private void PopulateLandlord(LandlordContactDto landlord)
     {
         LandlordName = landlord.DisplayName;
         LandlordInitials = ExtractInitials(landlord.DisplayName);
-        string since = landlord.MemberSinceUtc.ToString("MMM yyyy", CultureInfo.InvariantCulture);
-        LandlordBadge = string.Format(AppResources.GetString("RoomDetail_VerifiedLandlordSince"), since);
+        string since = landlord.MemberSinceUtc.ToString("MMM yyyy", CultureInfo.CurrentCulture);
+        LandlordBadge = string.Format(CultureInfo.CurrentCulture, AppResources.GetString("RoomDetail_VerifiedLandlordSince"), since);
 
         LandlordPhoneNumber = landlord.PhoneNumber;
         LandlordZaloUrl = landlord.ZaloUrl;
@@ -701,14 +863,30 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
         return $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant();
     }
 
+    private static string FormatShortMonthlyPrice(long amountVnd) =>
+        string.Format(CultureInfo.CurrentCulture, AppResources.GetString("RoomDetail_ShortPerMonthFormat"), FormatShortMoney(amountVnd));
+
     private static string FormatShortMoney(long amountVnd)
     {
         if (amountVnd >= 1_000_000)
         {
             double m = amountVnd / 1_000_000.0;
-            return m.ToString("0.##", CultureInfo.InvariantCulture) + "M";
+            return string.Format(
+                CultureInfo.CurrentCulture,
+                AppResources.GetString("RoomDetail_ShortMillionFormat"),
+                m.ToString("0.##", CultureInfo.CurrentCulture));
         }
-        return $"{amountVnd:N0}";
+
+        if (amountVnd >= 1_000)
+        {
+            double k = amountVnd / 1_000.0;
+            return string.Format(
+                CultureInfo.CurrentCulture,
+                AppResources.GetString("RoomDetail_ShortThousandFormat"),
+                k.ToString("0.##", CultureInfo.CurrentCulture));
+        }
+
+        return amountVnd.ToString("N0", CultureInfo.CurrentCulture);
     }
 
     private async Task LoadSimilarRoomsAsync()
@@ -722,8 +900,8 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
                 SimilarRooms.Add(new SimilarRoomDisplayModel(
                     card.Id,
                     card.Title,
-                    $"{FormatShortMoney(card.MonthlyRentVnd)}/mo",
-                    string.Format(AppResources.GetString("RoomDetail_DistanceFromThisRoom"), card.DistanceKm.ToString("0.0", CultureInfo.InvariantCulture)),
+                    FormatShortMonthlyPrice(card.MonthlyRentVnd),
+                    string.Format(CultureInfo.CurrentCulture, AppResources.GetString("RoomDetail_DistanceFromThisRoom"), card.DistanceKm.ToString("0.0", CultureInfo.CurrentCulture)),
                     card.CoverThumbUrl));
             }
             HasSimilarRooms = SimilarRooms.Count > 0;
@@ -805,9 +983,9 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
 
     private void UpdateCommuteNotices(double straightLineDistanceKm)
     {
-        var distanceFormatted = straightLineDistanceKm.ToString("0.0", CultureInfo.InvariantCulture);
-        CommuteHeaderFormatted = string.Format(AppResources.GetString("RoomDetail_GettingToCampus"), CampusName, distanceFormatted);
-        StraightLineNotice = string.Format(AppResources.GetString("RoomDetail_StraightLineNotice"), distanceFormatted, CampusName);
+        var distanceFormatted = straightLineDistanceKm.ToString("0.0", CultureInfo.CurrentCulture);
+        CommuteHeaderFormatted = string.Format(CultureInfo.CurrentCulture, AppResources.GetString("RoomDetail_GettingToCampus"), CampusName, distanceFormatted);
+        StraightLineNotice = string.Format(CultureInfo.CurrentCulture, AppResources.GetString("RoomDetail_StraightLineNotice"), distanceFormatted, CampusName);
     }
 
     #endregion
@@ -912,6 +1090,7 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
         {
             AmenitiesDisplayList.Add(item);
         }
+        UpdateAmenityRows();
         SeeAllAmenitiesText = IsAllAmenitiesExpanded
             ? AppResources.GetString("RoomDetail_CollapseAmenities")
             : string.Format(AppResources.GetString("RoomDetail_SeeAllAmenities"), _allAmenities.Count);
@@ -1022,10 +1201,17 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
+    public Task PreviewUnavailableDemoAsync() => SelectSimilarRoomAsync("seed-da-thue");
+
+    [RelayCommand]
     public async Task SelectSimilarRoomAsync(string targetRoomId)
     {
         if (string.IsNullOrWhiteSpace(targetRoomId)) return;
-        var route = $"roomdetail?roomId={targetRoomId}&campusId={CampusId}";
+        var route = $"{AppRoutes.RoomDetail}?roomId={Uri.EscapeDataString(targetRoomId)}";
+        if (!string.IsNullOrWhiteSpace(CampusId))
+        {
+            route += $"&campusId={Uri.EscapeDataString(CampusId)}";
+        }
         if (NavigateOverride != null)
         {
             await NavigateOverride(route);

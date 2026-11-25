@@ -275,4 +275,48 @@ public class RoomDetailEndpointIntegrationTests
             cmd.ExecuteNonQuery();
         }
     }
+
+    [Test]
+    public async Task GetRoomById_WithExtendedDemoSeed_ReturnsAmenitiesSafetyHouseRulesAndOtherFeesNote()
+    {
+        using var extendedFactory = new WebApplicationFactory<Program>().WithWebHostBuilder(webHost =>
+        {
+            webHost.UseEnvironment("Development");
+            webHost.UseSetting("DatabaseProvider", "Sqlite");
+            webHost.UseSetting("Sqlite:ConnectionString", "Data Source=:memory:");
+            webHost.UseSetting("Sqlite:SeedDemoRooms", "true");
+            webHost.UseSetting("Sqlite:SeedExtendedDemoData", "true");
+            webHost.UseSetting("Jwt:SigningKey", JwtSigningKey);
+            webHost.UseSetting("Jwt:Issuer", "RoomToRentRadar.Api");
+            webHost.UseSetting("Jwt:Audience", "RoomToRentRadar.Client");
+        });
+        using var extendedClient = extendedFactory.CreateClient();
+
+        var demo02Response = await extendedClient.GetAsync("/api/rooms/demo-02");
+        Assert.That(demo02Response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var demo02 = await demo02Response.Content.ReadFromJsonAsync<RoomDetailDto>(JsonOptions);
+
+        var seedResponse = await extendedClient.GetAsync("/api/rooms/seed-z115");
+        Assert.That(seedResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var seed = await seedResponse.Content.ReadFromJsonAsync<RoomDetailDto>(JsonOptions);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(demo02, Is.Not.Null);
+            Assert.That(demo02!.Amenities, Is.Not.Empty);
+            Assert.That(demo02.Safety.IsVerified, Is.True);
+            Assert.That(demo02.Safety.Score, Is.EqualTo(3));
+            Assert.That(demo02.Safety.Features, Has.Count.EqualTo(3));
+            Assert.That(demo02.HouseRules, Is.Not.Null);
+            Assert.That(demo02.HouseRules!.VersionNumber, Is.EqualTo(2));
+            Assert.That(demo02.HouseRules.CurfewTime, Is.EqualTo("23:30"));
+            Assert.That(demo02.Utilities.OtherFeesNote, Is.EqualTo("Vệ sinh chung 20.000 đ/tháng"));
+
+            Assert.That(seed, Is.Not.Null);
+            Assert.That(seed!.Utilities.OtherFeesNote, Is.EqualTo("Rác 20.000 đ/tháng"));
+            Assert.That(seed.Amenities, Is.Not.Empty);
+            Assert.That(seed.HouseRules, Is.Not.Null);
+            Assert.That(seed.Safety.Score, Is.EqualTo(3));
+        });
+    }
 }
