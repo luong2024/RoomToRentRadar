@@ -31,7 +31,7 @@
             </Grid.GestureRecognizers>
             <Label Text="{x:Static fonts:FluentUI.dismiss_24_regular}"
                    FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                   FontSize="24"
+                   FontSize="{StaticResource FontSizeH1}"
                    HorizontalOptions="Center"
                    VerticalOptions="Center"
                    AutomationProperties.IsInAccessibleTree="False"
@@ -39,7 +39,7 @@
         </Grid>
 
         <ScrollView Grid.Row="1">
-            <VerticalStackLayout Spacing="16">
+            <VerticalStackLayout Spacing="{StaticResource Space16}">
 
                 <VerticalStackLayout Spacing="6">
                     <Label Text="{strings:LocalizedStrings Key=Campus_Title}"
@@ -53,16 +53,18 @@
                 </VerticalStackLayout>
 
                 <!-- Search field -->
-                <Border HeightRequest="48"
-                        StrokeShape="RoundRectangle 12"
+                <Border HeightRequest="{StaticResource InputHeight}"
                         StrokeThickness="1"
                         Padding="14,0"
                         Stroke="{AppThemeBinding Light={StaticResource BorderInputLight}, Dark={StaticResource BorderInputDark}}"
                         BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="{StaticResource CornerRadiusLg}" />
+                    </Border.StrokeShape>
                     <Grid ColumnDefinitions="20, *" ColumnSpacing="10">
                         <Label Text="{x:Static fonts:FluentUI.search_20_regular}"
                                FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                               FontSize="20"
+                               FontSize="{StaticResource IconSize}"
                                VerticalOptions="Center"
                                AutomationProperties.IsInAccessibleTree="False"
                                TextColor="{AppThemeBinding Light={StaticResource TextPlaceholderLight}, Dark={StaticResource TextPlaceholderDark}}" />
@@ -150,7 +152,7 @@
                                                      Color="{AppThemeBinding Light={StaticResource SurfaceSelectedLight}, Dark={StaticResource SurfaceSelectedDark}}" />
 
                                             <Grid ColumnDefinitions="20, *"
-                                                  ColumnSpacing="12"
+                                                  ColumnSpacing="{StaticResource Space12}"
                                                   Padding="16,11">
                                                 <search:RadioIndicatorControl IsSelected="{Binding IsSelected}"
                                                                               VerticalOptions="Center"
@@ -194,15 +196,17 @@
         <!-- Footer pinned to the bottom; a save error appears above the button -->
         <VerticalStackLayout Grid.Row="2" Spacing="10">
             <Border IsVisible="{Binding HasSaveError}"
-                    StrokeShape="RoundRectangle 12"
                     StrokeThickness="1"
-                    Padding="12"
+                    Padding="{StaticResource PaddingMd}"
                     Stroke="{AppThemeBinding Light={StaticResource StatusDangerBorderLight}, Dark={StaticResource StatusDangerBorderDark}}"
                     BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="{StaticResource CornerRadiusLg}" />
+                </Border.StrokeShape>
                 <Grid ColumnDefinitions="Auto, *" ColumnSpacing="10">
                     <Label Text="{x:Static fonts:FluentUI.warning_24_regular}"
                            FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                           FontSize="20"
+                           FontSize="{StaticResource IconSize}"
                            VerticalOptions="Center"
                            AutomationProperties.IsInAccessibleTree="False"
                            TextColor="{AppThemeBinding Light={StaticResource StatusDangerLight}, Dark={StaticResource StatusDangerDark}}" />
@@ -218,7 +222,7 @@
             <common:RadaButton Text="{strings:LocalizedStrings Key=Campus_UseThisCampus}"
                                Variant="Primary"
                                ButtonHeight="52"
-                               CornerRadius="12"
+                               CornerRadius="{StaticResource RadiusLg}"
                                TextSize="{StaticResource FontSizeBodyLarge}"
                                HorizontalOptions="Fill"
                                Command="{Binding UseThisCampusCommand}"
