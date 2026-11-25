@@ -62,6 +62,24 @@ public sealed class InMemoryListingRepository : IListingRepository
         }
     }
 
+    /// <summary>US05 / T05.2 — tin công khai (Available + đã xác minh) của một cơ sở, dùng cho tìm theo vùng vẽ.</summary>
+    public Task<IReadOnlyList<ListingDocument>> GetPublicListingsAsync(
+        string campusId,
+        CancellationToken cancellationToken = default)
+    {
+        lock (_sync)
+        {
+            IReadOnlyList<ListingDocument> items = _canonical
+                .Where(l =>
+                    string.Equals(l.CampusId, campusId, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(l.Status, "Available", StringComparison.OrdinalIgnoreCase)
+                    && l.IsVerified)
+                .ToList();
+
+            return Task.FromResult(items);
+        }
+    }
+
     public Task<IReadOnlyList<ListingDocument>> GetSimilarCandidatesAsync(
         string campusId,
         string excludeId,

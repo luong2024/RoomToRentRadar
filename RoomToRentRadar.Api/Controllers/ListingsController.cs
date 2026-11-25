@@ -13,6 +13,28 @@ public sealed class ListingsController(
     IListingDetailService listingDetailService,
     IListingSearchService listingSearchService) : ControllerBase
 {
+    /// <summary>POST /api/v1/listings/spatial-search — tin đăng nằm trong polygon vẽ trên bản đồ (US05 T05.2)</summary>
+    [HttpPost("spatial-search")]
+    [AllowAnonymous]
+    [Consumes("application/json")]
+    [ProducesResponseType(typeof(SpatialSearchResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<SpatialSearchResponseDto>> SpatialSearch(
+        [FromBody] SpatialSearchRequestDto request,
+        [FromServices] ISpatialSearchService spatialSearchService,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Ok(await spatialSearchService.SearchInPolygonAsync(request, cancellationToken));
+        }
+        catch (ArgumentException ex)
+        {
+            ModelState.AddModelError("polygon", ex.Message);
+            return ValidationProblem(ModelState);
+        }
+    }
+
     /// <summary>GET /api/v1/listings?pageNumber=1&amp;pageSize=10&amp;sortBy=distance|rent|area&amp;isAscending=true (US01 T01.1)</summary>
     [HttpGet]
     [AllowAnonymous]
