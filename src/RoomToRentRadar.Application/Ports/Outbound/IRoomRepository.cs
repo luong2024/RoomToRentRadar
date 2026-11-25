@@ -1,5 +1,6 @@
 using RoomToRentRadar.Application.DTOs;
 using RoomToRentRadar.Domain.Entities;
+using RoomToRentRadar.Domain.ValueObjects;
 
 namespace RoomToRentRadar.Application.Ports.Outbound;
 
@@ -8,7 +9,8 @@ public interface IRoomRepository
     Task<Room> CreateAsync(Room room, CancellationToken cancellationToken = default) =>
         throw new NotSupportedException("Room creation is not supported by this repository implementation.");
 
-    Task UpdateAsync(Room room, CancellationToken cancellationToken = default) =>
+    /// <summary>Updates a room, preserving its stored location when no replacement is supplied.</summary>
+    Task UpdateAsync(Room room, GeoLocation? locationUpdate = null, CancellationToken cancellationToken = default) =>
         throw new NotSupportedException("Room updates are not supported by this repository implementation.");
 
     Task<Room?> GetByIdAsync(string id, CancellationToken cancellationToken = default);

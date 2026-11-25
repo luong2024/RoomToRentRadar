@@ -4,6 +4,8 @@ using RoomToRentRadar.Application.Exceptions;
 using RoomToRentRadar.Application.Ports.Inbound;
 using RoomToRentRadar.Application.Ports.Outbound;
 using RoomToRentRadar.Domain.Entities;
+using RoomToRentRadar.Domain.Exceptions;
+using RoomToRentRadar.Domain.ValueObjects;
 
 public sealed class CreateListingUseCase : ICreateListingUseCase
 {
@@ -19,7 +21,7 @@ public sealed class CreateListingUseCase : ICreateListingUseCase
     public async Task<ListingWriteResult> ExecuteAsync(Guid ownerId, ListingWriteRequest request, CancellationToken cancellationToken = default)
     {
         if (ownerId == Guid.Empty) throw new RequestValidationException("ownerId", "A valid landlord identity is required.");
-        ListingRequestValidator.Validate(request, requireNewPhotos: true);
+        var location = ListingRequestValidator.Validate(request, requireNewPhotos: true);
 
         var id = Guid.NewGuid().ToString("N");
         var storedUrls = new List<string>();
@@ -31,9 +33,9 @@ public sealed class CreateListingUseCase : ICreateListingUseCase
                 storedUrls.Add(await _imageStorage.StoreAsync(ownerId, id, content, photo.FileName, photo.ContentType, photo.Length, cancellationToken));
             }
 
-            var room = ListingRequestValidator.CreateRoom(id, ownerId, request, storedUrls);
+            var room = ListingRequestValidator.CreateRoom(id, ownerId, request, storedUrls, location);
             await _roomRepository.CreateAsync(room, cancellationToken);
-            return new ListingWriteResult(id, room.Status.ToString(), room.ImageUrls);
+            return new ListingWriteResult(id, room.Status.ToString(), room.ImageUrls, location);
         }
         catch
         {
@@ -50,7 +52,7 @@ internal static class ListingRequestValidator
         "BoardingRoom", "MiniApartment", "WholeHouse", "Dormitory"
     };
 
-    public static void Validate(ListingWriteRequest request, bool requireNewPhotos)
+    public static GeoLocation? Validate(ListingWriteRequest request, bool requireNewPhotos)
     {
         ArgumentNullException.ThrowIfNull(request);
         var errors = new Dictionary<string, string[]>();
@@ -64,13 +66,25 @@ internal static class ListingRequestValidator
         if (requireNewPhotos && request.Photos is { Count: < 3 }) errors["photos"] = ["At least three valid photos are required."];
         if (request.Photos is { Count: > ListingPhotoLimits.MaxCount })
             errors["photos"] = [$"No more than {ListingPhotoLimits.MaxCount} photos are allowed."];
+        GeoLocation? location = null;
+        try
+        {
+            location = GeoLocation.FromOptional(request.Latitude, request.Longitude);
+        }
+        catch (InvalidLocationException)
+        {
+            errors["coordinates"] = ["Supply both coordinates. Latitude must be finite and between -90 and 90. Longitude must be finite and between -180 and 180."];
+        }
+
         if (errors.Count > 0) throw new RequestValidationException(errors);
+        return location;
     }
 
-    public static Room CreateRoom(string id, Guid ownerId, ListingWriteRequest request, IReadOnlyList<string> imageUrls)
+    public static Room CreateRoom(
+        string id, Guid ownerId, ListingWriteRequest request, IReadOnlyList<string> imageUrls, GeoLocation? location)
     {
         var now = DateTime.UtcNow;
-        return new Room
+        var room = new Room
         {
             Id = id,
             LandlordId = ownerId,
@@ -88,6 +102,12 @@ internal static class ListingRequestValidator
             CreatedAt = now,
             LastUpdatedDate = now
         };
+
+        if (location is { } coordinates)
+        {
+            room.SetLocation(coordinates);
+        }
+        return room;
     }
 
     private static void AddTextError(IDictionary<string, string[]> errors, string field, string? value)

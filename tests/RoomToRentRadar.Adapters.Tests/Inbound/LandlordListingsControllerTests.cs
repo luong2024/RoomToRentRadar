@@ -63,7 +63,8 @@ public sealed class LandlordListingsControllerTests
 
     private static LandlordListingsController CreateController(CaptureCreateUseCase create, Guid? ownerId)
     {
-        var controller = new LandlordListingsController(create, new NoOpUpdateUseCase(), new NoOpUnpublishUseCase());
+        var controller = new LandlordListingsController(create, new NoOpUpdateUseCase(), new NoOpUnpublishUseCase(),
+            new NoOpGetListingCoordinatesUseCase());
         var claims = ownerId.HasValue ? new[] { new Claim(ClaimTypes.NameIdentifier, ownerId.Value.ToString("D")) } : [];
         controller.ControllerContext = new ControllerContext
         {
@@ -84,6 +85,12 @@ public sealed class LandlordListingsControllerTests
             Request = request;
             return Task.FromResult(new ListingWriteResult("listing-id", "Pending", []));
         }
+    }
+
+    private sealed class NoOpGetListingCoordinatesUseCase : IGetListingCoordinatesUseCase
+    {
+        public Task<ListingCoordinatesResult> ExecuteAsync(Guid ownerId, string listingId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ListingCoordinatesResult(listingId, null));
     }
 
     private sealed class NoOpUpdateUseCase : IUpdateListingUseCase

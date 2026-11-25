@@ -1,5 +1,6 @@
 namespace RoomToRentRadar.Adapters.Inbound.WebApi.Controllers;
 
+using System.Globalization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -17,6 +18,7 @@ public sealed class LandlordListingsController : ControllerBase
 {
     // Leave room for multipart fields and boundaries beyond the photo payload.
     private const long MaxRequestSizeBytes = ListingPhotoLimits.MaxCount * ListingPhotoLimits.MaxBytesPerPhoto + 10L * 1024 * 1024;
+    private readonly IGetListingCoordinatesUseCase _getCoordinates;
     private readonly ICreateListingUseCase _createListing;
     private readonly IUpdateListingUseCase _updateListing;
     private readonly IUnpublishListingUseCase _unpublishListing;
@@ -24,11 +26,25 @@ public sealed class LandlordListingsController : ControllerBase
     public LandlordListingsController(
         ICreateListingUseCase createListing,
         IUpdateListingUseCase updateListing,
-        IUnpublishListingUseCase unpublishListing)
+        IUnpublishListingUseCase unpublishListing,
+        IGetListingCoordinatesUseCase getCoordinates)
     {
         _createListing = createListing;
         _updateListing = updateListing;
         _unpublishListing = unpublishListing;
+        _getCoordinates = getCoordinates;
+    }
+
+    [HttpGet("{listingId}")]
+    [ProducesResponseType(typeof(ListingCoordinatesResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetCoordinates(string listingId, CancellationToken cancellationToken)
+    {
+        if (!TryGetLandlordId(out var ownerId)) return Unauthorized();
+        var result = await _getCoordinates.ExecuteAsync(ownerId, listingId, cancellationToken);
+        return Ok(new ListingCoordinatesResponse(result.ListingId, result.Location?.Latitude, result.Location?.Longitude));
     }
 
     [HttpPost]
@@ -44,7 +60,7 @@ public sealed class LandlordListingsController : ControllerBase
     {
         if (!TryGetLandlordId(out var ownerId)) return Unauthorized();
         var result = await _createListing.ExecuteAsync(ownerId, ToCommand(request, []), cancellationToken);
-        var response = new ListingWriteResponse(result.ListingId, result.ListingId, result.Status, result.ImageUrls);
+        var response = ToResponse(result);
         return Created($"/api/rooms/{result.ListingId}", response);
     }
 
@@ -55,6 +71,7 @@ public sealed class LandlordListingsController : ControllerBase
     [ProducesResponseType(typeof(ListingWriteResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Update(string listingId, [FromForm] ListingFormRequest request, CancellationToken cancellationToken)
     {
         if (!TryGetLandlordId(out var ownerId)) return Unauthorized();
@@ -65,7 +82,7 @@ public sealed class LandlordListingsController : ControllerBase
 
         IReadOnlyList<string>? retainedUrls = request.ReplaceGallery ? [] : request.ImageUrlsToRetain;
         var result = await _updateListing.ExecuteAsync(ownerId, listingId, ToCommand(request, retainedUrls), cancellationToken);
-        return Ok(new ListingWriteResponse(result.ListingId, result.ListingId, result.Status, result.ImageUrls));
+        return Ok(ToResponse(result));
     }
 
     [HttpPost("{listingId}/unpublish")]
@@ -78,7 +95,7 @@ public sealed class LandlordListingsController : ControllerBase
         return NoContent();
     }
 
-    private static ListingWriteRequest ToCommand(ListingFormRequest request, IReadOnlyList<string>? retainedUrls)
+    private ListingWriteRequest ToCommand(ListingFormRequest request, IReadOnlyList<string>? retainedUrls)
     {
         var photos = request.Photos.Select(file => new ListingImageUpload(
             file.OpenReadStream,
@@ -94,8 +111,32 @@ public sealed class LandlordListingsController : ControllerBase
             request.RoomType,
             request.Description,
             photos,
-            retainedUrls);
+            retainedUrls,
+            ParseCoordinate("latitude", request.Latitude),
+            ParseCoordinate("longitude", request.Longitude));
     }
+
+    private double? ParseCoordinate(string field, string? value)
+    {
+        // The scalar model binder can select the first value of a repeated multipart field.
+        if (Request.HasFormContentType &&
+            (Request.Form[field].Count > 1 || Request.Form.Files.GetFile(field) is not null))
+        {
+            throw new RequestValidationException(field, $"Send {field} once as a text field.");
+        }
+
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        if (value.Contains('\0') || !double.TryParse(value.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var coordinate))
+        {
+            throw new RequestValidationException(field, $"Enter {field} as a number with a period as the decimal separator.");
+        }
+
+        return coordinate;
+    }
+
+    private static ListingWriteResponse ToResponse(ListingWriteResult result) => new(
+        result.ListingId, result.ListingId, result.Status, result.ImageUrls,
+        result.Location?.Latitude, result.Location?.Longitude);
 
     private bool TryGetLandlordId(out Guid ownerId)
     {

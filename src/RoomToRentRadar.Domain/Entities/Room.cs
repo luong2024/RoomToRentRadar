@@ -1,5 +1,7 @@
 namespace RoomToRentRadar.Domain.Entities;
 
+using RoomToRentRadar.Domain.ValueObjects;
+
 public enum RoomStatus
 {
     Available = 0,
@@ -37,4 +39,16 @@ public class Room
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // Older documents can contain an incomplete or invalid pair.
+    public GeoLocation? GetLocation() =>
+        Latitude is double latitude && Longitude is double longitude && GeoLocation.IsValid(latitude, longitude)
+            ? new GeoLocation(latitude, longitude)
+            : null;
+
+    public void SetLocation(GeoLocation location)
+    {
+        Latitude = location.Latitude;
+        Longitude = location.Longitude;
+    }
 }

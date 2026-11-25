@@ -1,9 +1,16 @@
 using System.Net;
+using System.Text.Json;
 using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Caching.Memory;
+using RoomToRentRadar.Adapters.Outbound.Caching;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Documents;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Repositories;
 using RoomToRentRadar.Application.DTOs;
+using RoomToRentRadar.Application.Exceptions;
+using RoomToRentRadar.Application.Ports.Inbound;
+using RoomToRentRadar.Application.UseCases.RoomListings;
 using RoomToRentRadar.Domain.Entities;
+using RoomToRentRadar.Domain.ValueObjects;
 
 namespace RoomToRentRadar.IntegrationTests.Repositories;
 
@@ -24,25 +31,7 @@ public class CosmosRoomRepositoryTests
     [OneTimeSetUp]
     public async Task OneTimeSetUp()
     {
-        var clientOptions = new CosmosClientOptions
-        {
-            ConnectionMode = ConnectionMode.Gateway,
-            RequestTimeout = TimeSpan.FromSeconds(5),
-            HttpClientFactory = () =>
-            {
-                var handler = new HttpClientHandler
-                {
-                    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-                };
-                return new HttpClient(handler);
-            },
-            SerializerOptions = new CosmosSerializationOptions
-            {
-                PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase
-            }
-        };
-
-        _client = new CosmosClient(Endpoint, AuthKey, clientOptions);
+        _client = CreateCosmosClient();
         _batchId = Guid.NewGuid().ToString("N")[..8];
 
         try
@@ -388,6 +377,191 @@ public class CosmosRoomRepositoryTests
         Assert.That(totalCount2, Is.EqualTo(totalCount));
         Assert.That(page2Items.Count, Is.EqualTo(1));
         Assert.That(page1Items[0].Id, Is.Not.EqualTo(page2Items[0].Id));
+    }
+
+    [Test]
+    public async Task ListingWrites_RoundTripFullPrecisionAndGeoJsonWithFreshCosmosClients()
+    {
+        var owner = Guid.NewGuid();
+        var repository = _repository!;
+        var images = new FakeListingImageStorageService();
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var cacheInvalidator = new RoomListingCacheInvalidator(new MemoryCacheService(cache));
+        var update = new UpdateListingUseCase(repository, images, new InMemoryRoomListingRepository(), cacheInvalidator);
+        var original = new GeoLocation(21.5944123456789, 105.8482123456789);
+        var replacement = new GeoLocation(-33.857123456789, 151.213123456789);
+
+        var created = await new CreateListingUseCase(repository, images).ExecuteAsync(
+            owner, ListingRequest(original, photoCount: 3));
+        var createdDocument = await ReadFreshRoomDocumentAsync(created.ListingId);
+        AssertStoredLocation(createdDocument, original);
+
+        var updated = await update.ExecuteAsync(owner, created.ListingId, ListingRequest(replacement));
+        var updatedDocument = await ReadFreshRoomDocumentAsync(created.ListingId);
+        AssertStoredLocation(updatedDocument, replacement);
+        Assert.That(updatedDocument.PendingVisibilitySyncId, Is.Not.Null);
+        Assert.That(updated.Location, Is.EqualTo(replacement));
+
+        await update.ExecuteAsync(owner, created.ListingId, ListingRequest());
+        var beforeInvalidUpdate = await ReadFreshRoomDocumentAsync(created.ListingId);
+        var invalidUpdate = ListingRequest(photoCount: 1) with { Title = "Do not save", Latitude = 22 };
+        Assert.ThrowsAsync<RequestValidationException>(() => update.ExecuteAsync(owner, created.ListingId, invalidUpdate));
+
+        var afterInvalidUpdate = await ReadFreshRoomDocumentAsync(created.ListingId);
+        Assert.Multiple(() =>
+        {
+            Assert.That(afterInvalidUpdate.ETag, Is.EqualTo(beforeInvalidUpdate.ETag));
+            Assert.That(afterInvalidUpdate.Title, Is.EqualTo(beforeInvalidUpdate.Title));
+            Assert.That(afterInvalidUpdate.ImageUrls, Is.EqualTo(beforeInvalidUpdate.ImageUrls));
+            Assert.That(images.StoredUrls, Has.Count.EqualTo(3));
+        });
+
+        using var reader = CreateCosmosClient();
+        var freshRepository = new CosmosRoomRepository(reader.GetContainer(DatabaseName, ContainerName));
+        var ownerRead = await new GetListingCoordinatesUseCase(freshRepository).ExecuteAsync(owner, created.ListingId);
+        Assert.That(ownerRead.Location, Is.EqualTo(replacement));
+
+        using var rawResponse = await reader.GetContainer(DatabaseName, ContainerName).ReadItemStreamAsync(
+            created.ListingId, new PartitionKey(created.ListingId));
+        Assert.That(rawResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        using var rawDocument = await JsonDocument.ParseAsync(rawResponse.Content);
+        var document = rawDocument.RootElement;
+        var point = document.GetProperty("location");
+        Assert.Multiple(() =>
+        {
+            Assert.That(document.GetProperty("latitude").GetDouble(), Is.EqualTo(replacement.Latitude));
+            Assert.That(document.GetProperty("longitude").GetDouble(), Is.EqualTo(replacement.Longitude));
+            Assert.That(point.GetProperty("type").GetString(), Is.EqualTo("Point"));
+            Assert.That(point.GetProperty("coordinates").EnumerateArray().Select(value => value.GetDouble()),
+                Is.EqualTo(new[] { replacement.Longitude, replacement.Latitude }));
+        });
+    }
+
+    [TestCase("point-only", null, null, true, 22.25, 106.75)]
+    [TestCase("half-pair", 21.25, null, false, null, null)]
+    [TestCase("different-point", 21.25, 105.75, true, 21.25, 105.75)]
+    [TestCase("no-location", null, null, false, null, null)]
+    public async Task LegacyCoordinates_OmittedUpdatePreservesScalarsAndPointAndExplicitUpdateReplacesBoth(
+        string scenario, double? latitude, double? longitude, bool hasPoint, double? expectedLatitude, double? expectedLongitude)
+    {
+        var id = $"legacy-coordinates-{scenario}-{Guid.NewGuid():N}";
+        var owner = Guid.NewGuid();
+        var original = new RoomDocument
+        {
+            Id = id,
+            LandlordId = owner,
+            Latitude = latitude,
+            Longitude = longitude,
+            Location = hasPoint ? new CosmosPoint { Coordinates = [106.75, 22.25] } : null
+        };
+        await _container!.CreateItemAsync(original, new PartitionKey(id));
+        var repository = _repository!;
+        var room = (await repository.GetByIdAsync(id))!;
+        Assert.That(room.GetLocation(), Is.EqualTo(GeoLocation.FromOptional(expectedLatitude, expectedLongitude)));
+
+        room.Title = "Updated title";
+        await repository.UpdateAsync(room);
+        var preserved = await ReadFreshRoomDocumentAsync(id);
+        Assert.Multiple(() =>
+        {
+            Assert.That(preserved.Title, Is.EqualTo("Updated title"));
+            Assert.That(preserved.Latitude, Is.EqualTo(latitude));
+            Assert.That(preserved.Longitude, Is.EqualTo(longitude));
+            Assert.That(preserved.Location?.Coordinates, Is.EqualTo(original.Location?.Coordinates));
+        });
+
+        var loaded = (await repository.GetByIdAsync(id))!;
+        var explicitLocation = new GeoLocation(0, 0);
+        await repository.UpdateAsync(loaded, explicitLocation);
+        AssertStoredLocation(await ReadFreshRoomDocumentAsync(id), explicitLocation);
+    }
+
+    [Test]
+    public async Task LegacyCoordinates_PointWithoutCoordinatesDoesNotBecomeZeroZero()
+    {
+        var id = $"legacy-missing-point-coordinates-{Guid.NewGuid():N}";
+        using var payload = new MemoryStream(JsonSerializer.SerializeToUtf8Bytes(new { id, location = new { type = "Point" } }));
+        using var response = await _container!.CreateItemStreamAsync(payload, new PartitionKey(id));
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+
+        var room = (await _repository!.GetByIdAsync(id))!;
+        Assert.Multiple(() =>
+        {
+            Assert.That(room.GetLocation(), Is.Null);
+            Assert.That(room.Latitude, Is.Null);
+            Assert.That(room.Longitude, Is.Null);
+        });
+    }
+
+    [Test]
+    public async Task ListingCoordinateUpdate_StaleETagDoesNotOverwritePairOrVisibilityIntent()
+    {
+        var id = $"concurrent-coordinates-{Guid.NewGuid():N}";
+        var repository = _repository!;
+        await repository.CreateAsync(new Room { Id = id, LandlordId = Guid.NewGuid(), Status = RoomStatus.Pending });
+        var first = (await repository.GetByIdAsync(id))!;
+        var stale = (await repository.GetByIdAsync(id))!;
+
+        var savedLocation = new GeoLocation(21.5, 105.8);
+        first.Title = "Winning update";
+        await repository.UpdateAsync(first, savedLocation);
+        var saved = await ReadFreshRoomDocumentAsync(id);
+
+        stale.Title = "Stale update";
+        Assert.ThrowsAsync<ConcurrencyConflictException>(() => repository.UpdateAsync(stale, new GeoLocation(22, 106)));
+        var afterConflict = await ReadFreshRoomDocumentAsync(id);
+        AssertStoredLocation(afterConflict, savedLocation);
+        Assert.Multiple(() =>
+        {
+            Assert.That(afterConflict.Title, Is.EqualTo("Winning update"));
+            Assert.That(afterConflict.PendingVisibilitySyncId, Is.Not.Null.And.EqualTo(saved.PendingVisibilitySyncId));
+        });
+    }
+
+    private static ListingWriteRequest ListingRequest(GeoLocation? location = null, int photoCount = 0) => new(
+        "Coordinate listing", "10 Test Street", 2_000_000m, 0, 20, "BoardingRoom", null,
+        Enumerable.Range(0, photoCount).Select(i => new ListingImageUpload(
+            () => new MemoryStream([1, 2, 3]), $"location-photo-{i}.png", "image/png", 3)).ToArray(),
+        Latitude: location?.Latitude, Longitude: location?.Longitude);
+
+    private static async Task<RoomDocument> ReadFreshRoomDocumentAsync(string id)
+    {
+        using var reader = CreateCosmosClient();
+        var response = await reader.GetContainer(DatabaseName, ContainerName).ReadItemAsync<RoomDocument>(id, new PartitionKey(id));
+        return response.Resource;
+    }
+
+    private static void AssertStoredLocation(RoomDocument document, GeoLocation location)
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(document.Latitude, Is.EqualTo(location.Latitude));
+            Assert.That(document.Longitude, Is.EqualTo(location.Longitude));
+            Assert.That(document.Location?.Type, Is.EqualTo("Point"));
+            Assert.That(document.Location?.Coordinates, Is.EqualTo(new[] { location.Longitude, location.Latitude }));
+        });
+    }
+
+    private static CosmosClient CreateCosmosClient()
+    {
+        var clientOptions = new CosmosClientOptions
+        {
+            ConnectionMode = ConnectionMode.Gateway,
+            RequestTimeout = TimeSpan.FromSeconds(5),
+            HttpClientFactory = () =>
+            {
+                var handler = new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                };
+                return new HttpClient(handler);
+            },
+            SerializerOptions = new CosmosSerializationOptions
+            {
+                PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase
+            }
+        };
+        return new CosmosClient(Endpoint, AuthKey, clientOptions);
     }
 
     [Test]

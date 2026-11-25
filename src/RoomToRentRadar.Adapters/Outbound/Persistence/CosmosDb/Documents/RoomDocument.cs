@@ -1,5 +1,6 @@
 using Newtonsoft.Json;
 using RoomToRentRadar.Domain.Entities;
+using RoomToRentRadar.Domain.ValueObjects;
 
 namespace RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Documents;
 
@@ -9,7 +10,7 @@ public sealed class CosmosPoint
     public string Type { get; set; } = "Point";
 
     [JsonProperty("coordinates")]
-    public double[] Coordinates { get; set; } = [0, 0]; // [longitude, latitude]
+    public double[] Coordinates { get; set; } = []; // [longitude, latitude]
 }
 
 public sealed class RoomDocument : IProjectionVersionedDocument
@@ -145,17 +146,7 @@ public sealed class RoomDocument : IProjectionVersionedDocument
     {
         ArgumentNullException.ThrowIfNull(room);
 
-        CosmosPoint? location = null;
-        if (room.Latitude.HasValue && room.Longitude.HasValue)
-        {
-            location = new CosmosPoint
-            {
-                Type = "Point",
-                Coordinates = [room.Longitude.Value, room.Latitude.Value]
-            };
-        }
-
-        return new RoomDocument
+        var document = new RoomDocument
         {
             Id = room.Id,
             Title = room.Title,
@@ -178,9 +169,22 @@ public sealed class RoomDocument : IProjectionVersionedDocument
             LastUpdatedDate = room.LastUpdatedDate,
             CreatedAt = room.CreatedAt != default ? room.CreatedAt : (room.LastUpdatedDate ?? DateTime.UtcNow),
             Latitude = room.Latitude,
-            Longitude = room.Longitude,
-            Location = location
+            Longitude = room.Longitude
         };
+
+        if (room.GetLocation() is { } location)
+        {
+            document.SetLocation(location);
+        }
+
+        return document;
+    }
+
+    internal void SetLocation(GeoLocation location)
+    {
+        Latitude = location.Latitude;
+        Longitude = location.Longitude;
+        Location = new CosmosPoint { Coordinates = [location.Longitude, location.Latitude] };
     }
 
     public Room ToDomain()
@@ -188,10 +192,11 @@ public sealed class RoomDocument : IProjectionVersionedDocument
         double? lat = Latitude;
         double? lon = Longitude;
 
-        if ((!lat.HasValue || !lon.HasValue) && Location?.Coordinates is { Length: >= 2 } coords)
+        if ((!lat.HasValue || !lon.HasValue) &&
+            Location is { Type: "Point", Coordinates: [var longitude, var latitude, ..] })
         {
-            lon = coords[0];
-            lat = coords[1];
+            lon = longitude;
+            lat = latitude;
         }
 
         return new Room

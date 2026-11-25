@@ -36,7 +36,7 @@ public sealed class UnpublishListingUseCase : IUnpublishListingUseCase
             room.Status = RoomStatus.Pending;
             room.IsVerified = false;
             room.LastUpdatedDate = DateTime.UtcNow;
-            await _roomRepository.UpdateAsync(room, cancellationToken);
+            await _roomRepository.UpdateAsync(room, cancellationToken: cancellationToken);
         }
 
         // Finish updating public visibility after the save, even if the client disconnected.

@@ -5,6 +5,7 @@ using RoomToRentRadar.Application.DTOs;
 using RoomToRentRadar.Application.Exceptions;
 using RoomToRentRadar.Application.Ports.Outbound;
 using RoomToRentRadar.Domain.Entities;
+using RoomToRentRadar.Domain.ValueObjects;
 
 namespace RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Repositories;
 
@@ -20,12 +21,13 @@ public class CosmosRoomRepository : IRoomRepository
     public async Task<Room> CreateAsync(Room room, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(room);
+        _ = GeoLocation.FromOptional(room.Latitude, room.Longitude);
         var document = RoomDocument.FromDomain(room);
         var response = await _container.CreateItemAsync(document, new PartitionKey(document.Id), cancellationToken: cancellationToken);
         return response.Resource.ToDomain();
     }
 
-    public async Task UpdateAsync(Room room, CancellationToken cancellationToken = default)
+    public async Task UpdateAsync(Room room, GeoLocation? locationUpdate = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(room);
         if (string.IsNullOrWhiteSpace(room.ConcurrencyToken))
@@ -40,6 +42,18 @@ public class CosmosRoomRepository : IRoomRepository
         }
 
         var document = RoomDocument.FromDomain(room);
+        if (locationUpdate is { } location)
+        {
+            document.SetLocation(location);
+        }
+        else
+        {
+            // A no-op must retain the stored values, including legacy disagreement with GeoJSON.
+            document.Latitude = existing.Latitude;
+            document.Longitude = existing.Longitude;
+            document.Location = existing.Location;
+        }
+
         document.ProjectionVersion = existing.ProjectionVersion;
         if (room.Status == RoomStatus.Pending && !room.IsVerified &&
             room.LandlordId is Guid landlordId && landlordId != Guid.Empty)

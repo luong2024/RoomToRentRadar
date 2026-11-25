@@ -47,6 +47,67 @@ public sealed class ListingUseCasesTests
     }
 
     [Test]
+    public async Task CreateListing_WithCoordinates_PersistsValidatedPairAndPendingStatus()
+    {
+        var result = await new CreateListingUseCase(_repository, _storage).ExecuteAsync(
+            OwnerId, ValidRequest(3) with { Latitude = 21.5944123456789, Longitude = 105.8482123456789 });
+
+        var room = await _repository.GetByIdAsync(result.ListingId);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Location, Is.EqualTo(new GeoLocation(21.5944123456789, 105.8482123456789)));
+            Assert.That(room!.GetLocation(), Is.EqualTo(result.Location));
+            Assert.That(room.Status, Is.EqualTo(RoomStatus.Pending));
+        });
+    }
+
+    [TestCase(null, 105.8)]
+    [TestCase(90.0001, 105.8)]
+    [TestCase(21.5, -180.0001)]
+    [TestCase(double.NaN, 105.8)]
+    [TestCase(21.5, double.PositiveInfinity)]
+    public async Task InvalidCoordinates_RejectCreateAndUpdateBeforeUploadOrMutation(double? latitude, double? longitude)
+    {
+        var room = ExistingListing(OwnerId, ["one", "two", "three"]);
+        room.SetLocation(new GeoLocation(21.5, 105.8));
+        await _repository.CreateAsync(room);
+        var request = ValidRequest(3) with { Latitude = latitude, Longitude = longitude };
+
+        var createError = Assert.ThrowsAsync<RequestValidationException>(
+            () => new CreateListingUseCase(_repository, _storage).ExecuteAsync(OwnerId, request));
+        var updateError = Assert.ThrowsAsync<RequestValidationException>(
+            () => _updateListing.ExecuteAsync(OwnerId, room.Id, request));
+        var saved = await _repository.GetByIdAsync(room.Id);
+        Assert.Multiple(() =>
+        {
+            Assert.That(createError!.Errors.ContainsKey("coordinates"), Is.True);
+            Assert.That(updateError!.Errors.ContainsKey("coordinates"), Is.True);
+            Assert.That(_storage.StoredUrls, Is.Empty);
+            Assert.That(_repository.Rooms, Has.Count.EqualTo(1));
+            Assert.That(saved!.Title, Is.EqualTo("Original title"));
+            Assert.That(saved.GetLocation(), Is.EqualTo(new GeoLocation(21.5, 105.8)));
+        });
+    }
+
+    [Test]
+    public async Task GetListingCoordinates_UsesPersistedOwnerAndReadsPendingListing()
+    {
+        var room = ExistingListing(OwnerId, ["one", "two", "three"]);
+        room.SetLocation(new GeoLocation(0, 0));
+        await _repository.CreateAsync(room);
+        var useCase = new GetListingCoordinatesUseCase(_repository);
+
+        var result = await useCase.ExecuteAsync(OwnerId, room.Id);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.ListingId, Is.EqualTo(room.Id));
+            Assert.That(result.Location, Is.EqualTo(new GeoLocation(0, 0)));
+            Assert.ThrowsAsync<NotFoundException>(() => useCase.ExecuteAsync(Guid.NewGuid(), room.Id));
+            Assert.ThrowsAsync<NotFoundException>(() => useCase.ExecuteAsync(OwnerId, "missing"));
+        });
+    }
+
+    [Test]
     public async Task CreateListing_MoreThanThreePhotos_PersistsAllValidPhotos()
     {
         var result = await new CreateListingUseCase(_repository, _storage).ExecuteAsync(OwnerId, ValidRequest(5));
@@ -252,7 +313,7 @@ public sealed class ListingUseCasesTests
     }
 
     [Test]
-    public async Task UpdateListing_VisibilityFailureAfterSave_PreservesNewGalleryAndCanRetry()
+    public async Task UpdateListing_VisibilityFailureAfterSave_PreservesGalleryAndCoordinatesOnRetry()
     {
         var listing = ExistingListing(OwnerId, ["one", "two", "three"]);
         listing.Status = RoomStatus.Available;
@@ -262,13 +323,16 @@ public sealed class ListingUseCasesTests
         await _listingRepository.AddAsync(projection);
         _listingRepository.HideError = new IOException("Projection storage unavailable.");
 
-        Assert.ThrowsAsync<IOException>(() => _updateListing.ExecuteAsync(OwnerId, listing.Id, ValidRequest(3) with { ImageUrlsToRetain = [] }));
+        var location = new GeoLocation(21.5944, 105.8482);
+        var update = ValidRequest(3) with { ImageUrlsToRetain = [], Latitude = location.Latitude, Longitude = location.Longitude };
+        Assert.ThrowsAsync<IOException>(() => _updateListing.ExecuteAsync(OwnerId, listing.Id, update));
 
         var saved = await _repository.GetByIdAsync(listing.Id);
         Assert.Multiple(() =>
         {
             Assert.That(saved!.Status, Is.EqualTo(RoomStatus.Pending));
             Assert.That(saved.ImageUrls, Is.EqualTo(_storage.StoredUrls));
+            Assert.That(saved.GetLocation(), Is.EqualTo(location));
             Assert.That(saved.ImageUrls, Has.Count.EqualTo(3));
             Assert.That(_storage.DeletedUrls, Is.Empty);
         });
@@ -279,6 +343,7 @@ public sealed class ListingUseCasesTests
         {
             Assert.That(projection.IsDisplayable, Is.False);
             Assert.That(retried.ImageUrls, Is.EqualTo(saved!.ImageUrls));
+            Assert.That(retried.Location, Is.EqualTo(location));
             Assert.That(_cacheInvalidator.CampusIds, Is.EqualTo(new[] { projection.CampusId }));
         });
     }
@@ -400,9 +465,10 @@ public sealed class ListingUseCasesTests
             return Task.FromResult(room);
         }
 
-        public Task UpdateAsync(Room room, CancellationToken cancellationToken = default)
+        public Task UpdateAsync(Room room, GeoLocation? locationUpdate = null, CancellationToken cancellationToken = default)
         {
             if (UpdateError is not null) throw UpdateError;
+            if (locationUpdate is { } location) room.SetLocation(location);
             _rooms[room.Id] = room;
             AfterUpdate?.Invoke();
             return Task.CompletedTask;
