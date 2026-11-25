@@ -363,7 +363,59 @@ public class MainLandingPageModelTests
     }
 
     [Test]
-    public async Task DroppedModel_SubscribedToStore_IsCollectable()
+    public async Task CriteriaChanged_WhileLoadInFlight_RerunsWithLatestCriteria()
+    {
+        var store = new SearchCriteriaStore();
+        var firstCall = new TaskCompletionSource<PagedResult<RoomCardDto>>();
+        var calls = 0;
+
+        _roomGateway.SearchRoomsAsync(Arg.Any<RoomSearchRequest>())
+            .Returns(_ =>
+            {
+                calls++;
+                return calls == 1
+                    ? firstCall.Task
+                    : Task.FromResult(new PagedResult<RoomCardDto>(new[] { Room("room-2") }, 1, 1, 20));
+            });
+
+        var model = CreateModel(store);
+        var initialize = model.InitializeAsync();
+
+        await WaitUntilAsync(() => calls == 1);
+
+        store.Apply(new RoomSearchCriteria { MaxRentVnd = 2_000_000 });
+
+        Assert.That(model.HasActiveFilters, Is.True, "Chips update before the in-flight load finishes.");
+
+        firstCall.SetResult(new PagedResult<RoomCardDto>(new[] { Room() }, 1, 1, 20));
+        await initialize;
+
+        Assert.That(calls, Is.EqualTo(2));
+        Assert.That(model.Rooms.Single().Id, Is.EqualTo("room-2"));
+        await _roomGateway.Received(1).SearchRoomsAsync(
+            Arg.Is<RoomSearchRequest>(r => r.MaxRentVnd == 2_000_000));
+    }
+
+    [Test]
+    public async Task EmptyResults_WithActiveFilters_KeepsChipsAndZeroCount()
+    {
+        var store = new SearchCriteriaStore();
+        store.Apply(new RoomSearchCriteria { MaxRentVnd = 2_000_000 });
+        GatewayReturnsRooms();
+        var model = CreateModel(store);
+
+        await model.InitializeAsync();
+
+        Assert.That(model.State, Is.EqualTo(ViewState.Empty));
+        Assert.That(model.HasContent, Is.False);
+        Assert.That(model.TotalRoomCount, Is.EqualTo(0));
+        Assert.That(model.ResultCountText, Is.EqualTo("0 rooms"));
+        Assert.That(model.ActiveFilterChips, Has.Count.EqualTo(1));
+        Assert.That(model.HasActiveFilters, Is.True);
+    }
+
+    [Test]
+    public void DroppedModel_SubscribedToStore_IsCollectable()
     {
         var weak = CreateDroppedModelWithStore();
 
