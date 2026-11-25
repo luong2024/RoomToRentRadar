@@ -5,12 +5,16 @@ using RoomToRentRadar.Api.Services.Moderation;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddSingleton<IListingRepository, InMemoryListingRepository>();
+// Factory bắt buộc: nếu để DI tự chọn constructor, nó sẽ chọn overload (IEnumerable<ListingDocument>)
+// và inject một danh sách RỖNG => API chạy không có dữ liệu seed.
+builder.Services.AddSingleton(_ => new InMemoryListingRepository());
+builder.Services.AddSingleton<IListingRepository>(sp => sp.GetRequiredService<InMemoryListingRepository>());
 builder.Services.AddSingleton<IModerationAuditRepository, InMemoryModerationAuditRepository>();
 builder.Services.AddScoped<IListingService, ListingService>();
 builder.Services.AddScoped<IListingDetailService, ListingDetailService>();
 builder.Services.AddScoped<IListingSearchService, ListingSearchService>();
 builder.Services.AddScoped<IListingModerationService, ListingModerationService>();
+builder.Services.AddScoped<ISpatialSearchService, SpatialSearchService>();
 builder.Services.AddPhotoPipeline(builder.Configuration);
 
 builder.Services.AddControllers();
