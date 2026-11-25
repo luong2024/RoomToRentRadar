@@ -67,7 +67,7 @@ public sealed class AuthController(
     }
 
     [HttpPost("register/verify")]
-    [EnableRateLimiting(AuthRateLimitPolicy.Name)]
+    [EnableRateLimiting(AuthRateLimitPolicy.VerifyName)]
     [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK, "application/json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict, "application/problem+json")]
@@ -109,9 +109,9 @@ public sealed class AuthController(
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.Email)
-            || request.Email.Length > AuthLimits.EmailMaxLength
+            || request.Email.Length > AccountRules.EmailMaxLength
             || string.IsNullOrWhiteSpace(request.Password)
-            || request.Password.Length > AuthLimits.PasswordMaxLength)
+            || request.Password.Length > AccountRules.PasswordMaxLength)
         {
             return ToProblem(AuthProblemFactory.InvalidLoginRequestProblem());
         }

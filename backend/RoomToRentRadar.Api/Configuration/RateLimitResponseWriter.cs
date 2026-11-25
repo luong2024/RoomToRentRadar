@@ -25,9 +25,9 @@ public static class RateLimitResponseWriter
 
         var policyName = context.HttpContext.GetEndpoint()?.Metadata
             .GetMetadata<EnableRateLimitingAttribute>()?.PolicyName;
-        var problem = policyName == AuthRateLimitPolicy.Name
-            ? AuthProblemFactory.RateLimitedProblem()
-            : TravelProblemFactory.RateLimitedProblem();
+        var problem = policyName == TravelRateLimitPolicy.Name
+            ? TravelProblemFactory.RateLimitedProblem()
+            : AuthProblemFactory.RateLimitedProblem();
 
         context.HttpContext.Response.StatusCode = problem.Status!.Value;
         await context.HttpContext.Response.WriteAsJsonAsync(

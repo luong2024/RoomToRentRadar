@@ -11,8 +11,6 @@ public sealed class SmtpEmailSender(
     SmtpEmailOptions options,
     ILogger<SmtpEmailSender> logger) : IEmailSender
 {
-    private const int TimeoutMilliseconds = 15_000;
-
     public async Task<bool> SendRegistrationOtpAsync(
         RegistrationOtpEmail email,
         CancellationToken cancellationToken)
@@ -32,7 +30,7 @@ public sealed class SmtpEmailSender(
         {
             EnableSsl = options.UseStartTls,
             DeliveryMethod = SmtpDeliveryMethod.Network,
-            Timeout = TimeoutMilliseconds
+            Timeout = options.TimeoutSeconds * 1000
         };
         if (!string.IsNullOrWhiteSpace(options.UserName))
         {

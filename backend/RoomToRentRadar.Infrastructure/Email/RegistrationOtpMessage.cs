@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net.Mail;
 using System.Text;
 using RoomToRentRadar.Ports.Models.Auth;
+using RoomToRentRadar.Shared.Auth;
 
 namespace RoomToRentRadar.Infrastructure.Email;
 
@@ -15,7 +16,7 @@ internal static class RegistrationOtpMessage
 
            Mã xác minh đăng ký RoomToRentRadar của bạn là: {email.Code}
 
-           Mã có hiệu lực đến {email.ExpiresAt:HH:mm} ngày {email.ExpiresAt:dd/MM/yyyy} (UTC).
+           Mã có hiệu lực trong {AccountRules.OtpLifetimeMinutes} phút.
            Nếu bạn không yêu cầu tạo tài khoản, hãy bỏ qua email này.
 
            Trân trọng,

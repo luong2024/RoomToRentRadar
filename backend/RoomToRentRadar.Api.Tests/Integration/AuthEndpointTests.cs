@@ -179,7 +179,7 @@ public sealed class AuthEndpointTests
     {
         var response = await LoginAsync(
             TestUsersSeed.Email,
-            new string('a', AuthLimits.PasswordMaxLength + 1));
+            new string('a', AccountRules.PasswordMaxLength + 1));
 
         await AssertProblemAsync(response, HttpStatusCode.BadRequest, "invalid_login_request");
     }
@@ -188,7 +188,7 @@ public sealed class AuthEndpointTests
     public async Task Login_EmailTooLong_ReturnsBadRequestProblem()
     {
         var response = await LoginAsync(
-            new string('a', AuthLimits.EmailMaxLength + 1),
+            new string('a', AccountRules.EmailMaxLength + 1),
             TestUsersSeed.Password);
 
         await AssertProblemAsync(response, HttpStatusCode.BadRequest, "invalid_login_request");
@@ -322,6 +322,40 @@ public sealed class AuthEndpointTests
                 stored.ExpiresAt - stored.CreatedAt,
                 Is.EqualTo(TimeSpan.FromMinutes(AccountRules.OtpLifetimeMinutes)));
         });
+    }
+
+    [Test]
+    public async Task Register_AgainForTheSameEmail_ReplacesThePreviousChallenge()
+    {
+        var first = await BeginRegistrationAsync(
+            "resend@example.test",
+            "Password1",
+            "Resend User",
+            "student");
+        var second = await BeginRegistrationAsync(
+            "RESEND@example.test",
+            "Password1",
+            "Resend User",
+            "student");
+
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var stored = await dbContext.RegistrationChallenges
+                .Where(challenge => challenge.Email == "resend@example.test")
+                .ToListAsync();
+            Assert.Multiple(() =>
+            {
+                Assert.That(stored, Has.Count.EqualTo(1));
+                Assert.That(stored[0].Id, Is.EqualTo(second.ChallengeId));
+            });
+        }
+
+        var replay = await VerifyAsync(first.ChallengeId, _factory.EmailSink.Sent[0].Code);
+        await AssertProblemAsync(replay, HttpStatusCode.BadRequest, "invalid_otp_challenge");
+
+        var login = await VerifyAndReadAsync(second.ChallengeId);
+        Assert.That(login.Role, Is.EqualTo(UserRoleWire.Student));
     }
 
     [Test]
@@ -533,6 +567,10 @@ public sealed class AuthEndpointTests
                 Assert.That(
                     dbContext.Users.Count(user => user.Email == "race.verify@example.test"),
                     Is.EqualTo(1));
+                Assert.That(
+                    dbContext.RegistrationChallenges.Any(
+                        candidate => candidate.Id == challenge.ChallengeId),
+                    Is.False);
             });
         }
     }

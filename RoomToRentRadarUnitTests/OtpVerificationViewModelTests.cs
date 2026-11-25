@@ -44,6 +44,22 @@ public class OtpVerificationViewModelTests
     }
 
     [Test]
+    public void CopyHints_AreDerivedFromAccountRules()
+    {
+        var viewModel = CreateViewModel(
+            new FakeApiClient(),
+            new FakeTokenStore(),
+            new FakeNavigationService());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.CodeMaxLength, Is.EqualTo(AccountRules.OtpLength));
+            Assert.That(viewModel.CodeHint, Does.Contain($"{AccountRules.OtpLength} chữ số"));
+            Assert.That(viewModel.LifetimeHint, Does.Contain($"{AccountRules.OtpLifetimeMinutes} phút"));
+        });
+    }
+
+    [Test]
     public async Task Verify_WithValidCode_VerifiesAndRedirectsToRoleRoot()
     {
         var expiresAt = new DateTime(2026, 12, 2, 8, 0, 0, DateTimeKind.Utc);

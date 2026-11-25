@@ -111,6 +111,8 @@ public sealed class AuthServiceTests
             Assert.That(emails.Sent[0].DisplayName, Is.EqualTo(challenge.DisplayName));
             Assert.That(emails.Sent[0].Code, Is.EqualTo(ValidCode));
             Assert.That(emails.Sent[0].ExpiresAt, Is.EqualTo(challenge.ExpiresAt));
+            Assert.That(challenges.RemovedByEmail, Is.EqualTo(new[] { "land.lord@example.test" }));
+            Assert.That(challenges.RemovedExpired, Has.Count.EqualTo(1));
         });
     }
 
@@ -180,7 +182,7 @@ public sealed class AuthServiceTests
     }
 
     [Test]
-    public async Task VerifyRegistration_WithWrongCode_ReturnsRemainingAttemptsAndPersistsTheCount()
+    public async Task VerifyRegistration_WithWrongCode_ReturnsRemainingAttemptsAndConsumesOneAttempt()
     {
         var challenge = CreateChallenge();
         var challenges = new FakeRegistrationChallengeRepository { Challenge = challenge };
@@ -197,9 +199,35 @@ public sealed class AuthServiceTests
             Assert.That(result.AttemptsRemaining, Is.EqualTo(AccountRules.OtpMaxAttempts - 1));
             Assert.That(result.Response, Is.Null);
             Assert.That(challenge.AttemptCount, Is.EqualTo(1));
+            Assert.That(challenges.Consumed, Is.EqualTo(new[] { challenge.Id }));
             Assert.That(challenges.Removed, Is.Empty);
-            Assert.That(unitOfWork.SaveCount, Is.EqualTo(1));
+            Assert.That(unitOfWork.SaveCount, Is.Zero);
             Assert.That(unitOfWork.BeginTransactionCount, Is.Zero);
+        });
+    }
+
+    [Test]
+    public async Task VerifyRegistration_WhenAnotherRequestExhaustsTheCapFirst_RemovesChallengeAndReturnsAttemptsExceeded()
+    {
+        var challenge = CreateChallenge(attemptCount: AccountRules.OtpMaxAttempts - 1);
+        var challenges = new FakeRegistrationChallengeRepository
+        {
+            Challenge = challenge,
+            ExhaustOnConsume = true
+        };
+        var unitOfWork = new FakeUnitOfWork();
+        var service = CreateService(new FakeUserRepository(), unitOfWork, challenges: challenges);
+
+        var result = await service.VerifyRegistrationAsync(
+            new VerifyRegistrationCommand(challenge.Id, "000000"),
+            CancellationToken.None);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Outcome, Is.EqualTo(VerifyRegistrationOutcome.AttemptsExceeded));
+            Assert.That(result.Response, Is.Null);
+            Assert.That(challenges.Removed, Does.Contain(challenge));
+            Assert.That(unitOfWork.SaveCount, Is.EqualTo(1));
         });
     }
 
@@ -318,8 +346,9 @@ public sealed class AuthServiceTests
             Assert.That(result.Response, Is.Null);
             Assert.That(repository.AttemptedUser, Is.Not.Null);
             Assert.That(sessions.Added, Is.Empty);
-            Assert.That(challenges.Removed, Is.Empty);
-            Assert.That(unitOfWork.CommitCount, Is.Zero);
+            Assert.That(challenges.Removed, Does.Contain(challenge));
+            Assert.That(unitOfWork.SaveCount, Is.EqualTo(1));
+            Assert.That(unitOfWork.CommitCount, Is.EqualTo(1));
             Assert.That(unitOfWork.DisposeCount, Is.EqualTo(1));
         });
     }
@@ -444,9 +473,17 @@ public sealed class AuthServiceTests
     {
         public RegistrationChallenge? Challenge { get; init; }
 
+        public bool ExhaustOnConsume { get; init; }
+
         public List<RegistrationChallenge> Added { get; } = [];
 
         public List<RegistrationChallenge> Removed { get; } = [];
+
+        public List<Guid> Consumed { get; } = [];
+
+        public List<string> RemovedByEmail { get; } = [];
+
+        public List<DateTime> RemovedExpired { get; } = [];
 
         public Task AddAsync(RegistrationChallenge challenge, CancellationToken cancellationToken)
         {
@@ -456,6 +493,38 @@ public sealed class AuthServiceTests
 
         public Task<RegistrationChallenge?> FindByIdAsync(Guid id, CancellationToken cancellationToken)
             => Task.FromResult(Challenge);
+
+        public Task<int?> TryConsumeAttemptAsync(
+            Guid challengeId,
+            int maxAttempts,
+            CancellationToken cancellationToken)
+        {
+            if (ExhaustOnConsume || Challenge is null || Challenge.Id != challengeId)
+            {
+                return Task.FromResult<int?>(null);
+            }
+
+            Consumed.Add(challengeId);
+            if (Challenge.AttemptCount >= maxAttempts)
+            {
+                return Task.FromResult<int?>(null);
+            }
+
+            Challenge.AttemptCount++;
+            return Task.FromResult<int?>(Challenge.AttemptCount);
+        }
+
+        public Task RemoveByEmailAsync(string normalizedEmail, CancellationToken cancellationToken)
+        {
+            RemovedByEmail.Add(normalizedEmail);
+            return Task.CompletedTask;
+        }
+
+        public Task RemoveExpiredAsync(DateTime cutoffUtc, CancellationToken cancellationToken)
+        {
+            RemovedExpired.Add(cutoffUtc);
+            return Task.CompletedTask;
+        }
 
         public void Remove(RegistrationChallenge challenge) => Removed.Add(challenge);
     }

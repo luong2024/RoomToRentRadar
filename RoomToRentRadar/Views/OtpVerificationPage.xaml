@@ -28,10 +28,10 @@
                    CharacterSpacing="-0.4" SemanticProperties.HeadingLevel="Level1" />
 
             <VerticalStackLayout Spacing="2">
-                <Label Text="Chúng tôi đã gửi mã xác nhận gồm 6 chữ số tới:" Style="{StaticResource Caption}" />
+                <Label Text="{Binding CodeHint}" Style="{StaticResource Caption}" />
                 <Label Text="{Binding Email}" FontFamily="OpenSansSemibold" FontSize="14"
                        AutomationId="OtpEmail" SemanticProperties.Description="Email nhận mã xác nhận" />
-                <Label Text="Mã có hiệu lực trong 10 phút." Style="{StaticResource Caption}" FontSize="11.5" />
+                <Label Text="{Binding LifetimeHint}" Style="{StaticResource Caption}" FontSize="11.5" />
             </VerticalStackLayout>
 
             <Border Padding="18,16" StrokeShape="RoundRectangle 20">
@@ -41,7 +41,7 @@
                 <VerticalStackLayout Spacing="12">
                     <VerticalStackLayout Spacing="3">
                         <inputLayout:SfTextInputLayout Hint="Mã xác nhận" ShowHelperText="False" HasError="{Binding HasCodeError}">
-                            <Entry Text="{Binding Code}" Keyboard="Numeric" ReturnType="Go" MaxLength="6"
+                            <Entry Text="{Binding Code}" Keyboard="Numeric" ReturnType="Go" MaxLength="{Binding CodeMaxLength}"
                                    ReturnCommand="{Binding VerifyCommand}" Placeholder="123456"
                                    AutomationId="OtpCode" SemanticProperties.Description="Mã xác nhận từ email"
                                    Style="{StaticResource OtpEntry}" />

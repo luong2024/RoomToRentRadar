@@ -61,18 +61,45 @@ public sealed class AuthRateLimitTests
         var begin = await PostRegisterAsync(client, "verify.limit@example.test");
         var first = await PostVerifyAsync(client, Guid.NewGuid());
         var second = await PostVerifyAsync(client, Guid.NewGuid());
+        var third = await PostVerifyAsync(client, Guid.NewGuid());
 
         Assert.Multiple(() =>
         {
             Assert.That(begin.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
             Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         });
-        await AssertRateLimitedProblemAsync(second);
+        await AssertRateLimitedProblemAsync(third);
+    }
+
+    [Test]
+    public async Task Verify_ExceedingVerifyLimit_DoesNotBlockLogin()
+    {
+        using var factory = CreateFactory();
+        await factory.InitializeDatabaseAsync();
+        using var client = factory.CreateClient();
+
+        var first = await PostVerifyAsync(client, Guid.NewGuid());
+        var second = await PostVerifyAsync(client, Guid.NewGuid());
+        var third = await PostVerifyAsync(client, Guid.NewGuid());
+        var login = await PostLoginAsync(client);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        });
+        await AssertRateLimitedProblemAsync(third);
+        Assert.That(login.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     private static ListingsApiFactory CreateFactory()
         => new(services =>
-            services.Configure<AuthOptions>(options => options.RateLimitPerMinute = 2));
+            services.Configure<AuthOptions>(options =>
+            {
+                options.RateLimitPerMinute = 2;
+                options.VerifyRateLimitPerMinute = 2;
+            }));
 
     private static Task<HttpResponseMessage> PostLoginAsync(HttpClient client)
         => client.PostAsJsonAsync(

@@ -54,6 +54,12 @@ public partial class OtpVerificationViewModel : ObservableObject, IQueryAttribut
 
     public bool HasCodeError => !string.IsNullOrEmpty(CodeError);
 
+    public string CodeHint => $"Chúng tôi đã gửi mã xác nhận gồm {AccountRules.OtpLength} chữ số tới:";
+
+    public string LifetimeHint => $"Mã có hiệu lực trong {AccountRules.OtpLifetimeMinutes} phút.";
+
+    public int CodeMaxLength => AccountRules.OtpLength;
+
     partial void OnCodeChanged(string value) => CodeError = string.Empty;
 
     [RelayCommand(AllowConcurrentExecutions = false)]

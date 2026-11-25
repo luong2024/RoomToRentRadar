@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using RoomToRentRadar.Ports.Models.Auth;
 using RoomToRentRadar.Shared.Auth;
 
 namespace RoomToRentRadar.Api.Features.Auth;
@@ -30,7 +29,7 @@ public static class AuthProblemFactory
             StatusCodes.Status400BadRequest,
             WeakPassword,
             "Weak password",
-            $"password must be {AuthLimits.PasswordMinLength}-{AuthLimits.PasswordMaxLength} characters "
+            $"password must be {AccountRules.PasswordMinLength}-{AccountRules.PasswordMaxLength} characters "
             + "and contain at least one letter and one digit.");
 
     public static ProblemDetails InvalidDisplayNameProblem(string detail)
@@ -122,7 +121,7 @@ public static class AuthProblemFactory
             Type = "https://tools.ietf.org/html/rfc9110#section-15.5.1",
             Status = StatusCodes.Status400BadRequest,
             Title = "Invalid login request",
-            Detail = $"Email and password are required and the password must be at most {AuthLimits.PasswordMaxLength} characters."
+            Detail = $"Email and password are required and the password must be at most {AccountRules.PasswordMaxLength} characters."
         };
         problem.Extensions["code"] = InvalidLoginRequest;
         return problem;

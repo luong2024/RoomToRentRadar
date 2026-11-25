@@ -68,7 +68,11 @@ public sealed class ListingsApiFactory : WebApplicationFactory<Program>
         {
             services.AddSingleton<DbCommandInterceptor>(QueryCounter);
             // Auth limiter partitions are per-IP and shared across a fixture run.
-            services.Configure<AuthOptions>(options => options.RateLimitPerMinute = 1000);
+            services.Configure<AuthOptions>(options =>
+            {
+                options.RateLimitPerMinute = 1000;
+                options.VerifyRateLimitPerMinute = 1000;
+            });
             services.AddSingleton<IOtpGenerator>(OtpCodes);
             services.AddSingleton<IEmailSender>(EmailSink);
             _configureTestServices?.Invoke(services);

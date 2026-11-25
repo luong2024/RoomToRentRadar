@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RoomToRentRadar.Ports\RoomToRentRadar.Ports.csproj" />
+    <ProjectReference Include="..\..\RoomToRentRadar.Shared\RoomToRentRadar.Shared.csproj" />
   </ItemGroup>
 
 </Project>

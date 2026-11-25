@@ -18,16 +18,16 @@ public static class RegistrationValidator
         problem = null;
 
         var email = request.Email?.Trim() ?? string.Empty;
-        if (email.Length is 0 or > AuthLimits.EmailMaxLength || !EmailValidator.IsValid(email))
+        if (email.Length is 0 or > AccountRules.EmailMaxLength || !EmailValidator.IsValid(email))
         {
             problem = AuthProblemFactory.InvalidEmailProblem(
-                $"email is required, must be a valid address and at most {AuthLimits.EmailMaxLength} characters.");
+                $"email is required, must be a valid address and at most {AccountRules.EmailMaxLength} characters.");
             return false;
         }
 
         var password = request.Password ?? string.Empty;
-        if (password.Length < AuthLimits.PasswordMinLength
-            || password.Length > AuthLimits.PasswordMaxLength
+        if (password.Length < AccountRules.PasswordMinLength
+            || password.Length > AccountRules.PasswordMaxLength
             || !password.Any(char.IsLetter)
             || !password.Any(char.IsDigit))
         {
@@ -36,10 +36,10 @@ public static class RegistrationValidator
         }
 
         var displayName = request.DisplayName?.Trim() ?? string.Empty;
-        if (displayName.Length is 0 or > AuthLimits.DisplayNameMaxLength)
+        if (displayName.Length is 0 or > AccountRules.DisplayNameMaxLength)
         {
             problem = AuthProblemFactory.InvalidDisplayNameProblem(
-                $"display_name is required and must contain at most {AuthLimits.DisplayNameMaxLength} characters.");
+                $"display_name is required and must contain at most {AccountRules.DisplayNameMaxLength} characters.");
             return false;
         }
 

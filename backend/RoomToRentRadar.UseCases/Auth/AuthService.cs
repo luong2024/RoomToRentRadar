@@ -35,11 +35,14 @@ public sealed class AuthService(
             return BeginRegistrationResult.DuplicateEmail();
         }
 
+        var now = DateTime.UtcNow;
+        await registrationChallengeRepository.RemoveByEmailAsync(email, cancellationToken);
+        await registrationChallengeRepository.RemoveExpiredAsync(now, cancellationToken);
+
         var (passwordHash, passwordSalt) = passwordHasher.Hash(command.Password);
         var code = otpGenerator.Generate();
         var (otpHash, otpSalt) = passwordHasher.Hash(code);
 
-        var now = DateTime.UtcNow;
         var challenge = new RegistrationChallenge
         {
             Id = Guid.NewGuid(),
@@ -103,17 +106,19 @@ public sealed class AuthService(
 
         if (!passwordHasher.Verify(command.Code, challenge.OtpHash, challenge.OtpSalt))
         {
-            challenge.AttemptCount++;
-            var attemptsRemaining = AccountRules.OtpMaxAttempts - challenge.AttemptCount;
-            if (attemptsRemaining <= 0)
+            var attemptCount = await registrationChallengeRepository.TryConsumeAttemptAsync(
+                challenge.Id,
+                AccountRules.OtpMaxAttempts,
+                cancellationToken);
+
+            if (attemptCount is null or >= AccountRules.OtpMaxAttempts)
             {
                 registrationChallengeRepository.Remove(challenge);
                 await unitOfWork.SaveChangesAsync(cancellationToken);
                 return VerifyRegistrationResult.AttemptsExceeded();
             }
 
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-            return VerifyRegistrationResult.InvalidCode(attemptsRemaining);
+            return VerifyRegistrationResult.InvalidCode(AccountRules.OtpMaxAttempts - attemptCount.Value);
         }
 
         var user = new User
@@ -130,6 +135,9 @@ public sealed class AuthService(
         await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
         if (!await userRepository.TryAddAsync(user, cancellationToken))
         {
+            registrationChallengeRepository.Remove(challenge);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
             return VerifyRegistrationResult.DuplicateEmail();
         }
 

@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using RoomToRentRadar.Domain.Entities;
-using RoomToRentRadar.Ports.Models.Auth;
+using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.SqliteDataAccess.Converters;
 
 namespace RoomToRentRadar.SqliteDataAccess.Configurations;
@@ -20,17 +20,17 @@ public sealed class RegistrationChallengeConfiguration
 
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasColumnName("id");
-        builder.Property(x => x.Email).HasColumnName("email").HasMaxLength(AuthLimits.EmailMaxLength).IsRequired();
-        builder.Property(x => x.DisplayName).HasColumnName("display_name").HasMaxLength(AuthLimits.DisplayNameMaxLength).IsRequired();
-        builder.Property(x => x.PasswordHash).HasColumnName("password_hash").HasMaxLength(AuthLimits.PasswordHashMaxLength).IsRequired();
-        builder.Property(x => x.PasswordSalt).HasColumnName("password_salt").HasMaxLength(AuthLimits.PasswordSaltMaxLength).IsRequired();
+        builder.Property(x => x.Email).HasColumnName("email").HasMaxLength(AccountRules.EmailMaxLength).IsRequired();
+        builder.Property(x => x.DisplayName).HasColumnName("display_name").HasMaxLength(AccountRules.DisplayNameMaxLength).IsRequired();
+        builder.Property(x => x.PasswordHash).HasColumnName("password_hash").HasMaxLength(AccountRules.PasswordHashMaxLength).IsRequired();
+        builder.Property(x => x.PasswordSalt).HasColumnName("password_salt").HasMaxLength(AccountRules.PasswordSaltMaxLength).IsRequired();
         builder.Property(x => x.Role)
             .HasColumnName("role")
             .HasMaxLength(20)
             .HasConversion<UserRoleConverter>()
             .IsRequired();
-        builder.Property(x => x.OtpHash).HasColumnName("otp_hash").HasMaxLength(AuthLimits.OtpHashMaxLength).IsRequired();
-        builder.Property(x => x.OtpSalt).HasColumnName("otp_salt").HasMaxLength(AuthLimits.OtpSaltMaxLength).IsRequired();
+        builder.Property(x => x.OtpHash).HasColumnName("otp_hash").HasMaxLength(AccountRules.OtpHashMaxLength).IsRequired();
+        builder.Property(x => x.OtpSalt).HasColumnName("otp_salt").HasMaxLength(AccountRules.OtpSaltMaxLength).IsRequired();
         builder.Property(x => x.AttemptCount).HasColumnName("attempt_count");
         builder.Property(x => x.ExpiresAt).HasColumnName("expires_at");
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
