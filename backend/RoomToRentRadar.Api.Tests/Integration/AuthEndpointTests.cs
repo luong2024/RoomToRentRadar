@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
@@ -19,6 +19,8 @@ namespace RoomToRentRadar.Api.Tests.Integration;
 [TestFixture]
 public sealed class AuthEndpointTests
 {
+    private const string InvalidCode = "000000";
+
     private ListingsApiFactory _factory = null!;
     private HttpClient _client = null!;
 
@@ -177,7 +179,7 @@ public sealed class AuthEndpointTests
     {
         var response = await LoginAsync(
             TestUsersSeed.Email,
-            new string('a', AuthLimits.PasswordMaxLength + 1));
+            new string('a', AccountRules.PasswordMaxLength + 1));
 
         await AssertProblemAsync(response, HttpStatusCode.BadRequest, "invalid_login_request");
     }
@@ -186,54 +188,75 @@ public sealed class AuthEndpointTests
     public async Task Login_EmailTooLong_ReturnsBadRequestProblem()
     {
         var response = await LoginAsync(
-            new string('a', AuthLimits.EmailMaxLength + 1),
+            new string('a', AccountRules.EmailMaxLength + 1),
             TestUsersSeed.Password);
 
         await AssertProblemAsync(response, HttpStatusCode.BadRequest, "invalid_login_request");
     }
 
     [Test]
-    public async Task Register_Student_ReturnsCreatedAndLoginReturnsStudentRole()
+    public async Task Register_Student_SendsOtpAndVerificationCreatesTheAccount()
     {
-        var response = await RegisterAsync("New.Student@Example.test", "Password1", "New Student", "student");
+        var challenge = await BeginRegistrationAsync(
+            "New.Student@Example.test",
+            "Password1",
+            "New Student",
+            "student");
 
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
-
-        var registered = await response.Content.ReadFromJsonAsync<RegisterResponse>(ApiJson.Options);
         Assert.Multiple(() =>
         {
-            Assert.That(registered, Is.Not.Null);
-            Assert.That(registered!.UserId, Is.Not.EqualTo(Guid.Empty));
-            Assert.That(registered.Email, Is.EqualTo("new.student@example.test"));
-            Assert.That(registered.DisplayName, Is.EqualTo("New Student"));
-            Assert.That(registered.Role, Is.EqualTo("student"));
+            Assert.That(challenge.ChallengeId, Is.Not.EqualTo(Guid.Empty));
+            Assert.That(challenge.Email, Is.EqualTo("new.student@example.test"));
+            Assert.That(challenge.ExpiresAt, Is.GreaterThan(DateTime.UtcNow));
+            Assert.That(_factory.EmailSink.Sent, Has.Count.EqualTo(1));
         });
 
-        var login = await LoginAndReadAsync("NEW.STUDENT@EXAMPLE.TEST", "Password1");
-        Assert.That(login.Role, Is.EqualTo("student"));
+        var email = _factory.EmailSink.Sent[0];
+        Assert.Multiple(() =>
+        {
+            Assert.That(email.ToEmail, Is.EqualTo("new.student@example.test"));
+            Assert.That(email.DisplayName, Is.EqualTo("New Student"));
+            Assert.That(email.Code, Has.Length.EqualTo(AccountRules.OtpLength));
+            Assert.That(email.Code.All(char.IsAsciiDigit), Is.True);
+        });
+
+        var login = await VerifyAndReadAsync(challenge.ChallengeId);
+        Assert.Multiple(() =>
+        {
+            Assert.That(login.AccessToken, Is.Not.Empty);
+            Assert.That(login.Role, Is.EqualTo(UserRoleWire.Student));
+            Assert.That(login.DisplayName, Is.EqualTo("New Student"));
+        });
+
+        var laterLogin = await LoginAndReadAsync("NEW.STUDENT@EXAMPLE.TEST", "Password1");
+        Assert.That(laterLogin.Role, Is.EqualTo(UserRoleWire.Student));
     }
 
     [Test]
-    public async Task Register_Landlord_ReturnsLandlordRoleOnLogin()
+    public async Task Register_Landlord_VerificationReturnsLandlordRole()
     {
-        var response = await RegisterAsync("landlord@example.test", "Password1", "Landlord One", "landlord");
+        var challenge = await BeginRegistrationAsync(
+            "landlord.otp@example.test",
+            "Password1",
+            "Landlord One",
+            "landlord");
 
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+        var login = await VerifyAndReadAsync(challenge.ChallengeId);
 
-        var login = await LoginAndReadAsync("landlord@example.test", "Password1");
-        Assert.That(login.Role, Is.EqualTo("landlord"));
+        Assert.That(login.Role, Is.EqualTo(UserRoleWire.Landlord));
     }
 
     [Test]
-    public async Task Register_DuplicateEmail_IsCaseInsensitive()
+    public async Task Register_DuplicateEmail_IsCaseInsensitiveAndSendsNoEmail()
     {
-        var response = await RegisterAsync(
+        var response = await PostRegisterAsync(
             TestUsersSeed.Email.ToUpperInvariant(),
             "Password1",
             "Duplicate User",
             "student");
 
         await AssertProblemAsync(response, HttpStatusCode.Conflict, "email_already_registered");
+        Assert.That(_factory.EmailSink.Sent, Is.Empty);
     }
 
     [TestCase("Short1")]
@@ -241,7 +264,7 @@ public sealed class AuthEndpointTests
     [TestCase("12345678")]
     public async Task Register_WeakPassword_ReturnsBadRequestProblem(string password)
     {
-        var response = await RegisterAsync("weak@example.test", password, "Weak User", "student");
+        var response = await PostRegisterAsync("weak@example.test", password, "Weak User", "student");
 
         await AssertProblemAsync(response, HttpStatusCode.BadRequest, "weak_password");
     }
@@ -250,28 +273,306 @@ public sealed class AuthEndpointTests
     [TestCase("moderator")]
     public async Task Register_NonSelfServiceRole_ReturnsBadRequestProblem(string role)
     {
-        var response = await RegisterAsync("admin@example.test", "Password1", "Admin User", role);
+        var response = await PostRegisterAsync("admin@example.test", "Password1", "Admin User", role);
 
         await AssertProblemAsync(response, HttpStatusCode.BadRequest, "invalid_role");
     }
 
     [Test]
-    public async Task Register_StoresHashedPassword()
+    public async Task Register_DoesNotCreateUserBeforeVerification()
     {
-        const string password = "Password1";
-        var response = await RegisterAsync("hashed@example.test", password, "Hashed User", "student");
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+        await BeginRegistrationAsync("pending@example.test", "Password1", "Pending User", "student");
 
         await using var scope = _factory.Services.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var user = await dbContext.Users.SingleAsync(candidate => candidate.Email == "hashed@example.test");
 
         Assert.Multiple(() =>
         {
-            Assert.That(user.PasswordHash, Is.Not.EqualTo(password));
-            Assert.That(user.PasswordSalt, Is.Not.Empty);
-            Assert.That(new PasswordHasher().Verify(password, user.PasswordHash, user.PasswordSalt), Is.True);
+            Assert.That(
+                dbContext.Users.Any(user => user.Email == "pending@example.test"),
+                Is.False);
+            Assert.That(dbContext.RegistrationChallenges.Count(), Is.EqualTo(1));
         });
+    }
+
+    [Test]
+    public async Task Register_StoresHashedSecretsWithATenMinuteLifetime()
+    {
+        var challenge = await BeginRegistrationAsync(
+            "hashed.challenge@example.test",
+            "Password1",
+            "Hashed User",
+            "student");
+        var code = _factory.EmailSink.Sent[0].Code;
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var stored = await dbContext.RegistrationChallenges
+            .SingleAsync(candidate => candidate.Id == challenge.ChallengeId);
+        var hasher = new PasswordHasher();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(stored.PasswordHash, Is.Not.EqualTo("Password1"));
+            Assert.That(hasher.Verify("Password1", stored.PasswordHash, stored.PasswordSalt), Is.True);
+            Assert.That(stored.OtpHash, Is.Not.EqualTo(code));
+            Assert.That(hasher.Verify(code, stored.OtpHash, stored.OtpSalt), Is.True);
+            Assert.That(stored.AttemptCount, Is.Zero);
+            Assert.That(
+                stored.ExpiresAt - stored.CreatedAt,
+                Is.EqualTo(TimeSpan.FromMinutes(AccountRules.OtpLifetimeMinutes)));
+        });
+    }
+
+    [Test]
+    public async Task Register_AgainForTheSameEmail_ReplacesThePreviousChallenge()
+    {
+        var first = await BeginRegistrationAsync(
+            "resend@example.test",
+            "Password1",
+            "Resend User",
+            "student");
+        var second = await BeginRegistrationAsync(
+            "RESEND@example.test",
+            "Password1",
+            "Resend User",
+            "student");
+
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var stored = await dbContext.RegistrationChallenges
+                .Where(challenge => challenge.Email == "resend@example.test")
+                .ToListAsync();
+            Assert.Multiple(() =>
+            {
+                Assert.That(stored, Has.Count.EqualTo(1));
+                Assert.That(stored[0].Id, Is.EqualTo(second.ChallengeId));
+            });
+        }
+
+        var replay = await VerifyAsync(first.ChallengeId, _factory.EmailSink.Sent[0].Code);
+        await AssertProblemAsync(replay, HttpStatusCode.BadRequest, "invalid_otp_challenge");
+
+        var login = await VerifyAndReadAsync(second.ChallengeId);
+        Assert.That(login.Role, Is.EqualTo(UserRoleWire.Student));
+    }
+
+    [Test]
+    public async Task Register_WhenEmailDeliveryFails_Returns502AndDropsTheChallenge()
+    {
+        _factory.EmailSink.FailSends = true;
+
+        var response = await PostRegisterAsync(
+            "delivery.failed@example.test",
+            "Password1",
+            "Delivery Failed",
+            "student");
+
+        await AssertProblemAsync(response, HttpStatusCode.BadGateway, "email_delivery_failed");
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.That(
+            dbContext.RegistrationChallenges.Any(
+                challenge => challenge.Email == "delivery.failed@example.test"),
+            Is.False);
+    }
+
+    [Test]
+    public async Task Verify_WithCorrectCode_CreatesHashedUserSessionAndDeletesChallenge()
+    {
+        var challenge = await BeginRegistrationAsync(
+            "verified@example.test",
+            "Password1",
+            "Verified User",
+            "student");
+
+        var login = await VerifyAndReadAsync(challenge.ChallengeId);
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var user = await dbContext.Users.SingleAsync(candidate => candidate.Email == "verified@example.test");
+        var sessionCount = await dbContext.AuthSessions.CountAsync(session => session.UserId == user.Id);
+        var challengeCount = await dbContext.RegistrationChallenges.CountAsync();
+        var hasher = new PasswordHasher();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(user.PasswordHash, Is.Not.EqualTo("Password1"));
+            Assert.That(hasher.Verify("Password1", user.PasswordHash, user.PasswordSalt), Is.True);
+            Assert.That(user.Role, Is.EqualTo(UserRole.Student));
+            Assert.That(sessionCount, Is.EqualTo(1));
+            Assert.That(challengeCount, Is.Zero);
+        });
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/favourites");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
+        var protectedResponse = await _client.SendAsync(request);
+        Assert.That(protectedResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+    }
+
+    [Test]
+    public async Task Verify_InvalidCode_ReturnsAttemptsRemainingAndKeepsTheChallengeUsable()
+    {
+        var challenge = await BeginRegistrationAsync(
+            "attempts@example.test",
+            "Password1",
+            "Attempts User",
+            "student");
+
+        var response = await VerifyAsync(challenge.ChallengeId, InvalidCode);
+        await AssertProblemAsync(response, HttpStatusCode.BadRequest, "invalid_otp");
+
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.That(
+            document.RootElement.GetProperty("attempts_remaining").GetInt32(),
+            Is.EqualTo(AccountRules.OtpMaxAttempts - 1));
+
+        var login = await VerifyAndReadAsync(challenge.ChallengeId);
+        Assert.That(login.Role, Is.EqualTo(UserRoleWire.Student));
+    }
+
+    [Test]
+    public async Task Verify_FifthWrongCode_Returns429AndDropsTheChallenge()
+    {
+        var challenge = await BeginRegistrationAsync(
+            "exhausted@example.test",
+            "Password1",
+            "Exhausted User",
+            "student");
+
+        for (var attempt = 1; attempt < AccountRules.OtpMaxAttempts; attempt++)
+        {
+            var rejected = await VerifyAsync(challenge.ChallengeId, InvalidCode);
+            await AssertProblemAsync(rejected, HttpStatusCode.BadRequest, "invalid_otp");
+        }
+
+        var final = await VerifyAsync(challenge.ChallengeId, InvalidCode);
+        await AssertProblemAsync(final, HttpStatusCode.TooManyRequests, "otp_attempts_exceeded");
+
+        var correctCode = _factory.EmailSink.Sent[0].Code;
+        var afterLockout = await VerifyAsync(challenge.ChallengeId, correctCode);
+        await AssertProblemAsync(afterLockout, HttpStatusCode.BadRequest, "invalid_otp_challenge");
+    }
+
+    [Test]
+    public async Task Verify_CodeIsSingleUse()
+    {
+        var challenge = await BeginRegistrationAsync(
+            "single.use@example.test",
+            "Password1",
+            "Single Use",
+            "student");
+        await VerifyAndReadAsync(challenge.ChallengeId);
+
+        var replay = await VerifyAsync(challenge.ChallengeId, _factory.EmailSink.Sent[0].Code);
+
+        await AssertProblemAsync(replay, HttpStatusCode.BadRequest, "invalid_otp_challenge");
+    }
+
+    [Test]
+    public async Task Verify_ExpiredChallenge_ReturnsBadRequestAndDropsTheChallenge()
+    {
+        var challenge = await BeginRegistrationAsync(
+            "expired@example.test",
+            "Password1",
+            "Expired User",
+            "student");
+        var code = _factory.EmailSink.Sent[0].Code;
+
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var stored = await dbContext.RegistrationChallenges
+                .SingleAsync(candidate => candidate.Id == challenge.ChallengeId);
+            stored.ExpiresAt = DateTime.UtcNow.AddMinutes(-1);
+            await dbContext.SaveChangesAsync();
+        }
+
+        var response = await VerifyAsync(challenge.ChallengeId, code);
+        await AssertProblemAsync(response, HttpStatusCode.BadRequest, "invalid_otp_challenge");
+
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.That(
+            document.RootElement.GetProperty("title").GetString(),
+            Is.EqualTo("Verification code expired"));
+
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            Assert.That(
+                dbContext.RegistrationChallenges.Any(
+                    candidate => candidate.Id == challenge.ChallengeId),
+                Is.False);
+        }
+    }
+
+    [Test]
+    public async Task Verify_UnknownChallenge_ReturnsBadRequestProblem()
+    {
+        var response = await VerifyAsync(Guid.NewGuid(), _factory.OtpCodes.NextCode);
+
+        await AssertProblemAsync(response, HttpStatusCode.BadRequest, "invalid_otp_challenge");
+    }
+
+    [Test]
+    public async Task Verify_EmptyChallengeId_ReturnsBadRequestProblem()
+    {
+        var response = await VerifyAsync(Guid.Empty, _factory.OtpCodes.NextCode);
+
+        await AssertProblemAsync(response, HttpStatusCode.BadRequest, "invalid_otp_request");
+    }
+
+    [TestCase("12345")]
+    [TestCase("1234567")]
+    [TestCase("abcdef")]
+    [TestCase("")]
+    public async Task Verify_MalformedCode_ReturnsBadRequestProblem(string code)
+    {
+        var response = await VerifyAsync(Guid.NewGuid(), code);
+
+        await AssertProblemAsync(response, HttpStatusCode.BadRequest, "invalid_otp_request");
+    }
+
+    [Test]
+    public async Task Verify_WhenEmailWasRegisteredMeanwhile_ReturnsConflictWithoutSession()
+    {
+        var challenge = await BeginRegistrationAsync(
+            "race.verify@example.test",
+            "Password1",
+            "Race Verify",
+            "student");
+        var code = _factory.EmailSink.Sent[0].Code;
+
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var (hash, salt) = new PasswordHasher().Hash("Password1");
+            dbContext.Users.Add(CreateUser("race.verify@example.test", hash, salt));
+            await dbContext.SaveChangesAsync();
+        }
+
+        var response = await VerifyAsync(challenge.ChallengeId, code);
+        await AssertProblemAsync(response, HttpStatusCode.Conflict, "email_already_registered");
+
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            Assert.Multiple(() =>
+            {
+                Assert.That(
+                    dbContext.AuthSessions.Count(),
+                    Is.Zero);
+                Assert.That(
+                    dbContext.Users.Count(user => user.Email == "race.verify@example.test"),
+                    Is.EqualTo(1));
+                Assert.That(
+                    dbContext.RegistrationChallenges.Any(
+                        candidate => candidate.Id == challenge.ChallengeId),
+                    Is.False);
+            });
+        }
     }
 
     [Test]
@@ -313,6 +614,20 @@ public sealed class AuthEndpointTests
         using var content = new StringContent("null", Encoding.UTF8, "application/json");
 
         var response = await _client.PostAsync("/api/v1/auth/register", content);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
+        });
+    }
+
+    [Test]
+    public async Task Verify_WithNullBody_ReturnsBadRequestProblem()
+    {
+        using var content = new StringContent("null", Encoding.UTF8, "application/json");
+
+        var response = await _client.PostAsync("/api/v1/auth/register/verify", content);
 
         Assert.Multiple(() =>
         {
@@ -393,24 +708,51 @@ public sealed class AuthEndpointTests
         return JsonDocument.Parse(Convert.FromBase64String(base64));
     }
 
-    private async Task<HttpResponseMessage> RegisterAsync(
+    private async Task<RegisterChallengeResponse> BeginRegistrationAsync(
         string email,
         string password,
         string displayName,
         string role)
-        => await _client.PostAsJsonAsync(
+    {
+        var response = await PostRegisterAsync(email, password, displayName, role);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
+
+        var challenge = await response.Content.ReadFromJsonAsync<RegisterChallengeResponse>(ApiJson.Options);
+        Assert.That(challenge, Is.Not.Null);
+        return challenge!;
+    }
+
+    private Task<HttpResponseMessage> PostRegisterAsync(
+        string email,
+        string password,
+        string displayName,
+        string role)
+        => _client.PostAsJsonAsync(
             "/api/v1/auth/register",
             new RegisterRequest(email, password, displayName, role),
             ApiJson.Options);
 
-    private async Task<HttpResponseMessage> LoginAsync(string email, string password)
+    private Task<HttpResponseMessage> VerifyAsync(Guid challengeId, string code)
+        => _client.PostAsJsonAsync(
+            "/api/v1/auth/register/verify",
+            new VerifyRegistrationRequest(challengeId, code),
+            ApiJson.Options);
+
+    private async Task<LoginResponse> VerifyAndReadAsync(Guid challengeId)
     {
-        var response = await _client.PostAsJsonAsync(
+        var response = await VerifyAsync(challengeId, _factory.EmailSink.Sent[^1].Code);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        var login = await response.Content.ReadFromJsonAsync<LoginResponse>(ApiJson.Options);
+        Assert.That(login, Is.Not.Null);
+        return login!;
+    }
+
+    private async Task<HttpResponseMessage> LoginAsync(string email, string password)
+        => await _client.PostAsJsonAsync(
             "/api/v1/auth/login",
             new LoginRequest(email, password),
             ApiJson.Options);
-        return response;
-    }
 
     private async Task<LoginResponse> LoginAndReadAsync()
         => await LoginAndReadAsync(TestUsersSeed.Email, TestUsersSeed.Password);

@@ -31,13 +31,30 @@ public sealed class ShellNavigationService : INavigationService
         return GoToRegisterAsync();
     }
 
+    public Task GoToOtpVerificationAsync(Guid challengeId, string email)
+        => GetShell().GoToAsync(
+            $"{AppRoutes.OtpVerification}?challenge_id={challengeId}&email={Uri.EscapeDataString(email)}");
+
     public Task GoToRoleRootAsync(AppUserRole? role)
-        => MainThread.InvokeOnMainThreadAsync(() => GetShell().GoToAsync(role switch
+        => MainThread.InvokeOnMainThreadAsync(async () =>
         {
-            AppUserRole.Landlord => $"//{AppRoutes.MyListings}",
-            AppUserRole.Moderator or AppUserRole.Admin => $"//{AppRoutes.Moderation}",
-            _ => $"//{AppRoutes.Home}"
-        }));
+            var shell = GetShell();
+
+            // Auth pages are pushed on top of the tab that opened them; drop them so
+            // returning to that tab shows its root instead of the sign-in pipeline.
+            var sectionNavigation = shell.CurrentItem?.CurrentItem?.Navigation;
+            if (sectionNavigation is { } navigation && navigation.NavigationStack.Count > 1)
+            {
+                await navigation.PopToRootAsync(animated: false);
+            }
+
+            await shell.GoToAsync(role switch
+            {
+                AppUserRole.Landlord => $"//{AppRoutes.MyListings}",
+                AppUserRole.Moderator or AppUserRole.Admin => $"//{AppRoutes.Moderation}",
+                _ => $"//{AppRoutes.Home}"
+            });
+        });
 
     public Task GoToListingEditorAsync(Guid? listingId = null)
         => GetShell().GoToAsync(listingId is { } id

@@ -10,50 +10,143 @@ namespace RoomToRentRadar.UseCases.Auth;
 public sealed class AuthService(
     IUserRepository userRepository,
     IAuthSessionRepository authSessionRepository,
+    IRegistrationChallengeRepository registrationChallengeRepository,
     IPasswordHasher passwordHasher,
     ITokenGenerator tokenGenerator,
+    IOtpGenerator otpGenerator,
+    IEmailSender emailSender,
     IUnitOfWork unitOfWork) : IAuthUseCase
 {
     private static readonly TimeSpan SessionLifetime = TimeSpan.FromDays(7);
 
-    public async Task<RegisterUserResult> RegisterAsync(
-        RegisterUserCommand command,
+    public async Task<BeginRegistrationResult> BeginRegistrationAsync(
+        BeginRegistrationCommand command,
         CancellationToken cancellationToken)
     {
         if (!UserRoleWire.IsSelfService(command.Role))
         {
-            return RegisterUserResult.RoleNotAllowed();
+            return BeginRegistrationResult.RoleNotAllowed();
         }
 
         var email = User.NormalizeEmail(command.Email);
         var existing = await userRepository.FindByEmailAsync(email, cancellationToken);
         if (existing is not null)
         {
-            return RegisterUserResult.DuplicateEmail();
+            return BeginRegistrationResult.DuplicateEmail();
         }
 
-        var (hash, salt) = passwordHasher.Hash(command.Password);
-        var user = new User
+        var now = DateTime.UtcNow;
+        await registrationChallengeRepository.RemoveByEmailAsync(email, cancellationToken);
+        await registrationChallengeRepository.RemoveExpiredAsync(now, cancellationToken);
+
+        var (passwordHash, passwordSalt) = passwordHasher.Hash(command.Password);
+        var code = otpGenerator.Generate();
+        var (otpHash, otpSalt) = passwordHasher.Hash(code);
+
+        var challenge = new RegistrationChallenge
         {
             Id = Guid.NewGuid(),
             Email = email,
             DisplayName = command.DisplayName,
-            PasswordHash = hash,
-            PasswordSalt = salt,
+            PasswordHash = passwordHash,
+            PasswordSalt = passwordSalt,
             Role = command.Role,
-            CreatedAt = DateTime.UtcNow
+            OtpHash = otpHash,
+            OtpSalt = otpSalt,
+            AttemptCount = 0,
+            ExpiresAt = now.AddMinutes(AccountRules.OtpLifetimeMinutes),
+            CreatedAt = now
         };
 
-        if (!await userRepository.TryAddAsync(user, cancellationToken))
+        await registrationChallengeRepository.AddAsync(challenge, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var delivered = await emailSender.SendRegistrationOtpAsync(
+            new RegistrationOtpEmail(email, command.DisplayName, code, challenge.ExpiresAt),
+            cancellationToken);
+        if (!delivered)
         {
-            return RegisterUserResult.DuplicateEmail();
+            registrationChallengeRepository.Remove(challenge);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+            return BeginRegistrationResult.EmailDeliveryFailed();
         }
 
-        return RegisterUserResult.Created(new RegisterResponse(
-            user.Id,
-            user.Email,
-            user.DisplayName,
-            UserRoleWire.ToWireValue(user.Role)));
+        return BeginRegistrationResult.ChallengeCreated(new RegisterChallengeResponse(
+            challenge.Id,
+            challenge.Email,
+            challenge.ExpiresAt));
+    }
+
+    public async Task<VerifyRegistrationResult> VerifyRegistrationAsync(
+        VerifyRegistrationCommand command,
+        CancellationToken cancellationToken)
+    {
+        var challenge = await registrationChallengeRepository.FindByIdAsync(
+            command.ChallengeId,
+            cancellationToken);
+        if (challenge is null)
+        {
+            return VerifyRegistrationResult.ChallengeNotFound();
+        }
+
+        var now = DateTime.UtcNow;
+        if (challenge.ExpiresAt <= now)
+        {
+            registrationChallengeRepository.Remove(challenge);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+            return VerifyRegistrationResult.ChallengeExpired();
+        }
+
+        if (challenge.AttemptCount >= AccountRules.OtpMaxAttempts)
+        {
+            registrationChallengeRepository.Remove(challenge);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+            return VerifyRegistrationResult.AttemptsExceeded();
+        }
+
+        if (!passwordHasher.Verify(command.Code, challenge.OtpHash, challenge.OtpSalt))
+        {
+            var attemptCount = await registrationChallengeRepository.TryConsumeAttemptAsync(
+                challenge.Id,
+                AccountRules.OtpMaxAttempts,
+                cancellationToken);
+
+            if (attemptCount is null or >= AccountRules.OtpMaxAttempts)
+            {
+                registrationChallengeRepository.Remove(challenge);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
+                return VerifyRegistrationResult.AttemptsExceeded();
+            }
+
+            return VerifyRegistrationResult.InvalidCode(AccountRules.OtpMaxAttempts - attemptCount.Value);
+        }
+
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = challenge.Email,
+            DisplayName = challenge.DisplayName,
+            PasswordHash = challenge.PasswordHash,
+            PasswordSalt = challenge.PasswordSalt,
+            Role = challenge.Role,
+            CreatedAt = now
+        };
+
+        await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
+        if (!await userRepository.TryAddAsync(user, cancellationToken))
+        {
+            registrationChallengeRepository.Remove(challenge);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return VerifyRegistrationResult.DuplicateEmail();
+        }
+
+        var response = await CreateSessionAsync(user, cancellationToken);
+        registrationChallengeRepository.Remove(challenge);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+
+        return VerifyRegistrationResult.Verified(response);
     }
 
     public async Task<LoginResponse?> LoginAsync(
@@ -76,29 +169,9 @@ public sealed class AuthService(
             return null;
         }
 
-        var now = DateTime.UtcNow;
-        var expiresAt = now.Add(SessionLifetime);
-        var (token, tokenHash) = tokenGenerator.Create(
-            new AuthTokenSubject(user.Id, user.Email, user.DisplayName, user.Role),
-            expiresAt);
-
-        await authSessionRepository.AddAsync(
-            new AuthSession
-            {
-                Id = Guid.NewGuid(),
-                UserId = user.Id,
-                TokenHash = tokenHash,
-                ExpiresAt = expiresAt,
-                CreatedAt = now
-            },
-            cancellationToken);
+        var response = await CreateSessionAsync(user, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return new LoginResponse(
-            token,
-            expiresAt,
-            user.DisplayName,
-            UserRoleWire.ToWireValue(user.Role));
+        return response;
     }
 
     public Task<User?> AuthenticateAsync(string token, CancellationToken cancellationToken)
@@ -119,5 +192,31 @@ public sealed class AuthService(
 
         authSessionRepository.Remove(session);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task<LoginResponse> CreateSessionAsync(User user, CancellationToken cancellationToken)
+    {
+        var now = DateTime.UtcNow;
+        var expiresAt = now.Add(SessionLifetime);
+        var (token, tokenHash) = tokenGenerator.Create(
+            new AuthTokenSubject(user.Id, user.Email, user.DisplayName, user.Role),
+            expiresAt);
+
+        await authSessionRepository.AddAsync(
+            new AuthSession
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                TokenHash = tokenHash,
+                ExpiresAt = expiresAt,
+                CreatedAt = now
+            },
+            cancellationToken);
+
+        return new LoginResponse(
+            token,
+            expiresAt,
+            user.DisplayName,
+            UserRoleWire.ToWireValue(user.Role));
     }
 }

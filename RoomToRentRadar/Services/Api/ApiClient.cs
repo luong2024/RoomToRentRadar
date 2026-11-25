@@ -134,7 +134,7 @@ public sealed class ApiClient(HttpClient httpClient) : IApiClient
         return login ?? throw new InvalidOperationException("The login endpoint returned an empty response.");
     }
 
-    public async Task<RegisterResponse> RegisterAsync(
+    public async Task<RegisterChallengeResponse> BeginRegistrationAsync(
         RegisterRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -149,11 +149,34 @@ public sealed class ApiClient(HttpClient httpClient) : IApiClient
             throw await CreateApiExceptionAsync(response, cancellationToken);
         }
 
-        var registered = await response.Content.ReadFromJsonAsync<RegisterResponse>(
+        var challenge = await response.Content.ReadFromJsonAsync<RegisterChallengeResponse>(
             ApiJson.Options,
             cancellationToken);
 
-        return registered ?? throw new InvalidOperationException("The register endpoint returned an empty response.");
+        return challenge ?? throw new InvalidOperationException("The register endpoint returned an empty response.");
+    }
+
+    public async Task<LoginResponse> VerifyRegistrationAsync(
+        VerifyRegistrationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PostAsJsonAsync(
+            "api/v1/auth/register/verify",
+            request,
+            ApiJson.Options,
+            cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw await CreateApiExceptionAsync(response, cancellationToken);
+        }
+
+        var login = await response.Content.ReadFromJsonAsync<LoginResponse>(
+            ApiJson.Options,
+            cancellationToken);
+
+        return login ?? throw new InvalidOperationException(
+            "The registration verification endpoint returned an empty response.");
     }
 
     public async Task<LoginResponse?> DemoLoginAsync(CancellationToken cancellationToken = default)
@@ -315,6 +338,7 @@ public sealed class ApiClient(HttpClient httpClient) : IApiClient
         string? title = null;
         string? detail = null;
         string? code = null;
+        int? attemptsRemaining = null;
 
         try
         {
@@ -326,6 +350,12 @@ public sealed class ApiClient(HttpClient httpClient) : IApiClient
                 title = ReadString(root, "title");
                 detail = ReadString(root, "detail");
                 code = ReadString(root, "code");
+                if (root.TryGetProperty("attempts_remaining", out var attempts)
+                    && attempts.ValueKind == JsonValueKind.Number
+                    && attempts.TryGetInt32(out var value))
+                {
+                    attemptsRemaining = value;
+                }
             }
         }
         catch (JsonException)
@@ -335,7 +365,8 @@ public sealed class ApiClient(HttpClient httpClient) : IApiClient
         return new ApiException(
             response.StatusCode,
             detail ?? title ?? $"The API returned status {(int)response.StatusCode}.",
-            code);
+            code,
+            attemptsRemaining);
     }
 
     private static string? ReadString(JsonElement element, string propertyName)

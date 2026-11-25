@@ -17,23 +17,37 @@ public static class AuthRateLimitingExtensions
         services.AddRateLimiter(rateLimiter =>
         {
             rateLimiter.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-            rateLimiter.AddPolicy(AuthRateLimitPolicy.Name, context =>
-            {
-                var authOptions = context.RequestServices
-                    .GetRequiredService<IOptions<AuthOptions>>()
-                    .Value;
-                return RateLimitPartition.GetFixedWindowLimiter(
-                    context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                    _ => new FixedWindowRateLimiterOptions
-                    {
-                        PermitLimit = Math.Max(1, authOptions.RateLimitPerMinute),
-                        Window = TimeSpan.FromMinutes(1),
-                        QueueLimit = 0
-                    });
-            });
+            rateLimiter.AddPolicy(
+                AuthRateLimitPolicy.Name,
+                context => CreateIpPartition(
+                    context,
+                    context.RequestServices
+                        .GetRequiredService<IOptions<AuthOptions>>()
+                        .Value
+                        .RateLimitPerMinute));
+            rateLimiter.AddPolicy(
+                AuthRateLimitPolicy.VerifyName,
+                context => CreateIpPartition(
+                    context,
+                    context.RequestServices
+                        .GetRequiredService<IOptions<AuthOptions>>()
+                        .Value
+                        .VerifyRateLimitPerMinute));
             rateLimiter.OnRejected = RateLimitResponseWriter.WriteRejectionAsync;
         });
 
         return services;
     }
+
+    private static RateLimitPartition<string> CreateIpPartition(
+        HttpContext context,
+        int permitsPerMinute)
+        => RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = Math.Max(1, permitsPerMinute),
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            });
 }

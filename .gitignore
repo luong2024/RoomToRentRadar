@@ -59,6 +59,9 @@ logs/
 *.dmp
 **/App_Data/
 
+# Local development email outbox (contains OTP messages)
+/backend/RoomToRentRadar.Api/outbox/
+
 # OS/editor files
 .DS_Store
 Thumbs.db

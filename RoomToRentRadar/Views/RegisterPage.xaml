@@ -201,10 +201,10 @@
                         <buttons:SfButton Text="Đăng ký" Command="{Binding RegisterCommand}" IsEnabled="{Binding IsNotBusy}"
                                           AutomationId="RegisterSubmit" HorizontalOptions="Fill" Padding="40,0"
                                           SemanticProperties.Description="Đăng ký tài khoản"
-                                          SemanticProperties.Hint="Tạo tài khoản và tự động đăng nhập">
+                                          SemanticProperties.Hint="Tạo tài khoản và nhận mã xác nhận qua email">
                             <buttons:SfButton.Triggers>
                                 <DataTrigger TargetType="buttons:SfButton" Binding="{Binding IsBusy}" Value="True">
-                                    <Setter Property="Text" Value="Đang tạo tài khoản…" />
+                                    <Setter Property="Text" Value="Đang gửi mã…" />
                                 </DataTrigger>
                             </buttons:SfButton.Triggers>
                         </buttons:SfButton>
