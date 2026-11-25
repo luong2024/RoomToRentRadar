@@ -47,6 +47,14 @@
         Route="room-detail"
         SemanticProperties.Description="Chi tiết phòng trọ"
         SemanticProperties.Hint="Xem thông tin chi tiết phòng trọ, tiện ích, nội quy và liên hệ chủ trọ"/>
+
+    <ShellContent
+        Title="Đăng tin trọ"
+        Icon="{StaticResource IconAdd}"
+        ContentTemplate="{DataTemplate pages:CreateListingPage}"
+        Route="create-listing"
+        SemanticProperties.Description="Đăng tin phòng trọ"
+        SemanticProperties.Hint="Đăng tin phòng trọ mới kèm ảnh thực tế chờ kiểm duyệt"/>
     <ShellContent
         Title="Dashboard"
         Icon="{StaticResource IconDashboard}"
