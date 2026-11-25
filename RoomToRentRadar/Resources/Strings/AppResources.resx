@@ -953,4 +953,59 @@
   <data name="Campus_Empty_Message" xml:space="preserve">
     <value>Please try again later.</value>
   </data>
+  <!-- Explore list SCR-HOME-01 and room card (T01.2) -->
+  <data name="Card_PriceMillion" xml:space="preserve">
+    <value>{0}M/mo</value>
+  </data>
+  <data name="Card_PriceThousand" xml:space="preserve">
+    <value>{0}k/mo</value>
+  </data>
+  <data name="Card_Distance" xml:space="preserve">
+    <value>{0} km to {1}</value>
+  </data>
+  <data name="Card_Furnishing_Full" xml:space="preserve">
+    <value>Furnished</value>
+  </data>
+  <data name="Card_Furnishing_Basic" xml:space="preserve">
+    <value>Partly furnished</value>
+  </data>
+  <data name="Card_Furnishing_Unfurnished" xml:space="preserve">
+    <value>Unfurnished</value>
+  </data>
+  <data name="Card_Verified" xml:space="preserve">
+    <value>Verified</value>
+  </data>
+  <data name="Card_Compare" xml:space="preserve">
+    <value>Compare</value>
+  </data>
+  <data name="Card_SaveDescription" xml:space="preserve">
+    <value>Save room: {0}</value>
+  </data>
+  <data name="Explore_Near" xml:space="preserve">
+    <value>Near</value>
+  </data>
+  <data name="Explore_CampusChipDescription" xml:space="preserve">
+    <value>Change campus. Distances are measured from {0}</value>
+  </data>
+  <data name="Explore_NotificationsDescription" xml:space="preserve">
+    <value>Notifications</value>
+  </data>
+  <data name="Explore_NotificationsUnreadDescription" xml:space="preserve">
+    <value>Notifications, unread</value>
+  </data>
+  <data name="Explore_MapDescription" xml:space="preserve">
+    <value>Map view</value>
+  </data>
+  <data name="Explore_SaveSearch" xml:space="preserve">
+    <value>Save search</value>
+  </data>
+  <data name="Explore_CompareCount" xml:space="preserve">
+    <value>Compare ({0})</value>
+  </data>
+  <data name="Explore_CompareNow" xml:space="preserve">
+    <value>Compare now</value>
+  </data>
+  <data name="Explore_LoadMoreError" xml:space="preserve">
+    <value>Couldn't load more rooms.</value>
+  </data>
 </root>

@@ -954,4 +954,59 @@
   <data name="Campus_Empty_Message" xml:space="preserve">
     <value>Vui lòng thử lại sau.</value>
   </data>
+  <!-- Explore list SCR-HOME-01 and room card (T01.2) -->
+  <data name="Card_PriceMillion" xml:space="preserve">
+    <value>{0} tr/tháng</value>
+  </data>
+  <data name="Card_PriceThousand" xml:space="preserve">
+    <value>{0} nghìn/tháng</value>
+  </data>
+  <data name="Card_Distance" xml:space="preserve">
+    <value>{0} km tới {1}</value>
+  </data>
+  <data name="Card_Furnishing_Full" xml:space="preserve">
+    <value>Có nội thất</value>
+  </data>
+  <data name="Card_Furnishing_Basic" xml:space="preserve">
+    <value>Nội thất cơ bản</value>
+  </data>
+  <data name="Card_Furnishing_Unfurnished" xml:space="preserve">
+    <value>Không nội thất</value>
+  </data>
+  <data name="Card_Verified" xml:space="preserve">
+    <value>Đã xác minh</value>
+  </data>
+  <data name="Card_Compare" xml:space="preserve">
+    <value>So sánh</value>
+  </data>
+  <data name="Card_SaveDescription" xml:space="preserve">
+    <value>Lưu phòng: {0}</value>
+  </data>
+  <data name="Explore_Near" xml:space="preserve">
+    <value>Gần</value>
+  </data>
+  <data name="Explore_CampusChipDescription" xml:space="preserve">
+    <value>Đổi cơ sở. Khoảng cách đang tính từ {0}</value>
+  </data>
+  <data name="Explore_NotificationsDescription" xml:space="preserve">
+    <value>Thông báo</value>
+  </data>
+  <data name="Explore_NotificationsUnreadDescription" xml:space="preserve">
+    <value>Thông báo, có tin chưa đọc</value>
+  </data>
+  <data name="Explore_MapDescription" xml:space="preserve">
+    <value>Xem bản đồ</value>
+  </data>
+  <data name="Explore_SaveSearch" xml:space="preserve">
+    <value>Lưu tìm kiếm</value>
+  </data>
+  <data name="Explore_CompareCount" xml:space="preserve">
+    <value>So sánh ({0})</value>
+  </data>
+  <data name="Explore_CompareNow" xml:space="preserve">
+    <value>So sánh ngay</value>
+  </data>
+  <data name="Explore_LoadMoreError" xml:space="preserve">
+    <value>Không tải thêm được phòng.</value>
+  </data>
 </root>
