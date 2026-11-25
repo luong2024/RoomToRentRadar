@@ -19,7 +19,7 @@
                     BindableLayout.ItemsSource="{Binding Chips}">
             <BindableLayout.ItemTemplate>
                 <DataTemplate x:DataType="searchcore:ActiveFilterChipModel">
-                    <Grid HeightRequest="44"
+                    <Grid HeightRequest="48"
                           SemanticProperties.Description="{Binding RemoveAccessibilityLabel}">
                         <Grid.GestureRecognizers>
                             <TapGestureRecognizer
@@ -51,7 +51,7 @@
         </FlexLayout>
 
         <Grid Grid.Column="1"
-              HeightRequest="44"
+              HeightRequest="48"
               Padding="8,0"
               VerticalOptions="Center"
               IsVisible="{Binding HasActiveFilters}"

@@ -138,7 +138,7 @@
                            TextColor="{AppThemeBinding Light={StaticResource StatusDangerLight}, Dark={StaticResource StatusDangerDark}}" />
 
                     <FlexLayout Direction="Row" Wrap="Wrap" AlignItems="Center">
-                        <Grid HeightRequest="44">
+                        <Grid HeightRequest="48">
                             <Grid.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding SelectRentPresetCommand}" CommandParameter="1500000" />
                             </Grid.GestureRecognizers>
@@ -178,7 +178,7 @@
                             </Border>
                         </Grid>
 
-                        <Grid HeightRequest="44">
+                        <Grid HeightRequest="48">
                             <Grid.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding SelectRentPresetCommand}" CommandParameter="2000000" />
                             </Grid.GestureRecognizers>
@@ -218,7 +218,7 @@
                             </Border>
                         </Grid>
 
-                        <Grid HeightRequest="44">
+                        <Grid HeightRequest="48">
                             <Grid.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding SelectRentPresetCommand}" CommandParameter="3000000" />
                             </Grid.GestureRecognizers>
@@ -335,7 +335,7 @@
                            TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
 
                     <FlexLayout Direction="Row" Wrap="Wrap" AlignItems="Center">
-                        <Grid HeightRequest="44">
+                        <Grid HeightRequest="48">
                             <Grid.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding ToggleRoomTypeCommand}" CommandParameter="{x:Static enums:RoomType.BoardingRoom}" />
                             </Grid.GestureRecognizers>
@@ -375,7 +375,7 @@
                             </Border>
                         </Grid>
 
-                        <Grid HeightRequest="44">
+                        <Grid HeightRequest="48">
                             <Grid.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding ToggleRoomTypeCommand}" CommandParameter="{x:Static enums:RoomType.MiniApartment}" />
                             </Grid.GestureRecognizers>
@@ -415,7 +415,7 @@
                             </Border>
                         </Grid>
 
-                        <Grid HeightRequest="44">
+                        <Grid HeightRequest="48">
                             <Grid.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding ToggleRoomTypeCommand}" CommandParameter="{x:Static enums:RoomType.WholeHouse}" />
                             </Grid.GestureRecognizers>
@@ -455,7 +455,7 @@
                             </Border>
                         </Grid>
 
-                        <Grid HeightRequest="44">
+                        <Grid HeightRequest="48">
                             <Grid.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding ToggleRoomTypeCommand}" CommandParameter="{x:Static enums:RoomType.Dormitory}" />
                             </Grid.GestureRecognizers>
@@ -706,7 +706,7 @@
                            FontSize="12"
                            VerticalTextAlignment="Center"
                            TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
-                    <Grid Grid.Column="1" HeightRequest="44" Padding="8,0" SemanticProperties.Description="{Binding RetryText}">
+                    <Grid Grid.Column="1" HeightRequest="48" Padding="8,0" SemanticProperties.Description="{Binding RetryText}">
                         <Grid.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding RetryCountCommand}" />
                         </Grid.GestureRecognizers>
