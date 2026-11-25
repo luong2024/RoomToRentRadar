@@ -92,7 +92,7 @@
                                 FontSize="20"
                                 LineBreakMode="TailTruncation"
                                 MaxLines="1"
-                                Text="{Binding FullName, TargetNullValue='Name not provided'}"
+                                Text="{Binding FullNameDisplay}"
                                 TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
                             <HorizontalStackLayout Spacing="6">
                                 <Label
@@ -237,6 +237,17 @@
                         </VerticalStackLayout>
                     </Border>
                 </VerticalStackLayout>
+
+                <Border
+                    IsVisible="{Binding HasStatusMessage}"
+                    Padding="12"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource AccentTealSoft}, Dark={StaticResource AccentTealSoftDark}}"
+                    StrokeThickness="0">
+                    <Label
+                        FontSize="13"
+                        Text="{Binding StatusMessage}"
+                        TextColor="{AppThemeBinding Light={StaticResource AccentTeal}, Dark={StaticResource AccentTealDark}}" />
+                </Border>
 
                 <Button
                     Background="{StaticResource PrimaryBrandGradient}"
