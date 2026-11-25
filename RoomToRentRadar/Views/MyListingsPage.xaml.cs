@@ -5,6 +5,7 @@ namespace RoomToRentRadar.Views;
 public partial class MyListingsPage : ContentPage
 {
     private readonly MyListingsViewModel _model;
+
     public MyListingsPage(MyListingsViewModel model)
     {
         InitializeComponent();
@@ -14,6 +15,16 @@ public partial class MyListingsPage : ContentPage
     protected override void OnAppearing()
     {
         base.OnAppearing();
-        if (_model.LoadCommand.CanExecute(null)) _model.LoadCommand.Execute(null);
+        _model.AttachAuthSession();
+        if (_model.LoadCommand.CanExecute(null) && !_model.IsBusy)
+        {
+            _model.LoadCommand.Execute(null);
+        }
+    }
+
+    protected override void OnDisappearing()
+    {
+        _model.DetachAuthSession();
+        base.OnDisappearing();
     }
 }

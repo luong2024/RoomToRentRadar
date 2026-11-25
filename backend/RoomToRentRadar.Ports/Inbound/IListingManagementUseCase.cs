@@ -23,7 +23,17 @@ public interface IListingManagementUseCase
         ListingWriteCommand command,
         CancellationToken cancellationToken);
 
+    Task<ListingWriteResult<ManagedListingDto>> PublishAsync(
+        Guid ownerId,
+        Guid listingId,
+        CancellationToken cancellationToken);
+
     Task<ListingWriteResult<ManagedListingDto>> UnpublishAsync(
+        Guid ownerId,
+        Guid listingId,
+        CancellationToken cancellationToken);
+
+    Task<ListingWriteError?> DeleteAsync(
         Guid ownerId,
         Guid listingId,
         CancellationToken cancellationToken);

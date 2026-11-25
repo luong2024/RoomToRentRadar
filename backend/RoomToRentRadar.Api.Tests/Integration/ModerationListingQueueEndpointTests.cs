@@ -120,6 +120,66 @@ public sealed class ModerationListingQueueEndpointTests
     }
 
     [Test]
+    public async Task GetQueue_ReturnsFullRoomDetailsAndCoverOrderedPhotos()
+    {
+        await SetListingAsync(_listingIds[0], ListingStatus.PendingReview, BaseTime.AddHours(3), _memberId);
+        await SetListingAsync(_listingIds[1], ListingStatus.PendingReview, BaseTime.AddHours(1));
+        await SetListingAsync(_listingIds[2], ListingStatus.PendingReview, BaseTime.AddHours(2));
+
+        var response = await GetQueueAsync(await AccessTokenForRoleAsync("moderator"));
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var queue = await response.Content.ReadFromJsonAsync<ModerationListingQueueDto>(ApiJson.Options);
+
+        Assert.That(queue, Is.Not.Null);
+        Assert.That(queue!.Items, Has.Count.EqualTo(3));
+
+        var itemWithoutPhotos = queue.Items[0];
+        var itemWithSortedPhotos = queue.Items[1];
+        var itemWithCoverPhoto = queue.Items[2];
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(itemWithoutPhotos.Id, Is.EqualTo(_listingIds[1]));
+            Assert.That(itemWithoutPhotos.Description, Is.EqualTo("Test listing 1 description"));
+            Assert.That(itemWithoutPhotos.Price, Is.EqualTo(6_000_000L));
+            Assert.That(itemWithoutPhotos.Deposit, Is.EqualTo(6_000_000L));
+            Assert.That(itemWithoutPhotos.AreaM2, Is.EqualTo(35d));
+            Assert.That(itemWithoutPhotos.RoomType, Is.EqualTo((RoomType)1));
+            Assert.That(itemWithoutPhotos.Bedrooms, Is.EqualTo(1));
+            Assert.That(itemWithoutPhotos.Address, Is.EqualTo("Test address 1, District 1"));
+            Assert.That(itemWithoutPhotos.Lat, Is.EqualTo(10.701).Within(1e-9));
+            Assert.That(itemWithoutPhotos.Lng, Is.EqualTo(106.701).Within(1e-9));
+            Assert.That(itemWithoutPhotos.LandlordName, Is.EqualTo("Landlord 1"));
+            Assert.That(itemWithoutPhotos.LandlordPhone, Is.EqualTo("+84 900 000 001"));
+            Assert.That(itemWithoutPhotos.Photos, Is.Not.Null.And.Empty);
+
+            Assert.That(itemWithSortedPhotos.Id, Is.EqualTo(_listingIds[2]));
+            Assert.That(
+                itemWithSortedPhotos.Photos!.Select(photo => photo.Url),
+                Is.EqualTo(new[] { "/media/test/photo-1.jpg", "/media/test/photo-2.jpg" }));
+
+            Assert.That(itemWithCoverPhoto.Id, Is.EqualTo(_listingIds[0]));
+            Assert.That(itemWithCoverPhoto.Description, Is.EqualTo("Test listing 0 description"));
+            Assert.That(itemWithCoverPhoto.Price, Is.EqualTo(5_000_000L));
+            Assert.That(itemWithCoverPhoto.Deposit, Is.EqualTo(5_000_000L));
+            Assert.That(itemWithCoverPhoto.AreaM2, Is.EqualTo(30d));
+            Assert.That(itemWithCoverPhoto.RoomType, Is.EqualTo(RoomType.SingleRoom));
+            Assert.That(itemWithCoverPhoto.Bedrooms, Is.Zero);
+            Assert.That(itemWithCoverPhoto.Address, Is.EqualTo("Test address 0, District 0"));
+            Assert.That(itemWithCoverPhoto.Lat, Is.EqualTo(10.7).Within(1e-9));
+            Assert.That(itemWithCoverPhoto.Lng, Is.EqualTo(106.7).Within(1e-9));
+            Assert.That(itemWithCoverPhoto.LandlordName, Is.EqualTo("Landlord 0"));
+            Assert.That(itemWithCoverPhoto.LandlordPhone, Is.EqualTo("+84 900 000 000"));
+            Assert.That(
+                itemWithCoverPhoto.Photos!.Select(photo => photo.Url),
+                Is.EqualTo(new[] { "/media/test/cover-special.jpg", "/media/test/photo-0.jpg" }));
+            Assert.That(itemWithCoverPhoto.Photos![0].IsCover, Is.True);
+            Assert.That(itemWithCoverPhoto.Photos[1].IsCover, Is.False);
+        });
+    }
+
+    [Test]
     public async Task GetQueue_ExplicitStatus_ReturnsOnlyThatStatus()
     {
         var response = await GetQueueAsync(
@@ -181,6 +241,76 @@ public sealed class ModerationListingQueueEndpointTests
             Assert.That(secondPage.Pagination.HasMore, Is.False);
             Assert.That(secondPage.Pagination.NextCursor, Is.Null);
         });
+    }
+
+    [Test]
+    public async Task GetQueue_PublishedStatus_OrdersNewlyApprovedFirstAndCursorPaginatesDescendingWithoutDuplicates()
+    {
+        var approvedListingId = _listingIds[1];
+        await SetListingAsync(
+            approvedListingId,
+            ListingStatus.PendingReview,
+            new DateTime(2025, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+            _memberId);
+
+        var token = await AccessTokenForRoleAsync("moderator");
+        using (var approveMessage = new HttpRequestMessage(
+                   HttpMethod.Post,
+                   $"/api/v1/moderation/listings/{approvedListingId}/approve"))
+        {
+            approveMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            using var approveResponse = await _client.SendAsync(approveMessage);
+            Assert.That(approveResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+        }
+
+        using var firstResponse = await GetQueueAsync(token, "status=published&limit=2");
+        Assert.That(firstResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var firstPage = await firstResponse.Content.ReadFromJsonAsync<ModerationListingQueueDto>(ApiJson.Options);
+
+        Assert.That(firstPage, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(firstPage!.Items, Has.Count.EqualTo(2));
+            Assert.That(firstPage.Items[0].Id, Is.EqualTo(approvedListingId));
+            Assert.That(firstPage.Pagination.HasMore, Is.True);
+            Assert.That(firstPage.Pagination.NextCursor, Is.Not.Null);
+        });
+
+        var allItems = new List<ModerationListingDto>(firstPage!.Items);
+        var cursor = firstPage.Pagination.NextCursor;
+        while (cursor is not null)
+        {
+            using var pageResponse = await GetQueueAsync(
+                token,
+                $"status=published&limit=2&cursor={Uri.EscapeDataString(cursor)}");
+            Assert.That(pageResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            var page = await pageResponse.Content.ReadFromJsonAsync<ModerationListingQueueDto>(ApiJson.Options);
+            Assert.That(page, Is.Not.Null);
+
+            allItems.AddRange(page!.Items);
+            cursor = page.Pagination.HasMore ? page.Pagination.NextCursor : null;
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(allItems, Has.Count.EqualTo(TestListingsSeed.PublishedCount));
+            Assert.That(
+                allItems.Select(item => item.Id).Distinct().Count(),
+                Is.EqualTo(TestListingsSeed.PublishedCount));
+            Assert.That(allItems.Select(item => item.Status), Is.All.EqualTo(ListingStatus.Published));
+        });
+
+        for (var i = 1; i < allItems.Count; i++)
+        {
+            var previous = allItems[i - 1];
+            var current = allItems[i];
+            var isStrictlyDescending = previous.UpdatedAt > current.UpdatedAt
+                || (previous.UpdatedAt == current.UpdatedAt && previous.Id.CompareTo(current.Id) > 0);
+            Assert.That(
+                isStrictlyDescending,
+                Is.True,
+                $"Expected item {i - 1} ({previous.UpdatedAt:O}, {previous.Id}) before item {i} ({current.UpdatedAt:O}, {current.Id}).");
+        }
     }
 
     [Test]

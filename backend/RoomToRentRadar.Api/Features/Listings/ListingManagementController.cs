@@ -13,6 +13,7 @@ namespace RoomToRentRadar.Api.Features.Listings;
 [ApiController]
 [Authorize(Policy = AuthPolicies.Landlord)]
 [Route("api/v1/listings")]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden, "application/problem+json")]
 public sealed class ListingManagementController(
     IListingManagementUseCase listingManagementUseCase,
     IHouseRulesUseCase houseRulesUseCase) : ControllerBase
@@ -157,6 +158,24 @@ public sealed class ListingManagementController(
         return result.IsSuccess ? Ok(result.Value) : ToProblem(result.Error!);
     }
 
+    [HttpPost("{id:guid}/publish")]
+    [ProducesResponseType(typeof(ManagedListingDto), StatusCodes.Status200OK, "application/json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError, "application/problem+json")]
+    public async Task<ActionResult<ManagedListingDto>> PublishListing(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var result = await listingManagementUseCase.PublishAsync(
+            CurrentUserId,
+            id,
+            cancellationToken);
+
+        return result.IsSuccess ? Ok(result.Value) : ToProblem(result.Error!);
+    }
+
     [HttpPost("{id:guid}/unpublish")]
     [ProducesResponseType(typeof(ManagedListingDto), StatusCodes.Status200OK, "application/json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
@@ -173,6 +192,23 @@ public sealed class ListingManagementController(
             cancellationToken);
 
         return result.IsSuccess ? Ok(result.Value) : ToProblem(result.Error!);
+    }
+
+    [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError, "application/problem+json")]
+    public async Task<IActionResult> DeleteListing(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var error = await listingManagementUseCase.DeleteAsync(
+            CurrentUserId,
+            id,
+            cancellationToken);
+
+        return error is null ? NoContent() : ToProblem(error);
     }
 
     private static ListingWriteCommand ToCommand(ListingWriteInput input) => new(

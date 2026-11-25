@@ -37,10 +37,24 @@ public sealed class ListingManagementClient(HttpClient httpClient) : IListingMan
     public Task<ManagedListingDto> UpdateAsync(Guid id, ListingFormSubmission form, CancellationToken cancellationToken = default)
         => WriteAsync(HttpMethod.Put, $"api/v1/listings/{id}", form, cancellationToken);
 
+    public async Task<ManagedListingDto> PublishAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"api/v1/listings/{id}/publish");
+        return await SendAsync<ManagedListingDto>(request, cancellationToken);
+    }
+
     public async Task<ManagedListingDto> UnpublishAsync(Guid id, CancellationToken cancellationToken = default)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, $"api/v1/listings/{id}/unpublish");
         return await SendAsync<ManagedListingDto>(request, cancellationToken);
+    }
+
+    public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"api/v1/listings/{id}");
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+            await ThrowProblemAsync(response, cancellationToken);
     }
 
     public async Task<HouseRulesDto> UpdateHouseRulesAsync(
@@ -89,38 +103,41 @@ public sealed class ListingManagementClient(HttpClient httpClient) : IListingMan
     {
         using var response = await httpClient.SendAsync(request, cancellationToken);
         if (!response.IsSuccessStatusCode)
-        {
-            string? detail = null, code = null;
-            var errors = new Dictionary<string, string[]>();
-            try
-            {
-                await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-                using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-                var root = document.RootElement;
-                if (root.ValueKind == JsonValueKind.Object)
-                {
-                    detail = ReadString(root, "detail") ?? ReadString(root, "title");
-                    code = ReadString(root, "code");
-                    if (root.TryGetProperty("errors", out var fields) && fields.ValueKind == JsonValueKind.Object)
-                    {
-                        foreach (var field in fields.EnumerateObject())
-                        {
-                            if (field.Value.ValueKind == JsonValueKind.Array)
-                                errors[field.Name] = field.Value.EnumerateArray()
-                                    .Where(x => x.ValueKind == JsonValueKind.String)
-                                    .Select(x => x.GetString()!).ToArray();
-                        }
-                    }
-                }
-            }
-            catch (JsonException) { }
-
-            throw new ListingManagementException(response.StatusCode,
-                detail ?? $"Không thể thực hiện yêu cầu ({(int)response.StatusCode}).", code, errors);
-        }
+            await ThrowProblemAsync(response, cancellationToken);
 
         return await response.Content.ReadFromJsonAsync<T>(ApiJson.Options, cancellationToken)
             ?? throw new InvalidOperationException("The listing endpoint returned an empty response.");
+    }
+
+    private static async Task ThrowProblemAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        string? detail = null, code = null;
+        var errors = new Dictionary<string, string[]>();
+        try
+        {
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            var root = document.RootElement;
+            if (root.ValueKind == JsonValueKind.Object)
+            {
+                detail = ReadString(root, "detail") ?? ReadString(root, "title");
+                code = ReadString(root, "code");
+                if (root.TryGetProperty("errors", out var fields) && fields.ValueKind == JsonValueKind.Object)
+                {
+                    foreach (var field in fields.EnumerateObject())
+                    {
+                        if (field.Value.ValueKind == JsonValueKind.Array)
+                            errors[field.Name] = field.Value.EnumerateArray()
+                                .Where(x => x.ValueKind == JsonValueKind.String)
+                                .Select(x => x.GetString()!).ToArray();
+                    }
+                }
+            }
+        }
+        catch (JsonException) { }
+
+        throw new ListingManagementException(response.StatusCode,
+            detail ?? $"Không thể thực hiện yêu cầu ({(int)response.StatusCode}).", code, errors);
     }
 
     private static string? ReadString(JsonElement element, string name)

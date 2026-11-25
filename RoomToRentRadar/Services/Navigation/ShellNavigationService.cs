@@ -1,48 +1,61 @@
+using Microsoft.Maui.ApplicationModel;
 using RoomToRentRadar.Constants;
 using RoomToRentRadar.Models;
-using RoomToRentRadar.Services;
-using RoomToRentRadar.Services.Auth;
-using RoomToRentRadar.Services.ErrorHandling;
-using RoomToRentRadar.Services.Interactions;
-using RoomToRentRadar.Services.Navigation;
-using RoomToRentRadar.Services.Storage;
 
 namespace RoomToRentRadar.Services.Navigation;
 
 public sealed class ShellNavigationService : INavigationService
 {
+    private readonly SemaphoreSlim _navigationLock = new(1, 1);
+
+    public bool IsNavigating { get; private set; }
+
+#if WINDOWS
+    private const bool DefaultAnimate = false;
+#else
+    private const bool DefaultAnimate = true;
+#endif
+
     public Task GoToRoomDetailAsync(Guid listingId)
-        => GetShell().GoToAsync($"{AppRoutes.RoomDetail}?id={listingId}");
+        => NavigateAsync($"{AppRoutes.RoomDetail}?id={listingId}", DefaultAnimate);
 
     public Task GoToLoginAsync()
-        => GetShell().GoToAsync(AppRoutes.Login);
+        => NavigateAsync(AppRoutes.Login, DefaultAnimate);
 
     public Task GoToRegisterAsync()
-        => GetShell().GoToAsync(AppRoutes.Register);
+        => NavigateAsync(AppRoutes.Register, DefaultAnimate);
 
     public Task GoToRegisterAsync(AppUserRole? initialRole)
     {
         if (initialRole is AppUserRole.Student or AppUserRole.Landlord)
         {
             var wireRole = AppUserRoleWire.ToWireValue(initialRole.Value);
-            return GetShell().GoToAsync($"{AppRoutes.Register}?role={Uri.EscapeDataString(wireRole)}");
+            return NavigateAsync($"{AppRoutes.Register}?role={Uri.EscapeDataString(wireRole)}", DefaultAnimate);
         }
 
         return GoToRegisterAsync();
     }
 
     public Task GoToRoleRootAsync(AppUserRole? role)
-        => MainThread.InvokeOnMainThreadAsync(() => GetShell().GoToAsync(role switch
+        => RunNavigationAsync(async shell =>
         {
-            AppUserRole.Landlord => $"//{AppRoutes.MyListings}",
-            AppUserRole.Moderator or AppUserRole.Admin => $"//{AppRoutes.Moderation}",
-            _ => $"//{AppRoutes.Home}"
-        }));
+            var route = AppShell.GetRoleRootRoute(role);
+            if (shell is AppShell appShell)
+            {
+                appShell.PrepareRoleTabsForNavigation(role);
+                await shell.GoToAsync(route, animate: false);
+                appShell.FinalizeRoleTabs(role);
+            }
+            else
+            {
+                await shell.GoToAsync(route, animate: false);
+            }
+        });
 
     public Task GoToListingEditorAsync(Guid? listingId = null)
-        => GetShell().GoToAsync(listingId is { } id
-            ? $"{AppRoutes.ListingEditor}?id={id}"
-            : AppRoutes.ListingEditor);
+        => NavigateAsync(
+            listingId is { } id ? $"{AppRoutes.ListingEditor}?id={id}" : AppRoutes.ListingEditor,
+            DefaultAnimate);
 
     public Task GoToDirectionsAsync(
         double destinationLat,
@@ -57,14 +70,36 @@ public sealed class ShellNavigationService : INavigationService
             query += FormattableString.Invariant($"&from_lat={fromLat}&from_lng={fromLng}");
         }
 
-        return GetShell().GoToAsync($"{AppRoutes.Directions}?{query}");
+        return NavigateAsync($"{AppRoutes.Directions}?{query}", DefaultAnimate);
     }
 
     public Task GoToComparisonAsync()
-        => GetShell().GoToAsync(AppRoutes.Comparison);
+        => NavigateAsync(AppRoutes.Comparison, DefaultAnimate);
 
     public Task GoBackAsync()
-        => GetShell().GoToAsync("..");
+        => NavigateAsync("..", DefaultAnimate);
+
+    private Task NavigateAsync(string route, bool animate)
+        => RunNavigationAsync(shell => shell.GoToAsync(route, animate));
+
+    private async Task RunNavigationAsync(Func<Shell, Task> navigationAction)
+    {
+        await _navigationLock.WaitAsync();
+        try
+        {
+            IsNavigating = true;
+            await MainThread.InvokeOnMainThreadAsync(async () =>
+            {
+                var shell = GetShell();
+                await navigationAction(shell);
+            });
+        }
+        finally
+        {
+            IsNavigating = false;
+            _navigationLock.Release();
+        }
+    }
 
     private static Shell GetShell()
         => Shell.Current ?? throw new InvalidOperationException("Shell navigation requires an active Shell.");

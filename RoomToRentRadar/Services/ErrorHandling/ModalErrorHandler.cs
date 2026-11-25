@@ -1,33 +1,39 @@
+using Microsoft.Maui.ApplicationModel;
 using RoomToRentRadar.Extensions;
-using RoomToRentRadar.Services;
-using RoomToRentRadar.Services.Auth;
-using RoomToRentRadar.Services.ErrorHandling;
 using RoomToRentRadar.Services.Interactions;
-using RoomToRentRadar.Services.Navigation;
-using RoomToRentRadar.Services.Storage;
 
 namespace RoomToRentRadar.Services.ErrorHandling;
 
 public sealed class ModalErrorHandler : IErrorHandler
 {
-    private readonly SemaphoreSlim _semaphore = new(1, 1);
-
     public void HandleError(Exception ex)
     {
         DisplayAlertAsync(ex).FireAndForgetSafeAsync();
     }
 
-    private async Task DisplayAlertAsync(Exception ex)
+    private static async Task DisplayAlertAsync(Exception ex)
     {
+        await ShellAlertPrompt.DialogSemaphore.WaitAsync();
         try
         {
-            await _semaphore.WaitAsync();
-            if (Shell.Current is Shell shell)
-                await shell.DisplayAlertAsync("Error", ex.Message, "OK");
+            await MainThread.InvokeOnMainThreadAsync(async () =>
+            {
+                try
+                {
+                    if (Shell.Current is Shell shell)
+                    {
+                        await shell.DisplayAlertAsync("Error", ex.Message, "OK");
+                    }
+                }
+                catch
+                {
+                    // Never crash if Shell or WinUI ContentDialog host is closing.
+                }
+            });
         }
         finally
         {
-            _semaphore.Release();
+            ShellAlertPrompt.DialogSemaphore.Release();
         }
     }
 }

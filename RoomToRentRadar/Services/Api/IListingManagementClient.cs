@@ -8,7 +8,9 @@ public interface IListingManagementClient
     Task<ManagedListingDto> GetManagedAsync(Guid id, CancellationToken cancellationToken = default);
     Task<ManagedListingDto> CreateAsync(ListingFormSubmission form, CancellationToken cancellationToken = default);
     Task<ManagedListingDto> UpdateAsync(Guid id, ListingFormSubmission form, CancellationToken cancellationToken = default);
+    Task<ManagedListingDto> PublishAsync(Guid id, CancellationToken cancellationToken = default);
     Task<ManagedListingDto> UnpublishAsync(Guid id, CancellationToken cancellationToken = default);
+    Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
     Task<HouseRulesDto> UpdateHouseRulesAsync(Guid id, UpdateHouseRulesRequest request, CancellationToken cancellationToken = default);
 }
 

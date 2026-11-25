@@ -17,11 +17,16 @@ using RoomToRentRadar.Shared.Listings;
 namespace RoomToRentRadar.ViewModels;
 
 public partial class ListingEditorViewModel(IListingManagementClient client, AuthService auth,
-    INavigationService navigation, IAlertPrompt alerts) : ObservableObject, IQueryAttributable
+    INavigationService navigation, IAlertPrompt alerts,
+    IDeviceLocationService? locationService = null) : ObservableObject, IQueryAttributable
 {
+    private const string LocatingProgressMessage = "Đang lấy vị trí GPS chính xác…";
     private Guid? _listingId;
     private bool _loaded;
     private bool _released;
+    private bool _confirming;
+
+    public event EventHandler<(double Latitude, double Longitude)>? CurrentLocationResolved;
     public ListingFormField TitleField { get; } = new();
     public ListingFormField AddressField { get; } = new();
     public ListingFormField RentField { get; } = new();
@@ -47,10 +52,22 @@ public partial class ListingEditorViewModel(IListingManagementClient client, Aut
     [ObservableProperty] public partial string StatusText { get; set; } = "Tin mới sẽ được gửi chờ duyệt.";
     [ObservableProperty] public partial bool IsAuthenticated { get; set; }
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsNotBusy))]
-    [NotifyCanExecuteChangedFor(nameof(SaveCommand), nameof(PickPhotosCommand), nameof(UnpublishCommand))]
+    [NotifyPropertyChangedFor(nameof(IsNotBusy), nameof(CanSaveListing), nameof(CanDeleteWhenIdle), nameof(CanUseCurrentLocation))]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand), nameof(PickPhotosCommand), nameof(UnpublishCommand), nameof(PublishCommand), nameof(DeleteCommand), nameof(UseCurrentLocationCommand))]
     public partial bool IsBusy { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanSaveListing), nameof(CanUseCurrentLocation))]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand), nameof(UseCurrentLocationCommand))]
+    public partial bool CanSave { get; set; } = true;
     [ObservableProperty] public partial bool CanUnpublish { get; set; }
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PublishCommand))]
+    public partial bool CanPublish { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsNotLocating), nameof(CanUseCurrentLocation))]
+    [NotifyCanExecuteChangedFor(nameof(UseCurrentLocationCommand))]
+    public partial bool IsLocating { get; set; }
+    [ObservableProperty] public partial string LocationStatusMessage { get; set; } = string.Empty;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HouseRulesVersionText))]
     public partial long? HouseRulesVersion { get; set; }
@@ -58,7 +75,12 @@ public partial class ListingEditorViewModel(IListingManagementClient client, Aut
     [NotifyPropertyChangedFor(nameof(HouseRulesVersionText))]
     public partial DateTime? HouseRulesUpdatedAt { get; set; }
     public bool IsNotBusy => !IsBusy;
+    public bool IsNotLocating => !IsLocating;
+    public bool CanSaveListing => IsNotBusy && CanSave;
+    public bool CanUseCurrentLocation => IsNotBusy && !IsLocating && CanSave;
     public bool IsEditMode => _listingId is not null;
+    public bool CanDelete => IsEditMode && _loaded;
+    public bool CanDeleteWhenIdle => IsNotBusy && CanDelete;
     public string PageTitle => _listingId is null ? "Đăng tin cho thuê" : "Chỉnh sửa tin";
     public string PhotoCountText => $"{ExistingPhotos.Count + SelectedPhotos.Count} ảnh · cần ít nhất 3 ảnh";
     public const int HouseRulesMaxLength = 300;
@@ -72,8 +94,7 @@ public partial class ListingEditorViewModel(IListingManagementClient client, Aut
     {
         if (query.TryGetValue("id", out var value) && Guid.TryParse(value?.ToString(), out var id))
             _listingId = id;
-        OnPropertyChanged(nameof(PageTitle));
-        OnPropertyChanged(nameof(IsEditMode));
+        NotifyEditStateChanged();
     }
 
     [RelayCommand]
@@ -82,12 +103,12 @@ public partial class ListingEditorViewModel(IListingManagementClient client, Aut
     [RelayCommand(AllowConcurrentExecutions = false)]
     private async Task LoadAsync(CancellationToken cancellationToken)
     {
-        if (IsBusy || _released) return;
+        if (IsBusy || _released || _confirming) return;
         IsBusy = true;
         try
         {
             IsAuthenticated = await auth.IsSignedInAsync(cancellationToken);
-            if (!IsAuthenticated) { _loaded = false; return; }
+            if (!IsAuthenticated) { SetLoaded(false); return; }
             if (_loaded || _listingId is null) return;
             var listing = await client.GetManagedAsync(_listingId.Value, cancellationToken);
             TitleField.Text = listing.Title;
@@ -101,7 +122,7 @@ public partial class ListingEditorViewModel(IListingManagementClient client, Aut
             SelectedRoomType = RoomTypes.First(option => option.Value == listing.RoomType);
             ApplySavedListing(listing);
             ApplyHouseRules(listing.HouseRules);
-            _loaded = true;
+            SetLoaded(true);
             Message = string.Empty;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
@@ -112,7 +133,7 @@ public partial class ListingEditorViewModel(IListingManagementClient client, Aut
     [RelayCommand(CanExecute = nameof(IsNotBusy), AllowConcurrentExecutions = false)]
     private async Task PickPhotosAsync()
     {
-        if (_released) return;
+        if (_released || _confirming) return;
         IsBusy = true;
         PhotoError = string.Empty;
         try
@@ -170,10 +191,10 @@ public partial class ListingEditorViewModel(IListingManagementClient client, Aut
         finally { FinishOperation(); }
     }
 
-    [RelayCommand(CanExecute = nameof(IsNotBusy), AllowConcurrentExecutions = false)]
+    [RelayCommand(CanExecute = nameof(CanSaveListing), AllowConcurrentExecutions = false)]
     private async Task SaveAsync(CancellationToken cancellationToken)
     {
-        if (_released) return;
+        if (_released || !CanSave || _confirming) return;
         Message = string.Empty;
         if (_listingId is not null && !_loaded)
         {
@@ -197,20 +218,20 @@ public partial class ListingEditorViewModel(IListingManagementClient client, Aut
         try
         {
             IsAuthenticated = await auth.IsSignedInAsync(cancellationToken);
-            if (!IsAuthenticated) { _loaded = false; Message = "Đăng nhập để lưu tin."; return; }
+            if (!IsAuthenticated) { SetLoaded(false); Message = "Đăng nhập để lưu tin."; return; }
             var saved = _listingId is { } id
                 ? await client.UpdateAsync(id, submission, cancellationToken)
                 : await client.CreateAsync(submission, cancellationToken);
             _listingId = saved.Id;
-            _loaded = true;
-            foreach (var photo in SelectedPhotos) TryDelete(photo.Path);
-            SelectedPhotos.Clear();
+            SetLoaded(true);
+            ClearSelectedPhotos();
             ApplySavedListing(saved);
+            _released = true;
             Message = saved.Status == ListingStatus.PendingReview
                 ? "Đã lưu tin. Tin đang chờ duyệt trước khi hiển thị công khai."
                 : "Đã lưu thay đổi.";
-            OnPropertyChanged(nameof(PageTitle));
-            OnPropertyChanged(nameof(IsEditMode));
+            NotifyEditStateChanged();
+            await navigation.GoBackAsync();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
         catch (Exception ex) { HandleFailure(ex); }
@@ -220,11 +241,31 @@ public partial class ListingEditorViewModel(IListingManagementClient client, Aut
     [RelayCommand(CanExecute = nameof(IsNotBusy), AllowConcurrentExecutions = false)]
     private async Task UnpublishAsync(CancellationToken cancellationToken)
     {
-        if (_released || _listingId is null || !CanUnpublish) return;
+        if (_released || _listingId is null || !CanUnpublish || IsBusy || _confirming) return;
+        bool confirmed;
+        _confirming = true;
+        try
+        {
+            confirmed = await alerts.ConfirmAsync(
+                "Gỡ đăng tin?",
+                "Tin sẽ không còn hiển thị công khai. Bạn vẫn có thể chỉnh sửa tin.",
+                "Gỡ đăng",
+                "Hủy",
+                cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+        finally
+        {
+            _confirming = false;
+        }
+
+        if (!confirmed || _released || IsBusy) return;
         IsBusy = true;
         try
         {
-            if (!await alerts.ConfirmAsync("Gỡ đăng tin?", "Tin sẽ không còn hiển thị công khai. Bạn vẫn có thể chỉnh sửa tin.", "Gỡ đăng", "Hủy", cancellationToken) || _released) return;
             ApplySavedListing(await client.UnpublishAsync(_listingId.Value, cancellationToken));
             Message = "Đã gỡ đăng tin.";
         }
@@ -234,9 +275,176 @@ public partial class ListingEditorViewModel(IListingManagementClient client, Aut
     }
 
     [RelayCommand(CanExecute = nameof(IsNotBusy), AllowConcurrentExecutions = false)]
+    private async Task PublishAsync(CancellationToken cancellationToken)
+    {
+        if (_released || _listingId is null || !CanPublish || _confirming) return;
+        IsBusy = true;
+        try
+        {
+            ApplySavedListing(await client.PublishAsync(_listingId.Value, cancellationToken));
+            Message = "Đã gửi duyệt lại tin đăng. Tin đang chờ duyệt trước khi hiển thị công khai.";
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
+        catch (Exception ex) { HandleFailure(ex); }
+        finally { FinishOperation(); }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanDeleteWhenIdle), AllowConcurrentExecutions = false)]
+    private async Task DeleteAsync(CancellationToken cancellationToken)
+    {
+        if (_released || _listingId is null || IsBusy || _confirming) return;
+        if (!_loaded)
+        {
+            Message = "Tải lại thông tin tin đăng trước khi xóa.";
+            return;
+        }
+
+        bool confirmed;
+        _confirming = true;
+        try
+        {
+            confirmed = await alerts.ConfirmAsync(
+                "Xóa phòng cho thuê?",
+                "Tin đăng và toàn bộ hình ảnh sẽ bị xóa vĩnh viễn. Thao tác này không thể hoàn tác.",
+                "Xóa tin",
+                "Hủy",
+                cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+        finally
+        {
+            _confirming = false;
+        }
+
+        if (!confirmed || _released || IsBusy) return;
+        IsBusy = true;
+        try
+        {
+            await client.DeleteAsync(_listingId.Value, cancellationToken);
+            _released = true;
+            ClearSelectedPhotos();
+            Message = "Đã xóa tin đăng.";
+            await navigation.GoBackAsync();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
+        catch (Exception ex) { HandleFailure(ex); }
+        finally { FinishOperation(); }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanUseCurrentLocation), AllowConcurrentExecutions = false)]
+    private async Task UseCurrentLocationAsync(CancellationToken cancellationToken)
+    {
+        if (_released || !CanSave || IsBusy || _confirming) return;
+        if (locationService is null)
+        {
+            LocationStatusMessage = "Thiết bị này chưa hỗ trợ định vị GPS.";
+            return;
+        }
+
+        IsLocating = true;
+        LatitudeField.Error = string.Empty;
+        LongitudeField.Error = string.Empty;
+        LocationStatusMessage = LocatingProgressMessage;
+        try
+        {
+            var result = await locationService.GetCurrentLocationAsync(cancellationToken);
+            if (_released) return;
+
+            switch (result.Status)
+            {
+                case DeviceLocationStatus.Success when result.Latitude is { } lat && result.Longitude is { } lng:
+                    LatitudeField.Text = lat.ToString("F6", CultureInfo.InvariantCulture);
+                    LongitudeField.Text = lng.ToString("F6", CultureInfo.InvariantCulture);
+                    LocationStatusMessage = result.AccuracyMeters is { } accuracy && accuracy > 0
+                        ? $"Đã chọn vị trí hiện tại (độ chính xác ±{Math.Max(1, Math.Round(accuracy)):0} m)."
+                        : "Đã chọn vị trí GPS hiện tại.";
+                    CurrentLocationResolved?.Invoke(this, (lat, lng));
+                    break;
+
+                case DeviceLocationStatus.LocationDisabled:
+                    LocationStatusMessage = "GPS / Dịch vụ vị trí đang tắt. Hãy bật Vị trí rồi bấm định vị lại.";
+                    IsLocating = false;
+                    await PromptOpenLocationSettingsAsync(
+                        "Bật định vị GPS?",
+                        "Dịch vụ Vị trí (GPS) trên thiết bị đang tắt. Bạn có muốn mở Cài đặt để bật GPS ngay không?",
+                        "Bật GPS",
+                        "Để sau",
+                        cancellationToken);
+                    break;
+
+                case DeviceLocationStatus.PermissionDenied:
+                    LocationStatusMessage = "Chưa có quyền truy cập vị trí chính xác. Cấp quyền Vị trí trong Cài đặt rồi thử lại.";
+                    IsLocating = false;
+                    await PromptOpenLocationSettingsAsync(
+                        "Cấp quyền Vị trí?",
+                        "Room Radar cần quyền Vị trí chính xác để tự động điền tọa độ phòng. Mở Cài đặt ngay?",
+                        "Mở Cài đặt",
+                        "Đóng",
+                        cancellationToken);
+                    break;
+
+                case DeviceLocationStatus.NotSupported:
+                    LocationStatusMessage = "Thiết bị này không hỗ trợ định vị GPS. Hãy chạm bản đồ hoặc nhập tọa độ thủ công.";
+                    break;
+
+                default:
+                    LocationStatusMessage = "Không thể xác định vị trí hiện tại. Kiểm tra tín hiệu GPS / mạng rồi thử lại.";
+                    break;
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            if (LocationStatusMessage == LocatingProgressMessage)
+            {
+                LocationStatusMessage = string.Empty;
+            }
+        }
+        catch (Exception)
+        {
+            LocationStatusMessage = "Không thể xác định vị trí hiện tại. Kiểm tra tín hiệu GPS / mạng rồi thử lại.";
+        }
+        finally
+        {
+            IsLocating = false;
+        }
+    }
+
+    private async Task PromptOpenLocationSettingsAsync(
+        string title,
+        string message,
+        string acceptText,
+        string cancelText,
+        CancellationToken cancellationToken)
+    {
+        if (_released || _confirming || locationService is null) return;
+        bool confirmed;
+        _confirming = true;
+        try
+        {
+            confirmed = await alerts.ConfirmAsync(title, message, acceptText, cancelText, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+        finally
+        {
+            _confirming = false;
+        }
+
+        if (confirmed && !_released)
+        {
+            await locationService.OpenLocationSettingsAsync();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(IsNotBusy), AllowConcurrentExecutions = false)]
     private async Task SaveHouseRulesAsync(CancellationToken cancellationToken)
     {
-        if (_released || _listingId is not { } listingId) return;
+        if (_released || _listingId is not { } listingId || _confirming) return;
         Message = string.Empty;
         if (!_loaded)
         {
@@ -255,7 +463,7 @@ public partial class ListingEditorViewModel(IListingManagementClient client, Aut
         try
         {
             IsAuthenticated = await auth.IsSignedInAsync(cancellationToken);
-            if (!IsAuthenticated) { _loaded = false; Message = "Đăng nhập để lưu nội quy."; return; }
+            if (!IsAuthenticated) { SetLoaded(false); Message = "Đăng nhập để lưu nội quy."; return; }
             var saved = await client.UpdateHouseRulesAsync(listingId, new UpdateHouseRulesRequest
             {
                 QuietHours = QuietHoursField.Text.Trim(),
@@ -303,7 +511,7 @@ public partial class ListingEditorViewModel(IListingManagementClient client, Aut
             GuestPolicyField.Error = ReadError(problem, "guest_policy");
             CookingRulesField.Error = ReadError(problem, "cooking_rules");
             ParkingRulesField.Error = ReadError(problem, "parking_rules");
-            if (problem.StatusCode == HttpStatusCode.Unauthorized) { IsAuthenticated = false; _loaded = false; }
+            if (problem.StatusCode == HttpStatusCode.Unauthorized) { IsAuthenticated = false; SetLoaded(false); }
             Message = problem.Message;
         }
         else Message = "Không thể kết nối. Nội quy vẫn được giữ; hãy thử lại.";
@@ -317,7 +525,9 @@ public partial class ListingEditorViewModel(IListingManagementClient client, Aut
         ExistingPhotos.Clear();
         foreach (var photo in listing.Photos) ExistingPhotos.Add(new ExistingListingPhoto(photo));
         StatusText = ListingStatusText.For(listing.Status);
-        CanUnpublish = listing.Status is not (ListingStatus.Hidden or ListingStatus.Removed);
+        CanSave = listing.Status != ListingStatus.Removed;
+        CanUnpublish = listing.Status is ListingStatus.PendingReview or ListingStatus.Published;
+        CanPublish = listing.Status == ListingStatus.Hidden;
         OnPropertyChanged(nameof(PhotoCountText));
     }
 
@@ -340,10 +550,28 @@ public partial class ListingEditorViewModel(IListingManagementClient client, Aut
         if (exception is ListingManagementException problem)
         {
             SetErrors(problem.Errors.ToDictionary(pair => pair.Key, pair => string.Join(" ", pair.Value)));
-            if (problem.StatusCode == HttpStatusCode.Unauthorized) { IsAuthenticated = false; _loaded = false; }
+            if (problem.StatusCode == HttpStatusCode.Unauthorized) { IsAuthenticated = false; SetLoaded(false); }
             Message = problem.Message;
         }
         else Message = "Không thể kết nối. Dữ liệu vẫn được giữ; hãy thử lại.";
+    }
+
+    private void SetLoaded(bool loaded)
+    {
+        if (_loaded == loaded) return;
+        _loaded = loaded;
+        OnPropertyChanged(nameof(CanDelete));
+        OnPropertyChanged(nameof(CanDeleteWhenIdle));
+        DeleteCommand.NotifyCanExecuteChanged();
+    }
+
+    private void NotifyEditStateChanged()
+    {
+        OnPropertyChanged(nameof(PageTitle));
+        OnPropertyChanged(nameof(IsEditMode));
+        OnPropertyChanged(nameof(CanDelete));
+        OnPropertyChanged(nameof(CanDeleteWhenIdle));
+        DeleteCommand.NotifyCanExecuteChanged();
     }
 
     private static void TryDelete(string path)
@@ -359,6 +587,9 @@ public partial class ListingEditorViewModel(IListingManagementClient client, Aut
         SaveCommand.Cancel();
         SaveHouseRulesCommand.Cancel();
         UnpublishCommand.Cancel();
+        PublishCommand.Cancel();
+        DeleteCommand.Cancel();
+        UseCurrentLocationCommand.Cancel();
         if (!IsBusy) ClearSelectedPhotos();
     }
 

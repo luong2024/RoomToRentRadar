@@ -157,6 +157,33 @@ public class ListingManagementClientTests
     }
 
     [Test]
+    public async Task PublishAsync_PostsAndReturnsPendingReviewStatus()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        HttpMethod? method = null;
+        string? path = null;
+        var handler = new StubHandler(request =>
+        {
+            method = request.Method;
+            path = request.RequestUri!.AbsolutePath;
+            return Task.FromResult(JsonResponse(Listing(id) with { Status = ListingStatus.PendingReview }));
+        });
+
+        // Act
+        var result = await Client(handler).PublishAsync(id);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(method, Is.EqualTo(HttpMethod.Post));
+            Assert.That(path, Is.EqualTo($"/api/v1/listings/{id}/publish"));
+            Assert.That(result.Id, Is.EqualTo(id));
+            Assert.That(result.Status, Is.EqualTo(ListingStatus.PendingReview));
+        });
+    }
+
+    [Test]
     public async Task UnpublishAsync_PostsAndReturnsHiddenStatus()
     {
         var id = Guid.NewGuid();
@@ -170,6 +197,56 @@ public class ListingManagementClientTests
         var result = await Client(handler).UnpublishAsync(id);
 
         Assert.That(result.Status, Is.EqualTo(ListingStatus.Hidden));
+    }
+
+    [Test]
+    public async Task DeleteAsync_NoContentResponse_CompletesWithoutDeserializingBody()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        HttpMethod? method = null;
+        string? path = null;
+        var handler = new StubHandler(request =>
+        {
+            method = request.Method;
+            path = request.RequestUri!.AbsolutePath;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent));
+        });
+
+        // Act
+        await Client(handler).DeleteAsync(id);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(method, Is.EqualTo(HttpMethod.Delete));
+            Assert.That(path, Is.EqualTo($"/api/v1/listings/{id}"));
+        });
+    }
+
+    [Test]
+    public void DeleteAsync_NotFoundProblem_ThrowsListingManagementExceptionWithCodeAndMessage()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var handler = new StubHandler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound)
+        {
+            Content = new StringContent("""
+                {"title":"Listing not found","detail":"Tin đăng không tồn tại.","code":"listing_not_found"}
+                """, Encoding.UTF8, "application/problem+json")
+        }));
+
+        // Act
+        var exception = Assert.ThrowsAsync<ListingManagementException>(() => Client(handler).DeleteAsync(id))!;
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            Assert.That(exception.Code, Is.EqualTo("listing_not_found"));
+            Assert.That(exception.Message, Is.EqualTo("Tin đăng không tồn tại."));
+            Assert.That(exception.Errors, Is.Empty);
+        });
     }
 
     [Test]

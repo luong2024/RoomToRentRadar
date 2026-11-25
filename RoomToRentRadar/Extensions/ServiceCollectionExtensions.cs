@@ -41,6 +41,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IFavouritesService, FavouritesService>();
         services.AddSingleton<IUndoPrompt, SnackbarUndoPrompt>();
         services.AddSingleton<IAlertPrompt, ShellAlertPrompt>();
+        services.AddSingleton<IDeviceLocationService, MauiDeviceLocationService>();
         services.AddSingleton<IUndoService, UndoService>();
         services.AddSingleton<AuthService>();
         services.AddSingleton<IListingManagementClient>(provider => new ListingManagementClient(new HttpClient(

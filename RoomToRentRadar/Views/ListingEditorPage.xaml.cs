@@ -18,19 +18,24 @@ namespace RoomToRentRadar.Views;
 public partial class ListingEditorPage : ContentPage
 {
     private readonly ListingEditorViewModel _model;
+    private readonly TileLayer _tileLayer;
     private readonly MemoryLayer _locationLayer = new("Vị trí phòng") { Style = null };
     private bool _observing;
+    private bool _disposed;
+    private bool _mapUpdateQueued;
+    private double? _pendingZoomResolution;
 
     public ListingEditorPage(ListingEditorViewModel model)
     {
         InitializeComponent();
         BindingContext = _model = model;
-        LocationMap.Map.Layers.Add(new TileLayer(new HttpTileSource(new GlobalSphericalMercator(),
+        _tileLayer = new TileLayer(new HttpTileSource(new GlobalSphericalMercator(),
             "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
             name: "Esri World Street Map", attribution: new Attribution(
                 "Esri, HERE, Garmin, © OpenStreetMap contributors",
                 "https://www.esri.com/en-us/legal/terms/full-maps-use-terms"),
-            configureHttpRequestMessage: request => request.Headers.UserAgent.ParseAdd("RoomToRentRadar/1.0"))));
+            configureHttpRequestMessage: request => request.Headers.UserAgent.ParseAdd("RoomToRentRadar/1.0")));
+        LocationMap.Map.Layers.Add(_tileLayer);
         LocationMap.Map.Layers.Add(_locationLayer);
         var (x, y) = SphericalMercator.FromLonLat(106.7009, 10.7769);
         LocationMap.Map.Navigator.CenterOnAndZoomTo(new MPoint(x, y), 8);
@@ -39,13 +44,16 @@ public partial class ListingEditorPage : ContentPage
     protected override void OnAppearing()
     {
         base.OnAppearing();
+        if (_disposed) return;
         if (!_observing)
         {
             _observing = true;
             LocationMap.Map.Tapped += OnMapTapped;
             _model.LatitudeField.PropertyChanged += OnLocationChanged;
             _model.LongitudeField.PropertyChanged += OnLocationChanged;
+            _model.CurrentLocationResolved += OnCurrentLocationResolved;
         }
+        QueueMapPinUpdate(null);
         if (_model.LoadCommand.CanExecute(null)) _model.LoadCommand.Execute(null);
     }
 
@@ -55,6 +63,7 @@ public partial class ListingEditorPage : ContentPage
         LocationMap.Map.Tapped -= OnMapTapped;
         _model.LatitudeField.PropertyChanged -= OnLocationChanged;
         _model.LongitudeField.PropertyChanged -= OnLocationChanged;
+        _model.CurrentLocationResolved -= OnCurrentLocationResolved;
         base.OnDisappearing();
     }
 
@@ -62,36 +71,104 @@ public partial class ListingEditorPage : ContentPage
     {
         base.OnNavigatedFrom(args);
         // Login and tab changes retain this page in its navigation stack.
-        // Only release temporary photos after this editor has been removed.
-        if (!Navigation.NavigationStack.Contains(this)) _model.ReleaseSelectedPhotos();
+        // Only release temporary photos and map resources after this editor has been removed.
+        if (!Navigation.NavigationStack.Contains(this))
+        {
+            if (!_disposed)
+            {
+                _disposed = true;
+                _observing = false;
+                LocationMap.IsVisible = false;
+                try { LocationMap.Map.Layers.Clear(); } catch { }
+                try { _tileLayer.Dispose(); } catch { }
+            }
+
+            _model.ReleaseSelectedPhotos();
+        }
     }
 
     private void OnMapTapped(object? sender, MapEventArgs args)
     {
-        if (_model.IsBusy) return;
+        if (!_observing || _disposed || _model.IsBusy || _model.IsLocating) return;
         var (longitude, latitude) = SphericalMercator.ToLonLat(args.WorldPosition.X, args.WorldPosition.Y);
         _model.LatitudeField.Text = latitude.ToString("F6", CultureInfo.InvariantCulture);
         _model.LongitudeField.Text = longitude.ToString("F6", CultureInfo.InvariantCulture);
         args.Handled = true;
     }
 
+    private void OnCurrentLocationResolved(object? sender, (double Latitude, double Longitude) coords)
+    {
+        QueueMapPinUpdate(1.0);
+    }
+
     private void OnLocationChanged(object? sender, PropertyChangedEventArgs args)
     {
-        if (args.PropertyName != nameof(ListingFormField.Text)
-            || !ListingFormValidator.TryNumber(_model.LatitudeField.Text, out var latitude)
-            || !ListingFormValidator.TryNumber(_model.LongitudeField.Text, out var longitude)
-            || latitude is < -90 or > 90 || longitude is < -180 or > 180) return;
-        var (x, y) = SphericalMercator.FromLonLat(longitude, latitude);
+        if (args.PropertyName != nameof(ListingFormField.Text) || _model.IsLocating) return;
+        QueueMapPinUpdate(null);
+    }
+
+    private void QueueMapPinUpdate(double? zoomResolution)
+    {
+        if (!_observing || _disposed) return;
+        if (zoomResolution is { } targetZoom &&
+            (_pendingZoomResolution is null || targetZoom < _pendingZoomResolution.Value))
+        {
+            _pendingZoomResolution = targetZoom;
+        }
+
+        if (_mapUpdateQueued) return;
+        _mapUpdateQueued = true;
+
+        Dispatcher.Dispatch(() =>
+        {
+            _mapUpdateQueued = false;
+            var requestedZoom = _pendingZoomResolution;
+            _pendingZoomResolution = null;
+
+            if (!_observing || _disposed) return;
+            if (!ListingFormValidator.TryNumber(_model.LatitudeField.Text, out var latitude)
+                || !ListingFormValidator.TryNumber(_model.LongitudeField.Text, out var longitude)
+                || latitude is < -90 or > 90 || longitude is < -180 or > 180)
+            {
+                return;
+            }
+
+            try
+            {
+                var (x, y) = SphericalMercator.FromLonLat(longitude, latitude);
+                UpdatePin(x, y);
+                if (requestedZoom is { } zoom)
+                {
+                    LocationMap.Map.Navigator.CenterOnAndZoomTo(new MPoint(x, y), zoom);
+                }
+                else if (LocationMap.Map.Navigator.Viewport.Resolution > 2.5)
+                {
+                    LocationMap.Map.Navigator.CenterOnAndZoomTo(new MPoint(x, y), 2.0);
+                }
+                else
+                {
+                    LocationMap.Map.Navigator.CenterOn(new MPoint(x, y));
+                }
+
+                LocationMap.Refresh();
+            }
+            catch
+            {
+                // Ignore native SkiaSharp surface disposal races on teardown.
+            }
+        });
+    }
+
+    private void UpdatePin(double x, double y)
+    {
         var pin = new GeometryFeature { Geometry = new NetTopologySuite.Geometries.Point(x, y) };
         pin.Styles.Add(new SymbolStyle
         {
-            SymbolScale = 0.8,
-            Fill = new Mapsui.Styles.Brush(new Mapsui.Styles.Color(121, 84, 119)),
-            Outline = new Pen(Mapsui.Styles.Color.White, 2)
+            SymbolScale = 0.85,
+            Fill = new Mapsui.Styles.Brush(new Mapsui.Styles.Color(0, 114, 188)),
+            Outline = new Pen(Mapsui.Styles.Color.White, 2.5)
         });
         _locationLayer.Features = new[] { pin };
         _locationLayer.DataHasChanged();
-        LocationMap.Map.Navigator.CenterOn(new MPoint(x, y));
-        LocationMap.Refresh();
     }
 }
