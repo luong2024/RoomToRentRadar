@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Globalization;
 using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Models.RoomDetails;
@@ -20,6 +21,19 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     private readonly IListingReportService? _listingReportService;
     private readonly Func<string, string, Task<ReportListingDialogResult?>>? _openReportDialogAsync;
     private CancellationTokenSource? _loadCts;
+    private CancellationTokenSource? _travelCts;
+    private readonly ITravelTimeService? _travelTimeService;
+    private bool _travelPageActive = true;
+
+    [ObservableProperty] public partial string DestinationLatitude { get; set; } = "21.5852";
+    [ObservableProperty] public partial string DestinationLongitude { get; set; } = "105.8073";
+    [ObservableProperty] public partial bool IsTravelInfoLoading { get; set; }
+    [ObservableProperty] public partial string TravelInfoMessage { get; set; } = "Choose a destination to calculate travel information.";
+    [ObservableProperty] public partial string DistanceText { get; set; } = string.Empty;
+    [ObservableProperty] public partial string TravelTimeText { get; set; } = string.Empty;
+
+    partial void OnDestinationLatitudeChanged(string value) => CancelTravelInfo();
+    partial void OnDestinationLongitudeChanged(string value) => CancelTravelInfo();
     private (string RoomId, long SessionEpoch, Guid? UserId)? _loadedFavoriteStatus;
 
     [ObservableProperty]
@@ -114,7 +128,8 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         IFavouritesService? favouritesService = null,
         IFavoriteFeedbackService? favoriteFeedbackService = null,
         IListingReportService? listingReportService = null,
-        Func<string, string, Task<ReportListingDialogResult?>>? openReportDialogAsync = null)
+        Func<string, string, Task<ReportListingDialogResult?>>? openReportDialogAsync = null,
+        ITravelTimeService? travelTimeService = null)
     {
         _roomDetailService = roomDetailService ?? throw new ArgumentNullException(nameof(roomDetailService));
         _errorHandler = errorHandler ?? throw new ArgumentNullException(nameof(errorHandler));
@@ -125,6 +140,67 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         _favoriteFeedbackService = favoriteFeedbackService;
         _listingReportService = listingReportService;
         _openReportDialogAsync = openReportDialogAsync;
+        _travelTimeService = travelTimeService;
+    }
+
+    public void CancelTravelInfo()
+    {
+        var previous = Interlocked.Exchange(ref _travelCts, null);
+        previous?.Cancel();
+        IsTravelInfoLoading = false;
+        DistanceText = string.Empty;
+        TravelTimeText = string.Empty;
+        TravelInfoMessage = "Select Calculate to update travel information.";
+    }
+
+    public void PauseTravelInfo()
+    {
+        _travelPageActive = false;
+        CancelTravelInfo();
+    }
+
+    public void ResumeTravelInfo() => _travelPageActive = true;
+
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    public async Task LoadTravelInfoAsync()
+    {
+        CancelTravelInfo();
+        var room = Room;
+        if (room is null || _travelTimeService is null ||
+            !double.TryParse(DestinationLatitude, NumberStyles.Float, CultureInfo.InvariantCulture, out var lat) ||
+            !double.TryParse(DestinationLongitude, NumberStyles.Float, CultureInfo.InvariantCulture, out var lon))
+        {
+            TravelInfoMessage = "Location unavailable. Enter valid destination coordinates.";
+            return;
+        }
+
+        var current = new CancellationTokenSource();
+        _travelCts = current;
+        IsTravelInfoLoading = true;
+        TravelInfoMessage = "Calculating travel time...";
+        try
+        {
+            var info = await _travelTimeService.GetAsync(room.Id, room.Latitude, room.Longitude, lat, lon, current.Token);
+            if (current.IsCancellationRequested || !ReferenceEquals(_travelCts, current) || !ReferenceEquals(Room, room)) return;
+            if (info is null)
+            {
+                TravelInfoMessage = "Location unavailable. Unable to calculate distance.";
+                return;
+            }
+            DistanceText = $"{info.DistanceKm:0.0} km";
+            TravelTimeText = info.IsFallback ? "Travel time unavailable" : $"~{info.DurationMinutes} min driving";
+            TravelInfoMessage = info.IsFallback ? "Straight-line distance" : "Driving route distance";
+        }
+        catch (OperationCanceledException) when (current.IsCancellationRequested) { }
+        finally
+        {
+            if (ReferenceEquals(_travelCts, current))
+            {
+                _travelCts = null;
+                IsTravelInfoLoading = false;
+            }
+            current.Dispose();
+        }
     }
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
@@ -151,6 +227,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     [RelayCommand(AllowConcurrentExecutions = true)]
     public async Task LoadRoomDetailsAsync()
     {
+        CancelTravelInfo();
         var currentCts = new CancellationTokenSource();
         var previousCts = Interlocked.Exchange(ref _loadCts, currentCts);
         previousCts?.Cancel();
@@ -250,6 +327,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
 
             // Similar rooms are included in the detail response. An empty list is a valid API result.
             SimilarRooms = room.SimilarRooms ?? [];
+            if (_travelPageActive) await LoadTravelInfoAsync();
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {

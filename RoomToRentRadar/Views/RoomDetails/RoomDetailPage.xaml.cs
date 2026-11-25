@@ -32,4 +32,20 @@ public partial class RoomDetailPage : ContentPage
         _ = this.ShowPopupAsync(popup, options);
         return await popup.WaitForResultAsync();
     }
+
+    protected override void OnDisappearing()
+    {
+        (BindingContext as RoomDetailViewModel)?.PauseTravelInfo();
+        base.OnDisappearing();
+    }
+
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+        if (BindingContext is RoomDetailViewModel viewModel)
+        {
+            viewModel.ResumeTravelInfo();
+            if (viewModel.Room is not null) _ = viewModel.LoadTravelInfoAsync();
+        }
+    }
 }
