@@ -41,3 +41,40 @@ X-User-Id: student-ictu-01
 DELETE {{RoomToRentRadar.Api_HostAddress}}/api/v1/favourites/room-2026-001
 Accept: application/json
 X-User-Id: student-ictu-01
+
+### US08 / T08.3 - Moderation Queue & Listing Management
+GET {{RoomToRentRadar.Api_HostAddress}}/api/v1/moderation/listings?moderationStatus=PendingReview
+Accept: application/json
+X-User-Id: mod-ictu-01
+X-User-Role: Moderator
+
+###
+PUT {{RoomToRentRadar.Api_HostAddress}}/api/v1/moderation/listings/room-2026-006/status
+Content-Type: application/json
+X-User-Id: mod-ictu-01
+X-User-Role: Moderator
+
+{
+  "decision": "Approve",
+  "note": "Thông tin và ảnh phòng đạt chuẩn."
+}
+
+###
+GET {{RoomToRentRadar.Api_HostAddress}}/api/v1/moderation/listings/room-2026-006/history
+Accept: application/json
+X-User-Id: mod-ictu-01
+X-User-Role: Moderator
+
+###
+GET {{RoomToRentRadar.Api_HostAddress}}/api/v1/landlord/listings
+Accept: application/json
+X-User-Id: usr-landlord-09
+
+###
+PATCH {{RoomToRentRadar.Api_HostAddress}}/api/v1/landlord/listings/room-2026-001/availability
+Content-Type: application/json
+X-User-Id: usr-landlord-09
+
+{
+  "status": "Rented"
+}

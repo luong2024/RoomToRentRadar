@@ -323,16 +323,33 @@
 
                 <!-- 4. LIVE FILTERED ROOM RESULTS PREVIEW (US04 AC2 & AC3) -->
                 <VerticalStackLayout Spacing="10">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <Label Grid.Column="0"
-                               Text="Danh sách phòng khớp bộ lọc"
-                               FontSize="16"
-                               FontAttributes="Bold" />
-                        <Label Grid.Column="1"
-                               Text="Cập nhật tức thì (&lt; 2s)"
-                               FontSize="12"
-                               TextColor="#10B981"
-                               FontAttributes="Bold" />
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="8">
+                        <VerticalStackLayout Grid.Column="0"
+                                             Spacing="2"
+                                             VerticalOptions="Center">
+                            <Label Text="Danh sách phòng khớp bộ lọc"
+                                   FontSize="16"
+                                   FontAttributes="Bold" />
+                            <Label Text="{Binding DataSourceBadgeText}"
+                                   FontSize="11.5"
+                                   TextColor="#10B981"
+                                   FontAttributes="Bold" />
+                        </VerticalStackLayout>
+
+                        <Border Grid.Column="1"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark=#1C1C22}"
+                                Stroke="{AppThemeBinding Light=#E5E7EB, Dark=#383846}"
+                                StrokeThickness="1"
+                                StrokeShape="RoundRectangle 12"
+                                Padding="8,2"
+                                VerticalOptions="Center">
+                            <Picker AutomationId="FilterSortPicker"
+                                    Title="Sắp xếp"
+                                    FontSize="12"
+                                    ItemsSource="{Binding SortOptions}"
+                                    SelectedItem="{Binding SelectedSortOption}" />
+                        </Border>
                     </Grid>
 
                     <!-- Empty State when no rooms match -->
@@ -366,6 +383,11 @@
                                         StrokeThickness="1"
                                         StrokeShape="RoundRectangle 20"
                                         Padding="0">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type pageModels:SearchFilterViewModel}}, Path=OpenRoomDetailCommand, x:DataType=pageModels:SearchFilterViewModel}"
+                                            CommandParameter="{Binding .}" />
+                                    </Border.GestureRecognizers>
                                     <VerticalStackLayout Spacing="0">
 
                                         <!-- Room Photo Banner with Floating Badges -->
@@ -466,9 +488,21 @@
                                                        TextColor="{StaticResource Primary}" />
                                             </Grid>
 
-                                            <Label Text="{Binding Address, StringFormat='📍 {0}'}"
-                                                   FontSize="12"
-                                                   TextColor="{StaticResource Gray400}" />
+                                            <Grid ColumnDefinitions="*,Auto"
+                                                  ColumnSpacing="8">
+                                                <Label Grid.Column="0"
+                                                       Text="{Binding Address, StringFormat='📍 {0}'}"
+                                                       FontSize="12"
+                                                       TextColor="{StaticResource Gray400}"
+                                                       LineBreakMode="TailTruncation"
+                                                       VerticalOptions="Center" />
+                                                <Label Grid.Column="1"
+                                                       Text="Xem chi tiết phòng →"
+                                                       FontSize="12"
+                                                       FontAttributes="Bold"
+                                                       TextColor="{StaticResource Primary}"
+                                                       VerticalOptions="Center" />
+                                            </Grid>
                                         </VerticalStackLayout>
                                     </VerticalStackLayout>
                                 </Border>

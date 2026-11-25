@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using RoomToRentRadar.Api.Data;
 using RoomToRentRadar.Api.Models;
 using RoomToRentRadar.Shared.Dtos;
@@ -6,8 +7,9 @@ namespace RoomToRentRadar.Api.Repositories;
 
 public sealed class InMemoryListingRepository : IListingRepository
 {
-    private readonly IReadOnlyDictionary<string, ListingDocument> _byId;
-    private readonly IReadOnlyList<ListingDocument> _canonical;
+    private readonly Lock _sync = new();
+    private readonly ConcurrentDictionary<string, ListingDocument> _byId;
+    private readonly List<ListingDocument> _canonical;
 
     public InMemoryListingRepository()
         : this(ListingSeedData.Create())
@@ -17,7 +19,9 @@ public sealed class InMemoryListingRepository : IListingRepository
     public InMemoryListingRepository(IEnumerable<ListingDocument> listings)
     {
         var all = listings.ToList();
-        _byId = all.ToDictionary(l => l.Id, StringComparer.OrdinalIgnoreCase);
+        _byId = new ConcurrentDictionary<string, ListingDocument>(
+            all.ToDictionary(l => l.Id, StringComparer.OrdinalIgnoreCase),
+            StringComparer.OrdinalIgnoreCase);
         _canonical = all
             .Where(l => l.Id.StartsWith("room-2026-", StringComparison.OrdinalIgnoreCase))
             .ToList();
@@ -29,6 +33,35 @@ public sealed class InMemoryListingRepository : IListingRepository
         return Task.FromResult(listing);
     }
 
+    public Task<IReadOnlyList<ListingDocument>> GetAllCanonicalAsync(CancellationToken cancellationToken = default)
+    {
+        lock (_sync)
+        {
+            return Task.FromResult<IReadOnlyList<ListingDocument>>(_canonical.ToList());
+        }
+    }
+
+    public Task<ListingDocument> UpsertAsync(ListingDocument listing, CancellationToken cancellationToken = default)
+    {
+        lock (_sync)
+        {
+            _byId[listing.Id] = listing;
+            UpdateCanonicalList(listing);
+
+            // Đồng bộ alias room-ictu-XXX <-> room-2026-XXX nếu có
+            var aliasId = GetAliasId(listing.Id);
+            if (aliasId is not null && _byId.TryGetValue(aliasId, out var aliasDoc))
+            {
+                aliasDoc.Status = listing.Status;
+                aliasDoc.IsVerified = listing.IsVerified;
+                aliasDoc.ModerationStatus = listing.ModerationStatus;
+                aliasDoc.UpdatedAt = listing.UpdatedAt;
+            }
+
+            return Task.FromResult(listing);
+        }
+    }
+
     public Task<IReadOnlyList<ListingDocument>> GetSimilarCandidatesAsync(
         string campusId,
         string excludeId,
@@ -36,22 +69,31 @@ public sealed class InMemoryListingRepository : IListingRepository
     {
         var excludeCanonical = NormalizeToCanonicalId(excludeId);
 
-        IReadOnlyList<ListingDocument> items = _canonical
-            .Where(l =>
-                string.Equals(l.CampusId, campusId, StringComparison.OrdinalIgnoreCase)
-                && !string.Equals(l.Id, excludeCanonical, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(l.Status, "Available", StringComparison.OrdinalIgnoreCase)
-                && l.IsVerified)
-            .ToList();
+        lock (_sync)
+        {
+            IReadOnlyList<ListingDocument> items = _canonical
+                .Where(l =>
+                    string.Equals(l.CampusId, campusId, StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(l.Id, excludeCanonical, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(l.Status, "Available", StringComparison.OrdinalIgnoreCase)
+                    && l.IsVerified)
+                .ToList();
 
-        return Task.FromResult(items);
+            return Task.FromResult(items);
+        }
     }
 
     public Task<(IReadOnlyList<ListingDocument> Items, int TotalCount)> SearchAsync(
         ListingSearchQuery query,
         CancellationToken cancellationToken = default)
     {
-        IEnumerable<ListingDocument> filtered = _canonical
+        List<ListingDocument> snapshot;
+        lock (_sync)
+        {
+            snapshot = _canonical.ToList();
+        }
+
+        IEnumerable<ListingDocument> filtered = snapshot
             .Where(l =>
                 string.Equals(l.CampusId, query.CampusId, StringComparison.OrdinalIgnoreCase)
                 && string.Equals(l.Status, "Available", StringComparison.OrdinalIgnoreCase)
@@ -111,7 +153,13 @@ public sealed class InMemoryListingRepository : IListingRepository
         ListingQueryRequest request,
         CancellationToken cancellationToken = default)
     {
-        IQueryable<ListingDocument> query = _canonical
+        List<ListingDocument> snapshot;
+        lock (_sync)
+        {
+            snapshot = _canonical.ToList();
+        }
+
+        IQueryable<ListingDocument> query = snapshot
             .AsQueryable()
             .Where(l =>
                 (string.IsNullOrWhiteSpace(request.CampusId)
@@ -150,6 +198,42 @@ public sealed class InMemoryListingRepository : IListingRepository
             .ToList();
 
         return Task.FromResult(((IReadOnlyList<ListingDocument>)items, totalCount));
+    }
+
+    private void UpdateCanonicalList(ListingDocument listing)
+    {
+        if (!listing.Id.StartsWith("room-2026-", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        int existingIndex = _canonical.FindIndex(l =>
+            string.Equals(l.Id, listing.Id, StringComparison.OrdinalIgnoreCase));
+        if (existingIndex >= 0)
+        {
+            _canonical[existingIndex] = listing;
+        }
+        else
+        {
+            _canonical.Add(listing);
+        }
+    }
+
+    private static string? GetAliasId(string id)
+    {
+        if (id.StartsWith("room-2026-", StringComparison.OrdinalIgnoreCase)
+            && int.TryParse(id["room-2026-".Length..], out var n))
+        {
+            return $"room-ictu-{n:000}";
+        }
+
+        if (id.StartsWith("room-ictu-", StringComparison.OrdinalIgnoreCase)
+            && int.TryParse(id["room-ictu-".Length..], out var m))
+        {
+            return $"room-2026-{m:000}";
+        }
+
+        return null;
     }
 
     private static string NormalizeToCanonicalId(string id)
