@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -37,6 +37,14 @@
     <Compile Include="..\RoomToRentRadar\Services\ISpatialSearchService.cs" Link="Linked\Services\ISpatialSearchService.cs" />
     <Compile Include="..\RoomToRentRadar\Services\MockSpatialSearchService.cs" Link="Linked\Services\MockSpatialSearchService.cs" />
     <Compile Include="..\RoomToRentRadar\PageModels\MapSearchViewModel.cs" Link="Linked\PageModels\MapSearchViewModel.cs" />
+    <Compile Include="..\RoomToRentRadar\Models\Contracts\RoomDetailAndSearchContracts.cs" Link="Linked\Models\Contracts\RoomDetailAndSearchContracts.cs" />
+    <Compile Include="..\RoomToRentRadar\Services\IAppNavigationService.cs" Link="Linked\Services\IAppNavigationService.cs" />
+    <Compile Include="..\RoomToRentRadar\Services\IRoomDetailService.cs" Link="Linked\Services\IRoomDetailService.cs" />
+    <Compile Include="..\RoomToRentRadar\Services\MockRoomDetailService.cs" Link="Linked\Services\MockRoomDetailService.cs" />
+    <Compile Include="..\RoomToRentRadar\Services\ISearchFilterService.cs" Link="Linked\Services\ISearchFilterService.cs" />
+    <Compile Include="..\RoomToRentRadar\Services\MockSearchFilterService.cs" Link="Linked\Services\MockSearchFilterService.cs" />
+    <Compile Include="..\RoomToRentRadar\PageModels\RoomDetailViewModel.cs" Link="Linked\PageModels\RoomDetailViewModel.cs" />
+    <Compile Include="..\RoomToRentRadar\PageModels\SearchFilterViewModel.cs" Link="Linked\PageModels\SearchFilterViewModel.cs" />
   </ItemGroup>
 
 </Project>

@@ -166,6 +166,32 @@
                 <VerticalStackLayout Padding="16,0,16,0"
                                      Spacing="16">
 
+                    <!-- Error Banner when Listing Lookup Fails -->
+                    <Border IsVisible="{Binding HasError}"
+                            BackgroundColor="{AppThemeBinding Light=#FEF2F2, Dark=#3B1219}"
+                            Stroke="#EF4444"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 16"
+                            Padding="14">
+                        <Grid ColumnDefinitions="*,Auto"
+                              ColumnSpacing="10">
+                            <Label Grid.Column="0"
+                                   Text="{Binding ErrorMessage}"
+                                   FontSize="13"
+                                   TextColor="{AppThemeBinding Light=#991B1B, Dark=#FECACA}"
+                                   VerticalOptions="Center" />
+                            <Button Grid.Column="1"
+                                    Text="Thử lại"
+                                    Command="{Binding RetryLoadCommand}"
+                                    BackgroundColor="#EF4444"
+                                    TextColor="White"
+                                    FontSize="12"
+                                    FontAttributes="Bold"
+                                    CornerRadius="10"
+                                    Padding="12,6" />
+                        </Grid>
+                    </Border>
+
                     <!-- US02 AC3: Unavailable Banner & Horizontal Similar Rooms Carousel -->
                     <Border AutomationId="UnavailableBanner"
                             IsVisible="{Binding IsUnavailable}"
@@ -313,7 +339,8 @@
                             StrokeShape="RoundRectangle 22"
                             Padding="18">
                         <VerticalStackLayout Spacing="12">
-                            <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Grid ColumnDefinitions="Auto,*,Auto"
+                                  ColumnSpacing="8">
                                 <Border Grid.Column="0"
                                         BackgroundColor="#EDE9FE"
                                         StrokeThickness="0"
@@ -323,6 +350,18 @@
                                            FontSize="12"
                                            FontAttributes="Bold"
                                            TextColor="#5B21B6" />
+                                </Border>
+
+                                <Border Grid.Column="1"
+                                        HorizontalOptions="Start"
+                                        BackgroundColor="#ECFDF5"
+                                        StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 10"
+                                        Padding="8,4">
+                                    <Label Text="{Binding DataSourceBadgeText}"
+                                           FontSize="10.5"
+                                           FontAttributes="Bold"
+                                           TextColor="#047857" />
                                 </Border>
 
                                 <Label Grid.Column="2"
