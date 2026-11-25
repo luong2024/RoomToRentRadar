@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pageModels="clr-namespace:RoomToRentRadar.PageModels"
+             xmlns:models="clr-namespace:RoomToRentRadar.Models"
+             x:Class="RoomToRentRadar.Pages.PhotoGalleryModal"
+             x:DataType="pageModels:PhotoGalleryViewModel"
+             Title="Bộ sưu tập ảnh phòng"
+             BackgroundColor="#0B1120">
+
+    <Grid RowDefinitions="Auto,*,Auto" Padding="14">
+
+        <!-- Thanh tiêu đề + chỉ số ảnh -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,4,0,10">
+            <VerticalStackLayout Spacing="2">
+                <Label Text="{Binding CounterText}"
+                       FontSize="16"
+                       FontAttributes="Bold"
+                       TextColor="White" />
+                <Label Text="{Binding CurrentCaption}"
+                       FontSize="12.5"
+                       TextColor="#CBD5E1"
+                       MaxLines="1"
+                       LineBreakMode="TailTruncation" />
+            </VerticalStackLayout>
+
+            <Button Grid.Column="1"
+                    AutomationId="CloseGalleryButton"
+                    Text="Đóng"
+                    Command="{Binding CloseGalleryCommand}"
+                    BackgroundColor="#1E293B"
+                    TextColor="White"
+                    CornerRadius="6"
+                    Padding="14,6" />
+        </Grid>
+
+        <!-- Carousel ảnh thực tế (AC1, AC3) -->
+        <CarouselView Grid.Row="1"
+                      AutomationId="PhotoCarouselView"
+                      ItemsSource="{Binding Photos}"
+                      Position="{Binding CurrentPosition}"
+                      IsVisible="{Binding HasPhotos}"
+                      Loop="False">
+            <CarouselView.ItemTemplate>
+                <DataTemplate x:DataType="models:PhotoGalleryItemModel">
+                    <Grid Padding="4">
+                        <Image Source="{Binding ImageUrl}"
+                               Aspect="AspectFit"
+                               HorizontalOptions="Fill"
+                               VerticalOptions="Fill" />
+
+                        <Border HorizontalOptions="End"
+                                VerticalOptions="Start"
+                                Margin="12"
+                                Padding="10,5"
+                                BackgroundColor="#CC1D4ED8"
+                                StrokeThickness="0"
+                                StrokeShape="RoundRectangle 14"
+                                IsVisible="{Binding Is360}">
+                            <Label Text="360° VR"
+                                   FontSize="12"
+                                   FontAttributes="Bold"
+                                   TextColor="White" />
+                        </Border>
+                    </Grid>
+                </DataTemplate>
+            </CarouselView.ItemTemplate>
+        </CarouselView>
+
+        <!-- Ảnh dự phòng khi phòng không có ảnh (AC4) -->
+        <VerticalStackLayout Grid.Row="1"
+                             IsVisible="{Binding ShowPlaceholder}"
+                             VerticalOptions="Center"
+                             HorizontalOptions="Center"
+                             Spacing="12">
+            <Image AutomationId="PlaceholderRoomImage"
+                   Source="placeholder_room.png"
+                   WidthRequest="240"
+                   HeightRequest="180"
+                   Aspect="AspectFill" />
+            <Label Text="Phòng này hiện chưa có hình ảnh."
+                   FontSize="14"
+                   TextColor="#94A3B8"
+                   HorizontalTextAlignment="Center" />
+        </VerticalStackLayout>
+
+        <ActivityIndicator Grid.Row="1"
+                           IsRunning="{Binding IsLoading}"
+                           IsVisible="{Binding IsLoading}"
+                           Color="White"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center" />
+
+        <!-- Nút mở trình xem 360° toàn màn hình (AC2) -->
+        <Button Grid.Row="2"
+                AutomationId="Open360ViewerButton"
+                Text="Mở chế độ xem 360° tương tác"
+                Command="{Binding Open360ViewerCommand}"
+                IsVisible="{Binding IsCurrentPhoto360}"
+                BackgroundColor="#2563EB"
+                TextColor="White"
+                FontSize="14"
+                FontAttributes="Bold"
+                CornerRadius="8"
+                HeightRequest="46"
+                Margin="0,12,0,4" />
+    </Grid>
+</ContentPage>

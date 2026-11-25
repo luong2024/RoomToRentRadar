@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>RoomToRentRadar 360° Viewer</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css" />
+  <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+  <style>
+    html, body, #panorama {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #020617;
+      color: #f8fafc;
+      font-family: sans-serif;
+      overflow: hidden;
+    }
+    #fallback {
+      display: none;
+      padding: 24px;
+      text-align: center;
+      margin-top: 32vh;
+    }
+  </style>
+</head>
+<body>
+  <div id="panorama"></div>
+  <div id="fallback">
+    <h3>Chế độ xem 360°</h3>
+    <p id="fallbackMsg">Không kết nối được CDN Pannellum. Kéo hoặc kiểm tra kết nối mạng để tải ảnh 360°.</p>
+  </div>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const imgUrl = params.get('img') || '';
+    const isHttp = imgUrl.startsWith('http://') || imgUrl.startsWith('https://');
+    const demoPano = 'https://pannellum.org/images/alma.jpg';
+
+    if (typeof pannellum !== 'undefined') {
+      pannellum.viewer('panorama', {
+        type: 'equirectangular',
+        panorama: isHttp ? imgUrl : demoPano,
+        autoLoad: true,
+        showZoomCtrl: true,
+        compass: true
+      });
+    } else {
+      document.getElementById('panorama').style.display = 'none';
+      document.getElementById('fallback').style.display = 'block';
+    }
+  </script>
+</body>
+</html>

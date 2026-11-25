@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="RoomToRentRadar.Pages.Viewer360Page"
+             Title="Xem phòng 360°"
+             BackgroundColor="#020617">
+
+    <Grid RowDefinitions="Auto,*">
+        <Border Grid.Row="0"
+                BackgroundColor="#0F172A"
+                Padding="14,10"
+                StrokeThickness="0">
+            <Label x:Name="CaptionLabel"
+                   Text="Kéo ngang/dọc để xoay không gian 360°"
+                   FontSize="13"
+                   TextColor="#E2E8F0" />
+        </Border>
+
+        <WebView Grid.Row="1"
+                 x:Name="PanoramaWebView"
+                 AutomationId="Panorama360WebView" />
+    </Grid>
+</ContentPage>

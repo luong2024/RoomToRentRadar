@@ -59,6 +59,8 @@ namespace RoomToRentRadar
             builder.Services.AddSingleton<ProjectListPageModel>();
             builder.Services.AddSingleton<ManageMetaPageModel>();
 
+            builder.Services.AddSingleton<INavigationService, MauiNavigationService>();
+
             // US01 / T01.2: Refit API + Mock fallback + RoomListViewModel
             builder.Services
                 .AddRefitClient<IListingsApiService>()
@@ -98,6 +100,23 @@ namespace RoomToRentRadar
             builder.Services.AddTransient<RoomDetailPage>();
             builder.Services.AddSingleton<SearchFilterViewModel>();
             builder.Services.AddTransient<FilterBottomSheet>();
+
+            // US03 / T03.2: Photo Gallery API + Mock + Modal & 360 Viewer
+            builder.Services
+                .AddRefitClient<IPhotoGalleryApiService>()
+                .ConfigureHttpClient(client =>
+                {
+                    var baseUrl = DeviceInfo.Platform == DevicePlatform.Android
+                        ? "http://10.0.2.2:5000"
+                        : "http://localhost:5000";
+                    client.BaseAddress = new Uri(baseUrl);
+                    client.Timeout = TimeSpan.FromSeconds(5);
+                });
+            builder.Services.AddSingleton<MockPhotoGalleryService>();
+            builder.Services.AddSingleton<IPhotoGalleryService, PhotoGalleryService>();
+            builder.Services.AddTransient<PhotoGalleryViewModel>();
+            builder.Services.AddTransient<PhotoGalleryModal>();
+            builder.Services.AddTransient<Viewer360Page>();
 
             return builder.Build();
         }

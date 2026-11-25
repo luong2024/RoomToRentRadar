@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Maui.Alerts;
+using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
 using Font = Microsoft.Maui.Font;
 
@@ -9,6 +9,9 @@ namespace RoomToRentRadar
         public AppShell()
         {
             InitializeComponent();
+            Routing.RegisterRoute("room-detail-view", typeof(RoomDetailPage));
+            Routing.RegisterRoute("photo-gallery", typeof(PhotoGalleryModal));
+            Routing.RegisterRoute("viewer-360", typeof(Viewer360Page));
             var currentTheme = Application.Current!.RequestedTheme;
             ThemeSegmentedControl.SelectedIndex = currentTheme == AppTheme.Light ? 0 : 1;
         }

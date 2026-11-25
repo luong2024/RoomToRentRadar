@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -20,6 +21,7 @@ namespace RoomToRentRadar.PageModels
         public const int DefaultPageSize = 20;
 
         private readonly IListingsService _listingsService;
+        private readonly INavigationService? _navigationService;
         private readonly HashSet<string> _loadedIds = new(StringComparer.Ordinal);
         private int _currentPage = 1;
         private bool _hasInitialized;
@@ -108,12 +110,22 @@ namespace RoomToRentRadar.PageModels
         public RoomListingItemModel? SelectedRoom
         {
             get => _selectedRoom;
-            set => SetProperty(ref _selectedRoom, value);
+            set
+            {
+                if (SetProperty(ref _selectedRoom, value) && value is not null)
+                {
+                    var selected = value;
+                    _selectedRoom = null;
+                    OnPropertyChanged(nameof(SelectedRoom));
+                    _ = OpenRoomDetailAsync(selected);
+                }
+            }
         }
 
-        public RoomListViewModel(IListingsService listingsService)
+        public RoomListViewModel(IListingsService listingsService, INavigationService? navigationService = null)
         {
             _listingsService = listingsService;
+            _navigationService = navigationService;
             _selectedSortOption = SortOptions[0]; // Mặc định sortBy = "distance" (US01 AC1)
         }
 
@@ -234,6 +246,40 @@ namespace RoomToRentRadar.PageModels
             {
                 IsLoadingMore = false;
             }
+        }
+
+        [RelayCommand]
+        public async Task OpenRoomDetailAsync(RoomListingItemModel? room)
+        {
+            if (room is null || _navigationService is null)
+                return;
+
+            await _navigationService.GoToAsync("room-detail-view", new Dictionary<string, object>
+            {
+                ["id"] = room.Id
+            });
+        }
+
+        [RelayCommand]
+        public async Task OpenMapSearchAsync()
+        {
+            if (_navigationService is null)
+                return;
+
+            await _navigationService.GoToAsync("//map");
+        }
+
+        [RelayCommand]
+        public async Task OpenPhotoGalleryAsync(RoomListingItemModel? room = null)
+        {
+            if (_navigationService is null)
+                return;
+
+            var listingId = room?.Id ?? Listings.FirstOrDefault()?.Id ?? "room-2026-001";
+            await _navigationService.GoToAsync("photo-gallery", new Dictionary<string, object>
+            {
+                ["listingId"] = listingId
+            });
         }
 
         private void AppendUniqueItems(IEnumerable<RoomListingItemModel> items)
