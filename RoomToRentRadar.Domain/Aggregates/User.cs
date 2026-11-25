@@ -12,6 +12,7 @@ public sealed class User
     public const int MaxFailedLoginAttempts = 5;
     public static readonly TimeSpan DefaultLockoutDuration = TimeSpan.FromMinutes(15);
     public const int MaxStoredRefreshTokens = 10;
+    public const int MaxFullNameLength = 100;
 
     // BR-CMP-02 / BR-I18N-02: defaults mirror migration 0002 (Users.SelectedCampusId / PreferredLanguage).
     public const string DefaultSelectedCampusId = "ICTU";
@@ -273,6 +274,64 @@ public sealed class User
         _explicitConcurrencyToken = null;
     }
 
+    /// <summary>
+    /// UC-24 / UC-25 self-service profile edit. Only provided (non-null) values are applied, and nothing
+    /// changes unless every provided value is valid. Role, verification and e-mail are never touched
+    /// (GUARDRAILS 1.5.1). Returns <c>false</c> when no value actually differs.
+    /// </summary>
+    public bool UpdateProfile(
+        string? fullName,
+        string? phoneNumber,
+        string? selectedCampusId,
+        string? preferredLanguage,
+        DateTime utcNow)
+    {
+        var newFullName = fullName is null ? FullName : ValidateProfileFullName(fullName);
+
+        var newPhoneNumber = PhoneNumber;
+        if (phoneNumber is not null)
+        {
+            // A blank value is rejected rather than treated as "clear": Landlords must keep a phone number.
+            newPhoneNumber = NormalizeAndValidatePhone(phoneNumber, required: false)
+                ?? throw new DomainValidationException("Phone number cannot be blank.");
+        }
+
+        var newCampusId = SelectedCampusId;
+        if (selectedCampusId is not null)
+        {
+            // BR-CMP-02: whether the campus exists is checked by the use case.
+            if (string.IsNullOrWhiteSpace(selectedCampusId))
+            {
+                throw new DomainValidationException("Selected campus is required.");
+            }
+
+            newCampusId = selectedCampusId.Trim();
+        }
+
+        // BR-I18N-02
+        if (preferredLanguage is not null && !SupportedLanguages.Contains(preferredLanguage, StringComparer.Ordinal))
+        {
+            throw new DomainValidationException($"Preferred language '{preferredLanguage}' is not supported. Supported values: en, vi.");
+        }
+
+        var newLanguage = preferredLanguage ?? PreferredLanguage;
+
+        if (string.Equals(newFullName, FullName, StringComparison.Ordinal) &&
+            string.Equals(newPhoneNumber, PhoneNumber, StringComparison.Ordinal) &&
+            string.Equals(newCampusId, SelectedCampusId, StringComparison.Ordinal) &&
+            string.Equals(newLanguage, PreferredLanguage, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        FullName = newFullName;
+        PhoneNumber = newPhoneNumber;
+        SelectedCampusId = newCampusId;
+        PreferredLanguage = newLanguage;
+        UpdatedAtUtc = utcNow;
+        return true;
+    }
+
     public bool IsLockedOut(DateTime utcNow) =>
         LockoutEndUtc.HasValue && LockoutEndUtc.Value > utcNow;
 
@@ -469,6 +528,17 @@ public sealed class User
         }
 
         return normalized;
+    }
+
+    private static string ValidateProfileFullName(string fullName)
+    {
+        var trimmed = fullName.Trim();
+        if (trimmed.Length == 0 || trimmed.Length > MaxFullNameLength)
+        {
+            throw new DomainValidationException($"Full name must be between 1 and {MaxFullNameLength} characters long.");
+        }
+
+        return trimmed;
     }
 
     private void TrimRefreshTokenHistory()

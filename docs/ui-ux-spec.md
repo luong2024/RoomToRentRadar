@@ -89,6 +89,9 @@ Use semantic tokens only; method in `.agents/skills/ui/02-design-system`. The pa
 | `SurfaceCard` | `#FFFFFF` | `#162234` | cards |
 | `SurfaceElevated` | `#FFFFFF` | `#22334B` | sheets, dialogs |
 | `SurfaceSubtle` | `#E8EEF5` | `#1A283C` | chips, input fill |
+| `SurfaceSelected` | `#EEF7F6` | `#1E3947` | selected list row, e.g. campus picker (text: `TextPrimary` / `TextSecondary`) |
+| `BorderInput` | `#CBD5E1` | `#3A5273` | outlined search field border |
+| `TextPlaceholder` | `#64748B` | `#94A3B8` | input placeholder and its icon, unselected radio ring (on `SurfaceCard`) |
 | `TextPrimary` | `#1E293B` | `#F4F7FA` | body text, **prices** (bold, not coloured) |
 | `TextSecondary` | `#475569` | `#CBD5E1` | secondary text |
 | `TextMuted` | `#94A3B8` | `#64748B` | **non-essential** hints and disabled only |

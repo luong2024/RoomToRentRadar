@@ -12,7 +12,8 @@ public static partial class AppRoutes
     private static readonly HashSet<string> ReplacedRoutes = new(StringComparer.Ordinal)
     {
         RoomDetail,    // US02 / T02.2
-        SearchFilters  // US04 / T04.2
+        SearchFilters, // US04 / T04.2
+        AccountCampus  // US01 / T13.4
     };
 
     /// <summary>

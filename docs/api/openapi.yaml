@@ -192,7 +192,7 @@ paths:
     patch:
       tags: [Profile]
       operationId: updateMyProfile
-      summary: Update own profile incl. selected campus and language (BR-CMP-02, BR-I18N-02, UC-24, UC-25) — planned
+      summary: Update own profile incl. selected campus and language (BR-CMP-02, BR-I18N-02, UC-24, UC-25)
       security: [ { bearerAuth: [] } ]
       requestBody:
         required: true
@@ -207,6 +207,8 @@ paths:
               schema: { $ref: '#/components/schemas/UserProfileDto' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
 
   # ---------------------------------------------------------------- Campuses
   /api/campuses:
@@ -1350,7 +1352,7 @@ components:
       description: Only provided fields are changed. Role/isVerified/email are not updatable (GUARDRAILS 1.5.1).
       properties:
         fullName: { type: string, minLength: 1, maxLength: 100 }
-        phoneNumber: { type: [string, 'null'], pattern: '^(0|\+84)[0-9]{9}$' }
+        phoneNumber: { type: [string, 'null'], pattern: '^(0|\+84)[0-9]{9}$', description: 'null or omitted = unchanged; the number cannot be cleared.' }
         selectedCampusId: { type: string }
         preferredLanguage: { $ref: '#/components/schemas/AppLanguage' }
     AppLanguage:
