@@ -1,47 +1,20 @@
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
-using System.Net.Http.Json;
-using System.Text.Json;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using RoomToRentRadar.Models.Contracts;
+using RoomToRentRadar.Services;
 
 namespace RoomToRentRadar.PageModels;
 
-public sealed class ApiSearchActiveFiltersDto
+public sealed record SearchSortOptionModel(string Key, string DisplayName)
 {
-    public string CampusId { get; set; } = "ictu-main";
-    public decimal? MinRent { get; set; }
-    public decimal? MaxRent { get; set; }
-    public double? MinArea { get; set; }
-    public double? MaxArea { get; set; }
-    public string? RoomType { get; set; }
-    public double? MaxDistanceMeters { get; set; }
-    public string SortBy { get; set; } = "distance";
-}
-
-public sealed class ApiSearchListingCardDto
-{
-    public string Id { get; set; } = string.Empty;
-    public string CampusId { get; set; } = "ictu-main";
-    public string Title { get; set; } = string.Empty;
-    public decimal Rent { get; set; }
-    public double Area { get; set; }
-    public double DistanceMeters { get; set; }
-    public string RoomType { get; set; } = "Studio";
-    public string Address { get; set; } = string.Empty;
-    public string ThumbnailUrl { get; set; } = string.Empty;
-    public string Status { get; set; } = "Available";
-    public bool IsVerified { get; set; }
-}
-
-public sealed class ApiSearchResponseDto
-{
-    public int TotalCount { get; set; }
-    public ApiSearchActiveFiltersDto ActiveFilters { get; set; } = new();
-    public List<ApiSearchListingCardDto> Items { get; set; } = [];
-    public int PageIndex { get; set; } = 1;
-    public int PageSize { get; set; } = 20;
-    public bool HasNextPage { get; set; }
+    public override string ToString() => DisplayName;
 }
 
 public class ActiveFilterChipModel : ObservableObject
@@ -99,21 +72,15 @@ public class FilteredRoomCardModel : ObservableObject
 public class SearchFilterViewModel : ObservableObject
 {
     private static readonly CultureInfo ViCulture = CultureInfo.GetCultureInfo("vi-VN");
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-    private static readonly HttpClient SharedHttpClient = new()
-    {
-        Timeout = TimeSpan.FromSeconds(2.0)
-    };
 
-    private const decimal DefaultMinRent = 500_000m;
-    private const decimal DefaultMaxRent = 5_000_000m;
     private const double DefaultMinArea = 10.0;
     private const double DefaultMaxArea = 50.0;
     private const int DefaultMaxDistanceMeters = 3000;
     private const string AllRoomTypesValue = "Tất cả";
 
-    private readonly List<FilteredRoomCardModel> _allCatalogRooms = [];
-    private CancellationTokenSource? _apiSearchCts;
+    private readonly ISearchFilterService _searchFilterService;
+    private readonly IAppNavigationService? _navigationService;
+    private CancellationTokenSource? _searchCts;
 
     private string _minRentText = string.Empty;
     private string _maxRentText = string.Empty;
@@ -122,11 +89,10 @@ public class SearchFilterViewModel : ObservableObject
     private double _maxDistanceMeters = DefaultMaxDistanceMeters;
     private string _selectedRoomType = AllRoomTypesValue;
     private bool _onlyVerified = true;
-
-    private static string BaseApiUrl =>
-        DeviceInfo.Current.Platform == DevicePlatform.Android
-            ? "http://10.0.2.2:5000"
-            : "http://localhost:5000";
+    private int _totalResultCount;
+    private bool _isSearching;
+    private bool _isFromLiveApi;
+    private SearchSortOptionModel _selectedSortOption;
 
     public string MinRentText
     {
@@ -135,7 +101,7 @@ public class SearchFilterViewModel : ObservableObject
         {
             if (SetProperty(ref _minRentText, value))
             {
-                ApplyFiltersInternal();
+                TriggerApplyFilters();
             }
         }
     }
@@ -147,7 +113,7 @@ public class SearchFilterViewModel : ObservableObject
         {
             if (SetProperty(ref _maxRentText, value))
             {
-                ApplyFiltersInternal();
+                TriggerApplyFilters();
             }
         }
     }
@@ -166,7 +132,7 @@ public class SearchFilterViewModel : ObservableObject
                     OnPropertyChanged(nameof(MaxArea));
                 }
                 OnPropertyChanged(nameof(FormattedAreaRange));
-                ApplyFiltersInternal();
+                TriggerApplyFilters();
             }
         }
     }
@@ -185,7 +151,7 @@ public class SearchFilterViewModel : ObservableObject
                     OnPropertyChanged(nameof(MinArea));
                 }
                 OnPropertyChanged(nameof(FormattedAreaRange));
-                ApplyFiltersInternal();
+                TriggerApplyFilters();
             }
         }
     }
@@ -199,7 +165,7 @@ public class SearchFilterViewModel : ObservableObject
             if (SetProperty(ref _maxDistanceMeters, Math.Clamp(rounded, 100, DefaultMaxDistanceMeters)))
             {
                 OnPropertyChanged(nameof(FormattedMaxDistance));
-                ApplyFiltersInternal();
+                TriggerApplyFilters();
             }
         }
     }
@@ -215,7 +181,7 @@ public class SearchFilterViewModel : ObservableObject
                 {
                     opt.IsSelected = string.Equals(opt.Value, value, StringComparison.OrdinalIgnoreCase);
                 }
-                ApplyFiltersInternal();
+                TriggerApplyFilters();
             }
         }
     }
@@ -227,10 +193,50 @@ public class SearchFilterViewModel : ObservableObject
         {
             if (SetProperty(ref _onlyVerified, value))
             {
-                ApplyFiltersInternal();
+                TriggerApplyFilters();
             }
         }
     }
+
+    public IReadOnlyList<SearchSortOptionModel> SortOptions { get; } =
+    [
+        new("distance", "Gần ICTU nhất"),
+        new("price_asc", "Giá thấp đến cao"),
+        new("price_desc", "Giá cao đến thấp"),
+        new("area_desc", "Diện tích lớn nhất")
+    ];
+
+    public SearchSortOptionModel SelectedSortOption
+    {
+        get => _selectedSortOption;
+        set
+        {
+            if (value is not null && SetProperty(ref _selectedSortOption, value))
+            {
+                TriggerApplyFilters();
+            }
+        }
+    }
+
+    public bool IsSearching
+    {
+        get => _isSearching;
+        private set => SetProperty(ref _isSearching, value);
+    }
+
+    public bool IsFromLiveApi
+    {
+        get => _isFromLiveApi;
+        private set
+        {
+            if (SetProperty(ref _isFromLiveApi, value))
+            {
+                OnPropertyChanged(nameof(DataSourceBadgeText));
+            }
+        }
+    }
+
+    public string DataSourceBadgeText => IsFromLiveApi ? "🟢 API T04.1 trực tuyến" : "⚡ Bộ lọc Offline";
 
     public string FormattedMaxDistance => MaxDistanceMeters < 1000
         ? $"≤ {MaxDistanceMeters:0} m từ cổng ICTU"
@@ -238,13 +244,23 @@ public class SearchFilterViewModel : ObservableObject
 
     public string FormattedAreaRange => $"{MinArea:0.#} m² – {MaxArea:0.#} m²";
 
-    public int TotalResultCount => FilteredRooms.Count;
+    public int TotalResultCount
+    {
+        get => _totalResultCount;
+        private set
+        {
+            if (SetProperty(ref _totalResultCount, value))
+            {
+                OnPropertyChanged(nameof(ResultCountText));
+            }
+        }
+    }
 
-    public string ResultCountText => $"Tìm thấy {FilteredRooms.Count} phòng phù hợp";
+    public string ResultCountText => $"Tìm thấy {TotalResultCount} phòng phù hợp";
 
     public bool HasActiveFilters => ActiveFilterChips.Count > 0;
 
-    public bool HasNoResults => FilteredRooms.Count == 0;
+    public bool HasNoResults => !IsSearching && FilteredRooms.Count == 0;
 
     public ObservableCollection<ActiveFilterChipModel> ActiveFilterChips { get; } = [];
 
@@ -252,9 +268,9 @@ public class SearchFilterViewModel : ObservableObject
 
     public ObservableCollection<FilteredRoomCardModel> FilteredRooms { get; } = [];
 
-    public IRelayCommand ClearFiltersCommand { get; }
+    public IAsyncRelayCommand ClearFiltersCommand { get; }
 
-    public IRelayCommand ApplyFiltersCommand { get; }
+    public IAsyncRelayCommand ApplyFiltersCommand { get; }
 
     public IRelayCommand<RoomTypeOptionModel> SelectRoomTypeCommand { get; }
 
@@ -264,18 +280,26 @@ public class SearchFilterViewModel : ObservableObject
 
     public IRelayCommand<string> ApplyAreaPresetCommand { get; }
 
-    public SearchFilterViewModel()
+    public IAsyncRelayCommand<FilteredRoomCardModel> OpenRoomDetailCommand { get; }
+
+    public SearchFilterViewModel(
+        ISearchFilterService? searchFilterService = null,
+        IAppNavigationService? navigationService = null)
     {
-        ClearFiltersCommand = new RelayCommand(ClearFilters);
-        ApplyFiltersCommand = new RelayCommand(ApplyFiltersInternal);
+        _searchFilterService = searchFilterService ?? new MockSearchFilterService();
+        _navigationService = navigationService;
+        _selectedSortOption = SortOptions[0];
+
+        ClearFiltersCommand = new AsyncRelayCommand(ClearFiltersAsync);
+        ApplyFiltersCommand = new AsyncRelayCommand(() => ApplyFiltersAsync());
         SelectRoomTypeCommand = new RelayCommand<RoomTypeOptionModel>(SelectRoomType);
         RemoveFilterChipCommand = new RelayCommand<ActiveFilterChipModel>(RemoveFilterChip);
         ApplyPricePresetCommand = new RelayCommand<string>(ApplyPricePreset);
         ApplyAreaPresetCommand = new RelayCommand<string>(ApplyAreaPreset);
+        OpenRoomDetailCommand = new AsyncRelayCommand<FilteredRoomCardModel>(OpenRoomDetailAsync);
 
         InitializeRoomTypes();
-        SeedCatalogRooms();
-        ApplyFiltersInternal();
+        _ = ApplyFiltersAsync();
     }
 
     private void InitializeRoomTypes()
@@ -286,133 +310,6 @@ public class SearchFilterViewModel : ObservableObject
         RoomTypeOptions.Add(new RoomTypeOptionModel { Value = "Phòng khép kín", Icon = "🚪", IsSelected = false });
         RoomTypeOptions.Add(new RoomTypeOptionModel { Value = "Gác xép", Icon = "🪜", IsSelected = false });
         RoomTypeOptions.Add(new RoomTypeOptionModel { Value = "Chung cư mini", Icon = "🏢", IsSelected = false });
-    }
-
-    private void SeedCatalogRooms()
-    {
-        _allCatalogRooms.Clear();
-        _allCatalogRooms.AddRange([
-            new FilteredRoomCardModel
-            {
-                Id = "room-2026-001",
-                Title = "Studio Ban Công Thoáng Cách Cổng Chính ICTU 400m",
-                Rent = 1_800_000m,
-                Area = 22.5,
-                RoomType = "Studio",
-                DistanceMeters = 400,
-                Address = "Ngõ 18 Đường Z115, Tân Thịnh, TP. Thái Nguyên",
-                IsVerified = true,
-                SecurityScore = 4.8,
-                ImageUrl = "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=700&q=80",
-                PhotoBadgeText = "📷 6 ảnh • 🌐 360°",
-                FallbackColorHex = "#4F46E5"
-            },
-            new FilteredRoomCardModel
-            {
-                Id = "room-2026-002",
-                Title = "Studio Full Nội Thất Cổng Phụ ICTU",
-                Rent = 1_950_000m,
-                Area = 24.0,
-                RoomType = "Studio",
-                DistanceMeters = 350,
-                Address = "Ngõ 42 Đường Z115, Tân Thịnh, TP. Thái Nguyên",
-                IsVerified = true,
-                SecurityScore = 4.9,
-                ImageUrl = "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=700&q=80",
-                PhotoBadgeText = "📷 8 ảnh • 🌐 360°",
-                FallbackColorHex = "#7C3AED"
-            },
-            new FilteredRoomCardModel
-            {
-                Id = "room-2026-003",
-                Title = "Phòng Trọ Khép Kín Gác Xép Gỗ Thoáng Mát",
-                Rent = 1_500_000m,
-                Area = 20.0,
-                RoomType = "Gác xép",
-                DistanceMeters = 550,
-                Address = "Đường Quang Trung, Tân Thịnh, TP. Thái Nguyên",
-                IsVerified = true,
-                SecurityScore = 4.6,
-                ImageUrl = "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=700&q=80",
-                PhotoBadgeText = "📷 5 ảnh",
-                FallbackColorHex = "#0D9488"
-            },
-            new FilteredRoomCardModel
-            {
-                Id = "room-2026-004",
-                Title = "Phòng Khép Kín Sinh Viên Giá Rẻ Gần Chợ Z115",
-                Rent = 1_200_000m,
-                Area = 16.0,
-                RoomType = "Phòng khép kín",
-                DistanceMeters = 700,
-                Address = "Tổ 5 Phường Tân Thịnh, TP. Thái Nguyên",
-                IsVerified = true,
-                SecurityScore = 4.5,
-                ImageUrl = "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=700&q=80",
-                PhotoBadgeText = "📷 4 ảnh",
-                FallbackColorHex = "#2563EB"
-            },
-            new FilteredRoomCardModel
-            {
-                Id = "room-2026-005",
-                Title = "Chung Cư Mini Có Thang Máy & Khóa Vân Tay",
-                Rent = 2_600_000m,
-                Area = 28.0,
-                RoomType = "Chung cư mini",
-                DistanceMeters = 850,
-                Address = "Đường Z115, Quyết Thắng, TP. Thái Nguyên",
-                IsVerified = true,
-                SecurityScore = 4.9,
-                ImageUrl = "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=700&q=80",
-                PhotoBadgeText = "📷 10 ảnh • 🌐 360°",
-                FallbackColorHex = "#4338CA"
-            },
-            new FilteredRoomCardModel
-            {
-                Id = "room-2026-006",
-                Title = "Phòng Khép Kín Ban Công Rộng Gần Hồ Điều Hòa",
-                Rent = 1_650_000m,
-                Area = 21.0,
-                RoomType = "Phòng khép kín",
-                DistanceMeters = 1200,
-                Address = "Tổ 7 Phường Tân Thịnh, TP. Thái Nguyên",
-                IsVerified = true,
-                SecurityScore = 4.7,
-                ImageUrl = "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=700&q=80",
-                PhotoBadgeText = "📷 6 ảnh",
-                FallbackColorHex = "#059669"
-            },
-            new FilteredRoomCardModel
-            {
-                Id = "room-2026-007",
-                Title = "Phòng Gác Xép Có Điều Hòa Cách ICTU 1.5km",
-                Rent = 1_350_000m,
-                Area = 18.5,
-                RoomType = "Gác xép",
-                DistanceMeters = 1500,
-                Address = "Phường Quyết Thắng, TP. Thái Nguyên",
-                IsVerified = true,
-                SecurityScore = 4.4,
-                ImageUrl = "https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=700&q=80",
-                PhotoBadgeText = "📷 5 ảnh",
-                FallbackColorHex = "#D97706"
-            },
-            new FilteredRoomCardModel
-            {
-                Id = "room-2026-008",
-                Title = "Chung Cư Mini 2 Giường Cho Nhóm Sinh Viên Ở Ghép",
-                Rent = 3_200_000m,
-                Area = 35.0,
-                RoomType = "Chung cư mini",
-                DistanceMeters = 1800,
-                Address = "Đường Lương Ngọc Quyến, TP. Thái Nguyên",
-                IsVerified = true,
-                SecurityScore = 4.8,
-                ImageUrl = "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&w=700&q=80",
-                PhotoBadgeText = "📷 9 ảnh • 🌐 360°",
-                FallbackColorHex = "#9333EA"
-            }
-        ]);
     }
 
     private void SelectRoomType(RoomTypeOptionModel? option)
@@ -447,7 +344,7 @@ public class SearchFilterViewModel : ObservableObject
 
         OnPropertyChanged(nameof(MinRentText));
         OnPropertyChanged(nameof(MaxRentText));
-        ApplyFiltersInternal();
+        TriggerApplyFilters();
     }
 
     private void ApplyAreaPreset(string? presetKey)
@@ -475,7 +372,7 @@ public class SearchFilterViewModel : ObservableObject
         OnPropertyChanged(nameof(MinArea));
         OnPropertyChanged(nameof(MaxArea));
         OnPropertyChanged(nameof(FormattedAreaRange));
-        ApplyFiltersInternal();
+        TriggerApplyFilters();
     }
 
     private void RemoveFilterChip(ActiveFilterChipModel? chip)
@@ -497,7 +394,7 @@ public class SearchFilterViewModel : ObservableObject
                 OnPropertyChanged(nameof(MinArea));
                 OnPropertyChanged(nameof(MaxArea));
                 OnPropertyChanged(nameof(FormattedAreaRange));
-                ApplyFiltersInternal();
+                TriggerApplyFilters();
                 break;
             case "roomType":
                 SelectedRoomType = AllRoomTypesValue;
@@ -508,7 +405,7 @@ public class SearchFilterViewModel : ObservableObject
         }
     }
 
-    public void ClearFilters()
+    public async Task ClearFiltersAsync()
     {
         _minRentText = string.Empty;
         _maxRentText = string.Empty;
@@ -517,6 +414,7 @@ public class SearchFilterViewModel : ObservableObject
         _maxDistanceMeters = DefaultMaxDistanceMeters;
         _selectedRoomType = AllRoomTypesValue;
         _onlyVerified = true;
+        _selectedSortOption = SortOptions[0];
 
         foreach (var opt in RoomTypeOptions)
         {
@@ -532,37 +430,117 @@ public class SearchFilterViewModel : ObservableObject
         OnPropertyChanged(nameof(FormattedMaxDistance));
         OnPropertyChanged(nameof(SelectedRoomType));
         OnPropertyChanged(nameof(OnlyVerified));
+        OnPropertyChanged(nameof(SelectedSortOption));
 
-        ApplyFiltersInternal();
+        await ApplyFiltersAsync();
     }
 
-    private void ApplyFiltersInternal()
+    private void TriggerApplyFilters()
     {
-        var minRent = ParseDecimalOrDefault(MinRentText, DefaultMinRent);
-        var maxRent = ParseDecimalOrDefault(MaxRentText, DefaultMaxRent);
+        _ = ApplyFiltersAsync();
+    }
 
-        if (maxRent < minRent)
+    public async Task ApplyFiltersAsync(CancellationToken cancellationToken = default)
+    {
+        var minRent = ParseOptionalDecimal(MinRentText);
+        var maxRent = ParseOptionalDecimal(MaxRentText);
+
+        RebuildActiveFilterChips(minRent, maxRent);
+
+        _searchCts?.Cancel();
+        _searchCts = cancellationToken == default
+            ? new CancellationTokenSource()
+            : CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        var token = _searchCts.Token;
+
+        try
         {
-            maxRent = DefaultMaxRent;
-        }
+            IsSearching = true;
+            OnPropertyChanged(nameof(HasNoResults));
 
+            var query = new SearchListingsQueryContract
+            {
+                CampusId = "ictu-main",
+                MinRent = minRent,
+                MaxRent = maxRent,
+                MinArea = MinArea > DefaultMinArea ? MinArea : null,
+                MaxArea = MaxArea < DefaultMaxArea ? MaxArea : null,
+                RoomType = string.Equals(SelectedRoomType, AllRoomTypesValue, StringComparison.OrdinalIgnoreCase)
+                    ? null
+                    : SelectedRoomType,
+                MaxDistanceMeters = MaxDistanceMeters,
+                SortBy = SelectedSortOption.Key,
+                PageIndex = 1,
+                PageSize = 20
+            };
+
+            var fetchResult = await _searchFilterService.SearchAsync(query, token);
+            if (token.IsCancellationRequested)
+                return;
+
+            var response = fetchResult.Response;
+            IsFromLiveApi = fetchResult.IsFromLiveApi;
+
+            FilteredRooms.Clear();
+            var colors = new[] { "#4F46E5", "#7C3AED", "#0D9488", "#2563EB", "#4338CA" };
+            for (var i = 0; i < response.Items.Count; i++)
+            {
+                var item = response.Items[i];
+                if (OnlyVerified && !item.IsVerified)
+                    continue;
+
+                FilteredRooms.Add(new FilteredRoomCardModel
+                {
+                    Id = item.Id,
+                    Title = item.Title,
+                    Rent = item.Rent,
+                    Area = item.Area,
+                    RoomType = item.RoomType,
+                    DistanceMeters = (int)Math.Round(item.DistanceMeters),
+                    Address = item.Address,
+                    IsVerified = item.IsVerified,
+                    SecurityScore = 4.8,
+                    ImageUrl = ResolveRoomPhotoUrl(item.Id, item.ThumbnailUrl),
+                    PhotoBadgeText = ResolvePhotoBadge(item.Id),
+                    FallbackColorHex = colors[i % colors.Length]
+                });
+            }
+
+            TotalResultCount = OnlyVerified ? Math.Min(response.TotalCount, FilteredRooms.Count == response.Items.Count ? response.TotalCount : FilteredRooms.Count) : response.TotalCount;
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when rapid filter edits supersede an earlier request
+        }
+        finally
+        {
+            IsSearching = false;
+            OnPropertyChanged(nameof(HasActiveFilters));
+            OnPropertyChanged(nameof(HasNoResults));
+            OnPropertyChanged(nameof(ResultCountText));
+        }
+    }
+
+    private void RebuildActiveFilterChips(decimal? parsedMinRent, decimal? parsedMaxRent)
+    {
         ActiveFilterChips.Clear();
 
-        if (!string.IsNullOrWhiteSpace(MinRentText) && decimal.TryParse(CleanDigits(MinRentText), out var parsedMinRent))
+        if (parsedMinRent is { } minVal)
         {
             ActiveFilterChips.Add(new ActiveFilterChipModel
             {
                 Key = "minRent",
-                Label = $"Giá từ {string.Format(ViCulture, "{0:N0} đ", parsedMinRent)}"
+                Label = $"Giá từ {string.Format(ViCulture, "{0:N0} đ", minVal)}"
             });
         }
 
-        if (!string.IsNullOrWhiteSpace(MaxRentText) && decimal.TryParse(CleanDigits(MaxRentText), out var parsedMaxRent))
+        if (parsedMaxRent is { } maxVal)
         {
             ActiveFilterChips.Add(new ActiveFilterChipModel
             {
                 Key = "maxRent",
-                Label = $"Giá ≤ {string.Format(ViCulture, "{0:N0} đ", parsedMaxRent)}"
+                Label = $"Giá ≤ {string.Format(ViCulture, "{0:N0} đ", maxVal)}"
             });
         }
 
@@ -593,116 +571,25 @@ public class SearchFilterViewModel : ObservableObject
             });
         }
 
-        var query = _allCatalogRooms.Where(r =>
-            r.Rent >= minRent &&
-            r.Rent <= maxRent &&
-            r.Area >= MinArea &&
-            r.Area <= MaxArea &&
-            r.DistanceMeters <= MaxDistanceMeters &&
-            (!OnlyVerified || r.IsVerified) &&
-            MatchesRoomType(r.RoomType, SelectedRoomType))
-            .OrderBy(r => r.DistanceMeters)
-            .ToList();
-
-        FilteredRooms.Clear();
-        foreach (var room in query)
-        {
-            FilteredRooms.Add(room);
-        }
-
-        OnPropertyChanged(nameof(TotalResultCount));
-        OnPropertyChanged(nameof(ResultCountText));
         OnPropertyChanged(nameof(HasActiveFilters));
-        OnPropertyChanged(nameof(HasNoResults));
-
-        _apiSearchCts?.Cancel();
-        _apiSearchCts = new CancellationTokenSource();
-        _ = FetchSearchResultsFromApiAsync(minRent, maxRent, _apiSearchCts.Token);
     }
 
-    /// <summary>
-    /// Calls Backend API T04.1 (GET /api/v1/listings/search) and updates FilteredRooms when the local API is online.
-    /// Automatically preserves local filtered results when Backend API is offline.
-    /// </summary>
-    public async Task FetchSearchResultsFromApiAsync(
-        decimal minRent,
-        decimal maxRent,
-        CancellationToken cancellationToken = default)
+    private async Task OpenRoomDetailAsync(FilteredRoomCardModel? room)
     {
-        try
-        {
-            var queryParams = new List<string>
-            {
-                "campusId=ictu-main",
-                $"minRent={minRent.ToString(CultureInfo.InvariantCulture)}",
-                $"maxRent={maxRent.ToString(CultureInfo.InvariantCulture)}",
-                $"minArea={MinArea.ToString(CultureInfo.InvariantCulture)}",
-                $"maxArea={MaxArea.ToString(CultureInfo.InvariantCulture)}",
-                $"maxDistanceMeters={MaxDistanceMeters.ToString(CultureInfo.InvariantCulture)}",
-                "sortBy=distance",
-                "pageIndex=1",
-                "pageSize=20"
-            };
+        if (room is null || _navigationService is null)
+            return;
 
-            if (!string.Equals(SelectedRoomType, AllRoomTypesValue, StringComparison.OrdinalIgnoreCase))
-            {
-                var apiRoomType = string.Equals(SelectedRoomType, "Phòng khép kín", StringComparison.OrdinalIgnoreCase)
-                    ? "Khép kín"
-                    : SelectedRoomType;
-                queryParams.Add($"roomType={Uri.EscapeDataString(apiRoomType)}");
-            }
-
-            var url = $"{BaseApiUrl}/api/v1/listings/search?{string.Join("&", queryParams)}";
-            var response = await SharedHttpClient.GetFromJsonAsync<ApiSearchResponseDto>(url, JsonOptions, cancellationToken);
-            if (response is null || cancellationToken.IsCancellationRequested)
-                return;
-
-            var colors = new[] { "#4F46E5", "#7C3AED", "#0D9488", "#2563EB", "#4338CA" };
-            FilteredRooms.Clear();
-            for (var i = 0; i < response.Items.Count; i++)
-            {
-                var item = response.Items[i];
-                FilteredRooms.Add(new FilteredRoomCardModel
-                {
-                    Id = item.Id,
-                    Title = item.Title,
-                    Rent = item.Rent,
-                    Area = item.Area,
-                    RoomType = item.RoomType,
-                    DistanceMeters = (int)Math.Round(item.DistanceMeters),
-                    Address = item.Address,
-                    IsVerified = item.IsVerified,
-                    SecurityScore = 4.8,
-                    ImageUrl = ResolveRoomPhotoUrl(item.Id, item.ThumbnailUrl),
-                    PhotoBadgeText = "📷 6 ảnh • 🌐 360°",
-                    FallbackColorHex = colors[i % colors.Length]
-                });
-            }
-
-            OnPropertyChanged(nameof(TotalResultCount));
-            OnPropertyChanged(nameof(ResultCountText));
-            OnPropertyChanged(nameof(HasActiveFilters));
-            OnPropertyChanged(nameof(HasNoResults));
-        }
-        catch (Exception)
-        {
-            // Keep local filtered catalog when Backend API (http://localhost:5000) is not running
-        }
+        await _navigationService.NavigateToRoomDetailAsync(room.Id);
     }
 
-    private static bool MatchesRoomType(string roomType, string selectedFilter)
+    private static string ResolvePhotoBadge(string roomId) => roomId.ToLowerInvariant() switch
     {
-        if (string.Equals(selectedFilter, AllRoomTypesValue, StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        if (string.Equals(selectedFilter, "Phòng khép kín", StringComparison.OrdinalIgnoreCase)
-            && string.Equals(roomType, "Khép kín", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        return string.Equals(roomType, selectedFilter, StringComparison.OrdinalIgnoreCase);
-    }
+        "room-2026-001" => "📷 6 ảnh • 🌐 360°",
+        "room-2026-002" => "📷 8 ảnh • 🌐 360°",
+        "room-2026-005" => "📷 10 ảnh • 🌐 360°",
+        "room-2026-008" => "📷 9 ảnh • 🌐 360°",
+        _ => "📷 5 ảnh"
+    };
 
     private static string ResolveRoomPhotoUrl(string roomId, string? rawUrl)
     {
@@ -715,8 +602,11 @@ public class SearchFilterViewModel : ObservableObject
         {
             "room-2026-002" or "room-ictu-002" => "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=700&q=80",
             "room-2026-003" or "room-ictu-003" => "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=700&q=80",
-            "room-2026-004" or "room-ictu-004" => "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=700&q=80",
+            "room-2026-004" or "room-ictu-004" or "room-2026-009" => "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=700&q=80",
             "room-2026-005" or "room-ictu-005" => "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=700&q=80",
+            "room-2026-006" => "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=700&q=80",
+            "room-2026-007" => "https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=700&q=80",
+            "room-2026-008" => "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&w=700&q=80",
             _ => "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=700&q=80"
         };
     }
@@ -726,9 +616,12 @@ public class SearchFilterViewModel : ObservableObject
         return new string(input.Where(char.IsDigit).ToArray());
     }
 
-    private static decimal ParseDecimalOrDefault(string input, decimal fallback)
+    private static decimal? ParseOptionalDecimal(string input)
     {
+        if (string.IsNullOrWhiteSpace(input))
+            return null;
+
         var digits = CleanDigits(input);
-        return decimal.TryParse(digits, out var val) && val > 0 ? val : fallback;
+        return decimal.TryParse(digits, out var val) && val > 0 ? val : null;
     }
 }

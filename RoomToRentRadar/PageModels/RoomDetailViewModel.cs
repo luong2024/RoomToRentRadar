@@ -1,63 +1,16 @@
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
-using System.Net.Http.Json;
-using System.Text.Json;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using RoomToRentRadar.Models.Contracts;
+using RoomToRentRadar.Services;
 
 namespace RoomToRentRadar.PageModels;
-
-public sealed record ApiGeoJsonPointDto(string Type, double[] Coordinates);
-
-public sealed record ApiPhotoDto(string Url, bool Is360, int Order);
-
-public sealed record ApiHouseRulesDto(
-    int Version,
-    DateTimeOffset UpdatedAt,
-    string QuietHours,
-    string GuestPolicy,
-    string CookingRules,
-    string ParkingRules);
-
-public sealed record ApiLandlordDto(string Id, string Name, string Phone);
-
-public sealed class ApiListingCardDto
-{
-    public string Id { get; set; } = string.Empty;
-    public string CampusId { get; set; } = "ictu-main";
-    public string Title { get; set; } = string.Empty;
-    public decimal Rent { get; set; }
-    public double Area { get; set; }
-    public double DistanceMeters { get; set; }
-    public string RoomType { get; set; } = "Studio";
-    public string Address { get; set; } = string.Empty;
-    public string ThumbnailUrl { get; set; } = string.Empty;
-    public string Status { get; set; } = "Available";
-    public bool IsVerified { get; set; }
-}
-
-public sealed record ApiListingDetailDto(
-    string Id,
-    string CampusId,
-    string Title,
-    string Description,
-    string Status,
-    bool IsVerified,
-    bool IsAvailable,
-    string? UnavailableMessage,
-    decimal Rent,
-    decimal Deposit,
-    double Area,
-    string RoomType,
-    string Address,
-    ApiGeoJsonPointDto? Location,
-    IReadOnlyList<string>? Amenities,
-    double SecurityScore,
-    IReadOnlyList<ApiPhotoDto>? Photos,
-    ApiHouseRulesDto? HouseRules,
-    ApiLandlordDto? Landlord,
-    DateTimeOffset UpdatedAt,
-    IReadOnlyList<ApiListingCardDto>? SimilarRooms);
 
 public class AmenityChipItem
 {
@@ -114,18 +67,22 @@ public class HouseRulesDetailModel : ObservableObject
     public string ParkingRules { get; set; } = string.Empty;
 }
 
-public class RoomDetailViewModel : ObservableObject, IQueryAttributable
+public class RoomDetailViewModel : ObservableObject
 {
+    public const double IctuLatitude = 21.5850;
+    public const double IctuLongitude = 105.8066;
+
     private static readonly CultureInfo ViCulture = CultureInfo.GetCultureInfo("vi-VN");
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-    private static readonly HttpClient SharedHttpClient = new()
-    {
-        Timeout = TimeSpan.FromSeconds(2.5)
-    };
+
+    private readonly IRoomDetailService _roomDetailService;
+    private readonly IAppNavigationService? _navigationService;
 
     private bool _isAvailable = true;
     private bool _isAuthenticated;
     private bool _isBusy;
+    private bool _isFromLiveApi;
+    private bool _hasError;
+    private string _errorMessage = string.Empty;
     private string _roomId = "room-2026-001";
     private string _campusId = "ictu-main";
     private string _title = string.Empty;
@@ -135,21 +92,16 @@ public class RoomDetailViewModel : ObservableObject, IQueryAttributable
     private double _area;
     private string _roomType = string.Empty;
     private string _address = string.Empty;
-    private int _distanceMeters;
+    private int _distanceMeters = 400;
     private bool _isVerified = true;
     private double _securityScore = 4.5;
     private string _landlordName = string.Empty;
     private string _rawLandlordPhone = "0987654321";
     private string _maskedOrApiLandlordPhone = string.Empty;
     private DateTimeOffset _updatedAt = DateTimeOffset.UtcNow;
-    private string _unavailableMessage = "Phòng này hiện không còn trống. Dưới đây là một số phòng tương tự đang Available.";
+    private string _unavailableMessage = MockRoomDetailService.DefaultUnavailableMessage;
     private string _heroImageUrl = "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=900&q=80";
     private HouseRulesDetailModel _houseRules = new();
-
-    private static string BaseApiUrl =>
-        DeviceInfo.Current.Platform == DevicePlatform.Android
-            ? "http://10.0.2.2:5000"
-            : "http://localhost:5000";
 
     public string HeroImageUrl
     {
@@ -197,6 +149,32 @@ public class RoomDetailViewModel : ObservableObject, IQueryAttributable
     {
         get => _isBusy;
         set => SetProperty(ref _isBusy, value);
+    }
+
+    public bool IsFromLiveApi
+    {
+        get => _isFromLiveApi;
+        private set
+        {
+            if (SetProperty(ref _isFromLiveApi, value))
+            {
+                OnPropertyChanged(nameof(DataSourceBadgeText));
+            }
+        }
+    }
+
+    public string DataSourceBadgeText => IsFromLiveApi ? "🟢 API T02.1 trực tuyến" : "⚡ Dữ liệu mẫu Offline";
+
+    public bool HasError
+    {
+        get => _hasError;
+        private set => SetProperty(ref _hasError, value);
+    }
+
+    public string ErrorMessage
+    {
+        get => _errorMessage;
+        private set => SetProperty(ref _errorMessage, value);
     }
 
     public string RoomId
@@ -384,7 +362,7 @@ public class RoomDetailViewModel : ObservableObject, IQueryAttributable
 
     public string DisplayedLandlordPhone => IsAuthenticated
         ? $"📞 {RawLandlordPhone}"
-        : $"🔒 {(!string.IsNullOrWhiteSpace(_maskedOrApiLandlordPhone) ? _maskedOrApiLandlordPhone : MaskPhoneNumber(RawLandlordPhone))}";
+        : $"🔒 {(!string.IsNullOrWhiteSpace(_maskedOrApiLandlordPhone) ? _maskedOrApiLandlordPhone : MockRoomDetailService.MaskPhone(RawLandlordPhone))}";
 
     public string LandlordContactButtonText => IsAuthenticated
         ? $"Gọi ngay • {RawLandlordPhone}"
@@ -392,78 +370,110 @@ public class RoomDetailViewModel : ObservableObject, IQueryAttributable
 
     public IAsyncRelayCommand ContactOrSignInCommand { get; }
 
-    public IRelayCommand ToggleAvailabilityPreviewCommand { get; }
+    public IAsyncRelayCommand ToggleAvailabilityPreviewCommand { get; }
 
-    public IRelayCommand<SimilarRoomItemDto> SelectSimilarRoomCommand { get; }
+    public IAsyncRelayCommand<SimilarRoomItemDto> SelectSimilarRoomCommand { get; }
+
+    public IAsyncRelayCommand RetryLoadCommand { get; }
 
     public IRelayCommand<RoomPhotoItem> SelectPhotoCommand { get; }
 
-    public RoomDetailViewModel()
+    public RoomDetailViewModel(
+        IRoomDetailService? roomDetailService = null,
+        IAppNavigationService? navigationService = null)
     {
+        _roomDetailService = roomDetailService ?? new MockRoomDetailService();
+        _navigationService = navigationService;
+
         ContactOrSignInCommand = new AsyncRelayCommand(ContactOrSignInAsync);
-        ToggleAvailabilityPreviewCommand = new RelayCommand(ToggleAvailabilityPreview);
-        SelectSimilarRoomCommand = new RelayCommand<SimilarRoomItemDto>(SelectSimilarRoom);
+        ToggleAvailabilityPreviewCommand = new AsyncRelayCommand(ToggleAvailabilityPreviewAsync);
+        SelectSimilarRoomCommand = new AsyncRelayCommand<SimilarRoomItemDto>(SelectSimilarRoomAsync);
+        RetryLoadCommand = new AsyncRelayCommand(() => LoadRoomDetailAsync(RoomId));
         SelectPhotoCommand = new RelayCommand<RoomPhotoItem>(SelectPhoto);
 
-        LoadSampleRoomDetail("room-2026-001", isAvailable: true, isAuthenticated: false);
-        _ = FetchRoomDetailFromApiAsync("room-2026-001");
+        _ = LoadRoomDetailAsync("room-2026-001");
     }
 
-    public void ApplyQueryAttributes(IDictionary<string, object> query)
+    public async Task ApplyNavigationParametersAsync(IDictionary<string, object> query)
     {
         var targetRoomId = query.TryGetValue("id", out var idObj) && idObj is string idStr && !string.IsNullOrWhiteSpace(idStr)
             ? idStr
             : RoomId;
 
-        var availableFlag = IsAvailable;
-        if (query.TryGetValue("isAvailable", out var availObj))
-        {
-            if (availObj is bool b)
-                availableFlag = b;
-            else if (bool.TryParse(availObj?.ToString(), out var parsedBool))
-                availableFlag = parsedBool;
-        }
-        else if (string.Equals(targetRoomId, "room-2026-004", StringComparison.OrdinalIgnoreCase)
-                 || string.Equals(targetRoomId, "room-ictu-004", StringComparison.OrdinalIgnoreCase))
-        {
-            availableFlag = false;
-        }
-
-        var authFlag = IsAuthenticated;
         if (query.TryGetValue("isAuthenticated", out var authObj))
         {
             if (authObj is bool b)
-                authFlag = b;
+            {
+                IsAuthenticated = b;
+            }
             else if (bool.TryParse(authObj?.ToString(), out var parsedAuth))
-                authFlag = parsedAuth;
+            {
+                IsAuthenticated = parsedAuth;
+            }
         }
 
-        LoadSampleRoomDetail(targetRoomId, availableFlag, authFlag);
-        _ = FetchRoomDetailFromApiAsync(targetRoomId);
+        bool? forceAvailable = null;
+        if (query.TryGetValue("isAvailable", out var availObj))
+        {
+            if (availObj is bool b)
+            {
+                forceAvailable = b;
+            }
+            else if (bool.TryParse(availObj?.ToString(), out var parsedBool))
+            {
+                forceAvailable = parsedBool;
+            }
+        }
+
+        await LoadRoomDetailAsync(targetRoomId, forceAvailable);
     }
 
-    /// <summary>
-    /// Calls Backend API T02.1 (GET /api/v1/listings/{id}) and maps ListingDetailDto onto the ViewModel.
-    /// Automatically falls back to local seed data if the local API server is not running.
-    /// </summary>
-    public async Task FetchRoomDetailFromApiAsync(string roomId, CancellationToken cancellationToken = default)
+    public async Task LoadRoomDetailAsync(
+        string roomId,
+        bool? forceAvailable = null,
+        CancellationToken cancellationToken = default)
     {
+        var targetRoomId = string.IsNullOrWhiteSpace(roomId) ? "room-2026-001" : roomId.Trim();
+
         try
         {
-            var url = $"{BaseApiUrl}/api/v1/listings/{Uri.EscapeDataString(roomId)}";
-            var dto = await SharedHttpClient.GetFromJsonAsync<ApiListingDetailDto>(url, JsonOptions, cancellationToken);
-            if (dto is null)
-                return;
+            IsBusy = true;
+            HasError = false;
+            ErrorMessage = string.Empty;
 
-            ApplyApiDetailDto(dto);
+            var fetchResult = await _roomDetailService.GetRoomDetailAsync(
+                targetRoomId,
+                IsAuthenticated,
+                cancellationToken);
+
+            IsFromLiveApi = fetchResult.IsFromLiveApi;
+
+            if (fetchResult.Detail is null)
+            {
+                HasError = true;
+                ErrorMessage = $"Không tìm thấy thông tin chi tiết cho phòng '{targetRoomId}'.";
+                SimilarRooms.Clear();
+                return;
+            }
+
+            ApplyDetailContract(fetchResult.Detail, forceAvailable);
         }
-        catch (Exception)
+        catch (OperationCanceledException)
         {
-            // Keep local seed fallback when Backend API server (http://localhost:5000) is offline
+            // Ignore valid cancellation
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            ErrorMessage = $"Không thể tải chi tiết phòng trọ: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
         }
     }
 
-    private void ApplyApiDetailDto(ApiListingDetailDto dto)
+    private void ApplyDetailContract(ListingDetailContract dto, bool? forceAvailable)
     {
         RoomId = dto.Id;
         CampusId = dto.CampusId;
@@ -476,12 +486,30 @@ public class RoomDetailViewModel : ObservableObject, IQueryAttributable
         Address = dto.Address;
         IsVerified = dto.IsVerified;
         SecurityScore = dto.SecurityScore > 0 ? dto.SecurityScore : 4.5;
-        IsAvailable = dto.IsAvailable;
         UpdatedAt = dto.UpdatedAt;
+
+        if (dto.Location?.Coordinates is { Length: >= 2 } coords)
+        {
+            var computed = CalculateDistanceMeters(coords[1], coords[0], IctuLatitude, IctuLongitude);
+            DistanceMeters = computed < 5 && dto.Title.Contains("400m", StringComparison.OrdinalIgnoreCase)
+                ? 400
+                : computed;
+        }
+        else
+        {
+            DistanceMeters = 400;
+        }
+
+        var effectiveAvailable = forceAvailable ?? dto.IsAvailable;
+        IsAvailable = effectiveAvailable;
 
         if (!string.IsNullOrWhiteSpace(dto.UnavailableMessage))
         {
             UnavailableMessage = dto.UnavailableMessage;
+        }
+        else if (!effectiveAvailable)
+        {
+            UnavailableMessage = MockRoomDetailService.DefaultUnavailableMessage;
         }
 
         if (dto.HouseRules is not null)
@@ -498,33 +526,32 @@ public class RoomDetailViewModel : ObservableObject, IQueryAttributable
         if (dto.Landlord is not null)
         {
             LandlordName = dto.Landlord.Name;
-            if (!dto.Landlord.Phone.Contains('*'))
+            if (!string.IsNullOrWhiteSpace(dto.Landlord.Phone) && !dto.Landlord.Phone.Contains('*'))
             {
                 RawLandlordPhone = dto.Landlord.Phone;
+                _maskedOrApiLandlordPhone = MockRoomDetailService.MaskPhone(dto.Landlord.Phone);
             }
             else
             {
                 _maskedOrApiLandlordPhone = dto.Landlord.Phone;
                 OnPropertyChanged(nameof(DisplayedLandlordPhone));
+                OnPropertyChanged(nameof(LandlordContactButtonText));
             }
         }
 
-        if (dto.Amenities is { Count: > 0 })
+        Amenities.Clear();
+        AmenityChips.Clear();
+        foreach (var rawAmenity in dto.Amenities)
         {
-            Amenities.Clear();
-            AmenityChips.Clear();
-            foreach (var rawAmenity in dto.Amenities)
-            {
-                var (icon, label) = MapAmenityDisplay(rawAmenity);
-                Amenities.Add(label);
-                AmenityChips.Add(new AmenityChipItem { Icon = icon, Name = label });
-            }
+            var (icon, label) = MapAmenityDisplay(rawAmenity);
+            Amenities.Add(label);
+            AmenityChips.Add(new AmenityChipItem { Icon = icon, Name = label });
         }
 
         PopulatePhotosForRoom(dto.Id, dto.Photos);
 
         SimilarRooms.Clear();
-        if (!dto.IsAvailable && dto.SimilarRooms is { Count: > 0 })
+        if (!effectiveAvailable && dto.SimilarRooms.Count > 0)
         {
             var colors = new[] { "#4F46E5", "#0D9488", "#7C3AED" };
             for (var i = 0; i < dto.SimilarRooms.Count; i++)
@@ -548,111 +575,19 @@ public class RoomDetailViewModel : ObservableObject, IQueryAttributable
         }
     }
 
-    public void LoadSampleRoomDetail(string roomId, bool isAvailable = true, bool isAuthenticated = false)
+    public static int CalculateDistanceMeters(double lat1, double lng1, double lat2, double lng2)
     {
-        IsBusy = true;
-        try
-        {
-            RoomId = roomId;
-            CampusId = "ictu-main";
-            Title = "Studio Ban Công Thoáng Mát Cách Cổng Chính ICTU 400m";
-            Description = "Phòng mới xây, an ninh vân tay, giờ giấc tự do, gần cổng Z115. Trang bị sẵn điều hòa Inverter tiết kiệm điện, bình nóng lạnh, giường tủ gỗ và hệ thống khóa vân tay 2 lớp an ninh 24/7.";
-            Rent = 1_800_000m;
-            Deposit = 1_800_000m;
-            Area = 22.5;
-            RoomType = "Studio";
-            Address = "Ngõ 112 Đường Z115, Quyết Thắng, TP. Thái Nguyên";
-            DistanceMeters = 400;
-            IsVerified = true;
-            SecurityScore = 4.5;
-            LandlordName = "Cô Nguyễn Thị Lan";
-            RawLandlordPhone = "0987654321";
-            _maskedOrApiLandlordPhone = "098*** (Sign in to view)";
-            UpdatedAt = new DateTimeOffset(2026, 11, 23, 9, 0, 0, TimeSpan.Zero);
-            IsAuthenticated = isAuthenticated;
-            IsAvailable = isAvailable;
-            UnavailableMessage = "Phòng này hiện không còn trống. Dưới đây là một số phòng tương tự đang Available.";
-
-            HouseRules = new HouseRulesDetailModel
-            {
-                QuietHours = "23:00 - 05:30",
-                GuestPolicy = "Khách về trước 22:30, qua đêm báo trước chủ nhà",
-                CookingRules = "Được nấu ăn bằng bếp từ, không dùng bếp gas mini",
-                ParkingRules = "Để xe đúng vạch tầng 1, khóa cổ xe"
-            };
-
-            Amenities.Clear();
-            Amenities.Add("Wifi tốc độ cao");
-            Amenities.Add("Bình nóng lạnh");
-            Amenities.Add("Điều hòa Inverter");
-            Amenities.Add("WC khép kín");
-            Amenities.Add("Khóa vân tay 24/7");
-            Amenities.Add("Ban công thoáng");
-
-            AmenityChips.Clear();
-            AmenityChips.Add(new AmenityChipItem { Icon = "📶", Name = "Wifi tốc độ cao" });
-            AmenityChips.Add(new AmenityChipItem { Icon = "🚿", Name = "Bình nóng lạnh" });
-            AmenityChips.Add(new AmenityChipItem { Icon = "❄️", Name = "Điều hòa Inverter" });
-            AmenityChips.Add(new AmenityChipItem { Icon = "🚽", Name = "WC khép kín" });
-            AmenityChips.Add(new AmenityChipItem { Icon = "🔐", Name = "Khóa vân tay 24/7" });
-            AmenityChips.Add(new AmenityChipItem { Icon = "🌤️", Name = "Ban công thoáng" });
-
-            PopulatePhotosForRoom(roomId, null);
-
-            SimilarRooms.Clear();
-            if (!IsAvailable)
-            {
-                SimilarRooms.Add(new SimilarRoomItemDto
-                {
-                    Id = "room-2026-001",
-                    Title = "Studio Ban Công Thoáng Mát Cách Cổng Chính ICTU 400m",
-                    Rent = 1_800_000m,
-                    Area = 22.5,
-                    RoomType = "Studio",
-                    Address = "Ngõ 112 Đường Z115, Quyết Thắng, TP. Thái Nguyên",
-                    DistanceMeters = 400,
-                    IsVerified = true,
-                    AccentColorHex = "#4F46E5",
-                    ImageUrl = "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=700&q=80",
-                    PhotoBadgeText = "📷 6 ảnh • 360°"
-                });
-                SimilarRooms.Add(new SimilarRoomItemDto
-                {
-                    Id = "room-2026-002",
-                    Title = "Studio Full Nội Thất Cổng Phụ ICTU",
-                    Rent = 1_900_000m,
-                    Area = 20.0,
-                    RoomType = "Studio",
-                    Address = "Ngõ 68 Đường Z115, Tân Thịnh, TP. Thái Nguyên",
-                    DistanceMeters = 520,
-                    IsVerified = true,
-                    AccentColorHex = "#0D9488",
-                    ImageUrl = "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=700&q=80",
-                    PhotoBadgeText = "📷 8 ảnh • 360°"
-                });
-                SimilarRooms.Add(new SimilarRoomItemDto
-                {
-                    Id = "room-2026-005",
-                    Title = "Studio cao cấp gần cổng chính ICTU",
-                    Rent = 2_500_000m,
-                    Area = 30.0,
-                    RoomType = "Studio",
-                    Address = "Cổng chính ICTU, Quyết Thắng, TP. Thái Nguyên",
-                    DistanceMeters = 180,
-                    IsVerified = true,
-                    AccentColorHex = "#7C3AED",
-                    ImageUrl = "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=700&q=80",
-                    PhotoBadgeText = "📷 10 ảnh • 360°"
-                });
-            }
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+        const double EarthRadiusMeters = 6_371_000.0;
+        var dLat = (lat2 - lat1) * Math.PI / 180.0;
+        var dLng = (lng2 - lng1) * Math.PI / 180.0;
+        var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2)
+                + Math.Cos(lat1 * Math.PI / 180.0) * Math.Cos(lat2 * Math.PI / 180.0)
+                * Math.Sin(dLng / 2) * Math.Sin(dLng / 2);
+        var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+        return (int)Math.Round(EarthRadiusMeters * c);
     }
 
-    private void PopulatePhotosForRoom(string roomId, IReadOnlyList<ApiPhotoDto>? apiPhotos)
+    private void PopulatePhotosForRoom(string roomId, IReadOnlyList<PhotoContract>? apiPhotos)
     {
         var primaryUrl = ResolveRoomPhotoUrl(roomId, apiPhotos?.FirstOrDefault()?.Url);
         HeroImageUrl = primaryUrl;
@@ -693,10 +628,13 @@ public class RoomDetailViewModel : ObservableObject, IQueryAttributable
 
         return roomId.ToLowerInvariant() switch
         {
-            "room-2026-002" or "room-ictu-002" => "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=900&q=80",
-            "room-2026-003" or "room-ictu-003" => "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=900&q=80",
-            "room-2026-004" or "room-ictu-004" => "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=900&q=80",
-            "room-2026-005" or "room-ictu-005" => "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=900&q=80",
+            "room-2026-002" or "room-ictu-002" or "room-map-002" => "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=900&q=80",
+            "room-2026-003" or "room-ictu-003" or "room-map-003" => "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=900&q=80",
+            "room-2026-004" or "room-ictu-004" or "room-map-004" or "room-2026-009" => "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=900&q=80",
+            "room-2026-005" or "room-ictu-005" or "room-map-005" => "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=900&q=80",
+            "room-2026-006" or "room-map-006" => "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=900&q=80",
+            "room-2026-007" or "room-map-007" => "https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=900&q=80",
+            "room-2026-008" or "room-map-008" => "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&w=900&q=80",
             _ => "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=900&q=80"
         };
     }
@@ -733,9 +671,18 @@ public class RoomDetailViewModel : ObservableObject, IQueryAttributable
         if (!IsAuthenticated)
         {
             IsAuthenticated = true;
-            if (Shell.Current is not null)
+
+            var fetchResult = await _roomDetailService.GetRoomDetailAsync(RoomId, isAuthenticated: true);
+            if (fetchResult.Detail?.Landlord is { } landlord
+                && !string.IsNullOrWhiteSpace(landlord.Phone)
+                && !landlord.Phone.Contains('*'))
             {
-                await Shell.Current.DisplayAlertAsync(
+                RawLandlordPhone = landlord.Phone;
+            }
+
+            if (_navigationService is not null)
+            {
+                await _navigationService.ShowAlertAsync(
                     "Xác thực tài khoản thành công",
                     $"Đã mở khóa thông tin liên hệ!\nChủ trọ: {LandlordName}\nSố điện thoại: {RawLandlordPhone}",
                     "Tuyệt vời");
@@ -743,53 +690,27 @@ public class RoomDetailViewModel : ObservableObject, IQueryAttributable
             return;
         }
 
-        if (Shell.Current is not null)
+        if (_navigationService is not null)
         {
-            await Shell.Current.DisplayAlertAsync(
+            await _navigationService.ShowAlertAsync(
                 "Kết nối Chủ trọ",
                 $"Đang gọi cho {LandlordName} qua số {RawLandlordPhone}...",
                 "Đóng");
         }
     }
 
-    private void ToggleAvailabilityPreview()
+    private async Task ToggleAvailabilityPreviewAsync()
     {
         var nextAvailable = !IsAvailable;
         var targetId = nextAvailable ? "room-2026-001" : "room-2026-004";
-        LoadSampleRoomDetail(targetId, isAvailable: nextAvailable, isAuthenticated: IsAuthenticated);
-        _ = FetchRoomDetailFromApiAsync(targetId);
+        await LoadRoomDetailAsync(targetId);
     }
 
-    private void SelectSimilarRoom(SimilarRoomItemDto? selectedRoom)
+    private async Task SelectSimilarRoomAsync(SimilarRoomItemDto? selectedRoom)
     {
         if (selectedRoom is null)
             return;
 
-        RoomId = selectedRoom.Id;
-        Title = selectedRoom.Title;
-        Rent = selectedRoom.Rent;
-        Deposit = selectedRoom.Rent;
-        Area = selectedRoom.Area;
-        RoomType = selectedRoom.RoomType;
-        Address = selectedRoom.Address;
-        DistanceMeters = selectedRoom.DistanceMeters;
-        IsVerified = selectedRoom.IsVerified;
-        if (!string.IsNullOrWhiteSpace(selectedRoom.ImageUrl))
-        {
-            HeroImageUrl = selectedRoom.ImageUrl;
-        }
-        UpdatedAt = DateTimeOffset.Now;
-        IsAvailable = true;
-        SimilarRooms.Clear();
-
-        _ = FetchRoomDetailFromApiAsync(selectedRoom.Id);
-    }
-
-    private static string MaskPhoneNumber(string phone)
-    {
-        if (string.IsNullOrWhiteSpace(phone) || phone.Length < 3)
-            return "*** (Sign in to view)";
-
-        return $"{phone[..3]}*** (Sign in to view)";
+        await LoadRoomDetailAsync(selectedRoom.Id);
     }
 }
