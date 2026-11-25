@@ -63,7 +63,7 @@
                     StrokeThickness="0"
                     WidthRequest="48"
                     HeightRequest="48"
-                    BackgroundColor="#EEFFFFFF"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceElevatedLight}, Dark={StaticResource SurfaceElevatedDark}}"
                     HorizontalOptions="Start"
                     VerticalOptions="Start"
                     Shadow="{StaticResource Elevation1Shadow}"
@@ -94,7 +94,7 @@
                         StrokeThickness="0"
                         WidthRequest="48"
                         HeightRequest="48"
-                        BackgroundColor="#EEFFFFFF"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceElevatedLight}, Dark={StaticResource SurfaceElevatedDark}}"
                         Shadow="{StaticResource Elevation1Shadow}"
                         SemanticProperties.Description="Share listing">
                     <Border.GestureRecognizers>
@@ -118,7 +118,7 @@
                         StrokeThickness="0"
                         WidthRequest="48"
                         HeightRequest="48"
-                        BackgroundColor="#EEFFFFFF"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceElevatedLight}, Dark={StaticResource SurfaceElevatedDark}}"
                         Shadow="{StaticResource Elevation1Shadow}"
                         SemanticProperties.Description="Save room to favourites">
                     <Border.GestureRecognizers>

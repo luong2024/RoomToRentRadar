@@ -64,19 +64,24 @@
                         <!-- Details Body Content (Sections) -->
                         <VerticalStackLayout Padding="16,14,16,24" Spacing="16">
 
-                            <!-- Status Badge & Relative Updated Timestamp (Available only) -->
-                            <Grid ColumnDefinitions="Auto, *"
-                                  IsVisible="{Binding IsAvailable}">
+                            <!-- Status Badge & Relative Updated Timestamp (shown for Available, Rented, and Unpublished) -->
+                            <Grid ColumnDefinitions="Auto, *">
                                 <!-- Status Badge -->
                                 <Border Grid.Column="0"
                                         StrokeShape="RoundRectangle 9999"
                                         StrokeThickness="0"
-                                        BackgroundColor="{AppThemeBinding Light=#1516A34A, Dark=#254CB5AE}"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource ActionAccentSubtleLight}, Dark={StaticResource ActionAccentSubtleDark}}"
                                         Padding="10,4">
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding IsAvailable}" Value="False">
+                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource StatusWarningSubtleLight}, Dark={StaticResource StatusWarningSubtleDark}}" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
                                     <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
                                         <Image WidthRequest="14"
                                                HeightRequest="14"
-                                               VerticalOptions="Center">
+                                               VerticalOptions="Center"
+                                               IsVisible="{Binding IsAvailable}">
                                             <Image.Source>
                                                 <FontImageSource Glyph="{x:Static fonts:FluentUI.checkmark_circle_16_regular}"
                                                                  FontFamily="{x:Static fonts:FluentUI.FontFamily}"
@@ -84,12 +89,34 @@
                                                                  Color="{AppThemeBinding Light={StaticResource StatusSuccessTextLight}, Dark={StaticResource StatusSuccessDark}}" />
                                             </Image.Source>
                                         </Image>
+                                        <Image WidthRequest="14"
+                                               HeightRequest="14"
+                                               VerticalOptions="Center"
+                                               IsVisible="False">
+                                            <Image.Triggers>
+                                                <DataTrigger TargetType="Image" Binding="{Binding IsAvailable}" Value="False">
+                                                    <Setter Property="IsVisible" Value="True" />
+                                                </DataTrigger>
+                                            </Image.Triggers>
+                                            <Image.Source>
+                                                <FontImageSource Glyph="{x:Static fonts:FluentUI.info_16_regular}"
+                                                                 FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                                 Size="14"
+                                                                 Color="{AppThemeBinding Light={StaticResource StatusWarningTextLight}, Dark={StaticResource StatusWarningDark}}" />
+                                            </Image.Source>
+                                        </Image>
                                         <Label Text="{Binding StatusBadgeText}"
                                                FontFamily="{StaticResource FontFamilySemibold}"
                                                FontSize="{StaticResource FontSizeBadge}"
                                                FontAttributes="Bold"
                                                TextColor="{AppThemeBinding Light={StaticResource StatusSuccessTextLight}, Dark={StaticResource StatusSuccessDark}}"
-                                               VerticalTextAlignment="Center" />
+                                               VerticalTextAlignment="Center">
+                                            <Label.Triggers>
+                                                <DataTrigger TargetType="Label" Binding="{Binding IsAvailable}" Value="False">
+                                                    <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource StatusWarningTextLight}, Dark={StaticResource StatusWarningDark}}" />
+                                                </DataTrigger>
+                                            </Label.Triggers>
+                                        </Label>
                                     </HorizontalStackLayout>
                                 </Border>
 
@@ -233,7 +260,7 @@
                                 <Label Text="{loc:LocalizedStrings RoomDetail_DebugPreviewUnavailable}"
                                        FontFamily="{StaticResource FontFamilySemibold}"
                                        FontSize="{StaticResource FontSizeBodyMedium}"
-                                       TextColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}"
+                                       TextColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource TextBrandDark}}"
                                        HorizontalTextAlignment="Center"
                                        VerticalTextAlignment="Center" />
                             </Border>

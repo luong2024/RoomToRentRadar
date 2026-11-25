@@ -1341,7 +1341,12 @@ public class RoomDetailPageModelTests
 
         await _sut.InitializeAsync();
 
-        Assert.That(_sut.StatusBadgeText, Is.EqualTo(AppResources.GetString("RoomDetail_StatusUnpublished")));
+        Assert.Multiple(() =>
+        {
+            Assert.That(_sut.StatusBadgeText, Is.EqualTo(AppResources.GetString("RoomDetail_StatusUnpublished")));
+            Assert.That(_sut.UpdatedAgoText, Is.EqualTo("Updated 3 days ago"));
+            Assert.That(_sut.IsUnavailable, Is.True);
+        });
     }
 
     [Test]

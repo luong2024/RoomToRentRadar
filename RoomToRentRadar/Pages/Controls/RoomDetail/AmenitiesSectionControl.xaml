@@ -101,7 +101,7 @@
                 <Label Text="{Binding SeeAllAmenitiesText}"
                        FontFamily="{StaticResource FontFamilySemibold}"
                        FontSize="{StaticResource FontSizeBodyMedium}"
-                       TextColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}"
+                       TextColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource TextBrandDark}}"
                        HorizontalTextAlignment="Center"
                        VerticalTextAlignment="Center" />
             </Border>
