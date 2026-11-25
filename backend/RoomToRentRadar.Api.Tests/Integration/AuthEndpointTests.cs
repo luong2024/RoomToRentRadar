@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using RoomToRentRadar.SqliteDataAccess;
+using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Api.Tests.Infrastructure;
 using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.Shared.Serialization;
@@ -53,8 +54,31 @@ public sealed class AuthEndpointTests
             Assert.That(login, Is.Not.Null);
             Assert.That(login!.AccessToken, Is.Not.Empty);
             Assert.That(login.DisplayName, Is.EqualTo(TestUsersSeed.DisplayName));
+            Assert.That(login.Role, Is.EqualTo(UserRoleWire.Student));
             Assert.That(login.ExpiresAt, Is.GreaterThan(DateTime.UtcNow));
         });
+    }
+
+    [Test]
+    public async Task Login_LandlordAccount_ReturnsLandlordRole()
+    {
+        const string email = "landlord@example.test";
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await TestUsersSeed.SeedAdditionalAsync(
+                dbContext,
+                Guid.NewGuid(),
+                email,
+                UserRole.Landlord,
+                "Landlord Tester");
+        }
+
+        var response = await LoginAsync(email, TestUsersSeed.Password);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var login = await response.Content.ReadFromJsonAsync<LoginResponse>(ApiJson.Options);
+        Assert.That(login!.Role, Is.EqualTo(UserRoleWire.Landlord));
     }
 
     [Test]
@@ -120,6 +144,120 @@ public sealed class AuthEndpointTests
         var response = await _client.PostAsync("/api/v1/auth/demo-login", content: null);
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+    }
+
+    [Test]
+    public async Task Register_Student_ReturnsCreatedSessionAndRole()
+    {
+        var response = await RegisterAsync(
+            "new.student@example.test",
+            "Validpass123",
+            "New Student",
+            UserRoleWire.Student);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+        var login = await response.Content.ReadFromJsonAsync<LoginResponse>(ApiJson.Options);
+        Assert.Multiple(() =>
+        {
+            Assert.That(login, Is.Not.Null);
+            Assert.That(login!.AccessToken, Is.Not.Empty);
+            Assert.That(login.DisplayName, Is.EqualTo("New Student"));
+            Assert.That(login.Role, Is.EqualTo(UserRoleWire.Student));
+            Assert.That(login.ExpiresAt, Is.GreaterThan(DateTime.UtcNow));
+        });
+
+        var loginBack = await LoginAsync("new.student@example.test", "Validpass123");
+        Assert.That(loginBack.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+    }
+
+    [Test]
+    public async Task Register_Landlord_ReturnsCreatedSessionAndRole()
+    {
+        var response = await RegisterAsync(
+            "new.landlord@example.test",
+            "Validpass123",
+            "New Landlord",
+            UserRoleWire.Landlord);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+        var login = await response.Content.ReadFromJsonAsync<LoginResponse>(ApiJson.Options);
+        Assert.That(login!.Role, Is.EqualTo(UserRoleWire.Landlord));
+    }
+
+    [Test]
+    public async Task Register_DuplicateEmail_IsCaseInsensitive()
+    {
+        var response = await RegisterAsync(
+            TestUsersSeed.Email.ToUpperInvariant(),
+            "Validpass123",
+            "Duplicate User",
+            UserRoleWire.Student);
+
+        await AssertProblemAsync(response, HttpStatusCode.Conflict, "email_already_registered");
+    }
+
+    [TestCase("Abc123", TestName = "Register_WeakPassword_TooShort")]
+    [TestCase("abcdefgh", TestName = "Register_WeakPassword_NoDigit")]
+    [TestCase("12345678", TestName = "Register_WeakPassword_NoLetter")]
+    public async Task Register_WeakPassword_ReturnsBadRequest(string password)
+    {
+        var response = await RegisterAsync(
+            "weak.password@example.test",
+            password,
+            "Weak Password",
+            UserRoleWire.Student);
+
+        await AssertProblemAsync(response, HttpStatusCode.BadRequest, "invalid_registration_request");
+    }
+
+    [TestCase(UserRoleWire.Admin)]
+    [TestCase(UserRoleWire.Moderator)]
+    public async Task Register_UnsupportedRole_ReturnsBadRequest(string role)
+    {
+        var response = await RegisterAsync(
+            "elevated@example.test",
+            "Validpass123",
+            "Elevated User",
+            role);
+
+        await AssertProblemAsync(response, HttpStatusCode.BadRequest, "unsupported_registration_role");
+    }
+
+    [Test]
+    public async Task Register_InvalidEmail_ReturnsBadRequest()
+    {
+        var response = await RegisterAsync(
+            "not-an-email",
+            "Validpass123",
+            "No Email",
+            UserRoleWire.Student);
+
+        await AssertProblemAsync(response, HttpStatusCode.BadRequest, "invalid_registration_request");
+    }
+
+    [Test]
+    public async Task Register_MissingDisplayName_ReturnsBadRequest()
+    {
+        var response = await RegisterAsync(
+            "no.name@example.test",
+            "Validpass123",
+            "  ",
+            UserRoleWire.Student);
+
+        await AssertProblemAsync(response, HttpStatusCode.BadRequest, "invalid_registration_request");
+    }
+
+    private async Task<HttpResponseMessage> RegisterAsync(
+        string email,
+        string password,
+        string displayName,
+        string role)
+    {
+        var response = await _client.PostAsJsonAsync(
+            "/api/v1/auth/register",
+            new RegisterRequest(email, password, displayName, role),
+            ApiJson.Options);
+        return response;
     }
 
     private async Task<HttpResponseMessage> LoginAsync(string email, string password)

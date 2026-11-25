@@ -38,7 +38,7 @@ public sealed class ListingManagementEndpointTests
         await using var scope = _factory.Services.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await TestListingsSeed.SeedAsync(dbContext);
-        await TestUsersSeed.SeedAsync(dbContext);
+        await TestUsersSeed.SeedAsync(dbContext, UserRole.Landlord);
     }
 
     [OneTimeTearDown]
@@ -57,6 +57,34 @@ public sealed class ListingManagementEndpointTests
 
         var problem = await ReadProblemAsync(response, HttpStatusCode.Unauthorized);
         Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo("unauthorized"));
+    }
+
+    [Test]
+    public async Task Create_AsStudent_ReturnsForbidden()
+    {
+        const string email = "student@example.test";
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await TestUsersSeed.SeedAdditionalAsync(
+                dbContext,
+                Guid.NewGuid(),
+                email,
+                UserRole.Student,
+                "Student Tester");
+        }
+
+        var studentToken = await LoginAsync(email, TestUsersSeed.Password);
+        using var form = CreateForm(DefaultFields(), DefaultPhotos());
+
+        var response = await SendAsync(HttpMethod.Post, "/api/v1/listings", form, studentToken);
+
+        var problem = await ReadProblemAsync(response, HttpStatusCode.Forbidden);
+        Assert.Multiple(() =>
+        {
+            Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo("forbidden"));
+        });
+        Assert.That(await OwnerListingCountAsync(), Is.Zero);
     }
 
     [Test]
@@ -714,6 +742,7 @@ public sealed class ListingManagementEndpointTests
             DisplayName = "Other Landlord",
             PasswordHash = hash,
             PasswordSalt = salt,
+            Role = UserRole.Landlord,
             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
         });
         await dbContext.SaveChangesAsync();

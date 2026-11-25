@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RoomToRentRadar.Ports.Inbound;
+using RoomToRentRadar.Ports.Models.Auth;
 using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.SqliteDataAccess.Seed;
 
@@ -32,6 +33,33 @@ public sealed class AuthController(
 
         var response = await authUseCase.LoginAsync(email, password, cancellationToken);
         return response is null ? NotFound() : Ok(response);
+    }
+
+    [HttpPost("register")]
+    [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status201Created, "application/json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict, "application/problem+json")]
+    public async Task<ActionResult<LoginResponse>> Register(
+        [FromBody] RegisterRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!RegisterValidator.TryValidate(request, out var problem))
+        {
+            return ToProblem(problem!);
+        }
+
+        var result = await authUseCase.RegisterAsync(request, cancellationToken);
+        return result.Status switch
+        {
+            AuthRegistrationStatus.Success =>
+                StatusCode(StatusCodes.Status201Created, result.Response),
+            AuthRegistrationStatus.EmailAlreadyRegistered =>
+                ToProblem(AuthProblemFactory.EmailAlreadyRegisteredProblem()),
+            AuthRegistrationStatus.UnsupportedRole =>
+                ToProblem(AuthProblemFactory.UnsupportedRegistrationRoleProblem()),
+            _ => throw new InvalidOperationException(
+                $"Unmapped auth registration status '{result.Status}'.")
+        };
     }
 
     [HttpPost("login")]

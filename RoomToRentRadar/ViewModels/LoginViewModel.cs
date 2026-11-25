@@ -72,7 +72,7 @@ public partial class LoginViewModel : ObservableObject
             }
 
             Password = string.Empty;
-            await _navigationService.GoBackAsync();
+            await _navigationService.GoToRoleRootAsync(_authService.CurrentRole);
         }
         catch (Exception ex)
         {
@@ -87,4 +87,7 @@ public partial class LoginViewModel : ObservableObject
 
     [RelayCommand]
     private Task CancelAsync() => _navigationService.GoBackAsync();
+
+    [RelayCommand]
+    private Task GoToRegisterAsync() => _navigationService.GoToRegisterAsync();
 }

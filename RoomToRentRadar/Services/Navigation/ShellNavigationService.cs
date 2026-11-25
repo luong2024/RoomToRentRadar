@@ -1,4 +1,5 @@
 using RoomToRentRadar.Constants;
+using RoomToRentRadar.Models;
 using RoomToRentRadar.Services;
 using RoomToRentRadar.Services.Auth;
 using RoomToRentRadar.Services.ErrorHandling;
@@ -15,6 +16,17 @@ public sealed class ShellNavigationService : INavigationService
 
     public Task GoToLoginAsync()
         => GetShell().GoToAsync(AppRoutes.Login);
+
+    public Task GoToRegisterAsync()
+        => GetShell().GoToAsync(AppRoutes.Register);
+
+    public Task GoToRoleRootAsync(AppUserRole? role)
+        => GetShell().GoToAsync(role switch
+        {
+            AppUserRole.Landlord => $"//{AppRoutes.MyListings}",
+            AppUserRole.Moderator or AppUserRole.Admin => $"//{AppRoutes.Moderation}",
+            _ => $"//{AppRoutes.Home}"
+        });
 
     public Task GoToListingEditorAsync(Guid? listingId = null)
         => GetShell().GoToAsync(listingId is { } id

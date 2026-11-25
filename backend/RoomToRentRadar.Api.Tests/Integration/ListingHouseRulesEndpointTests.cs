@@ -39,7 +39,7 @@ public sealed class ListingHouseRulesEndpointTests
         await using var scope = _factory.Services.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await TestListingsSeed.SeedAsync(dbContext);
-        await TestUsersSeed.SeedAsync(dbContext);
+        await TestUsersSeed.SeedAsync(dbContext, UserRole.Landlord);
     }
 
     [OneTimeTearDown]
@@ -400,6 +400,7 @@ public sealed class ListingHouseRulesEndpointTests
             DisplayName = "Other Landlord",
             PasswordHash = hash,
             PasswordSalt = salt,
+            Role = UserRole.Landlord,
             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
         });
         await dbContext.SaveChangesAsync();

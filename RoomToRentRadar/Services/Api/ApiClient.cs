@@ -134,6 +134,28 @@ public sealed class ApiClient(HttpClient httpClient) : IApiClient
         return login ?? throw new InvalidOperationException("The login endpoint returned an empty response.");
     }
 
+    public async Task<LoginResponse> RegisterAsync(
+        RegisterRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PostAsJsonAsync(
+            "api/v1/auth/register",
+            request,
+            ApiJson.Options,
+            cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw await CreateApiExceptionAsync(response, cancellationToken);
+        }
+
+        var login = await response.Content.ReadFromJsonAsync<LoginResponse>(
+            ApiJson.Options,
+            cancellationToken);
+
+        return login ?? throw new InvalidOperationException("The register endpoint returned an empty response.");
+    }
+
     public async Task<LoginResponse?> DemoLoginAsync(CancellationToken cancellationToken = default)
     {
         using var response = await httpClient.PostAsync(

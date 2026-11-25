@@ -331,6 +331,10 @@ public class FavouritesViewModelTests
             return Task.CompletedTask;
         }
 
+        public Task GoToRegisterAsync() => Task.CompletedTask;
+
+        public Task GoToRoleRootAsync(RoomToRentRadar.Models.AppUserRole? role) => Task.CompletedTask;
+
         public Task GoToDirectionsAsync(
             double destinationLat,
             double destinationLng,

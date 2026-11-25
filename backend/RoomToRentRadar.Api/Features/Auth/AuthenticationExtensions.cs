@@ -18,6 +18,9 @@ public static class AuthenticationExtensions
             options.AddPolicy(AuthPolicies.ModeratorOrAdmin, policy => policy
                 .RequireAuthenticatedUser()
                 .RequireRole(UserRoleWire.Moderator, UserRoleWire.Admin));
+            options.AddPolicy(AuthPolicies.Landlord, policy => policy
+                .RequireAuthenticatedUser()
+                .RequireRole(UserRoleWire.Landlord));
         });
 
         return services;

@@ -8,6 +8,9 @@ public static class AuthProblemFactory
     public const string InvalidCredentials = "invalid_credentials";
     public const string Unauthorized = "unauthorized";
     public const string Forbidden = "forbidden";
+    public const string InvalidRegistrationRequest = "invalid_registration_request";
+    public const string EmailAlreadyRegistered = "email_already_registered";
+    public const string UnsupportedRegistrationRole = "unsupported_registration_role";
 
     public static ProblemDetails InvalidLoginRequestProblem()
     {
@@ -32,6 +35,45 @@ public static class AuthProblemFactory
             Detail = "The email or password is incorrect."
         };
         problem.Extensions["code"] = InvalidCredentials;
+        return problem;
+    }
+
+    public static ProblemDetails InvalidRegistrationRequestProblem(string detail)
+    {
+        var problem = new ProblemDetails
+        {
+            Type = "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+            Status = StatusCodes.Status400BadRequest,
+            Title = "Invalid registration request",
+            Detail = detail
+        };
+        problem.Extensions["code"] = InvalidRegistrationRequest;
+        return problem;
+    }
+
+    public static ProblemDetails EmailAlreadyRegisteredProblem()
+    {
+        var problem = new ProblemDetails
+        {
+            Type = "https://tools.ietf.org/html/rfc9110#section-15.5.10",
+            Status = StatusCodes.Status409Conflict,
+            Title = "Email already registered",
+            Detail = "An account with this email address already exists."
+        };
+        problem.Extensions["code"] = EmailAlreadyRegistered;
+        return problem;
+    }
+
+    public static ProblemDetails UnsupportedRegistrationRoleProblem()
+    {
+        var problem = new ProblemDetails
+        {
+            Type = "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+            Status = StatusCodes.Status400BadRequest,
+            Title = "Unsupported registration role",
+            Detail = "Only student and landlord accounts can be registered; admin accounts are provisioned by the system administrator."
+        };
+        problem.Extensions["code"] = UnsupportedRegistrationRole;
         return problem;
     }
 

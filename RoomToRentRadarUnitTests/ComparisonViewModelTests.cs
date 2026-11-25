@@ -368,6 +368,9 @@ public class ComparisonViewModelTests
         public Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The comparison screen does not sign in.");
 
+        public Task<LoginResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The comparison screen does not register accounts.");
+
         public Task<LoginResponse?> DemoLoginAsync(CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The comparison screen does not sign in.");
 
@@ -440,6 +443,10 @@ public class ComparisonViewModelTests
         public Task GoToRoomDetailAsync(Guid listingId) => Task.CompletedTask;
 
         public Task GoToLoginAsync() => Task.CompletedTask;
+
+        public Task GoToRegisterAsync() => Task.CompletedTask;
+
+        public Task GoToRoleRootAsync(RoomToRentRadar.Models.AppUserRole? role) => Task.CompletedTask;
 
         public Task GoToDirectionsAsync(double destinationLat, double destinationLng, double? originLat, double? originLng)
             => Task.CompletedTask;

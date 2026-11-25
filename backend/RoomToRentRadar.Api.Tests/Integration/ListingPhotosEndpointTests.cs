@@ -38,7 +38,7 @@ public sealed class ListingPhotosEndpointTests
         await using var scope = _factory.Services.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await TestListingsSeed.SeedAsync(dbContext);
-        var owner = await TestUsersSeed.SeedAsync(dbContext);
+        var owner = await TestUsersSeed.SeedAsync(dbContext, UserRole.Landlord);
         await dbContext.Listings.ExecuteUpdateAsync(
             setters => setters.SetProperty(listing => listing.OwnerId, owner.Id));
         _token = await LoginAsync(TestUsersSeed.Email, TestUsersSeed.Password);
@@ -255,6 +255,37 @@ public sealed class ListingPhotosEndpointTests
     }
 
     [Test]
+    public async Task Upload_AsStudent_ReturnsForbidden()
+    {
+        var listingId = TestListingsSeed.IdFor(1);
+        const string email = "student@example.test";
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await TestUsersSeed.SeedAdditionalAsync(
+                dbContext,
+                Guid.NewGuid(),
+                email,
+                UserRole.Student,
+                "Student Tester");
+        }
+
+        var studentToken = await LoginAsync(email, TestUsersSeed.Password);
+        using var multipart = CreateMultipart(
+            (TestImageFactory.CreateJpeg(400, 300), "image/jpeg", "a.jpg"));
+
+        var response = await PostPhotosAsync(listingId, multipart, studentToken);
+
+        var problem = await ReadProblemAsync(response, HttpStatusCode.Forbidden);
+        Assert.Multiple(() =>
+        {
+            Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo("forbidden"));
+        });
+        Assert.That(await GetPhotoRowsAsync(listingId), Is.Empty);
+        Assert.That(StoredFileCount(listingId), Is.Zero);
+    }
+
+    [Test]
     public async Task Upload_ByNonOwner_ReturnsListingNotFoundProblem()
     {
         var listingId = TestListingsSeed.IdFor(1);
@@ -464,6 +495,7 @@ public sealed class ListingPhotosEndpointTests
             DisplayName = "Other Landlord",
             PasswordHash = hash,
             PasswordSalt = salt,
+            Role = UserRole.Landlord,
             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
         });
         await dbContext.SaveChangesAsync();

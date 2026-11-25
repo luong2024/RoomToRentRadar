@@ -360,6 +360,10 @@ public class RoomReportViewModelTests
             return Task.CompletedTask;
         }
 
+        public Task GoToRegisterAsync() => Task.CompletedTask;
+
+        public Task GoToRoleRootAsync(RoomToRentRadar.Models.AppUserRole? role) => Task.CompletedTask;
+
         public Task GoToRoomDetailAsync(Guid listingId)
             => throw new NotSupportedException("The report sheet does not open listings.");
 

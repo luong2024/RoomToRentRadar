@@ -1,5 +1,6 @@
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Ports.Inbound;
+using RoomToRentRadar.Ports.Models.Auth;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 using RoomToRentRadar.Ports.Outbound.Services;
 using RoomToRentRadar.Shared.Auth;
@@ -29,23 +30,40 @@ public sealed class AuthService(
             return null;
         }
 
-        var (token, tokenHash) = tokenGenerator.Create();
-        var now = DateTime.UtcNow;
-        var expiresAt = now.Add(SessionLifetime);
+        return await CreateSessionAsync(user, cancellationToken);
+    }
 
-        await authSessionRepository.AddAsync(
-            new AuthSession
-            {
-                Id = Guid.NewGuid(),
-                UserId = user.Id,
-                TokenHash = tokenHash,
-                ExpiresAt = expiresAt,
-                CreatedAt = now
-            },
-            cancellationToken);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+    public async Task<AuthRegistrationResult> RegisterAsync(
+        RegisterRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!UserRoleWire.TryParse(request.Role?.Trim().ToLowerInvariant(), out var role)
+            || role is not (UserRole.Student or UserRole.Landlord))
+        {
+            return AuthRegistrationResult.UnsupportedRole();
+        }
 
-        return new LoginResponse(token, expiresAt, user.DisplayName);
+        var normalizedEmail = User.NormalizeEmail(request.Email);
+        if (await userRepository.FindByEmailAsync(normalizedEmail, cancellationToken) is not null)
+        {
+            return AuthRegistrationResult.EmailAlreadyRegistered();
+        }
+
+        var (hash, salt) = passwordHasher.Hash(request.Password);
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = normalizedEmail,
+            DisplayName = request.DisplayName.Trim(),
+            PasswordHash = hash,
+            PasswordSalt = salt,
+            Role = role,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await userRepository.AddAsync(user, cancellationToken);
+        var response = await CreateSessionAsync(user, cancellationToken);
+        return AuthRegistrationResult.Registered(response);
     }
 
     public Task<User?> AuthenticateAsync(string token, CancellationToken cancellationToken)
@@ -66,5 +84,32 @@ public sealed class AuthService(
 
         authSessionRepository.Remove(session);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task<LoginResponse> CreateSessionAsync(
+        User user,
+        CancellationToken cancellationToken)
+    {
+        var (token, tokenHash) = tokenGenerator.Create();
+        var now = DateTime.UtcNow;
+        var expiresAt = now.Add(SessionLifetime);
+
+        await authSessionRepository.AddAsync(
+            new AuthSession
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                TokenHash = tokenHash,
+                ExpiresAt = expiresAt,
+                CreatedAt = now
+            },
+            cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return new LoginResponse(
+            token,
+            expiresAt,
+            user.DisplayName,
+            UserRoleWire.ToWireValue(user.Role));
     }
 }
