@@ -920,4 +920,7 @@
   <data name="Common_Cancel" xml:space="preserve">
     <value>Huỷ</value>
   </data>
+  <data name="Date_Today" xml:space="preserve"><value>Hôm nay</value></data>
+  <data name="Date_Yesterday" xml:space="preserve"><value>Hôm qua</value></data>
+  <data name="Date_DaysAgo" xml:space="preserve"><value>{0} ngày trước</value></data>
 </root>

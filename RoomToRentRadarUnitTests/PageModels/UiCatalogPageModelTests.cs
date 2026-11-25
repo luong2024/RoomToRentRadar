@@ -86,7 +86,7 @@ public class UiCatalogPageModelTests
 
         // Raw demo values unchanged while formatted output switches cleanly
         Assert.That(CultureFormatting.FormatCurrency(vm.DemoCurrencyAmount, vm.PreviewCulture), Is.EqualTo("2,200,000 ₫"));
-        Assert.That(CultureFormatting.FormatDate(vm.DemoDateValue, vm.PreviewCulture), Is.EqualTo("11/25/2026"));
+        Assert.That(CultureFormatting.FormatDate(vm.DemoDateValue, vm.PreviewCulture, new DateOnly(2026, 12, 3)), Is.EqualTo("25 Nov 2026"));
         Assert.That(CultureFormatting.FormatDistance(vm.SampleRoom.DistanceMeters, vm.PreviewCulture), Is.EqualTo("350 m"));
         Assert.That(vm.DemoCurrencyAmount, Is.EqualTo(2200000m));
     }

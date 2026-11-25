@@ -9,6 +9,8 @@ public class CultureFormattingTests
     private static readonly CultureInfo ViVn = CultureInfo.GetCultureInfo("vi-VN");
     private static readonly CultureInfo EnUs = CultureInfo.GetCultureInfo("en-US");
 
+    private static readonly DateOnly ReferenceDate = new(2026, 12, 3);
+
     // UT01-UT06: Standard values in vi-VN
     [Test]
     public void FormatCurrency_StandardValue_ViVn_ReturnsDotSeparatorWithDongSymbol()
@@ -32,8 +34,8 @@ public class CultureFormattingTests
     {
         var date = new DateOnly(2026, 11, 25);
 
-        Assert.That(CultureFormatting.FormatDate(date, ViVn), Is.EqualTo("25/11/2026"));
-        Assert.That(CultureFormatting.FormatDate(new DateTime(2026, 11, 25, 16, 30, 0), ViVn), Is.EqualTo("25/11/2026"));
+        Assert.That(CultureFormatting.FormatDate(date, ViVn, ReferenceDate), Is.EqualTo("25/11/2026"));
+        Assert.That(CultureFormatting.FormatDate(new DateTime(2026, 11, 25, 16, 30, 0), ViVn, ReferenceDate), Is.EqualTo("25/11/2026"));
     }
 
     [Test]
@@ -81,10 +83,23 @@ public class CultureFormattingTests
     }
 
     [Test]
-    public void FormatDate_StandardValue_EnUs_ReturnsMonthDayYear()
+    public void FormatDate_StandardValue_EnUs_ReturnsDayAbbreviatedMonthYear()
     {
-        Assert.That(CultureFormatting.FormatDate(new DateOnly(2026, 11, 25), EnUs), Is.EqualTo("11/25/2026"));
-        Assert.That(CultureFormatting.FormatDate(new DateTime(2026, 11, 25, 16, 30, 0), EnUs), Is.EqualTo("11/25/2026"));
+        Assert.That(CultureFormatting.FormatDate(new DateOnly(2026, 11, 25), EnUs, ReferenceDate), Is.EqualTo("25 Nov 2026"));
+        Assert.That(CultureFormatting.FormatDate(new DateTime(2026, 11, 25, 16, 30, 0), EnUs, ReferenceDate), Is.EqualTo("25 Nov 2026"));
+    }
+
+    [TestCase(0, "Today", "Hôm nay")]
+    [TestCase(1, "Yesterday", "Hôm qua")]
+    [TestCase(3, "3 days ago", "3 ngày trước")]
+    [TestCase(7, "7 days ago", "7 ngày trước")]
+    [TestCase(8, "25 Nov 2026", "25/11/2026")]
+    [TestCase(-1, "4 Dec 2026", "04/12/2026")]
+    public void FormatDate_DaysFromReference_UsesDocumentedWindow(int daysAgo, string english, string vietnamese)
+    {
+        var date = ReferenceDate.AddDays(-daysAgo);
+        Assert.That(CultureFormatting.FormatDate(date, EnUs, ReferenceDate), Is.EqualTo(english));
+        Assert.That(CultureFormatting.FormatDate(date, ViVn, ReferenceDate), Is.EqualTo(vietnamese));
     }
 
     [Test]
@@ -282,7 +297,7 @@ public class CultureFormattingTests
 
             Assert.That(CultureFormatting.FormatCurrency(2200000m, EnUs), Is.EqualTo("2,200,000 ₫"));
             Assert.That(CultureFormatting.FormatNumber(12345.67, EnUs), Is.EqualTo("12,345.67"));
-            Assert.That(CultureFormatting.FormatDate(new DateOnly(2026, 11, 25), EnUs), Is.EqualTo("11/25/2026"));
+            Assert.That(CultureFormatting.FormatDate(new DateOnly(2026, 11, 25), EnUs, ReferenceDate), Is.EqualTo("25 Nov 2026"));
             Assert.That(CultureFormatting.FormatTime(new TimeOnly(16, 30), EnUs), Is.EqualTo("4:30 PM"));
             Assert.That(CultureFormatting.FormatArea(25.5, EnUs), Is.EqualTo("25.5 m²"));
             Assert.That(CultureFormatting.FormatDistance(1500, EnUs), Is.EqualTo("1.5 km"));
@@ -315,10 +330,10 @@ public class CultureFormattingTests
         var noonUtc = new DateTime(2026, 11, 25, 12, 0, 0, DateTimeKind.Utc);
         var endOfDayOffset = new DateTimeOffset(2026, 11, 25, 23, 59, 0, TimeSpan.FromHours(-5));
 
-        Assert.That(CultureFormatting.FormatDate(midnightUtc, ViVn), Is.EqualTo("25/11/2026"));
-        Assert.That(CultureFormatting.FormatDate(midnightUtc, EnUs), Is.EqualTo("11/25/2026"));
-        Assert.That(CultureFormatting.FormatDate(endOfDayOffset, ViVn), Is.EqualTo("25/11/2026"));
-        Assert.That(CultureFormatting.FormatDate(endOfDayOffset, EnUs), Is.EqualTo("11/25/2026"));
+        Assert.That(CultureFormatting.FormatDate(midnightUtc, ViVn, ReferenceDate), Is.EqualTo("25/11/2026"));
+        Assert.That(CultureFormatting.FormatDate(midnightUtc, EnUs, ReferenceDate), Is.EqualTo("25 Nov 2026"));
+        Assert.That(CultureFormatting.FormatDate(endOfDayOffset, ViVn, ReferenceDate), Is.EqualTo("25/11/2026"));
+        Assert.That(CultureFormatting.FormatDate(endOfDayOffset, EnUs, ReferenceDate), Is.EqualTo("25 Nov 2026"));
 
         Assert.That(CultureFormatting.FormatTime(new TimeOnly(0, 0), ViVn), Is.EqualTo("00:00"));
         Assert.That(CultureFormatting.FormatTime(new TimeOnly(0, 0), EnUs), Is.EqualTo("12:00 AM"));

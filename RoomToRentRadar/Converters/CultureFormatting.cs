@@ -1,4 +1,5 @@
 using System.Globalization;
+using RoomToRentRadar.Resources.Strings;
 
 namespace RoomToRentRadar.Converters;
 
@@ -102,10 +103,13 @@ public static class CultureFormatting
     }
 
     /// <summary>
-    /// Formats a date without timezone conversion:
-    /// <c>vi-VN</c>: <c>dd/MM/yyyy</c> · <c>en-US</c>: <c>MM/dd/yyyy</c>.
+    /// Formats today and the previous seven calendar days relatively, and other dates absolutely.
+    /// Preserves the calendar date supplied by the caller (BR-I18N-03).
     /// </summary>
-    public static string FormatDate(object? value, CultureInfo? culture = null)
+    public static string FormatDate(object? value, CultureInfo? culture = null) =>
+        FormatDate(value, culture, DateOnly.FromDateTime(DateTime.Today));
+
+    internal static string FormatDate(object? value, CultureInfo? culture, DateOnly today)
     {
         if (!TryExtractDate(value, out var date))
         {
@@ -113,7 +117,15 @@ public static class CultureFormatting
         }
 
         var effective = culture ?? CultureInfo.CurrentCulture;
-        var pattern = IsVietnamese(effective) ? "dd'/'MM'/'yyyy" : "MM'/'dd'/'yyyy";
+        var daysAgo = today.DayNumber - date.DayNumber;
+        if (daysAgo == 0)
+            return AppResources.GetString("Date_Today", effective);
+        if (daysAgo == 1)
+            return AppResources.GetString("Date_Yesterday", effective);
+        if (daysAgo is >= 2 and <= 7)
+            return string.Format(effective, AppResources.GetString("Date_DaysAgo", effective), daysAgo);
+
+        var pattern = IsVietnamese(effective) ? "dd'/'MM'/'yyyy" : "d MMM yyyy";
         return date.ToString(pattern, effective);
     }
 
