@@ -11,4 +11,16 @@ public sealed class SqliteSettings
     /// <c>Campuses</c> is reference data and is always seeded.
     /// </summary>
     public bool SeedDemoRooms { get; set; }
+
+    /// <summary>
+    /// T00.10: seeds the extended 30-room catalog (8 core + 22 extra) and child tables
+    /// (amenities, safety features, house rules). Effective only when <see cref="SeedDemoRooms"/> is true.
+    /// </summary>
+    public bool SeedExtendedDemoData { get; set; }
+
+    /// <summary>
+    /// Pre-hashed accounts loaded from <c>Admin:SeedAccounts</c> (and in Development
+    /// <c>DemoData:Accounts</c>) to be inserted idempotently on schema initialization.
+    /// </summary>
+    public IReadOnlyList<SeedAccount> SeedAccounts { get; set; } = Array.Empty<SeedAccount>();
 }

@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using RoomToRentRadar.Api.Authorization;
 using RoomToRentRadar.Api.BackgroundJobs;
 using RoomToRentRadar.Api.Binders;
+using RoomToRentRadar.Api.Configuration;
 using RoomToRentRadar.Api.Errors;
 using RoomToRentRadar.Api.Middlewares;
 using RoomToRentRadar.Api.Security;
@@ -50,6 +51,12 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 var sqliteSettings = builder.Configuration.GetSection(SqliteSettings.SectionName).Get<SqliteSettings>() ?? new SqliteSettings();
 sqliteSettings.SeedDemoRooms = builder.Configuration.GetValue<bool?>("Sqlite:SeedDemoRooms")
     ?? builder.Environment.IsDevelopment(); // H4: demo seed only for local development
+sqliteSettings.SeedExtendedDemoData = builder.Configuration.GetValue<bool?>("Sqlite:SeedExtendedDemoData")
+    ?? builder.Environment.IsDevelopment();
+sqliteSettings.SeedAccounts = SeedAccountsLoader.Load(
+    builder.Configuration,
+    builder.Environment.IsDevelopment(),
+    new Pbkdf2PasswordHasherAdapter());
 builder.Services.AddSqliteDatastore(sqliteSettings);
 
 // ===== 3. Application =====

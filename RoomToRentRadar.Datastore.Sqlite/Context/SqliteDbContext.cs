@@ -78,12 +78,21 @@ public sealed class SqliteDbContext : IDisposable
                 // Campuses is reference data: always seeded, in every environment (H4 / ADR-002).
                 SeedCampuses(conn);
 
+                // Configured accounts (Admin:SeedAccounts, plus DemoData:Accounts in Development)
+                // run before SeedDemoLandlordUserIfMissing so configured credentials take precedence.
+                SeedConfiguredAccounts(conn, _settings.SeedAccounts);
+
                 if (_settings.SeedDemoRooms)
                 {
                     // BR-LST-06: search only shows rooms whose landlord is verified, so the demo
                     // landlord must exist (and be verified) before the demo rooms are inserted.
                     SeedDemoLandlordUserIfMissing(conn);
                     SeedRoomsIfEmpty(conn);
+
+                    if (_settings.SeedExtendedDemoData)
+                    {
+                        DemoDataSeeder.Seed(conn);
+                    }
                 }
 
                 _schemaInitialized = true;
@@ -144,6 +153,63 @@ public sealed class SqliteDbContext : IDisposable
         tx.Commit();
     }
 
+    private static void SeedConfiguredAccounts(
+        SqliteConnection conn,
+        IReadOnlyList<SeedAccount>? seedAccounts)
+    {
+        if (seedAccounts is not { Count: > 0 })
+        {
+            return;
+        }
+
+        const string createdAtUtc = "2026-11-01T08:00:00.0000000Z";
+
+        using var tx = conn.BeginTransaction();
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.Transaction = tx;
+            cmd.CommandText = """
+                INSERT OR IGNORE INTO Users (
+                    Id, Email, NormalizedEmail, FullName, PasswordHash, Role, AuthProvider,
+                    SsoSubjectId, PhoneNumber, StudentCode, IsVerified, FailedLoginCount,
+                    LockoutEndUtc, CreatedAtUtc, UpdatedAtUtc
+                ) VALUES (
+                    @id, @email, @normalizedEmail, @fullName, @passwordHash, @role, 'Local',
+                    NULL, @phoneNumber, @studentCode, @isVerified, 0,
+                    NULL, @createdAtUtc, @createdAtUtc
+                );
+                """;
+
+            var idParam = cmd.Parameters.Add("@id", SqliteType.Text);
+            var emailParam = cmd.Parameters.Add("@email", SqliteType.Text);
+            var normalizedEmailParam = cmd.Parameters.Add("@normalizedEmail", SqliteType.Text);
+            var fullNameParam = cmd.Parameters.Add("@fullName", SqliteType.Text);
+            var passwordHashParam = cmd.Parameters.Add("@passwordHash", SqliteType.Text);
+            var roleParam = cmd.Parameters.Add("@role", SqliteType.Text);
+            var phoneNumberParam = cmd.Parameters.Add("@phoneNumber", SqliteType.Text);
+            var studentCodeParam = cmd.Parameters.Add("@studentCode", SqliteType.Text);
+            var isVerifiedParam = cmd.Parameters.Add("@isVerified", SqliteType.Integer);
+            cmd.Parameters.AddWithValue("@createdAtUtc", createdAtUtc);
+
+            foreach (var account in seedAccounts)
+            {
+                var trimmedEmail = account.Email.Trim();
+                idParam.Value = account.Id.Trim();
+                emailParam.Value = trimmedEmail;
+                normalizedEmailParam.Value = trimmedEmail.ToLowerInvariant();
+                fullNameParam.Value = account.FullName.Trim();
+                passwordHashParam.Value = account.PasswordHash;
+                roleParam.Value = account.Role.ToString();
+                phoneNumberParam.Value = (object?)account.PhoneNumber ?? DBNull.Value;
+                studentCodeParam.Value = (object?)account.StudentCode ?? DBNull.Value;
+                isVerifiedParam.Value = account.IsVerified ? 1 : 0;
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        tx.Commit();
+    }
+
     /// <summary>
     /// BR-LST-06: the search read model joins <c>Users</c> on <c>IsVerified</c>, so demo rooms need a
     /// verified landlord row. <c>INSERT OR IGNORE</c> keeps any real landlord that already owns the id.
@@ -189,82 +255,9 @@ public sealed class SqliteDbContext : IDisposable
         }
 
         using var tx = conn.BeginTransaction();
-        using (var cmd = conn.CreateCommand())
+        foreach (var room in RoomSeedData.CreateRooms())
         {
-            cmd.Transaction = tx;
-            cmd.CommandText = """
-                INSERT OR IGNORE INTO Rooms (
-                    Id, LandlordId, Title, Description, RoomType, MonthlyRentVnd, DepositVnd, AreaM2,
-                    MaxOccupants, Furnishing, AvailableFrom, AddressLine, Ward, District, Latitude, Longitude,
-                    ElectricityPriceVndPerKwh, WaterPriceVnd, WaterPriceUnit, InternetFeeVnd, ParkingFeeVnd,
-                    OtherFeesNote, Status, StatusReason, NeedsReReview, IsSafetyVerified, VerifiedAtUtc,
-                    VerifiedByUserId, PublishedAtUtc, LastUpdatedAtUtc, CreatedAtUtc, Version
-                ) VALUES (
-                    @id, @landlordId, @title, @description, @roomType, @monthlyRentVnd, @depositVnd, @areaM2,
-                    @maxOccupants, @furnishing, @availableFrom, @addressLine, @ward, @district, @latitude, @longitude,
-                    @electricityPriceVndPerKwh, @waterPriceVnd, @waterPriceUnit, @internetFeeVnd, @parkingFeeVnd,
-                    @otherFeesNote, @status, @statusReason, @needsReReview, @isSafetyVerified, @verifiedAtUtc,
-                    @verifiedByUserId, @publishedAtUtc, @lastUpdatedAtUtc, @createdAtUtc, @version
-                );
-                """;
-
-            var parameters = new[]
-            {
-                "@id", "@landlordId", "@title", "@description", "@roomType", "@monthlyRentVnd", "@depositVnd", "@areaM2",
-                "@maxOccupants", "@furnishing", "@availableFrom", "@addressLine", "@ward", "@district", "@latitude", "@longitude",
-                "@electricityPriceVndPerKwh", "@waterPriceVnd", "@waterPriceUnit", "@internetFeeVnd", "@parkingFeeVnd",
-                "@otherFeesNote", "@status", "@statusReason", "@needsReReview", "@isSafetyVerified", "@verifiedAtUtc",
-                "@verifiedByUserId", "@publishedAtUtc", "@lastUpdatedAtUtc", "@createdAtUtc", "@version"
-            }.Select(name =>
-            {
-                var parameter = cmd.CreateParameter();
-                parameter.ParameterName = name;
-                cmd.Parameters.Add(parameter);
-                return parameter;
-            }).ToArray();
-
-            foreach (var room in RoomSeedData.CreateRooms())
-            {
-                parameters[0].Value = room.Id;
-                parameters[1].Value = room.LandlordId;
-                parameters[2].Value = room.Title;
-                parameters[3].Value = (object?)room.Description ?? DBNull.Value;
-                parameters[4].Value = room.RoomType.ToString();
-                parameters[5].Value = room.MonthlyRentVnd;
-                parameters[6].Value = room.DepositVnd;
-                parameters[7].Value = room.AreaM2;
-                parameters[8].Value = (object?)room.MaxOccupants ?? DBNull.Value;
-                parameters[9].Value = (object?)room.Furnishing ?? DBNull.Value;
-                parameters[10].Value = room.AvailableFrom.HasValue
-                    ? room.AvailableFrom.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
-                    : DBNull.Value;
-                parameters[11].Value = room.AddressLine;
-                parameters[12].Value = room.Ward;
-                parameters[13].Value = room.District;
-                parameters[14].Value = room.Latitude;
-                parameters[15].Value = room.Longitude;
-                parameters[16].Value = (object?)room.ElectricityPriceVndPerKwh ?? DBNull.Value;
-                parameters[17].Value = (object?)room.WaterPriceVnd ?? DBNull.Value;
-                parameters[18].Value = (object?)room.WaterPriceUnit ?? DBNull.Value;
-                parameters[19].Value = (object?)room.InternetFeeVnd ?? DBNull.Value;
-                parameters[20].Value = (object?)room.ParkingFeeVnd ?? DBNull.Value;
-                parameters[21].Value = (object?)room.OtherFeesNote ?? DBNull.Value;
-                parameters[22].Value = room.Status.ToString();
-                parameters[23].Value = (object?)room.StatusReason ?? DBNull.Value;
-                parameters[24].Value = room.NeedsReReview ? 1 : 0;
-                parameters[25].Value = room.IsSafetyVerified ? 1 : 0;
-                parameters[26].Value = room.VerifiedAtUtc.HasValue
-                    ? room.VerifiedAtUtc.Value.ToString("O", CultureInfo.InvariantCulture)
-                    : DBNull.Value;
-                parameters[27].Value = (object?)room.VerifiedByUserId ?? DBNull.Value;
-                parameters[28].Value = room.PublishedAtUtc.HasValue
-                    ? room.PublishedAtUtc.Value.ToString("O", CultureInfo.InvariantCulture)
-                    : DBNull.Value;
-                parameters[29].Value = room.LastUpdatedAtUtc.ToString("O", CultureInfo.InvariantCulture);
-                parameters[30].Value = room.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture);
-                parameters[31].Value = room.Version;
-                cmd.ExecuteNonQuery();
-            }
+            DemoRoomRowWriter.InsertOrIgnore(conn, tx, room);
         }
 
         tx.Commit();
