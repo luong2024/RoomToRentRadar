@@ -147,7 +147,7 @@ Fluent System Icons (bundled `FluentSystemIcons-Regular.ttf`). Icons accompany m
 
 | Component | Spec |
 |---|---|
-| `RoomCard` | 16:10 cover (thumb), verified badge overlay top-left, [heart] top-right (48 dp hit), title (2 lines max), **price "2.5M/mo"**, `25 m² · Boarding room · 1.2 km to ICTU`, *Compare* text button. Fixed height for scroll perf. |
+| `RoomCard` | 16:10 cover (thumb), verified badge overlay top-left, [heart] top-right (48 dp hit), **price "2.5M/mo"**, title (2 lines max), `25 m² · Boarding room · 1.2 km to ICTU`, *Compare* text button. Fixed height for scroll perf. |
 | `FilterChip` | removable chip `Under 3M [x]`; *Clear filters* text chip at end. |
 | `StatusBanner` | full-width under header: Warning colour for `Rented`/`Unpublished` (public) and `PendingReview`/`Rejected`/`Suspended` (owner/admin views), Verified colour for approvals. |
 | `StickyContactBar` | bottom of detail: price + *Call* · *Zalo* · primary *Message*. Guest: single primary *Sign in to contact*. |
@@ -184,8 +184,8 @@ Step 1 role cards: *I am a student* / *I am a landlord*. Step 2 form (phone requ
 │ 128 rooms · [star] Save search            │  count always visible (US04 AC3)
 │ ┌──────────────────────────────────────┐ │
 │ │ [cover photo]  [check] Verified [heart]│ │
-│ │ Private room near ICTU               │ │
 │ │ 2.5M/mo                              │ │
+│ │ Private room near ICTU               │ │
 │ │ 25 m² · Boarding room · 1.2 km to ICTU│ │
 │ └──────────────────────────────────────┘ │
 │ ...infinite scroll (20/page)...           │
