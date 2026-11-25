@@ -72,8 +72,9 @@
                 </Image>
             </Border>
 
-            <!-- Actions: Share & Favourite -->
-            <HorizontalStackLayout HorizontalOptions="End"
+            <!-- Actions: Share & Favourite (only shown when room is available) -->
+            <HorizontalStackLayout IsVisible="{Binding IsAvailable}"
+                                   HorizontalOptions="End"
                                    VerticalOptions="Start"
                                    Spacing="10">
                 <!-- Share Button -->
@@ -126,8 +127,9 @@
             </HorizontalStackLayout>
         </Grid>
 
-        <!-- 3. Bottom Badges: 360 View Pill & Photo Counter -->
-        <Grid Padding="16,0,16,16"
+        <!-- 3. Bottom Badges: 360 View Pill & Photo Counter (only shown when room is available) -->
+        <Grid IsVisible="{Binding IsAvailable}"
+              Padding="16,0,16,16"
               VerticalOptions="End">
             <!-- 360° View Button Pill -->
             <Border IsVisible="{Binding Is360Available}"

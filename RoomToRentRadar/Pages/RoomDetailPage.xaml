@@ -58,11 +58,15 @@
                         <!-- Top Hero Image Gallery (Back, Share, Fav, 360, Counter) -->
                         <detail:RoomHeroGalleryControl />
 
+                        <!-- Unavailable Notice Banner (Full-width directly below hero when rented/unpublished) -->
+                        <detail:UnavailableBannerControl />
+
                         <!-- Details Body Content (Sections) -->
                         <VerticalStackLayout Padding="16,14,16,24" Spacing="16">
 
-                            <!-- Status Badge & Relative Updated Timestamp -->
-                            <Grid ColumnDefinitions="Auto, *">
+                            <!-- Status Badge & Relative Updated Timestamp (Available only) -->
+                            <Grid ColumnDefinitions="Auto, *"
+                                  IsVisible="{Binding IsAvailable}">
                                 <!-- Status Badge -->
                                 <Border Grid.Column="0"
                                         StrokeShape="RoundRectangle 9999"
@@ -102,8 +106,9 @@
                                    TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
                                    LineBreakMode="WordWrap" />
 
-                            <!-- Pricing & Deposit Display -->
-                            <VerticalStackLayout Spacing="4">
+                            <!-- Pricing & Deposit Display (Available only) -->
+                            <VerticalStackLayout Spacing="4"
+                                                 IsVisible="{Binding IsAvailable}">
                                 <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
                                     <Label Text="{Binding PriceFormatted}"
                                            FontFamily="{StaticResource FontFamilySemibold}"
@@ -123,32 +128,69 @@
                                        TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
                             </VerticalStackLayout>
 
-                            <!-- Unavailable Notice Banner (Visible when listing is rented/unavailable) -->
-                            <detail:UnavailableBannerControl />
+                            <!-- Unavailable Compact Summary & Straight-Line Distance Card (SCR-ROOM-01-UNAVAILABLE) -->
+                            <VerticalStackLayout IsVisible="{Binding IsUnavailable}"
+                                                 Spacing="14">
+                                <Label Text="{Binding UnavailableSummaryFormatted}"
+                                       FontFamily="{StaticResource FontFamilyRegular}"
+                                       FontSize="{StaticResource FontSizeBodyLarge}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"
+                                       LineBreakMode="WordWrap" />
+
+                                <Border StrokeShape="RoundRectangle 12"
+                                        StrokeThickness="1"
+                                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+                                        Padding="14,12">
+                                    <Grid ColumnDefinitions="24, *"
+                                          ColumnSpacing="10"
+                                          VerticalOptions="Center">
+                                        <Image Grid.Column="0"
+                                               WidthRequest="20"
+                                               HeightRequest="20"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center">
+                                            <Image.Source>
+                                                <FontImageSource Glyph="{x:Static fonts:FluentUI.location_20_regular}"
+                                                                 FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                                 Size="20"
+                                                                 Color="{AppThemeBinding Light={StaticResource ActionAccentLight}, Dark={StaticResource ActionAccentDark}}" />
+                                            </Image.Source>
+                                        </Image>
+                                        <Label Grid.Column="1"
+                                               Text="{Binding StraightLineNotice}"
+                                               FontFamily="{StaticResource FontFamilyRegular}"
+                                               FontSize="{StaticResource FontSizeBodyMedium}"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"
+                                               LineBreakMode="WordWrap"
+                                               VerticalTextAlignment="Center" />
+                                    </Grid>
+                                </Border>
+                            </VerticalStackLayout>
 
                             <!-- Similar Rooms Recommendation Carousel (Visible when listing is unavailable) -->
                             <detail:SimilarRoomsCarouselControl />
 
                             <!-- Key Facts Grid (Area, Room type, Occupants, Furnishing, Availability, Distance) -->
-                            <detail:RoomKeyFactsGridControl />
+                            <detail:RoomKeyFactsGridControl IsVisible="{Binding IsAvailable}" />
 
                             <!-- Monthly Utility Costs Card -->
-                            <detail:MonthlyCostsCardControl />
+                            <detail:MonthlyCostsCardControl IsVisible="{Binding IsAvailable}" />
 
                             <!-- Amenities 2-Column Section -->
-                            <detail:AmenitiesSectionControl />
+                            <detail:AmenitiesSectionControl IsVisible="{Binding IsAvailable}" />
 
                             <!-- Safety Checklist Section -->
-                            <detail:SafetySectionControl />
+                            <detail:SafetySectionControl IsVisible="{Binding IsAvailable}" />
 
                             <!-- House Rules Section -->
-                            <detail:HouseRulesSectionControl />
+                            <detail:HouseRulesSectionControl IsVisible="{Binding IsAvailable}" />
 
                             <!-- Location & Travel Times Section -->
-                            <detail:LocationTravelTimesControl />
+                            <detail:LocationTravelTimesControl IsVisible="{Binding IsAvailable}" />
 
                             <!-- Landlord Block & Report Listing Action -->
-                            <detail:LandlordBlockControl />
+                            <detail:LandlordBlockControl IsVisible="{Binding IsAvailable}" />
 
                         </VerticalStackLayout>
                     </VerticalStackLayout>

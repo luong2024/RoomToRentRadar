@@ -255,6 +255,9 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
     public partial string UnavailableBannerText { get; set; } = string.Empty;
 
     [ObservableProperty]
+    public partial string UnavailableSummaryFormatted { get; set; } = string.Empty;
+
+    [ObservableProperty]
     public partial string ContactDisabledText { get; set; } = string.Empty;
 
     [ObservableProperty]
@@ -347,11 +350,17 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
         // Availability state mapping (BR-LST-04a)
         IsAvailable = detail.Status == ListingStatus.Available;
         IsUnavailable = detail.Status is ListingStatus.Rented or ListingStatus.Unpublished;
+        if (!IsUnavailable)
+        {
+            SimilarRooms.Clear();
+            HasSimilarRooms = false;
+        }
 
         // Pricing formatting
         PriceFormatted = $"{detail.MonthlyRentVnd:N0} đ";
         PeriodFormatted = AppResources.GetString("RoomDetail_PerMonth");
         PriceShortFormatted = $"{FormatShortMoney(detail.MonthlyRentVnd)}/mo";
+        UnavailableSummaryFormatted = $"{PriceFormatted} {PeriodFormatted} · {detail.AreaM2:0.#} m² · {FormatRoomType(detail.RoomType)}";
 
         int depositMonths = detail.MonthlyRentVnd > 0 ? (int)Math.Round((double)detail.DepositVnd / detail.MonthlyRentVnd) : 1;
         string monthWord = depositMonths <= 1
@@ -373,8 +382,16 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
                 ? AppResources.GetString("RoomDetail_UpdatedYesterday")
                 : string.Format(AppResources.GetString("RoomDetail_UpdatedDaysAgo"), daysAgo));
 
-        // Unavailable banner text (Image 4)
-        UnavailableBannerText = string.Format(AppResources.GetString("RoomDetail_UnavailableBanner"), daysAgo == 0 ? AppResources.GetString("RoomDetail_UpdatedToday").ToLowerInvariant() : $"{daysAgo} days ago");
+        // Unavailable banner text (SCR-ROOM-01-UNAVAILABLE)
+        string relativeTime = daysAgo switch
+        {
+            0 => AppResources.GetString("RoomDetail_RelativeToday"),
+            1 => AppResources.GetString("RoomDetail_RelativeYesterday"),
+            _ => string.Format(AppResources.GetString("RoomDetail_RelativeDaysAgo"), daysAgo)
+        };
+        UnavailableBannerText = detail.Status == ListingStatus.Unpublished
+            ? AppResources.GetString("RoomDetail_UnavailableBannerGeneral")
+            : string.Format(AppResources.GetString("RoomDetail_UnavailableBanner"), relativeTime);
         ContactDisabledText = AppResources.GetString("RoomDetail_ContactDisabled");
 
         // Photos gallery setup
@@ -429,16 +446,10 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
             $"{detail.AreaM2:0.#} m²"));
 
         // 2. Room Type
-        string roomTypeString = detail.RoomType switch
-        {
-            RoomType.BoardingRoom => AppResources.GetString("RoomType_BoardingRoom"),
-            RoomType.Dormitory => AppResources.GetString("RoomType_Dormitory"),
-            _ => detail.RoomType.ToString()
-        };
         KeyFacts.Add(new KeyFactItem(
             FluentUI.home_24_regular,
             AppResources.GetString("RoomDetail_RoomType"),
-            roomTypeString));
+            FormatRoomType(detail.RoomType)));
 
         // 3. Max Occupants
         string occupantsValue = detail.MaxOccupants is > 0
@@ -476,6 +487,15 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
             string.Format(AppResources.GetString("RoomDetail_ToCampus"), CampusName),
             $"{detail.DistanceKm:0.0} km"));
     }
+
+    private static string FormatRoomType(RoomType roomType) => roomType switch
+    {
+        RoomType.BoardingRoom => AppResources.GetString("RoomType_BoardingRoom"),
+        RoomType.MiniApartment => AppResources.GetString("RoomType_MiniApartment"),
+        RoomType.WholeHouse => AppResources.GetString("RoomType_WholeHouse"),
+        RoomType.Dormitory => AppResources.GetString("RoomType_Dormitory"),
+        _ => roomType.ToString()
+    };
 
     private void PopulateMonthlyCosts(RoomDetailDto detail)
     {

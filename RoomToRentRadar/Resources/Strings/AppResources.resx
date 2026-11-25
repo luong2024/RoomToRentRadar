@@ -302,6 +302,15 @@
   <data name="RoomDetail_UpdatedYesterday" xml:space="preserve">
     <value>Updated yesterday</value>
   </data>
+  <data name="RoomDetail_RelativeToday" xml:space="preserve">
+    <value>today</value>
+  </data>
+  <data name="RoomDetail_RelativeYesterday" xml:space="preserve">
+    <value>yesterday</value>
+  </data>
+  <data name="RoomDetail_RelativeDaysAgo" xml:space="preserve">
+    <value>{0} days ago</value>
+  </data>
   <data name="RoomDetail_PerMonth" xml:space="preserve">
     <value>/ month</value>
   </data>
@@ -343,6 +352,12 @@
   </data>
   <data name="RoomType_BoardingRoom" xml:space="preserve">
     <value>Boarding room</value>
+  </data>
+  <data name="RoomType_MiniApartment" xml:space="preserve">
+    <value>Mini apartment</value>
+  </data>
+  <data name="RoomType_WholeHouse" xml:space="preserve">
+    <value>Whole house</value>
   </data>
   <data name="RoomType_Dormitory" xml:space="preserve">
     <value>Dormitory</value>

@@ -168,11 +168,64 @@ public class RoomDetailPageModelTests
         Assert.That(_sut.IsAvailable, Is.False);
         Assert.That(_sut.IsUnavailable, Is.True);
         Assert.That(_sut.UnavailableBannerText, Does.Contain("This room is no longer available. It was marked as rented"));
+        Assert.That(_sut.UnavailableSummaryFormatted, Is.EqualTo("1,800,000 đ / month · 18 m² · Boarding room"));
         Assert.That(_sut.ContactDisabledText, Is.EqualTo("Contact is disabled for unavailable rooms"));
         Assert.That(_sut.SimilarRooms, Has.Count.EqualTo(2));
         Assert.That(_sut.SimilarRooms[0].Title, Is.EqualTo("Room near Tân Thịnh market"));
         Assert.That(_sut.SimilarRooms[0].PriceFormatted, Is.EqualTo("1.9M/mo"));
         Assert.That(_sut.SimilarRooms[0].DistanceFormatted, Is.EqualTo("0.4 km from this room"));
+    }
+
+    [Test]
+    public async Task InitializeAsync_WhenRoomIsUnpublished_SetsGeneralUnavailableBannerAndClearsOnAvailable()
+    {
+        // Arrange
+        var unpublishedRoom = CreateSampleRoom(
+            status: ListingStatus.Unpublished,
+            isVerified: true,
+            monthlyRent: 2800000,
+            deposit: 2800000,
+            areaM2: 28.0,
+            maxOccupants: 3,
+            furnishing: Furnishing.Full,
+            availableFrom: null,
+            distanceKm: 1.0,
+            landlordPhone: null);
+
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(unpublishedRoom);
+        _roomGateway.GetSimilarRoomsAsync("room-test-1", "ictu").Returns(new List<RoomCardDto>
+        {
+            new("sim-1", "Similar", 2700000, 26.0, RoomType.BoardingRoom, 0.5, true, ListingStatus.Available, null, 21.5, 105.8, DateTime.UtcNow, false)
+        });
+
+        // Act
+        await _sut.InitializeAsync();
+
+        // Assert - Unpublished state
+        Assert.That(_sut.IsUnavailable, Is.True);
+        Assert.That(_sut.UnavailableBannerText, Is.EqualTo("This room is no longer available."));
+        Assert.That(_sut.HasSimilarRooms, Is.True);
+
+        // Act - Reload as Available room
+        var availableRoom = CreateSampleRoom(
+            status: ListingStatus.Available,
+            isVerified: true,
+            monthlyRent: 2500000,
+            deposit: 2500000,
+            areaM2: 25.0,
+            maxOccupants: 2,
+            furnishing: Furnishing.Full,
+            availableFrom: null,
+            distanceKm: 1.2,
+            landlordPhone: null);
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(availableRoom);
+        await _sut.InitializeAsync();
+
+        // Assert - Stale similar rooms are cleared
+        Assert.That(_sut.IsAvailable, Is.True);
+        Assert.That(_sut.IsUnavailable, Is.False);
+        Assert.That(_sut.HasSimilarRooms, Is.False);
+        Assert.That(_sut.SimilarRooms, Is.Empty);
     }
 
     [Test]

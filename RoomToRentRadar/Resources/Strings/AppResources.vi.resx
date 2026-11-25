@@ -303,6 +303,15 @@
   <data name="RoomDetail_UpdatedYesterday" xml:space="preserve">
     <value>Cập nhật hôm qua</value>
   </data>
+  <data name="RoomDetail_RelativeToday" xml:space="preserve">
+    <value>hôm nay</value>
+  </data>
+  <data name="RoomDetail_RelativeYesterday" xml:space="preserve">
+    <value>hôm qua</value>
+  </data>
+  <data name="RoomDetail_RelativeDaysAgo" xml:space="preserve">
+    <value>{0} ngày trước</value>
+  </data>
   <data name="RoomDetail_PerMonth" xml:space="preserve">
     <value>/ tháng</value>
   </data>
@@ -344,6 +353,12 @@
   </data>
   <data name="RoomType_BoardingRoom" xml:space="preserve">
     <value>Phòng trọ</value>
+  </data>
+  <data name="RoomType_MiniApartment" xml:space="preserve">
+    <value>Chung cư mini</value>
+  </data>
+  <data name="RoomType_WholeHouse" xml:space="preserve">
+    <value>Nhà nguyên căn</value>
   </data>
   <data name="RoomType_Dormitory" xml:space="preserve">
     <value>Ký túc xá</value>
