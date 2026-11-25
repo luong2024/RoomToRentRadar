@@ -65,7 +65,7 @@ public class SearchClientApiFlowIntegrationTests
     public void TearDown() => LocalizedStrings.Instance.SetCulture(En);
 
     // ---------------------------------------------------------------------
-    // Live count → Apply → Explore count, chips and sort (US04 AC2/AC3)
+    // Live count -> Apply -> Explore count, chips and sort (US04 AC2/AC3)
     // ---------------------------------------------------------------------
 
     [Test]
@@ -122,7 +122,7 @@ public class SearchClientApiFlowIntegrationTests
                     ActiveFilterChipKind.RoomType,
                     ActiveFilterChipKind.MaxDistance
                 }),
-                "Chip order must be Price → Area → RoomTypes → Distance.");
+                "Chip order must be Price -> Area -> RoomTypes -> Distance.");
             Assert.That(landing.CurrentSortLabel, Is.EqualTo(AppResources.GetString("Sort_PriceAsc_Short")));
             Assert.That(filters.ShowRoomsText, Is.EqualTo($"Show {expectation.TotalCount} rooms"));
         });
@@ -149,8 +149,7 @@ public class SearchClientApiFlowIntegrationTests
         });
 
         var selection = new FakeCampusSelection();
-        var bridge = new CampusSearchBridge(selection, store, SubstituteSession());
-        Assert.That(bridge, Is.Not.Null, "CampusSearchBridge wires the campus selection into the criteria store.");
+        _ = new CampusSearchBridge(selection, store, SubstituteSession());
 
         var landing = CreateLanding(store);
         await landing.InitializeAsync();
@@ -171,6 +170,8 @@ public class SearchClientApiFlowIntegrationTests
         });
 
         await selection.SelectCampusAsync("TNUT");
+        Assert.That(store.Current.CampusId, Is.EqualTo("TNUT"),
+            "CampusSearchBridge must push the selected campus into the criteria store.");
         var atTnut = SearchOracle.Search(_dataset, store.Current.ToRoomSearchRequest(), "TNUT");
         await WaitForLandingAsync(landing, atTnut);
 

@@ -125,7 +125,7 @@ public static class SearchDatasetSeeder
         rooms.Add(Ictu("c-area-199", ListingStatus.Available, RoomType.BoardingRoom, 1_500_000, 19.9, 1.2, 0.0, 19));
         rooms.Add(Ictu("c-area-201", ListingStatus.Available, RoomType.BoardingRoom, 1_500_000, 20.1, 1.3, 0.0, 20));
 
-        // Same rent, same distance band, same PublishedAtUtc → exercises every tie-break (BR-SRCH-04).
+        // Same rent, same distance band, same PublishedAtUtc -> exercises every tie-break (BR-SRCH-04).
         rooms.Add(Ictu("c-dup-newest-a", ListingStatus.Available, RoomType.Dormitory, 3_500_000, 30.0, 0.0, 3.0, 21));
         rooms.Add(Ictu("c-dup-newest-b", ListingStatus.Available, RoomType.Dormitory, 3_500_000, 30.0, 0.0, -3.0, 21));
 

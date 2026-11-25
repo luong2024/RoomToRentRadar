@@ -25,8 +25,10 @@ public class SqliteSearchQueryPlanAndPerformanceTests
     private const string SelectPrefix = """
         SELECT r.Id, r.Title, r.MonthlyRentVnd, r.AreaM2, r.RoomType, r.Status,
                (r.VerifiedAtUtc IS NOT NULL) AS IsVerified,
-               NULL AS CoverThumbUrl,
-               r.Latitude, r.Longitude, r.PublishedAtUtc
+               (SELECT p.ThumbPath FROM RoomPhotos p
+                WHERE p.RoomId = r.Id AND p.Kind = 'Standard'
+                ORDER BY p.SortOrder, p.Id LIMIT 1) AS CoverThumbPath,
+               r.Latitude, r.Longitude, r.PublishedAtUtc, r.Furnishing
         FROM Rooms r
         INNER JOIN Users u ON u.Id = r.LandlordId
         WHERE r.Status = 'Available'

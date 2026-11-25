@@ -239,9 +239,10 @@ public class SearchPerformanceAndConcurrencyTests
         TestContext.Progress.WriteLine(
             $"[T04.3] 20 concurrent readers (file SQLite): p50={p50:F2}ms p95={p95:F2}ms max={max:F2}ms");
 
+        // GetSearchPageAsync throws on any non-2xx response, so reaching here already proves 20/20 returned 200.
         Assert.Multiple(() =>
         {
-            Assert.That(results.All(result => result.Page is not null), Is.True, "All 20 requests returned 200 OK (no SQLITE_BUSY/500).");
+            Assert.That(samples, Has.Count.EqualTo(20));
             Assert.That(p95, Is.LessThanOrEqualTo(300), $"Concurrent p95 {p95:F2} ms must stay within the NFR-02 budget.");
             Assert.That(max, Is.LessThan(2000), $"US04 AC2: concurrent worst case {max:F2} ms must be < 2,000 ms.");
         });

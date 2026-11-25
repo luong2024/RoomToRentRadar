@@ -1,3 +1,4 @@
+using System.Globalization;
 using RoomToRentRadar.Ports.Contracts.Requests.Rooms;
 
 namespace RoomToRentRadarUnitTests.Search.Fixtures;
@@ -74,5 +75,12 @@ public class SearchDatasetSeederTests
     }
 
     private static string RowKey(SeedRoom room) =>
-        string.Join('|', room.Id, room.MonthlyRentVnd, room.AreaM2, room.Latitude, room.Longitude, room.RoomType, room.Status);
+        string.Join('|',
+            room.Id,
+            room.MonthlyRentVnd.ToString(CultureInfo.InvariantCulture),
+            room.AreaM2.ToString("R", CultureInfo.InvariantCulture),
+            room.Latitude.ToString("R", CultureInfo.InvariantCulture),
+            room.Longitude.ToString("R", CultureInfo.InvariantCulture),
+            room.RoomType.ToString(),
+            room.Status.ToString());
 }
