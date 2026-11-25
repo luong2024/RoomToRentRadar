@@ -20,97 +20,104 @@
                                Subtitle="ICTU Student Rentals"
                                CanGoBack="False" />
 
-        <feedback:StateView Grid.Row="1"
-                            State="{Binding State}"
-                            HasContent="{Binding HasContent}"
-                            ErrorMessage="{Binding ErrorMessage}"
-                            RetryCommand="{Binding RetryCommand}"
-                            ErrorTitle="{Binding ExploreErrorTitleText}"
-                            EmptyTitle="{Binding ExploreEmptyTitleText}"
-                            EmptyMessage="{Binding ExploreEmptyMessageText}"
-                            EmptyActionText="{Binding ExploreEmptyActionText}"
-                            EmptyActionCommand="{Binding ClearFiltersCommand}">
-            <RefreshView IsRefreshing="{Binding IsRefreshing}"
-                         Command="{Binding RefreshCommand}">
-                <ScrollView Padding="{StaticResource ScreenMargin}">
-                    <VerticalStackLayout Spacing="20" MaximumWidthRequest="640" HorizontalOptions="Center">
+        <Grid Grid.Row="1" RowDefinitions="Auto, *" RowSpacing="0">
+            <!-- US04 AC3: filters bar, active chips & result count stay visible in every state -->
+            <VerticalStackLayout Grid.Row="0"
+                                 Padding="{StaticResource ScreenMargin}"
+                                 Spacing="8"
+                                 MaximumWidthRequest="640">
+                <search:ExploreFilterBarControl ActiveFilterCount="{Binding ActiveFilterCount}"
+                                                HasActiveFilters="{Binding HasActiveFilters}"
+                                                CurrentSortLabel="{Binding CurrentSortLabel}"
+                                                FiltersButtonText="{Binding FiltersButtonText}"
+                                                FiltersButtonDescription="{Binding FiltersButtonDescription}"
+                                                SortButtonDescription="{Binding SortButtonDescription}"
+                                                ResultCountText="{Binding ResultCountText}"
+                                                VerifiedOnlySuffixText="{Binding VerifiedOnlySuffixText}"
+                                                OpenFiltersCommand="{Binding OpenFiltersCommand}"
+                                                OpenSortCommand="{Binding OpenSortCommand}" />
 
-                        <!-- 1. Search Bar -->
-                        <inputs:SearchBarView Placeholder="Search rooms near ICTU, amenities, price..."
-                                              Margin="0,8,0,0" />
+                <search:ActiveFilterChipsControl Chips="{Binding ActiveFilterChips}"
+                                                 HasActiveFilters="{Binding HasActiveFilters}"
+                                                 RemoveChipCommand="{Binding RemoveFilterChipCommand}"
+                                                 ClearAllCommand="{Binding ClearFiltersCommand}"
+                                                 ClearAllText="{Binding ClearAllText}" />
+            </VerticalStackLayout>
 
-                        <!-- 2. Hero Welcome Card -->
-                        <Border StrokeShape="RoundRectangle 16"
-                                StrokeThickness="1"
-                                Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
-                                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
-                                Padding="20"
-                                Shadow="{StaticResource Elevation2Shadow}">
-                            <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
-                                <VerticalStackLayout Grid.Column="0" Spacing="4">
-                                    <Label Text="{Binding WelcomeMessage}"
-                                           Style="{StaticResource TextH2}" />
-                                    <Label Text="{Binding UserEmail}"
-                                           Style="{StaticResource TextCaption}"
-                                           TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
-                                           IsVisible="{Binding IsUserSignedIn}" />
-                                </VerticalStackLayout>
-                                <common:RadaBadge Grid.Column="1"
-                                                  Type="Custom"
-                                                  BadgeColor="{StaticResource ActionAccentLight}"
-                                                  BadgeTextColor="{StaticResource ActionPrimaryLight}"
-                                                  Text="{Binding UserRole}" />
-                            </Grid>
-                        </Border>
+            <feedback:StateView Grid.Row="1"
+                                State="{Binding State}"
+                                HasContent="{Binding HasContent}"
+                                ErrorMessage="{Binding ErrorMessage}"
+                                RetryCommand="{Binding RetryCommand}"
+                                ErrorTitle="{Binding ExploreErrorTitleText}"
+                                EmptyTitle="{Binding ExploreEmptyTitleText}"
+                                EmptyMessage="{Binding ExploreEmptyMessageText}"
+                                EmptyActionText="{Binding ExploreEmptyActionText}"
+                                EmptyActionCommand="{Binding ClearFiltersCommand}">
+                <RefreshView IsRefreshing="{Binding IsRefreshing}"
+                             Command="{Binding RefreshCommand}">
+                    <ScrollView Padding="{StaticResource ScreenMargin}">
+                        <VerticalStackLayout Spacing="20" MaximumWidthRequest="640" HorizontalOptions="Center">
 
-                        <!-- 3. Filters bar, active chips & result count -->
-                        <search:ExploreFilterBarControl ActiveFilterCount="{Binding ActiveFilterCount}"
-                                                        HasActiveFilters="{Binding HasActiveFilters}"
-                                                        CurrentSortLabel="{Binding CurrentSortLabel}"
-                                                        FiltersButtonText="{Binding FiltersButtonText}"
-                                                        FiltersButtonDescription="{Binding FiltersButtonDescription}"
-                                                        SortButtonDescription="{Binding SortButtonDescription}"
-                                                        ResultCountText="{Binding ResultCountText}"
-                                                        VerifiedOnlySuffixText="{Binding VerifiedOnlySuffixText}"
-                                                        OpenFiltersCommand="{Binding OpenFiltersCommand}"
-                                                        OpenSortCommand="{Binding OpenSortCommand}" />
+                            <!-- 1. Search Bar -->
+                            <inputs:SearchBarView Placeholder="Search rooms near ICTU, amenities, price..."
+                                                  Margin="0,8,0,0" />
 
-                        <search:ActiveFilterChipsControl Chips="{Binding ActiveFilterChips}"
-                                                         HasActiveFilters="{Binding HasActiveFilters}"
-                                                         RemoveChipCommand="{Binding RemoveFilterChipCommand}"
-                                                         ClearAllCommand="{Binding ClearFiltersCommand}"
-                                                         ClearAllText="{Binding ClearAllText}" />
+                            <!-- 2. Hero Welcome Card -->
+                            <Border StrokeShape="RoundRectangle 16"
+                                    StrokeThickness="1"
+                                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+                                    Padding="20"
+                                    Shadow="{StaticResource Elevation2Shadow}">
+                                <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
+                                    <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                        <Label Text="{Binding WelcomeMessage}"
+                                               Style="{StaticResource TextH2}" />
+                                        <Label Text="{Binding UserEmail}"
+                                               Style="{StaticResource TextCaption}"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+                                               IsVisible="{Binding IsUserSignedIn}" />
+                                    </VerticalStackLayout>
+                                    <common:RadaBadge Grid.Column="1"
+                                                      Type="Custom"
+                                                      BadgeColor="{StaticResource ActionAccentLight}"
+                                                      BadgeTextColor="{StaticResource ActionPrimaryLight}"
+                                                      Text="{Binding UserRole}" />
+                                </Grid>
+                            </Border>
 
-                        <!-- 4. Room feed -->
-                        <VerticalStackLayout Spacing="0"
-                                             BindableLayout.ItemsSource="{Binding Rooms}">
-                            <BindableLayout.ItemTemplate>
-                                <DataTemplate x:DataType="cardmodels:RoomCardDisplayModel">
-                                    <cards:RoomCardView Room="{Binding}" />
-                                </DataTemplate>
-                            </BindableLayout.ItemTemplate>
+                            <!-- 3. Room feed -->
+                            <VerticalStackLayout Spacing="0"
+                                                 BindableLayout.ItemsSource="{Binding Rooms}">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="cardmodels:RoomCardDisplayModel">
+                                        <cards:RoomCardView Room="{Binding}" />
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+
+                            <!-- 4. Quick Actions & Sign Out -->
+                            <VerticalStackLayout Spacing="12" Margin="0,16,0,32">
+                                <common:RadaButton Text="Sign Out"
+                                                   Variant="Outline"
+                                                   Command="{Binding SignOutCommand}"
+                                                   ButtonHeight="48"
+                                                   HorizontalOptions="Fill" />
+
+                                <common:RadaButton Text="Open UI Design System Catalog"
+                                                   Variant="Ghost"
+                                                   Command="{Binding OpenUiCatalogCommand}"
+                                                   ButtonHeight="44"
+                                                   HorizontalOptions="Center"
+                                                   IsVisible="{Binding IsDebugMode}" />
+                            </VerticalStackLayout>
+
                         </VerticalStackLayout>
-
-                        <!-- 5. Quick Actions & Sign Out -->
-                        <VerticalStackLayout Spacing="12" Margin="0,16,0,32">
-                            <common:RadaButton Text="Sign Out"
-                                               Variant="Outline"
-                                               Command="{Binding SignOutCommand}"
-                                               ButtonHeight="48"
-                                               HorizontalOptions="Fill" />
-
-                            <common:RadaButton Text="Open UI Design System Catalog"
-                                               Variant="Ghost"
-                                               Command="{Binding OpenUiCatalogCommand}"
-                                               ButtonHeight="44"
-                                               HorizontalOptions="Center"
-                                               IsVisible="{Binding IsDebugMode}" />
-                        </VerticalStackLayout>
-
-                    </VerticalStackLayout>
-                </ScrollView>
-            </RefreshView>
-        </feedback:StateView>
+                    </ScrollView>
+                </RefreshView>
+            </feedback:StateView>
+        </Grid>
 
         <!-- Bottom Navigation Bar -->
         <nav:BottomNavBarControl Grid.Row="2"
