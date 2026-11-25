@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading;
@@ -212,6 +212,175 @@ public class MapSearchViewModelTests
             Assert.That(vm.HasError, Is.True);
             Assert.That(vm.IsSearching, Is.False);
             Assert.That(vm.ErrorMessage, Does.Contain("Network timeout"));
+        });
+    }
+
+    [Test]
+    public async Task ExecuteSpatialSearchAsync_ValidIctuPolygon_PopulatesMapPinsAndAutoSelectsFirstPinForPreviewCard()
+    {
+        var vm = new MapSearchViewModel(new MockSpatialSearchService());
+        int pinChangedEvents = 0;
+        vm.MapPinsChanged += () => pinChangedEvents++;
+
+        await vm.ExecuteSpatialSearchAsync(CreateIctuBoundingRing());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.MapPins, Has.Count.EqualTo(8));
+            Assert.That(vm.HasMatchedPins, Is.True);
+            Assert.That(vm.HasSelectedPin, Is.True);
+            Assert.That(vm.SelectedPin, Is.SameAs(vm.MapPins[0]));
+            Assert.That(vm.SelectedPin!.IsSelected, Is.True);
+            Assert.That(vm.SelectedPinPositionText, Is.EqualTo("Ghim 1/8"));
+            Assert.That(vm.CanSaveCurrentArea, Is.True);
+            Assert.That(pinChangedEvents, Is.GreaterThanOrEqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task SelectPinCommand_AndSelectPinById_SwitchSelectedPinAndHighlightState()
+    {
+        var vm = new MapSearchViewModel(new MockSpatialSearchService());
+        await vm.ExecuteSpatialSearchAsync(CreateIctuBoundingRing());
+        var thirdPin = vm.MapPins[2];
+
+        vm.SelectPinCommand.Execute(thirdPin);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.SelectedPin, Is.SameAs(thirdPin));
+            Assert.That(vm.MapPins[0].IsSelected, Is.False);
+            Assert.That(thirdPin.IsSelected, Is.True);
+            Assert.That(thirdPin.PinBackgroundHex, Is.EqualTo("#512BD4"));
+            Assert.That(vm.SelectedPinPositionText, Is.EqualTo("Ghim 3/8"));
+        });
+
+        vm.SelectPinById(vm.MapPins[4].Id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.SelectedPin, Is.SameAs(vm.MapPins[4]));
+            Assert.That(thirdPin.IsSelected, Is.False);
+            Assert.That(vm.MapPins[4].IsSelected, Is.True);
+            Assert.That(vm.SelectedPinPositionText, Is.EqualTo("Ghim 5/8"));
+        });
+    }
+
+    [Test]
+    public async Task SelectNextAndPreviousPinCommands_CycleThroughPinsAndClosePreviewClearsSelection()
+    {
+        var vm = new MapSearchViewModel(new MockSpatialSearchService());
+        await vm.ExecuteSpatialSearchAsync(CreateIctuBoundingRing());
+
+        vm.SelectNextPinCommand.Execute(null);
+        Assert.That(vm.SelectedPin, Is.SameAs(vm.MapPins[1]));
+
+        vm.SelectPreviousPinCommand.Execute(null);
+        vm.SelectPreviousPinCommand.Execute(null);
+        Assert.That(vm.SelectedPin, Is.SameAs(vm.MapPins[^1]));
+
+        vm.ClosePinPreviewCommand.Execute(null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.SelectedPin, Is.Null);
+            Assert.That(vm.HasSelectedPin, Is.False);
+            Assert.That(vm.SelectedPinPositionText, Is.Empty);
+        });
+    }
+
+    [Test]
+    public async Task OpenSelectedPinDetailCommand_SetsLastOpenedRoomDetailIdAndFiresEvent()
+    {
+        var vm = new MapSearchViewModel(new MockSpatialSearchService());
+        MapPinItemModel? navigatedPin = null;
+        vm.RoomDetailNavigationRequested += pin => navigatedPin = pin;
+        await vm.ExecuteSpatialSearchAsync(CreateIctuBoundingRing());
+        var targetPin = vm.MapPins[1];
+        vm.SelectPinCommand.Execute(targetPin);
+
+        vm.OpenSelectedPinDetailCommand.Execute(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.LastOpenedRoomDetailId, Is.EqualTo(targetPin.Id));
+            Assert.That(navigatedPin, Is.SameAs(targetPin));
+            Assert.That(vm.StatusMessage, Does.Contain(targetPin.Title));
+        });
+    }
+
+    [Test]
+    public async Task SaveCurrentAreaCommand_WithActivePolygon_AddsNewSavedAreaToTopOfList()
+    {
+        var vm = new MapSearchViewModel(new MockSpatialSearchService());
+        int initialCount = vm.SavedAreas.Count;
+        await vm.ExecuteSpatialSearchAsync(CreateIctuBoundingRing());
+        vm.SavedAreaNameInput = "Khu vực Z115 yêu thích";
+
+        vm.SaveCurrentAreaCommand.Execute(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.SavedAreas, Has.Count.EqualTo(initialCount + 1));
+            Assert.That(vm.SavedAreas[0].Name, Is.EqualTo("Khu vực Z115 yêu thích"));
+            Assert.That(vm.SavedAreas[0].MatchedRoomCount, Is.EqualTo(8));
+            Assert.That(vm.SavedAreas[0].IsActive, Is.True);
+            Assert.That(vm.SavedAreaNameInput, Is.Empty);
+        });
+    }
+
+    [Test]
+    public void SaveCurrentAreaCommand_WithoutActivePolygon_DoesNotAddSavedArea()
+    {
+        var vm = new MapSearchViewModel(new MockSpatialSearchService());
+        int initialCount = vm.SavedAreas.Count;
+        vm.SavedAreaNameInput = "Không hợp lệ";
+
+        vm.SaveCurrentAreaCommand.Execute(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.CanSaveCurrentArea, Is.False);
+            Assert.That(vm.SavedAreas, Has.Count.EqualTo(initialCount));
+            Assert.That(vm.StatusMessage, Does.Contain("trước khi lưu"));
+        });
+    }
+
+    [Test]
+    public async Task ApplySavedAreaCommand_LoadsSavedPolygonPinsAndMarksAreaActive()
+    {
+        var vm = new MapSearchViewModel(new MockSpatialSearchService());
+        IReadOnlyList<double[]>? appliedRing = null;
+        vm.SavedAreaPolygonApplied += ring => appliedRing = ring;
+        var targetArea = vm.SavedAreas[0];
+
+        await vm.ApplySavedAreaCommand.ExecuteAsync(targetArea);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(targetArea.IsActive, Is.True);
+            Assert.That(vm.HasPolygon, Is.True);
+            Assert.That(vm.MatchedRooms, Is.Not.Empty);
+            Assert.That(vm.MapPins, Has.Count.EqualTo(vm.MatchedRooms.Count));
+            Assert.That(vm.HasSelectedPin, Is.True);
+            Assert.That(appliedRing, Is.SameAs(targetArea.PolygonGeoJson));
+            Assert.That(vm.StatusMessage, Does.Contain(targetArea.Name));
+        });
+    }
+
+    [Test]
+    public void RemoveSavedAreaCommand_RemovesTargetSavedArea()
+    {
+        var vm = new MapSearchViewModel(new MockSpatialSearchService());
+        var areaToRemove = vm.SavedAreas[0];
+        int initialCount = vm.SavedAreas.Count;
+
+        vm.RemoveSavedAreaCommand.Execute(areaToRemove);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.SavedAreas, Has.Count.EqualTo(initialCount - 1));
+            Assert.That(vm.SavedAreas, Does.Not.Contain(areaToRemove));
+            Assert.That(vm.StatusMessage, Does.Contain(areaToRemove.Name));
         });
     }
 

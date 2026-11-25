@@ -10,7 +10,7 @@
 
     <Grid RowDefinitions="*,Auto">
 
-        <!-- Bản đồ + Lớp GraphicsView thu nét cảm ứng -->
+        <!-- Bản đồ + Lớp GraphicsView thu nét cảm ứng + Ghim, Preview Card & Khu vực đã lưu (T05.3) -->
         <Grid Grid.Row="0">
             <maps:Map x:Name="CampusMap"
                       AutomationId="CampusMap"
@@ -24,73 +24,344 @@
                           DragInteraction="OnPolygonCanvasDragInteraction"
                           EndInteraction="OnPolygonCanvasEndInteraction" />
 
-            <!-- Cụm nút điều khiển nổi góc trên trái -->
-            <HorizontalStackLayout Margin="12"
-                                   Spacing="8"
-                                   HorizontalOptions="Start"
-                                   VerticalOptions="Start">
-                <Button AutomationId="DrawPolygonToggleButton"
-                        Text="{Binding DrawToggleButtonText}"
-                        Command="{Binding ToggleDrawModeCommand}"
-                        FontSize="13"
-                        FontAttributes="Bold"
-                        TextColor="White"
-                        Padding="14,8"
-                        CornerRadius="5">
-                    <Button.Triggers>
-                        <DataTrigger TargetType="Button"
-                                     Binding="{Binding IsDrawingMode}"
-                                     Value="True">
-                            <Setter Property="BackgroundColor" Value="#1D4ED8" />
-                        </DataTrigger>
-                        <DataTrigger TargetType="Button"
-                                     Binding="{Binding IsDrawingMode}"
-                                     Value="False">
-                            <Setter Property="BackgroundColor" Value="#0F172A" />
-                        </DataTrigger>
-                    </Button.Triggers>
-                </Button>
+            <!-- Cụm điều khiển nổi phía trên & Danh sách khu vực đã lưu -->
+            <VerticalStackLayout Margin="12"
+                                 Spacing="8"
+                                 VerticalOptions="Start">
 
-                <Button AutomationId="ClearPolygonButton"
-                        Text="Xóa vùng"
-                        Command="{Binding ClearPolygonCommand}"
-                        Clicked="OnClearPolygonClicked"
-                        IsVisible="{Binding HasPolygon}"
-                        FontSize="13"
-                        BackgroundColor="White"
-                        TextColor="#0F172A"
-                        BorderColor="#CBD5E1"
-                        BorderWidth="1"
-                        Padding="12,8"
-                        CornerRadius="5" />
-            </HorizontalStackLayout>
+                <Grid ColumnDefinitions="*,Auto"
+                      ColumnSpacing="8">
+                    <VerticalStackLayout Grid.Column="0"
+                                         Spacing="6">
+                        <HorizontalStackLayout Spacing="8">
+                            <Button AutomationId="DrawPolygonToggleButton"
+                                    Text="{Binding DrawToggleButtonText}"
+                                    Command="{Binding ToggleDrawModeCommand}"
+                                    FontSize="13"
+                                    FontAttributes="Bold"
+                                    TextColor="White"
+                                    Padding="14,8"
+                                    CornerRadius="8">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Binding="{Binding IsDrawingMode}"
+                                                 Value="True">
+                                        <Setter Property="BackgroundColor" Value="#1D4ED8" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Button"
+                                                 Binding="{Binding IsDrawingMode}"
+                                                 Value="False">
+                                        <Setter Property="BackgroundColor" Value="#0F172A" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
 
-            <!-- Nút căn lại tâm ĐH CNTT&TT ICTU -->
-            <Border AutomationId="CenterIctuButton"
-                    Margin="12"
-                    Padding="8"
-                    HorizontalOptions="End"
-                    VerticalOptions="Start"
-                    BackgroundColor="White"
-                    Stroke="#CBD5E1"
-                    StrokeThickness="1"
-                    StrokeShape="RoundRectangle 5">
-                <Border.GestureRecognizers>
-                    <TapGestureRecognizer Tapped="OnCenterIctuTapped" />
-                </Border.GestureRecognizers>
-                <Image HeightRequest="20"
-                       WidthRequest="20">
-                    <Image.Source>
-                        <FontImageSource Glyph="{x:Static fonts:FluentUI.my_location_20_regular}"
-                                         FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                                         Color="#0F172A"
-                                         Size="20" />
-                    </Image.Source>
-                </Image>
-            </Border>
+                            <Button AutomationId="ClearPolygonButton"
+                                    Text="Xóa vùng"
+                                    Command="{Binding ClearPolygonCommand}"
+                                    Clicked="OnClearPolygonClicked"
+                                    IsVisible="{Binding HasPolygon}"
+                                    FontSize="13"
+                                    BackgroundColor="White"
+                                    TextColor="#0F172A"
+                                    BorderColor="#CBD5E1"
+                                    BorderWidth="1"
+                                    Padding="12,8"
+                                    CornerRadius="8" />
+                        </HorizontalStackLayout>
+
+                        <!-- Ô đặt tên & Nút lưu khu vực đang khoanh (T05.3) -->
+                        <Grid ColumnDefinitions="*,Auto"
+                              ColumnSpacing="6"
+                              IsVisible="{Binding HasPolygon}">
+                            <Border Grid.Column="0"
+                                    BackgroundColor="White"
+                                    Stroke="#CBD5E1"
+                                    StrokeThickness="1"
+                                    StrokeShape="RoundRectangle 8"
+                                    Padding="8,0"
+                                    HeightRequest="38">
+                                <Entry AutomationId="SavedAreaNameEntry"
+                                       Placeholder="Tên khu vực lưu..."
+                                       PlaceholderColor="#94A3B8"
+                                       Text="{Binding SavedAreaNameInput}"
+                                       TextColor="#0F172A"
+                                       FontSize="12"
+                                       VerticalOptions="Center" />
+                            </Border>
+
+                            <Button Grid.Column="1"
+                                    AutomationId="SaveAreaButton"
+                                    Text="💾 Lưu khu vực"
+                                    Command="{Binding SaveCurrentAreaCommand}"
+                                    BackgroundColor="#512BD4"
+                                    TextColor="White"
+                                    FontSize="12"
+                                    FontAttributes="Bold"
+                                    Padding="12,0"
+                                    HeightRequest="38"
+                                    CornerRadius="8" />
+                        </Grid>
+                    </VerticalStackLayout>
+
+                    <!-- Nút căn lại tâm ĐH CNTT&TT ICTU -->
+                    <Border Grid.Column="1"
+                            AutomationId="CenterIctuButton"
+                            Padding="8"
+                            HorizontalOptions="End"
+                            VerticalOptions="Start"
+                            BackgroundColor="White"
+                            Stroke="#CBD5E1"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 8">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnCenterIctuTapped" />
+                        </Border.GestureRecognizers>
+                        <Image HeightRequest="20"
+                               WidthRequest="20">
+                            <Image.Source>
+                                <FontImageSource Glyph="{x:Static fonts:FluentUI.my_location_20_regular}"
+                                                 FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                 Color="#0F172A"
+                                                 Size="20" />
+                            </Image.Source>
+                        </Image>
+                    </Border>
+                </Grid>
+
+                <!-- Dải khu vực tìm kiếm đã lưu (Saved Areas - T05.3) -->
+                <CollectionView AutomationId="SavedAreasCollectionView"
+                                ItemsSource="{Binding SavedAreas}"
+                                IsVisible="{Binding HasSavedAreas}"
+                                HeightRequest="38"
+                                SelectionMode="None">
+                    <CollectionView.ItemsLayout>
+                        <LinearItemsLayout Orientation="Horizontal"
+                                           ItemSpacing="8" />
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="pageModels:SavedSearchAreaModel">
+                            <Border BackgroundColor="{Binding ChipBackgroundHex}"
+                                    Stroke="{Binding ChipStrokeHex}"
+                                    StrokeThickness="1"
+                                    StrokeShape="RoundRectangle 16"
+                                    Padding="10,6">
+                                <HorizontalStackLayout Spacing="8"
+                                                       VerticalOptions="Center">
+                                    <Label Text="{Binding DisplaySummary}"
+                                           FontSize="12"
+                                           FontAttributes="Bold"
+                                           TextColor="{Binding ChipTextColorHex}"
+                                           VerticalOptions="Center">
+                                        <Label.GestureRecognizers>
+                                            <TapGestureRecognizer
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type pageModels:MapSearchViewModel}}, Path=ApplySavedAreaCommand, x:DataType=pageModels:MapSearchViewModel}"
+                                                CommandParameter="{Binding .}" />
+                                        </Label.GestureRecognizers>
+                                    </Label>
+
+                                    <Label Text="✕"
+                                           FontSize="12"
+                                           FontAttributes="Bold"
+                                           TextColor="{Binding ChipTextColorHex}"
+                                           Opacity="0.8"
+                                           Padding="4,0"
+                                           VerticalOptions="Center">
+                                        <Label.GestureRecognizers>
+                                            <TapGestureRecognizer
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type pageModels:MapSearchViewModel}}, Path=RemoveSavedAreaCommand, x:DataType=pageModels:MapSearchViewModel}"
+                                                CommandParameter="{Binding .}" />
+                                        </Label.GestureRecognizers>
+                                    </Label>
+                                </HorizontalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </VerticalStackLayout>
+
+            <!-- Cụm dưới bản đồ: Dải ghim giá nhanh + Thẻ xem trước PinPreviewCard (T05.3) -->
+            <VerticalStackLayout Margin="12,0,12,12"
+                                 Spacing="8"
+                                 VerticalOptions="End">
+
+                <!-- Dải ghim giá phòng tìm thấy để chọn nhanh trên mọi thiết bị -->
+                <CollectionView AutomationId="MapPinsStripCollectionView"
+                                ItemsSource="{Binding MapPins}"
+                                IsVisible="{Binding HasMatchedPins}"
+                                HeightRequest="36"
+                                SelectionMode="None">
+                    <CollectionView.ItemsLayout>
+                        <LinearItemsLayout Orientation="Horizontal"
+                                           ItemSpacing="8" />
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="pageModels:MapPinItemModel">
+                            <Border BackgroundColor="{Binding PinBackgroundHex}"
+                                    Stroke="{Binding PinStrokeHex}"
+                                    StrokeThickness="1.5"
+                                    StrokeShape="RoundRectangle 16"
+                                    Padding="12,6">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type pageModels:MapSearchViewModel}}, Path=SelectPinCommand, x:DataType=pageModels:MapSearchViewModel}"
+                                        CommandParameter="{Binding .}" />
+                                </Border.GestureRecognizers>
+                                <Label Text="{Binding PinBadgeText}"
+                                       FontSize="12"
+                                       FontAttributes="Bold"
+                                       TextColor="{Binding PinTextColorHex}"
+                                       VerticalOptions="Center" />
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+                <!-- Thẻ xem trước phòng trọ khi chạm ghim (PinPreviewCard - T05.3) -->
+                <Border AutomationId="PinPreviewCard"
+                        IsVisible="{Binding HasSelectedPin}"
+                        BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1C1C22}"
+                        Stroke="{AppThemeBinding Light=#E2E8F0, Dark=#32323C}"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 18"
+                        Padding="12">
+                    <VerticalStackLayout Spacing="10">
+
+                        <!-- Hàng tiêu đề thẻ: Loại phòng + Verified + Điều hướng ghim + Đóng -->
+                        <Grid ColumnDefinitions="*,Auto"
+                              ColumnSpacing="8">
+                            <HorizontalStackLayout Grid.Column="0"
+                                                   Spacing="6"
+                                                   VerticalOptions="Center">
+                                <Border BackgroundColor="#EDE9FE"
+                                        StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 8"
+                                        Padding="8,3">
+                                    <Label Text="{Binding SelectedPin.RoomType}"
+                                           FontSize="11"
+                                           FontAttributes="Bold"
+                                           TextColor="#512BD4" />
+                                </Border>
+                                <Border BackgroundColor="#DCFCE7"
+                                        StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 8"
+                                        Padding="8,3">
+                                    <Label Text="{Binding SelectedPin.VerifiedBadgeText}"
+                                           FontSize="11"
+                                           FontAttributes="Bold"
+                                           TextColor="#15803D" />
+                                </Border>
+                                <Label Text="{Binding SelectedPinPositionText}"
+                                       FontSize="11"
+                                       FontAttributes="Bold"
+                                       TextColor="#64748B"
+                                       VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+
+                            <HorizontalStackLayout Grid.Column="1"
+                                                   Spacing="4"
+                                                   VerticalOptions="Center">
+                                <Button AutomationId="PrevPinButton"
+                                        Text="‹"
+                                        Command="{Binding SelectPreviousPinCommand}"
+                                        BackgroundColor="#F1F5F9"
+                                        TextColor="#0F172A"
+                                        FontSize="14"
+                                        FontAttributes="Bold"
+                                        WidthRequest="30"
+                                        HeightRequest="30"
+                                        Padding="0"
+                                        CornerRadius="8" />
+                                <Button AutomationId="NextPinButton"
+                                        Text="›"
+                                        Command="{Binding SelectNextPinCommand}"
+                                        BackgroundColor="#F1F5F9"
+                                        TextColor="#0F172A"
+                                        FontSize="14"
+                                        FontAttributes="Bold"
+                                        WidthRequest="30"
+                                        HeightRequest="30"
+                                        Padding="0"
+                                        CornerRadius="8" />
+                                <Button AutomationId="ClosePinPreviewButton"
+                                        Text="✕"
+                                        Command="{Binding ClosePinPreviewCommand}"
+                                        BackgroundColor="#FEE2E2"
+                                        TextColor="#DC2626"
+                                        FontSize="12"
+                                        FontAttributes="Bold"
+                                        WidthRequest="30"
+                                        HeightRequest="30"
+                                        Padding="0"
+                                        CornerRadius="8" />
+                            </HorizontalStackLayout>
+                        </Grid>
+
+                        <!-- Thông tin chi tiết ghim đang chọn -->
+                        <Grid ColumnDefinitions="92,*"
+                              ColumnSpacing="12">
+                            <Border Grid.Column="0"
+                                    WidthRequest="92"
+                                    HeightRequest="84"
+                                    BackgroundColor="#EEF2FF"
+                                    StrokeThickness="0"
+                                    StrokeShape="RoundRectangle 12">
+                                <Image Source="{Binding SelectedPin.ResolvedImageUrl}"
+                                       Aspect="AspectFill" />
+                            </Border>
+
+                            <VerticalStackLayout Grid.Column="1"
+                                                 Spacing="3"
+                                                 VerticalOptions="Center">
+                                <Label AutomationId="PinPreviewTitleLabel"
+                                       Text="{Binding SelectedPin.Title}"
+                                       FontSize="14"
+                                       FontAttributes="Bold"
+                                       MaxLines="2"
+                                       LineBreakMode="TailTruncation"
+                                       TextColor="{AppThemeBinding Light=#0F172A, Dark=#F8FAFC}" />
+                                <Label AutomationId="PinPreviewRentLabel"
+                                       Text="{Binding SelectedPin.FormattedRent}"
+                                       FontSize="15"
+                                       FontAttributes="Bold"
+                                       TextColor="#512BD4" />
+                                <Label Text="{Binding SelectedPin.FormattedSpecs}"
+                                       FontSize="12"
+                                       LineBreakMode="TailTruncation"
+                                       TextColor="{AppThemeBinding Light=#334155, Dark=#CBD5E1}" />
+                                <Label Text="{Binding SelectedPin.Address}"
+                                       FontSize="11"
+                                       LineBreakMode="TailTruncation"
+                                       TextColor="#64748B" />
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <!-- Tọa độ & Nút mở chi tiết phòng -->
+                        <Grid ColumnDefinitions="*,Auto"
+                              ColumnSpacing="8">
+                            <Label Grid.Column="0"
+                                   Text="{Binding SelectedPin.FormattedCoordinates}"
+                                   FontSize="11"
+                                   TextColor="#64748B"
+                                   VerticalOptions="Center" />
+                            <Button Grid.Column="1"
+                                    AutomationId="OpenPinDetailButton"
+                                    Text="Xem chi tiết phòng →"
+                                    Command="{Binding OpenSelectedPinDetailCommand}"
+                                    BackgroundColor="#512BD4"
+                                    TextColor="White"
+                                    FontSize="12"
+                                    FontAttributes="Bold"
+                                    Padding="12,7"
+                                    HeightRequest="34"
+                                    CornerRadius="10" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
         </Grid>
 
-        <!-- Thanh trạng thái & số phòng tìm được (handoff sang T05.3) -->
+        <!-- Thanh trạng thái & số phòng tìm được -->
         <Border Grid.Row="1"
                 Padding="14,12"
                 BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark={StaticResource DarkSecondaryBackground}}"
