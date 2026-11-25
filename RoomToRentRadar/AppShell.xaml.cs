@@ -28,6 +28,9 @@ namespace RoomToRentRadar
             // Register real FiltersPage (US04 / T04.2); RegisterAll() skips its placeholder route.
             Routing.RegisterRoute(AppRoutes.SearchFilters, typeof(Pages.FiltersPage));
 
+            // Register real CampusPickerPage (US01 / T13.4, SCR-ACC-02)
+            Routing.RegisterRoute(AppRoutes.AccountCampus, typeof(Pages.CampusPickerPage));
+
             // Register real RoomDetailPage (US02 / T02.2)
             Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(Pages.RoomDetailPage));
             Routing.RegisterRoute("roomdetail", typeof(Pages.RoomDetailPage));

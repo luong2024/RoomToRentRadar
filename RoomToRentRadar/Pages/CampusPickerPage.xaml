@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.PageModels"
+             xmlns:feedback="clr-namespace:RoomToRentRadar.Pages.Controls.Feedback"
+             xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
+             xmlns:search="clr-namespace:RoomToRentRadar.Pages.Controls.Search"
+             xmlns:strings="clr-namespace:RoomToRentRadar.Resources.Strings"
+             xmlns:fonts="clr-namespace:Fonts"
+             x:Class="RoomToRentRadar.Pages.CampusPickerPage"
+             x:DataType="vm:CampusPickerPageModel"
+             Shell.NavBarIsVisible="False"
+             Shell.TabBarIsVisible="False"
+             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCanvasLight}, Dark={StaticResource SurfaceCanvasDark}}">
+
+    <!-- SCR-ACC-02: spacing and sizes follow the approved design export (Onboarding.dc.html). -->
+    <Grid RowDefinitions="Auto, *, Auto"
+          Padding="20,14,20,24"
+          RowSpacing="14"
+          MaximumWidthRequest="640">
+
+        <!-- Close: 48dp touch target, icon aligned as in the design -->
+        <Grid Grid.Row="0"
+              WidthRequest="48"
+              HeightRequest="48"
+              Margin="-12,0,0,0"
+              HorizontalOptions="Start"
+              SemanticProperties.Description="{strings:LocalizedStrings Key=Campus_Close_Description}">
+            <Grid.GestureRecognizers>
+                <TapGestureRecognizer Command="{Binding CloseCommand}" />
+            </Grid.GestureRecognizers>
+            <Label Text="{x:Static fonts:FluentUI.dismiss_24_regular}"
+                   FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                   FontSize="24"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center"
+                   AutomationProperties.IsInAccessibleTree="False"
+                   TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+        </Grid>
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Spacing="16">
+
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="{strings:LocalizedStrings Key=Campus_Title}"
+                           Style="{StaticResource TextH1}"
+                           SemanticProperties.HeadingLevel="Level1" />
+                    <Label Text="{strings:LocalizedStrings Key=Campus_Subtitle}"
+                           FontFamily="{StaticResource FontFamilyRegular}"
+                           FontSize="15"
+                           LineHeight="1.2"
+                           TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                </VerticalStackLayout>
+
+                <!-- Search field -->
+                <Border HeightRequest="48"
+                        StrokeShape="RoundRectangle 12"
+                        StrokeThickness="1"
+                        Padding="14,0"
+                        Stroke="{AppThemeBinding Light={StaticResource BorderInputLight}, Dark={StaticResource BorderInputDark}}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}">
+                    <Grid ColumnDefinitions="20, *" ColumnSpacing="10">
+                        <Label Text="{x:Static fonts:FluentUI.search_20_regular}"
+                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                               FontSize="20"
+                               VerticalOptions="Center"
+                               AutomationProperties.IsInAccessibleTree="False"
+                               TextColor="{AppThemeBinding Light={StaticResource TextPlaceholderLight}, Dark={StaticResource TextPlaceholderDark}}" />
+                        <Entry x:Name="SearchEntry"
+                               Grid.Column="1"
+                               Text="{Binding SearchText}"
+                               Placeholder="{strings:LocalizedStrings Key=Campus_Search_Placeholder}"
+                               SemanticProperties.Description="{strings:LocalizedStrings Key=Campus_Search_Placeholder}"
+                               FontFamily="{StaticResource FontFamilyRegular}"
+                               FontSize="15"
+                               ReturnType="Search"
+                               IsSpellCheckEnabled="False"
+                               IsTextPredictionEnabled="False"
+                               VerticalOptions="Center"
+                               BackgroundColor="Transparent"
+                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+                               PlaceholderColor="{AppThemeBinding Light={StaticResource TextPlaceholderLight}, Dark={StaticResource TextPlaceholderDark}}" />
+                    </Grid>
+                </Border>
+
+                <!-- Row-shaped skeleton while the first load runs -->
+                <Border IsVisible="{Binding IsSkeletonVisible}"
+                        StrokeShape="RoundRectangle 14"
+                        StrokeThickness="1"
+                        Padding="16,8"
+                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+                        AutomationProperties.IsInAccessibleTree="False">
+                    <VerticalStackLayout Spacing="22" Padding="0,10">
+                        <VerticalStackLayout.Resources>
+                            <Style TargetType="BoxView">
+                                <Setter Property="HeightRequest" Value="32" />
+                                <Setter Property="CornerRadius" Value="6" />
+                                <Setter Property="Color" Value="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}" />
+                            </Style>
+                        </VerticalStackLayout.Resources>
+                        <BoxView />
+                        <BoxView />
+                        <BoxView />
+                        <BoxView />
+                        <BoxView />
+                        <BoxView />
+                    </VerticalStackLayout>
+                </Border>
+
+                <feedback:StateView IsVisible="{Binding IsBodyVisible}"
+                                    State="{Binding State}"
+                                    HasContent="{Binding HasContent}"
+                                    ErrorTitle="{strings:LocalizedStrings Key=Campus_Load_Error_Title}"
+                                    ErrorMessage="{Binding ErrorMessage}"
+                                    RetryCommand="{Binding RetryCommand}"
+                                    EmptyTitle="{strings:LocalizedStrings Key=Campus_Empty_Title}"
+                                    EmptyMessage="{strings:LocalizedStrings Key=Campus_Empty_Message}">
+                    <VerticalStackLayout>
+                        <feedback:EmptyStateView IsVisible="{Binding HasNoMatches}"
+                                                 Title="{strings:LocalizedStrings Key=Campus_NoMatch_Title}"
+                                                 Message="{strings:LocalizedStrings Key=Campus_NoMatch_Message}"
+                                                 IconGlyph="{x:Static fonts:FluentUI.search_20_regular}"
+                                                 HasAction="False" />
+
+                        <Border IsVisible="{Binding HasMatches}"
+                                StrokeShape="RoundRectangle 14"
+                                StrokeThickness="1"
+                                Padding="1"
+                                Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}">
+                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding VisibleCampuses}">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:CampusRowItem">
+                                        <Grid MinimumHeightRequest="48"
+                                              SemanticProperties.Description="{Binding AccessibilityText}">
+                                            <Grid.GestureRecognizers>
+                                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:CampusPickerPageModel}}, Path=SelectCampusCommand, x:DataType=vm:CampusPickerPageModel}"
+                                                                      CommandParameter="{Binding .}" />
+                                            </Grid.GestureRecognizers>
+
+                                            <BoxView IsVisible="{Binding IsSelected}"
+                                                     Color="{AppThemeBinding Light={StaticResource SurfaceSelectedLight}, Dark={StaticResource SurfaceSelectedDark}}" />
+
+                                            <Grid ColumnDefinitions="20, *"
+                                                  ColumnSpacing="12"
+                                                  Padding="16,11">
+                                                <search:RadioIndicatorControl IsSelected="{Binding IsSelected}"
+                                                                              VerticalOptions="Center"
+                                                                              AutomationProperties.IsInAccessibleTree="False"
+                                                                              RingColor="{AppThemeBinding Light={StaticResource TextPlaceholderLight}, Dark={StaticResource TextPlaceholderDark}}"
+                                                                              SelectedColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionAccentDark}}"
+                                                                              HoleColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}" />
+
+                                                <VerticalStackLayout Grid.Column="1"
+                                                                     Spacing="1"
+                                                                     VerticalOptions="Center">
+                                                    <Label Text="{Binding Code}"
+                                                           FontFamily="{StaticResource FontFamilySemibold}"
+                                                           FontSize="15"
+                                                           FontAttributes="Bold"
+                                                           AutomationProperties.IsInAccessibleTree="False"
+                                                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                                    <Label Text="{Binding Name}"
+                                                           FontFamily="{StaticResource FontFamilyRegular}"
+                                                           FontSize="{StaticResource FontSizeCaption}"
+                                                           LineBreakMode="WordWrap"
+                                                           AutomationProperties.IsInAccessibleTree="False"
+                                                           TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                                                </VerticalStackLayout>
+                                            </Grid>
+
+                                            <BoxView IsVisible="{Binding ShowDivider}"
+                                                     HeightRequest="1"
+                                                     VerticalOptions="End"
+                                                     Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+                        </Border>
+                    </VerticalStackLayout>
+                </feedback:StateView>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- Footer pinned to the bottom; a save error appears above the button -->
+        <VerticalStackLayout Grid.Row="2" Spacing="10">
+            <Border IsVisible="{Binding HasSaveError}"
+                    StrokeShape="RoundRectangle 12"
+                    StrokeThickness="1"
+                    Padding="12"
+                    Stroke="{AppThemeBinding Light={StaticResource StatusDangerBorderLight}, Dark={StaticResource StatusDangerBorderDark}}"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}">
+                <Grid ColumnDefinitions="Auto, *" ColumnSpacing="10">
+                    <Label Text="{x:Static fonts:FluentUI.warning_24_regular}"
+                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                           FontSize="20"
+                           VerticalOptions="Center"
+                           AutomationProperties.IsInAccessibleTree="False"
+                           TextColor="{AppThemeBinding Light={StaticResource StatusDangerLight}, Dark={StaticResource StatusDangerDark}}" />
+                    <Label Grid.Column="1"
+                           Text="{Binding SaveErrorMessage}"
+                           FontFamily="{StaticResource FontFamilyRegular}"
+                           FontSize="{StaticResource FontSizeBodyMedium}"
+                           VerticalOptions="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                </Grid>
+            </Border>
+
+            <common:RadaButton Text="{strings:LocalizedStrings Key=Campus_UseThisCampus}"
+                               Variant="Primary"
+                               ButtonHeight="52"
+                               CornerRadius="12"
+                               TextSize="{StaticResource FontSizeBodyLarge}"
+                               HorizontalOptions="Fill"
+                               Command="{Binding UseThisCampusCommand}"
+                               IsLoading="{Binding IsSaving}" />
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>

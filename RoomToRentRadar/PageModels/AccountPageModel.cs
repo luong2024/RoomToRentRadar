@@ -14,6 +14,7 @@ public partial class AccountPageModel : ObservableObject
     private readonly IAuthGateway _authGateway;
     private readonly ISessionStore _sessionStore;
     private readonly INavigationService? _navigation;
+    private readonly ICampusSelectionService? _campusSelection;
 
     [ObservableProperty]
     public partial string DisplayName { get; set; } = string.Empty;
@@ -77,11 +78,19 @@ public partial class AccountPageModel : ObservableObject
     public AccountPageModel(
         IAuthGateway authGateway,
         ISessionStore sessionStore,
-        INavigationService? navigation = null)
+        INavigationService? navigation = null,
+        ICampusSelectionService? campusSelection = null)
     {
         _authGateway = authGateway ?? throw new ArgumentNullException(nameof(authGateway));
         _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
         _navigation = navigation;
+        _campusSelection = campusSelection;
+
+        if (_campusSelection != null)
+        {
+            _ = new WeakCampusSubscription(this, _campusSelection);
+            RefreshCampusName();
+        }
 
         LocalizedStrings.Instance.PropertyChanged += (_, _) =>
         {
@@ -132,6 +141,37 @@ public partial class AccountPageModel : ObservableObject
         catch
         {
             // Offline or network error: gracefully keep cached profile
+        }
+
+        await LoadCampusAsync();
+    }
+
+    // BR-CMP-02 / UC-02 A1: reconcile with the profile, then resolve the campus short name.
+    private async Task LoadCampusAsync()
+    {
+        if (_campusSelection == null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _campusSelection.SynchronizeAsync();
+            await _campusSelection.GetCampusesAsync();
+        }
+        catch
+        {
+            // Offline: the stored campus id is still shown.
+        }
+
+        RefreshCampusName();
+    }
+
+    private void RefreshCampusName()
+    {
+        if (_campusSelection != null)
+        {
+            CampusName = _campusSelection.SelectedCampus?.ShortName ?? _campusSelection.SelectedCampusId;
         }
     }
 
@@ -228,10 +268,7 @@ public partial class AccountPageModel : ObservableObject
     [RelayCommand]
     private async Task NavigateCampusAsync()
     {
-        var title = GetLocalizedString("Account_Alert_CampusTitle", "My Campus");
-        var message = GetLocalizedString("Account_Alert_CampusMessage", "ICTU (Information & Communication Technology University) is your default campus reference.");
-        var ok = GetLocalizedString("Common_Ok", "OK");
-        await ShowAlertAsync(title, message, ok);
+        await NavigateToRouteAsync(AppRoutes.AccountCampus);
     }
 
     [RelayCommand]
@@ -356,5 +393,27 @@ public partial class AccountPageModel : ObservableObject
             await Microsoft.Maui.Controls.Shell.Current.DisplayAlertAsync(title, message, cancel);
         }
 #endif
+    }
+
+    /// <summary>Keeps the singleton campus service from rooting this transient PageModel.</summary>
+    private sealed class WeakCampusSubscription
+    {
+        private readonly WeakReference<AccountPageModel> _target;
+        private readonly ICampusSelectionService _service;
+
+        public WeakCampusSubscription(AccountPageModel target, ICampusSelectionService service)
+        {
+            _target = new WeakReference<AccountPageModel>(target);
+            _service = service;
+            _service.SelectedCampusChanged += OnSelectedCampusChanged;
+        }
+
+        private void OnSelectedCampusChanged(object? sender, EventArgs e)
+        {
+            if (_target.TryGetTarget(out var target))
+                target.RefreshCampusName();
+            else
+                _service.SelectedCampusChanged -= OnSelectedCampusChanged;
+        }
     }
 }

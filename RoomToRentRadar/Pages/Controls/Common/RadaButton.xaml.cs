@@ -50,6 +50,9 @@ public partial class RadaButton : ContentView
     public static readonly BindableProperty TextColorProperty =
         BindableProperty.Create(nameof(TextColor), typeof(Color), typeof(RadaButton), Colors.White);
 
+    public static readonly BindableProperty TextSizeProperty =
+        BindableProperty.Create(nameof(TextSize), typeof(double), typeof(RadaButton), 14.0);
+
     public static readonly BindableProperty HasLeadingIconProperty =
         BindableProperty.Create(nameof(HasLeadingIcon), typeof(bool), typeof(RadaButton), false);
 
@@ -114,6 +117,13 @@ public partial class RadaButton : ContentView
     {
         get => (Color)GetValue(TextColorProperty);
         set => SetValue(TextColorProperty, value);
+    }
+
+    /// <summary>Label font size; defaults to <c>FontSizeBodyMedium</c>.</summary>
+    public double TextSize
+    {
+        get => (double)GetValue(TextSizeProperty);
+        set => SetValue(TextSizeProperty, value);
     }
 
     public bool HasLeadingIcon

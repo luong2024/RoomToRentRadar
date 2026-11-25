@@ -53,6 +53,8 @@ public sealed class CampusSelectionService : ICampusSelectionService
 
     public string SelectedCampusId => _selectedCampusId;
 
+    public IReadOnlyList<CampusDto>? CachedCampuses => _campuses;
+
     public CampusDto? SelectedCampus =>
         _campuses?.FirstOrDefault(c => string.Equals(c.Id, _selectedCampusId, StringComparison.Ordinal));
 

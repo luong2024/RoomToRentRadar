@@ -39,6 +39,9 @@ public static class PageRegistration
         // Filters panel (US04 / T04.2)
         services.AddPage<FiltersPage, FiltersPageModel>();
 
+        // Campus picker (US01 / T13.4)
+        services.AddPage<CampusPickerPage, CampusPickerPageModel>();
+
         services.AddSingleton<UiCatalogPageModel>();
         services.AddTransient<UiCatalogPage>();
 

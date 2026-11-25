@@ -20,6 +20,9 @@ public interface ICampusSelectionService
     /// <summary>Raised after <see cref="SelectedCampusId"/> changes, on the caller's synchronization context.</summary>
     event EventHandler? SelectedCampusChanged;
 
+    /// <summary>The last non-empty campus list, or <c>null</c> if none has been loaded yet.</summary>
+    IReadOnlyList<CampusDto>? CachedCampuses { get; }
+
     /// <summary>The campus list, cached in memory after the first non-empty answer; failures are not cached.</summary>
     Task<IReadOnlyList<CampusDto>> GetCampusesAsync(bool forceRefresh = false, CancellationToken ct = default);
 

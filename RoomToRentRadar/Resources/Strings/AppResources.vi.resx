@@ -920,4 +920,38 @@
   <data name="Common_Cancel" xml:space="preserve">
     <value>Huỷ</value>
   </data>
+  <!-- Campus picker SCR-ACC-02 (T13.4) -->
+  <data name="Campus_Title" xml:space="preserve">
+    <value>Tính khoảng cách từ</value>
+  </data>
+  <data name="Campus_Subtitle" xml:space="preserve">
+    <value>Mặc định dùng ICTU. Bạn học ở trường khác thuộc Đại học Thái Nguyên? Hãy chọn trường đó để xem khoảng cách và thời gian di chuyển từ đó.</value>
+  </data>
+  <data name="Campus_Search_Placeholder" xml:space="preserve">
+    <value>Tìm cơ sở</value>
+  </data>
+  <data name="Campus_UseThisCampus" xml:space="preserve">
+    <value>Dùng cơ sở này</value>
+  </data>
+  <data name="Campus_Close_Description" xml:space="preserve">
+    <value>Đóng</value>
+  </data>
+  <data name="Campus_Row_Selected" xml:space="preserve">
+    <value>đã chọn</value>
+  </data>
+  <data name="Campus_NoMatch_Title" xml:space="preserve">
+    <value>Không có cơ sở nào phù hợp</value>
+  </data>
+  <data name="Campus_NoMatch_Message" xml:space="preserve">
+    <value>Hãy thử tên hoặc mã khác.</value>
+  </data>
+  <data name="Campus_Load_Error_Title" xml:space="preserve">
+    <value>Không tải được danh sách cơ sở</value>
+  </data>
+  <data name="Campus_Empty_Title" xml:space="preserve">
+    <value>Chưa có cơ sở nào</value>
+  </data>
+  <data name="Campus_Empty_Message" xml:space="preserve">
+    <value>Vui lòng thử lại sau.</value>
+  </data>
 </root>
