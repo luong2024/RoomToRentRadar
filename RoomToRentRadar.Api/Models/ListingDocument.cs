@@ -40,6 +40,8 @@ public sealed class ListingDocument
 
     public LandlordDocument Landlord { get; set; } = new();
 
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
