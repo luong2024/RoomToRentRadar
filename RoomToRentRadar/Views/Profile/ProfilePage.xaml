@@ -1,62 +1,263 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage x:Class="RoomToRentRadar.Views.Profile.ProfilePage"
-             xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:vm="clr-namespace:RoomToRentRadar.ViewModels.Profile"
-             x:DataType="vm:ProfileViewModel"
-             Title="My profile"
-             BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}">
-    <ScrollView>
-        <VerticalStackLayout Padding="20" Spacing="18">
-            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
-            <Border Padding="20" BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
-                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" StrokeShape="RoundRectangle 18">
-                <VerticalStackLayout HorizontalOptions="Center" Spacing="10">
-                    <Border HeightRequest="104" WidthRequest="104" StrokeThickness="0" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}" StrokeShape="RoundRectangle 52">
-                        <Grid>
-                            <Label Text="👤" FontSize="42" HorizontalOptions="Center" VerticalOptions="Center" />
-                            <Image Source="{Binding AvatarPreview}" Aspect="AspectFill" />
-                        </Grid>
-                    </Border>
-                    <Button Text="Choose avatar" Command="{Binding ChooseAvatarCommand}" />
-                    <Label Text="{Binding RoleDisplay}" FontAttributes="Bold" HorizontalOptions="Center" />
-                </VerticalStackLayout>
+<ContentPage
+    x:Class="RoomToRentRadar.Views.Profile.ProfilePage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:f="clr-namespace:Fonts"
+    xmlns:vm="clr-namespace:RoomToRentRadar.ViewModels.Profile"
+    x:DataType="vm:ProfileViewModel"
+    Title="Profile"
+    BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}"
+    Shell.NavBarIsVisible="False">
+
+    <Grid MaximumWidthRequest="760" RowDefinitions="Auto,*" RowSpacing="0">
+        <Grid Grid.Row="0" Padding="16,12" ColumnDefinitions="Auto,*" ColumnSpacing="12">
+            <Border
+                Padding="0"
+                BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                HeightRequest="44"
+                MinimumHeightRequest="44"
+                MinimumWidthRequest="44"
+                SemanticProperties.Description="Open main menu"
+                Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                StrokeShape="RoundRectangle 14"
+                StrokeThickness="1"
+                WidthRequest="44">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnOpenMenuTapped" />
+                </Border.GestureRecognizers>
+                <Label
+                    FontFamily="{x:Static f:FluentUI.FontFamily}"
+                    FontSize="22"
+                    HorizontalOptions="Center"
+                    Text="{x:Static f:FluentUI.navigation_24_regular}"
+                    TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                    VerticalOptions="Center" />
             </Border>
 
-            <Label Text="Personal information" FontAttributes="Bold" FontSize="18" />
-            <Label Text="{Binding StatusMessage}"
-                   TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
-            <VerticalStackLayout Spacing="2">
-                <Label Text="Account" FontAttributes="Bold" />
-                <Label Text="{Binding AccountEmail}" />
+            <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
+                <Label
+                    FontAttributes="Bold"
+                    FontFamily="OpenSansSemibold"
+                    FontSize="20"
+                    Text="Profile"
+                    TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                <Label
+                    FontSize="12.5"
+                    Text="Manage your account information"
+                    TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
             </VerticalStackLayout>
-            <Entry Placeholder="Full name" Text="{Binding FullName}" />
-            <Entry Placeholder="Phone number" Keyboard="Telephone" Text="{Binding PhoneNumber}" />
-            <Editor Placeholder="Short bio" AutoSize="TextChanges" Text="{Binding Bio}" />
+        </Grid>
 
-            <VerticalStackLayout IsVisible="{Binding IsStudent}" Spacing="10">
-                <Label Text="Student information" FontAttributes="Bold" FontSize="18" />
-                <Entry Placeholder="Student ID" Text="{Binding StudentId}" />
-                <Entry Placeholder="University" Text="{Binding University}" />
-                <Entry Placeholder="Faculty" Text="{Binding Faculty}" />
-                <Entry Placeholder="Maximum monthly budget" Keyboard="Numeric" Text="{Binding MaxBudgetText}" />
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="16,8,16,32" Spacing="18">
+                <ActivityIndicator
+                    Color="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                    IsRunning="{Binding IsBusy}"
+                    IsVisible="{Binding IsBusy}"
+                    VerticalOptions="Center" />
+
+                <!-- Account summary -->
+                <Border
+                    Padding="20"
+                    Background="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}"
+                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                    StrokeShape="RoundRectangle 20"
+                    StrokeThickness="1">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+                        <Border
+                            Padding="0"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                            HeightRequest="88"
+                            Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                            StrokeShape="RoundRectangle 44"
+                            StrokeThickness="1"
+                            WidthRequest="88">
+                            <Grid>
+                                <Label
+                                    FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                    FontSize="38"
+                                    HorizontalOptions="Center"
+                                    Text="{x:Static f:FluentUI.person_48_regular}"
+                                    TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                    VerticalOptions="Center" />
+                                <Image Aspect="AspectFill" Source="{Binding AvatarPreview}" />
+                            </Grid>
+                        </Border>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="5" VerticalOptions="Center">
+                            <Label
+                                FontAttributes="Bold"
+                                FontFamily="OpenSansSemibold"
+                                FontSize="20"
+                                LineBreakMode="TailTruncation"
+                                MaxLines="1"
+                                Text="{Binding FullNameDisplay}"
+                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                            <HorizontalStackLayout Spacing="6">
+                                <Label
+                                    FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                    FontSize="15"
+                                    Text="{x:Static f:FluentUI.mail_16_regular}"
+                                    TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                <Label
+                                    FontSize="13"
+                                    LineBreakMode="TailTruncation"
+                                    MaxLines="1"
+                                    Text="{Binding AccountEmail}"
+                                    TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+                            </HorizontalStackLayout>
+                            <Border
+                                Padding="9,4"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                                HorizontalOptions="Start"
+                                StrokeShape="RoundRectangle 10"
+                                StrokeThickness="0">
+                                <HorizontalStackLayout Spacing="5">
+                                    <Label
+                                        FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                        FontSize="13"
+                                        Text="{x:Static f:FluentUI.badge_20_regular}"
+                                        TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                                    <Label
+                                        FontAttributes="Bold"
+                                        FontSize="12"
+                                        Text="{Binding RoleDisplay}"
+                                        TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                                </HorizontalStackLayout>
+                            </Border>
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+
+                <Button
+                    BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                    BorderColor="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                    BorderWidth="1"
+                    Command="{Binding ChooseAvatarCommand}"
+                    CornerRadius="14"
+                    FontAttributes="Bold"
+                    HeightRequest="48"
+                    Text="Change profile picture"
+                    TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+
+                <Border
+                    IsVisible="{Binding HasStatusMessage}"
+                    Padding="12"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource AccentTealSoft}, Dark={StaticResource AccentTealSoftDark}}"
+                    StrokeThickness="0">
+                    <Label
+                        FontSize="13"
+                        Text="{Binding StatusMessage}"
+                        TextColor="{AppThemeBinding Light={StaticResource AccentTeal}, Dark={StaticResource AccentTealDark}}" />
+                </Border>
+
+                <!-- Basic information -->
+                <VerticalStackLayout Spacing="10">
+                    <HorizontalStackLayout Spacing="8">
+                        <Label
+                            FontFamily="{x:Static f:FluentUI.FontFamily}"
+                            FontSize="20"
+                            Text="{x:Static f:FluentUI.person_20_regular}"
+                            TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                        <Label
+                            FontAttributes="Bold"
+                            FontFamily="OpenSansSemibold"
+                            FontSize="18"
+                            Text="Personal information"
+                            TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                    </HorizontalStackLayout>
+                    <Border
+                        Padding="16"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                        StrokeShape="RoundRectangle 18"
+                        StrokeThickness="1">
+                        <VerticalStackLayout Spacing="14">
+                            <VerticalStackLayout Spacing="5">
+                                <Label FontAttributes="Bold" FontSize="13" Text="Full name" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+                                <Entry ClearButtonVisibility="WhileEditing" Placeholder="Enter your full name" Text="{Binding FullName}" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Spacing="5">
+                                <Label FontAttributes="Bold" FontSize="13" Text="Phone number" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+                                <Entry ClearButtonVisibility="WhileEditing" Keyboard="Telephone" Placeholder="Example: 0912 345 678" Text="{Binding PhoneNumber}" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Spacing="5">
+                                <Label FontAttributes="Bold" FontSize="13" Text="Short bio" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+                                <Editor AutoSize="TextChanges" HeightRequest="92" Placeholder="Tell landlords or tenants a little about yourself" Text="{Binding Bio}" />
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+
+                <!-- Student fields -->
+                <VerticalStackLayout IsVisible="{Binding IsStudent}" Spacing="10">
+                    <HorizontalStackLayout Spacing="8">
+                        <Label FontFamily="{x:Static f:FluentUI.FontFamily}" FontSize="20" Text="{x:Static f:FluentUI.hat_graduation_20_regular}" TextColor="{AppThemeBinding Light={StaticResource AccentHighlight}, Dark={StaticResource AccentHighlightDark}}" />
+                        <Label FontAttributes="Bold" FontFamily="OpenSansSemibold" FontSize="18" Text="Student information" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                    </HorizontalStackLayout>
+                    <Border Padding="16" BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}" Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" StrokeShape="RoundRectangle 18" StrokeThickness="1">
+                        <VerticalStackLayout Spacing="14">
+                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="Student ID" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Placeholder="Enter your student ID" Text="{Binding StudentId}" /></VerticalStackLayout>
+                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="College / university" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Placeholder="Enter your school name" Text="{Binding University}" /></VerticalStackLayout>
+                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="Faculty / major" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Placeholder="Enter your faculty or major" Text="{Binding Faculty}" /></VerticalStackLayout>
+                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="Maximum monthly budget" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Keyboard="Numeric" Placeholder="Example: 2500000" Text="{Binding MaxBudgetText}" /></VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+
+                <!-- Landlord fields -->
+                <VerticalStackLayout IsVisible="{Binding IsLandlord}" Spacing="10">
+                    <HorizontalStackLayout Spacing="8">
+                        <Label FontFamily="{x:Static f:FluentUI.FontFamily}" FontSize="20" Text="{x:Static f:FluentUI.building_20_regular}" TextColor="{AppThemeBinding Light={StaticResource AccentHighlight}, Dark={StaticResource AccentHighlightDark}}" />
+                        <Label FontAttributes="Bold" FontFamily="OpenSansSemibold" FontSize="18" Text="Landlord information" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                    </HorizontalStackLayout>
+                    <Border Padding="16" BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}" Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" StrokeShape="RoundRectangle 18" StrokeThickness="1">
+                        <VerticalStackLayout Spacing="14">
+                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="Business / property name" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Placeholder="Enter your business name" Text="{Binding BusinessName}" /></VerticalStackLayout>
+                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="Contact address" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Placeholder="Enter your address" Text="{Binding Address}" /></VerticalStackLayout>
+                            <Border Padding="12" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}" StrokeThickness="0">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"><Label FontFamily="{x:Static f:FluentUI.FontFamily}" FontSize="18" Text="{x:Static f:FluentUI.shield_checkmark_16_regular}" TextColor="{AppThemeBinding Light={StaticResource AccentTeal}, Dark={StaticResource AccentTealDark}}" /><VerticalStackLayout Grid.Column="1" Spacing="1"><Label FontAttributes="Bold" FontSize="12" Text="Verification status" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Label FontSize="13" Text="{Binding VerificationStatus, TargetNullValue='Verification not submitted'}" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" /></VerticalStackLayout></Grid>
+                            </Border>
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+
+                <!-- Administrator fields -->
+                <VerticalStackLayout IsVisible="{Binding IsAdmin}" Spacing="10">
+                    <HorizontalStackLayout Spacing="8">
+                        <Label FontFamily="{x:Static f:FluentUI.FontFamily}" FontSize="20" Text="{x:Static f:FluentUI.briefcase_20_regular}" TextColor="{AppThemeBinding Light={StaticResource AccentHighlight}, Dark={StaticResource AccentHighlightDark}}" />
+                        <Label FontAttributes="Bold" FontFamily="OpenSansSemibold" FontSize="18" Text="Administrator information" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                    </HorizontalStackLayout>
+                    <Border Padding="16" BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}" Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" StrokeShape="RoundRectangle 18" StrokeThickness="1">
+                        <VerticalStackLayout Spacing="14">
+                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="Staff ID" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Placeholder="Enter your staff ID" Text="{Binding StaffCode}" /></VerticalStackLayout>
+                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="Department" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Placeholder="Enter your department" Text="{Binding Department}" /></VerticalStackLayout>
+                            <VerticalStackLayout Spacing="5"><Label FontAttributes="Bold" FontSize="13" Text="Job title" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" /><Entry Placeholder="Enter your job title" Text="{Binding JobTitle}" /></VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+
+                <Border
+                    IsVisible="{Binding HasStatusMessage}"
+                    Padding="12"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource AccentTealSoft}, Dark={StaticResource AccentTealSoftDark}}"
+                    StrokeThickness="0">
+                    <Label
+                        FontSize="13"
+                        Text="{Binding StatusMessage}"
+                        TextColor="{AppThemeBinding Light={StaticResource AccentTeal}, Dark={StaticResource AccentTealDark}}" />
+                </Border>
+
+                <Button
+                    Background="{StaticResource PrimaryBrandGradient}"
+                    Command="{Binding SaveCommand}"
+                    CornerRadius="16"
+                    FontAttributes="Bold"
+                    HeightRequest="54"
+                    Text="Save changes"
+                    TextColor="White" />
             </VerticalStackLayout>
-
-            <VerticalStackLayout IsVisible="{Binding IsLandlord}" Spacing="10">
-                <Label Text="Landlord information" FontAttributes="Bold" FontSize="18" />
-                <Entry Placeholder="Business name" Text="{Binding BusinessName}" />
-                <Entry Placeholder="Property address" Text="{Binding Address}" />
-                <Label Text="{Binding VerificationStatus, StringFormat='Verification: {0}'}" />
-            </VerticalStackLayout>
-
-            <VerticalStackLayout IsVisible="{Binding IsAdmin}" Spacing="10">
-                <Label Text="Administrator information" FontAttributes="Bold" FontSize="18" />
-                <Entry Placeholder="Staff code" Text="{Binding StaffCode}" />
-                <Entry Placeholder="Department" Text="{Binding Department}" />
-                <Entry Placeholder="Job title" Text="{Binding JobTitle}" />
-            </VerticalStackLayout>
-
-            <Button Text="Save profile" Command="{Binding SaveCommand}" />
-        </VerticalStackLayout>
-    </ScrollView>
+        </ScrollView>
+    </Grid>
 </ContentPage>
