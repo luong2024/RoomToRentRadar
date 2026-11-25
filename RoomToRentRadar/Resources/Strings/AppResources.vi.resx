@@ -342,6 +342,12 @@
   <data name="RoomType_BoardingRoom" xml:space="preserve">
     <value>Phòng trọ</value>
   </data>
+  <data name="RoomType_MiniApartment" xml:space="preserve">
+    <value>Chung cư mini</value>
+  </data>
+  <data name="RoomType_WholeHouse" xml:space="preserve">
+    <value>Nhà nguyên căn</value>
+  </data>
   <data name="RoomType_Dormitory" xml:space="preserve">
     <value>Ký túc xá</value>
   </data>
@@ -757,5 +763,161 @@
   </data>
   <data name="Explore_Empty_Action" xml:space="preserve">
     <value>Đặt lại bộ lọc</value>
+  </data>
+  <data name="Filters_Title" xml:space="preserve">
+    <value>Bộ lọc</value>
+  </data>
+  <data name="Filters_Clear" xml:space="preserve">
+    <value>Xoá</value>
+  </data>
+  <data name="Filters_CloseDescription" xml:space="preserve">
+    <value>Đóng bộ lọc</value>
+  </data>
+  <data name="Filters_MonthlyRent" xml:space="preserve">
+    <value>Giá thuê hàng tháng</value>
+  </data>
+  <data name="Filters_Area" xml:space="preserve">
+    <value>Diện tích</value>
+  </data>
+  <data name="Filters_RoomType" xml:space="preserve">
+    <value>Loại phòng</value>
+  </data>
+  <data name="Filters_MaxDistanceToCampus" xml:space="preserve">
+    <value>Khoảng cách tối đa tới {0}</value>
+  </data>
+  <data name="Filters_SortBy" xml:space="preserve">
+    <value>Sắp xếp theo</value>
+  </data>
+  <data name="Filters_Range_Any" xml:space="preserve">
+    <value>Tất cả</value>
+  </data>
+  <data name="Filters_MinLabel" xml:space="preserve">
+    <value>Từ</value>
+  </data>
+  <data name="Filters_MaxLabel" xml:space="preserve">
+    <value>Đến</value>
+  </data>
+  <data name="Filters_MinRentPlaceholder" xml:space="preserve">
+    <value>Tối thiểu (₫)</value>
+  </data>
+  <data name="Filters_MaxRentPlaceholder" xml:space="preserve">
+    <value>Tối đa (₫)</value>
+  </data>
+  <data name="Filters_MinAreaPlaceholder" xml:space="preserve">
+    <value>Tối thiểu (m²)</value>
+  </data>
+  <data name="Filters_MaxAreaPlaceholder" xml:space="preserve">
+    <value>Tối đa (m²)</value>
+  </data>
+  <data name="Filters_Preset_Under1_5M" xml:space="preserve">
+    <value>Dưới 1,5 tr</value>
+  </data>
+  <data name="Filters_Preset_Under2M" xml:space="preserve">
+    <value>Dưới 2 tr</value>
+  </data>
+  <data name="Filters_Preset_Under3M" xml:space="preserve">
+    <value>Dưới 3 tr</value>
+  </data>
+  <data name="Filters_Chip_UnderAmount" xml:space="preserve">
+    <value>Dưới {0}</value>
+  </data>
+  <data name="Filters_Chip_FromAmount" xml:space="preserve">
+    <value>Từ {0}</value>
+  </data>
+  <data name="Filters_Chip_RangeAmount" xml:space="preserve">
+    <value>{0} – {1} {2}</value>
+  </data>
+  <data name="Filters_Chip_MinArea" xml:space="preserve">
+    <value>≥ {0} m²</value>
+  </data>
+  <data name="Filters_Chip_MaxArea" xml:space="preserve">
+    <value>≤ {0} m²</value>
+  </data>
+  <data name="Filters_Chip_AreaRange" xml:space="preserve">
+    <value>{0}–{1} m²</value>
+  </data>
+  <data name="Filters_Chip_MaxDistance" xml:space="preserve">
+    <value>≤ {0} km</value>
+  </data>
+  <data name="Filters_DistanceOption" xml:space="preserve">
+    <value>{0} km</value>
+  </data>
+  <data name="Filters_PriceUnitMillion" xml:space="preserve">
+    <value>{0} tr</value>
+  </data>
+  <data name="Filters_PriceUnitThousand" xml:space="preserve">
+    <value>{0}k</value>
+  </data>
+  <data name="Filters_UnitMillion" xml:space="preserve">
+    <value>tr</value>
+  </data>
+  <data name="Filters_UnitThousand" xml:space="preserve">
+    <value>k</value>
+  </data>
+  <data name="Filters_ShowRoomsPlural" xml:space="preserve">
+    <value>Xem {0} phòng</value>
+  </data>
+  <data name="Filters_ShowRoomsSingular" xml:space="preserve">
+    <value>Xem 1 phòng</value>
+  </data>
+  <data name="Filters_ShowRoomsZero" xml:space="preserve">
+    <value>Xem 0 phòng</value>
+  </data>
+  <data name="Filters_ShowRoomsFallback" xml:space="preserve">
+    <value>Xem danh sách phòng</value>
+  </data>
+  <data name="Filters_Counting" xml:space="preserve">
+    <value>Đang đếm số phòng...</value>
+  </data>
+  <data name="Sort_Distance" xml:space="preserve">
+    <value>Gần trường nhất</value>
+  </data>
+  <data name="Sort_Distance_Short" xml:space="preserve">
+    <value>Gần nhất</value>
+  </data>
+  <data name="Sort_PriceAsc" xml:space="preserve">
+    <value>Giá: thấp đến cao</value>
+  </data>
+  <data name="Sort_PriceAsc_Short" xml:space="preserve">
+    <value>Giá ↑</value>
+  </data>
+  <data name="Sort_PriceDesc" xml:space="preserve">
+    <value>Giá: cao đến thấp</value>
+  </data>
+  <data name="Sort_PriceDesc_Short" xml:space="preserve">
+    <value>Giá ↓</value>
+  </data>
+  <data name="Sort_Newest" xml:space="preserve">
+    <value>Mới nhất</value>
+  </data>
+  <data name="Sort_Newest_Short" xml:space="preserve">
+    <value>Mới nhất</value>
+  </data>
+  <data name="Explore_FiltersButton" xml:space="preserve">
+    <value>Bộ lọc</value>
+  </data>
+  <data name="Explore_FiltersButtonDescription" xml:space="preserve">
+    <value>Mở bộ lọc, đang bật {0} tiêu chí</value>
+  </data>
+  <data name="Explore_SortButtonDescription" xml:space="preserve">
+    <value>Đổi thứ tự sắp xếp</value>
+  </data>
+  <data name="Explore_ClearAll" xml:space="preserve">
+    <value>Xoá tất cả</value>
+  </data>
+  <data name="Explore_RemoveChipDescription" xml:space="preserve">
+    <value>Gỡ bộ lọc {0}</value>
+  </data>
+  <data name="Explore_RoomsCountPlural" xml:space="preserve">
+    <value>{0} phòng</value>
+  </data>
+  <data name="Explore_RoomsCountSingular" xml:space="preserve">
+    <value>1 phòng</value>
+  </data>
+  <data name="Explore_VerifiedOnlySuffix" xml:space="preserve">
+    <value> · đã xác minh</value>
+  </data>
+  <data name="Common_Cancel" xml:space="preserve">
+    <value>Huỷ</value>
   </data>
 </root>

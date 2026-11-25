@@ -36,6 +36,9 @@ public static class PageRegistration
         // Room Detail Screen (US02 / T02.2)
         services.AddPage<RoomDetailPage, RoomDetailPageModel>();
 
+        // Filters panel (US04 / T04.2)
+        services.AddPage<FiltersPage, FiltersPageModel>();
+
         services.AddSingleton<UiCatalogPageModel>();
         services.AddTransient<UiCatalogPage>();
 

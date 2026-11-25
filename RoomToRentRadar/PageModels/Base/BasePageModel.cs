@@ -10,6 +10,8 @@ public partial class BasePageModel : ObservableObject
 {
     private Func<Task<bool>>? _lastLoad;
     private bool _lastIsRefresh;
+    private Func<Task<bool>>? _pendingLoad;
+    private bool _pendingIsRefresh;
     private bool _isRunning;
     private Exception? _lastException;
 
@@ -35,12 +37,18 @@ public partial class BasePageModel : ObservableObject
 
     public async Task RunAsync(Func<Task<bool>> load, bool isRefresh = false)
     {
-        if (_isRunning)
-            return;
-
-        _isRunning = true;
         _lastLoad = load;
         _lastIsRefresh = isRefresh;
+
+        // Never drop a load: keep only the latest request and run it once the current one finishes (US04 AC2).
+        if (_isRunning)
+        {
+            _pendingLoad = load;
+            _pendingIsRefresh = isRefresh;
+            return;
+        }
+
+        _isRunning = true;
         var previousState = State;
 
         try
@@ -79,6 +87,15 @@ public partial class BasePageModel : ObservableObject
             IsLoading = false;
             IsRefreshing = false;
             _isRunning = false;
+        }
+
+        if (_pendingLoad is not null)
+        {
+            var pendingLoad = _pendingLoad;
+            var pendingIsRefresh = _pendingIsRefresh;
+            _pendingLoad = null;
+            _pendingIsRefresh = false;
+            await RunAsync(pendingLoad, pendingIsRefresh);
         }
     }
 

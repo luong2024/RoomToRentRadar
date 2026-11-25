@@ -83,6 +83,7 @@ Use semantic tokens only; method in `.agents/skills/ui/02-design-system`. The pa
 | `ActionPrimary` | `#163A5F` (Navy) | `#3572A5` | primary buttons, active tab |
 | `ActionSecondary` | `#256D85` (Ocean) | `#256D85` | secondary buttons, focus ring (`BorderFocus`) |
 | `ActionAccent` | `#4CB5AE` (Teal) | `#5CE1D6` | highlights, badges, selected chips, illustrations |
+| `ActionAccentSubtle` | `#E6F6F5` | `#15333A` | active filter chip fill (text: `TextBrand`) |
 | `TextBrand` | `#163A5F` | `#5CE1D6` | links, brand text |
 | `SurfaceCanvas` | `#F4F7FA` | `#0B131E` | page background |
 | `SurfaceCard` | `#FFFFFF` | `#162234` | cards |
