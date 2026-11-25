@@ -159,6 +159,21 @@ namespace RoomToRentRadar
             builder.Services.AddTransient<CompareRoomsViewModel>();
             builder.Services.AddTransient<CompareRoomsPage>();
 
+            // US11 / T11.2: House Rules API + Mock Fallback + HouseRulesSectionViewModel
+            builder.Services
+                .AddRefitClient<IHouseRulesApiService>()
+                .ConfigureHttpClient(client =>
+                {
+                    var baseUrl = DeviceInfo.Platform == DevicePlatform.Android
+                        ? "http://10.0.2.2:5000"
+                        : "http://localhost:5000";
+                    client.BaseAddress = new Uri(baseUrl);
+                    client.Timeout = TimeSpan.FromSeconds(5);
+                });
+            builder.Services.AddSingleton<MockHouseRulesService>();
+            builder.Services.AddSingleton<IHouseRulesService, HouseRulesService>();
+            builder.Services.AddTransient<HouseRulesSectionViewModel>();
+
             return builder.Build();
         }
     }

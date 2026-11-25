@@ -55,6 +55,10 @@
     <Compile Include="..\RoomToRentRadar\PageModels\CreateListingViewModel.cs" Link="Linked\PageModels\CreateListingViewModel.cs" />
     <Compile Include="..\RoomToRentRadar\Models\RoomComparisonModels.cs" Link="Linked\Models\RoomComparisonModels.cs" />
     <Compile Include="..\RoomToRentRadar\PageModels\CompareRoomsViewModel.cs" Link="Linked\PageModels\CompareRoomsViewModel.cs" />
+    <Compile Include="..\RoomToRentRadar\Models\Contracts\HouseRulesContracts.cs" Link="Linked\Models\Contracts\HouseRulesContracts.cs" />
+    <Compile Include="..\RoomToRentRadar\Services\IHouseRulesService.cs" Link="Linked\Services\IHouseRulesService.cs" />
+    <Compile Include="..\RoomToRentRadar\Services\MockHouseRulesService.cs" Link="Linked\Services\MockHouseRulesService.cs" />
+    <Compile Include="..\RoomToRentRadar\PageModels\HouseRulesSectionViewModel.cs" Link="Linked\PageModels\HouseRulesSectionViewModel.cs" />
   </ItemGroup>
 
 </Project>

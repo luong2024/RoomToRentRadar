@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pageModels="clr-namespace:RoomToRentRadar.PageModels"
+             x:Class="RoomToRentRadar.Pages.Controls.HouseRulesSectionView"
+             x:DataType="pageModels:HouseRulesSectionViewModel">
+
+    <Border AutomationId="HouseRulesContainer"
+            BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark=#1C1C22}"
+            Stroke="{AppThemeBinding Light=#ECEEF5, Dark=#2D2D38}"
+            StrokeThickness="1"
+            StrokeShape="RoundRectangle 22"
+            Padding="18">
+        <VerticalStackLayout Spacing="14">
+
+            <!-- HEADER ROW: Title + Version Badge + Edit Button -->
+            <Grid ColumnDefinitions="*,Auto"
+                  ColumnSpacing="8">
+                <VerticalStackLayout Grid.Column="0"
+                                     Spacing="4">
+                    <HorizontalStackLayout Spacing="8">
+                        <Label Text="📋"
+                               FontSize="18" />
+                        <Label Text="Nội quy khu trọ"
+                               FontSize="17"
+                               FontAttributes="Bold" />
+                    </HorizontalStackLayout>
+
+                    <HorizontalStackLayout Spacing="6">
+                        <Border BackgroundColor="#EDE9FE"
+                                StrokeThickness="0"
+                                StrokeShape="RoundRectangle 8"
+                                Padding="8,3">
+                            <Label AutomationId="RulesVersionLabel"
+                                   Text="{Binding VersionBadgeText}"
+                                   FontSize="11"
+                                   FontAttributes="Bold"
+                                   TextColor="#512BD4" />
+                        </Border>
+                        <Border BackgroundColor="{AppThemeBinding Light=#F1F5F9, Dark=#272730}"
+                                StrokeThickness="0"
+                                StrokeShape="RoundRectangle 8"
+                                Padding="7,3">
+                            <Label Text="{Binding DataSourceBadgeText}"
+                                   FontSize="10.5"
+                                   FontAttributes="Bold"
+                                   TextColor="#64748B" />
+                        </Border>
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+
+                <Button Grid.Column="1"
+                        AutomationId="EditRulesButton"
+                        Text="{Binding EditButtonText}"
+                        Command="{Binding ToggleEditModeCommand}"
+                        BackgroundColor="#F5F3FF"
+                        TextColor="#512BD4"
+                        BorderColor="#DDD6FE"
+                        BorderWidth="1"
+                        FontSize="12"
+                        FontAttributes="Bold"
+                        CornerRadius="10"
+                        Padding="10,6"
+                        HeightRequest="34"
+                        VerticalOptions="Start" />
+            </Grid>
+
+            <!-- STATUS CONFIRMATION BANNER -->
+            <Border IsVisible="{Binding HasStatusMessage}"
+                    BackgroundColor="#ECFDF5"
+                    Stroke="#10B981"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 12"
+                    Padding="10,8">
+                <Label Text="{Binding StatusMessage}"
+                       FontSize="12"
+                       FontAttributes="Bold"
+                       TextColor="#065F46" />
+            </Border>
+
+            <!-- DISPLAY MODE -->
+            <VerticalStackLayout IsVisible="{Binding IsNotEditing}"
+                                 Spacing="10">
+                <Border BackgroundColor="{AppThemeBinding Light=#F9FAFB, Dark=#24242E}"
+                        StrokeThickness="0"
+                        StrokeShape="RoundRectangle 14"
+                        Padding="12,10">
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="10">
+                        <Label Grid.Column="0" Text="🌙" FontSize="18" VerticalOptions="Center" />
+                        <VerticalStackLayout Grid.Column="1" Spacing="2">
+                            <Label Text="Giờ giấc yên lặng" FontSize="12" TextColor="{StaticResource Gray500}" />
+                            <Label Text="{Binding QuietHours}" FontSize="13" FontAttributes="Bold" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+
+                <Border BackgroundColor="{AppThemeBinding Light=#F9FAFB, Dark=#24242E}"
+                        StrokeThickness="0"
+                        StrokeShape="RoundRectangle 14"
+                        Padding="12,10">
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="10">
+                        <Label Grid.Column="0" Text="👥" FontSize="18" VerticalOptions="Center" />
+                        <VerticalStackLayout Grid.Column="1" Spacing="2">
+                            <Label Text="Chính sách khách tới chơi" FontSize="12" TextColor="{StaticResource Gray500}" />
+                            <Label Text="{Binding GuestPolicy}" FontSize="13" FontAttributes="Bold" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+
+                <Border BackgroundColor="{AppThemeBinding Light=#F9FAFB, Dark=#24242E}"
+                        StrokeThickness="0"
+                        StrokeShape="RoundRectangle 14"
+                        Padding="12,10">
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="10">
+                        <Label Grid.Column="0" Text="🍳" FontSize="18" VerticalOptions="Center" />
+                        <VerticalStackLayout Grid.Column="1" Spacing="2">
+                            <Label Text="Quy định nấu ăn" FontSize="12" TextColor="{StaticResource Gray500}" />
+                            <Label Text="{Binding CookingRules}" FontSize="13" FontAttributes="Bold" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+
+                <Border BackgroundColor="{AppThemeBinding Light=#F9FAFB, Dark=#24242E}"
+                        StrokeThickness="0"
+                        StrokeShape="RoundRectangle 14"
+                        Padding="12,10">
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="10">
+                        <Label Grid.Column="0" Text="🛵" FontSize="18" VerticalOptions="Center" />
+                        <VerticalStackLayout Grid.Column="1" Spacing="2">
+                            <Label Text="Quy định để xe" FontSize="12" TextColor="{StaticResource Gray500}" />
+                            <Label Text="{Binding ParkingRules}" FontSize="13" FontAttributes="Bold" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+            </VerticalStackLayout>
+
+            <!-- EDIT MODE -->
+            <VerticalStackLayout IsVisible="{Binding IsEditing}"
+                                 Spacing="10">
+                <VerticalStackLayout Spacing="3">
+                    <Label Text="🌙 Giờ giấc yên lặng" FontSize="12" FontAttributes="Bold" />
+                    <Border BackgroundColor="{AppThemeBinding Light=#F8FAFC, Dark=#25252E}"
+                            Stroke="{AppThemeBinding Light=#CBD5E1, Dark=#3F3F46}"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 10"
+                            Padding="10,2">
+                        <Entry AutomationId="EditQuietHoursEntry"
+                               Text="{Binding DraftQuietHours}"
+                               FontSize="13" />
+                    </Border>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="3">
+                    <Label Text="👥 Chính sách khách tới chơi" FontSize="12" FontAttributes="Bold" />
+                    <Border BackgroundColor="{AppThemeBinding Light=#F8FAFC, Dark=#25252E}"
+                            Stroke="{AppThemeBinding Light=#CBD5E1, Dark=#3F3F46}"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 10"
+                            Padding="10,2">
+                        <Entry AutomationId="EditGuestPolicyEntry"
+                               Text="{Binding DraftGuestPolicy}"
+                               FontSize="13" />
+                    </Border>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="3">
+                    <Label Text="🍳 Quy định nấu ăn" FontSize="12" FontAttributes="Bold" />
+                    <Border BackgroundColor="{AppThemeBinding Light=#F8FAFC, Dark=#25252E}"
+                            Stroke="{AppThemeBinding Light=#CBD5E1, Dark=#3F3F46}"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 10"
+                            Padding="10,2">
+                        <Entry AutomationId="EditCookingRulesEntry"
+                               Text="{Binding DraftCookingRules}"
+                               FontSize="13" />
+                    </Border>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="3">
+                    <Label Text="🛵 Quy định để xe" FontSize="12" FontAttributes="Bold" />
+                    <Border BackgroundColor="{AppThemeBinding Light=#F8FAFC, Dark=#25252E}"
+                            Stroke="{AppThemeBinding Light=#CBD5E1, Dark=#3F3F46}"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 10"
+                            Padding="10,2">
+                        <Entry AutomationId="EditParkingRulesEntry"
+                               Text="{Binding DraftParkingRules}"
+                               FontSize="13" />
+                    </Border>
+                </VerticalStackLayout>
+
+                <Label Text="{Binding ValidationError}"
+                       IsVisible="{Binding HasValidationError}"
+                       FontSize="12"
+                       TextColor="#DC2626" />
+
+                <Grid ColumnDefinitions="*,Auto,Auto"
+                      ColumnSpacing="8">
+                    <Button Grid.Column="0"
+                            AutomationId="SaveRulesButton"
+                            Text="💾 Lưu phiên bản mới"
+                            Command="{Binding SaveRulesCommand}"
+                            BackgroundColor="#512BD4"
+                            TextColor="White"
+                            FontSize="12.5"
+                            FontAttributes="Bold"
+                            CornerRadius="10"
+                            Padding="12,9" />
+
+                    <Button Grid.Column="1"
+                            AutomationId="CancelEditRulesButton"
+                            Text="Hủy"
+                            Command="{Binding CancelEditCommand}"
+                            BackgroundColor="#E2E8F0"
+                            TextColor="#0F172A"
+                            FontSize="12.5"
+                            FontAttributes="Bold"
+                            CornerRadius="10"
+                            Padding="12,9" />
+
+                    <ActivityIndicator Grid.Column="2"
+                                       IsRunning="{Binding IsSaving}"
+                                       IsVisible="{Binding IsSaving}"
+                                       VerticalOptions="Center" />
+                </Grid>
+            </VerticalStackLayout>
+
+            <!-- VERSION HISTORY ACCORDION -->
+            <VerticalStackLayout IsVisible="{Binding HasHistory}"
+                                 Spacing="8">
+                <Button AutomationId="ToggleHistoryButton"
+                        Text="{Binding HistoryToggleText}"
+                        Command="{Binding ToggleHistoryCommand}"
+                        BackgroundColor="{AppThemeBinding Light=#F8FAFC, Dark=#24242E}"
+                        TextColor="#475569"
+                        FontSize="12"
+                        FontAttributes="Bold"
+                        CornerRadius="10"
+                        Padding="10,7" />
+
+                <VerticalStackLayout IsVisible="{Binding IsHistoryExpanded}"
+                                     BindableLayout.ItemsSource="{Binding VersionHistory}"
+                                     Spacing="8">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="pageModels:HouseRulesHistoryItemModel">
+                            <Border BackgroundColor="{AppThemeBinding Light=#F8FAFC, Dark=#24242E}"
+                                    Stroke="{AppThemeBinding Light=#E2E8F0, Dark=#32323C}"
+                                    StrokeThickness="1"
+                                    StrokeShape="RoundRectangle 12"
+                                    Padding="12">
+                                <VerticalStackLayout Spacing="6">
+                                    <Grid ColumnDefinitions="Auto,*,Auto"
+                                          ColumnSpacing="8">
+                                        <Border Grid.Column="0"
+                                                BackgroundColor="#E2E8F0"
+                                                StrokeThickness="0"
+                                                StrokeShape="RoundRectangle 6"
+                                                Padding="7,2"
+                                                VerticalOptions="Center">
+                                            <Label Text="{Binding VersionBadgeText}"
+                                                   FontSize="11"
+                                                   FontAttributes="Bold"
+                                                   TextColor="#334155" />
+                                        </Border>
+                                        <Label Grid.Column="1"
+                                               Text="{Binding FormattedUpdatedAt}"
+                                               FontSize="11"
+                                               TextColor="#64748B"
+                                               VerticalOptions="Center" />
+                                        <Button Grid.Column="2"
+                                                Text="Khôi phục"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type pageModels:HouseRulesSectionViewModel}}, Path=RestoreVersionCommand, x:DataType=pageModels:HouseRulesSectionViewModel}"
+                                                CommandParameter="{Binding .}"
+                                                BackgroundColor="#EDE9FE"
+                                                TextColor="#512BD4"
+                                                FontSize="11"
+                                                FontAttributes="Bold"
+                                                Padding="8,4"
+                                                HeightRequest="28"
+                                                CornerRadius="8" />
+                                    </Grid>
+
+                                    <Label Text="{Binding QuietHours, StringFormat='🌙 Giờ yên tĩnh: {0}'}"
+                                           FontSize="11.5"
+                                           TextColor="#475569" />
+                                    <Label Text="{Binding GuestPolicy, StringFormat='👥 Khách chơi: {0}'}"
+                                           FontSize="11.5"
+                                           TextColor="#475569" />
+                                    <Label Text="{Binding CookingRules, StringFormat='🍳 Nấu ăn: {0}'}"
+                                           FontSize="11.5"
+                                           TextColor="#475569" />
+                                    <Label Text="{Binding ParkingRules, StringFormat='🛵 Để xe: {0}'}"
+                                           FontSize="11.5"
+                                           TextColor="#475569" />
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+
+        </VerticalStackLayout>
+    </Border>
+</ContentView>
