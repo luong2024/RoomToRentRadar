@@ -99,6 +99,10 @@ namespace RoomToRentRadar
             builder.Services.AddSingleton<SearchFilterViewModel>();
             builder.Services.AddTransient<FilterBottomSheet>();
 
+            // US10 / T10.1: CompareRoomsViewModel & CompareRoomsPage
+            builder.Services.AddTransient<CompareRoomsViewModel>();
+            builder.Services.AddTransient<CompareRoomsPage>();
+
             return builder.Build();
         }
     }
