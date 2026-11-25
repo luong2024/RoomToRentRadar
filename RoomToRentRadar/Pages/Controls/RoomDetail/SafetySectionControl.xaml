@@ -25,18 +25,24 @@
                        TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
                        VerticalTextAlignment="Center" />
 
-                <!-- Verification Pill Badge -->
+                <!-- Verification Pill Badge (distinct styles for Verified vs Unverified) -->
                 <Border Grid.Column="1"
                         StrokeShape="RoundRectangle 9999"
                         StrokeThickness="1"
-                        Stroke="{AppThemeBinding Light={StaticResource StatusSuccessLight}, Dark={StaticResource StatusSuccessDark}}"
+                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
                         BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
                         Padding="10,4"
                         VerticalOptions="Center">
+                    <Border.Triggers>
+                        <DataTrigger TargetType="Border" Binding="{Binding IsSafetyVerified}" Value="True">
+                            <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource StatusSuccessLight}, Dark={StaticResource StatusSuccessDark}}" />
+                        </DataTrigger>
+                    </Border.Triggers>
                     <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
                         <Image WidthRequest="14"
                                HeightRequest="14"
-                               VerticalOptions="Center">
+                               VerticalOptions="Center"
+                               IsVisible="{Binding IsSafetyVerified}">
                             <Image.Source>
                                 <FontImageSource Glyph="{x:Static fonts:FluentUI.shield_checkmark_16_regular}"
                                                  FontFamily="{x:Static fonts:FluentUI.FontFamily}"
@@ -44,12 +50,34 @@
                                                  Color="{AppThemeBinding Light={StaticResource StatusSuccessTextLight}, Dark={StaticResource StatusSuccessDark}}" />
                             </Image.Source>
                         </Image>
+                        <Image WidthRequest="14"
+                               HeightRequest="14"
+                               VerticalOptions="Center"
+                               IsVisible="False">
+                            <Image.Triggers>
+                                <DataTrigger TargetType="Image" Binding="{Binding IsSafetyVerified}" Value="False">
+                                    <Setter Property="IsVisible" Value="True" />
+                                </DataTrigger>
+                            </Image.Triggers>
+                            <Image.Source>
+                                <FontImageSource Glyph="{x:Static fonts:FluentUI.info_16_regular}"
+                                                 FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                 Size="14"
+                                                 Color="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                            </Image.Source>
+                        </Image>
                         <Label Text="{Binding SafetyScoreFormatted}"
                                FontFamily="{StaticResource FontFamilySemibold}"
                                FontSize="{StaticResource FontSizeBadge}"
                                FontAttributes="Bold"
-                               TextColor="{AppThemeBinding Light={StaticResource StatusSuccessTextLight}, Dark={StaticResource StatusSuccessDark}}"
-                               VerticalTextAlignment="Center" />
+                               TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"
+                               VerticalTextAlignment="Center">
+                            <Label.Triggers>
+                                <DataTrigger TargetType="Label" Binding="{Binding IsSafetyVerified}" Value="True">
+                                    <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource StatusSuccessTextLight}, Dark={StaticResource StatusSuccessDark}}" />
+                                </DataTrigger>
+                            </Label.Triggers>
+                        </Label>
                     </HorizontalStackLayout>
                 </Border>
             </Grid>
@@ -64,12 +92,31 @@
                                    WidthRequest="16"
                                    HeightRequest="16"
                                    HorizontalOptions="Start"
-                                   VerticalOptions="Center">
+                                   VerticalOptions="Center"
+                                   IsVisible="{Binding IsVerified}">
                                 <Image.Source>
                                     <FontImageSource Glyph="{Binding IconGlyph}"
                                                      FontFamily="{x:Static fonts:FluentUI.FontFamily}"
                                                      Size="16"
-                                                     Color="{Binding IconColor}" />
+                                                     Color="{AppThemeBinding Light={StaticResource StatusSuccessLight}, Dark={StaticResource StatusSuccessDark}}" />
+                                </Image.Source>
+                            </Image>
+                            <Image Grid.Column="0"
+                                   WidthRequest="16"
+                                   HeightRequest="16"
+                                   HorizontalOptions="Start"
+                                   VerticalOptions="Center"
+                                   IsVisible="False">
+                                <Image.Triggers>
+                                    <DataTrigger TargetType="Image" Binding="{Binding IsVerified}" Value="False">
+                                        <Setter Property="IsVisible" Value="True" />
+                                    </DataTrigger>
+                                </Image.Triggers>
+                                <Image.Source>
+                                    <FontImageSource Glyph="{Binding IconGlyph}"
+                                                     FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                     Size="16"
+                                                     Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
                                 </Image.Source>
                             </Image>
                             <Label Grid.Column="1"

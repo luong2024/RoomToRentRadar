@@ -124,17 +124,40 @@
                     <Border.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding ToggleFavouriteCommand}" />
                     </Border.GestureRecognizers>
-                    <Image WidthRequest="20"
-                           HeightRequest="20"
-                           HorizontalOptions="Center"
-                           VerticalOptions="Center">
-                        <Image.Source>
-                            <FontImageSource Glyph="{Binding FavouriteIconGlyph}"
-                                             FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                                             Size="20"
-                                             Color="{Binding FavouriteIconColor}" />
-                        </Image.Source>
-                    </Image>
+                    <Grid WidthRequest="20"
+                          HeightRequest="20"
+                          HorizontalOptions="Center"
+                          VerticalOptions="Center">
+                        <Image WidthRequest="20"
+                               HeightRequest="20"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center"
+                               IsVisible="{Binding IsFavourite}">
+                            <Image.Source>
+                                <FontImageSource Glyph="{Binding FavouriteIconGlyph}"
+                                                 FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                 Size="20"
+                                                 Color="{AppThemeBinding Light={StaticResource StatusDangerLight}, Dark={StaticResource StatusDangerDark}}" />
+                            </Image.Source>
+                        </Image>
+                        <Image WidthRequest="20"
+                               HeightRequest="20"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center"
+                               IsVisible="False">
+                            <Image.Triggers>
+                                <DataTrigger TargetType="Image" Binding="{Binding IsFavourite}" Value="False">
+                                    <Setter Property="IsVisible" Value="True" />
+                                </DataTrigger>
+                            </Image.Triggers>
+                            <Image.Source>
+                                <FontImageSource Glyph="{Binding FavouriteIconGlyph}"
+                                                 FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                 Size="20"
+                                                 Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                            </Image.Source>
+                        </Image>
+                    </Grid>
                 </Border>
             </HorizontalStackLayout>
         </Grid>

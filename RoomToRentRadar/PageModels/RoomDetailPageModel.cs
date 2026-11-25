@@ -94,11 +94,9 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(FavouriteIconGlyph))]
-    [NotifyPropertyChangedFor(nameof(FavouriteIconColor))]
     public partial bool IsFavourite { get; set; } = false;
 
     public string FavouriteIconGlyph => FluentUI.heart_24_regular;
-    public string FavouriteIconColor => IsFavourite ? "#DC2626" : "#1E293B";
 
     [ObservableProperty]
     public partial RoomDetailDto? Room { get; set; }

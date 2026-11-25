@@ -42,17 +42,12 @@
                         <TapGestureRecognizer Command="{Binding RemoveCommand}"
                                               CommandParameter="{Binding Room.Id}" />
                     </Border.GestureRecognizers>
-                    <Image WidthRequest="14"
-                           HeightRequest="14"
-                           HorizontalOptions="Center"
-                           VerticalOptions="Center">
-                        <Image.Source>
-                            <FontImageSource Glyph="{x:Static fonts:FluentUI.dismiss_16_regular}"
-                                             FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                                             Size="14"
-                                             Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
-                        </Image.Source>
-                    </Image>
+                    <Label Text="{x:Static fonts:FluentUI.dismiss_16_regular}"
+                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                           FontSize="14"
+                           HorizontalTextAlignment="Center"
+                           VerticalTextAlignment="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
                 </Border>
             </Grid>
 

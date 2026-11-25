@@ -263,7 +263,14 @@ public partial class MainLandingPageModel : BasePageModel
             return;
         }
 
-        await _navigation.GoToAsync($"roomdetail?roomId={Uri.EscapeDataString(roomId)}");
+        var route = $"{AppRoutes.RoomDetail}?roomId={Uri.EscapeDataString(roomId)}";
+        var campusId = _searchCriteriaStore.Current.CampusId;
+        if (!string.IsNullOrWhiteSpace(campusId))
+        {
+            route += $"&campusId={Uri.EscapeDataString(campusId)}";
+        }
+
+        await _navigation.GoToAsync(route);
     }
 
     [RelayCommand]

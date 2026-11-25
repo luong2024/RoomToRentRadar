@@ -38,10 +38,7 @@ public sealed record AmenityRowItem(AmenityDisplayItem Left, AmenityDisplayItem?
 /// <summary>
 /// Display model for a safety verification item (CCTV, fire extinguisher, secure entrance, etc.).
 /// </summary>
-public sealed record SafetyCheckItem(SafetyFeature Feature, string Description, bool IsVerified, string IconGlyph)
-{
-    public string IconColor => IsVerified ? "#16A34A" : "#94A3B8";
-}
+public sealed record SafetyCheckItem(SafetyFeature Feature, string Description, bool IsVerified, string IconGlyph);
 
 /// <summary>
 /// Display model for a house rule entry (quiet hours, curfew, guests, cooking, parking).

@@ -108,12 +108,12 @@
                     <Label Text="{x:Static fonts:FluentUI.location_16_regular}"
                            FontFamily="{x:Static fonts:FluentUI.FontFamily}"
                            FontSize="14"
-                           TextColor="{AppThemeBinding Light={StaticResource ActionAccentLight}, Dark={StaticResource ActionAccentDark}}"
+                           TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource ActionAccentDark}}"
                            VerticalTextAlignment="Center" />
                     <Label Text="{Binding Room.DistanceFormatted}"
                            FontFamily="{StaticResource FontFamilySemibold}"
                            FontSize="{StaticResource FontSizeCaption}"
-                           TextColor="{AppThemeBinding Light={StaticResource ActionAccentLight}, Dark={StaticResource ActionAccentDark}}"
+                           TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource ActionAccentDark}}"
                            VerticalTextAlignment="Center" />
                     <Label Text="•"
                            FontSize="12"
