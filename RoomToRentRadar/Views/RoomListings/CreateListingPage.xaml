@@ -436,6 +436,12 @@
                             <Label Text="{loc:Translate ListingLocation_NavigationError}"
                                    IsVisible="{Binding HasLocationNavigationError}"
                                    TextColor="{StaticResource Error}" />
+                            <Label Text="{loc:Translate ListingSubmit_InvalidLocation}"
+                                   IsVisible="{Binding HasLocationSubmissionError}"
+                                   TextColor="{StaticResource Error}" />
+                            <Label Text="{loc:Translate ListingLocation_ResponseWarning}"
+                                   IsVisible="{Binding HasLocationResponseWarning}"
+                                   TextColor="{StaticResource Error}" />
                             <Button Text="{loc:Translate ListingLocation_Open}"
                                     Style="{StaticResource SecondaryButton}"
                                     HorizontalOptions="Start"

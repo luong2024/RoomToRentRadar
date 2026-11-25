@@ -3,6 +3,7 @@ using NUnit.Framework;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Models.MapSearch;
 using RoomToRentRadar.Models.RoomListings;
+using RoomToRentRadar.Resources.Strings;
 using RoomToRentRadar.Services.RoomListings;
 using RoomToRentRadar.ViewModels.RoomListings;
 
@@ -535,6 +536,105 @@ public class CreateListingViewModelTests
         Assert.That(_viewModel.IsSuccess, Is.False);
         Assert.That(_viewModel.HasError, Is.True);
         Assert.That(_viewModel.ErrorMessage, Does.Contain("Máy chủ quá tải"));
+    }
+
+    [Test]
+    public async Task SubmitListing_UsesConfirmedSnapshotAndAppliesAuthoritativeResponse()
+    {
+        FillValidFormData();
+        var selected = new GeoCoordinate(21.5855, 105.8075);
+        var persisted = selected with { Latitude = 21.58550001 };
+        var photos = _viewModel.Photos.ToArray();
+        var result = new TaskCompletionSource<CreateListingResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        CreateListingRequest? sent = null;
+        _viewModel.LocationPickerHandler = _ => Task.FromResult(
+            new ListingLocationPickerResult(ListingLocationPickerOutcome.Confirmed, selected));
+        await _viewModel.OpenLocationPickerAsync();
+
+        _mockCreateListingService.Setup(service => service.CreateListingAsync(
+                It.IsAny<CreateListingRequest>(), It.IsAny<CancellationToken>()))
+            .Returns((CreateListingRequest request, CancellationToken _) =>
+            {
+                sent = request;
+                return result.Task;
+            });
+
+        var submit = _viewModel.SubmitListingAsync(CancellationToken.None);
+        await _viewModel.SubmitListingAsync(CancellationToken.None);
+        await _viewModel.OpenLocationPickerAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(sent, Is.Not.Null);
+            Assert.That(sent!.Location, Is.EqualTo(selected));
+            Assert.That(sent.Photos, Is.EqualTo(photos));
+            Assert.That(_viewModel.LocationSummary, Is.EqualTo(ListingLocation.Describe(selected)));
+            Assert.That(_viewModel.OpenLocationPickerCommand.CanExecute(null), Is.False);
+        });
+
+        result.SetResult(CreateListingResult.Success("listing-123") with { PersistedLocation = persisted });
+        await submit;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_viewModel.IsSuccess, Is.True);
+            Assert.That(_viewModel.ConfirmedLocation, Is.EqualTo(persisted));
+            Assert.That(_viewModel.LocationSummary, Is.EqualTo(ListingLocation.Describe(persisted, saved: true)));
+            Assert.That(_viewModel.Photos, Is.EqualTo(photos));
+        });
+        _mockCreateListingService.Verify(service => service.CreateListingAsync(
+            It.IsAny<CreateListingRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Test]
+    public async Task SubmitListing_CoordinateErrorPreservesFormPhotosAndConfirmedLocation()
+    {
+        FillValidFormData();
+        var title = _viewModel.Title;
+        var photos = _viewModel.Photos.ToArray();
+        var selected = new GeoCoordinate(21.5855, 105.8075);
+        _viewModel.LocationPickerHandler = _ => Task.FromResult(
+            new ListingLocationPickerResult(ListingLocationPickerOutcome.Confirmed, selected));
+        await _viewModel.OpenLocationPickerAsync();
+        _mockCreateListingService.Setup(service => service.CreateListingAsync(
+                It.IsAny<CreateListingRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateListingResult.Failure(AppResources.GetString("ListingSubmit_InvalidLocation"))
+                with { HasLocationError = true });
+
+        await _viewModel.SubmitListingAsync(CancellationToken.None);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_viewModel.HasError, Is.True);
+            Assert.That(_viewModel.HasLocationSubmissionError, Is.True);
+            Assert.That(_viewModel.Title, Is.EqualTo(title));
+            Assert.That(_viewModel.Photos, Is.EqualTo(photos));
+            Assert.That(_viewModel.ConfirmedLocation, Is.EqualTo(selected));
+            Assert.That(_viewModel.LocationSummary, Is.EqualTo(ListingLocation.Describe(selected)));
+        });
+    }
+
+    [Test]
+    public async Task SubmitListing_InvalidSavedLocationKeepsConfirmedSelectionAndShowsWarning()
+    {
+        FillValidFormData();
+        var selected = new GeoCoordinate(21.5855, 105.8075);
+        _viewModel.LocationPickerHandler = _ => Task.FromResult(
+            new ListingLocationPickerResult(ListingLocationPickerOutcome.Confirmed, selected));
+        await _viewModel.OpenLocationPickerAsync();
+        _mockCreateListingService.Setup(service => service.CreateListingAsync(
+                It.IsAny<CreateListingRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateListingResult.Success("listing-123") with { HasLocationResponseWarning = true });
+
+        await _viewModel.SubmitListingAsync(CancellationToken.None);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_viewModel.IsSuccess, Is.True);
+            Assert.That(_viewModel.HasLocationResponseWarning, Is.True);
+            Assert.That(_viewModel.ConfirmedLocation, Is.EqualTo(selected));
+            Assert.That(_viewModel.LocationSummary, Is.EqualTo(ListingLocation.Describe(selected)));
+        });
     }
 
     [Test]

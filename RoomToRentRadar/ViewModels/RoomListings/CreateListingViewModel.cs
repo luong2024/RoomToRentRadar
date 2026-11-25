@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Models.MapSearch;
 using RoomToRentRadar.Models.RoomListings;
+using RoomToRentRadar.Resources.Strings;
 using RoomToRentRadar.Services.RoomListings;
 
 namespace RoomToRentRadar.ViewModels.RoomListings;
@@ -21,6 +22,7 @@ public partial class CreateListingViewModel : ObservableObject
     private readonly IAuthenticationSessionService? _sessionService;
     private GeoCoordinate? _confirmedLocation;
     private long? _locationSessionEpoch;
+    private bool _isConfirmedLocationSaved;
     private bool _isPickingLocation;
 
     public CreateListingViewModel(
@@ -49,19 +51,39 @@ public partial class CreateListingViewModel : ObservableObject
         ? _confirmedLocation
         : null;
 
-    public string LocationSummary => ListingLocation.Describe(ConfirmedLocation);
+    public string LocationSummary => ListingLocation.Describe(ConfirmedLocation, _isConfirmedLocationSaved);
 
     [ObservableProperty]
     public partial bool HasLocationNavigationError { get; private set; }
+
+    [ObservableProperty]
+    public partial bool HasLocationSubmissionError { get; private set; }
+
+    [ObservableProperty]
+    public partial bool HasLocationResponseWarning { get; private set; }
 
     internal void RefreshLocationForSession()
     {
         if (_confirmedLocation is not null && ConfirmedLocation is null)
         {
-            _confirmedLocation = null;
-            OnPropertyChanged(nameof(ConfirmedLocation));
-            OnPropertyChanged(nameof(LocationSummary));
+            SetConfirmedLocation(null, _sessionService?.SessionEpoch, saved: false);
+            HasLocationSubmissionError = false;
+            HasLocationResponseWarning = false;
         }
+    }
+
+    private void SetConfirmedLocation(GeoCoordinate? location, long? sessionEpoch, bool saved)
+    {
+        if (_confirmedLocation == location && _locationSessionEpoch == sessionEpoch && _isConfirmedLocationSaved == saved)
+        {
+            return;
+        }
+
+        _confirmedLocation = location;
+        _locationSessionEpoch = sessionEpoch;
+        _isConfirmedLocationSaved = saved;
+        OnPropertyChanged(nameof(ConfirmedLocation));
+        OnPropertyChanged(nameof(LocationSummary));
     }
 
 
@@ -245,10 +267,9 @@ public partial class CreateListingViewModel : ObservableObject
             if (result.Outcome == ListingLocationPickerOutcome.Confirmed &&
                 ListingLocation.IsValid(result.Location) && _confirmedLocation != result.Location)
             {
-                _confirmedLocation = result.Location;
-                _locationSessionEpoch = sessionEpoch;
-                OnPropertyChanged(nameof(ConfirmedLocation));
-                OnPropertyChanged(nameof(LocationSummary));
+                SetConfirmedLocation(result.Location, sessionEpoch, saved: false);
+                HasLocationSubmissionError = false;
+                HasLocationResponseWarning = false;
             }
         }
         catch (Exception)
@@ -371,6 +392,7 @@ public partial class CreateListingViewModel : ObservableObject
             return;
         }
 
+        var sessionEpoch = _sessionService?.SessionEpoch;
         try
         {
             IsSubmitting = true;
@@ -387,29 +409,52 @@ public partial class CreateListingViewModel : ObservableObject
                 AreaM2: area,
                 RoomType: SelectedRoomType!,
                 Description: string.IsNullOrWhiteSpace(Description) ? null : Description.Trim(),
-                Photos: Photos.ToList());
+                Photos: Photos.ToList())
+            {
+                Location = ConfirmedLocation
+            };
 
             var result = await _createListingService.CreateListingAsync(request, cancellationToken);
+            if (sessionEpoch != _sessionService?.SessionEpoch)
+            {
+                return;
+            }
 
             if (result.IsSuccess)
             {
+                HasLocationResponseWarning = result.HasLocationResponseWarning;
+                if (result.PersistedLocation is { } persisted && ListingLocation.IsValid(persisted))
+                {
+                    SetConfirmedLocation(persisted, sessionEpoch, saved: true);
+                }
+                else
+                {
+                    SetConfirmedLocation(ConfirmedLocation, sessionEpoch, saved: false);
+                }
+
                 IsSuccess = true;
                 SuccessMessage = "Tin đăng của bạn đã được gửi thành công và đang chờ quản trị viên duyệt!";
             }
             else
             {
                 HasError = true;
-                ErrorMessage = result.ErrorMessage ?? "Không thể gửi tin đăng. Vui lòng thử lại sau.";
+                HasLocationSubmissionError = result.HasLocationError;
+                ErrorMessage = result.HasLocationError
+                    ? AppResources.GetString("ListingSubmit_InvalidForm")
+                    : result.ErrorMessage ?? AppResources.GetString("ListingSubmit_Unconfirmed");
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            HasError = true;
-            ErrorMessage = $"Đã xảy ra lỗi khi gửi tin đăng: {ex.Message}";
+            if (sessionEpoch == _sessionService?.SessionEpoch)
+            {
+                HasError = true;
+                ErrorMessage = AppResources.GetString("ListingSubmit_Unconfirmed");
+            }
         }
         finally
         {
@@ -631,6 +676,8 @@ public partial class CreateListingViewModel : ObservableObject
         ErrorMessage = null;
         IsSuccess = false;
         SuccessMessage = null;
+        HasLocationSubmissionError = false;
+        HasLocationResponseWarning = false;
     }
 
     private static bool TryParsePrice(string? input, out decimal result)

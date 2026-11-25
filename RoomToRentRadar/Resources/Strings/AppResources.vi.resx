@@ -152,7 +152,7 @@
   <data name="ListingLocation_Optional" xml:space="preserve"><value>Vị trí trên bản đồ (tùy chọn)</value></data>
   <data name="ListingLocation_Open" xml:space="preserve"><value>Mở bản đồ chọn vị trí</value></data>
   <data name="ListingLocation_Empty" xml:space="preserve"><value>Chưa chọn vị trí</value></data>
-  <data name="ListingLocation_Coordinates" xml:space="preserve"><value>Vị trí đã chọn: {0:F6}, {1:F6}</value></data>
+  <data name="ListingLocation_Coordinates" xml:space="preserve"><value>Vị trí đã chọn: vĩ độ {0:F6} / kinh độ {1:F6}</value></data>
   <data name="ListingLocation_Cancel" xml:space="preserve"><value>Hủy</value></data>
   <data name="ListingLocation_Confirm" xml:space="preserve"><value>Xác nhận vị trí</value></data>
   <data name="ListingLocation_PinLabel" xml:space="preserve"><value>Vị trí phòng</value></data>
@@ -162,4 +162,16 @@
   <data name="ListingLocation_MapMissingKey" xml:space="preserve"><value>Bản build này chưa cấu hình Google Maps. Hãy đặt khóa trong secrets.props rồi build lại, hoặc hủy để tiếp tục.</value></data>
   <data name="ListingLocation_MapUnavailable" xml:space="preserve"><value>Thiết bị này chưa hỗ trợ chọn vị trí. Bạn có thể gửi biểu mẫu mà không cần vị trí trên bản đồ.</value></data>
   <data name="ListingLocation_NavigationError" xml:space="preserve"><value>Không thể mở hoặc đóng bản đồ. Vui lòng thử lại.</value></data>
+  <data name="ListingLocation_SavedCoordinates" xml:space="preserve"><value>Vị trí đã lưu: vĩ độ {0:F6} / kinh độ {1:F6}</value></data>
+  <data name="ListingLocation_ResponseWarning" xml:space="preserve"><value>Tin đã được tạo nhưng chưa xác minh được vị trí đã lưu.</value></data>
+  <data name="ListingSubmit_Unconfirmed" xml:space="preserve"><value>Chưa xác nhận được kết quả. Hãy kiểm tra tin đã được tạo hay chưa trước khi gửi lại.</value></data>
+  <data name="ListingSubmit_ServerUnconfirmed" xml:space="preserve"><value>Lỗi máy chủ ({0}). Hãy kiểm tra tin đã được tạo hay chưa trước khi gửi lại.</value></data>
+  <data name="ListingSubmit_Unavailable" xml:space="preserve"><value>Dịch vụ tạo tin tạm thời không khả dụng (404 Not Found). Vui lòng thử lại sau.</value></data>
+  <data name="ListingSubmit_InvalidForm" xml:space="preserve"><value>Vui lòng kiểm tra thông tin tin đăng rồi thử lại.</value></data>
+  <data name="ListingSubmit_InvalidLocation" xml:space="preserve"><value>Vị trí không hợp lệ. Hãy mở bản đồ để chọn lại vị trí.</value></data>
+  <data name="ListingSubmit_SignIn" xml:space="preserve"><value>Hãy đăng nhập lại để gửi tin.</value></data>
+  <data name="ListingSubmit_Forbidden" xml:space="preserve"><value>Tài khoản của bạn không có quyền gửi tin này.</value></data>
+  <data name="ListingSubmit_HttpError" xml:space="preserve"><value>Không thể gửi tin ({0}).</value></data>
+  <data name="ListingSubmit_MissingPhoto" xml:space="preserve"><value>Không tìm thấy ảnh đã chọn. Hãy xóa ảnh đó khỏi biểu mẫu rồi chọn lại.</value></data>
+  <data name="ListingSubmit_InvalidPhoto" xml:space="preserve"><value>Không thể đọc một ảnh đã chọn. Hãy xóa ảnh đó khỏi biểu mẫu rồi chọn lại.</value></data>
 </root>

@@ -12,9 +12,10 @@ internal static class ListingLocation
         Longitude: >= -180 and <= 180
     };
 
-    internal static string Describe(GeoCoordinate? coordinate) => coordinate is null
+    internal static string Describe(GeoCoordinate? coordinate, bool saved = false) => coordinate is null
         ? AppResources.GetString("ListingLocation_Empty")
-        : string.Format(CultureInfo.CurrentCulture, AppResources.GetString("ListingLocation_Coordinates"),
+        : string.Format(CultureInfo.CurrentCulture,
+            AppResources.GetString(saved ? "ListingLocation_SavedCoordinates" : "ListingLocation_Coordinates"),
             coordinate.Latitude, coordinate.Longitude);
 }
 
