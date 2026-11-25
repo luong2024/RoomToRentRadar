@@ -73,7 +73,7 @@ public class HttpProfileGatewayTests
 
     [TestCase(HttpStatusCode.BadRequest, "CAMPUS_NOT_FOUND")]
     [TestCase(HttpStatusCode.Unauthorized, "UNAUTHORIZED")]
-    public void UpdateMyProfileAsync_ErrorStatus_ThrowsApiExceptionWithErrorCode(HttpStatusCode status, string code)
+    public async Task UpdateMyProfileAsync_ErrorStatus_ThrowsApiExceptionWithErrorCode(HttpStatusCode status, string code)
     {
         var (gateway, _, client) = Create(_ => Problem(status, code));
         using var __ = client;
@@ -85,14 +85,18 @@ public class HttpProfileGatewayTests
             Assert.That(ex!.StatusCode, Is.EqualTo(status));
             Assert.That(ex.ErrorCode, Is.EqualTo(code));
         });
+
+        await Task.CompletedTask;
     }
 
     [Test]
-    public void UpdateMyProfileAsync_NullRequest_Throws()
+    public async Task UpdateMyProfileAsync_NullRequest_Throws()
     {
         var (gateway, _, client) = Create(_ => Profile());
         using var __ = client;
 
         Assert.ThrowsAsync<ArgumentNullException>(async () => await gateway.UpdateMyProfileAsync(null!));
+
+        await Task.CompletedTask;
     }
 }

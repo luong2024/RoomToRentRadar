@@ -5,7 +5,14 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using RoomToRentRadar.Datastore.Sqlite.Repositories;
+using RoomToRentRadar.Domain.Aggregates;
+using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Ports.Contracts.Requests.Auth;
+using RoomToRentRadar.Ports.Outbound.ExternalServices;
+using RoomToRentRadar.Ports.Outbound.Repositories;
 
 namespace RoomToRentRadarUnitTests.Api;
 
@@ -206,5 +213,79 @@ public class ProfileEndpointIntegrationTests
         });
         using var me = await GetMeAsync(token);
         Assert.That(me.RootElement.GetProperty("preferredLanguage").GetString(), Is.EqualTo("vi"));
+    }
+
+    [Test]
+    public async Task Patch_ValidTokenOfMissingAccount_Returns404NotFound()
+    {
+        // A correctly signed token whose account was never stored (for example, removed after sign-in).
+        using var scope = _factory.Services.CreateScope();
+        var tokens = scope.ServiceProvider.GetRequiredService<IJwtTokenServicePort>();
+        var ghost = User.RegisterLocal(
+            "ghost@ictu.edu.vn", "hash", "Ghost", UserRole.Student, null, null, DateTime.UtcNow);
+        var token = tokens.GenerateAccessToken(ghost, DateTime.UtcNow).Token;
+
+        var response = await PatchAsync("""{"selectedCampusId":"TNUT"}""", token);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        Assert.That(await ReadErrorCodeAsync(response), Is.EqualTo("NOT_FOUND"));
+    }
+
+    [Test]
+    public async Task Patch_AnotherWriterWinsTheRace_Returns409_AndKeepsTheOtherValue()
+    {
+        var race = new RaceSwitch();
+        using var factory = _factory.WithWebHostBuilder(webHost => webHost.ConfigureTestServices(services =>
+        {
+            services.AddSingleton(race);
+            services.AddScoped<SqliteUserRepository>();
+            services.AddScoped<IUserRepository, ConcurrentWriterUserRepository>();
+        }));
+        _client.Dispose();
+        _client = factory.CreateClient();
+        var token = await RegisterStudentAsync();
+        race.Armed = true;
+
+        var response = await PatchAsync("""{"selectedCampusId":"TNUT"}""", token);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+        Assert.That(await ReadErrorCodeAsync(response), Is.EqualTo("CONCURRENCY_CONFLICT"));
+        using var me = await GetMeAsync(token);
+        Assert.That(me.RootElement.GetProperty("selectedCampusId").GetString(), Is.EqualTo("TNUE"));
+    }
+
+    private sealed class RaceSwitch
+    {
+        public bool Armed { get; set; }
+    }
+
+    /// <summary>The real SQLite repository, plus one competing write just before the next update.</summary>
+    private sealed class ConcurrentWriterUserRepository(SqliteUserRepository inner, RaceSwitch race) : IUserRepository
+    {
+        public Task<User?> GetByIdAsync(string id, CancellationToken ct = default) => inner.GetByIdAsync(id, ct);
+
+        public Task<User?> GetByEmailAsync(string normalizedEmail, CancellationToken ct = default) =>
+            inner.GetByEmailAsync(normalizedEmail, ct);
+
+        public Task<User?> GetByRefreshTokenHashAsync(string refreshTokenHash, CancellationToken ct = default) =>
+            inner.GetByRefreshTokenHashAsync(refreshTokenHash, ct);
+
+        public Task<bool> ExistsByEmailAsync(string normalizedEmail, CancellationToken ct = default) =>
+            inner.ExistsByEmailAsync(normalizedEmail, ct);
+
+        public Task AddAsync(User user, CancellationToken ct = default) => inner.AddAsync(user, ct);
+
+        public async Task UpdateAsync(User user, CancellationToken ct = default)
+        {
+            if (race.Armed)
+            {
+                race.Armed = false;
+                var other = await inner.GetByIdAsync(user.Id, ct);
+                other!.UpdateProfile(null, null, "TNUE", null, DateTime.UtcNow);
+                await inner.UpdateAsync(other, ct);
+            }
+
+            await inner.UpdateAsync(user, ct);
+        }
     }
 }

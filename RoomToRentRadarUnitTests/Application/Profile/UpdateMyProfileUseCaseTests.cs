@@ -100,28 +100,34 @@ public class UpdateMyProfileUseCaseTests
     }
 
     [Test]
-    public void Execute_UserMissing_ThrowsUserNotFound()
+    public async Task Execute_UserMissing_ThrowsUserNotFound()
     {
         Assert.ThrowsAsync<UserNotFoundException>(
             async () => await _sut.ExecuteAsync("missing", Campus("TNUT")));
+
+        await Task.CompletedTask;
     }
 
     [TestCase("")]
     [TestCase("  ")]
-    public void Execute_BlankUserId_Throws(string userId)
+    public async Task Execute_BlankUserId_Throws(string userId)
     {
         Assert.ThrowsAsync<DomainValidationException>(
             async () => await _sut.ExecuteAsync(userId, Campus("TNUT")));
+
+        await Task.CompletedTask;
     }
 
     [Test]
-    public void Execute_RepositoryConcurrencyConflict_Propagates()
+    public async Task Execute_RepositoryConcurrencyConflict_Propagates()
     {
         _userRepository.UpdateAsync(Arg.Any<User>(), Arg.Any<CancellationToken>())
             .ThrowsAsync(new ConcurrencyConflictException("conflict"));
 
         Assert.ThrowsAsync<ConcurrencyConflictException>(
             async () => await _sut.ExecuteAsync(_user.Id, Campus("TNUT")));
+
+        await Task.CompletedTask;
     }
 
     [Test]

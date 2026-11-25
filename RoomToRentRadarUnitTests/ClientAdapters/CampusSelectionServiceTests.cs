@@ -120,7 +120,7 @@ public class CampusSelectionServiceTests
     }
 
     [Test]
-    public void SignedIn_GatewayThrows_NoStoreNoEvent_ExceptionPropagates()
+    public async Task SignedIn_GatewayThrows_NoStoreNoEvent_ExceptionPropagates()
     {
         SignIn();
         _profileGateway.UpdateMyProfileAsync(Arg.Any<UpdateMyProfileRequest>(), Arg.Any<CancellationToken>())
@@ -135,6 +135,8 @@ public class CampusSelectionServiceTests
             Assert.That(Stored, Is.Null);
             Assert.That(_changedCount, Is.Zero);
         });
+
+        await Task.CompletedTask;
     }
 
     [Test]
@@ -161,11 +163,13 @@ public class CampusSelectionServiceTests
 
     [TestCase("")]
     [TestCase("  ")]
-    public void Select_BlankId_Throws(string id)
+    public async Task Select_BlankId_Throws(string id)
     {
         var service = CreateService();
 
         Assert.ThrowsAsync<ArgumentException>(async () => await service.SelectCampusAsync(id));
+
+        await Task.CompletedTask;
     }
 
     [Test]
