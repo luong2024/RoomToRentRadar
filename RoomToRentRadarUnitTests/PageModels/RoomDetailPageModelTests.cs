@@ -10,6 +10,7 @@ using RoomToRentRadar.Ports.Contracts.Responses.Auth;
 using RoomToRentRadar.Ports.Contracts.Responses.Photos;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadar.Resources.Strings;
+using RoomToRentRadar.Services.Navigation.Core;
 
 namespace RoomToRentRadarUnitTests.PageModels;
 
@@ -551,7 +552,23 @@ public class RoomDetailPageModelTests
         await _sut.SelectSimilarRoomAsync("sim-999");
 
         // Assert
-        Assert.That(targetRoute, Is.EqualTo("roomdetail?roomId=sim-999&campusId=ictu"));
+        Assert.That(targetRoute, Is.EqualTo($"{AppRoutes.RoomDetail}?roomId=sim-999&campusId=ictu"));
+    }
+
+    [Test]
+    public async Task SelectSimilarRoomAsync_WhenCampusIdIsNull_OmitsCampusQueryParameter()
+    {
+        string? targetRoute = null;
+        _sut.CampusId = null;
+        _sut.NavigateOverride = route =>
+        {
+            targetRoute = route;
+            return Task.CompletedTask;
+        };
+
+        await _sut.SelectSimilarRoomAsync("sim-999");
+
+        Assert.That(targetRoute, Is.EqualTo($"{AppRoutes.RoomDetail}?roomId=sim-999"));
     }
 
     [Test]
@@ -1060,7 +1077,7 @@ public class RoomDetailPageModelTests
 
         await _sut.PreviewUnavailableDemoAsync();
 
-        Assert.That(capturedRoute, Is.EqualTo("roomdetail?roomId=seed-da-thue&campusId=ictu"));
+        Assert.That(capturedRoute, Is.EqualTo($"{AppRoutes.RoomDetail}?roomId=seed-da-thue&campusId=ictu"));
     }
 
     [Test]

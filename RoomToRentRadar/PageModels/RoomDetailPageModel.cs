@@ -13,6 +13,7 @@ using RoomToRentRadar.Ports.Contracts.Common;
 using RoomToRentRadar.Ports.Contracts.Responses.Photos;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadar.Resources.Strings;
+using RoomToRentRadar.Services.Navigation.Core;
 
 namespace RoomToRentRadar.PageModels;
 
@@ -1206,7 +1207,11 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
     public async Task SelectSimilarRoomAsync(string targetRoomId)
     {
         if (string.IsNullOrWhiteSpace(targetRoomId)) return;
-        var route = $"roomdetail?roomId={targetRoomId}&campusId={CampusId}";
+        var route = $"{AppRoutes.RoomDetail}?roomId={Uri.EscapeDataString(targetRoomId)}";
+        if (!string.IsNullOrWhiteSpace(CampusId))
+        {
+            route += $"&campusId={Uri.EscapeDataString(CampusId)}";
+        }
         if (NavigateOverride != null)
         {
             await NavigateOverride(route);

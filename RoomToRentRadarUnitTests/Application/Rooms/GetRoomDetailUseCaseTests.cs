@@ -122,7 +122,8 @@ public class GetRoomDetailUseCaseTests
         _roomRepository.GetByIdAsync("room-001", Arg.Any<CancellationToken>())
             .Returns(CreateSampleRoom(status: ListingStatus.PendingReview));
 
-        Assert.ThrowsAsync<EntityNotFoundException>(async () => await _sut.ExecuteAsync("room-001"));
+        var ex = await AssertThrowsAsync<EntityNotFoundException>(() => _sut.ExecuteAsync("room-001"));
+        Assert.That(ex.ErrorCode, Is.EqualTo(ProblemCodes.RoomNotFound));
 
         await _photoRepository.DidNotReceive().ListByRoomAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
@@ -245,7 +246,7 @@ public class GetRoomDetailUseCaseTests
     [TestCase(ListingStatus.PendingReview)]
     [TestCase(ListingStatus.Rejected)]
     [TestCase(ListingStatus.Suspended)]
-    public Task ExecuteAsync_WhenRoomIsNonPublicAndCallerIsGuest_ThrowsRoomNotFound(ListingStatus hiddenStatus)
+    public async Task ExecuteAsync_WhenRoomIsNonPublicAndCallerIsGuest_ThrowsRoomNotFound(ListingStatus hiddenStatus)
     {
         // Arrange (BR-LST-04a: PendingReview, Rejected, Suspended return 404 to non-owners)
         var room = CreateSampleRoom(status: hiddenStatus);
@@ -253,9 +254,8 @@ public class GetRoomDetailUseCaseTests
         _currentUserContext.IsAuthenticated.Returns(false);
 
         // Act & Assert
-        var ex = Assert.ThrowsAsync<EntityNotFoundException>(() => _sut.ExecuteAsync("room-001"));
-        Assert.That(ex!.ErrorCode, Is.EqualTo(ProblemCodes.RoomNotFound));
-        return Task.CompletedTask;
+        var ex = await AssertThrowsAsync<EntityNotFoundException>(() => _sut.ExecuteAsync("room-001"));
+        Assert.That(ex.ErrorCode, Is.EqualTo(ProblemCodes.RoomNotFound));
     }
 
     [TestCase(ListingStatus.PendingReview)]
@@ -303,28 +303,26 @@ public class GetRoomDetailUseCaseTests
     }
 
     [Test]
-    public Task ExecuteAsync_WhenRoomDoesNotExist_ThrowsRoomNotFound()
+    public async Task ExecuteAsync_WhenRoomDoesNotExist_ThrowsRoomNotFound()
     {
         // Arrange
         _roomRepository.GetByIdAsync("non-existing-id", Arg.Any<CancellationToken>()).Returns((Room?)null);
 
         // Act & Assert
-        var ex = Assert.ThrowsAsync<EntityNotFoundException>(() => _sut.ExecuteAsync("non-existing-id"));
-        Assert.That(ex!.ErrorCode, Is.EqualTo(ProblemCodes.RoomNotFound));
-        return Task.CompletedTask;
+        var ex = await AssertThrowsAsync<EntityNotFoundException>(() => _sut.ExecuteAsync("non-existing-id"));
+        Assert.That(ex.ErrorCode, Is.EqualTo(ProblemCodes.RoomNotFound));
     }
 
     [Test]
-    public Task ExecuteAsync_WhenCampusNotFound_ThrowsCampusNotFound()
+    public async Task ExecuteAsync_WhenCampusNotFound_ThrowsCampusNotFound()
     {
         // Arrange (BR-CMP-01)
         var room = CreateSampleRoom();
         _roomRepository.GetByIdAsync("room-001", Arg.Any<CancellationToken>()).Returns(room);
 
         // Act & Assert
-        var ex = Assert.ThrowsAsync<DomainValidationException>(() => _sut.ExecuteAsync("room-001", campusId: "UNKNOWN_CAMPUS"));
-        Assert.That(ex!.ErrorCode, Is.EqualTo(ProblemCodes.CampusNotFound));
-        return Task.CompletedTask;
+        var ex = await AssertThrowsAsync<DomainValidationException>(() => _sut.ExecuteAsync("room-001", campusId: "UNKNOWN_CAMPUS"));
+        Assert.That(ex.ErrorCode, Is.EqualTo(ProblemCodes.CampusNotFound));
     }
 
     [Test]
@@ -493,5 +491,21 @@ public class GetRoomDetailUseCaseTests
 
         Assert.Throws<ArgumentNullException>(() =>
             new GetRoomDetailUseCase(_roomRepository, _userRepository, _campusRepository, _currentUserContext, _photoRepository, null!));
+    }
+
+    private static async Task<TException> AssertThrowsAsync<TException>(Func<Task> action)
+        where TException : Exception
+    {
+        try
+        {
+            await action();
+        }
+        catch (TException ex)
+        {
+            return ex;
+        }
+
+        Assert.Fail($"Expected {typeof(TException).Name} to be thrown.");
+        return null!;
     }
 }
