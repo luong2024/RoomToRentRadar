@@ -1,5 +1,6 @@
 # =============================================================================
-# Files excluded from the Docker build context (backend image: RoomToRentRadar.Api/Dockerfile).
+# Files excluded from the Docker build context (backend image: backend/RoomToRentRadar.Api/Dockerfile).
+# Must stay at the REPOSITORY ROOT: backend/docker-compose.yml builds with context "..".
 # Keeps the context small and stops Windows build output from breaking the Linux build.
 # =============================================================================
 
@@ -8,9 +9,8 @@
 **/obj/
 
 # Frontend and tests are not part of the backend image
-RoomToRentRadar/
-RoomToRentRadarUnitTests/
-RoomToRentRadarUIAppiumTests/
+frontend/
+backend/RoomToRentRadarUnitTests/
 
 # Local databases, uploads and secrets
 **/*.db
@@ -18,7 +18,7 @@ RoomToRentRadarUIAppiumTests/
 **/*.db3-shm
 **/*.db3-wal
 **/Uploads/
-.env
+**/.env
 **/appsettings.*.local.json
 
 # Git, IDE and tooling (also keeps Directory.Build.props from running "git config" inside the build)
@@ -37,3 +37,4 @@ scripts/
 .dockerignore
 docker-compose*.yml
 *.md
+docs/

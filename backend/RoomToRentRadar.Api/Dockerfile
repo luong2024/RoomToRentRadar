@@ -1,8 +1,8 @@
 # =============================================================================
 # RoomToRentRadar.Api — Docker image for the ASP.NET Core MVC Web API (backend).
 # Build from the REPOSITORY ROOT (the API needs Core + Infrastructure):
-#   docker build -f RoomToRentRadar.Api/Dockerfile -t roomtorentradar-api .
-# Normally started through docker-compose.yml at the repository root.
+#   docker build -f backend/RoomToRentRadar.Api/Dockerfile -t roomtorentradar-api .
+# Normally started through backend/docker-compose.yml (cd backend; docker compose up --build -d).
 # =============================================================================
 
 # ---------- Stage 1: build & publish with the .NET 10 SDK ----------
@@ -12,16 +12,16 @@ WORKDIR /src
 # Restore first, copying only project files, so Docker caches the NuGet layer
 # and only re-downloads packages when a .csproj changes.
 COPY global.json Directory.Build.props ./
-COPY RoomToRentRadar.Core/RoomToRentRadar.Core.csproj RoomToRentRadar.Core/
-COPY RoomToRentRadar.Infrastructure/RoomToRentRadar.Infrastructure.csproj RoomToRentRadar.Infrastructure/
-COPY RoomToRentRadar.Api/RoomToRentRadar.Api.csproj RoomToRentRadar.Api/
-RUN dotnet restore RoomToRentRadar.Api/RoomToRentRadar.Api.csproj
+COPY backend/RoomToRentRadar.Core/RoomToRentRadar.Core.csproj backend/RoomToRentRadar.Core/
+COPY backend/RoomToRentRadar.Infrastructure/RoomToRentRadar.Infrastructure.csproj backend/RoomToRentRadar.Infrastructure/
+COPY backend/RoomToRentRadar.Api/RoomToRentRadar.Api.csproj backend/RoomToRentRadar.Api/
+RUN dotnet restore backend/RoomToRentRadar.Api/RoomToRentRadar.Api.csproj
 
 # Backend source only: the MAUI app and test projects are never part of this image.
-COPY RoomToRentRadar.Core/ RoomToRentRadar.Core/
-COPY RoomToRentRadar.Infrastructure/ RoomToRentRadar.Infrastructure/
-COPY RoomToRentRadar.Api/ RoomToRentRadar.Api/
-RUN dotnet publish RoomToRentRadar.Api/RoomToRentRadar.Api.csproj \
+COPY backend/RoomToRentRadar.Core/ backend/RoomToRentRadar.Core/
+COPY backend/RoomToRentRadar.Infrastructure/ backend/RoomToRentRadar.Infrastructure/
+COPY backend/RoomToRentRadar.Api/ backend/RoomToRentRadar.Api/
+RUN dotnet publish backend/RoomToRentRadar.Api/RoomToRentRadar.Api.csproj \
     --configuration Release \
     --no-restore \
     --output /app/publish \

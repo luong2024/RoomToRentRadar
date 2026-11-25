@@ -51,8 +51,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\RoomToRentRadar.Core\RoomToRentRadar.Core.csproj" />
-		<ProjectReference Include="..\RoomToRentRadar.Infrastructure\RoomToRentRadar.Infrastructure.csproj" />
+		<!-- Shared contracts from the backend folder. Infrastructure is referenced only during the transition
+		     until every feature has an HTTP client in Services/Api (see AGENTS.md section 4). -->
+		<ProjectReference Include="..\..\backend\RoomToRentRadar.Core\RoomToRentRadar.Core.csproj" />
+		<ProjectReference Include="..\..\backend\RoomToRentRadar.Infrastructure\RoomToRentRadar.Infrastructure.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

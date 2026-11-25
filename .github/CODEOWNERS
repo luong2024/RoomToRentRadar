@@ -7,10 +7,10 @@
 *                                           @quangtldc0301
 
 # Locked Core Architecture & Contracts (requires Scrum Master / Lead approval)
-/RoomToRentRadar.Core/                      @quangtldc0301
-/RoomToRentRadar.Infrastructure/Persistence/ @quangtldc0301
-/RoomToRentRadar.Api/Program.cs             @quangtldc0301
-/RoomToRentRadar/MauiProgram.cs             @quangtldc0301
+/backend/RoomToRentRadar.Core/                      @quangtldc0301
+/backend/RoomToRentRadar.Infrastructure/Persistence/ @quangtldc0301
+/backend/RoomToRentRadar.Api/Program.cs             @quangtldc0301
+/frontend/RoomToRentRadar/MauiProgram.cs             @quangtldc0301
 /AGENTS.md                                  @quangtldc0301
 /.github/                                   @quangtldc0301
 /.githooks/                                 @quangtldc0301
