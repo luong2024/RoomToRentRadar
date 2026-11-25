@@ -1,3 +1,5 @@
+using RoomToRentRadar.Models.MapSearch;
+
 namespace RoomToRentRadar.Models.RoomListings;
 
 /// <summary>
@@ -78,7 +80,10 @@ public sealed record CreateListingRequest(
     string RoomType,
     string? Description,
     IReadOnlyList<ListingPhotoItem> Photos,
-    IReadOnlyList<string>? PhotoUrls = null);
+    IReadOnlyList<string>? PhotoUrls = null)
+{
+    public GeoCoordinate? Location { get; init; }
+}
 
 /// <summary>
 /// Result returned after submitting a listing creation request.
@@ -88,6 +93,10 @@ public sealed record CreateListingResult(
     string? ListingId = null,
     string? ErrorMessage = null)
 {
+    public GeoCoordinate? PersistedLocation { get; init; }
+    public bool HasLocationResponseWarning { get; init; }
+    public bool HasLocationError { get; init; }
+
     public static CreateListingResult Success(string listingId) => new(true, listingId);
     public static CreateListingResult Failure(string errorMessage) => new(false, null, errorMessage);
 }
