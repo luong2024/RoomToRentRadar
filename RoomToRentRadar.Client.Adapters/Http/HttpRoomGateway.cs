@@ -56,7 +56,7 @@ public sealed class HttpRoomGateway : IRoomGateway
         var path = $"/api/rooms/{Uri.EscapeDataString(roomId)}{suffix}";
         return string.IsNullOrWhiteSpace(campusId)
             ? path
-            : $"{path}?campusId={Uri.EscapeDataString(campusId)}";
+            : $"{path}?campusId={Uri.EscapeDataString(campusId.Trim())}";
     }
 
     private static string BuildSearchUrl(RoomSearchRequest request)

@@ -299,6 +299,7 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
             HasError = false;
             IsNotFound = false;
             ErrorMessage = string.Empty;
+            _lastTravelTimes = null;
 
             // Check authentication state for BR-AUTH-07 / BR-CNT-01 and resolve active campus (US09 AC2 / BR-CMP-02)
             IsSignedIn = await _sessionStore.HasValidTokenAsync();

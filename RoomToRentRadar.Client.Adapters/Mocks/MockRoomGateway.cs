@@ -21,10 +21,10 @@ public sealed class MockRoomGateway : IRoomGateway
 {
     private const double DrivingDetourFactor = 1.3;
     private const double WalkingDetourFactor = 1.15;
-    private const double BusDurationFactor = 1.6;
-    private const int BusOverheadSeconds = 600;
     private const double MotorbikeSpeedKmPerHour = 30.0;
     private const double WalkingSpeedKmPerHour = 5.0;
+    private const double BusDurationFactor = 1.6;
+    private const int BusOverheadSeconds = 600;
 
     public Task<PagedResult<RoomCardDto>> SearchRoomsAsync(RoomSearchRequest request, CancellationToken ct = default)
     {

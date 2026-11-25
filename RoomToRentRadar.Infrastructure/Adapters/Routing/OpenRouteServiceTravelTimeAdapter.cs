@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 using RoomToRentRadar.Ports.Outbound.ExternalServices;
@@ -34,8 +35,10 @@ public sealed class OpenRouteServiceTravelTimeAdapter : ITravelTimePort
     {
         ct.ThrowIfCancellationRequested();
 
-        if (string.IsNullOrWhiteSpace(_settings.OpenRouteServiceApiKey))
+        var apiKey = _settings.OpenRouteServiceApiKey?.Trim();
+        if (string.IsNullOrWhiteSpace(apiKey))
         {
+            Trace.TraceWarning("OpenRouteService routing skipped because Routing:OpenRouteServiceApiKey is not configured.");
             return null;
         }
 
@@ -49,9 +52,9 @@ public sealed class OpenRouteServiceTravelTimeAdapter : ITravelTimePort
         try
         {
             var drivingTask = FetchProfileAsync(
-                DrivingProfile, originLat, originLng, destinationLat, destinationLng, linkedCts.Token);
+                DrivingProfile, apiKey, originLat, originLng, destinationLat, destinationLng, linkedCts.Token);
             var walkingTask = FetchProfileAsync(
-                WalkingProfile, originLat, originLng, destinationLat, destinationLng, linkedCts.Token);
+                WalkingProfile, apiKey, originLat, originLng, destinationLat, destinationLng, linkedCts.Token);
 
             var legs = await Task.WhenAll(drivingTask, walkingTask).ConfigureAwait(false);
             var driving = legs[0];
@@ -69,20 +72,24 @@ public sealed class OpenRouteServiceTravelTimeAdapter : ITravelTimePort
         }
         catch (OperationCanceledException)
         {
+            Trace.TraceWarning("OpenRouteService request timed out after {0}s; falling back to straight-line distance.", timeoutSeconds);
             return null;
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException ex)
         {
+            Trace.TraceWarning("OpenRouteService HTTP request failed ({0}); falling back to straight-line distance.", ex.Message);
             return null;
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
+            Trace.TraceWarning("OpenRouteService response JSON parse failed ({0}); falling back to straight-line distance.", ex.Message);
             return null;
         }
     }
 
     private async Task<RouteLegResult?> FetchProfileAsync(
         string profile,
+        string apiKey,
         double originLat,
         double originLng,
         double destinationLat,
@@ -98,12 +105,13 @@ public sealed class OpenRouteServiceTravelTimeAdapter : ITravelTimePort
         var url = $"{baseUrl}/v2/directions/{profile}?start={Uri.EscapeDataString(start)}&end={Uri.EscapeDataString(end)}";
 
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.TryAddWithoutValidation("Authorization", _settings.OpenRouteServiceApiKey);
+        request.Headers.TryAddWithoutValidation("Authorization", apiKey);
         request.Headers.TryAddWithoutValidation("Accept", "application/geo+json, application/json");
 
         using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseContentRead, ct).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
         {
+            Trace.TraceWarning("OpenRouteService profile '{0}' returned HTTP {1}; falling back to straight-line distance.", profile, (int)response.StatusCode);
             return null;
         }
 
@@ -114,6 +122,7 @@ public sealed class OpenRouteServiceTravelTimeAdapter : ITravelTimePort
             || features.ValueKind != JsonValueKind.Array
             || features.GetArrayLength() == 0)
         {
+            Trace.TraceWarning("OpenRouteService profile '{0}' returned no route features.", profile);
             return null;
         }
 

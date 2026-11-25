@@ -138,9 +138,12 @@ public class RoomDetailPageModelTests
         Assert.That(_sut.CommuteTimes, Has.Count.EqualTo(3));
         Assert.That(_sut.HasTravelTimes, Is.True);
         Assert.That(_sut.IsCommuteFallback, Is.False);
+        Assert.That(_sut.CommuteTimes[0].Mode, Is.EqualTo(TravelMode.Motorbike));
         Assert.That(_sut.CommuteTimes[0].TimeFormatted, Is.EqualTo("8 mins"));
         Assert.That(_sut.CommuteTimes[0].DistanceFormatted, Is.EqualTo("1.9 km"));
+        Assert.That(_sut.CommuteTimes[1].Mode, Is.EqualTo(TravelMode.Bus));
         Assert.That(_sut.CommuteTimes[1].TimeFormatted, Is.EqualTo("~19 mins"));
+        Assert.That(_sut.CommuteTimes[2].Mode, Is.EqualTo(TravelMode.Walking));
         Assert.That(_sut.CommuteTimes[2].TimeFormatted, Is.EqualTo("25 mins"));
         Assert.That(_sut.CommuteTimes[2].DistanceFormatted, Is.EqualTo("1.5 km"));
 
@@ -1258,7 +1261,6 @@ public class RoomDetailPageModelTests
             Assert.That(_sut.StraightLineNotice, Does.Contain("1,2 km"));
         });
     }
-
     private static RoomDetailDto CreateSampleRoom(
         ListingStatus status,
         bool isVerified,

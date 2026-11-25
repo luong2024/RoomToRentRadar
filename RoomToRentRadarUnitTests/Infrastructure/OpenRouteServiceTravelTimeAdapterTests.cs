@@ -166,6 +166,34 @@ public class OpenRouteServiceTravelTimeAdapterTests
             await sut.GetRoutesAsync(21.5875, 105.8080, 21.5851, 105.8066, cts.Token));
     }
 
+    [Test]
+    public async Task GetRoutesAsync_ApiKeyWithWhitespace_TrimsAuthorizationHeader()
+    {
+        var recordedAuthHeaders = new List<string?>();
+        var handler = new DelegateHttpMessageHandler((request, _) =>
+        {
+            recordedAuthHeaders.Add(request.Headers.TryGetValues("Authorization", out var values)
+                ? values.FirstOrDefault()
+                : null);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(ValidOrsJson, Encoding.UTF8, "application/json")
+            });
+        });
+
+        using var httpClient = new HttpClient(handler);
+        var sut = new OpenRouteServiceTravelTimeAdapter(httpClient, new RoutingSettings
+        {
+            OpenRouteServiceApiKey = "  test-ors-key\r\n ",
+            TimeoutSeconds = 3
+        });
+
+        var result = await sut.GetRoutesAsync(21.5875, 105.8080, 21.5851, 105.8066);
+
+        Assert.That(result, Is.Not.Null);
+        Assert.That(recordedAuthHeaders, Is.All.EqualTo("test-ors-key"));
+    }
+
     private sealed class DelegateHttpMessageHandler : HttpMessageHandler
     {
         private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> _handler;
