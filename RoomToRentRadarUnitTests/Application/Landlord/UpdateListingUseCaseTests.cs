@@ -21,6 +21,7 @@ public class UpdateListingUseCaseTests
     private IRoomPhotoRepository _photos = null!;
     private InlineUnitOfWork _unitOfWork = null!;
     private FakePhotoStorage _storage = null!;
+    private ITravelTimeCacheRepository _travelTimeCache = null!;
     private UpdateListingUseCase _useCase = null!;
     private readonly Dictionary<string, RoomPhoto> _photosById = new(StringComparer.Ordinal);
     private Room _room = null!;
@@ -34,7 +35,8 @@ public class UpdateListingUseCaseTests
         _photos = Substitute.For<IRoomPhotoRepository>();
         _unitOfWork = new InlineUnitOfWork();
         _storage = new FakePhotoStorage();
-        _useCase = new UpdateListingUseCase(_rooms, _photos, _unitOfWork, _storage);
+        _travelTimeCache = Substitute.For<ITravelTimeCacheRepository>();
+        _useCase = new UpdateListingUseCase(_rooms, _photos, _unitOfWork, _storage, _travelTimeCache);
 
         _room = AppTestData.NewRoom("room-1", status: ListingStatus.Available, version: 3);
         _photosById.Clear();

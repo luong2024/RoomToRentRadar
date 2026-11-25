@@ -406,11 +406,11 @@ Preferences (`Preferences` API, not SQLite): `SelectedCampusId` (guest), `AppLan
 | 0002 | `0002_users_delta.sql` | `Users.SelectedCampusId`, `PreferredLanguage`, `Version` | T00.7 | Thinh |
 | 0003 | `0003_room_children.sql` | `RoomAmenities`, `RoomSafetyFeatures`, `HouseRuleVersions` | T00.9 | Duyen |
 | 0004 | `0004_room_photos.sql` | `RoomPhotos` | T03.1 | Hieu |
-| 0005 | `0005_favourites.sql` | `Favourites` | T06.1 | — |
-| 0006 | `0006_saved_searches.sql` | `SavedSearches` + `SavedSearchAlertLogs` | T07.1 | — |
-| 0007 | `0007_devices_notifications.sql` | `DeviceRegistrations` + `Notifications` | T07.2 | — |
-| 0008 | `0008_listing_reports.sql` | `ListingReports` | T12.1 | — |
-| 0009 | `0009_travel_time_cache.sql` | `TravelTimeEstimates` | T09.1 | — |
+| 0005 | `0005_travel_time_cache.sql` | `TravelTimeEstimates` | T09.1 | — |
+| 0006 | `0006_favourites.sql` | `Favourites` | T06.1 | — |
+| 0007 | `0007_saved_searches.sql` | `SavedSearches` + `SavedSearchAlertLogs` | T07.1 | — |
+| 0008 | `0008_devices_notifications.sql` | `DeviceRegistrations` + `Notifications` | T07.2 | — |
+| 0009 | `0009_listing_reports.sql` | `ListingReports` | T12.1 | — |
 | 0010 | `0010_chat.sql` | `Conversations`, `ConversationParticipants`, `Messages` | T14.x | — |
 
 Rules:

@@ -27,22 +27,26 @@ public sealed class UpdateListingUseCase : IUpdateListingUseCase
     private readonly IRoomPhotoRepository _photoRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPhotoStoragePort _storage;
+    private readonly ITravelTimeCacheRepository _travelTimeCacheRepository;
 
     public UpdateListingUseCase(
         IRoomRepository roomRepository,
         IRoomPhotoRepository photoRepository,
         IUnitOfWork unitOfWork,
-        IPhotoStoragePort storage)
+        IPhotoStoragePort storage,
+        ITravelTimeCacheRepository travelTimeCacheRepository)
     {
         ArgumentNullException.ThrowIfNull(roomRepository);
         ArgumentNullException.ThrowIfNull(photoRepository);
         ArgumentNullException.ThrowIfNull(unitOfWork);
         ArgumentNullException.ThrowIfNull(storage);
+        ArgumentNullException.ThrowIfNull(travelTimeCacheRepository);
 
         _roomRepository = roomRepository;
         _photoRepository = photoRepository;
         _unitOfWork = unitOfWork;
         _storage = storage;
+        _travelTimeCacheRepository = travelTimeCacheRepository;
     }
 
     public async Task<MyListingDetailDto> ExecuteAsync(UpdateListingCommand command, CancellationToken ct = default)
