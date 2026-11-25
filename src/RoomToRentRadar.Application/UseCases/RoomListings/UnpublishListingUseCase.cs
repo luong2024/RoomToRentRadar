@@ -39,10 +39,11 @@ public sealed class UnpublishListingUseCase : IUnpublishListingUseCase
             await _roomRepository.UpdateAsync(room, cancellationToken);
         }
 
-        var campusIds = await _visibilityWriter.HideAsync(room.Id, cancellationToken);
+        // Finish updating public visibility after the save, even if the client disconnected.
+        var campusIds = await _visibilityWriter.HideAsync(room.Id, CancellationToken.None);
         foreach (var campusId in campusIds)
         {
-            await _cacheInvalidator.InvalidateCampusAsync(campusId, cancellationToken);
+            await _cacheInvalidator.InvalidateCampusAsync(campusId, CancellationToken.None);
         }
     }
 }

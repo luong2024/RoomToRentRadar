@@ -311,6 +311,31 @@ public sealed class ListingUseCasesTests
     }
 
     [Test]
+    public async Task UnpublishListing_RequestCancelledAfterSave_StillHidesProjectionAndInvalidatesCache()
+    {
+        using var request = new CancellationTokenSource();
+        var room = ExistingListing(OwnerId, ["one", "two", "three"]);
+        room.Status = RoomStatus.Available;
+        room.IsVerified = true;
+        await _repository.CreateAsync(room);
+        var projection = CreatePublicProjection(room.Id);
+        await _listingRepository.AddAsync(projection);
+        _repository.AfterUpdate = request.Cancel;
+        var useCase = new UnpublishListingUseCase(_repository, _listingRepository, _cacheInvalidator);
+
+        await useCase.ExecuteAsync(OwnerId, room.Id, request.Token);
+
+        var saved = await _repository.GetByIdAsync(room.Id);
+        Assert.Multiple(() =>
+        {
+            Assert.That(request.IsCancellationRequested, Is.True);
+            Assert.That(saved!.Status, Is.EqualTo(RoomStatus.Pending));
+            Assert.That(projection.IsDisplayable, Is.False);
+            Assert.That(_cacheInvalidator.CampusIds, Is.EqualTo(new[] { projection.CampusId }));
+        });
+    }
+
+    [Test]
     public async Task UnpublishListing_AnotherLandlordCannotUnpublishListing()
     {
         var listing = ExistingListing(OwnerId, ["one", "two", "three"]);
@@ -367,6 +392,7 @@ public sealed class ListingUseCasesTests
         private readonly Dictionary<string, Room> _rooms = new(StringComparer.Ordinal);
         public IReadOnlyCollection<Room> Rooms => _rooms.Values;
         public Exception? UpdateError { get; set; }
+        public Action? AfterUpdate { get; set; }
 
         public Task<Room> CreateAsync(Room room, CancellationToken cancellationToken = default)
         {
@@ -378,6 +404,7 @@ public sealed class ListingUseCasesTests
         {
             if (UpdateError is not null) throw UpdateError;
             _rooms[room.Id] = room;
+            AfterUpdate?.Invoke();
             return Task.CompletedTask;
         }
 
@@ -401,6 +428,7 @@ public sealed class ListingUseCasesTests
 
         public Task<IReadOnlyList<string>> HideAsync(string roomId, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (HideError is not null) throw HideError;
 
             var campuses = new List<string>();
@@ -427,6 +455,7 @@ public sealed class ListingUseCasesTests
 
         public Task InvalidateCampusAsync(string campusId, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             CampusIds.Add(campusId);
             return Task.CompletedTask;
         }
