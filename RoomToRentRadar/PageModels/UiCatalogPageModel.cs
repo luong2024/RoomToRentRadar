@@ -93,6 +93,8 @@ public partial class UiCatalogPageModel : ObservableObject
             IsVerified = true,
             IsAvailable = true,
             IsBookmarked = false,
+            RoomType = RoomToRentRadar.Domain.Enums.RoomType.MiniApartment,
+            Furnishing = RoomToRentRadar.Domain.Enums.Furnishing.Full,
             Amenities = ["Wifi", "Air Conditioner", "Water Heater", "Private Bath"]
         };
     }

@@ -85,8 +85,7 @@ public class CampusSearchBridgeTests
         gateway.SearchRoomsAsync(Arg.Any<RoomSearchRequest>(), Arg.Any<CancellationToken>())
             .Returns(new PagedResult<RoomCardDto>([], 0, 1, 20));
         CreateBridge();
-        var explore = new MainLandingPageModel(
-            gateway, Substitute.For<ISessionStore>(), Substitute.For<INavigationService>(), _store);
+        var explore = new MainLandingPageModel(gateway, Substitute.For<INavigationService>(), _store);
 
         ChangeSelection("TNUT");
 

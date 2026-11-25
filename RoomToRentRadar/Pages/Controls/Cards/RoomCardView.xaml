@@ -1,133 +1,158 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
              xmlns:cards="clr-namespace:RoomToRentRadar.Pages.Controls.Cards"
              xmlns:fonts="clr-namespace:Fonts"
-             xmlns:rooms="clr-namespace:RoomToRentRadar.Ports.Contracts.Responses.Rooms;assembly=RoomToRentRadar.Ports"
              x:Class="RoomToRentRadar.Pages.Controls.Cards.RoomCardView"
-             x:Name="RootRoomCard"
              x:DataType="cards:RoomCardView">
 
-    <Border StrokeShape="RoundRectangle 12"
+    <!-- Layout follows the approved design export (RoomCard.dc.html).
+         Padding is set on every Border here: the app-wide Border style adds 15. -->
+    <Border StrokeShape="RoundRectangle 14"
             StrokeThickness="1"
+            Padding="0"
             Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
-            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
-            Shadow="{StaticResource Elevation1Shadow}"
-            Margin="0,0,0,12">
+            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}">
         <Border.GestureRecognizers>
             <TapGestureRecognizer Command="{Binding DetailsCommand}"
                                   CommandParameter="{Binding Room.Id}" />
         </Border.GestureRecognizers>
 
-        <VerticalStackLayout Spacing="0">
-            <!-- 1. Thumbnail Header with Badges & Bookmark Action -->
-            <Grid HeightRequest="180">
-                <!-- Thumbnail Image with Fallback Placeholder -->
-                <Image Aspect="AspectFill"
-                       Source="{Binding Room.ThumbnailUrl}"
-                       HeightRequest="180"
-                       HorizontalOptions="Fill" />
+        <Grid>
+            <Grid RowDefinitions="172, Auto">
+                <!-- Cover: the placeholder stays underneath while loading, on failure and without a photo (BR-MED-05) -->
+                <Image Grid.Row="0"
+                       Source="room_placeholder.png"
+                       Aspect="AspectFill"
+                       AutomationProperties.IsInAccessibleTree="False" />
+                <Image Grid.Row="0"
+                       Aspect="AspectFill"
+                       AutomationProperties.IsInAccessibleTree="False">
+                    <Image.Source>
+                        <!-- ADR-004: thumbnails are cached for seven days -->
+                        <UriImageSource Uri="{Binding Room.ThumbnailUri}"
+                                        CacheValidity="7.00:00:00" />
+                    </Image.Source>
+                </Image>
 
-                <!-- Top Gradient/Scrim for text contrast -->
-                <BoxView HeightRequest="60"
-                         VerticalOptions="Start"
-                         Color="#33000000" />
-
-                <!-- Verified Badge Top Left -->
-                <common:RadaBadge Type="Verified"
-                                  IsVisible="{Binding Room.IsVerified}"
-                                  Margin="12,12,0,0"
-                                  HorizontalOptions="Start"
-                                  VerticalOptions="Start" />
-
-                <!-- Bookmark Favorite Button Top Right -->
-                <Border StrokeShape="RoundRectangle 9999"
-                        StrokeThickness="0"
-                        WidthRequest="48"
-                        HeightRequest="48"
-                        BackgroundColor="#CCFFFFFF"
-                        Margin="0,8,8,0"
-                        HorizontalOptions="End"
-                        VerticalOptions="Start"
-                        SemanticProperties.Description="Save room bookmark"
-                        SemanticProperties.Hint="Toggles bookmark for this room">
-                    <Border.GestureRecognizers>
-                        <TapGestureRecognizer Command="{Binding BookmarkCommand}"
-                                              CommandParameter="{Binding Room.Id}" />
-                    </Border.GestureRecognizers>
-                    <Image WidthRequest="20"
-                           HeightRequest="20"
-                           HorizontalOptions="Center"
-                           VerticalOptions="Center">
-                        <Image.Source>
-                            <FontImageSource Glyph="{Binding BookmarkIconGlyph}"
-                                             FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                                             Size="20"
-                                             Color="{Binding BookmarkIconColor}" />
-                        </Image.Source>
-                    </Image>
-                </Border>
+                <VerticalStackLayout Grid.Row="1"
+                                     Padding="16,12,16,14"
+                                     Spacing="4"
+                                     SemanticProperties.Description="{Binding Room.AccessibilityText}">
+                    <Label Text="{Binding Room.PriceText}"
+                           FontFamily="{StaticResource FontFamilySemibold}"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           AutomationProperties.IsInAccessibleTree="False"
+                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                    <Label Text="{Binding Room.Title}"
+                           FontFamily="{StaticResource FontFamilySemibold}"
+                           FontSize="15"
+                           MaxLines="2"
+                           LineBreakMode="TailTruncation"
+                           AutomationProperties.IsInAccessibleTree="False"
+                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                    <Label Text="{Binding Room.MetaText}"
+                           FontFamily="{StaticResource FontFamilyRegular}"
+                           FontSize="13"
+                           LineBreakMode="WordWrap"
+                           AutomationProperties.IsInAccessibleTree="False"
+                           TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                    <!-- Right margin keeps the distance clear of the Compare action -->
+                    <Grid ColumnDefinitions="Auto, *"
+                          ColumnSpacing="4"
+                          Margin="0,2,104,0">
+                        <Label Text="{x:Static fonts:FluentUI.location_16_regular}"
+                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                               FontSize="15"
+                               VerticalOptions="Center"
+                               AutomationProperties.IsInAccessibleTree="False"
+                               TextColor="{AppThemeBinding Light={StaticResource ActionSecondaryLight}, Dark={StaticResource TextBrandDark}}" />
+                        <Label Grid.Column="1"
+                               Text="{Binding Room.DistanceText}"
+                               FontFamily="{StaticResource FontFamilySemibold}"
+                               FontSize="13"
+                               VerticalOptions="Center"
+                               AutomationProperties.IsInAccessibleTree="False"
+                               TextColor="{AppThemeBinding Light={StaticResource ActionSecondaryLight}, Dark={StaticResource TextBrandDark}}" />
+                    </Grid>
+                </VerticalStackLayout>
             </Grid>
 
-            <!-- 2. Room Content Details Area -->
-            <VerticalStackLayout Padding="16" Spacing="8">
-                <!-- P1: Price and Area Tag -->
-                <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
-                    <common:PriceTagView Grid.Column="0"
-                                         Price="{Binding Room.PricePerMonth}"
-                                         Period="/ month" />
-
-                    <!-- Area Pill -->
-                    <Border Grid.Column="1"
-                            StrokeShape="RoundRectangle 6"
-                            StrokeThickness="1"
-                            Padding="8,2"
-                            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
-                            Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
-                            VerticalOptions="Center">
-                        <Label Text="{Binding Room.AreaFormatted}"
-                               FontFamily="{StaticResource FontFamilySemibold}"
-                               FontSize="{StaticResource FontSizeCaption}"
-                               TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}"
-                               VerticalTextAlignment="Center" />
-                    </Border>
-                </Grid>
-
-                <!-- P2: Room Title (H3 Bold, Max 2 lines) -->
-                <Label Text="{Binding Room.Title}"
-                       FontFamily="{StaticResource FontFamilySemibold}"
-                       FontSize="{StaticResource FontSizeH3}"
-                       FontAttributes="Bold"
-                       LineBreakMode="TailTruncation"
-                       MaxLines="2"
-                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
-
-                <!-- P3: Distance to ICTU Campus & Address -->
-                <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
-                    <Label Text="{x:Static fonts:FluentUI.location_16_regular}"
+            <!-- Verified badge, top left (icon + text) -->
+            <Border IsVisible="{Binding Room.IsVerified}"
+                    Margin="12,12,0,0"
+                    Padding="6,4,9,4"
+                    HorizontalOptions="Start"
+                    VerticalOptions="Start"
+                    StrokeThickness="0"
+                    StrokeShape="RoundRectangle 999"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}">
+                <HorizontalStackLayout Spacing="4">
+                    <Label Text="{x:Static fonts:FluentUI.shield_checkmark_16_regular}"
                            FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                           FontSize="14"
-                           TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource ActionAccentDark}}"
-                           VerticalTextAlignment="Center" />
-                    <Label Text="{Binding Room.DistanceFormatted}"
+                           FontSize="15"
+                           VerticalOptions="Center"
+                           AutomationProperties.IsInAccessibleTree="False"
+                           TextColor="{AppThemeBinding Light={StaticResource StatusSuccessTextLight}, Dark={StaticResource StatusSuccessDark}}" />
+                    <Label Text="{Binding Room.VerifiedText}"
                            FontFamily="{StaticResource FontFamilySemibold}"
                            FontSize="{StaticResource FontSizeCaption}"
-                           TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource ActionAccentDark}}"
-                           VerticalTextAlignment="Center" />
-                    <Label Text="•"
-                           FontSize="12"
-                           TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
-                           VerticalTextAlignment="Center" />
-                    <Label Text="{Binding Room.Address}"
-                           FontFamily="{StaticResource FontFamilyRegular}"
-                           FontSize="{StaticResource FontSizeCaption}"
-                           LineBreakMode="TailTruncation"
-                           TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
-                           VerticalTextAlignment="Center" />
+                           FontAttributes="Bold"
+                           VerticalOptions="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource StatusSuccessTextLight}, Dark={StaticResource StatusSuccessDark}}" />
                 </HorizontalStackLayout>
-            </VerticalStackLayout>
-        </VerticalStackLayout>
+            </Border>
+
+            <!-- Save (heart), top right -->
+            <Border WidthRequest="48"
+                    HeightRequest="48"
+                    Margin="0,8,8,0"
+                    Padding="0"
+                    HorizontalOptions="End"
+                    VerticalOptions="Start"
+                    StrokeThickness="0"
+                    StrokeShape="RoundRectangle 999"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+                    SemanticProperties.Description="{Binding Room.SaveDescription}">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding BookmarkCommand}"
+                                          CommandParameter="{Binding Room.Id}" />
+                </Border.GestureRecognizers>
+                <Label x:Name="HeartGlyph"
+                       Text="{x:Static fonts:FluentUI.heart_24_regular}"
+                       FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                       FontSize="22"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center"
+                       AutomationProperties.IsInAccessibleTree="False" />
+            </Border>
+
+            <!-- Compare, bottom right -->
+            <HorizontalStackLayout Spacing="4"
+                                   HeightRequest="48"
+                                   Margin="0,0,12,4"
+                                   Padding="4,0"
+                                   HorizontalOptions="End"
+                                   VerticalOptions="End"
+                                   SemanticProperties.Description="{Binding Room.CompareText}">
+                <HorizontalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding CompareCommand}"
+                                          CommandParameter="{Binding Room.Id}" />
+                </HorizontalStackLayout.GestureRecognizers>
+                <Label Text="{x:Static fonts:FluentUI.column_double_compare_20_regular}"
+                       FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                       FontSize="16"
+                       VerticalOptions="Center"
+                       AutomationProperties.IsInAccessibleTree="False"
+                       TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}" />
+                <Label Text="{Binding Room.CompareText}"
+                       FontFamily="{StaticResource FontFamilySemibold}"
+                       FontSize="13"
+                       VerticalOptions="Center"
+                       AutomationProperties.IsInAccessibleTree="False"
+                       TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}" />
+            </HorizontalStackLayout>
+        </Grid>
     </Border>
 </ContentView>
-
