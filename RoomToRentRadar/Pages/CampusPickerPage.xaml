@@ -108,6 +108,13 @@
                     </VerticalStackLayout>
                 </Border>
 
+                <feedback:EmptyStateView IsVisible="{Binding IsLoadFailed}"
+                                         Title="{strings:LocalizedStrings Key=Campus_Load_Error_Title}"
+                                         Message="{Binding ErrorMessage}"
+                                         IconGlyph="{x:Static fonts:FluentUI.warning_24_regular}"
+                                         ActionText="{strings:LocalizedStrings Key=State_Retry}"
+                                         ActionCommand="{Binding RetryCommand}" />
+
                 <feedback:StateView IsVisible="{Binding IsBodyVisible}"
                                     State="{Binding State}"
                                     HasContent="{Binding HasContent}"
@@ -126,7 +133,7 @@
                         <Border IsVisible="{Binding HasMatches}"
                                 StrokeShape="RoundRectangle 14"
                                 StrokeThickness="1"
-                                Padding="1"
+                                Padding="0"
                                 Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}">
                             <VerticalStackLayout BindableLayout.ItemsSource="{Binding VisibleCampuses}">

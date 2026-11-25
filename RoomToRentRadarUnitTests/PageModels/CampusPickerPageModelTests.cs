@@ -77,11 +77,15 @@ public class CampusPickerPageModelTests
 
         var model = await CreateLoadedAsync();
         Assert.That(model.State, Is.EqualTo(ViewState.Error));
-        Assert.That(model.ErrorMessage, Is.Not.Empty);
+        Assert.That(model.ErrorMessage, Is.EqualTo(AppResources.GetString("Error_NETWORK_ERROR")));
+        Assert.That(model.IsLoadFailed, Is.True);
+        Assert.That(model.IsBodyVisible, Is.False);
 
         await model.RetryCommand.ExecuteAsync(null);
 
         Assert.That(model.State, Is.EqualTo(ViewState.Content));
+        Assert.That(model.IsLoadFailed, Is.False);
+        Assert.That(model.IsBodyVisible, Is.True);
         Assert.That(model.VisibleCampuses, Has.Count.EqualTo(8));
     }
 

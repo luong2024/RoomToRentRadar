@@ -88,15 +88,22 @@ public partial class CampusPickerPageModel : BasePageModel
     /// <summary>The page draws its own row-shaped skeleton instead of the shared card skeleton.</summary>
     public bool IsSkeletonVisible => State == ViewState.Loading;
 
-    public bool IsBodyVisible => !IsSkeletonVisible;
+    /// <summary>
+    /// First load failed with nothing to show. The page draws this itself with a filled button: the shared
+    /// error card's outline button is unreadable on a light surface.
+    /// </summary>
+    public bool IsLoadFailed => State == ViewState.Error && !HasContent;
+
+    public bool IsBodyVisible => !IsSkeletonVisible && !IsLoadFailed;
 
     protected override void OnPropertyChanged(PropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
 
-        if (e.PropertyName == nameof(State))
+        if (e.PropertyName is nameof(State) or nameof(HasContent))
         {
             OnPropertyChanged(nameof(IsSkeletonVisible));
+            OnPropertyChanged(nameof(IsLoadFailed));
             OnPropertyChanged(nameof(IsBodyVisible));
         }
     }

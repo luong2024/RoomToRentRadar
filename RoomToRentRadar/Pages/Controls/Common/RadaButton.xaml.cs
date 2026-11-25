@@ -148,7 +148,8 @@ public partial class RadaButton : ContentView
 
     private void UpdateCornerRadius(double radius)
     {
-        ButtonBorder.StrokeShape = new RoundRectangleGeometry { CornerRadius = new CornerRadius(radius) };
+        // A Geometry is not a valid Border shape: it leaves the button without a background.
+        ButtonBorder.StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(radius) };
     }
 
     private void UpdateIconVisibility()
