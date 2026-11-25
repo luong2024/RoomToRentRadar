@@ -15,7 +15,7 @@ public static partial class AppRoutes
     {
         foreach (var entry in PlaceholderCatalog.All)
         {
-            if (entry.Route is MyListings or Moderation)
+            if (entry.Route is MyListings or Moderation or RoomDetail)
             {
                 continue;
             }
