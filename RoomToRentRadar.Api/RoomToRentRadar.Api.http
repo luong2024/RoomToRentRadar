@@ -12,6 +12,36 @@ Accept: application/json
 GET {{RoomToRentRadar.Api_HostAddress}}/api/v1/listings/search?campusId=ictu-main&minRent=1600000&maxRent=2000000&minArea=18&maxArea=25&roomType=Studio&maxDistanceMeters=600&sortBy=distance
 Accept: application/json
 
+### US06 / T06.1 - Favourites Toggle, List & Account Sync
+POST {{RoomToRentRadar.Api_HostAddress}}/api/v1/favourites/toggle
+Content-Type: application/json
+X-User-Id: student-ictu-01
+
+{
+  "listingId": "room-2026-001",
+  "action": "Add"
+}
+
+###
+GET {{RoomToRentRadar.Api_HostAddress}}/api/v1/favourites
+Accept: application/json
+X-User-Id: student-ictu-01
+
+###
+POST {{RoomToRentRadar.Api_HostAddress}}/api/v1/favourites/sync
+Content-Type: application/json
+X-User-Id: student-ictu-01
+
+{
+  "listingIds": ["room-2026-001", "room-2026-002"],
+  "removedListingIds": []
+}
+
+###
+DELETE {{RoomToRentRadar.Api_HostAddress}}/api/v1/favourites/room-2026-001
+Accept: application/json
+X-User-Id: student-ictu-01
+
 ### US08 / T08.3 - Moderation Queue & Listing Management
 GET {{RoomToRentRadar.Api_HostAddress}}/api/v1/moderation/listings?moderationStatus=PendingReview
 Accept: application/json

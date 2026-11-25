@@ -1,15 +1,18 @@
 using RoomToRentRadar.Api;
 using RoomToRentRadar.Api.Repositories;
 using RoomToRentRadar.Api.Services;
+using RoomToRentRadar.Api.Services.Favourites;
 using RoomToRentRadar.Api.Services.Moderation;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton<IListingRepository, InMemoryListingRepository>();
+builder.Services.AddSingleton<IFavouriteRepository, InMemoryFavouriteRepository>();
 builder.Services.AddSingleton<IModerationAuditRepository, InMemoryModerationAuditRepository>();
 builder.Services.AddScoped<IListingService, ListingService>();
 builder.Services.AddScoped<IListingDetailService, ListingDetailService>();
 builder.Services.AddScoped<IListingSearchService, ListingSearchService>();
+builder.Services.AddScoped<IFavouriteService, FavouriteService>();
 builder.Services.AddScoped<IListingModerationService, ListingModerationService>();
 builder.Services.AddPhotoPipeline(builder.Configuration);
 
