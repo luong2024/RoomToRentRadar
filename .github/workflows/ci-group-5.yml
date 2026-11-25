@@ -54,7 +54,7 @@ jobs:
         if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'feature/group-5/T') && !startsWith(github.head_ref, 'feature/group-5/T00-')
         run: |
           git fetch origin ${{ github.base_ref }} --depth=50
-          locked_changes="$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '^(RoomToRentRadar\.Core/Models/|RoomToRentRadar\.Core/Abstractions/|RoomToRentRadar\.Infrastructure/Persistence/|RoomToRentRadar/MauiProgram\.cs$|RoomToRentRadar\.Api/Program\.cs$)' || true)"
+          locked_changes="$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '^(backend/RoomToRentRadar\.Core/Models/|backend/RoomToRentRadar\.Core/Abstractions/|backend/RoomToRentRadar\.Infrastructure/Persistence/|frontend/RoomToRentRadar/MauiProgram\.cs$|backend/RoomToRentRadar\.Api/Program\.cs$)' || true)"
           if [ -n "$locked_changes" ]; then
             if ! echo "${{ join(github.event.pull_request.labels.*.name, ',') }}" | grep -qi "architect-approved"; then
               echo "::error::PR từ nhánh '${{ github.head_ref }}' đã sửa vùng khóa của @architect (Core, Persistence, MauiProgram.cs, hoặc Api/Program.cs) khi chưa có nhãn 'architect-approved':"
@@ -66,7 +66,7 @@ jobs:
       - name: "Rule 4: Static Scan for UI Thread Deadlocks (.Result / .Wait()) & Service Locator"
         run: |
           # Check for synchronous blocking calls in Features or Repositories
-          deadlock_hits="$(grep -rnE '\.(Result|Wait\s*\()' RoomToRentRadar/Features RoomToRentRadar.Infrastructure/Repositories 2>/dev/null || true)"
+          deadlock_hits="$(grep -rnE '\.(Result|Wait\s*\()' frontend/RoomToRentRadar/Features backend/RoomToRentRadar.Infrastructure/Repositories 2>/dev/null || true)"
           if [ -n "$deadlock_hits" ]; then
             echo "::error::Phát hiện lệnh chặn luồng đồng bộ (.Result hoặc .Wait()) có nguy cơ gây treo (deadlock) ứng dụng MAUI. Hãy dùng async/await:"
             echo "$deadlock_hits"
@@ -74,7 +74,7 @@ jobs:
           fi
 
           # Check for Service Locator anti-pattern in PageModels
-          locator_hits="$(grep -rnE 'IServiceProvider|\.GetService<' RoomToRentRadar/Features 2>/dev/null || true)"
+          locator_hits="$(grep -rnE 'IServiceProvider|\.GetService<' frontend/RoomToRentRadar/Features 2>/dev/null || true)"
           if [ -n "$locator_hits" ]; then
             echo "::error::Phát hiện Service Locator (IServiceProvider.GetService) trong Features/. Hãy inject trực tiếp Interface qua Constructor (DIP):"
             echo "$locator_hits"
@@ -103,14 +103,14 @@ jobs:
 
       - name: Build Core, Infrastructure & ASP.NET Core Web API (Warnings as Errors)
         run: |
-          dotnet build RoomToRentRadar.Core/RoomToRentRadar.Core.csproj -c Release --warnaserror
-          dotnet build RoomToRentRadar.Infrastructure/RoomToRentRadar.Infrastructure.csproj -c Release --warnaserror
-          dotnet build RoomToRentRadar.Api/RoomToRentRadar.Api.csproj -c Release --warnaserror
-          dotnet build RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj -c Release
+          dotnet build backend/RoomToRentRadar.Core/RoomToRentRadar.Core.csproj -c Release --warnaserror
+          dotnet build backend/RoomToRentRadar.Infrastructure/RoomToRentRadar.Infrastructure.csproj -c Release --warnaserror
+          dotnet build backend/RoomToRentRadar.Api/RoomToRentRadar.Api.csproj -c Release --warnaserror
+          dotnet build backend/RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj -c Release
 
       - name: Run Unit, SQLite & API Contract Tests (30s Hang Timeout per test)
         run: |
-          dotnet test RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj \
+          dotnet test backend/RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj \
             -c Release \
             --no-build \
             --verbosity normal \
@@ -152,8 +152,8 @@ jobs:
         run: dotnet workload install maui-android maui-windows
 
       - name: Build MAUI Windows Target (Verifies XAML SourceGen & WinUI 3)
-        run: dotnet build RoomToRentRadar/RoomToRentRadar.csproj -c Release -f net10.0-windows10.0.19041.0 --nologo
+        run: dotnet build frontend/RoomToRentRadar/RoomToRentRadar.csproj -c Release -f net10.0-windows10.0.19041.0 --nologo
 
       - name: Build MAUI Android Target (Verifies Android Packaging & Handlers)
-        run: dotnet build RoomToRentRadar/RoomToRentRadar.csproj -c Release -f net10.0-android --nologo
+        run: dotnet build frontend/RoomToRentRadar/RoomToRentRadar.csproj -c Release -f net10.0-android --nologo
  
