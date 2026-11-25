@@ -131,32 +131,13 @@ public static class RoomMapper
             Utilities: utilities,
             Amenities: room.Amenities,
             Safety: safety,
-            HouseRules: ToHouseRulesDto(room.CurrentHouseRules),
+            HouseRules: LandlordListingMapper.ToHouseRulesDto(room.CurrentHouseRules),
             Photos: photos ?? Array.Empty<PhotoDto>(),
             Landlord: landlordContact,
             IsFavourite: false,
             PublishedAtUtc: room.PublishedAtUtc,
             LastUpdatedAtUtc: room.LastUpdatedAtUtc);
     }
-
-    private static HouseRulesDto? ToHouseRulesDto(HouseRuleVersion? rules) =>
-        rules is null
-            ? null
-            : new HouseRulesDto(
-                QuietHoursStart: rules.QuietHoursStart,
-                QuietHoursEnd: rules.QuietHoursEnd,
-                CurfewTime: rules.CurfewTime,
-                GuestPolicy: rules.GuestPolicy,
-                GuestPolicyNote: rules.GuestPolicyNote,
-                CookingPolicy: rules.CookingPolicy,
-                ParkingAvailable: rules.ParkingAvailable,
-                ParkingRules: rules.ParkingRules,
-                PetsAllowed: rules.PetsAllowed,
-                SmokingAllowed: rules.SmokingAllowed,
-                OtherRules: rules.OtherRules,
-                VersionNumber: rules.VersionNumber,
-                // A version is immutable, so its creation time is when the rules last changed (BR-HR-02).
-                UpdatedAtUtc: rules.CreatedAtUtc);
 
     public static RoomCardDto ToCardDto(
         RoomSearchCandidate candidate,
