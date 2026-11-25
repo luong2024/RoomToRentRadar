@@ -19,6 +19,10 @@ namespace RoomToRentRadar.Client.Adapters.Mocks;
 /// </summary>
 public sealed class MockRoomGateway : IRoomGateway
 {
+    private const double DrivingDetourFactor = 1.3;
+    private const double WalkingDetourFactor = 1.15;
+    private const double BusDurationFactor = 1.6;
+    private const int BusOverheadSeconds = 600;
     private const double MotorbikeSpeedKmPerHour = 30.0;
     private const double WalkingSpeedKmPerHour = 5.0;
 
@@ -113,16 +117,26 @@ public sealed class MockRoomGateway : IRoomGateway
 
     public Task<TravelTimesDto> GetRoomTravelTimesAsync(string roomId, string? campusId = null, CancellationToken ct = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
         var room = FindRoom(roomId);
         var campus = ResolveCampus(campusId);
-        var distanceKm = Distance(campus, room);
-        var distanceMeters = (int)Math.Round(distanceKm * 1000);
+        var straightKm = Distance(campus, room);
+        var effectiveKm = Math.Max(0.2, straightKm);
+
+        var drivingMeters = Math.Max(200, (int)Math.Round(effectiveKm * DrivingDetourFactor * 1000.0, MidpointRounding.AwayFromZero));
+        var drivingSeconds = Math.Max(60, (int)Math.Round((drivingMeters / 1000.0) / MotorbikeSpeedKmPerHour * 3600.0, MidpointRounding.AwayFromZero));
+        var busSeconds = (int)Math.Round(drivingSeconds * BusDurationFactor, MidpointRounding.AwayFromZero) + BusOverheadSeconds;
+
+        var walkingMeters = Math.Max(150, (int)Math.Round(effectiveKm * WalkingDetourFactor * 1000.0, MidpointRounding.AwayFromZero));
+        var walkingSeconds = Math.Max(120, (int)Math.Round((walkingMeters / 1000.0) / WalkingSpeedKmPerHour * 3600.0, MidpointRounding.AwayFromZero));
+
         var items = new List<TravelTimeItemDto>
         {
-            new(TravelMode.Motorbike, distanceMeters, (int)Math.Round(distanceKm / MotorbikeSpeedKmPerHour * 3600), true),
-            new(TravelMode.Walking, distanceMeters, (int)Math.Round(distanceKm / WalkingSpeedKmPerHour * 3600), true)
+            new(TravelMode.Motorbike, drivingMeters, drivingSeconds, IsEstimate: false),
+            new(TravelMode.Bus, drivingMeters, busSeconds, IsEstimate: true),
+            new(TravelMode.Walking, walkingMeters, walkingSeconds, IsEstimate: false)
         };
-        return Task.FromResult(new TravelTimesDto(campus.Id, distanceKm, true, items));
+        return Task.FromResult(new TravelTimesDto(campus.Id, straightKm, IsFallback: false, items));
     }
 
     private static List<RankedRoom> RankRooms(CampusDto campus, RoomSearchRequest request, string sort)

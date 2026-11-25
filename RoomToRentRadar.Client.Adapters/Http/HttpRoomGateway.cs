@@ -34,26 +34,30 @@ public sealed class HttpRoomGateway : IRoomGateway
 
     public async Task<RoomDetailDto> GetRoomDetailAsync(string roomId, string? campusId = null, CancellationToken ct = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
-        var url = string.IsNullOrWhiteSpace(campusId)
-            ? $"/api/rooms/{Uri.EscapeDataString(roomId)}"
-            : $"/api/rooms/{Uri.EscapeDataString(roomId)}?campusId={Uri.EscapeDataString(campusId)}";
-        using var response = await _httpClient.GetAsync(url, ct);
+        using var response = await _httpClient.GetAsync(BuildRoomSubResourceUrl(roomId, string.Empty, campusId), ct);
         return await ApiResponseReader.ReadAsync<RoomDetailDto>(response, _logger, ct);
     }
 
     public async Task<IReadOnlyList<RoomCardDto>> GetSimilarRoomsAsync(string roomId, string? campusId = null, CancellationToken ct = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
-        var url = string.IsNullOrWhiteSpace(campusId)
-            ? $"/api/rooms/{Uri.EscapeDataString(roomId)}/similar"
-            : $"/api/rooms/{Uri.EscapeDataString(roomId)}/similar?campusId={Uri.EscapeDataString(campusId)}";
-        using var response = await _httpClient.GetAsync(url, ct);
+        using var response = await _httpClient.GetAsync(BuildRoomSubResourceUrl(roomId, "/similar", campusId), ct);
         return await ApiResponseReader.ReadAsync<List<RoomCardDto>>(response, _logger, ct);
     }
 
-    public Task<TravelTimesDto> GetRoomTravelTimesAsync(string roomId, string? campusId = null, CancellationToken ct = default) =>
-        Pending.For<TravelTimesDto>("T09.1", "getRoomTravelTimes");
+    public async Task<TravelTimesDto> GetRoomTravelTimesAsync(string roomId, string? campusId = null, CancellationToken ct = default)
+    {
+        using var response = await _httpClient.GetAsync(BuildRoomSubResourceUrl(roomId, "/travel-times", campusId), ct);
+        return await ApiResponseReader.ReadAsync<TravelTimesDto>(response, _logger, ct);
+    }
+
+    private static string BuildRoomSubResourceUrl(string roomId, string suffix, string? campusId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
+        var path = $"/api/rooms/{Uri.EscapeDataString(roomId)}{suffix}";
+        return string.IsNullOrWhiteSpace(campusId)
+            ? path
+            : $"{path}?campusId={Uri.EscapeDataString(campusId)}";
+    }
 
     private static string BuildSearchUrl(RoomSearchRequest request)
     {

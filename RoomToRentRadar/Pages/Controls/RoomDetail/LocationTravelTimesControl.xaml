@@ -65,12 +65,13 @@
                        IsVisible="{Binding IsCommuteFallback}"
                        FontFamily="{StaticResource FontFamilyRegular}"
                        FontSize="{StaticResource FontSizeCaption}"
-                       TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                       TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
 
                 <!-- 3. Commute Times 3-Column Grid -->
                 <Grid ColumnDefinitions="*, *, *"
                       ColumnSpacing="8"
                       Margin="0,8,0,0"
+                      IsVisible="{Binding HasTravelTimes}"
                       BindableLayout.ItemsSource="{Binding CommuteTimes}">
                     <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="models:CommuteModeItem">
@@ -83,7 +84,7 @@
                                     <Label Text="{Binding IconGlyph}"
                                            FontFamily="{x:Static fonts:FluentUI.FontFamily}"
                                            FontSize="20"
-                                           TextColor="{AppThemeBinding Light={StaticResource ActionAccentLight}, Dark={StaticResource ActionAccentDark}}"
+                                           TextColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}"
                                            HorizontalTextAlignment="Center" />
                                     <Label Text="{Binding TimeFormatted}"
                                            FontFamily="{StaticResource FontFamilySemibold}"
@@ -91,10 +92,15 @@
                                            FontAttributes="Bold"
                                            TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
                                            HorizontalTextAlignment="Center" />
+                                    <Label Text="{Binding DistanceFormatted}"
+                                           FontFamily="{StaticResource FontFamilyRegular}"
+                                           FontSize="{StaticResource FontSizeCaption}"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"
+                                           HorizontalTextAlignment="Center" />
                                     <Label Text="{Binding Label}"
                                            FontFamily="{StaticResource FontFamilyRegular}"
                                            FontSize="{StaticResource FontSizeBadge}"
-                                           TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"
                                            HorizontalTextAlignment="Center" />
                                 </VerticalStackLayout>
                             </Border>

@@ -34,6 +34,8 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
     private bool _disposed;
 
     private readonly List<AmenityDisplayItem> _allAmenities = [];
+    private string _effectiveCampusId = "ICTU";
+    private TravelTimesDto? _lastTravelTimes;
 
     #region Query & Navigation Properties
 
@@ -298,24 +300,29 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
             IsNotFound = false;
             ErrorMessage = string.Empty;
 
-            // Check authentication state for BR-AUTH-07 / BR-CNT-01
+            // Check authentication state for BR-AUTH-07 / BR-CNT-01 and resolve active campus (US09 AC2 / BR-CMP-02)
             IsSignedIn = await _sessionStore.HasValidTokenAsync();
+            _effectiveCampusId = await ResolveEffectiveCampusIdAsync();
+            CampusName = _effectiveCampusId.ToUpperInvariant();
 
             // Load full room details via IRoomGateway
-            var detail = await _roomGateway.GetRoomDetailAsync(RoomId, CampusId);
+            var detail = await _roomGateway.GetRoomDetailAsync(RoomId, _effectiveCampusId);
             Room = detail;
 
             // Populate UI sections
             PopulateRoomDetails(detail);
 
-            // If room is unavailable, load similar rooms recommendation (AC3 / BR-LST-10)
+            // Load similar rooms (if unavailable) and travel times estimates (US09) concurrently
             if (IsUnavailable)
             {
-                await LoadSimilarRoomsAsync();
+                await Task.WhenAll(
+                    LoadSimilarRoomsAsync(_effectiveCampusId),
+                    LoadTravelTimesAsync(_effectiveCampusId));
             }
-
-            // Load travel times estimates (US09 integration)
-            await LoadTravelTimesAsync();
+            else
+            {
+                await LoadTravelTimesAsync(_effectiveCampusId);
+            }
         }
         catch (ApiException apiEx) when (apiEx.StatusCode == HttpStatusCode.NotFound || apiEx.ErrorCode == ProblemCodes.RoomNotFound)
         {
@@ -412,9 +419,18 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
 
         // Address & Commute
         AddressFormatted = $"{detail.Address.AddressLine}, {detail.Address.Ward}, {detail.Address.District}";
-        CampusName = !string.IsNullOrWhiteSpace(CampusId) ? CampusId : "ICTU";
-        CommuteHeaderFormatted = string.Format(AppResources.GetString("RoomDetail_GettingToCampus"), CampusName, detail.DistanceKm.ToString("0.0", CultureInfo.InvariantCulture));
-        StraightLineNotice = string.Format(AppResources.GetString("RoomDetail_StraightLineNotice"), detail.DistanceKm.ToString("0.0", CultureInfo.InvariantCulture), CampusName);
+        CampusName = _effectiveCampusId.ToUpperInvariant();
+        var formattedDistance = detail.DistanceKm.ToString("0.0", CultureInfo.CurrentCulture);
+        CommuteHeaderFormatted = string.Format(
+            CultureInfo.CurrentCulture,
+            AppResources.GetString("RoomDetail_GettingToCampus"),
+            CampusName,
+            formattedDistance);
+        StraightLineNotice = string.Format(
+            CultureInfo.CurrentCulture,
+            AppResources.GetString("RoomDetail_StraightLineNotice"),
+            formattedDistance,
+            CampusName);
 
         // Landlord contact block
         PopulateLandlord(detail.Landlord);
@@ -714,12 +730,33 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
         return $"{amountVnd:N0}";
     }
 
-    private async Task LoadSimilarRoomsAsync()
+    private async Task<string> ResolveEffectiveCampusIdAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(CampusId))
+        {
+            return CampusId.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(_searchCriteriaStore?.Current.CampusId))
+        {
+            return _searchCriteriaStore.Current.CampusId.Trim();
+        }
+
+        var profile = await _sessionStore.GetCachedUserProfileAsync();
+        if (!string.IsNullOrWhiteSpace(profile?.SelectedCampusId))
+        {
+            return profile.SelectedCampusId.Trim();
+        }
+
+        return "ICTU";
+    }
+
+    private async Task LoadSimilarRoomsAsync(string campusId)
     {
         try
         {
             SimilarRooms.Clear();
-            var similar = await _roomGateway.GetSimilarRoomsAsync(RoomId, CampusId);
+            var similar = await _roomGateway.GetSimilarRoomsAsync(RoomId, campusId);
             foreach (var card in similar)
             {
                 SimilarRooms.Add(new SimilarRoomDisplayModel(
@@ -737,58 +774,81 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
         }
     }
 
-    private async Task LoadTravelTimesAsync()
+    private async Task LoadTravelTimesAsync(string campusId)
     {
         try
         {
-            CommuteTimes.Clear();
-            var travel = await _roomGateway.GetRoomTravelTimesAsync(RoomId, CampusId);
-            if (travel != null && travel.Items.Count > 0)
-            {
-                HasTravelTimes = true;
-                IsCommuteFallback = travel.IsFallback;
-
-                foreach (var item in travel.Items)
-                {
-                    int mins = (int)Math.Max(1, Math.Round(item.DurationSeconds / 60.0));
-                    string timeFormatted = item.IsEstimate
-                        ? string.Format(AppResources.GetString("RoomDetail_MinutesEst"), mins)
-                        : string.Format(AppResources.GetString("RoomDetail_Minutes"), mins);
-
-                    var commuteItem = item.Mode switch
-                    {
-                        TravelMode.Motorbike => new CommuteModeItem(item.Mode, FluentUI.vehicle_motorcycle_24_regular, timeFormatted, string.Empty, AppResources.GetString("TravelMode_Motorbike")),
-                        TravelMode.Bus => new CommuteModeItem(item.Mode, FluentUI.vehicle_bus_24_regular, timeFormatted, string.Empty, AppResources.GetString("TravelMode_Bus")),
-                        _ => new CommuteModeItem(item.Mode, FluentUI.person_walking_24_regular, timeFormatted, string.Empty, AppResources.GetString("TravelMode_Walking"))
-                    };
-                    CommuteTimes.Add(commuteItem);
-                }
-            }
-            else
-            {
-                PopulateDefaultEstimatedCommute();
-            }
+            var travel = await _roomGateway.GetRoomTravelTimesAsync(RoomId, campusId);
+            _lastTravelTimes = travel;
+            ApplyTravelTimes(travel);
         }
         catch
         {
-            PopulateDefaultEstimatedCommute();
+            _lastTravelTimes = null;
+            ApplyTravelTimes(null);
         }
     }
 
-    private void PopulateDefaultEstimatedCommute()
+    private void ApplyTravelTimes(TravelTimesDto? travel)
     {
         CommuteTimes.Clear();
-        if (Room == null) return;
+        if (travel != null && !travel.IsFallback && travel.Items.Count > 0)
+        {
+            HasTravelTimes = true;
+            IsCommuteFallback = false;
 
-        double distanceKm = Room.DistanceKm;
-        int motorbikeMins = (int)Math.Max(1, Math.Round(distanceKm / 30.0 * 60));
-        int busMins = (int)Math.Max(5, Math.Round(distanceKm / 15.0 * 60 + 5));
-        int walkMins = (int)Math.Max(2, Math.Round(distanceKm / 5.0 * 60));
+            foreach (var item in travel.Items)
+            {
+                var mins = (int)Math.Max(1, Math.Round(item.DurationSeconds / 60.0));
+                var timeFormatted = item.IsEstimate
+                    ? string.Format(CultureInfo.CurrentCulture, AppResources.GetString("RoomDetail_MinutesEst"), mins)
+                    : string.Format(CultureInfo.CurrentCulture, AppResources.GetString("RoomDetail_Minutes"), mins);
+                var distanceFormatted = FormatTravelDistance(item.DistanceMeters);
 
-        CommuteTimes.Add(new CommuteModeItem(TravelMode.Motorbike, FluentUI.vehicle_motorcycle_24_regular, string.Format(AppResources.GetString("RoomDetail_Minutes"), motorbikeMins), string.Empty, AppResources.GetString("TravelMode_Motorbike")));
-        CommuteTimes.Add(new CommuteModeItem(TravelMode.Bus, FluentUI.vehicle_bus_24_regular, string.Format(AppResources.GetString("RoomDetail_MinutesEst"), busMins), string.Empty, AppResources.GetString("TravelMode_Bus")));
-        CommuteTimes.Add(new CommuteModeItem(TravelMode.Walking, FluentUI.person_walking_24_regular, string.Format(AppResources.GetString("RoomDetail_Minutes"), walkMins), string.Empty, AppResources.GetString("TravelMode_Walking")));
-        HasTravelTimes = true;
+                var commuteItem = item.Mode switch
+                {
+                    TravelMode.Motorbike => new CommuteModeItem(
+                        item.Mode, FluentUI.vehicle_motorcycle_24_regular, timeFormatted, distanceFormatted,
+                        AppResources.GetString("TravelMode_Motorbike")),
+                    TravelMode.Bus => new CommuteModeItem(
+                        item.Mode, FluentUI.vehicle_bus_24_regular, timeFormatted, distanceFormatted,
+                        AppResources.GetString("TravelMode_Bus")),
+                    _ => new CommuteModeItem(
+                        item.Mode, FluentUI.person_walking_24_regular, timeFormatted, distanceFormatted,
+                        AppResources.GetString("TravelMode_Walking"))
+                };
+                CommuteTimes.Add(commuteItem);
+            }
+
+            return;
+        }
+
+        // US09 AC3 / BR-TRV-04: hide commute mode grid and display straight-line distance fallback.
+        HasTravelTimes = false;
+        IsCommuteFallback = true;
+        var straightLineKm = travel?.StraightLineDistanceKm ?? Room?.DistanceKm ?? 0;
+        StraightLineNotice = string.Format(
+            CultureInfo.CurrentCulture,
+            AppResources.GetString("RoomDetail_StraightLineNotice"),
+            straightLineKm.ToString("0.0", CultureInfo.CurrentCulture),
+            CampusName);
+    }
+
+    private static string FormatTravelDistance(int distanceMeters)
+    {
+        if (distanceMeters < 1000)
+        {
+            return string.Format(
+                CultureInfo.CurrentCulture,
+                AppResources.GetString("RoomDetail_DistanceMeters"),
+                Math.Max(0, distanceMeters));
+        }
+
+        var km = Math.Round(distanceMeters / 1000.0, 1, MidpointRounding.AwayFromZero);
+        return string.Format(
+            CultureInfo.CurrentCulture,
+            AppResources.GetString("RoomDetail_DistanceKm"),
+            km.ToString("0.0", CultureInfo.CurrentCulture));
     }
 
     #endregion
@@ -1064,6 +1124,7 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
         if (Room != null)
         {
             PopulateRoomDetails(Room);
+            ApplyTravelTimes(_lastTravelTimes);
         }
     }
 
