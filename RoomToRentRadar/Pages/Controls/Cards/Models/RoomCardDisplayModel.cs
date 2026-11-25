@@ -1,4 +1,5 @@
 using System.Globalization;
+using RoomToRentRadar.Converters;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Resources.Strings;
 
@@ -10,8 +11,6 @@ namespace RoomToRentRadar.Pages.Controls.Cards.Models;
 /// </summary>
 public sealed record RoomCardDisplayModel
 {
-    private const decimal OneMillion = 1_000_000;
-
     public string Id { get; init; } = string.Empty;
     public string Title { get; init; } = string.Empty;
     public decimal PricePerMonth { get; init; }
@@ -41,10 +40,8 @@ public sealed record RoomCardDisplayModel
 
     public string AreaFormatted => $"{AreaSquareMeters:F0} m²";
 
-    /// <summary>"2.5M/mo" / "2,5 tr/tháng"; amounts under one million use the thousand unit.</summary>
-    public string PriceText => PricePerMonth >= OneMillion
-        ? Format("Card_PriceMillion", (PricePerMonth / OneMillion).ToString("0.###", Culture))
-        : Format("Card_PriceThousand", (PricePerMonth / 1000).ToString("0.#", Culture));
+    /// <summary>"2.5M/mo" / "2,5 tr/tháng", in the same form as the room detail (ui-ux-spec §6).</summary>
+    public string PriceText => CultureFormatting.FormatMonthlyPrice((long)PricePerMonth, Culture);
 
     /// <summary>"25 m² · Boarding room · Furnished"; unknown parts are left out.</summary>
     public string MetaText

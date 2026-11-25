@@ -1040,12 +1040,6 @@
     <value>Vui lòng thử lại sau.</value>
   </data>
   <!-- Explore list SCR-HOME-01 and room card (T01.2) -->
-  <data name="Card_PriceMillion" xml:space="preserve">
-    <value>{0} tr/tháng</value>
-  </data>
-  <data name="Card_PriceThousand" xml:space="preserve">
-    <value>{0}k/tháng</value>
-  </data>
   <data name="Card_Distance" xml:space="preserve">
     <value>{0} km tới {1}</value>
   </data>
@@ -1093,5 +1087,11 @@
   </data>
   <data name="Explore_LoadMoreError" xml:space="preserve">
     <value>Không tải thêm được phòng.</value>
+  </data>
+  <data name="Price_ShortWithUnit" xml:space="preserve">
+    <value>{0}</value>
+  </data>
+  <data name="Price_FullWithUnit" xml:space="preserve">
+    <value>{0} ₫</value>
   </data>
 </root>

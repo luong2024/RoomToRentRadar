@@ -1039,12 +1039,6 @@
     <value>Please try again later.</value>
   </data>
   <!-- Explore list SCR-HOME-01 and room card (T01.2) -->
-  <data name="Card_PriceMillion" xml:space="preserve">
-    <value>{0}M/mo</value>
-  </data>
-  <data name="Card_PriceThousand" xml:space="preserve">
-    <value>{0}k/mo</value>
-  </data>
   <data name="Card_Distance" xml:space="preserve">
     <value>{0} km to {1}</value>
   </data>
@@ -1092,5 +1086,11 @@
   </data>
   <data name="Explore_LoadMoreError" xml:space="preserve">
     <value>Couldn't load more rooms.</value>
+  </data>
+  <data name="Price_ShortWithUnit" xml:space="preserve">
+    <value>{0} VND</value>
+  </data>
+  <data name="Price_FullWithUnit" xml:space="preserve">
+    <value>{0} VND</value>
   </data>
 </root>

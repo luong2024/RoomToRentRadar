@@ -12,6 +12,9 @@ public static class CultureFormatting
     public const string FallbackValue = "—";
     public const string DefaultNumberFormat = "N2";
 
+    private const long Thousand = 1_000;
+    private const long Million = 1_000_000;
+
     public static readonly CultureInfo VietnameseCulture = CultureInfo.GetCultureInfo("vi-VN");
     public static readonly CultureInfo EnglishCulture = CultureInfo.GetCultureInfo("en-US");
 
@@ -67,6 +70,53 @@ public static class CultureFormatting
         var formatted = amount.ToString("N0", effective);
         return $"{formatted} ₫";
     }
+
+    /// <summary>
+    /// Short VND amount shared by the room card, room detail and compare card: <c>2.5M</c>, <c>2,5 tr</c>,
+    /// <c>950k</c> (ui-ux-spec §6). The short form only drops zeros: an amount that is not a whole number of
+    /// thousands is written in full, so a price is never rounded.
+    /// </summary>
+    public static string FormatCompactMoney(long amountVnd, CultureInfo? culture = null)
+    {
+        var effective = culture ?? CultureInfo.CurrentCulture;
+        if (!HasShortForm(amountVnd))
+        {
+            return FormatCurrency(amountVnd, effective);
+        }
+
+        return amountVnd >= Million
+            ? Localized("RoomDetail_ShortMillionFormat", effective, (amountVnd / (decimal)Million).ToString("0.###", effective))
+            : Localized("RoomDetail_ShortThousandFormat", effective, (amountVnd / Thousand).ToString(effective));
+    }
+
+    /// <summary><see cref="FormatCompactMoney"/> with the period: <c>2.5M/mo</c>, <c>2,5 tr/tháng</c>.</summary>
+    public static string FormatMonthlyPrice(long amountVnd, CultureInfo? culture = null)
+    {
+        var effective = culture ?? CultureInfo.CurrentCulture;
+        return Localized("RoomDetail_ShortPerMonthFormat", effective, FormatCompactMoney(amountVnd, effective));
+    }
+
+    /// <summary>
+    /// Deposit shown under the price. English names the currency (<c>2.4M VND</c>); the Vietnamese "tr" and
+    /// "k" read as đồng already, and a full amount carries <c>₫</c>.
+    /// </summary>
+    public static string FormatDepositMoney(long amountVnd, CultureInfo? culture = null)
+    {
+        if (amountVnd < 0)
+        {
+            return FallbackValue;
+        }
+
+        var effective = culture ?? CultureInfo.CurrentCulture;
+        return HasShortForm(amountVnd)
+            ? Localized("Price_ShortWithUnit", effective, FormatCompactMoney(amountVnd, effective))
+            : Localized("Price_FullWithUnit", effective, amountVnd.ToString("N0", effective));
+    }
+
+    private static bool HasShortForm(long amountVnd) => amountVnd >= Thousand && amountVnd % Thousand == 0;
+
+    private static string Localized(string key, CultureInfo culture, string value) =>
+        string.Format(culture, AppResources.GetString(key, culture), value);
 
     /// <summary>
     /// Formats a general number using the provided culture (default <c>N2</c>).

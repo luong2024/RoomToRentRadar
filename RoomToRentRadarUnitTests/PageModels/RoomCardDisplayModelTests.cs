@@ -42,6 +42,7 @@ public class RoomCardDisplayModelTests
     [TestCase("en-US", 4_000_000, "4M/mo")]
     [TestCase("en-US", 2_950_000, "2.95M/mo")]
     [TestCase("vi-VN", 2_950_000, "2,95 tr/tháng")]
+    [TestCase("en-US", 2_454_321, "2,454,321 ₫/mo")]
     public void PriceText_UsesTheLanguageAndUnit(string culture, int price, string expected)
     {
         UseLanguage(culture);
@@ -114,7 +115,7 @@ public class RoomCardDisplayModelTests
     {
         string[] keys =
         [
-            "Card_PriceMillion", "Card_PriceThousand", "Card_Distance", "Card_Furnishing_Full",
+            "Card_Distance", "Card_Furnishing_Full",
             "Card_Furnishing_Basic", "Card_Furnishing_Unfurnished", "Card_Verified", "Card_Compare",
             "Card_SaveDescription", "Explore_Near", "Explore_CampusChipDescription",
             "Explore_NotificationsDescription", "Explore_NotificationsUnreadDescription", "Explore_MapDescription",
