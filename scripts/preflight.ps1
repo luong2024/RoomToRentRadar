@@ -20,7 +20,7 @@ if ($branch -eq "main" -or $branch -eq "master") {
 }
 
 Write-Host "=== [2/4] Static Scan for UI Deadlocks (.Result / .Wait()) & Service Locator ===" -ForegroundColor Cyan
-$featureFiles = Get-ChildItem -Path "RoomToRentRadar\Features","RoomToRentRadar.Infrastructure\Repositories","RoomToRentRadar.Api\Endpoints" -Recurse -Include *.cs -ErrorAction SilentlyContinue
+$featureFiles = Get-ChildItem -Path "frontend\RoomToRentRadar\Features","frontend\RoomToRentRadar\Services\Api","backend\RoomToRentRadar.Infrastructure\Repositories","backend\RoomToRentRadar.Api\Controllers","backend\RoomToRentRadar.Api\Endpoints" -Recurse -Include *.cs -ErrorAction SilentlyContinue
 if ($featureFiles) {
     $deadlocks = $featureFiles | Select-String -Pattern '\.(Result\b|Wait\s*\()'
     if ($deadlocks) {
@@ -29,7 +29,7 @@ if ($featureFiles) {
         exit 1
     }
 
-    $locators = Get-ChildItem -Path "RoomToRentRadar\Features" -Recurse -Include *.cs -ErrorAction SilentlyContinue | Select-String -Pattern 'IServiceProvider|\.GetService<'
+    $locators = Get-ChildItem -Path "frontend\RoomToRentRadar\Features" -Recurse -Include *.cs -ErrorAction SilentlyContinue | Select-String -Pattern 'IServiceProvider|\.GetService<'
     if ($locators) {
         $locators | ForEach-Object { Write-Host "$($_.Path):$($_.LineNumber): $($_.Line.Trim())" -ForegroundColor Red }
         Write-Error "Detected Service Locator (IServiceProvider.GetService) in Features/. Inject interfaces via constructor instead."
@@ -38,7 +38,7 @@ if ($featureFiles) {
 }
 
 Write-Host "=== [3/4] Building Core, Infrastructure & Running Contract/API Tests (30s Hang Timeout) ===" -ForegroundColor Cyan
-dotnet test RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj --nologo --blame-hang-timeout 30s
+dotnet test backend/RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj --nologo --blame-hang-timeout 30s
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Contract / Unit tests failed or timed out!"
     exit $LASTEXITCODE
