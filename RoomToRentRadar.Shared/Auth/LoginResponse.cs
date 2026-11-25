@@ -1,3 +1,7 @@
 namespace RoomToRentRadar.Shared.Auth;
 
-public sealed record LoginResponse(string AccessToken, DateTime ExpiresAt, string DisplayName, string Role);
+public sealed record LoginResponse(
+    string AccessToken,
+    DateTime ExpiresAt,
+    string DisplayName,
+    string Role);

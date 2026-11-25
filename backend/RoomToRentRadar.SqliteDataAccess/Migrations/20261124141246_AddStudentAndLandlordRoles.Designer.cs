@@ -11,7 +11,7 @@ using RoomToRentRadar.SqliteDataAccess;
 namespace RoomToRentRadar.SqliteDataAccess.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261125011737_AddStudentAndLandlordRoles")]
+    [Migration("20261124141246_AddStudentAndLandlordRoles")]
     partial class AddStudentAndLandlordRoles
     {
         /// <inheritdoc />

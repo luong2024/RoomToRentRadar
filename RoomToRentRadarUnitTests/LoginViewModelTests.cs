@@ -1,4 +1,4 @@
-using RoomToRentRadar.Models;
+﻿using RoomToRentRadar.Models;
 using RoomToRentRadar.Services;
 using RoomToRentRadar.Services.Auth;
 using RoomToRentRadar.Services.ErrorHandling;
@@ -217,7 +217,7 @@ public class LoginViewModelTests
                 : Task.FromResult(LoginResult);
         }
 
-        public Task<LoginResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+        public Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The login screen registers through the registration screen.");
 
         public Task<LoginResponse?> DemoLoginAsync(CancellationToken cancellationToken = default)

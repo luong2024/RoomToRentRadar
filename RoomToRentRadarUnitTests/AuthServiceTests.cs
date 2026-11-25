@@ -1,4 +1,4 @@
-using RoomToRentRadar.Models;
+﻿using RoomToRentRadar.Models;
 using RoomToRentRadar.Services;
 using RoomToRentRadar.Services.Auth;
 using RoomToRentRadar.Services.ErrorHandling;
@@ -104,7 +104,12 @@ public class AuthServiceTests
         var expiresAt = new DateTime(2026, 12, 2, 8, 0, 0, DateTimeKind.Utc);
         var apiClient = new FakeApiClient
         {
-            RegisterResult = new LoginResponse("register-token", expiresAt, "New Landlord", AppUserRoleWire.Landlord)
+            RegisterResult = new RegisterResponse(
+                Guid.NewGuid(),
+                "landlord@example.test",
+                "New Landlord",
+                AppUserRoleWire.Landlord),
+            LoginResult = new LoginResponse("register-token", expiresAt, "New Landlord", AppUserRoleWire.Landlord)
         };
         var tokenStore = new FakeTokenStore();
         var service = new AuthService(apiClient, tokenStore);
@@ -121,6 +126,30 @@ public class AuthServiceTests
             Assert.That(tokenStore.Role, Is.EqualTo(AppUserRole.Landlord));
             Assert.That(service.CurrentRole, Is.EqualTo(AppUserRole.Landlord));
             Assert.That(sessionChanges, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task Register_WhenFollowUpLoginFails_ThrowsUnauthorizedAndKeepsSessionEmpty()
+    {
+        var apiClient = new FakeApiClient
+        {
+            RegisterResult = new RegisterResponse(
+                Guid.NewGuid(),
+                "landlord@example.test",
+                "New Landlord",
+                AppUserRoleWire.Landlord)
+        };
+        var tokenStore = new FakeTokenStore();
+        var service = new AuthService(apiClient, tokenStore);
+
+        Assert.ThrowsAsync<ApiException>(async () => await service.RegisterAsync(
+            new RegisterRequest("landlord@example.test", "Password-123", "New Landlord", AppUserRoleWire.Landlord)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(tokenStore.AccessToken, Is.Null);
+            Assert.That(service.CurrentRole, Is.Null);
         });
     }
 
@@ -188,7 +217,9 @@ public class AuthServiceTests
 
         public Exception? DemoLoginException { get; set; }
 
-        public LoginResponse? RegisterResult { get; set; }
+        public RegisterResponse? RegisterResult { get; set; }
+
+        public LoginResponse? LoginResult { get; set; }
 
         public RegisterRequest? RequestedRegistration { get; private set; }
 
@@ -214,7 +245,7 @@ public class AuthServiceTests
             => throw new NotSupportedException("Automatic sign-in does not load listing contacts.");
 
         public Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
-            => throw new NotSupportedException("Automatic sign-in does not use explicit credentials.");
+            => Task.FromResult(LoginResult);
 
         public Task<LoginResponse?> DemoLoginAsync(CancellationToken cancellationToken = default)
         {
@@ -225,13 +256,13 @@ public class AuthServiceTests
                 : Task.FromResult(DemoLoginResult);
         }
 
-        public Task<LoginResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+        public Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
         {
             RequestedRegistration = request;
 
             return RegisterResult is { } result
                 ? Task.FromResult(result)
-                : Task.FromException<LoginResponse>(new NotSupportedException("No registration result was configured."));
+                : Task.FromException<RegisterResponse>(new NotSupportedException("No registration result was configured."));
         }
 
         public Task LogoutAsync(CancellationToken cancellationToken = default)

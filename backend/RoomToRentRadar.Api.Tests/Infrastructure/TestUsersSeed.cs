@@ -12,14 +12,10 @@ public static class TestUsersSeed
     public const string Password = "Demo-password-123";
     public const string DisplayName = "Demo Tester";
 
+    public static readonly Guid Id = new("aaaaaaaa-0000-0000-0000-000000000001");
     public static async Task<User> SeedAsync(AppDbContext dbContext, UserRole role = UserRole.Student)
     {
-        var user = Create(
-            new Guid("aaaaaaaa-0000-0000-0000-000000000001"),
-            Email,
-            DisplayName,
-            Password,
-            role);
+        var user = Create(Id, Email, DisplayName, Password, role);
 
         dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync();

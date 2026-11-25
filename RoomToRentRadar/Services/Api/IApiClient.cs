@@ -28,7 +28,7 @@ public interface IApiClient
         LoginRequest request,
         CancellationToken cancellationToken = default);
 
-    Task<LoginResponse> RegisterAsync(
+    Task<RegisterResponse> RegisterAsync(
         RegisterRequest request,
         CancellationToken cancellationToken = default);
 

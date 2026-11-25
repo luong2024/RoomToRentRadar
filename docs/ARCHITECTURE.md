@@ -186,31 +186,37 @@ root (`AddDataAccess`, `AddUseCases`, `AddInfrastructure`).
 - Schema changes use EF Core migrations. Never use `EnsureCreated`.
 - Development startup applies migrations and seeds sample data; this is a documented exception.
 
-### 4.4 Roles and authorization
+### 4.4 Authentication, roles and authorization
 
 - Roles are `student`, `landlord`, `moderator` and `admin`. The `UserRole` enum and its
   `UserRoleWire` values live once in `Shared/Auth` (like `ListingStatus`); the `users` CHECK
-  constraint, EF converters, the role claim, `RegistrationRoles` and the mobile `AppUserRoleWire`
+  constraint, EF converters, the token role claim, `AccountRules` and the mobile `AppUserRoleWire`
   all derive from that single source.
 - `POST /api/v1/auth/register` creates self-service accounts for `student` and `landlord` only;
-  moderator and admin accounts are provisioned out of band. Registration validates `AccountRules`
-  (email format/length, display name length, password 8–128 characters with letters and digits) and
-  rejects duplicate emails with 409 `email_already_registered`.
+  moderator and admin accounts are provisioned out of band. `RegistrationValidator`/`AuthLimits`
+  validate email format/length, display name length and a password of 8-128 characters containing
+  letters and digits. Duplicate emails return 409 `email_already_registered`, including a concurrent
+  insert that slips past the pre-check and is caught by the repository's unique-index handling.
+- `POST /api/v1/auth/login` issues an HS256-signed JWT access token (7-day expiry) carrying the user
+  id, email, display name and role claims. The JwtBearer handler validates signature, issuer,
+  audience and lifetime on every request. Each token is bound to a server-side `auth_sessions` row
+  (stored as a SHA-256 hash) that is checked after signature validation, so logout still revokes
+  access immediately.
+- The signing key comes from `Auth:Token:SigningKey` (user-secrets or the
+  `Auth__Token__SigningKey` environment variable). Missing keys fail startup outside Development;
+  Development falls back to a per-process key.
+- Passwords are stored as PBKDF2-SHA256 (100k iterations, 16-byte salt, fixed-time comparison)
+  through `IPasswordHasher`.
+- `POST /api/v1/auth/register` and `/login` share a fixed-window per-IP rate limit
+  (`Auth:RateLimitPerMinute`, default 10) and answer 429 `auth_rate_limited` with a `Retry-After`
+  header when exceeded.
 - Migration `AddStudentAndLandlordRoles` replaces the legacy `user` role: accounts that own at least
   one listing become `landlord` (they keep access to listing management and photo upload), all other
   legacy accounts become `student`. The `Down` migration merges both roles back to `user`.
-- `POST /api/v1/auth/login` returns `LoginResponse(AccessToken, ExpiresAt, DisplayName, Role)`.
-  Passwords are hashed through `IPasswordHasher`; sessions are opaque bearer tokens stored hashed in
-  `auth_sessions`.
-- `POST /api/v1/auth/register` and `/login` share a fixed-window per-IP rate limit
-  (`Auth:RateLimitPerMinute`, default 10) and answer 429 `auth_rate_limited` with a `Retry-After`
-  header when exceeded. A concurrent duplicate registration that slips past the pre-check is
-  translated by the repository's unique-index handling into the same 409
-  `email_already_registered` problem.
 - Authorization policies live in `Features/Auth/AuthPolicies.cs` and rely on the role claim issued by
-  `BearerTokenAuthenticationHandler`. `Landlord` guards listing management (`api/v1/listings`
-  create/update/unpublish) and photo upload; `ModeratorOrAdmin` guards `api/v1/moderation/*`.
-  Rejected calls return 401/403 with a `ProblemDetails` `code`.
+  the JWT handler. `Landlord` guards listing management (`api/v1/listings` create/update/unpublish)
+  and photo upload; `ModeratorOrAdmin` guards `api/v1/moderation/*`. Rejected calls return 401/403
+  with a `ProblemDetails` `code`.
 - The mobile moderation queue uses `GET /api/v1/moderation/listings?status=pending_review`
   (cursor paginated) and `POST /api/v1/moderation/listings/{id}/approve`.
 

@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using RoomToRentRadar.Services;
 using RoomToRentRadar.Services.Auth;
 using RoomToRentRadar.Services.ErrorHandling;
@@ -915,7 +915,7 @@ public class RoomDetailViewModelTests
         public Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The room detail screen does not sign in.");
 
-        public Task<LoginResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+        public Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The room detail screen does not register accounts.");
 
         public Task<LoginResponse?> DemoLoginAsync(CancellationToken cancellationToken = default)

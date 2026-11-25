@@ -6,13 +6,13 @@ namespace RoomToRentRadar.Ports.Inbound;
 
 public interface IAuthUseCase
 {
+    Task<RegisterUserResult> RegisterAsync(
+        RegisterUserCommand command,
+        CancellationToken cancellationToken);
+
     Task<LoginResponse?> LoginAsync(
         string email,
         string password,
-        CancellationToken cancellationToken);
-
-    Task<AuthRegistrationResult> RegisterAsync(
-        RegisterRequest request,
         CancellationToken cancellationToken);
 
     Task<User?> AuthenticateAsync(string token, CancellationToken cancellationToken);

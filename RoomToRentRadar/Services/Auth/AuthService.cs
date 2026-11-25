@@ -32,7 +32,19 @@ public sealed class AuthService(IApiClient apiClient, ITokenStore tokenStore)
         RegisterRequest request,
         CancellationToken cancellationToken = default)
     {
-        var response = await apiClient.RegisterAsync(request, cancellationToken);
+        await apiClient.RegisterAsync(request, cancellationToken);
+
+        var response = await apiClient.LoginAsync(
+            new LoginRequest(request.Email, request.Password),
+            cancellationToken);
+        if (response is null)
+        {
+            throw new ApiException(
+                HttpStatusCode.Unauthorized,
+                "The account was created but the session could not be started.",
+                "invalid_credentials");
+        }
+
         await ApplySessionAsync(response, cancellationToken);
     }
 

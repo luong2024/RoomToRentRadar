@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -38,34 +39,31 @@ public sealed class AuthController(
 
     [HttpPost("register")]
     [EnableRateLimiting(AuthRateLimitPolicy.Name)]
-    [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status201Created, "application/json")]
+    [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status201Created, "application/json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict, "application/problem+json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests, "application/problem+json")]
-    public async Task<ActionResult<LoginResponse>> Register(
+    public async Task<ActionResult<RegisterResponse>> Register(
         [FromBody] RegisterRequest request,
         CancellationToken cancellationToken)
     {
-        if (!RegisterValidator.TryValidate(request, out var problem))
+        if (!RegistrationValidator.TryCreate(request, out var command, out var validationProblem))
         {
-            return ToProblem(problem!);
+            return ToProblem(validationProblem!);
         }
 
-        var result = await authUseCase.RegisterAsync(request, cancellationToken);
-        return result.Status switch
+        var result = await authUseCase.RegisterAsync(command, cancellationToken);
+        if (result.Outcome == RegisterUserOutcome.EmailAlreadyRegistered)
         {
-            AuthRegistrationStatus.Success when result.Response is not null =>
-                StatusCode(StatusCodes.Status201Created, result.Response),
-            AuthRegistrationStatus.Success =>
-                throw new InvalidOperationException(
-                    "Registration succeeded without a session response."),
-            AuthRegistrationStatus.EmailAlreadyRegistered =>
-                ToProblem(AuthProblemFactory.EmailAlreadyRegisteredProblem()),
-            AuthRegistrationStatus.UnsupportedRole =>
-                ToProblem(AuthProblemFactory.UnsupportedRegistrationRoleProblem()),
-            _ => throw new InvalidOperationException(
-                $"Unmapped auth registration status '{result.Status}'.")
-        };
+            return ToProblem(AuthProblemFactory.EmailAlreadyRegisteredProblem());
+        }
+
+        if (result.Outcome == RegisterUserOutcome.RoleNotAllowed)
+        {
+            return ToProblem(AuthProblemFactory.InvalidRoleProblem());
+        }
+
+        return StatusCode(StatusCodes.Status201Created, result.Response);
     }
 
     [HttpPost("login")]
@@ -78,7 +76,10 @@ public sealed class AuthController(
         [FromBody] LoginRequest request,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
+        if (string.IsNullOrWhiteSpace(request.Email)
+            || request.Email.Length > AuthLimits.EmailMaxLength
+            || string.IsNullOrWhiteSpace(request.Password)
+            || request.Password.Length > AuthLimits.PasswordMaxLength)
         {
             return ToProblem(AuthProblemFactory.InvalidLoginRequestProblem());
         }
@@ -98,14 +99,12 @@ public sealed class AuthController(
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
     public async Task<IActionResult> Logout(CancellationToken cancellationToken)
     {
-        var token = Request.Headers.Authorization.ToString();
-        const string bearerPrefix = "Bearer ";
-        if (token.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
+        var token = await HttpContext.GetTokenAsync("access_token");
+        if (!string.IsNullOrEmpty(token))
         {
-            token = token[bearerPrefix.Length..].Trim();
+            await authUseCase.LogoutAsync(token, cancellationToken);
         }
 
-        await authUseCase.LogoutAsync(token, cancellationToken);
         return NoContent();
     }
 

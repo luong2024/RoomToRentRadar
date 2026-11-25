@@ -16,7 +16,12 @@ public static class UserRoleWire
     public const string Moderator = "moderator";
     public const string Admin = "admin";
 
-    public static readonly IReadOnlyList<string> All = [Student, Landlord, Moderator, Admin];
+    /// <summary>Returns true when the role may be self-assigned at registration; admin accounts are provisioned.</summary>
+    public static bool IsSelfService(UserRole role)
+        => role is UserRole.Student or UserRole.Landlord;
+
+    public static readonly IReadOnlyList<string> All =
+        [Student, Landlord, Moderator, Admin];
 
     public static bool TryParse(string? value, out UserRole role)
     {

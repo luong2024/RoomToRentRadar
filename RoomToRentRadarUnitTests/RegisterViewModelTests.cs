@@ -22,7 +22,12 @@ public class RegisterViewModelTests
     {
         var apiClient = new FakeApiClient
         {
-            RegisterResult = new LoginResponse(
+            RegisterResult = new RegisterResponse(
+                Guid.NewGuid(),
+                "landlord@example.test",
+                "New Landlord",
+                AppUserRoleWire.Landlord),
+            LoginResult = new LoginResponse(
                 "register-token",
                 DateTime.UtcNow.AddDays(7),
                 "New Landlord",
@@ -61,7 +66,12 @@ public class RegisterViewModelTests
     {
         var apiClient = new FakeApiClient
         {
-            RegisterResult = new LoginResponse(
+            RegisterResult = new RegisterResponse(
+                Guid.NewGuid(),
+                "student@example.test",
+                "New Student",
+                AppUserRoleWire.Student),
+            LoginResult = new LoginResponse(
                 "register-token",
                 DateTime.UtcNow.AddDays(7),
                 "New Student",
@@ -250,16 +260,18 @@ public class RegisterViewModelTests
     {
         public List<RegisterRequest> Registrations { get; } = new();
 
-        public LoginResponse? RegisterResult { get; set; }
+        public RegisterResponse? RegisterResult { get; set; }
+
+        public LoginResponse? LoginResult { get; set; }
 
         public Exception? RegisterException { get; set; }
 
-        public Task<LoginResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+        public Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
         {
             Registrations.Add(request);
 
             return RegisterException is { } exception
-                ? Task.FromException<LoginResponse>(exception)
+                ? Task.FromException<RegisterResponse>(exception)
                 : Task.FromResult(RegisterResult!);
         }
 
@@ -285,7 +297,7 @@ public class RegisterViewModelTests
             => throw new NotSupportedException("The registration screen does not load listing contacts.");
 
         public Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
-            => throw new NotSupportedException("The registration screen creates the session with the register call.");
+            => Task.FromResult(LoginResult);
 
         public Task<LoginResponse?> DemoLoginAsync(CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The registration screen does not use the demo login.");
