@@ -218,6 +218,32 @@ public class FiltersPageModelTests
     }
 
     [Test]
+    public async Task ApiError_InvalidAreaRange_ShowsLocalizedInlineMessage()
+    {
+        GatewayThrows(new ApiException("bad range", HttpStatusCode.BadRequest, ProblemCodes.InvalidAreaRange));
+        var model = CreateModel();
+
+        await model.InitializeAsync();
+
+        Assert.That(model.AreaErrorMessage, Is.EqualTo(AppResources.GetString("Error_INVALID_AREA_RANGE")));
+        Assert.That(model.HasAreaError, Is.True);
+        Assert.That(model.HasNetworkError, Is.False);
+    }
+
+    [Test]
+    public async Task ApiError_InvalidDistanceRange_ShowsLocalizedInlineMessage()
+    {
+        GatewayThrows(new ApiException("bad range", HttpStatusCode.BadRequest, ProblemCodes.InvalidDistanceRange));
+        var model = CreateModel();
+
+        await model.InitializeAsync();
+
+        Assert.That(model.DistanceErrorMessage, Is.EqualTo(AppResources.GetString("Error_INVALID_DISTANCE_RANGE")));
+        Assert.That(model.HasDistanceError, Is.True);
+        Assert.That(model.HasNetworkError, Is.False);
+    }
+
+    [Test]
     public async Task NetworkError_ShowsBannerAndRetryRecovers()
     {
         GatewayThrows(new ApiException("offline", (HttpStatusCode)0, ApiErrorCodes.NetworkError));
