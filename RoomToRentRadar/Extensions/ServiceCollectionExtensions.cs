@@ -38,6 +38,15 @@ public static class ServiceCollectionExtensions
                 Timeout = TimeSpan.FromSeconds(15)
             });
         });
+        services.AddSingleton<IPhotosApiClient>(serviceProvider =>
+        {
+            var handler = serviceProvider.GetRequiredService<AuthenticatedHttpMessageHandler>();
+            return new PhotosApiClient(new HttpClient(handler)
+            {
+                BaseAddress = new Uri(ApiConstants.BaseAddress),
+                Timeout = TimeSpan.FromSeconds(15)
+            });
+        });
         services.AddSingleton<IFavouritesService, FavouritesService>();
         services.AddSingleton<IUndoPrompt, SnackbarUndoPrompt>();
         services.AddSingleton<IAlertPrompt, ShellAlertPrompt>();

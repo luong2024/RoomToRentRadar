@@ -3,6 +3,7 @@ using Microsoft.Extensions.FileProviders;
 using RoomToRentRadar.Api.Configuration;
 using RoomToRentRadar.Api.Features.Auth;
 using RoomToRentRadar.Api.Features.Travel;
+using RoomToRentRadar.Api.Seed;
 using RoomToRentRadar.Infrastructure;
 using RoomToRentRadar.Infrastructure.Photos;
 using RoomToRentRadar.Ports.Outbound.Services;
@@ -23,6 +24,7 @@ builder.Services
     .AddApiControllers()
     .AddListingsOpenApi()
     .AddDevelopmentCors()
+    .AddMediaCors()
     .AddReverseProxySupport(builder.Configuration)
     .AddBearerAuthentication()
     .AddTravelRateLimiting();
@@ -32,6 +34,8 @@ builder.Services.AddMemoryCache(cache =>
     cache.SizeLimit = 10_000;
     cache.CompactionPercentage = 0.1;
 });
+
+builder.Services.AddSingleton<SeedMediaWriter>();
 
 var app = builder.Build();
 
@@ -63,6 +67,7 @@ if (app.Environment.IsDevelopment())
     await dbContext.Database.MigrateAsync();
     await DatabaseSeeder.SeedSampleAsync(dbContext);
     await DatabaseSeeder.BackfillSampleDetailsAsync(dbContext);
+    await scope.ServiceProvider.GetRequiredService<SeedMediaWriter>().EnsureSampleMediaAsync(dbContext);
     await DemoUserSeeder.SeedAsync(
         dbContext,
         app.Configuration,
@@ -84,11 +89,20 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseWhen(
+    context => context.Request.Path.StartsWithSegments(PhotoStorage.RequestPath),
+    branch => branch.UseCors(HostingExtensions.MediaCorsPolicy));
+
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(
         app.Services.GetRequiredService<PhotoStorageOptions>().RootPath),
-    RequestPath = PhotoStorage.RequestPath
+    RequestPath = PhotoStorage.RequestPath,
+    OnPrepareResponse = staticFileResponseContext =>
+    {
+        staticFileResponseContext.Context.Response.Headers.CacheControl =
+            "public, max-age=31536000, immutable";
+    }
 });
 
 app.UseAuthentication();

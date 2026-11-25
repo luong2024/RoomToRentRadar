@@ -67,6 +67,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         };
 
     private readonly IApiClient _apiClient;
+    private readonly IPhotosApiClient _photosApiClient;
     private readonly IErrorHandler _errorHandler;
     private readonly INavigationService _navigationService;
     private readonly IFavouritesService _favouritesService;
@@ -111,6 +112,26 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     public partial string PhotoSource { get; set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsGalleryEmpty))]
+    public partial bool IsGalleryLoading { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsGalleryEmpty))]
+    public partial bool HasGalleryError { get; set; }
+
+    [ObservableProperty]
+    public partial GalleryPhotoItem? CoverPhoto { get; set; }
+
+    [ObservableProperty]
+    public partial IReadOnlyList<GalleryPhotoItem> PreviewThumbs { get; set; }
+
+    [ObservableProperty]
+    public partial string GalleryCountText { get; set; }
+
+    [ObservableProperty]
+    public partial string ViewAllText { get; set; }
+
+    [ObservableProperty]
     public partial IReadOnlyList<string> AmenityDisplayLabels { get; set; }
 
     [ObservableProperty]
@@ -146,6 +167,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
 
     public RoomDetailViewModel(
         IApiClient apiClient,
+        IPhotosApiClient photosApiClient,
         IErrorHandler errorHandler,
         INavigationService navigationService,
         IFavouritesService favouritesService,
@@ -153,6 +175,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         RoomReportViewModel reportViewModel)
     {
         _apiClient = apiClient;
+        _photosApiClient = photosApiClient;
         _errorHandler = errorHandler;
         _navigationService = navigationService;
         _favouritesService = favouritesService;
@@ -166,6 +189,9 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         StatusDisplayText = string.Empty;
         RoomTypeDisplayText = string.Empty;
         PhotoSource = "room_1.png";
+        PreviewThumbs = [];
+        GalleryCountText = string.Empty;
+        ViewAllText = "Xem tất cả ảnh";
         AmenityLabels = [];
         AmenityDisplayLabels = [];
         Rules = [];
@@ -175,6 +201,10 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     }
 
     public ObservableCollection<ListingSummaryDto> SimilarRooms { get; } = [];
+
+    public ObservableCollection<GalleryPhotoItem> Photos { get; } = [];
+
+    public PhotoLightboxViewModel Lightbox { get; } = new();
 
     public RoomReportViewModel Report { get; }
 
@@ -213,6 +243,12 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     public bool IsSignInPromptVisible => IsContentVisible && !IsPhoneVisible;
 
     public bool HasSimilarRooms => SimilarRooms.Count > 0;
+
+    public bool HasPhotos => Photos.Count > 0;
+
+    public bool IsGalleryEmpty => !IsGalleryLoading && !HasGalleryError && !HasPhotos;
+
+    public bool HasPreviewThumbs => PreviewThumbs.Count > 0;
 
     public bool HasSimilarStatusMessage => !string.IsNullOrEmpty(SimilarStatusMessage) && !HasSimilarRooms;
 
@@ -265,6 +301,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
                     State = RoomDetailState.Content;
                     await RefreshFavouriteStateAsync(listingId, cancellationToken);
                     await RefreshContactAsync(cancellationToken);
+                    await LoadGalleryAsync(listingId, cancellationToken);
                     break;
             }
         }
@@ -372,6 +409,72 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
 
     [RelayCommand]
     private Task GoBackAsync() => _navigationService.GoBackAsync();
+
+    [RelayCommand]
+    private async Task RetryGalleryAsync(CancellationToken cancellationToken)
+    {
+        if (State != RoomDetailState.Content || _listingId is not { } listingId)
+            return;
+
+        await LoadGalleryAsync(listingId, cancellationToken);
+    }
+
+    [RelayCommand]
+    private void OpenGallery(GalleryPhotoItem? photo)
+    {
+        if (Photos.Count == 0)
+            return;
+
+        var index = photo is null ? 0 : Photos.IndexOf(photo);
+        Lightbox.OpenCommand.Execute(index < 0 ? 0 : index);
+    }
+
+    private async Task LoadGalleryAsync(Guid listingId, CancellationToken cancellationToken)
+    {
+        IsGalleryLoading = true;
+        HasGalleryError = false;
+
+        try
+        {
+            var result = await _photosApiClient.GetPhotosAsync(listingId, cancellationToken);
+            Photos.Clear();
+
+            if (result.Outcome == ListingPhotosFetchOutcome.Found)
+            {
+                foreach (var photo in result.Photos)
+                {
+                    Photos.Add(new GalleryPhotoItem(photo));
+                }
+            }
+
+            ApplyGalleryState();
+        }
+        catch (Exception)
+        {
+            // The gallery is optional on the detail page: keep the listing usable
+            // and offer a retry instead of failing the whole screen.
+            Photos.Clear();
+            HasGalleryError = true;
+            ApplyGalleryState();
+        }
+        finally
+        {
+            IsGalleryLoading = false;
+            OnPropertyChanged(nameof(IsGalleryEmpty));
+        }
+    }
+
+    private void ApplyGalleryState()
+    {
+        Lightbox.SetPhotos(Photos.ToList());
+        CoverPhoto = Photos.Count > 0 ? Photos[0] : null;
+        PreviewThumbs = Photos.Skip(1).Take(4).ToList();
+        GalleryCountText = Photos.Count == 1 ? "1 ảnh" : $"{Photos.Count} ảnh";
+        ViewAllText = Photos.Count == 0 ? "Xem tất cả ảnh" : $"Xem tất cả {Photos.Count} ảnh";
+        OnPropertyChanged(nameof(HasPhotos));
+        OnPropertyChanged(nameof(HasPreviewThumbs));
+        OnPropertyChanged(nameof(IsGalleryEmpty));
+    }
 
     private void ShowDetail(ListingDetailDto detail)
     {

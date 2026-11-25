@@ -8,6 +8,7 @@
              xmlns:progressBar="clr-namespace:Syncfusion.Maui.Toolkit.ProgressBar;assembly=Syncfusion.Maui.Toolkit"
              xmlns:shimmer="clr-namespace:Syncfusion.Maui.Toolkit.Shimmer;assembly=Syncfusion.Maui.Toolkit"
              xmlns:sheet="clr-namespace:Syncfusion.Maui.Toolkit.BottomSheet;assembly=Syncfusion.Maui.Toolkit"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Controls"
              xmlns:report="clr-namespace:RoomToRentRadar.ViewModels"
              x:Class="RoomToRentRadar.Views.RoomDetailPage"
              x:DataType="viewModels:RoomDetailViewModel"
@@ -95,6 +96,123 @@
                             </VerticalStackLayout>
                         </Border>
                     </Grid>
+                </Border>
+
+                <!-- Photo gallery -->
+                <Border Padding="16" StrokeThickness="0" StrokeShape="RoundRectangle 18"
+                        AutomationId="PhotoGallerySection">
+                    <VerticalStackLayout Spacing="12">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <Label Text="Thư viện ảnh" Style="{StaticResource SectionTitle}" FontSize="17"
+                                   VerticalOptions="Center"
+                                   SemanticProperties.HeadingLevel="Level2" />
+                            <Border Grid.Column="1" Padding="10,5" VerticalOptions="Center" StrokeThickness="0"
+                                    StrokeShape="RoundRectangle 10"
+                                    IsVisible="{Binding HasPhotos}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}">
+                                <Label Text="{Binding GalleryCountText}" FontSize="11.5" FontFamily="OpenSansSemibold"
+                                       TextColor="{AppThemeBinding Light={StaticResource AccentPressed}, Dark={StaticResource AccentDark}}" />
+                            </Border>
+                        </Grid>
+
+                        <!-- Loading skeleton -->
+                        <Border StrokeThickness="0" StrokeShape="RoundRectangle 16" Padding="0" HeightRequest="180"
+                                IsVisible="{Binding IsGalleryLoading}"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
+                            <shimmer:SfShimmer Type="Video" IsActive="{Binding IsGalleryLoading}"
+                                               SemanticProperties.Description="Đang tải thư viện ảnh" />
+                        </Border>
+
+                        <!-- Cover photo -->
+                        <Border StrokeThickness="0" StrokeShape="RoundRectangle 16" Padding="0" HeightRequest="200"
+                                IsVisible="{Binding HasPhotos}"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
+                            <Grid>
+                                <Image Source="{Binding CoverPhoto.FullSource}" Aspect="AspectFill"
+                                       AutomationId="GalleryCoverPhoto"
+                                       SemanticProperties.Description="{Binding CoverPhoto.AccessibleDescription}"
+                                       SemanticProperties.Hint="Mở thư viện ảnh của phòng">
+                                    <Image.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding OpenGalleryCommand}"
+                                                              CommandParameter="{Binding CoverPhoto}" />
+                                    </Image.GestureRecognizers>
+                                </Image>
+
+                                <Border Margin="10" Padding="10,5" HorizontalOptions="Start" VerticalOptions="Start"
+                                        StrokeThickness="0" StrokeShape="RoundRectangle 9"
+                                        BackgroundColor="#CC152430"
+                                        IsVisible="{Binding CoverPhoto.IsPanorama}">
+                                    <Label Text="360°" FontSize="11" FontFamily="OpenSansSemibold" TextColor="White" />
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <!-- Remaining photos -->
+                        <FlexLayout BindableLayout.ItemsSource="{Binding PreviewThumbs}"
+                                    Direction="Row" Wrap="Wrap" JustifyContent="Start"
+                                    IsVisible="{Binding HasPreviewThumbs}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="viewModels:GalleryPhotoItem">
+                                    <Border WidthRequest="72" HeightRequest="72" Margin="0,0,8,8" Padding="0"
+                                            StrokeThickness="0" StrokeShape="RoundRectangle 12"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer
+                                                Command="{Binding OpenGalleryCommand, Source={RelativeSource AncestorType={x:Type viewModels:RoomDetailViewModel}}, x:DataType=viewModels:RoomDetailViewModel}"
+                                                CommandParameter="{Binding .}" />
+                                        </Border.GestureRecognizers>
+                                        <Grid>
+                                            <Image Source="{Binding ThumbSource}" Aspect="AspectFill"
+                                                   SemanticProperties.Description="{Binding AccessibleDescription}"
+                                                   SemanticProperties.Hint="Mở ảnh này trong thư viện" />
+                                            <Border Margin="4" Padding="5,2"
+                                                    HorizontalOptions="End" VerticalOptions="End"
+                                                    StrokeThickness="0" StrokeShape="RoundRectangle 6"
+                                                    BackgroundColor="#CC152430"
+                                                    IsVisible="{Binding IsPanorama}">
+                                                <Label Text="360°" FontSize="8.5" FontFamily="OpenSansSemibold" TextColor="White" />
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </FlexLayout>
+
+                        <buttons:SfButton Text="{Binding ViewAllText}" Style="{StaticResource SoftSfButton}"
+                                          Command="{Binding OpenGalleryCommand}"
+                                          IsVisible="{Binding HasPhotos}"
+                                          HorizontalOptions="Fill"
+                                          AutomationId="GalleryViewAllButton"
+                                          SemanticProperties.Description="Mở toàn bộ thư viện ảnh của phòng"
+                                          SemanticProperties.Hint="Mở trình xem ảnh toàn màn hình" />
+
+                        <!-- Empty state -->
+                        <Border IsVisible="{Binding IsGalleryEmpty}" Padding="16" StrokeThickness="0"
+                                StrokeShape="RoundRectangle 14"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
+                            <VerticalStackLayout Spacing="8">
+                                <Image Source="room_1.png" HeightRequest="92" Aspect="AspectFit"
+                                       SemanticProperties.Description="Minh họa phòng chưa có ảnh" />
+                                <Label Text="Chưa có ảnh cho phòng này" Style="{StaticResource CardTitle}"
+                                       HorizontalTextAlignment="Center" />
+                                <Label Text="Chủ phòng chưa tải ảnh lên. Bạn vẫn có thể xem thông tin chi tiết bên dưới."
+                                       Style="{StaticResource Caption}" LineHeight="1.35"
+                                       HorizontalTextAlignment="Center" />
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <!-- Error state -->
+                        <VerticalStackLayout IsVisible="{Binding HasGalleryError}" Spacing="10">
+                            <Label Text="Chưa tải được thư viện ảnh. Kiểm tra kết nối mạng rồi thử lại nhé."
+                                   Style="{StaticResource Caption}" LineHeight="1.35" />
+                            <buttons:SfButton Text="Thử lại" Command="{Binding RetryGalleryCommand}"
+                                              Style="{StaticResource SoftSfButton}"
+                                              HorizontalOptions="Start"
+                                              AutomationId="GalleryRetryButton"
+                                              SemanticProperties.Description="Thử tải lại thư viện ảnh"
+                                              SemanticProperties.Hint="Tải lại ảnh của phòng này" />
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
                 </Border>
 
                 <!-- Host card -->
@@ -496,6 +614,10 @@
                 </VerticalStackLayout>
             </VerticalStackLayout>
         </cards:SfCardView>
+
+        <!-- Full-screen photo lightbox. Last child (and spans both rows) so it
+             covers every state, including the bottom contact bar. -->
+        <controls:PhotoLightboxOverlay Grid.RowSpan="2" BindingContext="{Binding Lightbox}" />
     </Grid>
         </sheet:SfBottomSheet.Content>
 

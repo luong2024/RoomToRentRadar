@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="RoomToRentRadar.Controls.Panorama360View">
+
+    <!-- The viewer background stays dark so the WebView blends into the lightbox. -->
+    <Grid BackgroundColor="#0B1016">
+        <!-- The webview is added here lazily; keeping the host laid out (not collapsed)
+             guarantees the platform WebView is measured with a real size. -->
+        <Grid x:Name="ViewerHost" BackgroundColor="Transparent" />
+
+        <VerticalStackLayout x:Name="LoadingState" Spacing="12" Padding="24"
+                             InputTransparent="True"
+                             HorizontalOptions="Center" VerticalOptions="Center"
+                             SemanticProperties.Description="Đang mở ảnh toàn cảnh 360 độ">
+            <ActivityIndicator IsRunning="True" Color="#F2FFFFFF"
+                               WidthRequest="30" HeightRequest="30"
+                               HorizontalOptions="Center" />
+            <Label Text="Đang mở ảnh 360°…" FontSize="13" HorizontalTextAlignment="Center"
+                   TextColor="#E6FFFFFF" />
+        </VerticalStackLayout>
+
+        <Grid x:Name="FallbackState" IsVisible="False">
+            <Image x:Name="FallbackImage" Aspect="AspectFit"
+                   SemanticProperties.Description="Ảnh toàn cảnh của phòng" />
+            <Border Margin="16" Padding="14,10" VerticalOptions="End"
+                    StrokeThickness="0" StrokeShape="RoundRectangle 12"
+                    BackgroundColor="#CC152430">
+                <Label Text="Không thể mở ảnh 360°. Đang hiển thị ảnh thường."
+                       FontSize="12.5" LineHeight="1.3" TextColor="#F2FFFFFF" />
+            </Border>
+        </Grid>
+    </Grid>
+</ContentView>

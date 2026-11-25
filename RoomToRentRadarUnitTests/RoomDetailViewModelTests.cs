@@ -1,4 +1,5 @@
 using System.Globalization;
+using RoomToRentRadar.Constants;
 using RoomToRentRadar.Services;
 using RoomToRentRadar.Services.Auth;
 using RoomToRentRadar.Services.ErrorHandling;
@@ -751,15 +752,357 @@ public class RoomDetailViewModelTests
         });
     }
 
+    [Test]
+    public async Task LoadAsync_WhenPhotosFound_PopulatesTheGalleryAndTheLightbox()
+    {
+        var photos = CreatePhotos(10);
+        var photosApiClient = new FakePhotosApiClient
+        {
+            Result = new ListingPhotosFetchResult(ListingPhotosFetchOutcome.Found, photos)
+        };
+        var errorHandler = new FakeErrorHandler();
+        var viewModel = CreateViewModel(
+            new FakeApiClient(new ListingDetailFetchResult(ListingDetailFetchOutcome.Found, CreateDetail(DateTime.UtcNow))),
+            errorHandler,
+            new FakeNavigationService(),
+            photosApiClient: photosApiClient);
+        ApplyListingId(viewModel, ListingId);
+
+        await AwaitAutoStartedLoadAsync(viewModel);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.State, Is.EqualTo(RoomDetailState.Content));
+            Assert.That(viewModel.IsGalleryLoading, Is.False);
+            Assert.That(viewModel.HasGalleryError, Is.False);
+            Assert.That(viewModel.IsGalleryEmpty, Is.False);
+            Assert.That(viewModel.HasPhotos, Is.True);
+            Assert.That(viewModel.Photos, Has.Count.EqualTo(10));
+            Assert.That(viewModel.CoverPhoto?.Id, Is.EqualTo(photos[0].Id));
+            Assert.That(viewModel.PreviewThumbs, Has.Count.EqualTo(4));
+            Assert.That(
+                viewModel.PreviewThumbs.Select(photo => photo.Id),
+                Is.EqualTo(photos.Skip(1).Take(4).Select(photo => photo.Id)));
+            Assert.That(viewModel.HasPreviewThumbs, Is.True);
+            Assert.That(viewModel.GalleryCountText, Is.EqualTo("10 ảnh"));
+            Assert.That(viewModel.ViewAllText, Is.EqualTo("Xem tất cả 10 ảnh"));
+            Assert.That(viewModel.Lightbox.Photos, Has.Count.EqualTo(10));
+            Assert.That(viewModel.Lightbox.CurrentIndex, Is.Zero);
+            Assert.That(viewModel.Lightbox.CounterText, Is.EqualTo("1 / 10"));
+            Assert.That(photosApiClient.RequestedIds, Has.Count.EqualTo(1));
+            Assert.That(photosApiClient.RequestedIds[0], Is.EqualTo(ListingId));
+            Assert.That(errorHandler.HandledExceptions, Is.Empty);
+        });
+    }
+
+    [Test]
+    public async Task LoadAsync_WhenSinglePhotoFound_ShowsOnePhotoCountAndNoPreviewThumbs()
+    {
+        var photos = CreatePhotos(1);
+        var photosApiClient = new FakePhotosApiClient
+        {
+            Result = new ListingPhotosFetchResult(ListingPhotosFetchOutcome.Found, photos)
+        };
+        var viewModel = CreateViewModel(
+            new FakeApiClient(new ListingDetailFetchResult(ListingDetailFetchOutcome.Found, CreateDetail(DateTime.UtcNow))),
+            new FakeErrorHandler(),
+            new FakeNavigationService(),
+            photosApiClient: photosApiClient);
+        ApplyListingId(viewModel, ListingId);
+
+        await AwaitAutoStartedLoadAsync(viewModel);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.Photos, Has.Count.EqualTo(1));
+            Assert.That(viewModel.CoverPhoto?.Id, Is.EqualTo(photos[0].Id));
+            Assert.That(viewModel.PreviewThumbs, Is.Empty);
+            Assert.That(viewModel.HasPreviewThumbs, Is.False);
+            Assert.That(viewModel.GalleryCountText, Is.EqualTo("1 ảnh"));
+            Assert.That(viewModel.ViewAllText, Is.EqualTo("Xem tất cả 1 ảnh"));
+            Assert.That(viewModel.IsGalleryEmpty, Is.False);
+            Assert.That(viewModel.Lightbox.HasPhotos, Is.True);
+            Assert.That(viewModel.Lightbox.Photos, Has.Count.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task LoadAsync_WhenNoPhotosFound_ShowsTheEmptyGallery()
+    {
+        var photosApiClient = new FakePhotosApiClient
+        {
+            Result = new ListingPhotosFetchResult(ListingPhotosFetchOutcome.Found, [])
+        };
+        var errorHandler = new FakeErrorHandler();
+        var viewModel = CreateViewModel(
+            new FakeApiClient(new ListingDetailFetchResult(ListingDetailFetchOutcome.Found, CreateDetail(DateTime.UtcNow))),
+            errorHandler,
+            new FakeNavigationService(),
+            photosApiClient: photosApiClient);
+        ApplyListingId(viewModel, ListingId);
+
+        await AwaitAutoStartedLoadAsync(viewModel);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.State, Is.EqualTo(RoomDetailState.Content));
+            Assert.That(viewModel.IsGalleryEmpty, Is.True);
+            Assert.That(viewModel.HasPhotos, Is.False);
+            Assert.That(viewModel.HasGalleryError, Is.False);
+            Assert.That(viewModel.IsGalleryLoading, Is.False);
+            Assert.That(viewModel.CoverPhoto, Is.Null);
+            Assert.That(viewModel.PreviewThumbs, Is.Empty);
+            Assert.That(viewModel.GalleryCountText, Is.EqualTo("0 ảnh"));
+            Assert.That(viewModel.ViewAllText, Is.EqualTo("Xem tất cả ảnh"));
+            Assert.That(viewModel.Lightbox.HasPhotos, Is.False);
+            Assert.That(photosApiClient.RequestedIds, Has.Count.EqualTo(1));
+            Assert.That(errorHandler.HandledExceptions, Is.Empty);
+        });
+    }
+
+    [TestCase(ListingPhotosFetchOutcome.NotFound)]
+    [TestCase(ListingPhotosFetchOutcome.Unavailable)]
+    public async Task LoadAsync_WhenThePhotosAreMissing_ShowsTheEmptyGallery(ListingPhotosFetchOutcome outcome)
+    {
+        var photosApiClient = new FakePhotosApiClient
+        {
+            Result = new ListingPhotosFetchResult(outcome, [])
+        };
+        var errorHandler = new FakeErrorHandler();
+        var viewModel = CreateViewModel(
+            new FakeApiClient(new ListingDetailFetchResult(ListingDetailFetchOutcome.Found, CreateDetail(DateTime.UtcNow))),
+            errorHandler,
+            new FakeNavigationService(),
+            photosApiClient: photosApiClient);
+        ApplyListingId(viewModel, ListingId);
+
+        await AwaitAutoStartedLoadAsync(viewModel);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.State, Is.EqualTo(RoomDetailState.Content));
+            Assert.That(viewModel.IsGalleryEmpty, Is.True);
+            Assert.That(viewModel.HasGalleryError, Is.False);
+            Assert.That(viewModel.Photos, Is.Empty);
+            Assert.That(viewModel.CoverPhoto, Is.Null);
+            Assert.That(viewModel.GalleryCountText, Is.EqualTo("0 ảnh"));
+            Assert.That(viewModel.ViewAllText, Is.EqualTo("Xem tất cả ảnh"));
+            Assert.That(errorHandler.HandledExceptions, Is.Empty);
+        });
+    }
+
+    [Test]
+    public async Task LoadAsync_WhenThePhotosApiThrows_KeepsTheContentAndShowsTheGalleryError()
+    {
+        var photosApiClient = new FakePhotosApiClient
+        {
+            Exception = new HttpRequestException("gallery down")
+        };
+        var errorHandler = new FakeErrorHandler();
+        var viewModel = CreateViewModel(
+            new FakeApiClient(new ListingDetailFetchResult(ListingDetailFetchOutcome.Found, CreateDetail(DateTime.UtcNow))),
+            errorHandler,
+            new FakeNavigationService(),
+            photosApiClient: photosApiClient);
+        ApplyListingId(viewModel, ListingId);
+
+        await AwaitAutoStartedLoadAsync(viewModel);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.State, Is.EqualTo(RoomDetailState.Content));
+            Assert.That(viewModel.IsContentVisible, Is.True);
+            Assert.That(viewModel.Listing, Is.Not.Null);
+            Assert.That(viewModel.HasGalleryError, Is.True);
+            Assert.That(viewModel.IsGalleryEmpty, Is.False);
+            Assert.That(viewModel.IsGalleryLoading, Is.False);
+            Assert.That(viewModel.Photos, Is.Empty);
+            Assert.That(viewModel.CoverPhoto, Is.Null);
+            Assert.That(viewModel.HasPhotos, Is.False);
+            Assert.That(viewModel.PreviewThumbs, Is.Empty);
+            Assert.That(viewModel.Lightbox.HasPhotos, Is.False);
+            Assert.That(photosApiClient.RequestedIds, Has.Count.EqualTo(1));
+            Assert.That(errorHandler.HandledExceptions, Is.Empty);
+        });
+    }
+
+    [Test]
+    public async Task LoadAsync_WhenThePhotoUrlsAreRelative_BuildsAbsoluteMediaUrls()
+    {
+        // ApiConstants.BaseAddress is http://localhost:5080/ on the net10.0 test target.
+        var relativeUrl = "/media/room-cover.jpg";
+        var photos = new[]
+        {
+            new ListingPhotoDto(
+                PhotoId(0),
+                ListingId,
+                relativeUrl,
+                null,
+                1600,
+                900,
+                ListingPhotoKind.Photo,
+                "Phòng khách",
+                0,
+                true)
+        };
+        var photosApiClient = new FakePhotosApiClient
+        {
+            Result = new ListingPhotosFetchResult(ListingPhotosFetchOutcome.Found, photos)
+        };
+        var viewModel = CreateViewModel(
+            new FakeApiClient(new ListingDetailFetchResult(ListingDetailFetchOutcome.Found, CreateDetail(DateTime.UtcNow))),
+            new FakeErrorHandler(),
+            new FakeNavigationService(),
+            photosApiClient: photosApiClient);
+        ApplyListingId(viewModel, ListingId);
+
+        await AwaitAutoStartedLoadAsync(viewModel);
+
+        var expectedUrl = $"{ApiConstants.BaseAddress}media/room-cover.jpg";
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.Photos[0].FullUrl, Is.EqualTo(expectedUrl));
+            Assert.That(viewModel.Photos[0].ThumbUrl, Is.EqualTo(expectedUrl));
+            Assert.That(new Uri(viewModel.Photos[0].FullUrl).IsAbsoluteUri, Is.True);
+        });
+    }
+
+    [Test]
+    public async Task OpenGalleryCommand_WithAPhoto_OpensTheLightboxAtThatIndex()
+    {
+        var photos = CreatePhotos(10);
+        var viewModel = await LoadViewModelWithGalleryAsync(photos);
+
+        viewModel.OpenGalleryCommand.Execute(viewModel.Photos[3]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.Lightbox.IsOpen, Is.True);
+            Assert.That(viewModel.Lightbox.CurrentIndex, Is.EqualTo(3));
+            Assert.That(viewModel.Lightbox.CurrentPhoto?.Id, Is.EqualTo(photos[3].Id));
+            Assert.That(viewModel.Lightbox.CounterText, Is.EqualTo("4 / 10"));
+        });
+    }
+
+    [Test]
+    public async Task OpenGalleryCommand_WithNull_OpensTheFirstPhoto()
+    {
+        var photos = CreatePhotos(4);
+        var viewModel = await LoadViewModelWithGalleryAsync(photos);
+
+        // The gallery binds the tapped item; a tap without a payload must open the first photo.
+        viewModel.OpenGalleryCommand.Execute(null!);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.Lightbox.IsOpen, Is.True);
+            Assert.That(viewModel.Lightbox.CurrentIndex, Is.Zero);
+            Assert.That(viewModel.Lightbox.CurrentPhoto?.Id, Is.EqualTo(photos[0].Id));
+        });
+    }
+
+    [Test]
+    public async Task OpenGalleryCommand_WhenTheListingHasNoPhotos_KeepsTheLightboxClosed()
+    {
+        var viewModel = await LoadViewModelWithGalleryAsync([]);
+
+        viewModel.OpenGalleryCommand.Execute(null!);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.Lightbox.IsOpen, Is.False);
+            Assert.That(viewModel.Lightbox.CurrentIndex, Is.Zero);
+            Assert.That(viewModel.Lightbox.HasPhotos, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task RetryGalleryCommand_AfterAFailedLoad_PopulatesTheGallery()
+    {
+        var photos = CreatePhotos(3);
+        var photosApiClient = new FakePhotosApiClient
+        {
+            Exception = new HttpRequestException("gallery down")
+        };
+        var viewModel = CreateViewModel(
+            new FakeApiClient(new ListingDetailFetchResult(ListingDetailFetchOutcome.Found, CreateDetail(DateTime.UtcNow))),
+            new FakeErrorHandler(),
+            new FakeNavigationService(),
+            photosApiClient: photosApiClient);
+        ApplyListingId(viewModel, ListingId);
+        await AwaitAutoStartedLoadAsync(viewModel);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasGalleryError, Is.True);
+            Assert.That(viewModel.Photos, Is.Empty);
+        });
+
+        photosApiClient.Exception = null;
+        photosApiClient.Result = new ListingPhotosFetchResult(ListingPhotosFetchOutcome.Found, photos);
+
+        await viewModel.RetryGalleryCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasGalleryError, Is.False);
+            Assert.That(viewModel.IsGalleryLoading, Is.False);
+            Assert.That(viewModel.Photos, Has.Count.EqualTo(3));
+            Assert.That(viewModel.CoverPhoto?.Id, Is.EqualTo(photos[0].Id));
+            Assert.That(viewModel.GalleryCountText, Is.EqualTo("3 ảnh"));
+            Assert.That(viewModel.ViewAllText, Is.EqualTo("Xem tất cả 3 ảnh"));
+            Assert.That(viewModel.Lightbox.Photos, Has.Count.EqualTo(3));
+            Assert.That(viewModel.IsGalleryEmpty, Is.False);
+            Assert.That(photosApiClient.RequestedIds, Has.Count.EqualTo(2));
+        });
+    }
+
+    private static async Task<RoomDetailViewModel> LoadViewModelWithGalleryAsync(ListingPhotoDto[] photos)
+    {
+        var photosApiClient = new FakePhotosApiClient
+        {
+            Result = new ListingPhotosFetchResult(ListingPhotosFetchOutcome.Found, photos)
+        };
+        var viewModel = CreateViewModel(
+            new FakeApiClient(new ListingDetailFetchResult(ListingDetailFetchOutcome.Found, CreateDetail(DateTime.UtcNow))),
+            new FakeErrorHandler(),
+            new FakeNavigationService(),
+            photosApiClient: photosApiClient);
+        ApplyListingId(viewModel, ListingId);
+
+        await AwaitAutoStartedLoadAsync(viewModel);
+
+        return viewModel;
+    }
+
+    private static ListingPhotoDto[] CreatePhotos(int count)
+        => Enumerable.Range(0, count)
+            .Select(index => new ListingPhotoDto(
+                PhotoId(index),
+                ListingId,
+                $"/media/room-{index}.jpg",
+                null,
+                1600,
+                900,
+                index == 1 ? ListingPhotoKind.Panorama : ListingPhotoKind.Photo,
+                index == 0 ? "Ảnh bìa" : null,
+                index,
+                index == 0))
+            .ToArray();
+
+    private static Guid PhotoId(int index) => new(index, 0, 0, new byte[8]);
+
     private static RoomDetailViewModel CreateViewModel(
         IApiClient apiClient,
         IErrorHandler errorHandler,
         INavigationService navigationService,
         FakeFavouritesService? favouritesService = null,
         FakeUndoService? undoService = null,
-        RoomReportViewModel? reportViewModel = null)
+        RoomReportViewModel? reportViewModel = null,
+        FakePhotosApiClient? photosApiClient = null)
         => new(
             apiClient,
+            photosApiClient ?? new FakePhotosApiClient(),
             errorHandler,
             navigationService,
             favouritesService ?? new FakeFavouritesService(),
@@ -944,6 +1287,44 @@ public class RoomDetailViewModelTests
             int limit = 20,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The room detail screen does not load notifications.");
+    }
+
+    private sealed class FakePhotosApiClient : IPhotosApiClient
+    {
+        public ListingPhotosFetchResult Result { get; set; } =
+            new(ListingPhotosFetchOutcome.Found, Array.Empty<ListingPhotoDto>());
+
+        public Exception? Exception { get; set; }
+
+        public List<Guid> RequestedIds { get; } = new();
+
+        public List<string> RequestedMediaUrls { get; } = new();
+
+        public byte[]? MediaBytes { get; set; }
+
+        public Exception? MediaException { get; set; }
+
+        public Task<ListingPhotosFetchResult> GetPhotosAsync(
+            Guid listingId,
+            CancellationToken cancellationToken = default)
+        {
+            RequestedIds.Add(listingId);
+
+            return Exception is { } exception
+                ? Task.FromException<ListingPhotosFetchResult>(exception)
+                : Task.FromResult(Result);
+        }
+
+        public Task<byte[]?> GetMediaBytesAsync(
+            string absoluteUrl,
+            CancellationToken cancellationToken = default)
+        {
+            RequestedMediaUrls.Add(absoluteUrl);
+
+            return MediaException is { } exception
+                ? Task.FromException<byte[]?>(exception)
+                : Task.FromResult(MediaBytes);
+        }
     }
 
     private sealed class FakeFavouritesService : IFavouritesService
