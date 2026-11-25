@@ -320,20 +320,22 @@ public partial class MainLandingPageModel : BasePageModel
     }
 
     [RelayCommand]
-    private Task OpenRoomAsync(string? roomId)
+    private async Task ViewRoomDetailsAsync(string? roomId)
     {
         if (string.IsNullOrWhiteSpace(roomId))
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        var query = new Dictionary<string, object> { ["roomId"] = roomId };
-        if (_loadedCriteria?.CampusId is { } campusId)
+        var route = $"{AppRoutes.RoomDetail}?roomId={Uri.EscapeDataString(roomId)}";
+        // The campus of the list on screen, so the detail measures from the same place as the card.
+        var campusId = (_loadedCriteria ?? _searchCriteriaStore.Current).CampusId;
+        if (!string.IsNullOrWhiteSpace(campusId))
         {
-            query["campusId"] = campusId;
+            route += $"&campusId={Uri.EscapeDataString(campusId)}";
         }
 
-        return _navigation.GoToAsync(AppRoutes.RoomDetail, query);
+        await _navigation.GoToAsync(route);
     }
 
     [RelayCommand]

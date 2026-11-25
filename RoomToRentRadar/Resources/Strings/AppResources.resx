@@ -272,6 +272,12 @@
   <data name="RoomDetail_Title" xml:space="preserve">
     <value>Room Details</value>
   </data>
+  <data name="RoomDetail_Description" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="RoomDetail_NoPhotos" xml:space="preserve">
+    <value>No photos available for this listing</value>
+  </data>
   <data name="RoomDetail_360View" xml:space="preserve">
     <value>360° view</value>
   </data>
@@ -298,6 +304,15 @@
   </data>
   <data name="RoomDetail_UpdatedYesterday" xml:space="preserve">
     <value>Updated yesterday</value>
+  </data>
+  <data name="RoomDetail_RelativeToday" xml:space="preserve">
+    <value>today</value>
+  </data>
+  <data name="RoomDetail_RelativeYesterday" xml:space="preserve">
+    <value>yesterday</value>
+  </data>
+  <data name="RoomDetail_RelativeDaysAgo" xml:space="preserve">
+    <value>{0} days ago</value>
   </data>
   <data name="RoomDetail_PerMonth" xml:space="preserve">
     <value>/ month</value>
@@ -410,6 +425,18 @@
   <data name="RoomDetail_EstimateNote" xml:space="preserve">
     <value>Estimate: 100 kWh electricity, 1 person water.</value>
   </data>
+  <data name="RoomDetail_OtherFeesFormat" xml:space="preserve">
+    <value>Other fees: {0}</value>
+  </data>
+  <data name="RoomDetail_ShortMillionFormat" xml:space="preserve">
+    <value>{0}M</value>
+  </data>
+  <data name="RoomDetail_ShortThousandFormat" xml:space="preserve">
+    <value>{0}k</value>
+  </data>
+  <data name="RoomDetail_ShortPerMonthFormat" xml:space="preserve">
+    <value>{0}/mo</value>
+  </data>
   <data name="RoomDetail_Amenities" xml:space="preserve">
     <value>Amenities</value>
   </data>
@@ -466,6 +493,12 @@
   </data>
   <data name="Amenity_Window" xml:space="preserve">
     <value>Window</value>
+  </data>
+  <data name="Amenity_Elevator" xml:space="preserve">
+    <value>Elevator</value>
+  </data>
+  <data name="Amenity_DryingArea" xml:space="preserve">
+    <value>Drying area</value>
   </data>
   <data name="RoomDetail_Safety" xml:space="preserve">
     <value>Safety</value>
@@ -532,6 +565,30 @@
   </data>
   <data name="HouseRule_ParkingYard" xml:space="preserve">
     <value>Motorbikes in the yard, one per room</value>
+  </data>
+  <data name="HouseRule_ParkingUnavailable" xml:space="preserve">
+    <value>No motorbike parking</value>
+  </data>
+  <data name="HouseRule_Pets" xml:space="preserve">
+    <value>Pets</value>
+  </data>
+  <data name="HouseRule_PetsAllowed" xml:space="preserve">
+    <value>Allowed</value>
+  </data>
+  <data name="HouseRule_PetsNotAllowed" xml:space="preserve">
+    <value>Not allowed</value>
+  </data>
+  <data name="HouseRule_Smoking" xml:space="preserve">
+    <value>Smoking</value>
+  </data>
+  <data name="HouseRule_SmokingAllowed" xml:space="preserve">
+    <value>Allowed</value>
+  </data>
+  <data name="HouseRule_SmokingNotAllowed" xml:space="preserve">
+    <value>Not allowed</value>
+  </data>
+  <data name="HouseRule_OtherRules" xml:space="preserve">
+    <value>Other rules</value>
   </data>
   <data name="RoomDetail_GettingToCampus" xml:space="preserve">
     <value>Getting to {0} · {1} km</value>
@@ -607,6 +664,9 @@
   </data>
   <data name="RoomDetail_BackToExplore" xml:space="preserve">
     <value>Back to Explore</value>
+  </data>
+  <data name="RoomDetail_DebugPreviewUnavailable" xml:space="preserve">
+    <value>Debug: Preview unavailable room (Rented)</value>
   </data>
 
   <!-- Placeholder screens (T00.15): shared PlaceholderPage titles, "Coming in" and id text -->
@@ -919,6 +979,31 @@
   <data name="Common_Cancel" xml:space="preserve">
     <value>Cancel</value>
   </data>
+  <data name="Date_Today" xml:space="preserve"><value>Today</value></data>
+  <data name="Date_Yesterday" xml:space="preserve"><value>Yesterday</value></data>
+  <data name="Date_DaysAgo" xml:space="preserve"><value>{0} days ago</value></data>
+  <data name="Catalog_Title" xml:space="preserve"><value>8. CULTURE-AWARE FORMATTING</value></data>
+  <data name="Catalog_Description" xml:space="preserve"><value>Preview formatting without changing raw values or global app language.</value></data>
+  <data name="Catalog_SelectVietnamese" xml:space="preserve"><value>Preview Vietnamese culture vi-VN</value></data>
+  <data name="Catalog_SelectEnglish" xml:space="preserve"><value>Preview English culture en-US</value></data>
+  <data name="Catalog_Vietnamese" xml:space="preserve"><value>Tiếng Việt (vi-VN)</value></data>
+  <data name="Catalog_English" xml:space="preserve"><value>English (en-US)</value></data>
+  <data name="Catalog_UseApp" xml:space="preserve"><value>Use app culture</value></data>
+  <data name="Catalog_ResetHint" xml:space="preserve"><value>Reset formatting preview to follow the current app culture</value></data>
+  <data name="Catalog_Currency" xml:space="preserve"><value>Currency</value></data>
+  <data name="Catalog_Number" xml:space="preserve"><value>Number</value></data>
+  <data name="Catalog_Date" xml:space="preserve"><value>Date</value></data>
+  <data name="Catalog_Time" xml:space="preserve"><value>Time</value></data>
+  <data name="Catalog_Area" xml:space="preserve"><value>Area</value></data>
+  <data name="Catalog_Distance" xml:space="preserve"><value>Distance</value></data>
+  <data name="Catalog_Room" xml:space="preserve"><value>Preview room values (SampleRoom)</value></data>
+  <data name="Catalog_Rent" xml:space="preserve"><value>Monthly rent</value></data>
+  <data name="Catalog_Status" xml:space="preserve"><value>App: {0}  ·  Preview: {1}</value></data>
+  <data name="Catalog_Following" xml:space="preserve"><value>Mode: Following app culture</value></data>
+  <data name="Catalog_Override" xml:space="preserve"><value>Mode: Local preview override</value></data>
+  <data name="Catalog_Input" xml:space="preserve"><value>Input:</value></data>
+  <data name="Catalog_PreviewFeedback" xml:space="preserve"><value>Previewing {0} (app culture remains {1}).</value></data>
+  <data name="Catalog_FollowFeedback" xml:space="preserve"><value>Following app culture ({0}).</value></data>
   <!-- Campus picker SCR-ACC-02 (T13.4) -->
   <data name="Campus_Title" xml:space="preserve">
     <value>Measure distances from</value>

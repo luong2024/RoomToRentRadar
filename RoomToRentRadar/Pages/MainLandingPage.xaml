@@ -180,7 +180,7 @@
                             <DataTemplate x:DataType="cardmodels:RoomCardDisplayModel">
                                 <cards:RoomCardView Margin="16,0"
                                                     Room="{Binding}"
-                                                    DetailsCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:MainLandingPageModel}}, Path=OpenRoomCommand, x:DataType=vm:MainLandingPageModel}" />
+                                                    DetailsCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:MainLandingPageModel}}, Path=ViewRoomDetailsCommand, x:DataType=vm:MainLandingPageModel}" />
                             </DataTemplate>
                         </CollectionView.ItemTemplate>
                         <CollectionView.Footer>

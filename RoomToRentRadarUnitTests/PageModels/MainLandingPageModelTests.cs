@@ -215,6 +215,39 @@ public class MainLandingPageModelTests
             r.Sort == null));
     }
 
+    [Test]
+    public async Task ViewRoomDetails_ValidRoomId_NavigatesToRoomDetailRoute()
+    {
+        var model = CreateModel();
+
+        await model.ViewRoomDetailsCommand.ExecuteAsync("seed-z115");
+
+        await _navigation.Received(1).GoToAsync($"{AppRoutes.RoomDetail}?roomId=seed-z115");
+    }
+
+    [Test]
+    public async Task ViewRoomDetails_WhenCampusSelected_IncludesCampusIdInRoute()
+    {
+        var store = new SearchCriteriaStore();
+        store.SetCampus("tnut", "TNUT");
+        var model = CreateModel(store);
+
+        await model.ViewRoomDetailsCommand.ExecuteAsync("seed-z115");
+
+        await _navigation.Received(1).GoToAsync($"{AppRoutes.RoomDetail}?roomId=seed-z115&campusId=tnut");
+    }
+
+    [Test]
+    public async Task ViewRoomDetails_NullOrWhiteSpace_DoesNotNavigate()
+    {
+        var model = CreateModel();
+
+        await model.ViewRoomDetailsCommand.ExecuteAsync(null);
+        await model.ViewRoomDetailsCommand.ExecuteAsync("   ");
+
+        await _navigation.DidNotReceive().GoToAsync(Arg.Any<string>());
+    }
+
     private MainLandingPageModel CreateModel(ISearchCriteriaStore store) =>
         new(_roomGateway, _navigation, store);
 

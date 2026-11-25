@@ -355,12 +355,9 @@ public class ExploreListPageModelTests
         var model = CreateModel();
         await model.InitializeAsync();
 
-        await model.OpenRoomCommand.ExecuteAsync("room-1");
+        await model.ViewRoomDetailsCommand.ExecuteAsync("room-1");
 
-        await _navigation.Received(1).GoToAsync(
-            AppRoutes.RoomDetail,
-            Arg.Is<IDictionary<string, object>>(q =>
-                (string)q["roomId"] == "room-1" && (string)q["campusId"] == "TNUT"));
+        await _navigation.Received(1).GoToAsync($"{AppRoutes.RoomDetail}?roomId=room-1&campusId=TNUT");
     }
 
     [TestCase(null)]
@@ -369,9 +366,9 @@ public class ExploreListPageModelTests
     {
         var model = CreateModel();
 
-        await model.OpenRoomCommand.ExecuteAsync(roomId);
+        await model.ViewRoomDetailsCommand.ExecuteAsync(roomId);
 
-        await _navigation.DidNotReceive().GoToAsync(Arg.Any<string>(), Arg.Any<IDictionary<string, object>>());
+        await _navigation.DidNotReceive().GoToAsync(Arg.Any<string>());
     }
 
     [Test]

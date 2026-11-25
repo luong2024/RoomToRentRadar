@@ -30,12 +30,18 @@
                 <BindableLayout.ItemTemplate>
                     <DataTemplate x:DataType="models:HouseRuleItem">
                         <Grid ColumnDefinitions="26, *" VerticalOptions="Center">
-                            <Label Grid.Column="0"
-                                   Text="{Binding IconGlyph}"
-                                   FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                                   FontSize="18"
-                                   TextColor="{AppThemeBinding Light={StaticResource ActionAccentLight}, Dark={StaticResource ActionAccentDark}}"
-                                   VerticalTextAlignment="Center" />
+                            <Image Grid.Column="0"
+                                   WidthRequest="18"
+                                   HeightRequest="18"
+                                   HorizontalOptions="Start"
+                                   VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="{Binding IconGlyph}"
+                                                     FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                     Size="18"
+                                                     Color="{AppThemeBinding Light={StaticResource ActionAccentLight}, Dark={StaticResource ActionAccentDark}}" />
+                                </Image.Source>
+                            </Image>
                             <Label Grid.Column="1"
                                    VerticalTextAlignment="Center"
                                    LineBreakMode="WordWrap">

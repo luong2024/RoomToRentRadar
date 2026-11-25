@@ -28,9 +28,9 @@
 
         <!-- 2. ERROR STATE WITH RETRY -->
         <feedback:ErrorRetryView IsVisible="{Binding HasError}"
-                                 Title="{loc:LocalizedStrings Common_Error}"
+                                 Title="{loc:LocalizedStrings State_Error_Title}"
                                  ErrorMessage="{Binding ErrorMessage}"
-                                 RetryText="{loc:LocalizedStrings Common_Retry}"
+                                 RetryText="{loc:LocalizedStrings State_Retry}"
                                  RetryCommand="{Binding InitializeCommand}"
                                  VerticalOptions="Center"
                                  HorizontalOptions="Center" />
@@ -40,7 +40,7 @@
                                  IconGlyph="{x:Static fonts:FluentUI.search_info_24_regular}"
                                  Title="{loc:LocalizedStrings RoomDetail_NotFoundTitle}"
                                  Message="{Binding ErrorMessage}"
-                                 ActionText="{loc:LocalizedStrings Common_Back}"
+                                 ActionText="{loc:LocalizedStrings RoomDetail_BackToExplore}"
                                  ActionCommand="{Binding GoBackCommand}"
                                  VerticalOptions="Center"
                                  HorizontalOptions="Center" />
@@ -51,36 +51,72 @@
 
             <!-- Scrollable Content with Pull-To-Refresh -->
             <RefreshView Grid.Row="0"
-                         Command="{Binding InitializeCommand}"
+                         Command="{Binding RefreshCommand}"
                          IsRefreshing="{Binding IsBusy}">
                 <ScrollView>
                     <VerticalStackLayout Spacing="0">
                         <!-- Top Hero Image Gallery (Back, Share, Fav, 360, Counter) -->
                         <detail:RoomHeroGalleryControl />
 
+                        <!-- Unavailable Notice Banner (Full-width directly below hero when rented/unpublished) -->
+                        <detail:UnavailableBannerControl />
+
                         <!-- Details Body Content (Sections) -->
                         <VerticalStackLayout Padding="16,14,16,24" Spacing="16">
 
-                            <!-- Status Badge & Relative Updated Timestamp -->
+                            <!-- Status Badge & Relative Updated Timestamp (shown for Available, Rented, and Unpublished) -->
                             <Grid ColumnDefinitions="Auto, *">
                                 <!-- Status Badge -->
                                 <Border Grid.Column="0"
                                         StrokeShape="RoundRectangle 9999"
                                         StrokeThickness="0"
-                                        BackgroundColor="{AppThemeBinding Light=#1516A34A, Dark=#254CB5AE}"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource ActionAccentSubtleLight}, Dark={StaticResource ActionAccentSubtleDark}}"
                                         Padding="10,4">
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding IsAvailable}" Value="False">
+                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource StatusWarningSubtleLight}, Dark={StaticResource StatusWarningSubtleDark}}" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
                                     <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
-                                        <Label Text="{x:Static fonts:FluentUI.checkmark_circle_16_regular}"
-                                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                                               FontSize="14"
-                                               TextColor="{AppThemeBinding Light={StaticResource StatusSuccessTextLight}, Dark={StaticResource StatusSuccessDark}}"
-                                               VerticalTextAlignment="Center" />
+                                        <Image WidthRequest="14"
+                                               HeightRequest="14"
+                                               VerticalOptions="Center"
+                                               IsVisible="{Binding IsAvailable}">
+                                            <Image.Source>
+                                                <FontImageSource Glyph="{x:Static fonts:FluentUI.checkmark_circle_16_regular}"
+                                                                 FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                                 Size="14"
+                                                                 Color="{AppThemeBinding Light={StaticResource StatusSuccessTextLight}, Dark={StaticResource StatusSuccessDark}}" />
+                                            </Image.Source>
+                                        </Image>
+                                        <Image WidthRequest="14"
+                                               HeightRequest="14"
+                                               VerticalOptions="Center"
+                                               IsVisible="False">
+                                            <Image.Triggers>
+                                                <DataTrigger TargetType="Image" Binding="{Binding IsAvailable}" Value="False">
+                                                    <Setter Property="IsVisible" Value="True" />
+                                                </DataTrigger>
+                                            </Image.Triggers>
+                                            <Image.Source>
+                                                <FontImageSource Glyph="{x:Static fonts:FluentUI.info_16_regular}"
+                                                                 FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                                 Size="14"
+                                                                 Color="{AppThemeBinding Light={StaticResource StatusWarningTextLight}, Dark={StaticResource StatusWarningDark}}" />
+                                            </Image.Source>
+                                        </Image>
                                         <Label Text="{Binding StatusBadgeText}"
                                                FontFamily="{StaticResource FontFamilySemibold}"
                                                FontSize="{StaticResource FontSizeBadge}"
                                                FontAttributes="Bold"
                                                TextColor="{AppThemeBinding Light={StaticResource StatusSuccessTextLight}, Dark={StaticResource StatusSuccessDark}}"
-                                               VerticalTextAlignment="Center" />
+                                               VerticalTextAlignment="Center">
+                                            <Label.Triggers>
+                                                <DataTrigger TargetType="Label" Binding="{Binding IsAvailable}" Value="False">
+                                                    <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource StatusWarningTextLight}, Dark={StaticResource StatusWarningDark}}" />
+                                                </DataTrigger>
+                                            </Label.Triggers>
+                                        </Label>
                                     </HorizontalStackLayout>
                                 </Border>
 
@@ -102,8 +138,9 @@
                                    TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
                                    LineBreakMode="WordWrap" />
 
-                            <!-- Pricing & Deposit Display -->
-                            <VerticalStackLayout Spacing="4">
+                            <!-- Pricing & Deposit Display (Available only) -->
+                            <VerticalStackLayout Spacing="4"
+                                                 IsVisible="{Binding IsAvailable}">
                                 <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
                                     <Label Text="{Binding PriceFormatted}"
                                            FontFamily="{StaticResource FontFamilySemibold}"
@@ -123,32 +160,110 @@
                                        TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
                             </VerticalStackLayout>
 
-                            <!-- Unavailable Notice Banner (Visible when listing is rented/unavailable) -->
-                            <detail:UnavailableBannerControl />
+                            <!-- Unavailable Compact Summary & Straight-Line Distance Card (SCR-ROOM-01-UNAVAILABLE) -->
+                            <VerticalStackLayout IsVisible="{Binding IsUnavailable}"
+                                                 Spacing="14">
+                                <Label Text="{Binding UnavailableSummaryFormatted}"
+                                       FontFamily="{StaticResource FontFamilyRegular}"
+                                       FontSize="{StaticResource FontSizeBodyLarge}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"
+                                       LineBreakMode="WordWrap" />
+
+                                <Border StrokeShape="RoundRectangle 12"
+                                        StrokeThickness="1"
+                                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+                                        Padding="14,12">
+                                    <Grid ColumnDefinitions="24, *"
+                                          ColumnSpacing="10"
+                                          VerticalOptions="Center">
+                                        <Image Grid.Column="0"
+                                               WidthRequest="20"
+                                               HeightRequest="20"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center">
+                                            <Image.Source>
+                                                <FontImageSource Glyph="{x:Static fonts:FluentUI.location_20_regular}"
+                                                                 FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                                 Size="20"
+                                                                 Color="{AppThemeBinding Light={StaticResource ActionAccentLight}, Dark={StaticResource ActionAccentDark}}" />
+                                            </Image.Source>
+                                        </Image>
+                                        <Label Grid.Column="1"
+                                               Text="{Binding StraightLineNotice}"
+                                               FontFamily="{StaticResource FontFamilyRegular}"
+                                               FontSize="{StaticResource FontSizeBodyMedium}"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"
+                                               LineBreakMode="WordWrap"
+                                               VerticalTextAlignment="Center" />
+                                    </Grid>
+                                </Border>
+                            </VerticalStackLayout>
 
                             <!-- Similar Rooms Recommendation Carousel (Visible when listing is unavailable) -->
                             <detail:SimilarRoomsCarouselControl />
 
                             <!-- Key Facts Grid (Area, Room type, Occupants, Furnishing, Availability, Distance) -->
-                            <detail:RoomKeyFactsGridControl />
+                            <detail:RoomKeyFactsGridControl IsVisible="{Binding IsAvailable}" />
+
+                            <!-- Room Description Card (US02 AC1) -->
+                            <Border IsVisible="{Binding ShowDescription}"
+                                    StrokeShape="RoundRectangle 12"
+                                    StrokeThickness="1"
+                                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+                                    Shadow="{StaticResource Elevation1Shadow}"
+                                    Padding="16">
+                                <VerticalStackLayout Spacing="8">
+                                    <Label Text="{loc:LocalizedStrings RoomDetail_Description}"
+                                           FontFamily="{StaticResource FontFamilySemibold}"
+                                           FontSize="{StaticResource FontSizeH3}"
+                                           FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                    <Label Text="{Binding Description}"
+                                           FontFamily="{StaticResource FontFamilyRegular}"
+                                           FontSize="{StaticResource FontSizeBodyMedium}"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"
+                                           LineBreakMode="WordWrap" />
+                                </VerticalStackLayout>
+                            </Border>
 
                             <!-- Monthly Utility Costs Card -->
-                            <detail:MonthlyCostsCardControl />
+                            <detail:MonthlyCostsCardControl IsVisible="{Binding IsAvailable}" />
 
                             <!-- Amenities 2-Column Section -->
-                            <detail:AmenitiesSectionControl />
+                            <detail:AmenitiesSectionControl IsVisible="{Binding IsAvailable}" />
 
                             <!-- Safety Checklist Section -->
-                            <detail:SafetySectionControl />
+                            <detail:SafetySectionControl IsVisible="{Binding IsAvailable}" />
 
                             <!-- House Rules Section -->
-                            <detail:HouseRulesSectionControl />
+                            <detail:HouseRulesSectionControl IsVisible="{Binding IsAvailable}" />
 
                             <!-- Location & Travel Times Section -->
-                            <detail:LocationTravelTimesControl />
+                            <detail:LocationTravelTimesControl IsVisible="{Binding IsAvailable}" />
 
                             <!-- Landlord Block & Report Listing Action -->
-                            <detail:LandlordBlockControl />
+                            <detail:LandlordBlockControl IsVisible="{Binding IsAvailable}" />
+
+                            <!-- Debug-only quick jump to SCR-ROOM-01-UNAVAILABLE (seed-da-thue) for QA/UAT -->
+                            <Border IsVisible="{Binding ShowUnavailableDebugPreview}"
+                                    StrokeShape="RoundRectangle 8"
+                                    StrokeThickness="1"
+                                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
+                                    HeightRequest="48"
+                                    Padding="12,0">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding PreviewUnavailableDemoCommand}" />
+                                </Border.GestureRecognizers>
+                                <Label Text="{loc:LocalizedStrings RoomDetail_DebugPreviewUnavailable}"
+                                       FontFamily="{StaticResource FontFamilySemibold}"
+                                       FontSize="{StaticResource FontSizeBodyMedium}"
+                                       TextColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource TextBrandDark}}"
+                                       HorizontalTextAlignment="Center"
+                                       VerticalTextAlignment="Center" />
+                            </Border>
 
                         </VerticalStackLayout>
                     </VerticalStackLayout>

@@ -29,71 +29,76 @@
                    VerticalTextAlignment="Center" />
         </Grid>
 
-        <!-- Horizontal Carousel of Similar Rooms -->
-        <CollectionView ItemsSource="{Binding SimilarRooms}"
-                        HeightRequest="215"
-                        SelectionMode="None">
-            <CollectionView.ItemsLayout>
-                <LinearItemsLayout Orientation="Horizontal"
-                                   ItemSpacing="12" />
-            </CollectionView.ItemsLayout>
-            <CollectionView.ItemTemplate>
-                <DataTemplate x:DataType="models:SimilarRoomDisplayModel">
-                    <Border WidthRequest="185"
-                            StrokeShape="RoundRectangle 12"
-                            StrokeThickness="1"
-                            Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
-                            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
-                            Shadow="{StaticResource Elevation1Shadow}"
-                            Margin="0,2,0,6">
-                        <Border.GestureRecognizers>
-                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:RoomDetailPageModel}}, Path=SelectSimilarRoomCommand}"
-                                                  CommandParameter="{Binding Id}" />
-                        </Border.GestureRecognizers>
+        <!-- Horizontal Carousel of Similar Rooms (ScrollView avoids nested CollectionView scroll jank on Android) -->
+        <ScrollView Orientation="Horizontal"
+                    HorizontalScrollBarVisibility="Never">
+            <HorizontalStackLayout BindableLayout.ItemsSource="{Binding SimilarRooms}"
+                                   Spacing="12"
+                                   Padding="0,2,0,6">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="models:SimilarRoomDisplayModel">
+                        <Border WidthRequest="185"
+                                StrokeShape="RoundRectangle 12"
+                                StrokeThickness="1"
+                                Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+                                Shadow="{StaticResource Elevation1Shadow}">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:RoomDetailPageModel}}, Path=SelectSimilarRoomCommand}"
+                                                      CommandParameter="{Binding Id}" />
+                            </Border.GestureRecognizers>
 
-                        <VerticalStackLayout Spacing="0">
-                            <!-- Room Thumbnail / Fallback -->
-                            <Grid HeightRequest="105" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}">
-                                <Image Source="{Binding ThumbnailUrl}"
-                                       Aspect="AspectFill"
-                                       HeightRequest="105"
-                                       HorizontalOptions="Fill"
-                                       VerticalOptions="Fill" />
-                                <Label Text="{x:Static fonts:FluentUI.home_24_regular}"
-                                       FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                                       FontSize="24"
-                                       HorizontalOptions="Center"
-                                       VerticalOptions="Center"
-                                       TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
-                            </Grid>
+                            <VerticalStackLayout Spacing="0">
+                                <!-- Room Thumbnail / Fallback -->
+                                <Grid HeightRequest="105" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}">
+                                    <Image IsVisible="{Binding HasNoThumbnail}"
+                                           WidthRequest="28"
+                                           HeightRequest="28"
+                                           HorizontalOptions="Center"
+                                           VerticalOptions="Center">
+                                        <Image.Source>
+                                            <FontImageSource Glyph="{x:Static fonts:FluentUI.home_24_regular}"
+                                                             FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                             Size="28"
+                                                             Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                                        </Image.Source>
+                                    </Image>
+                                    <Image Source="{Binding ThumbnailUrl}"
+                                           IsVisible="{Binding HasThumbnail}"
+                                           Aspect="AspectFill"
+                                           HeightRequest="105"
+                                           HorizontalOptions="Fill"
+                                           VerticalOptions="Fill" />
+                                </Grid>
 
-                            <!-- Room Brief Info -->
-                            <VerticalStackLayout Padding="10,8" Spacing="4">
-                                <!-- Price -->
-                                <Label Text="{Binding PriceFormatted}"
-                                       FontFamily="{StaticResource FontFamilySemibold}"
-                                       FontSize="{StaticResource FontSizeH3}"
-                                       FontAttributes="Bold"
-                                       TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}" />
+                                <!-- Room Brief Info -->
+                                <VerticalStackLayout Padding="10,8" Spacing="4">
+                                    <!-- Price -->
+                                    <Label Text="{Binding PriceFormatted}"
+                                           FontFamily="{StaticResource FontFamilySemibold}"
+                                           FontSize="{StaticResource FontSizeH3}"
+                                           FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}" />
 
-                                <!-- Title (Max 2 lines) -->
-                                <Label Text="{Binding Title}"
-                                       FontFamily="{StaticResource FontFamilyRegular}"
-                                       FontSize="{StaticResource FontSizeCaption}"
-                                       LineBreakMode="TailTruncation"
-                                       MaxLines="2"
-                                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                    <!-- Title (Max 2 lines) -->
+                                    <Label Text="{Binding Title}"
+                                           FontFamily="{StaticResource FontFamilyRegular}"
+                                           FontSize="{StaticResource FontSizeCaption}"
+                                           LineBreakMode="TailTruncation"
+                                           MaxLines="2"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
 
-                                <!-- Distance from target room -->
-                                <Label Text="{Binding DistanceFormatted}"
-                                       FontFamily="{StaticResource FontFamilyRegular}"
-                                       FontSize="{StaticResource FontSizeBadge}"
-                                       TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                                    <!-- Distance from target room -->
+                                    <Label Text="{Binding DistanceFormatted}"
+                                           FontFamily="{StaticResource FontFamilyRegular}"
+                                           FontSize="{StaticResource FontSizeBadge}"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                                </VerticalStackLayout>
                             </VerticalStackLayout>
-                        </VerticalStackLayout>
-                    </Border>
-                </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
+                        </Border>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </HorizontalStackLayout>
+        </ScrollView>
     </VerticalStackLayout>
 </ContentView>
