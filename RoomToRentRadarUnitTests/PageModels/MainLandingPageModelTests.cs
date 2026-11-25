@@ -9,7 +9,6 @@ using RoomToRentRadar.PageModels;
 using RoomToRentRadar.PageModels.Base;
 using RoomToRentRadar.Ports.Contracts.Common;
 using RoomToRentRadar.Ports.Contracts.Requests.Rooms;
-using RoomToRentRadar.Ports.Contracts.Responses.Auth;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadar.Resources.Strings;
 using RoomToRentRadar.Services.Navigation.Core;
@@ -23,7 +22,6 @@ public class MainLandingPageModelTests
     private static readonly CultureInfo En = new("en-US");
 
     private IRoomGateway _roomGateway = null!;
-    private ISessionStore _sessionStore = null!;
     private INavigationService _navigation = null!;
 
     [SetUp]
@@ -31,9 +29,7 @@ public class MainLandingPageModelTests
     {
         LocalizedStrings.Instance.SetCulture(En);
         _roomGateway = Substitute.For<IRoomGateway>();
-        _sessionStore = Substitute.For<ISessionStore>();
         _navigation = Substitute.For<INavigationService>();
-        _sessionStore.GetCachedUserProfileAsync().Returns((UserProfileDto?)null);
     }
 
     [TearDown]
@@ -42,7 +38,7 @@ public class MainLandingPageModelTests
         LocalizedStrings.Instance.SetCulture(En);
     }
 
-    private MainLandingPageModel CreateModel() => new(_roomGateway, _sessionStore, _navigation);
+    private MainLandingPageModel CreateModel() => new(_roomGateway, _navigation);
 
     private static RoomCardDto Room(string id = "room-1") => new(
         id,
@@ -70,7 +66,6 @@ public class MainLandingPageModelTests
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static WeakReference CreateDroppedModel() => new(new MainLandingPageModel(
         Substitute.For<IRoomGateway>(),
-        Substitute.For<ISessionStore>(),
         Substitute.For<INavigationService>()));
 
     [Test]
@@ -221,7 +216,7 @@ public class MainLandingPageModelTests
     }
 
     private MainLandingPageModel CreateModel(ISearchCriteriaStore store) =>
-        new(_roomGateway, _sessionStore, _navigation, store);
+        new(_roomGateway, _navigation, store);
 
     private static async Task WaitUntilAsync(Func<bool> condition)
     {
@@ -432,7 +427,6 @@ public class MainLandingPageModelTests
         var store = new SearchCriteriaStore();
         return new WeakReference(new MainLandingPageModel(
             Substitute.For<IRoomGateway>(),
-            Substitute.For<ISessionStore>(),
             Substitute.For<INavigationService>(),
             store));
     }

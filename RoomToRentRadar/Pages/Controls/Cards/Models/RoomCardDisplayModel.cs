@@ -29,6 +29,12 @@ public sealed record RoomCardDisplayModel
     /// <summary>Short name of the campus <see cref="DistanceMeters"/> is measured from (BR-SRCH-03).</summary>
     public string CampusName { get; init; } = "ICTU";
 
+    /// <summary>
+    /// Language the card was built for. It makes a rebuilt card unequal to the previous one, so bound
+    /// views re-read the formatted texts.
+    /// </summary>
+    public string Language { get; init; } = string.Empty;
+
     public string DistanceFormatted => DistanceMeters < 1000
         ? $"{DistanceMeters:F0}m from campus"
         : $"{(DistanceMeters / 1000.0):F1}km from campus";
