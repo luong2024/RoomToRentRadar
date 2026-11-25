@@ -18,13 +18,14 @@ public class RoomCardDisplayModelTests
     private static RoomCardDisplayModel Card(
         decimal price = 2_500_000,
         Furnishing? furnishing = Furnishing.Full,
-        string thumbnail = "") => new()
+        string thumbnail = "",
+        double distanceMeters = 1200) => new()
     {
         Id = "r1",
         Title = "Private room with balcony",
         PricePerMonth = price,
         AreaSquareMeters = 25,
-        DistanceMeters = 1200,
+        DistanceMeters = distanceMeters,
         RoomType = RoomType.BoardingRoom,
         Furnishing = furnishing,
         CampusName = "TNUT",
@@ -39,6 +40,8 @@ public class RoomCardDisplayModelTests
     [TestCase("en-US", 950_000, "950k/mo")]
     [TestCase("vi-VN", 950_000, "950k/tháng")]
     [TestCase("en-US", 4_000_000, "4M/mo")]
+    [TestCase("en-US", 2_950_000, "2.95M/mo")]
+    [TestCase("vi-VN", 2_950_000, "2,95 tr/tháng")]
     public void PriceText_UsesTheLanguageAndUnit(string culture, int price, string expected)
     {
         UseLanguage(culture);
@@ -72,6 +75,17 @@ public class RoomCardDisplayModelTests
         UseLanguage(culture);
 
         Assert.That(Card().DistanceText, Is.EqualTo(expected));
+    }
+
+    [TestCase("en-US", 0, "< 0.1 km to TNUT")]
+    [TestCase("vi-VN", 0, "< 0,1 km tới TNUT")]
+    [TestCase("en-US", 100, "0.1 km to TNUT")]
+    [TestCase("en-US", 900, "0.9 km to TNUT")]
+    public void DistanceText_UsesKilometres_AndNeverShowsZero(string culture, double meters, string expected)
+    {
+        UseLanguage(culture);
+
+        Assert.That(Card(distanceMeters: meters).DistanceText, Is.EqualTo(expected));
     }
 
     [TestCase("http://10.0.2.2:5000/media/a.jpg", true)]

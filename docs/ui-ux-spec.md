@@ -272,10 +272,11 @@ Hub segmented *Landlords (n) · Listings (n) · Changes (n) · Reports (n)*, old
 
 | Item | Rule | English (en-US) | Tiếng Việt (vi-VN) |
 |---|---|---|---|
-| Price on card | million with 1 decimal | `2.5M/mo`, `950k/mo` (< 1M) | `2,5 tr/tháng`, `950k/tháng` |
+| Price on card | million, or thousand under 1M; exact amount, up to 3 decimals, no trailing zeros | `2.5M/mo`, `2.95M/mo`, `950k/mo` | `2,5 tr/tháng`, `2,95 tr/tháng`, `950k/tháng` |
 | Price on detail/forms | full VND, culture thousands separator | `2,500,000 ₫` | `2.500.000 ₫` |
 | Area | `m²` | `25 m²` | `25 m²` |
-| Distance | 1 decimal | `1.2 km to ICTU`; < 1 km → `850 m` | `1,2 km tới ICTU`; `850 m` |
+| Distance to campus (straight line, `BR-SRCH-03`) | km with 1 decimal, also under 1 km; `< 0.1 km` when it rounds to zero | `1.2 km to ICTU`, `0.9 km to ICTU`, `< 0.1 km to ICTU` | `1,2 km tới ICTU`, `0,9 km tới ICTU`, `< 0,1 km tới ICTU` |
+| Route distance (US09) | metres under 1 km, otherwise km with 1 decimal | `850 m`, `1.4 km` | `850 m`, `1,4 km` |
 | Duration | minutes, `~` for estimates | `8 mins`, `~19 mins (est.)` | `8 phút`, `~19 phút (ước tính)` |
 | Dates | relative ≤ 7 days, else absolute | `3 days ago`, `15 Nov 2026` | `3 ngày trước`, `15/11/2026` |
 

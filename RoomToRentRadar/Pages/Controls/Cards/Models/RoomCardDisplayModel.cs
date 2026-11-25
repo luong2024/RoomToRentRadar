@@ -70,8 +70,16 @@ public sealed record RoomCardDisplayModel
     public string DistanceText => string.Format(
         Culture,
         AppResources.GetString("Card_Distance"),
-        (DistanceMeters / 1000.0).ToString("0.0", Culture),
+        DistanceInKilometres,
         CampusName);
+
+    /// <summary>
+    /// The straight-line distance is only precise to 0.1 km (BR-SRCH-03), so it is always shown in
+    /// kilometres, and a value that would read "0.0" shows "&lt; 0.1" (docs/ui-ux-spec.md §6).
+    /// </summary>
+    private string DistanceInKilometres => DistanceMeters < 50
+        ? $"< {0.1.ToString("0.0", Culture)}"
+        : (DistanceMeters / 1000.0).ToString("0.0", Culture);
 
     /// <summary>Cover photo address; <c>null</c> shows the placeholder only (BR-MED-05).</summary>
     public Uri? ThumbnailUri =>
