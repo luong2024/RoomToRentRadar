@@ -219,7 +219,7 @@ Primary: *Draw area* → *Done*. Sort toggle *Price / Distance* in list view. St
 Order (inverted pyramid, US11 AC2 rules before contact):
 1. Gallery header (swipe, `1/12`, 360° badge) — placeholder if none.
 2. `StatusBanner` if not Available; *Updated 3 days ago* (US02 AC2).
-3. Title, **price/month**, deposit, verified badge, [heart], share, [more] (Report).
+3. Title, **price/month** and deposit in the short form of §6, verified badge, [heart], share, [more] (Report).
 4. Key facts row: area · room type · max occupants · furnishing · available from.
 5. **Monthly costs**: rent, electricity ₫/kWh, water, internet, parking, other → "Estimated ~2.9M/mo".
 6. Amenities (grid, first 8 + *See all*).
@@ -272,8 +272,9 @@ Hub segmented *Landlords (n) · Listings (n) · Changes (n) · Reports (n)*, old
 
 | Item | Rule | English (en-US) | Tiếng Việt (vi-VN) |
 |---|---|---|---|
-| Price on card | million, or thousand under 1M; exact amount, up to 3 decimals, no trailing zeros | `2.5M/mo`, `2.95M/mo`, `950k/mo` | `2,5 tr/tháng`, `2,95 tr/tháng`, `950k/tháng` |
-| Price on detail/forms | full VND, culture thousands separator | `2,500,000 ₫` | `2.500.000 ₫` |
+| Short price (room card, detail header and sticky bar, similar rooms, compare card, estimated total) | million, or thousand under 1M; up to 3 decimals, no trailing zeros. Only whole thousands are shortened; any other amount is written in full, never rounded | `2.5M/mo`, `2.95M/mo`, `950k/mo`, `2,454,321 ₫/mo` | `2,5 tr/tháng`, `2,95 tr/tháng`, `950k/tháng`, `2.454.321 ₫/tháng` |
+| Deposit under the price | same short form; English names the currency | `Deposit 2.4M VND`, `Deposit 2,454,321 VND` | `Tiền cọc 2,4 tr`, `Tiền cọc 2.454.321 ₫` |
+| Monthly costs, forms, shared text | full VND, culture thousands separator | `2,500,000 ₫`, `3,500 ₫ / kWh` | `2.500.000 ₫`, `3.500 ₫ / kWh` |
 | Area | `m²` | `25 m²` | `25 m²` |
 | Distance to campus (straight line, `BR-SRCH-03`) | km with 1 decimal, also under 1 km; `< 0.1 km` when it rounds to zero | `1.2 km to ICTU`, `0.9 km to ICTU`, `< 0.1 km to ICTU` | `1,2 km tới ICTU`, `0,9 km tới ICTU`, `< 0,1 km tới ICTU` |
 | Route distance (US09) | metres under 1 km, otherwise km with 1 decimal | `850 m`, `1.4 km` | `850 m`, `1,4 km` |
