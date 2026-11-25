@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
-using RoomToRentRadar.Api.Endpoints;
+using RoomToRentRadar.Api.Models;
 
 namespace RoomToRentRadar.Api.Auth
 {
@@ -65,13 +65,13 @@ namespace RoomToRentRadar.Api.Auth
                             var message = context.AuthenticateFailure is SecurityTokenExpiredException
                                 ? "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
                                 : "Bạn cần đăng nhập để thực hiện thao tác này.";
-                            await context.Response.WriteAsJsonAsync(new AuthErrorResponse(message));
+                            await context.Response.WriteAsJsonAsync(new ErrorResponse(message));
                         },
                         OnForbidden = async context =>
                         {
                             context.Response.StatusCode = StatusCodes.Status403Forbidden;
                             await context.Response.WriteAsJsonAsync(
-                                new AuthErrorResponse("Tài khoản của bạn không có quyền thực hiện thao tác này."));
+                                new ErrorResponse("Tài khoản của bạn không có quyền thực hiện thao tác này."));
                         },
                     };
                 });
