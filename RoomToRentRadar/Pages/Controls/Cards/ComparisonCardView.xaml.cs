@@ -26,7 +26,19 @@ public partial class ComparisonCardView : ContentView
     public ComparisonCardView()
     {
         InitializeComponent();
-        BindingContext = this;
+        if (Content != null)
+        {
+            Content.BindingContext = this;
+        }
+    }
+
+    protected override void OnBindingContextChanged()
+    {
+        base.OnBindingContextChanged();
+        if (Content != null)
+        {
+            Content.BindingContext = this;
+        }
     }
 }
 
