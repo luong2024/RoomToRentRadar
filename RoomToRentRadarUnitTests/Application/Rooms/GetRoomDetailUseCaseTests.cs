@@ -285,4 +285,106 @@ public class GetRoomDetailUseCaseTests
         // Assert
         Assert.That(resultIctu.DistanceKm, Is.Not.EqualTo(resultTnus.DistanceKm));
     }
+
+    [Test]
+    public async Task ExecuteAsync_WhenRoomHasAmenitiesSafetyAndHouseRules_PopulatesAllChildren()
+    {
+        // Arrange
+        var room = CreateSampleRoom();
+        var rules = HouseRuleVersion.Create(
+            roomId: "room-001",
+            versionNumber: 1,
+            guestPolicy: GuestPolicy.DaytimeOnly,
+            cookingPolicy: CookingPolicy.Allowed,
+            parkingAvailable: true,
+            petsAllowed: false,
+            smokingAllowed: false,
+            createdByUserId: "landlord-001",
+            utcNow: DateTime.UtcNow,
+            quietHoursStart: "22:00",
+            quietHoursEnd: "06:00",
+            curfewTime: "23:00",
+            guestPolicyNote: "Báo trước 1 tiếng",
+            parkingRules: "Xe để trong sân",
+            otherRules: "Giữ vệ sinh chung");
+
+        room.SetChildren(
+            amenities: new[] { Amenity.AirConditioner, Amenity.Wifi, Amenity.PrivateBathroom },
+            safetyFeatures: new[]
+            {
+                new RoomSafetyFeatureEntry(SafetyFeature.Cctv, true),
+                new RoomSafetyFeatureEntry(SafetyFeature.SecureEntrance, true),
+                new RoomSafetyFeatureEntry(SafetyFeature.FireSafety, false)
+            },
+            currentHouseRules: rules);
+
+        var landlord = CreateSampleLandlord();
+        _roomRepository.GetByIdAsync("room-001", Arg.Any<CancellationToken>()).Returns(room);
+        _userRepository.GetByIdAsync("landlord-001", Arg.Any<CancellationToken>()).Returns(landlord);
+
+        // Act
+        var result = await _sut.ExecuteAsync("room-001");
+
+        // Assert - Amenities (AC1)
+        Assert.That(result.Amenities, Has.Count.EqualTo(3));
+        Assert.That(result.Amenities, Does.Contain(Amenity.AirConditioner));
+        Assert.That(result.Amenities, Does.Contain(Amenity.Wifi));
+        Assert.That(result.Amenities, Does.Contain(Amenity.PrivateBathroom));
+
+        // Assert - House Rules (AC1)
+        Assert.That(result.HouseRules, Is.Not.Null);
+        Assert.That(result.HouseRules!.VersionNumber, Is.EqualTo(1));
+        Assert.That(result.HouseRules.QuietHoursStart, Is.EqualTo("22:00"));
+        Assert.That(result.HouseRules.QuietHoursEnd, Is.EqualTo("06:00"));
+        Assert.That(result.HouseRules.CurfewTime, Is.EqualTo("23:00"));
+        Assert.That(result.HouseRules.GuestPolicy, Is.EqualTo(GuestPolicy.DaytimeOnly));
+        Assert.That(result.HouseRules.GuestPolicyNote, Is.EqualTo("Báo trước 1 tiếng"));
+        Assert.That(result.HouseRules.CookingPolicy, Is.EqualTo(CookingPolicy.Allowed));
+        Assert.That(result.HouseRules.ParkingAvailable, Is.True);
+        Assert.That(result.HouseRules.ParkingRules, Is.EqualTo("Xe để trong sân"));
+        Assert.That(result.HouseRules.PetsAllowed, Is.False);
+
+        // Assert - Safety Score & Features (BR-LST-08: Unverified room reflects declared count)
+        Assert.That(result.Safety, Is.Not.Null);
+        Assert.That(result.Safety.IsVerified, Is.False);
+        Assert.That(result.Safety.Score, Is.EqualTo(3)); // 3 declared features
+        Assert.That(result.Safety.Features, Has.Count.EqualTo(3));
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WhenRoomHasPhotos_OrdersBySortOrderAndExpandsStorageUrls()
+    {
+        // Arrange
+        var room = CreateSampleRoom();
+        var landlord = CreateSampleLandlord();
+        _roomRepository.GetByIdAsync("room-001", Arg.Any<CancellationToken>()).Returns(room);
+        _userRepository.GetByIdAsync("landlord-001", Arg.Any<CancellationToken>()).Returns(landlord);
+
+        var photoRepo = Substitute.For<IRoomPhotoRepository>();
+        var storage = Substitute.For<IPhotoStoragePort>();
+        storage.GetPublicUrl(Arg.Any<string>()).Returns(ci => $"https://cdn.example.com/{ci.Arg<string>()}");
+
+        var now = DateTime.UtcNow;
+        var p1 = RoomPhoto.Reconstitute("p1", "room-001", "landlord-001", PhotoKind.Standard, "image/jpeg", 1024, 800, 600, "rooms/orig1.jpg", "rooms/med1.jpg", "rooms/thumb1.jpg", sortOrder: 2, createdAtUtc: now);
+        var p2 = RoomPhoto.Reconstitute("p2", "room-001", "landlord-001", PhotoKind.Panorama, "image/jpeg", 2048, 1600, 800, "rooms/orig2.jpg", "rooms/med2.jpg", "rooms/thumb2.jpg", sortOrder: 1, createdAtUtc: now);
+
+        photoRepo.ListByRoomAsync("room-001", Arg.Any<CancellationToken>()).Returns(new[] { p1, p2 });
+
+        var sutWithPhotos = new GetRoomDetailUseCase(_roomRepository, _userRepository, _campusRepository, _currentUserContext, photoRepo, storage);
+
+        // Act
+        var result = await sutWithPhotos.ExecuteAsync("room-001");
+
+        // Assert - Photos ordered by SortOrder (p2 sortOrder=1 before p1 sortOrder=2)
+        Assert.That(result.Photos, Has.Count.EqualTo(2));
+        Assert.That(result.Photos[0].Id, Is.EqualTo("p2"));
+        Assert.That(result.Photos[0].SortOrder, Is.EqualTo(1));
+        Assert.That(result.Photos[0].Kind, Is.EqualTo(PhotoKind.Panorama));
+        Assert.That(result.Photos[0].ThumbUrl, Is.EqualTo("https://cdn.example.com/rooms/thumb2.jpg"));
+        Assert.That(result.Photos[0].MediumUrl, Is.EqualTo("https://cdn.example.com/rooms/med2.jpg"));
+        Assert.That(result.Photos[0].OriginalUrl, Is.EqualTo("https://cdn.example.com/rooms/orig2.jpg"));
+
+        Assert.That(result.Photos[1].Id, Is.EqualTo("p1"));
+        Assert.That(result.Photos[1].SortOrder, Is.EqualTo(2));
+    }
 }

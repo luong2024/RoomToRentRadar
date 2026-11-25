@@ -19,7 +19,8 @@ public static class RoomMapper
         Room room,
         User? landlord,
         Campus campus,
-        bool isPhoneVisible)
+        bool isPhoneVisible,
+        IReadOnlyList<PhotoDto>? photos = null)
     {
         ArgumentNullException.ThrowIfNull(room);
         ArgumentNullException.ThrowIfNull(campus);
@@ -97,10 +98,27 @@ public static class RoomMapper
             Latitude: room.Latitude,
             Longitude: room.Longitude);
 
+        // BR-LST-08: When verified, score = confirmed features count and list confirmed features.
+        // When unverified, score = declared features count and list declared features.
+        var confirmedFeatures = room.SafetyFeatures
+            .Where(sf => sf.IsConfirmed)
+            .Select(sf => sf.Feature)
+            .ToList();
+        var declaredFeatures = room.SafetyFeatures
+            .Select(sf => sf.Feature)
+            .ToList();
+
+        var safetyScore = room.IsSafetyVerified
+            ? confirmedFeatures.Count
+            : declaredFeatures.Count;
+        var safetyFeatures = room.IsSafetyVerified
+            ? (IReadOnlyList<SafetyFeature>)confirmedFeatures
+            : declaredFeatures;
+
         var safety = new SafetyDto(
-            Score: 0,
+            Score: safetyScore,
             IsVerified: room.IsSafetyVerified,
-            Features: Array.Empty<SafetyFeature>());
+            Features: safetyFeatures);
 
         var furnishing = Enum.TryParse<Furnishing>(room.Furnishing, true, out var parsedFurnishing)
             ? parsedFurnishing
@@ -123,10 +141,10 @@ public static class RoomMapper
             Location: location,
             DistanceKm: distanceKm,
             Utilities: utilities,
-            Amenities: Array.Empty<Amenity>(),
+            Amenities: room.Amenities ?? Array.Empty<Amenity>(),
             Safety: safety,
-            HouseRules: null,
-            Photos: Array.Empty<PhotoDto>(),
+            HouseRules: LandlordListingMapper.ToHouseRulesDto(room.CurrentHouseRules),
+            Photos: photos ?? Array.Empty<PhotoDto>(),
             Landlord: landlordContact,
             IsFavourite: false,
             PublishedAtUtc: room.PublishedAtUtc,

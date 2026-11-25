@@ -5,6 +5,7 @@ using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.Exceptions;
 using RoomToRentRadar.Ports.Contracts.Common;
+using RoomToRentRadar.Ports.Contracts.Responses.Photos;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadar.Ports.Inbound.UseCases.Rooms;
 using RoomToRentRadar.Ports.Outbound.ExternalServices;
@@ -20,17 +21,32 @@ public sealed class GetRoomDetailUseCase : IGetRoomDetailUseCase
     private readonly IUserRepository _userRepository;
     private readonly ICampusRepository _campusRepository;
     private readonly ICurrentUserContextPort _currentUserContext;
+    private readonly IRoomPhotoRepository? _photoRepository;
+    private readonly IPhotoStoragePort? _storage;
 
     public GetRoomDetailUseCase(
         IRoomRepository roomRepository,
         IUserRepository userRepository,
         ICampusRepository campusRepository,
         ICurrentUserContextPort currentUserContext)
+        : this(roomRepository, userRepository, campusRepository, currentUserContext, photoRepository: null, storage: null)
+    {
+    }
+
+    public GetRoomDetailUseCase(
+        IRoomRepository roomRepository,
+        IUserRepository userRepository,
+        ICampusRepository campusRepository,
+        ICurrentUserContextPort currentUserContext,
+        IRoomPhotoRepository? photoRepository,
+        IPhotoStoragePort? storage)
     {
         _roomRepository = roomRepository ?? throw new ArgumentNullException(nameof(roomRepository));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _campusRepository = campusRepository ?? throw new ArgumentNullException(nameof(campusRepository));
         _currentUserContext = currentUserContext ?? throw new ArgumentNullException(nameof(currentUserContext));
+        _photoRepository = photoRepository;
+        _storage = storage;
     }
 
     public async Task<RoomDetailDto> ExecuteAsync(
@@ -85,6 +101,18 @@ public sealed class GetRoomDetailUseCase : IGetRoomDetailUseCase
         var landlord = await _userRepository.GetByIdAsync(room.LandlordId, ct);
         var isPhoneVisible = _currentUserContext.IsAuthenticated;
 
-        return RoomMapper.ToDetailDto(room, landlord, campus, isPhoneVisible);
+        // Load and map room photos ordered by SortOrder per BR-MED-05
+        IReadOnlyList<PhotoDto> photoDtos = Array.Empty<PhotoDto>();
+        if (_photoRepository != null && _storage != null)
+        {
+            var photos = await _photoRepository.ListByRoomAsync(room.Id, ct);
+            photoDtos = photos
+                .OrderBy(p => p.SortOrder)
+                .ThenBy(p => p.Id, StringComparer.Ordinal)
+                .Select(p => LandlordListingMapper.ToPhotoDto(p, _storage))
+                .ToList();
+        }
+
+        return RoomMapper.ToDetailDto(room, landlord, campus, isPhoneVisible, photoDtos);
     }
 }
