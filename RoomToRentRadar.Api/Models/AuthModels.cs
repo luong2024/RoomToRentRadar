@@ -10,31 +10,31 @@ namespace RoomToRentRadar.Api.Models
 
     /// <summary>Body of POST /api/auth/register.</summary>
     public sealed record RegisterRequest(
-        [property: Required(ErrorMessage = "Vui lòng nhập họ tên.")]
-        [property: StringLength(100, ErrorMessage = "Họ tên tối đa 100 ký tự.")]
+        [Required(ErrorMessage = "Vui lòng nhập họ tên.")]
+        [StringLength(100, ErrorMessage = "Họ tên tối đa 100 ký tự.")]
         string FullName,
 
-        [property: Required(ErrorMessage = "Vui lòng nhập email.")]
-        [property: EmailAddress(ErrorMessage = "Email không hợp lệ.")]
+        [Required(ErrorMessage = "Vui lòng nhập email.")]
+        [EmailAddress(ErrorMessage = "Email không hợp lệ.")]
         string Email,
 
-        [property: Required(ErrorMessage = "Vui lòng nhập mật khẩu.")]
-        [property: MinLength(AuthRules.MinPasswordLength, ErrorMessage = "Mật khẩu phải có ít nhất 6 ký tự.")]
+        [Required(ErrorMessage = "Vui lòng nhập mật khẩu.")]
+        [MinLength(AuthRules.MinPasswordLength, ErrorMessage = "Mật khẩu phải có ít nhất 6 ký tự.")]
         string Password,
 
-        [property: Required(ErrorMessage = "Vui lòng nhập số điện thoại.")]
-        [property: Phone(ErrorMessage = "Số điện thoại không hợp lệ.")]
+        [Required(ErrorMessage = "Vui lòng nhập số điện thoại.")]
+        [Phone(ErrorMessage = "Số điện thoại không hợp lệ.")]
         string Phone,
 
-        [property: Required(ErrorMessage = "Vui lòng chọn vai trò Student hoặc Landlord.")]
+        [Required(ErrorMessage = "Vui lòng chọn vai trò Student hoặc Landlord.")]
         string Role);
 
     /// <summary>Body of POST /api/auth/login.</summary>
     public sealed record LoginRequest(
-        [property: Required(ErrorMessage = "Vui lòng nhập email.")]
+        [Required(ErrorMessage = "Vui lòng nhập email.")]
         string Email,
 
-        [property: Required(ErrorMessage = "Vui lòng nhập mật khẩu.")]
+        [Required(ErrorMessage = "Vui lòng nhập mật khẩu.")]
         string Password);
 
     /// <summary>User data returned to the client. Never contains the password hash.</summary>
