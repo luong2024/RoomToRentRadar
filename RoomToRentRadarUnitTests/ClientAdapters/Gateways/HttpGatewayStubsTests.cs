@@ -7,7 +7,9 @@ using RoomToRentRadar.Client.Adapters.Abstractions;
 using RoomToRentRadar.Client.Adapters.Http;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Ports.Contracts.Common;
+using RoomToRentRadar.Ports.Contracts.Requests.Profile;
 using RoomToRentRadar.Ports.Contracts.Requests.Rooms;
+using RoomToRentRadar.Ports.Contracts.Responses.Auth;
 using RoomToRentRadar.Ports.Contracts.Responses.Campuses;
 using RoomToRentRadar.Ports.Contracts.Responses.Photos;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
@@ -15,9 +17,9 @@ using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 namespace RoomToRentRadarUnitTests.ClientAdapters.Gateways;
 
 /// <summary>
-/// T00.14 Phase 7 (AC-3): the 48 not-yet-implemented gateway operations are Http stubs returning a
-/// faulted task with NotImplementedException("Txx.y: operationId ..."); only searchRooms and
-/// listCampuses are real. Task-id families are cross-checked against docs/use-cases.md §4 (PLAN §5.4).
+/// T00.14 Phase 7 (AC-3): the not-yet-implemented gateway operations are Http stubs returning a
+/// faulted task with NotImplementedException("Txx.y: operationId ..."); the operations listed in
+/// <c>RealOperationIds</c> are real. Task-id families are cross-checked against docs/use-cases.md §4 (PLAN §5.4).
 /// </summary>
 [TestFixture]
 public class HttpGatewayStubsTests
@@ -35,7 +37,7 @@ public class HttpGatewayStubsTests
         GatewayInterfaces.SelectMany(t => t.GetMethods()).ToArray();
 
     private static readonly string[] RealOperationIds =
-        ["searchRooms", "listCampuses", "getRoomDetail", "getSimilarRooms", "getRoomTravelTimes"];
+        ["searchRooms", "listCampuses", "getRoomDetail", "getSimilarRooms", "getRoomTravelTimes", "updateMyProfile"];
 
     private static IEnumerable<TestCaseData> StubCases() =>
         GatewayMethods
@@ -73,7 +75,7 @@ public class HttpGatewayStubsTests
     {
         var stubMethods = GatewayMethods.Where(m => !RealOperationIds.Contains(OperationId(m))).ToArray();
         Assert.That(GatewayMethods, Has.Length.EqualTo(50));
-        Assert.That(stubMethods, Has.Length.EqualTo(45));
+        Assert.That(stubMethods, Has.Length.EqualTo(44));
         foreach (var method in stubMethods)
         {
             var task = InvokeWithDefaultArgs(method);
@@ -89,6 +91,7 @@ public class HttpGatewayStubsTests
             "/api/rooms/room-1" => Json(SampleRoomDetail()),
             "/api/rooms/room-1/similar" => Json(Array.Empty<RoomCardDto>()),
             "/api/rooms/room-1/travel-times" => Json(new TravelTimesDto("ICTU", 0.5, false, [])),
+            "/api/me/profile" => Json(SampleProfile()),
             _ => new HttpResponseMessage(HttpStatusCode.NotFound)
         });
         using var client = new HttpClient(stub) { BaseAddress = new Uri("http://localhost") };
@@ -98,12 +101,16 @@ public class HttpGatewayStubsTests
         var detail = await new HttpRoomGateway(client).GetRoomDetailAsync("room-1");
         var similar = await new HttpRoomGateway(client).GetSimilarRoomsAsync("room-1");
         var travelTimes = await new HttpRoomGateway(client).GetRoomTravelTimesAsync("room-1");
+        var profile = await new HttpProfileGateway(client)
+            .UpdateMyProfileAsync(new UpdateMyProfileRequest(null, null, "ICTU", null));
 
         Assert.That(page.TotalCount, Is.EqualTo(0));
         Assert.That(campuses, Is.Empty);
         Assert.That(detail.Id, Is.EqualTo("room-1"));
         Assert.That(similar, Is.Empty);
         Assert.That(travelTimes.CampusId, Is.EqualTo("ICTU"));
+        Assert.That(profile.Id, Is.EqualTo("user-1"));
+        Assert.That(stub.CountForPath("/api/me/profile"), Is.EqualTo(1));
         Assert.That(stub.CountForPath("/api/rooms"), Is.EqualTo(1));
         Assert.That(stub.CountForPath("/api/campuses"), Is.EqualTo(1));
         Assert.That(stub.CountForPath("/api/rooms/room-1"), Is.EqualTo(1));
@@ -210,6 +217,10 @@ public class HttpGatewayStubsTests
             Content = new StringContent(
                 JsonSerializer.Serialize(body, ApiResponseReader.JsonOptions), Encoding.UTF8, "application/json")
         };
+
+    private static UserProfileDto SampleProfile() => new(
+        "user-1", "student@ictu.edu.vn", "Student", "Student", "Local", null, null, true,
+        new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc), "ICTU", "en");
 
     private static RoomDetailDto SampleRoomDetail() => new(
         "room-1", "Phòng trọ test", "Mô tả", RoomType.BoardingRoom, ListingStatus.Available, true,
