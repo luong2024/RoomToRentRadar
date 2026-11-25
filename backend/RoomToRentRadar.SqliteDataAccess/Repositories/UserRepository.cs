@@ -13,6 +13,11 @@ public sealed class UserRepository(AppDbContext dbContext) : IUserRepository
             user => user.Email == normalizedEmail,
             cancellationToken);
 
+    public Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken)
+        => dbContext.Users.FirstOrDefaultAsync(
+            user => user.Id == id,
+            cancellationToken);
+
     public async Task<bool> TryAddAsync(User user, CancellationToken cancellationToken)
     {
         dbContext.Users.Add(user);

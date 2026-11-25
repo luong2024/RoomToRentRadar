@@ -21,5 +21,12 @@ public interface IAuthUseCase
 
     Task<User?> AuthenticateAsync(string token, CancellationToken cancellationToken);
 
+    Task<UserProfileDto?> GetProfileAsync(Guid userId, CancellationToken cancellationToken);
+
+    Task<UserProfileDto?> UpdateDisplayNameAsync(
+        Guid userId,
+        string displayName,
+        CancellationToken cancellationToken);
+
     Task LogoutAsync(string token, CancellationToken cancellationToken);
 }

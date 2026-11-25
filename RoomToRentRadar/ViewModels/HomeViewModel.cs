@@ -5,7 +5,6 @@ using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Services;
 using RoomToRentRadar.Services.Auth;
 using RoomToRentRadar.Services.ErrorHandling;
-using RoomToRentRadar.Services.Interactions;
 using RoomToRentRadar.Services.Navigation;
 using RoomToRentRadar.Services.Storage;
 using RoomToRentRadar.Models;
@@ -25,7 +24,6 @@ public partial class HomeViewModel : ObservableObject
     private readonly INavigationService _navigationService;
     private readonly IRoomComparisonStore _comparisonStore;
     private readonly AuthService? _authService;
-    private readonly IAlertPrompt? _alertPrompt;
     private readonly SynchronizationContext? _uiContext;
     private bool _isAuthSubscribed;
     private CancellationTokenSource? _searchCancellation;
@@ -107,15 +105,13 @@ public partial class HomeViewModel : ObservableObject
         IErrorHandler errorHandler,
         INavigationService navigationService,
         IRoomComparisonStore comparisonStore,
-        AuthService? authService = null,
-        IAlertPrompt? alertPrompt = null)
+        AuthService? authService = null)
     {
         _apiClient = apiClient;
         _errorHandler = errorHandler;
         _navigationService = navigationService;
         _comparisonStore = comparisonStore;
         _authService = authService;
-        _alertPrompt = alertPrompt;
         _uiContext = SynchronizationContext.Current;
         if (_authService is not null)
         {
@@ -504,27 +500,13 @@ public partial class HomeViewModel : ObservableObject
     {
         try
         {
-            if (_authService is null || !_authService.IsSignedIn || _alertPrompt is null)
+            if (_authService is null || !_authService.IsSignedIn)
             {
                 await _navigationService.GoToLoginAsync();
                 return;
             }
 
-            var displayName = string.IsNullOrWhiteSpace(_authService.CurrentDisplayName)
-                ? "Người dùng"
-                : _authService.CurrentDisplayName;
-            var roleLabel = FormatRoleLabel(_authService.CurrentRole);
-            var signOut = await _alertPrompt.ConfirmAsync(
-                "Tài khoản của bạn",
-                $"Đang đăng nhập: {displayName}\nVai trò: {roleLabel}",
-                "Đăng xuất",
-                "Đóng");
-
-            if (signOut)
-            {
-                await _authService.SignOutAsync();
-                await _navigationService.GoToRoleRootAsync(null);
-            }
+            await _navigationService.GoToProfileAsync();
         }
         catch (Exception ex)
         {

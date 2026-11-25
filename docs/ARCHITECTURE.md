@@ -51,7 +51,9 @@ RoomToRentRadar/
 │   ├── Auth/             Authentication, token store, HTTP handler
 │   ├── ErrorHandling/    IErrorHandler implementations
 │   ├── Interactions/     Alerts, snackbars, undo
+│   ├── Media/            Device media picking (profile avatar)
 │   ├── Navigation/       Shell navigation abstraction
+│   ├── Profile/          Session-scoped profile details store
 │   ├── Storage/          Local preference stores
 │   └── ...               App services (favourites, comparison, security score)
 ├── Validations/          Form and photo validation
@@ -101,9 +103,24 @@ Create a folder only when it contains code. Do not add empty layers.
   `OtpVerificationPage` with the challenge id and email. After sign-in or a verified registration the
   app calls `INavigationService.GoToRoleRootAsync(role)`:
   Student → `//home`, Landlord → `//my-listings`, Moderator/Admin → `//moderation`.
-- `AppShell` shows the `MyListings` tab only for Landlord and the `Moderation` tab only for
-  Moderator/Admin. It observes `AuthService.SessionChanged` and only touches tab visibility on the
-  main thread.
+- `AppShell` shows the `MyListings` tab only for Landlord, the `Moderation` tab only for
+  Moderator/Admin, and the `Profile` (`Tài khoản`) tab for every role. It observes
+  `AuthService.SessionChanged` and only touches tab visibility on the main thread.
+- The Home account button opens the Profile tab when signed in and the login page when signed out.
+  `ProfilePage` loads through `IProfileClient` (`GET /api/v1/auth/me`) and shows signed-out and error
+  states of its own.
+- The Profile tab is role-adaptive: Students see personal and rental-need information, Landlords see
+  business details, verification, room stats and reputation, and staff see account identity plus the
+  settings entry point. Sections the API does not expose yet read from `IProfileDetailsStore`
+  (in-memory, per session, seeded per user) and are captioned as illustrative data.
+- `EditProfilePage` (`AppRoutes.EditProfile`) is opened from the Profile tab for Students and
+  Landlords. It saves the display name through `PUT /api/v1/auth/me` and the remaining form fields
+  through `IProfileDetailsStore`; the avatar is chosen from the device gallery via `IAvatarPicker`
+  and copied under `FileSystem.AppDataDirectory`.
+- `AccountSettingsPage` (`AppRoutes.AccountSettings`) hosts notification/privacy toggles persisted in
+  `IProfileDetailsStore`, placeholder rows for features not shipped yet, and the real sign-out.
+- "Phòng yêu thích" opens the Favourites tab and "Tin đăng của tôi" opens My Listings; the remaining
+  profile menu entries are coming-soon alerts.
 
 ### 3.5 API communication
 
@@ -113,9 +130,10 @@ Create a folder only when it contains code. Do not add empty layers.
 - Request/response types come from `RoomToRentRadar.Shared`.
 - Failures are reported through `IErrorHandler`; do not show alerts from ViewModels.
 - `AuthService` owns the session: it stores the token and role through `ITokenStore`
-  (`AppUserRole`), exposes `CurrentRole` and raises `SessionChanged`. ViewModels read the role from
-  the service, never from secure storage directly. Sessions stored before roles existed are treated
-  as Student.
+  (`AppUserRole`), exposes `CurrentRole` and `CurrentDisplayName`, and raises `SessionChanged`. ViewModels
+  read the role from the service, never from secure storage directly. Sessions stored before roles
+  existed are treated as Student. After a profile rename `EditProfileViewModel` calls
+  `UpdateCurrentDisplayName` so the cached name stays in sync; the Profile tab also refreshes it on load.
 
 ### 3.6 Theming and layout
 
@@ -242,6 +260,11 @@ root (`AddDataAccess`, `AddUseCases`, `AddInfrastructure`).
   with a `ProblemDetails` `code`.
 - The mobile moderation queue uses `GET /api/v1/moderation/listings?status=pending_review`
   (cursor paginated) and `POST /api/v1/moderation/listings/{id}/approve`.
+- `GET /api/v1/auth/me` returns the signed-in account as `UserProfileDto` (user id, email, display
+  name, role, created at). `PUT /api/v1/auth/me` updates only the display name, trimmed and validated
+  with `AccountRules` (required, at most 120 characters). Both endpoints require `[Authorize]`:
+  missing/invalid tokens return 401, an invalid name returns 400 `invalid_display_name`, and a token
+  whose user row no longer exists returns 404 `profile_not_found`.
 
 ## 5. Testing
 

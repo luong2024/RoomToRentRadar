@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -126,6 +127,45 @@ public sealed class AuthController(
     }
 
     [Authorize]
+    [HttpGet("me")]
+    [ProducesResponseType(typeof(UserProfileDto), StatusCodes.Status200OK, "application/json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/problem+json")]
+    public async Task<ActionResult<UserProfileDto>> GetProfile(CancellationToken cancellationToken)
+    {
+        var profile = await authUseCase.GetProfileAsync(CurrentUserId, cancellationToken);
+        return profile is null
+            ? ToProblem(AuthProblemFactory.ProfileNotFoundProblem())
+            : Ok(profile);
+    }
+
+    [Authorize]
+    [HttpPut("me")]
+    [ProducesResponseType(typeof(UserProfileDto), StatusCodes.Status200OK, "application/json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/problem+json")]
+    public async Task<ActionResult<UserProfileDto>> UpdateProfile(
+        [FromBody] UpdateProfileRequest request,
+        CancellationToken cancellationToken)
+    {
+        var displayName = request.DisplayName?.Trim() ?? string.Empty;
+        if (!AccountRules.IsDisplayNameValid(displayName))
+        {
+            return ToProblem(AuthProblemFactory.InvalidDisplayNameProblem(
+                $"display_name is required and must contain at most {AccountRules.DisplayNameMaxLength} characters."));
+        }
+
+        var profile = await authUseCase.UpdateDisplayNameAsync(
+            CurrentUserId,
+            displayName,
+            cancellationToken);
+        return profile is null
+            ? ToProblem(AuthProblemFactory.ProfileNotFoundProblem())
+            : Ok(profile);
+    }
+
+    [Authorize]
     [HttpPost("logout")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
@@ -147,4 +187,6 @@ public sealed class AuthController(
             detail: problem.Detail,
             type: problem.Type,
             extensions: problem.Extensions);
+
+    private Guid CurrentUserId => Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 }
