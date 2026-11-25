@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -37,6 +37,11 @@
     <Compile Include="..\RoomToRentRadar\Services\ISpatialSearchService.cs" Link="Linked\Services\ISpatialSearchService.cs" />
     <Compile Include="..\RoomToRentRadar\Services\MockSpatialSearchService.cs" Link="Linked\Services\MockSpatialSearchService.cs" />
     <Compile Include="..\RoomToRentRadar\PageModels\MapSearchViewModel.cs" Link="Linked\PageModels\MapSearchViewModel.cs" />
+    <Compile Include="..\RoomToRentRadar\Models\Contracts\CommuteContracts.cs" Link="Linked\Models\Contracts\CommuteContracts.cs" />
+    <Compile Include="..\RoomToRentRadar\Utilities\HaversineDistanceHelper.cs" Link="Linked\Utilities\HaversineDistanceHelper.cs" />
+    <Compile Include="..\RoomToRentRadar\Services\ICommuteService.cs" Link="Linked\Services\ICommuteService.cs" />
+    <Compile Include="..\RoomToRentRadar\Services\MockCommuteService.cs" Link="Linked\Services\MockCommuteService.cs" />
+    <Compile Include="..\RoomToRentRadar\PageModels\CommuteViewModel.cs" Link="Linked\PageModels\CommuteViewModel.cs" />
   </ItemGroup>
 
 </Project>
