@@ -541,6 +541,21 @@ public partial class HomeViewModelTests
         });
     }
 
+    [Test]
+    public async Task OpenAuth_NavigatesToLoginScreen()
+    {
+        var navigation = new FakeNavigationService();
+        var viewModel = new HomeViewModel(
+            new FakeApiClient(),
+            new FakeErrorHandler(),
+            navigation,
+            new RoomComparisonStore());
+
+        await viewModel.OpenAuthCommand.ExecuteAsync(null);
+
+        Assert.That(navigation.LoginNavigationCount, Is.EqualTo(1));
+    }
+
     private static ListingSearchResultDto CreatePage(
         string? nextCursor,
         params ListingSummaryDto[] items)
@@ -690,7 +705,15 @@ public partial class HomeViewModelTests
                 : Task.CompletedTask;
         }
 
-        public Task GoToLoginAsync() => Task.CompletedTask;
+        public int LoginNavigationCount { get; private set; }
+
+        public Task GoToLoginAsync()
+        {
+            LoginNavigationCount++;
+            return Exception is { } exception
+                ? Task.FromException(exception)
+                : Task.CompletedTask;
+        }
 
         public Task GoToRegisterAsync() => Task.CompletedTask;
 

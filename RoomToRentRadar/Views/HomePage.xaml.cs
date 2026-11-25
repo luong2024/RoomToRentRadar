@@ -50,6 +50,7 @@ public partial class HomePage : ContentPage
     {
         base.OnAppearing();
         UpdateLayout();
+        _viewModel.AttachAuthSession();
         _viewModel.RefreshComparisonState();
         if (!_motionActive)
         {
@@ -69,6 +70,7 @@ public partial class HomePage : ContentPage
     protected override void OnDisappearing()
     {
         _motionActive = false;
+        _viewModel.DetachAuthSession();
         _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
         _viewModel.CloseSearchCommand.Execute(null);
         _viewModel.IsFilterPanelOpen = false;

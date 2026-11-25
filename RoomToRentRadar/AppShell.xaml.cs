@@ -55,7 +55,13 @@ public partial class AppShell : Shell
             return;
         }
 
-        MyListingsTab.IsVisible = role == AppUserRole.Landlord;
-        ModerationTab.IsVisible = role is AppUserRole.Moderator or AppUserRole.Admin;
+        var isLandlord = role == AppUserRole.Landlord;
+        var isModeratorOrAdmin = role is AppUserRole.Moderator or AppUserRole.Admin;
+
+        ExploreTab.IsVisible = !isModeratorOrAdmin;
+        FavouritesTab.IsVisible = !isLandlord && !isModeratorOrAdmin;
+        MapTab.IsVisible = !isModeratorOrAdmin;
+        MyListingsTab.IsVisible = isLandlord;
+        ModerationTab.IsVisible = isModeratorOrAdmin;
     }
 }

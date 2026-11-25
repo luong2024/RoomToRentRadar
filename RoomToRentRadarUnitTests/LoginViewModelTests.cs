@@ -77,10 +77,15 @@ public class LoginViewModelTests
     {
         var navigationService = new FakeNavigationService();
         var viewModel = CreateViewModel(new FakeApiClient(), new FakeTokenStore(), navigationService);
+        viewModel.SelectLandlordCommand.Execute(null);
 
         await viewModel.GoToRegisterCommand.ExecuteAsync(null);
 
-        Assert.That(navigationService.GoToRegisterCount, Is.EqualTo(1));
+        Assert.Multiple(() =>
+        {
+            Assert.That(navigationService.GoToRegisterCount, Is.EqualTo(1));
+            Assert.That(navigationService.RequestedRegisterRole, Is.EqualTo(AppUserRole.Landlord));
+        });
     }
 
     [Test]
@@ -129,6 +134,54 @@ public class LoginViewModelTests
             Assert.That(apiClient.RequestedLogins, Is.Empty);
             Assert.That(tokenStore.AccessToken, Is.Null);
             Assert.That(navigationService.GoBackCount, Is.Zero);
+        });
+    }
+
+    [Test]
+    public async Task SignIn_WhenEmailFormatInvalid_ShowsInlineEmailErrorWithoutCallingApi()
+    {
+        var apiClient = new FakeApiClient();
+        var viewModel = CreateViewModel(apiClient, new FakeTokenStore(), new FakeNavigationService());
+        viewModel.Email = "not-an-email";
+        viewModel.Password = "Demo-password-123";
+
+        await viewModel.SignInCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasEmailError, Is.True);
+            Assert.That(viewModel.EmailError, Is.EqualTo("Email không hợp lệ."));
+            Assert.That(viewModel.HasPasswordError, Is.False);
+            Assert.That(viewModel.ErrorMessage, Is.EqualTo("Email không hợp lệ."));
+            Assert.That(apiClient.RequestedLogins, Is.Empty);
+        });
+
+        viewModel.Email = "demo@example.test";
+        Assert.That(viewModel.HasEmailError, Is.False);
+    }
+
+    [Test]
+    public async Task SignIn_WhenRateLimited_ShowsFriendlyMessageWithoutErrorHandler()
+    {
+        var apiClient = new FakeApiClient
+        {
+            LoginException = new ApiException(
+                System.Net.HttpStatusCode.TooManyRequests,
+                "Too many requests.",
+                "rate_limit_exceeded")
+        };
+        var errorHandler = new FakeErrorHandler();
+        var viewModel = CreateViewModel(apiClient, new FakeTokenStore(), new FakeNavigationService(), errorHandler);
+        viewModel.Email = "demo@example.test";
+        viewModel.Password = "Demo-password-123";
+
+        await viewModel.SignInCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.HasError, Is.True);
+            Assert.That(viewModel.ErrorMessage, Does.Contain("quá nhiều lần"));
+            Assert.That(errorHandler.HandledExceptions, Is.Empty);
         });
     }
 
@@ -309,6 +362,8 @@ public class LoginViewModelTests
 
         public int GoToRegisterCount { get; private set; }
 
+        public AppUserRole? RequestedRegisterRole { get; private set; }
+
         public List<AppUserRole?> RoleRootRoles { get; } = new();
 
         public Task GoToRoomDetailAsync(Guid listingId)
@@ -323,6 +378,13 @@ public class LoginViewModelTests
         public Task GoToRegisterAsync()
         {
             GoToRegisterCount++;
+            return Task.CompletedTask;
+        }
+
+        public Task GoToRegisterAsync(AppUserRole? initialRole)
+        {
+            GoToRegisterCount++;
+            RequestedRegisterRole = initialRole;
             return Task.CompletedTask;
         }
 

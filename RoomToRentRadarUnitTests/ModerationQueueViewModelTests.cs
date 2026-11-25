@@ -295,6 +295,25 @@ public class ModerationQueueViewModelTests
     }
 
     [Test]
+    public async Task SignOut_ClearsItemsAndTransitionsToSignedOutState()
+    {
+        var client = new FakeModerationClient();
+        client.Pages.Enqueue(Page(null, hasMore: false, Listing("Phòng A")));
+        var viewModel = CreateViewModel(client, SignedInAs(AppUserRole.Admin));
+        await viewModel.LoadCommand.ExecuteAsync(null);
+        Assert.That(viewModel.CanSignOut, Is.True);
+
+        await viewModel.SignOutCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.Items, Is.Empty);
+            Assert.That(viewModel.State, Is.EqualTo(ModerationQueueState.SignedOut));
+            Assert.That(viewModel.CanSignOut, Is.False);
+        });
+    }
+
+    [Test]
     public async Task Approve_WhenTheLastVisibleItemIsRemoved_LoadsTheNextPage()
     {
         var client = new FakeModerationClient();
@@ -496,8 +515,13 @@ public class ModerationQueueViewModelTests
         public Task GoToRegisterAsync()
             => throw new NotSupportedException("The moderation screen does not open the registration screen.");
 
+        public List<AppUserRole?> RoleRootRoles { get; } = [];
+
         public Task GoToRoleRootAsync(AppUserRole? role)
-            => throw new NotSupportedException("The moderation screen does not navigate to a role root.");
+        {
+            RoleRootRoles.Add(role);
+            return Task.CompletedTask;
+        }
 
         public Task GoToDirectionsAsync(
             double destinationLat,

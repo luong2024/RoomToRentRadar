@@ -40,6 +40,7 @@ public partial class ModerationQueueViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsContentState))]
     [NotifyPropertyChangedFor(nameof(IsEmptyState))]
     [NotifyPropertyChangedFor(nameof(IsSignedOutState))]
+    [NotifyPropertyChangedFor(nameof(CanSignOut))]
     [NotifyPropertyChangedFor(nameof(IsDeniedState))]
     [NotifyPropertyChangedFor(nameof(IsErrorState))]
     public partial ModerationQueueState State { get; set; }
@@ -78,6 +79,8 @@ public partial class ModerationQueueViewModel : ObservableObject
 
     public bool IsSignedOutState => State == ModerationQueueState.SignedOut;
 
+    public bool CanSignOut => !IsSignedOutState;
+
     public bool IsDeniedState => State == ModerationQueueState.Denied;
 
     public bool IsErrorState => State == ModerationQueueState.Error;
@@ -86,6 +89,15 @@ public partial class ModerationQueueViewModel : ObservableObject
 
     [RelayCommand]
     private Task SignInAsync() => _navigationService.GoToLoginAsync();
+
+    [RelayCommand(AllowConcurrentExecutions = false)]
+    private async Task SignOutAsync(CancellationToken cancellationToken)
+    {
+        await _authService.SignOutAsync(cancellationToken);
+        Items.Clear();
+        State = ModerationQueueState.SignedOut;
+        await _navigationService.GoToRoleRootAsync(null);
+    }
 
     [RelayCommand(AllowConcurrentExecutions = false)]
     private async Task LoadAsync(CancellationToken cancellationToken)
