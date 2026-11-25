@@ -25,6 +25,14 @@
         SemanticProperties.Hint="Khoanh vùng tìm phòng quanh ICTU"/>
 
     <ShellContent
+        Title="Yêu thích"
+        Icon="{StaticResource IconFavourites}"
+        ContentTemplate="{DataTemplate pages:FavouritesPage}"
+        Route="favourites"
+        SemanticProperties.Description="Danh sách phòng đã lưu"
+        SemanticProperties.Hint="Xem và quản lý các phòng trọ yêu thích"/>
+
+    <ShellContent
         Title="Bộ lọc tìm kiếm"
         Icon="{StaticResource IconProjects}"
         ContentTemplate="{DataTemplate pages:FilterBottomSheet}"

@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pages="clr-namespace:RoomToRentRadar.Pages"
+             xmlns:pageModels="clr-namespace:RoomToRentRadar.PageModels"
+             xmlns:models="clr-namespace:RoomToRentRadar.Models"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Pages.Controls"
+             x:Class="RoomToRentRadar.Pages.FavouritesPage"
+             x:Name="FavouritesPageRoot"
+             x:DataType="pageModels:FavouritesViewModel"
+             Title="Phòng đã lưu"
+             BackgroundColor="{AppThemeBinding Light=#F8FAFC, Dark=#0F172A}">
+
+    <Grid RowDefinitions="Auto,*,Auto"
+          Padding="12,10,12,12"
+          RowSpacing="10">
+
+        <!-- Header đếm số phòng đã lưu -->
+        <VerticalStackLayout Grid.Row="0" Spacing="2">
+            <Label Text="{Binding FavouriteCount, StringFormat='{0} phòng yêu thích'}"
+                   FontSize="16"
+                   FontAttributes="Bold"
+                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#F8FAFC}" />
+            <Label Text="Bấm vào biểu tượng trái tim để bỏ lưu (có thể hoàn tác trong 5 giây)"
+                   FontSize="12"
+                   TextColor="{AppThemeBinding Light=#64748B, Dark={StaticResource Gray400}}" />
+        </VerticalStackLayout>
+
+        <!-- Danh sách phòng đã lưu -->
+        <CollectionView Grid.Row="1"
+                        AutomationId="FavouritesCollectionView"
+                        ItemsSource="{Binding Favourites}"
+                        SelectionMode="Single"
+                        SelectionChanged="OnFavouriteSelectionChanged">
+            <CollectionView.ItemsLayout>
+                <LinearItemsLayout Orientation="Vertical" ItemSpacing="10" />
+            </CollectionView.ItemsLayout>
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:RoomListingItemModel">
+                    <controls:RoomCardView
+                        ToggleFavouriteCommand="{Binding Source={x:Reference FavouritesPageRoot}, Path=ViewModel.RemoveWithUndoCommand, x:DataType=pages:FavouritesPage}" />
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+
+            <CollectionView.EmptyView>
+                <VerticalStackLayout VerticalOptions="Center"
+                                     HorizontalOptions="Center"
+                                     Padding="24"
+                                     Spacing="8">
+                    <ActivityIndicator IsRunning="{Binding IsLoading}"
+                                       IsVisible="{Binding IsLoading}" />
+                    <Label Text="Chưa có phòng yêu thích nào."
+                           FontSize="15"
+                           FontAttributes="Bold"
+                           IsVisible="{Binding IsEmpty}"
+                           HorizontalTextAlignment="Center" />
+                    <Label Text="Bấm biểu tượng trái tim trên danh sách phòng để lưu lại xem sau."
+                           FontSize="13"
+                           TextColor="#64748B"
+                           IsVisible="{Binding IsEmpty}"
+                           HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+            </CollectionView.EmptyView>
+        </CollectionView>
+
+        <!-- Thanh Snackbar Hoàn Tác trong 5 giây (US06 AC4) -->
+        <Border Grid.Row="2"
+                IsVisible="{Binding ShowUndoBar}"
+                BackgroundColor="#0F172A"
+                Stroke="#334155"
+                StrokeThickness="1"
+                StrokeShape="RoundRectangle 8"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <Label Grid.Column="0"
+                       Text="{Binding UndoMessage}"
+                       TextColor="White"
+                       FontSize="13"
+                       VerticalOptions="Center"
+                       MaxLines="2"
+                       LineBreakMode="TailTruncation" />
+
+                <Button Grid.Column="1"
+                        AutomationId="UndoRemoveSnackbarButton"
+                        Text="Hoàn tác"
+                        Command="{Binding UndoRemoveCommand}"
+                        BackgroundColor="#2563EB"
+                        TextColor="White"
+                        FontSize="13"
+                        FontAttributes="Bold"
+                        CornerRadius="6"
+                        Padding="14,6"
+                        VerticalOptions="Center" />
+            </Grid>
+        </Border>
+    </Grid>
+</ContentPage>

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8" ?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <?xaml-comp compile="true" ?>
 <ResourceDictionary 
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
@@ -57,6 +57,12 @@
 
     <FontImageSource x:Key="IconMap"
                      Glyph="{x:Static f:FluentUI.map_24_regular}"
+                     FontFamily="{x:Static f:FluentUI.FontFamily}"
+                     Color="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}"
+                     Size="{StaticResource IconSize}" />
+
+    <FontImageSource x:Key="IconFavourites"
+                     Glyph="{x:Static f:FluentUI.heart_24_regular}"
                      FontFamily="{x:Static f:FluentUI.FontFamily}"
                      Color="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}"
                      Size="{StaticResource IconSize}" />
