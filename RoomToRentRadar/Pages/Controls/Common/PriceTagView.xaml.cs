@@ -1,11 +1,10 @@
 using System.Globalization;
+using RoomToRentRadar.Converters;
 
 namespace RoomToRentRadar.Pages.Controls.Common;
 
 public partial class PriceTagView : ContentView
 {
-    private static readonly CultureInfo VietnameseCulture = new("vi-VN");
-
     public static readonly BindableProperty PriceProperty =
         BindableProperty.Create(nameof(Price), typeof(decimal), typeof(PriceTagView), 0m,
             propertyChanged: (b, o, n) => ((PriceTagView)b).UpdateFormattedPrice());
@@ -14,7 +13,7 @@ public partial class PriceTagView : ContentView
         BindableProperty.Create(nameof(Period), typeof(string), typeof(PriceTagView), "/ month");
 
     public static readonly BindableProperty FormattedPriceProperty =
-        BindableProperty.Create(nameof(FormattedPrice), typeof(string), typeof(PriceTagView), "0 VND");
+        BindableProperty.Create(nameof(FormattedPrice), typeof(string), typeof(PriceTagView), string.Empty);
 
     public decimal Price
     {
@@ -42,7 +41,8 @@ public partial class PriceTagView : ContentView
 
     private void UpdateFormattedPrice()
     {
-        FormattedPrice = $"{Price.ToString("N0", VietnameseCulture)} VND";
+        // Same short form as the room card and room detail (ui-ux-spec §6).
+        FormattedPrice = CultureFormatting.FormatCompactMoney((long)Price, CultureInfo.CurrentCulture);
     }
 }
 
