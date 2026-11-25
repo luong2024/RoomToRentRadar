@@ -145,7 +145,15 @@
         </Grid>
 
         <Grid Grid.Row="2">
-            <feedback:StateView State="{Binding State}"
+            <feedback:EmptyStateView IsVisible="{Binding IsLoadFailed}"
+                                     Title="{Binding ExploreErrorTitleText}"
+                                     Message="{Binding ErrorMessage}"
+                                     IconGlyph="{x:Static fonts:FluentUI.warning_24_regular}"
+                                     ActionText="{Binding RetryText}"
+                                     ActionCommand="{Binding RetryCommand}" />
+
+            <feedback:StateView IsVisible="{Binding IsBodyVisible}"
+                                State="{Binding State}"
                                 HasContent="{Binding HasContent}"
                                 ErrorMessage="{Binding ErrorMessage}"
                                 RetryCommand="{Binding RetryCommand}"

@@ -220,6 +220,56 @@ public class ExploreListPageModelTests
         Assert.That(Requests(1), Is.EqualTo(1));
     }
 
+    // ----------------------------------------------------------------- load errors
+
+    [Test]
+    public async Task FirstLoadFailure_ShowsTheScreenErrorBlock_UntilRetrySucceeds()
+    {
+        PageFails(1);
+        var model = CreateModel();
+        var raised = new List<string?>();
+        model.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        await model.InitializeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(model.IsLoadFailed, Is.True);
+            Assert.That(model.IsBodyVisible, Is.False);
+            Assert.That(model.ErrorMessage, Is.Not.Empty);
+            Assert.That(raised, Does.Contain(nameof(model.IsLoadFailed)));
+            Assert.That(raised, Does.Contain(nameof(model.IsBodyVisible)));
+        });
+
+        PageReturns(1, Page(1, 1, 1));
+        await model.RetryCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(model.IsLoadFailed, Is.False);
+            Assert.That(model.IsBodyVisible, Is.True);
+            Assert.That(model.Rooms, Has.Count.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task FailedRefresh_WithAListOnScreen_KeepsTheList()
+    {
+        var model = await LoadTwoPageListAsync();
+        PageFails(1);
+
+        await model.RefreshCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(model.State, Is.EqualTo(ViewState.Offline));
+            Assert.That(model.IsLoadFailed, Is.False);
+            Assert.That(model.IsBodyVisible, Is.True);
+            Assert.That(model.Rooms, Has.Count.EqualTo(20));
+            Assert.That(model.TotalRoomCount, Is.EqualTo(22));
+        });
+    }
+
     // ----------------------------------------------------------------- cards and header
 
     [Test]

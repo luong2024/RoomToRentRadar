@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -99,6 +100,14 @@ public partial class MainLandingPageModel : BasePageModel
 
     public bool HasCompareSelection => CompareCount > 0;
 
+    /// <summary>
+    /// First load failed with nothing to show. The page draws this itself with a filled button: the shared
+    /// error card's outline button is unreadable on a light surface.
+    /// </summary>
+    public bool IsLoadFailed => State == ViewState.Error && !HasContent;
+
+    public bool IsBodyVisible => !IsLoadFailed;
+
     public string ExploreErrorTitleText => AppResources.GetString("Explore_Error_Title");
     public string ExploreEmptyTitleText => AppResources.GetString("Explore_Empty_Title");
     public string ExploreEmptyMessageText => AppResources.GetString("Explore_Empty_Message");
@@ -167,6 +176,17 @@ public partial class MainLandingPageModel : BasePageModel
         _searchCriteriaStore = searchCriteriaStore ?? new SearchCriteriaStore();
         _ = new WeakCriteriaSubscription(this, _searchCriteriaStore);
         RefreshFilterState();
+    }
+
+    protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+
+        if (e.PropertyName is nameof(State) or nameof(HasContent))
+        {
+            OnPropertyChanged(nameof(IsLoadFailed));
+            OnPropertyChanged(nameof(IsBodyVisible));
+        }
     }
 
     protected override void OnLanguageChanged()
