@@ -11,10 +11,12 @@ public sealed record RoomSearchCandidate(
     RoomType RoomType,
     ListingStatus Status,
     bool IsVerified,
-    string? CoverThumbUrl,
+    // Storage key of the cover thumbnail (BR-MED-05); the use case turns it into a public URL.
+    string? CoverThumbPath,
     double Latitude,
     double Longitude,
-    DateTime? PublishedAtUtc
+    DateTime? PublishedAtUtc,
+    Furnishing? Furnishing = null
 );
 
 /// <summary>

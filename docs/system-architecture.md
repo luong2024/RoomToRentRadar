@@ -258,6 +258,7 @@ The rate limiter row (429) is added by its own task; until then no code path pro
 | `IctuSso:*`, `IctuSso:UseMockVerifier` | ADR-005 | `false` |
 | `Admin:SeedAccounts` | seeded admin accounts `[{Id?, Email, FullName, Password}]` | empty |
 | `DemoData:Accounts` | dev-only demo accounts `[{Id, Email, FullName, Role, IsVerified, PhoneNumber?, StudentCode?, Password}]` (ignored outside Dev) | empty |
+| `DemoData:SeedPhotos` | dev-only: attach the photos in `RoomToRentRadar.Api/SeedMedia/` to demo rooms and serve them under `/media/seed/rooms/` (ignored outside Dev) | `false` (`true` in `appsettings.Development.json`) |
 | Client `ApiOptions:BaseUrl` | per build/environment | emulator `http://10.0.2.2:5000` |
 
 ### 7.6 Localization (US15)
