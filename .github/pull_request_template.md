@@ -18,4 +18,4 @@
 
 ## Bằng chứng chạy thử (Screenshot / Log)
 
-*(Dán ảnh màn hình hoặc kết quả chạy thử vào đây trước khi nhờ `@Duc-Nguyen-Github` hoặc `@quangtldc0301` bấm Merge)*
+*(Dán ảnh màn hình hoặc kết quả chạy thử vào đây trước khi nhờ `@quangtldc0301` bấm Merge)*

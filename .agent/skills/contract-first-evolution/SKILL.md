@@ -11,7 +11,8 @@ Ngăn chặn hiện tượng Agent tự tiện thay đổi model dữ liệu, ch
 ## Khi nào kích hoạt Skill này
 - Khi `@architect` cần thêm trường mới vào Model (`RoomToRentRadar.Core/Models/`).
 - Khi cần mở rộng Interface hợp đồng (`RoomToRentRadar.Core/Abstractions/`) hoặc SQLite Schema (`RoomToRentRadar.Infrastructure/Persistence/`).
-- Lưu ý: `@developer` **CẤM** tự ý sửa các thư mục trên nếu chưa được Scrum Master (`@Duc-Nguyen-Github`) hoặc Tech Lead (`@quangtldc0301`) phê duyệt.
+- Lưu ý: `@developer` **CẤM** tự ý sửa các thư mục trên nếu chưa được Scrum Master kiêm Tech Lead (`@quangtldc0301`) phê duyệt.
+- Hợp đồng JSON của Web API (DTO trong `RoomToRentRadar.Api/Models/`) cũng là hợp đồng với app MAUI: áp dụng cùng quy tắc "Mở rộng, không Phá vỡ" bên dưới (không đổi tên/xóa trường mà client HTTP đang dùng).
 
 ---
 

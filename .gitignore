@@ -21,3 +21,8 @@ TestResults/
 # OS-generated files
 .DS_Store
 Thumbs.db
+
+# Docker / secrets (copy .env.example to .env; never commit the real .env)
+.env
+.env.*
+!.env.example
