@@ -92,6 +92,26 @@ public class UiCatalogPageModelTests
     }
 
     [Test]
+    public void SelectPreviewCultureCommand_RefreshesCaptionsAndRentLabelInThePreviewLanguage()
+    {
+        LocalizedStrings.Instance.SetCulture(CultureInfo.GetCultureInfo("en-US"));
+        var vm = new UiCatalogPageModel();
+        Assert.That(vm["Rent"], Is.EqualTo("Monthly rent"));
+        var changedProps = new List<string?>();
+        vm.PropertyChanged += (_, e) => changedProps.Add(e.PropertyName);
+
+        vm.SelectPreviewCultureCommand.Execute("vi-VN");
+
+        Assert.That(changedProps, Does.Contain(string.Empty));
+        Assert.That(vm["Rent"], Is.EqualTo("Giá thuê mỗi tháng"));
+        Assert.That(vm.DemoAreaInputText, Is.EqualTo("Đầu vào: 25.5 m²"));
+        Assert.That(vm.AppCulture.Name, Is.EqualTo("en-US"));
+        vm.UseAppCultureCommand.Execute(null);
+        Assert.That(vm["Rent"], Is.EqualTo("Monthly rent"));
+        Assert.That(vm.DemoAreaInputText, Is.EqualTo("Input: 25.5 m²"));
+    }
+
+    [Test]
     public void UseAppCultureCommand_RestoresFollowingAppCultureAndNotifies()
     {
         LocalizedStrings.Instance.SetCulture(CultureInfo.GetCultureInfo("vi-VN"));

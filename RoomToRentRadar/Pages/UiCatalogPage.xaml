@@ -224,10 +224,10 @@
 
                 <!-- SECTION 8: CULTURE-AWARE FORMATTING -->
                 <VerticalStackLayout Spacing="12" Margin="0,0,0,24">
-                    <Label Text="8. CULTURE-AWARE FORMATTING"
+                    <Label Text="{Binding [Title]}"
                            Style="{StaticResource TextH3}"
                            SemanticProperties.HeadingLevel="Level2" />
-                    <Label Text="Preview formatting without changing raw values or global app language."
+                    <Label Text="{Binding [Description]}"
                            Style="{StaticResource TextBodyMedium}" />
 
                     <!-- Culture Controls Card -->
@@ -242,7 +242,7 @@
                                         StrokeThickness="1.5"
                                         Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
                                         BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
-                                        SemanticProperties.Description="Preview Vietnamese culture vi-VN">
+                                        SemanticProperties.Description="{Binding [SelectVietnamese]}">
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer Command="{Binding SelectPreviewCultureCommand}"
                                                               CommandParameter="vi-VN" />
@@ -265,7 +265,7 @@
                                                IsVisible="{Binding IsVietnamesePreview}"
                                                TextColor="{StaticResource White}" />
                                         <Label Grid.Column="1"
-                                               Text="Tiếng Việt (vi-VN)"
+                                               Text="{Binding [Vietnamese]}"
                                                FontFamily="{StaticResource FontFamilySemibold}"
                                                FontSize="{StaticResource FontSizeBodyMedium}"
                                                VerticalTextAlignment="Center"
@@ -288,7 +288,7 @@
                                         StrokeThickness="1.5"
                                         Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
                                         BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
-                                        SemanticProperties.Description="Preview English culture en-US">
+                                        SemanticProperties.Description="{Binding [SelectEnglish]}">
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer Command="{Binding SelectPreviewCultureCommand}"
                                                               CommandParameter="en-US" />
@@ -311,7 +311,7 @@
                                                IsVisible="{Binding IsEnglishPreview}"
                                                TextColor="{StaticResource White}" />
                                         <Label Grid.Column="1"
-                                               Text="English (en-US)"
+                                               Text="{Binding [English]}"
                                                FontFamily="{StaticResource FontFamilySemibold}"
                                                FontSize="{StaticResource FontSizeBodyMedium}"
                                                VerticalTextAlignment="Center"
@@ -340,11 +340,11 @@
                                 </VerticalStackLayout>
                             </Border>
 
-                            <Button Text="Use app culture"
+                            <Button Text="{Binding [UseApp]}"
                                     Style="{StaticResource OutlineButton}"
                                     Command="{Binding UseAppCultureCommand}"
                                     HorizontalOptions="Start"
-                                    SemanticProperties.Description="Reset formatting preview to follow the current app culture" />
+                                    SemanticProperties.Description="{Binding [ResetHint]}" />
                         </VerticalStackLayout>
                     </Border>
 
@@ -354,7 +354,7 @@
                             <!-- 1. Currency -->
                             <Grid ColumnDefinitions="*, Auto" ColumnSpacing="12">
                                 <VerticalStackLayout Grid.Column="0" Spacing="2">
-                                    <Label Text="Currency"
+                                    <Label Text="{Binding [Currency]}"
                                            FontFamily="{StaticResource FontFamilySemibold}"
                                            FontSize="{StaticResource FontSizeBodyMedium}"
                                            TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
@@ -380,7 +380,7 @@
                             <!-- 2. Number -->
                             <Grid ColumnDefinitions="*, Auto" ColumnSpacing="12">
                                 <VerticalStackLayout Grid.Column="0" Spacing="2">
-                                    <Label Text="Number"
+                                    <Label Text="{Binding [Number]}"
                                            FontFamily="{StaticResource FontFamilySemibold}"
                                            FontSize="{StaticResource FontSizeBodyMedium}"
                                            TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
@@ -406,7 +406,7 @@
                             <!-- 3. Date -->
                             <Grid ColumnDefinitions="*, Auto" ColumnSpacing="12">
                                 <VerticalStackLayout Grid.Column="0" Spacing="2">
-                                    <Label Text="Date"
+                                    <Label Text="{Binding [Date]}"
                                            FontFamily="{StaticResource FontFamilySemibold}"
                                            FontSize="{StaticResource FontSizeBodyMedium}"
                                            TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
@@ -432,7 +432,7 @@
                             <!-- 4. Time -->
                             <Grid ColumnDefinitions="*, Auto" ColumnSpacing="12">
                                 <VerticalStackLayout Grid.Column="0" Spacing="2">
-                                    <Label Text="Time"
+                                    <Label Text="{Binding [Time]}"
                                            FontFamily="{StaticResource FontFamilySemibold}"
                                            FontSize="{StaticResource FontSizeBodyMedium}"
                                            TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
@@ -458,7 +458,7 @@
                             <!-- 5. Area -->
                             <Grid ColumnDefinitions="*, Auto" ColumnSpacing="12">
                                 <VerticalStackLayout Grid.Column="0" Spacing="2">
-                                    <Label Text="Area"
+                                    <Label Text="{Binding [Area]}"
                                            FontFamily="{StaticResource FontFamilySemibold}"
                                            FontSize="{StaticResource FontSizeBodyMedium}"
                                            TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
@@ -484,7 +484,7 @@
                             <!-- 6. Distance -->
                             <Grid ColumnDefinitions="*, Auto" ColumnSpacing="12">
                                 <VerticalStackLayout Grid.Column="0" Spacing="2">
-                                    <Label Text="Distance"
+                                    <Label Text="{Binding [Distance]}"
                                            FontFamily="{StaticResource FontFamilySemibold}"
                                            FontSize="{StaticResource FontSizeBodyMedium}"
                                            TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
@@ -509,14 +509,14 @@
                     <!-- Optional Preview: SampleRoom values formatted via converters without modifying RoomCardView -->
                     <Border Style="{StaticResource BaseCardBorderStyle}">
                         <VerticalStackLayout Spacing="8">
-                            <Label Text="Preview room values (SampleRoom)"
+                            <Label Text="{Binding [Room]}"
                                    FontFamily="{StaticResource FontFamilySemibold}"
                                    FontSize="{StaticResource FontSizeBodyMedium}"
                                    TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}" />
 
                             <Grid ColumnDefinitions="Auto, *" ColumnSpacing="8">
                                 <Label Grid.Column="0"
-                                       Text="Price:"
+                                       Text="{Binding [Rent]}"
                                        Style="{StaticResource TextBodyMedium}" />
                                 <Label Grid.Column="1"
                                        FontFamily="{StaticResource FontFamilySemibold}"
@@ -525,8 +525,7 @@
                                        TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}">
                                     <Label.Text>
                                         <MultiBinding Mode="OneWay"
-                                                      Converter="{StaticResource CurrencyConverter}"
-                                                      StringFormat="{}{0} / month">
+                                                      Converter="{StaticResource CurrencyConverter}">
                                             <Binding Path="SampleRoom.PricePerMonth" />
                                             <Binding Path="PreviewCulture" />
                                         </MultiBinding>
@@ -537,7 +536,7 @@
                             <Grid ColumnDefinitions="*, *" ColumnSpacing="12">
                                 <Grid Grid.Column="0" ColumnDefinitions="Auto, *" ColumnSpacing="6">
                                     <Label Grid.Column="0"
-                                           Text="Area:"
+                                           Text="{Binding [Area]}"
                                            Style="{StaticResource TextBodyMedium}" />
                                     <Label Grid.Column="1"
                                            FontFamily="{StaticResource FontFamilySemibold}"
@@ -555,7 +554,7 @@
 
                                 <Grid Grid.Column="1" ColumnDefinitions="Auto, *" ColumnSpacing="6">
                                     <Label Grid.Column="0"
-                                           Text="Distance:"
+                                           Text="{Binding [Distance]}"
                                            Style="{StaticResource TextBodyMedium}" />
                                     <Label Grid.Column="1"
                                            FontFamily="{StaticResource FontFamilySemibold}"

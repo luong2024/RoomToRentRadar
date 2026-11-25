@@ -2,6 +2,7 @@ using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Converters;
+using RoomToRentRadar.Resources.Strings;
 using RoomToRentRadar.Pages.Controls.Cards.Models;
 
 namespace RoomToRentRadar.PageModels;
@@ -51,10 +52,12 @@ public partial class UiCatalogPageModel : ObservableObject
     public bool IsEnglishPreview => !IsVietnamesePreview;
     public string AppCultureName => GetDisplayCultureName(AppCulture);
     public string PreviewCultureName => GetDisplayCultureName(PreviewCulture);
-    public string CultureStatusText => $"App: {AppCultureName}  ·  Preview: {PreviewCultureName}";
-    public string PreviewModeText => IsUsingAppCulture
-        ? "Mode: Following app culture"
-        : "Mode: Local preview override";
+    public string this[string key] => AppResources.GetString("Catalog_" + key, PreviewCulture);
+    public string CultureStatusText => string.Format(PreviewCulture, this["Status"], AppCultureName, PreviewCultureName);
+    public string PreviewModeText => this[IsUsingAppCulture ? "Following" : "Override"];
+
+    // Refresh indexer bindings and input captions when only the preview language changes.
+    partial void OnPreviewCultureChanged(CultureInfo value) => OnPropertyChanged(string.Empty);
 
     // Fixed typed demo inputs for deterministic converter previews
     public decimal DemoCurrencyAmount { get; } = 2200000m;
@@ -65,12 +68,12 @@ public partial class UiCatalogPageModel : ObservableObject
     public double DemoDistanceValue { get; } = 1500d;
 
     // Invariant input labels for side-by-side verification
-    public string DemoCurrencyInputText => $"Input: {DemoCurrencyAmount.ToString(CultureInfo.InvariantCulture)}";
-    public string DemoNumberInputText => $"Input: {DemoNumberValue.ToString(CultureInfo.InvariantCulture)}";
-    public string DemoDateInputText => $"Input: {DemoDateValue.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}";
-    public string DemoTimeInputText => $"Input: {DemoTimeValue.ToString("HH:mm", CultureInfo.InvariantCulture)}";
-    public string DemoAreaInputText => $"Input: {DemoAreaValue.ToString(CultureInfo.InvariantCulture)} m²";
-    public string DemoDistanceInputText => $"Input: {DemoDistanceValue.ToString(CultureInfo.InvariantCulture)} m";
+    public string DemoCurrencyInputText => $"{this["Input"]} {DemoCurrencyAmount.ToString(CultureInfo.InvariantCulture)}";
+    public string DemoNumberInputText => $"{this["Input"]} {DemoNumberValue.ToString(CultureInfo.InvariantCulture)}";
+    public string DemoDateInputText => $"{this["Input"]} {DemoDateValue.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}";
+    public string DemoTimeInputText => $"{this["Input"]} {DemoTimeValue.ToString("HH:mm", CultureInfo.InvariantCulture)}";
+    public string DemoAreaInputText => $"{this["Input"]} {DemoAreaValue.ToString(CultureInfo.InvariantCulture)} m²";
+    public string DemoDistanceInputText => $"{this["Input"]} {DemoDistanceValue.ToString(CultureInfo.InvariantCulture)} m";
 
     public UiCatalogPageModel()
     {
@@ -118,14 +121,14 @@ public partial class UiCatalogPageModel : ObservableObject
         var targetCulture = CultureFormatting.ResolveCulture(cultureCode, AppCulture);
         IsUsingAppCulture = false;
         PreviewCulture = targetCulture;
-        FeedbackMessage = $"Previewing {PreviewCultureName} (app culture remains {AppCultureName}).";
+        FeedbackMessage = string.Format(PreviewCulture, this["PreviewFeedback"], PreviewCultureName, AppCultureName);
     }
 
     [RelayCommand]
     private void UseAppCulture()
     {
         SyncWithAppCulture(resetOverride: true);
-        FeedbackMessage = $"Following app culture ({AppCultureName}).";
+        FeedbackMessage = string.Format(PreviewCulture, this["FollowFeedback"], AppCultureName);
     }
 
     [RelayCommand]
