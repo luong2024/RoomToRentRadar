@@ -71,6 +71,7 @@
                 <Grid ColumnDefinitions="*, *, *"
                       ColumnSpacing="8"
                       Margin="0,8,0,0"
+                      IsVisible="{Binding HasTravelTimes}"
                       BindableLayout.ItemsSource="{Binding CommuteTimes}">
                     <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="models:CommuteModeItem">
