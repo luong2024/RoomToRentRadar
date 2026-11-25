@@ -920,6 +920,31 @@
   <data name="Common_Cancel" xml:space="preserve">
     <value>Huỷ</value>
   </data>
+  <data name="Date_Today" xml:space="preserve"><value>Hôm nay</value></data>
+  <data name="Date_Yesterday" xml:space="preserve"><value>Hôm qua</value></data>
+  <data name="Date_DaysAgo" xml:space="preserve"><value>{0} ngày trước</value></data>
+  <data name="Catalog_Title" xml:space="preserve"><value>8. ĐỊNH DẠNG THEO NGÔN NGỮ</value></data>
+  <data name="Catalog_Description" xml:space="preserve"><value>Xem trước định dạng với dữ liệu gốc và ngôn ngữ ứng dụng hiện tại.</value></data>
+  <data name="Catalog_SelectVietnamese" xml:space="preserve"><value>Xem trước định dạng tiếng Việt (vi-VN)</value></data>
+  <data name="Catalog_SelectEnglish" xml:space="preserve"><value>Xem trước định dạng tiếng Anh (en-US)</value></data>
+  <data name="Catalog_Vietnamese" xml:space="preserve"><value>Tiếng Việt (vi-VN)</value></data>
+  <data name="Catalog_English" xml:space="preserve"><value>English (en-US)</value></data>
+  <data name="Catalog_UseApp" xml:space="preserve"><value>Dùng ngôn ngữ ứng dụng</value></data>
+  <data name="Catalog_ResetHint" xml:space="preserve"><value>Đặt lại bản xem trước theo ngôn ngữ hiện tại của ứng dụng</value></data>
+  <data name="Catalog_Currency" xml:space="preserve"><value>Tiền tệ</value></data>
+  <data name="Catalog_Number" xml:space="preserve"><value>Số</value></data>
+  <data name="Catalog_Date" xml:space="preserve"><value>Ngày</value></data>
+  <data name="Catalog_Time" xml:space="preserve"><value>Giờ</value></data>
+  <data name="Catalog_Area" xml:space="preserve"><value>Diện tích</value></data>
+  <data name="Catalog_Distance" xml:space="preserve"><value>Khoảng cách</value></data>
+  <data name="Catalog_Room" xml:space="preserve"><value>Xem trước thông tin phòng mẫu</value></data>
+  <data name="Catalog_Rent" xml:space="preserve"><value>Giá thuê mỗi tháng</value></data>
+  <data name="Catalog_Status" xml:space="preserve"><value>Ứng dụng: {0}  ·  Xem trước: {1}</value></data>
+  <data name="Catalog_Following" xml:space="preserve"><value>Chế độ: Theo ngôn ngữ ứng dụng</value></data>
+  <data name="Catalog_Override" xml:space="preserve"><value>Chế độ: Chọn ngôn ngữ xem trước</value></data>
+  <data name="Catalog_Input" xml:space="preserve"><value>Đầu vào:</value></data>
+  <data name="Catalog_PreviewFeedback" xml:space="preserve"><value>Đang xem trước {0} (ngôn ngữ ứng dụng vẫn là {1}).</value></data>
+  <data name="Catalog_FollowFeedback" xml:space="preserve"><value>Đang dùng ngôn ngữ ứng dụng ({0}).</value></data>
   <!-- Campus picker SCR-ACC-02 (T13.4) -->
   <data name="Campus_Title" xml:space="preserve">
     <value>Tính khoảng cách từ</value>
