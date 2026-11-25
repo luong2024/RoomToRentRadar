@@ -1,0 +1,100 @@
+using System.Net;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+
+namespace RoomToRentRadarUnitTests.Api;
+
+/// <summary>T00.10: the committed demo photos are served in Development only.</summary>
+[TestFixture]
+public class SeedMediaEndpointTests
+{
+    private const string JwtSigningKey = "integration-test-signing-key-at-least-32-bytes-long!!";
+    private const string ImagePath = "/media/seed/rooms/house-01-thumb.jpg";
+
+    private static WebApplicationFactory<Program> CreateFactory(string environment, bool? seedPhotos = null) =>
+        new WebApplicationFactory<Program>().WithWebHostBuilder(webHost =>
+        {
+            webHost.UseEnvironment(environment);
+            webHost.UseSetting("DatabaseProvider", "Sqlite");
+            webHost.UseSetting("Sqlite:ConnectionString", "Data Source=:memory:");
+            if (seedPhotos.HasValue)
+            {
+                webHost.UseSetting("DemoData:SeedPhotos", seedPhotos.Value ? "true" : "false");
+            }
+
+            webHost.UseSetting("Jwt:SigningKey", JwtSigningKey);
+            webHost.UseSetting("Jwt:Issuer", "RoomToRentRadar.Api");
+            webHost.UseSetting("Jwt:Audience", "RoomToRentRadar.Client");
+            // Required outside Development once real routing is configured (T09.1); never used by these tests.
+            webHost.UseSetting("Routing:OpenRouteServiceApiKey", "test-ors-api-key");
+        });
+
+    [Test]
+    public async Task Development_ServesSeedPhotoAsJpeg()
+    {
+        using var factory = CreateFactory("Development");
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync(ImagePath);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("image/jpeg"));
+        });
+    }
+
+    [TestCase("/media/seed/manifest.json")]
+    [TestCase("/media/seed/CREDITS.md")]
+    [TestCase("/media/seed/rooms/..%2Fmanifest.json")]
+    [TestCase("/media/seed/rooms/missing.jpg")]
+    public async Task Development_PublishesOnlyTheImages(string path)
+    {
+        using var factory = CreateFactory("Development");
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync(path);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+    }
+
+    [Test]
+    public async Task Development_WithoutTheImageFolder_StartsAndServesNoSeedPhotos()
+    {
+        // Like running the built assembly: the content root has no SeedMedia/rooms folder.
+        var contentRoot = Path.Combine(Path.GetTempPath(), $"rtr_no_seed_media_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(contentRoot, "SeedMedia"));
+        try
+        {
+            using var factory = CreateFactory("Development", seedPhotos: true)
+                .WithWebHostBuilder(webHost => webHost.UseContentRoot(contentRoot));
+            using var client = factory.CreateClient();
+
+            var health = await client.GetAsync("/api/health");
+            var image = await client.GetAsync(ImagePath);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(health.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+                Assert.That(image.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            });
+        }
+        finally
+        {
+            Directory.Delete(contentRoot, recursive: true);
+        }
+    }
+
+    [TestCase("Production", null)]
+    [TestCase("Production", true)]
+    [TestCase("Development", false)]
+    public async Task OutsideDevelopmentOrSwitchedOff_SeedPhotosAreNotServed(string environment, bool? seedPhotos)
+    {
+        using var factory = CreateFactory(environment, seedPhotos);
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync(ImagePath);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+    }
+}

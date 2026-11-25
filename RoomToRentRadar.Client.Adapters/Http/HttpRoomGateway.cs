@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.Extensions.Logging;
 using RoomToRentRadar.Client.Adapters.Abstractions;
+using RoomToRentRadar.Client.Adapters.Utilities;
 using RoomToRentRadar.Ports.Contracts.Common;
 using RoomToRentRadar.Ports.Contracts.Requests.Rooms;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
@@ -23,7 +24,8 @@ public sealed class HttpRoomGateway : IRoomGateway
     {
         ArgumentNullException.ThrowIfNull(request);
         using var response = await _httpClient.GetAsync(BuildSearchUrl(request), ct);
-        return await ApiResponseReader.ReadAsync<PagedResult<RoomCardDto>>(response, _logger, ct);
+        var page = await ApiResponseReader.ReadAsync<PagedResult<RoomCardDto>>(response, _logger, ct);
+        return page with { Items = ReachableCovers(page.Items) };
     }
 
     public Task<AreaSearchResultDto> SearchRoomsInAreaAsync(AreaSearchRequest request, CancellationToken ct = default) =>
@@ -39,7 +41,18 @@ public sealed class HttpRoomGateway : IRoomGateway
             ? $"/api/rooms/{Uri.EscapeDataString(roomId)}"
             : $"/api/rooms/{Uri.EscapeDataString(roomId)}?campusId={Uri.EscapeDataString(campusId)}";
         using var response = await _httpClient.GetAsync(url, ct);
-        return await ApiResponseReader.ReadAsync<RoomDetailDto>(response, _logger, ct);
+        var detail = await ApiResponseReader.ReadAsync<RoomDetailDto>(response, _logger, ct);
+        return detail with
+        {
+            Photos = detail.Photos
+                .Select(photo => photo with
+                {
+                    ThumbUrl = Reachable(photo.ThumbUrl)!,
+                    MediumUrl = Reachable(photo.MediumUrl)!,
+                    OriginalUrl = Reachable(photo.OriginalUrl)!
+                })
+                .ToList()
+        };
     }
 
     public async Task<IReadOnlyList<RoomCardDto>> GetSimilarRoomsAsync(string roomId, string? campusId = null, CancellationToken ct = default)
@@ -49,7 +62,8 @@ public sealed class HttpRoomGateway : IRoomGateway
             ? $"/api/rooms/{Uri.EscapeDataString(roomId)}/similar"
             : $"/api/rooms/{Uri.EscapeDataString(roomId)}/similar?campusId={Uri.EscapeDataString(campusId)}";
         using var response = await _httpClient.GetAsync(url, ct);
-        return await ApiResponseReader.ReadAsync<List<RoomCardDto>>(response, _logger, ct);
+        var cards = await ApiResponseReader.ReadAsync<List<RoomCardDto>>(response, _logger, ct);
+        return ReachableCovers(cards);
     }
 
     public async Task<TravelTimesDto> GetRoomTravelTimesAsync(string roomId, string? campusId = null, CancellationToken ct = default)
@@ -61,6 +75,11 @@ public sealed class HttpRoomGateway : IRoomGateway
         using var response = await _httpClient.GetAsync(url, ct);
         return await ApiResponseReader.ReadAsync<TravelTimesDto>(response, _logger, ct);
     }
+
+    private IReadOnlyList<RoomCardDto> ReachableCovers(IReadOnlyList<RoomCardDto> cards) =>
+        cards.Select(card => card with { CoverThumbUrl = Reachable(card.CoverThumbUrl) }).ToList();
+
+    private string? Reachable(string? mediaUrl) => MediaUrlRewriter.Rewrite(mediaUrl, _httpClient.BaseAddress);
 
     private static string BuildSearchUrl(RoomSearchRequest request)
     {

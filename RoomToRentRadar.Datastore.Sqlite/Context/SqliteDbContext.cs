@@ -91,7 +91,7 @@ public sealed class SqliteDbContext : IDisposable
 
                     if (_settings.SeedExtendedDemoData)
                     {
-                        DemoDataSeeder.Seed(conn);
+                        DemoDataSeeder.Seed(conn, _settings.SeedPhotos);
                     }
                 }
 

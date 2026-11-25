@@ -72,7 +72,7 @@ public class RoomsContractsTests
         {
             "Id", "Title", "MonthlyRentVnd", "AreaM2", "RoomType", "DistanceKm",
             "IsVerified", "Status", "CoverThumbUrl", "Latitude", "Longitude",
-            "PublishedAtUtc", "IsFavourite"
+            "PublishedAtUtc", "IsFavourite", "Furnishing"
         };
 
         var actual = typeof(RoomCardDto).GetProperties().Select(p => p.Name).ToList();

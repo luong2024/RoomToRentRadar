@@ -25,13 +25,16 @@ public sealed class GetSimilarRoomsUseCase : IGetSimilarRoomsUseCase
     private readonly ICampusRepository _campusRepository;
     private readonly IRoomSearchReadModel _readModel;
     private readonly ICurrentUserContextPort _currentUserContext;
+    private readonly IPhotoStoragePort _photoStorage;
 
     public GetSimilarRoomsUseCase(
         IRoomRepository roomRepository,
         ICampusRepository campusRepository,
         IRoomSearchReadModel readModel,
-        ICurrentUserContextPort currentUserContext)
+        ICurrentUserContextPort currentUserContext,
+        IPhotoStoragePort photoStorage)
     {
+        _photoStorage = photoStorage ?? throw new ArgumentNullException(nameof(photoStorage));
         _roomRepository = roomRepository ?? throw new ArgumentNullException(nameof(roomRepository));
         _campusRepository = campusRepository ?? throw new ArgumentNullException(nameof(campusRepository));
         _readModel = readModel ?? throw new ArgumentNullException(nameof(readModel));
@@ -157,7 +160,7 @@ public sealed class GetSimilarRoomsUseCase : IGetSimilarRoomsUseCase
 
         // Map to RoomCardDto (distanceKm is relative to the requested campus per OpenAPI schema)
         return selected
-            .Select(x => RoomMapper.ToCardDto(x.Candidate, campus))
+            .Select(x => RoomMapper.ToCardDto(x.Candidate, campus, _photoStorage))
             .ToList();
     }
 }

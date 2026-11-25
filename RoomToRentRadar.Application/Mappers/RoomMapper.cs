@@ -7,6 +7,7 @@ using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.Services;
 using RoomToRentRadar.Ports.Contracts.Responses.Photos;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
+using RoomToRentRadar.Ports.Outbound.ExternalServices;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 
 /// <summary>
@@ -98,27 +99,14 @@ public static class RoomMapper
             Latitude: room.Latitude,
             Longitude: room.Longitude);
 
-        // BR-LST-08: When verified, score = confirmed features count and list confirmed features.
-        // When unverified, score = declared features count and list declared features.
-        var confirmedFeatures = room.SafetyFeatures
-            .Where(sf => sf.IsConfirmed)
-            .Select(sf => sf.Feature)
-            .ToList();
-        var declaredFeatures = room.SafetyFeatures
-            .Select(sf => sf.Feature)
-            .ToList();
-
-        var safetyScore = room.IsSafetyVerified
-            ? confirmedFeatures.Count
-            : declaredFeatures.Count;
-        var safetyFeatures = room.IsSafetyVerified
-            ? (IReadOnlyList<SafetyFeature>)confirmedFeatures
-            : declaredFeatures;
-
+        // BR-LST-08: the features listed are exactly the ones the score counts.
         var safety = new SafetyDto(
-            Score: safetyScore,
+            Score: room.SafetyScore,
             IsVerified: room.IsSafetyVerified,
-            Features: safetyFeatures);
+            Features: room.SafetyFeatures
+                .Where(f => !room.IsSafetyVerified || f.IsConfirmed)
+                .Select(f => f.Feature)
+                .ToList());
 
         var furnishing = Enum.TryParse<Furnishing>(room.Furnishing, true, out var parsedFurnishing)
             ? parsedFurnishing
@@ -141,7 +129,7 @@ public static class RoomMapper
             Location: location,
             DistanceKm: distanceKm,
             Utilities: utilities,
-            Amenities: room.Amenities ?? Array.Empty<Amenity>(),
+            Amenities: room.Amenities,
             Safety: safety,
             HouseRules: LandlordListingMapper.ToHouseRulesDto(room.CurrentHouseRules),
             Photos: photos ?? Array.Empty<PhotoDto>(),
@@ -153,10 +141,12 @@ public static class RoomMapper
 
     public static RoomCardDto ToCardDto(
         RoomSearchCandidate candidate,
-        Campus campus)
+        Campus campus,
+        IPhotoStoragePort storage)
     {
         ArgumentNullException.ThrowIfNull(candidate);
         ArgumentNullException.ThrowIfNull(campus);
+        ArgumentNullException.ThrowIfNull(storage);
 
         var distanceKm = HaversineDistanceCalculator.CalculateDistanceKm(
             candidate.Latitude, candidate.Longitude, campus.Latitude, campus.Longitude);
@@ -170,10 +160,11 @@ public static class RoomMapper
             DistanceKm: distanceKm,
             IsVerified: candidate.IsVerified,
             Status: candidate.Status,
-            CoverThumbUrl: candidate.CoverThumbUrl,
+            CoverThumbUrl: candidate.CoverThumbPath is null ? null : storage.GetPublicUrl(candidate.CoverThumbPath),
             Latitude: candidate.Latitude,
             Longitude: candidate.Longitude,
             PublishedAtUtc: candidate.PublishedAtUtc,
-            IsFavourite: false);
+            IsFavourite: false,
+            Furnishing: candidate.Furnishing);
     }
 }

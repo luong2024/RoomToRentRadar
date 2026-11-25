@@ -61,7 +61,7 @@
                    Text="{Binding Source={x:Reference RootButtonView}, Path=Text}"
                    TextColor="{Binding Source={x:Reference RootButtonView}, Path=TextColor}"
                    FontFamily="{StaticResource FontFamilySemibold}"
-                   FontSize="{StaticResource FontSizeBodyMedium}"
+                   FontSize="{Binding Source={x:Reference RootButtonView}, Path=TextSize}"
                    VerticalTextAlignment="Center"
                    HorizontalTextAlignment="Center" />
         </Grid>

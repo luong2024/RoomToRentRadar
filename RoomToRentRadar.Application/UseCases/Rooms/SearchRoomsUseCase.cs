@@ -6,6 +6,7 @@ using RoomToRentRadar.Ports.Contracts.Common;
 using RoomToRentRadar.Ports.Contracts.Requests.Rooms;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadar.Ports.Inbound.UseCases.Rooms;
+using RoomToRentRadar.Ports.Outbound.ExternalServices;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 
 namespace RoomToRentRadar.Application.UseCases.Rooms;
@@ -23,13 +24,19 @@ public sealed class SearchRoomsUseCase : ISearchRoomsUseCase
 
     private readonly ICampusRepository _campusRepository;
     private readonly IRoomSearchReadModel _readModel;
+    private readonly IPhotoStoragePort _photoStorage;
 
-    public SearchRoomsUseCase(ICampusRepository campusRepository, IRoomSearchReadModel readModel)
+    public SearchRoomsUseCase(
+        ICampusRepository campusRepository,
+        IRoomSearchReadModel readModel,
+        IPhotoStoragePort photoStorage)
     {
         ArgumentNullException.ThrowIfNull(campusRepository);
         ArgumentNullException.ThrowIfNull(readModel);
+        ArgumentNullException.ThrowIfNull(photoStorage);
         _campusRepository = campusRepository;
         _readModel = readModel;
+        _photoStorage = photoStorage;
     }
 
     public async Task<PagedResult<RoomCardDto>> ExecuteAsync(RoomSearchRequest request, CancellationToken ct = default)
@@ -251,7 +258,7 @@ public sealed class SearchRoomsUseCase : ISearchRoomsUseCase
             .ToList();
     }
 
-    private static IReadOnlyList<RoomCardDto> BuildPage(IReadOnlyList<RankedRoom> ordered, int pageNumber, int pageSize)
+    private IReadOnlyList<RoomCardDto> BuildPage(IReadOnlyList<RankedRoom> ordered, int pageNumber, int pageSize)
     {
         // long arithmetic so huge page numbers cannot overflow int. pageNumber is already clamped to
         // >= 1 before this call, so (pageNumber - 1) >= 0 and (long)(pageNumber - 1) * pageSize never overflows.
@@ -273,7 +280,7 @@ public sealed class SearchRoomsUseCase : ISearchRoomsUseCase
         return items;
     }
 
-    private static RoomCardDto ToCard(RankedRoom match) => new(
+    private RoomCardDto ToCard(RankedRoom match) => new(
         Id: match.Candidate.Id,
         Title: match.Candidate.Title,
         MonthlyRentVnd: match.Candidate.MonthlyRentVnd,
@@ -282,11 +289,14 @@ public sealed class SearchRoomsUseCase : ISearchRoomsUseCase
         DistanceKm: match.DistanceKm,
         IsVerified: match.Candidate.IsVerified,
         Status: match.Candidate.Status,
-        CoverThumbUrl: match.Candidate.CoverThumbUrl,
+        CoverThumbUrl: match.Candidate.CoverThumbPath is null
+            ? null
+            : _photoStorage.GetPublicUrl(match.Candidate.CoverThumbPath),
         Latitude: match.Candidate.Latitude,
         Longitude: match.Candidate.Longitude,
         PublishedAtUtc: match.Candidate.PublishedAtUtc,
-        IsFavourite: false); // anonymous search: US04, favourites are added client-side by US06
+        IsFavourite: false, // anonymous search: US04, favourites are added client-side by US06
+        Furnishing: match.Candidate.Furnishing);
 
     private readonly record struct RankedRoom(RoomSearchCandidate Candidate, double DistanceKm);
 }

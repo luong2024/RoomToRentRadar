@@ -22,7 +22,7 @@ public sealed class GetRoomDetailUseCase : IGetRoomDetailUseCase
     private readonly ICampusRepository _campusRepository;
     private readonly ICurrentUserContextPort _currentUserContext;
     private readonly IRoomPhotoRepository _photoRepository;
-    private readonly IPhotoStoragePort _storage;
+    private readonly IPhotoStoragePort _photoStorage;
 
     public GetRoomDetailUseCase(
         IRoomRepository roomRepository,
@@ -30,14 +30,14 @@ public sealed class GetRoomDetailUseCase : IGetRoomDetailUseCase
         ICampusRepository campusRepository,
         ICurrentUserContextPort currentUserContext,
         IRoomPhotoRepository photoRepository,
-        IPhotoStoragePort storage)
+        IPhotoStoragePort photoStorage)
     {
         _roomRepository = roomRepository ?? throw new ArgumentNullException(nameof(roomRepository));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _campusRepository = campusRepository ?? throw new ArgumentNullException(nameof(campusRepository));
         _currentUserContext = currentUserContext ?? throw new ArgumentNullException(nameof(currentUserContext));
         _photoRepository = photoRepository ?? throw new ArgumentNullException(nameof(photoRepository));
-        _storage = storage ?? throw new ArgumentNullException(nameof(storage));
+        _photoStorage = photoStorage ?? throw new ArgumentNullException(nameof(photoStorage));
     }
 
     public async Task<RoomDetailDto> ExecuteAsync(
@@ -68,14 +68,13 @@ public sealed class GetRoomDetailUseCase : IGetRoomDetailUseCase
         var landlord = await _userRepository.GetByIdAsync(room.LandlordId, ct);
         var isPhoneVisible = _currentUserContext.IsAuthenticated;
 
-        // Load and map room photos ordered by SortOrder per BR-MED-05
-        var photos = await _photoRepository.ListByRoomAsync(room.Id, ct);
-        var photoDtos = photos
-            .OrderBy(p => p.SortOrder)
-            .ThenBy(p => p.Id, StringComparer.Ordinal)
-            .Select(p => LandlordListingMapper.ToPhotoDto(p, _storage))
+        // Read only after the visibility check above, so hidden listings never expose photos (BR-LST-04a).
+        var photos = (await _photoRepository.ListByRoomAsync(room.Id, ct))
+            .OrderBy(photo => photo.SortOrder)
+            .ThenBy(photo => photo.Id, StringComparer.Ordinal)
+            .Select(photo => LandlordListingMapper.ToPhotoDto(photo, _photoStorage))
             .ToList();
 
-        return RoomMapper.ToDetailDto(room, landlord, campus, isPhoneVisible, photoDtos);
+        return RoomMapper.ToDetailDto(room, landlord, campus, isPhoneVisible, photos);
     }
 }

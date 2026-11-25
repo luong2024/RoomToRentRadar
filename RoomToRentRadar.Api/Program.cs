@@ -62,6 +62,17 @@ sqliteSettings.SeedAccounts = SeedAccountsLoader.Load(
     builder.Configuration,
     builder.Environment.IsDevelopment(),
     new Pbkdf2PasswordHasherAdapter());
+// T00.10: demo photos exist in Development only and are served straight from the committed folder.
+var seedMediaPath = Path.Combine(builder.Environment.ContentRootPath, SeedPhotoLoader.FolderName);
+var seedPhotosRequested = builder.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("DemoData:SeedPhotos");
+// The images stay in the project folder; a run from the build output has none and simply seeds no photos.
+var seedDemoPhotos = seedPhotosRequested
+    && Directory.Exists(Path.Combine(seedMediaPath, SeedPhotoLoader.ImagesFolderName));
+if (seedDemoPhotos)
+{
+    sqliteSettings.SeedPhotos = SeedPhotoLoader.Load(seedMediaPath);
+}
+
 builder.Services.AddSqliteDatastore(sqliteSettings);
 
 // ===== 3. Application =====
@@ -149,9 +160,26 @@ builder.Services.AddAuthorization(AuthorizationPolicies.ConfigurePolicies);
 // ===== 6. Request pipeline =====
 var app = builder.Build();
 
+if (seedPhotosRequested && !seedDemoPhotos)
+{
+    app.Logger.LogWarning(
+        "DemoData:SeedPhotos is on but '{SeedMediaPath}' has no images; demo rooms get no photos. Run the API with 'dotnet run'.",
+        seedMediaPath);
+}
+
 app.UseMiddleware<ProblemDetailsMiddleware>();
 // 401/403/404/415 produced without a body (auth challenge, unknown route, unsupported media type) become problem+json with a stable errorCode.
 app.UseStatusCodePages(StatusCodeProblemPages.WriteAsync);
+
+if (seedDemoPhotos)
+{
+    // Only the images: the manifest and credits next to them are not published.
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(Path.Combine(seedMediaPath, SeedPhotoLoader.ImagesFolderName)),
+        RequestPath = SeedPhotoLoader.RequestPath
+    });
+}
 
 // ADR-008 / system-architecture §6.1: uploaded photos are served as immutable, year-long cacheable files.
 var mediaRootPath = Path.GetFullPath(

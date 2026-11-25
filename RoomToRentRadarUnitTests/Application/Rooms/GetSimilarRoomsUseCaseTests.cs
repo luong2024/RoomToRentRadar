@@ -37,7 +37,8 @@ public class GetSimilarRoomsUseCaseTests
         _campusRepository.GetByIdAsync(Arg.Is<string>(id => id != "ICTU"), Arg.Any<CancellationToken>())
             .Returns((Campus?)null);
 
-        _sut = new GetSimilarRoomsUseCase(_roomRepository, _campusRepository, _readModel, _currentUserContext);
+        _sut = new GetSimilarRoomsUseCase(
+            _roomRepository, _campusRepository, _readModel, _currentUserContext, Substitute.For<IPhotoStoragePort>());
     }
 
     private static Room CreateTargetRoom(
@@ -84,10 +85,32 @@ public class GetSimilarRoomsUseCaseTests
             RoomType: type,
             Status: ListingStatus.Available,
             IsVerified: true,
-            CoverThumbUrl: null,
+            CoverThumbPath: null,
             Latitude: lat,
             Longitude: lng,
             PublishedAtUtc: BasePublishedAt);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_SimilarRoomCover_BecomesPublicUrl()
+    {
+        var storage = Substitute.For<IPhotoStoragePort>();
+        storage.GetPublicUrl("seed/rooms/b-thumb.jpg").Returns("https://media.test/b-thumb.jpg");
+        _roomRepository.GetByIdAsync("target-room", Arg.Any<CancellationToken>()).Returns(CreateTargetRoom());
+        var candidate = NewCandidate("near", "Phòng gần đó", RoomType.BoardingRoom, 2_000_000L, 20, 21.5876, 105.8081)
+            with { CoverThumbPath = "seed/rooms/b-thumb.jpg", Furnishing = Furnishing.Basic };
+        _readModel.QueryCandidatesAsync(Arg.Any<RoomSearchQueryFilter>(), Arg.Any<CancellationToken>())
+            .Returns(new[] { candidate });
+        var sut = new GetSimilarRoomsUseCase(
+            _roomRepository, _campusRepository, _readModel, _currentUserContext, storage);
+
+        var result = await sut.ExecuteAsync("target-room");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Single().CoverThumbUrl, Is.EqualTo("https://media.test/b-thumb.jpg"));
+            Assert.That(result.Single().Furnishing, Is.EqualTo(Furnishing.Basic));
+        });
     }
 
     [Test]

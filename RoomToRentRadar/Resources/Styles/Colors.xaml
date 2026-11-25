@@ -84,6 +84,9 @@
     <Color x:Key="SurfaceSubtleLight">#E8EEF5</Color>
     <Color x:Key="SurfaceSubtleDark">#1A283C</Color>
 
+    <Color x:Key="SurfaceSelectedLight">#EEF7F6</Color>
+    <Color x:Key="SurfaceSelectedDark">#1E3947</Color>
+
     <!-- Typography & Content -->
     <Color x:Key="TextPrimaryLight">#1E293B</Color>
     <Color x:Key="TextPrimaryDark">#F4F7FA</Color>
@@ -99,6 +102,9 @@
 
     <Color x:Key="TextBrandLight">#163A5F</Color>
     <Color x:Key="TextBrandDark">#5CE1D6</Color>
+
+    <Color x:Key="TextPlaceholderLight">#64748B</Color>
+    <Color x:Key="TextPlaceholderDark">#94A3B8</Color>
 
     <!-- Actions & Interactive -->
     <Color x:Key="ActionPrimaryLight">#163A5F</Color>
@@ -126,6 +132,9 @@
     <Color x:Key="BorderFocusLight">#256D85</Color>
     <Color x:Key="BorderFocusDark">#4CB5AE</Color>
 
+    <Color x:Key="BorderInputLight">#CBD5E1</Color>
+    <Color x:Key="BorderInputDark">#3A5273</Color>
+
     <!-- ========================================================================= -->
     <!-- TIER 2 SEMANTIC SOLID COLOR BRUSHES (THEME AWARE)                         -->
     <!-- ========================================================================= -->
@@ -134,6 +143,7 @@
     <SolidColorBrush x:Key="SurfaceCardBrush" Color="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"/>
     <SolidColorBrush x:Key="SurfaceElevatedBrush" Color="{AppThemeBinding Light={StaticResource SurfaceElevatedLight}, Dark={StaticResource SurfaceElevatedDark}}"/>
     <SolidColorBrush x:Key="SurfaceSubtleBrush" Color="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"/>
+    <SolidColorBrush x:Key="SurfaceSelectedBrush" Color="{AppThemeBinding Light={StaticResource SurfaceSelectedLight}, Dark={StaticResource SurfaceSelectedDark}}"/>
 
     <SolidColorBrush x:Key="TextPrimaryBrush" Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"/>
     <SolidColorBrush x:Key="TextSecondaryBrush" Color="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"/>
@@ -156,6 +166,7 @@
 
     <SolidColorBrush x:Key="BorderSubtleBrush" Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"/>
     <SolidColorBrush x:Key="BorderFocusBrush" Color="{AppThemeBinding Light={StaticResource BorderFocusLight}, Dark={StaticResource BorderFocusDark}}"/>
+    <SolidColorBrush x:Key="BorderInputBrush" Color="{AppThemeBinding Light={StaticResource BorderInputLight}, Dark={StaticResource BorderInputDark}}"/>
 
     <!-- ========================================================================= -->
     <!-- BACKWARD COMPATIBILITY KEYS (PRESERVES EXISTING TEMPLATE STYLES)          -->
