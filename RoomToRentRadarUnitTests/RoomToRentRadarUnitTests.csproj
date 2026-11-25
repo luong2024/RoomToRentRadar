@@ -32,6 +32,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\RoomToRentRadar\Converters\CultureFormatting.cs" Link="Converters\CultureFormatting.cs" />
     <Compile Include="..\RoomToRentRadar\Resources\Fonts\FluentUI.cs" Link="Resources\Fonts\FluentUI.cs" />
     <Compile Include="..\RoomToRentRadar\Pages\Controls\RoomDetail\Models\RoomDetailModels.cs" Link="Pages\Controls\RoomDetail\Models\RoomDetailModels.cs" />
     <Compile Include="..\RoomToRentRadar\PageModels\RoomDetailPageModel.cs" Link="PageModels\RoomDetailPageModel.cs" />

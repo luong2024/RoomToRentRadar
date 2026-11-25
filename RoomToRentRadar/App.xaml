@@ -2,6 +2,7 @@
 <Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:local="clr-namespace:RoomToRentRadar"
+             xmlns:converters="clr-namespace:RoomToRentRadar.Converters"
              x:Class="RoomToRentRadar.App">
     <Application.Resources>
         <ResourceDictionary>
@@ -17,6 +18,14 @@
                 <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
                 <ResourceDictionary Source="Resources/Styles/AppStyles.xaml" />
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- Culture-Aware Formatting Converters -->
+            <converters:CurrencyConverter x:Key="CurrencyConverter" />
+            <converters:NumberConverter x:Key="NumberConverter" />
+            <converters:DateConverter x:Key="DateConverter" />
+            <converters:TimeConverter x:Key="TimeConverter" />
+            <converters:AreaConverter x:Key="AreaConverter" />
+            <converters:DistanceConverter x:Key="DistanceConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>
