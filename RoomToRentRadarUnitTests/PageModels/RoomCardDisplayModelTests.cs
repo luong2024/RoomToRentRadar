@@ -37,7 +37,7 @@ public class RoomCardDisplayModelTests
     [TestCase("en-US", 1_000_000, "1M/mo")]
     [TestCase("en-US", 1_250_000, "1.25M/mo")]
     [TestCase("en-US", 950_000, "950k/mo")]
-    [TestCase("vi-VN", 950_000, "950 nghìn/tháng")]
+    [TestCase("vi-VN", 950_000, "950k/tháng")]
     [TestCase("en-US", 4_000_000, "4M/mo")]
     public void PriceText_UsesTheLanguageAndUnit(string culture, int price, string expected)
     {

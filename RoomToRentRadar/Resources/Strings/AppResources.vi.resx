@@ -959,7 +959,7 @@
     <value>{0} tr/tháng</value>
   </data>
   <data name="Card_PriceThousand" xml:space="preserve">
-    <value>{0} nghìn/tháng</value>
+    <value>{0}k/tháng</value>
   </data>
   <data name="Card_Distance" xml:space="preserve">
     <value>{0} km tới {1}</value>
