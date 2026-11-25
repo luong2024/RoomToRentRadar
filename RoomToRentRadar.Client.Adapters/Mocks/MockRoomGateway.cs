@@ -98,9 +98,7 @@ public sealed class MockRoomGateway : IRoomGateway
             new SafetyDto(
                 SafetyScore(room),
                 room.IsSafetyVerified,
-                room.IsSafetyVerified
-                    ? [SafetyFeature.Cctv, SafetyFeature.SecureEntrance, SafetyFeature.FireSafety, SafetyFeature.WellLitAccess]
-                    : [SafetyFeature.Cctv, SafetyFeature.SecureEntrance, SafetyFeature.WellLitAccess]),
+                SafetyFeaturesFor(room)),
             HouseRulesFor(room),
             PhotosFor(room),
             new LandlordContactDto("seed-landlord", "Seed Landlord", true,
@@ -310,7 +308,11 @@ public sealed class MockRoomGateway : IRoomGateway
         return amenities;
     }
 
-    private static int SafetyScore(SampleRoom room) => room.IsSafetyVerified ? 4 : 3;
+    private static IReadOnlyList<SafetyFeature> SafetyFeaturesFor(SampleRoom room) => room.IsSafetyVerified
+        ? [SafetyFeature.Cctv, SafetyFeature.SecureEntrance, SafetyFeature.WellLitAccess]
+        : [SafetyFeature.SecureEntrance];
+
+    private static int SafetyScore(SampleRoom room) => SafetyFeaturesFor(room).Count;
 
     private static HouseRulesDto HouseRulesFor(SampleRoom room) => new(
         QuietHoursStart: "22:00",
@@ -353,9 +355,22 @@ public sealed class MockRoomGateway : IRoomGateway
             2048, 1024, 2)
     ];
 
-    // Fixed mock estimate: rent plus the flat monthly fees; metered usage is not simulated.
-    private static long EstimatedMonthlyTotal(SampleRoom room) =>
-        room.MonthlyRentVnd + room.InternetFeeVnd + room.ParkingFeeVnd + room.WaterPriceVnd;
+    // BR-LST-03: estimated monthly total = rent + 100 kWh electricity + water (4 m³, 1 × per person, or 0 if included) + internet + parking.
+    private static long EstimatedMonthlyTotal(SampleRoom room)
+    {
+        long waterCost = room.WaterPriceUnit switch
+        {
+            WaterPriceUnit.PerPerson => room.WaterPriceVnd,
+            WaterPriceUnit.Included => 0L,
+            _ => 4L * room.WaterPriceVnd
+        };
+
+        return room.MonthlyRentVnd
+            + (100L * room.ElectricityPriceVndPerKwh)
+            + waterCost
+            + room.InternetFeeVnd
+            + room.ParkingFeeVnd;
+    }
 
     private static bool Contains(IReadOnlyList<GeoPointDto> polygon, double latitude, double longitude)
     {

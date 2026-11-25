@@ -233,9 +233,26 @@ public class MockRoomGatewayTests
                 HaversineDistanceCalculator.CalculateDistanceKm(IctuLatitude, IctuLongitude, seed.Latitude, seed.Longitude)));
             Assert.That(detail.Photos, Has.Count.EqualTo(3));
             Assert.That(detail.HouseRules, Is.Not.Null);
-            Assert.That(detail.Safety.Score, Is.EqualTo(4));
+            Assert.That(detail.Safety.Score, Is.EqualTo(3));
+            Assert.That(detail.Safety.Features, Has.Count.EqualTo(3));
+            Assert.That(detail.Utilities.EstimatedMonthlyTotalVnd, Is.EqualTo(2_060_000L));
             Assert.That(detail.Landlord.Id, Is.EqualTo("seed-landlord"));
             Assert.That(detail.PublishedAtUtc, Is.EqualTo(seed.PublishedAtUtc));
+        });
+    }
+
+    [Test]
+    public async Task GetRoomDetailAsync_SeedRooms_FollowsBrLst03EstimatedMonthlyFormula()
+    {
+        var perPerson = await _gateway.GetRoomDetailAsync("seed-z115");
+        var perM3 = await _gateway.GetRoomDetailAsync("seed-tan-thinh");
+        var included = await _gateway.GetRoomDetailAsync("seed-thinh-dan");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(perPerson.Utilities.EstimatedMonthlyTotalVnd, Is.EqualTo(2_060_000L));
+            Assert.That(perM3.Utilities.EstimatedMonthlyTotalVnd, Is.EqualTo(3_450_000L));
+            Assert.That(included.Utilities.EstimatedMonthlyTotalVnd, Is.EqualTo(4_000_000L));
         });
     }
 

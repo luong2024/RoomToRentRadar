@@ -101,6 +101,7 @@ public class MockVsRealApiParityTests
             Assert.That(real.Utilities.InternetFeeVnd, Is.EqualTo(mock.Utilities.InternetFeeVnd));
             Assert.That(real.Utilities.ParkingFeeVnd, Is.EqualTo(mock.Utilities.ParkingFeeVnd));
             Assert.That(real.Utilities.OtherFeesNote, Is.EqualTo(mock.Utilities.OtherFeesNote));
+            Assert.That(mock.Utilities.EstimatedMonthlyTotalVnd, Is.EqualTo(real.Utilities.EstimatedMonthlyTotalVnd));
             Assert.That(real.Utilities.EstimatedMonthlyTotalVnd, Is.EqualTo(2_060_000L));
             Assert.That(real.Landlord.Id, Is.EqualTo(mock.Landlord.Id));
             Assert.That(real.Landlord.PhoneNumber, Is.EqualTo(mock.Landlord.PhoneNumber));
@@ -132,10 +133,10 @@ public class MockVsRealApiParityTests
         {
             Assert.That(real.Amenities, Is.Not.Empty);
             Assert.That(real.HouseRules, Is.Not.Null);
-            Assert.That(real.Safety.IsVerified, Is.EqualTo(mock.Safety.IsVerified));
-            Assert.That(real.Safety.Score, Is.EqualTo(3));
-            Assert.That(real.Utilities.OtherFeesNote, Is.EqualTo(mock.Utilities.OtherFeesNote));
-            Assert.That(real.Utilities.EstimatedMonthlyTotalVnd, Is.EqualTo(2_060_000L));
+            Assert.That(mock.Safety.IsVerified, Is.EqualTo(real.Safety.IsVerified));
+            Assert.That(mock.Safety.Score, Is.EqualTo(real.Safety.Score));
+            Assert.That(mock.Safety.Features, Is.EqualTo(real.Safety.Features));
+            Assert.That(mock.Utilities, Is.EqualTo(real.Utilities));
         });
     }
 
