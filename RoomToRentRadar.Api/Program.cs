@@ -22,6 +22,10 @@ using RoomToRentRadar.Infrastructure.Adapters.Security;
 using RoomToRentRadar.Ports.Outbound.ExternalServices;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddJsonFile(
+    $"appsettings.{builder.Environment.EnvironmentName}.local.json",
+    optional: true,
+    reloadOnChange: true);
 
 // ===== 1. Controllers & JSON =====
 builder.Services.AddControllers(options =>
