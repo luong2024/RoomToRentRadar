@@ -9,6 +9,15 @@
     Shell.FlyoutBehavior="Flyout"
     Title="RoomToRentRadar - ICTU">
 
+    <!-- Baseline Home Screen: MUST stay the first ShellContent, because Shell opens its first item at startup. -->
+    <ShellContent
+        Title="Trang chủ ICTU Radar"
+        Icon="{StaticResource IconDashboard}"
+        ContentTemplate="{DataTemplate home:HomePage}"
+        Route="home"
+        SemanticProperties.Description="Trang chủ RoomToRentRadar"
+        SemanticProperties.Hint="Màn hình khởi động RoomToRentRadar"/>
+
     <!-- ========================================================================= -->
     <!-- ROOMTORENTRADAR SPRINT 1 MENU ZONES (CONFLICT-FREE DEVELOPER ZONES)       -->
     <!-- Route registration for non-flyout pages goes in your FeatureModule.cs!    -->
@@ -29,15 +38,6 @@
         ContentTemplate="{DataTemplate auth:LoginPage}"
         Route="login-menu"
         SemanticProperties.Description="Đăng nhập hoặc tạo tài khoản RoomToRentRadar"/>
-
-    <!-- Baseline Home Screen -->
-    <ShellContent
-        Title="Trang chủ ICTU Radar"
-        Icon="{StaticResource IconDashboard}"
-        ContentTemplate="{DataTemplate home:HomePage}"
-        Route="home"
-        SemanticProperties.Description="Trang chủ RoomToRentRadar"
-        SemanticProperties.Hint="Màn hình khởi động RoomToRentRadar"/>
 
     <Shell.FlyoutFooter>
         <Grid Padding="15">
