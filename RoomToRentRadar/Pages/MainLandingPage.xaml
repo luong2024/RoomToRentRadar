@@ -79,7 +79,8 @@
                                              BindableLayout.ItemsSource="{Binding Rooms}">
                             <BindableLayout.ItemTemplate>
                                 <DataTemplate x:DataType="cardmodels:RoomCardDisplayModel">
-                                    <cards:RoomCardView Room="{Binding}" />
+                                    <cards:RoomCardView Room="{Binding}"
+                                                        DetailsCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:MainLandingPageModel}}, Path=ViewRoomDetailsCommand}" />
                                 </DataTemplate>
                             </BindableLayout.ItemTemplate>
                         </VerticalStackLayout>

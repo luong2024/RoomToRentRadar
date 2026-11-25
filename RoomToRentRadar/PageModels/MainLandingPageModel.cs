@@ -111,6 +111,17 @@ public partial class MainLandingPageModel : BasePageModel
     }
 
     [RelayCommand]
+    private async Task ViewRoomDetailsAsync(string? roomId)
+    {
+        if (string.IsNullOrWhiteSpace(roomId))
+        {
+            return;
+        }
+
+        await _navigation.GoToAsync($"roomdetail?roomId={Uri.EscapeDataString(roomId)}");
+    }
+
+    [RelayCommand]
     private async Task SignOutAsync()
     {
         await _sessionStore.ClearSessionAsync();

@@ -67,14 +67,15 @@
                        FontSize="{StaticResource FontSizeCaption}"
                        TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
 
-                <!-- 3. Commute Times 3-Column Grid -->
-                <Grid ColumnDefinitions="*, *, *"
-                      ColumnSpacing="8"
-                      Margin="0,8,0,0"
-                      BindableLayout.ItemsSource="{Binding CommuteTimes}">
+                <!-- 3. Commute Times 3-Column Layout -->
+                <FlexLayout BindableLayout.ItemsSource="{Binding CommuteTimes}"
+                            Wrap="Wrap"
+                            JustifyContent="SpaceBetween"
+                            Margin="0,8,0,0">
                     <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="models:CommuteModeItem">
-                            <Border StrokeShape="RoundRectangle 8"
+                            <Border FlexLayout.Basis="31%"
+                                    StrokeShape="RoundRectangle 8"
                                     StrokeThickness="1"
                                     Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
                                     BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
@@ -100,7 +101,7 @@
                             </Border>
                         </DataTemplate>
                     </BindableLayout.ItemTemplate>
-                </Grid>
+                </FlexLayout>
             </VerticalStackLayout>
         </VerticalStackLayout>
     </Border>
