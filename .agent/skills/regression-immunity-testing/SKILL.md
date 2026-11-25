@@ -15,7 +15,7 @@ description: Standardized NUnit 4 testing workflow to verify zero regressions ac
 ### Bước 1: Chạy Toàn Bộ Test Suite Hiện Có (Kèm Hang Timeout 30s)
 Chạy lệnh kiểm thử đơn vị & hợp đồng API:
 ```powershell
-dotnet test RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj --blame-hang-timeout 30s
+dotnet test backend/RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj --blame-hang-timeout 30s
 ```
 Quan sát kết quả:
 - **Nếu 100% Tests Pass:** Tiến hành sang Bước 2.
@@ -25,7 +25,7 @@ Quan sát kết quả:
   > 2. Tuyệt đối KHÔNG ĐƯỢC xóa bài test cũ hoặc gắn attribute `[Ignore]`.
   > 3. Phân tích và sửa lại code của Task đang làm để tương thích hoàn toàn với hợp đồng chung.
 
-### Bước 2: Quy Chuẩn Viết Bài Test Mới Trong `RoomToRentRadarUnitTests`
+### Bước 2: Quy Chuẩn Viết Bài Test Mới Trong `backend/RoomToRentRadarUnitTests`
 > **LƯU Ý QUAN TRỌNG CHO AI AGENT:**
 > - Dự án sử dụng **NUnit 4** (`[Test]`, `[SetUp]`, `[TearDown]`, `[CancelAfter(5000)]`, `Assert.That(..., Is.EqualTo(...))`).
 > - **KHÔNG sử dụng xUnit (`[Fact]`) và KHÔNG sử dụng `Moq`** (không cài gói `Moq` vào project). Hãy dùng trực tiếp `RentalDatabaseService` với file SQLite tạm hoặc các lớp `InMemory*` trong `RoomToRentRadar.Infrastructure.Fakes`.
@@ -37,7 +37,7 @@ using RoomToRentRadar;
 using RoomToRentRadar.Data;
 using RoomToRentRadar.Models;
 
-namespace RoomToRentRadarUnitTests
+namespace backend/RoomToRentRadarUnitTests
 {
     [CancelAfter(5000)]
     public class RoomListingSqliteTests

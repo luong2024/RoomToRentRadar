@@ -9,10 +9,10 @@ description: Guidelines and patterns for evolving C# Domain Models, Repositories
 Ngăn chặn hiện tượng Agent tự tiện thay đổi model dữ liệu, chữ ký hàm (method signatures), hay database schema làm crash các màn hình khác hoặc phá vỡ các task đang chạy song song của thành viên khác trong team.
 
 ## Khi nào kích hoạt Skill này
-- Khi `@architect` cần thêm trường mới vào Model (`RoomToRentRadar.Core/Models/`).
-- Khi cần mở rộng Interface hợp đồng (`RoomToRentRadar.Core/Abstractions/`) hoặc SQLite Schema (`RoomToRentRadar.Infrastructure/Persistence/`).
+- Khi `@architect` cần thêm trường mới vào Model (`backend/RoomToRentRadar.Core/Models/`).
+- Khi cần mở rộng Interface hợp đồng (`backend/RoomToRentRadar.Core/Abstractions/`) hoặc SQLite Schema (`backend/RoomToRentRadar.Infrastructure/Persistence/`).
 - Lưu ý: `@developer` **CẤM** tự ý sửa các thư mục trên nếu chưa được Scrum Master kiêm Tech Lead (`@quangtldc0301`) phê duyệt.
-- Hợp đồng JSON của Web API (DTO trong `RoomToRentRadar.Api/Models/`) cũng là hợp đồng với app MAUI: áp dụng cùng quy tắc "Mở rộng, không Phá vỡ" bên dưới (không đổi tên/xóa trường mà client HTTP đang dùng).
+- Hợp đồng JSON của Web API (DTO trong `backend/RoomToRentRadar.Api/Models/`) cũng là hợp đồng với app MAUI: áp dụng cùng quy tắc "Mở rộng, không Phá vỡ" bên dưới (không đổi tên/xóa trường mà client HTTP đang dùng).
 
 ---
 
@@ -37,6 +37,6 @@ Khi cần truyền thêm tham số vào hàm truy vấn trong `IRoomListingRepos
 ---
 
 ## Quy Trình Tự Kiểm Tra (Self-Audit Checklist)
-- [ ] Không có thuộc tính cũ nào bị xóa hoặc đổi tên trong `RoomToRentRadar.Core/Models/`.
-- [ ] Tất cả các method trong `RoomToRentRadar.Core/Abstractions/` giữ nguyên chữ ký chuẩn.
-- [ ] Lệnh `dotnet test RoomToRentRadarUnitTests` và `dotnet build RoomToRentRadar.slnx` biên dịch `0 Error(s)`.
+- [ ] Không có thuộc tính cũ nào bị xóa hoặc đổi tên trong `backend/RoomToRentRadar.Core/Models/`.
+- [ ] Tất cả các method trong `backend/RoomToRentRadar.Core/Abstractions/` giữ nguyên chữ ký chuẩn.
+- [ ] Lệnh `dotnet test backend/RoomToRentRadarUnitTests` và `dotnet build RoomToRentRadar.slnx` biên dịch `0 Error(s)`.

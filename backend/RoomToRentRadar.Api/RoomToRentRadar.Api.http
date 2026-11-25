@@ -1,10 +1,10 @@
 ### RoomToRentRadar.Api — sample requests for US01 / T01.1 (MVC AuthController + JWT)
 ### 1. Start the backend, either way (both listen on port 8080):
 ###    a) Docker (recommended, same as the demo):
-###         Copy-Item .env.example .env   # once, then set JWT_SIGNING_KEY in .env
+###         cd backend; Copy-Item .env.example .env   # once, then set JWT_SIGNING_KEY in backend/.env
 ###         docker compose up --build -d
 ###    b) Without Docker, Development mode (dev JWT key from appsettings.Development.json):
-###         $env:ASPNETCORE_ENVIRONMENT = "Development"; dotnet run --project RoomToRentRadar.Api --urls http://localhost:8080
+###         $env:ASPNETCORE_ENVIRONMENT = "Development"; dotnet run --project backend/RoomToRentRadar.Api --urls http://localhost:8080
 ### 2. Click "Send Request" above each request (VS Code "REST Client" extension or Visual Studio).
 ### 3. Send "Login OK (student)" first: its token is reused by the /me requests below.
 ### Demo accounts come from IctuSeedData (password 123456).

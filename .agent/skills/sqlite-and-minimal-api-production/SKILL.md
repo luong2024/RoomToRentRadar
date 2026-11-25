@@ -9,9 +9,9 @@ description: Production patterns and guardrails for implementing SQLite Reposito
 Hướng dẫn AI Agent khi thực hiện 10 Task Backend (`T01.1`, `T02.1`, `T03.1`, `T04.1`, `T05.1`, `T07.1`, `T08.1`, `T09.2`, `T12.1`, `T13.1`) viết code truy vấn SQLite trong `RoomToRentRadar.Infrastructure` và Controller MVC trong `RoomToRentRadar.Api` (chạy trong Docker) đạt chuẩn Production, an toàn kiểu dữ liệu, chống SQL Injection và không làm hỏng `.csproj`.
 
 ## Khi nào kích hoạt Skill này
-- Khi viết code trong `RoomToRentRadar.Infrastructure/Repositories/` hoặc `Services/`.
-- Khi viết code trong `RoomToRentRadar.Api/Controllers/*Controller.cs` hoặc `RoomToRentRadar.Api/Models/*Models.cs`.
-- Khi chuyển một file Minimal API cũ `RoomToRentRadar.Api/Endpoints/*Endpoints.cs` sang Controller.
+- Khi viết code trong `backend/RoomToRentRadar.Infrastructure/Repositories/` hoặc `Services/`.
+- Khi viết code trong `backend/RoomToRentRadar.Api/Controllers/*Controller.cs` hoặc `backend/RoomToRentRadar.Api/Models/*Models.cs`.
+- Khi chuyển một file Minimal API cũ `backend/RoomToRentRadar.Api/Endpoints/*Endpoints.cs` sang Controller.
 
 ---
 
@@ -64,11 +64,11 @@ Hướng dẫn AI Agent khi thực hiện 10 Task Backend (`T01.1`, `T02.1`, `T0
 
 ---
 
-## 2. Chuẩn Viết Controller MVC Trong `RoomToRentRadar.Api/Controllers/`
+## 2. Chuẩn Viết Controller MVC Trong `backend/RoomToRentRadar.Api/Controllers/`
 
 Web API theo mô hình **MVC**: **M** = DTO trong `Api/Models/<Feature>Models.cs`, **C** = `Api/Controllers/<Feature>Controller.cs`, **V** = dữ liệu JSON trả về. Mẫu chuẩn để copy: `Controllers/AuthController.cs` + `Models/AuthModels.cs`.
 
-1. **Tuyệt đối KHÔNG sửa `RoomToRentRadar.Api/Program.cs`:**
+1. **Tuyệt đối KHÔNG sửa `backend/RoomToRentRadar.Api/Program.cs`:**
    - `Program.cs` đã bật sẵn `AddControllers()`, `MapControllers()` và JWT. Controller mới tự được nhận, mỗi Task chỉ sửa Controller và Models của mình.
    - Nếu Api cần đăng ký repository/service thật mới (ví dụ `AddSingleton<IFavoriteRepository, FavoriteRepository>()`), báo `@architect` (`@quangtldc0301`) thêm vào `Program.cs`.
    - **Không thêm route mới vào `Api/Endpoints/*Endpoints.cs`** (Minimal API cũ). Khi làm Task, chuyển route sang Controller rồi xóa file Endpoint tương ứng và dòng `app.Map...Endpoints()` (báo `@architect`).
@@ -128,8 +128,9 @@ Web API theo mô hình **MVC**: **M** = DTO trong `Api/Models/<Feature>Models.cs
    - **Web API:** báo `@architect` đăng ký cùng dòng đó trong `Api/Program.cs`, nếu không API vẫn dùng bản `InMemory*`.
 5. **Chạy thử trong Docker trước khi báo hoàn tất:**
    ```powershell
+   cd backend
    docker compose up --build -d
-   # gọi thử các route của Task (thêm request mẫu vào RoomToRentRadar.Api/RoomToRentRadar.Api.http)
+   # gọi thử các route của Task (thêm request mẫu vào backend/RoomToRentRadar.Api/RoomToRentRadar.Api.http)
    docker compose down
    ```
    CI build `Core`, `Infrastructure`, `Api` với `--warnaserror`: code mới không được có cảnh báo biên dịch.

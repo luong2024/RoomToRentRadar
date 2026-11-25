@@ -9,8 +9,8 @@ description: Best practices, XAML SourceGen rules, Shell navigation patterns, an
 Hướng dẫn AI Agent tuân thủ chuẩn mực kiến trúc 4 project SOLID của dự án `.NET MAUI RoomToRentRadar`: tách bạch rõ ràng giữa View (`Features/<Feature>/*Page.xaml`), ViewModel (`*PageModel.cs`), Domain Contract (`RoomToRentRadar.Core`), và Data/SQLite (`RoomToRentRadar.Infrastructure`).
 
 ## Khi nào kích hoạt Skill này
-- Khi tạo mới hoặc chỉnh sửa XAML Pages, Custom Controls và PageModels trong `RoomToRentRadar/Features/<Feature>/` hoặc `RoomToRentRadar/Pages/Controls/`.
-- Khi đăng ký Dependency Injection và Shell Route trong `RoomToRentRadar/Features/<Feature>/<Feature>FeatureModule.cs`.
+- Khi tạo mới hoặc chỉnh sửa XAML Pages, Custom Controls và PageModels trong `frontend/RoomToRentRadar/Features/<Feature>/` hoặc `frontend/RoomToRentRadar/Pages/Controls/`.
+- Khi đăng ký Dependency Injection và Shell Route trong `frontend/RoomToRentRadar/Features/<Feature>/<Feature>FeatureModule.cs`.
 
 ---
 
@@ -98,7 +98,7 @@ Khi một màn hình nhận tham số từ màn hình trước (ví dụ `RoomDe
 
 ### 5. Đăng Ký Dependency Injection & Route Trong `<Feature>FeatureModule.cs` (Chuẩn OCP)
 - **TUYỆT ĐỐI KHÔNG sửa `MauiProgram.cs`**.
-- Mở đúng file `RoomToRentRadar/Features/<Feature>/<Feature>FeatureModule.cs` của tính năng mình để đăng ký:
+- Mở đúng file `frontend/RoomToRentRadar/Features/<Feature>/<Feature>FeatureModule.cs` của tính năng mình để đăng ký:
   ```csharp
   // Ví dụ trong FavoritesFeatureModule.cs:
   services.AddSingleton<IFavoriteRepository, FavoriteRepository>(); // T07.1
