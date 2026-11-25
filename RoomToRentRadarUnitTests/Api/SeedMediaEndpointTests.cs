@@ -25,6 +25,8 @@ public class SeedMediaEndpointTests
             webHost.UseSetting("Jwt:SigningKey", JwtSigningKey);
             webHost.UseSetting("Jwt:Issuer", "RoomToRentRadar.Api");
             webHost.UseSetting("Jwt:Audience", "RoomToRentRadar.Client");
+            // Required outside Development once real routing is configured (T09.1); never used by these tests.
+            webHost.UseSetting("Routing:OpenRouteServiceApiKey", "test-ors-api-key");
         });
 
     [Test]
