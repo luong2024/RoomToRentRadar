@@ -92,6 +92,8 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ICreateListingService, CreateListingService>();
         services.AddTransient<CreateListingViewModel>();
         services.AddTransient<CreateListingPage>();
+        services.AddTransient<ListingLocationPickerViewModel>();
+        services.AddTransient<ListingLocationPickerPage>();
         return services;
     }
 }

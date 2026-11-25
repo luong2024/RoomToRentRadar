@@ -1,8 +1,11 @@
 using System.Globalization;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json.Serialization;
-using RoomToRentRadar.Models.RoomListings;
 using RoomToRentRadar.Infrastructure.Api;
+using RoomToRentRadar.Models.MapSearch;
+using RoomToRentRadar.Models.RoomListings;
+using RoomToRentRadar.Resources.Strings;
 
 namespace RoomToRentRadar.Services.RoomListings;
 
@@ -24,6 +27,13 @@ public class CreateListingService : ICreateListingService
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
 
+        var location = request.Location;
+        if (location is not null && !ListingLocation.IsValid(location))
+        {
+            return InvalidLocation();
+        }
+
+        var requestStarted = false;
         try
         {
             using var multipartContent = new MultipartFormDataContent();
@@ -45,6 +55,12 @@ public class CreateListingService : ICreateListingService
                 multipartContent.Add(new StringContent(request.Description), "description");
             }
 
+            if (location is not null)
+            {
+                multipartContent.Add(new StringContent(location.Latitude.ToString("R", CultureInfo.InvariantCulture)), "latitude");
+                multipartContent.Add(new StringContent(location.Longitude.ToString("R", CultureInfo.InvariantCulture)), "longitude");
+            }
+
             if (request.PhotoUrls != null)
             {
                 foreach (var url in request.PhotoUrls)
@@ -60,53 +76,98 @@ public class CreateListingService : ICreateListingService
             {
                 for (int i = 0; i < request.Photos.Count; i++)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     var photo = request.Photos[i];
                     var stream = await photo.OpenReadStreamAsync();
-                    if (stream == null || !stream.CanRead || (stream.CanSeek && stream.Length == 0))
+                    if (stream.CanSeek && stream.Length == 0)
                     {
-                        throw new InvalidOperationException($"Ảnh '{photo.FileName}' không có nội dung dữ liệu hợp lệ.");
+                        stream.Dispose();
+                        return Failure("ListingSubmit_InvalidPhoto");
                     }
 
-                    var streamContent = new StreamContent(stream);
                     var contentType = string.IsNullOrWhiteSpace(photo.ContentType) ? "image/jpeg" : photo.ContentType;
-                    streamContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
-
                     var fileName = string.IsNullOrWhiteSpace(photo.FileName) ? $"photo_{i}.jpg" : photo.FileName;
-                    multipartContent.Add(streamContent, "photos", fileName);
+                    var streamContent = new StreamContent(stream);
+                    try
+                    {
+                        streamContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+                        multipartContent.Add(streamContent, "photos", fileName);
+                    }
+                    catch
+                    {
+                        streamContent.Dispose();
+                        throw;
+                    }
                 }
             }
 
+            requestStarted = true;
             var response = await _apiClient.PostMultipartAsync<CreateListingApiResponse>(
                 "api/v1/landlord/listings",
                 multipartContent,
                 cancellationToken);
 
-            var listingId = response?.ResolvedId;
-            if (!string.IsNullOrWhiteSpace(listingId))
+            if (response is null || response.ResolvedId is not { } listingId || string.IsNullOrWhiteSpace(listingId))
             {
-                return CreateListingResult.Success(listingId);
+                return Failure("ListingSubmit_Unconfirmed");
             }
 
-            return CreateListingResult.Failure(response?.Message ?? "Không nhận được mã tin đăng hợp lệ từ máy chủ.");
+            var persisted = response.Latitude is { } latitude && response.Longitude is { } longitude
+                ? new GeoCoordinate(latitude, longitude)
+                : null;
+
+            if (ListingLocation.IsValid(persisted))
+            {
+                return CreateListingResult.Success(listingId) with { PersistedLocation = persisted };
+            }
+
+            return CreateListingResult.Success(listingId) with
+            {
+                HasLocationResponseWarning = location is not null || response.Latitude.HasValue || response.Longitude.HasValue
+            };
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
         }
-        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        catch (ApiValidationException ex) when (ex.Fields.Any(IsLocationField))
         {
-            return CreateListingResult.Failure("Dịch vụ tạo tin đăng tạm thời không khả dụng (404 Not Found). Vui lòng thử lại sau.");
+            return InvalidLocation();
         }
-        catch (HttpRequestException ex)
+        catch (HttpRequestException ex) when (ex.StatusCode is { } status)
         {
-            var statusCode = ex.StatusCode.HasValue ? $" ({(int)ex.StatusCode.Value})" : string.Empty;
-            return CreateListingResult.Failure($"Lỗi máy chủ{statusCode}: {ex.Message}");
+            return status switch
+            {
+                HttpStatusCode.BadRequest => Failure("ListingSubmit_InvalidForm"),
+                HttpStatusCode.Unauthorized => Failure("ListingSubmit_SignIn"),
+                HttpStatusCode.Forbidden => Failure("ListingSubmit_Forbidden"),
+                HttpStatusCode.NotFound => Failure("ListingSubmit_Unavailable"),
+                _ when (int)status >= 500 => CreateListingResult.Failure(string.Format(
+                    CultureInfo.CurrentCulture, AppResources.GetString("ListingSubmit_ServerUnconfirmed"), (int)status)),
+                _ => CreateListingResult.Failure(string.Format(
+                    CultureInfo.CurrentCulture, AppResources.GetString("ListingSubmit_HttpError"), (int)status))
+            };
         }
-        catch (Exception ex)
+        catch (FileNotFoundException) when (!requestStarted)
         {
-            return CreateListingResult.Failure(ex.Message);
+            return Failure("ListingSubmit_MissingPhoto");
+        }
+        catch (Exception)
+        {
+            return Failure(requestStarted ? "ListingSubmit_Unconfirmed" : "ListingSubmit_InvalidPhoto");
         }
     }
+
+    private static bool IsLocationField(string field) =>
+        string.Equals(field, "latitude", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(field, "longitude", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(field, "coordinates", StringComparison.OrdinalIgnoreCase);
+
+    private static CreateListingResult InvalidLocation() =>
+        Failure("ListingSubmit_InvalidLocation") with { HasLocationError = true };
+
+    private static CreateListingResult Failure(string resource) =>
+        CreateListingResult.Failure(AppResources.GetString(resource));
 }
 
 public sealed class CreateListingApiResponse
@@ -117,6 +178,8 @@ public sealed class CreateListingApiResponse
     [JsonPropertyName("id")]
     public string? Id { get; set; }
 
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
     public string? Status { get; set; }
     public string? Message { get; set; }
 

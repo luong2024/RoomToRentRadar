@@ -148,4 +148,30 @@
   <data name="Logout_Confirm_Yes" xml:space="preserve"><value>Log Out</value></data>
   <data name="Logout_Confirm_No" xml:space="preserve"><value>Cancel</value></data>
   <data name="Logout_Success" xml:space="preserve"><value>Logged out successfully</value></data>
+  <data name="ListingLocation_Title" xml:space="preserve"><value>Select room location</value></data>
+  <data name="ListingLocation_Optional" xml:space="preserve"><value>Map location (optional)</value></data>
+  <data name="ListingLocation_Open" xml:space="preserve"><value>Open map picker</value></data>
+  <data name="ListingLocation_Empty" xml:space="preserve"><value>No location selected</value></data>
+  <data name="ListingLocation_Coordinates" xml:space="preserve"><value>Selected location: latitude {0:F6} / longitude {1:F6}</value></data>
+  <data name="ListingLocation_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="ListingLocation_Confirm" xml:space="preserve"><value>Confirm location</value></data>
+  <data name="ListingLocation_PinLabel" xml:space="preserve"><value>Room location</value></data>
+  <data name="ListingLocation_MapHint" xml:space="preserve"><value>Tap the map to place or move the pin.</value></data>
+  <data name="ListingLocation_MapLoading" xml:space="preserve"><value>Waiting for the map. If it stays blank, check your connection or return to the form.</value></data>
+  <data name="ListingLocation_MapOffline" xml:space="preserve"><value>The map needs an internet connection. Reconnect or cancel to return to the form.</value></data>
+  <data name="ListingLocation_MapMissingKey" xml:space="preserve"><value>Google Maps is not configured for this build. Configure the key in secrets.props and rebuild, or cancel to continue.</value></data>
+  <data name="ListingLocation_MapUnavailable" xml:space="preserve"><value>Location selection is unavailable on this device. You can submit the form without a map location.</value></data>
+  <data name="ListingLocation_NavigationError" xml:space="preserve"><value>Could not open or close the map. Please try again.</value></data>
+  <data name="ListingLocation_SavedCoordinates" xml:space="preserve"><value>Saved location: latitude {0:F6} / longitude {1:F6}</value></data>
+  <data name="ListingLocation_ResponseWarning" xml:space="preserve"><value>The listing was created, but the saved location could not be verified.</value></data>
+  <data name="ListingSubmit_Unconfirmed" xml:space="preserve"><value>The result could not be confirmed. Check whether the listing was created before submitting again.</value></data>
+  <data name="ListingSubmit_ServerUnconfirmed" xml:space="preserve"><value>Server error ({0}). Check whether the listing was created before submitting again.</value></data>
+  <data name="ListingSubmit_Unavailable" xml:space="preserve"><value>The listing service is unavailable (404 Not Found). Please try again later.</value></data>
+  <data name="ListingSubmit_InvalidForm" xml:space="preserve"><value>Please review the listing information and try again.</value></data>
+  <data name="ListingSubmit_InvalidLocation" xml:space="preserve"><value>The location is invalid. Open the map to select the location again.</value></data>
+  <data name="ListingSubmit_SignIn" xml:space="preserve"><value>Sign in again to submit the listing.</value></data>
+  <data name="ListingSubmit_Forbidden" xml:space="preserve"><value>Your account does not have permission to submit this listing.</value></data>
+  <data name="ListingSubmit_HttpError" xml:space="preserve"><value>Could not submit the listing ({0}).</value></data>
+  <data name="ListingSubmit_MissingPhoto" xml:space="preserve"><value>A selected photo could not be found. Remove it and select it again.</value></data>
+  <data name="ListingSubmit_InvalidPhoto" xml:space="preserve"><value>A selected photo could not be read. Remove it and select it again.</value></data>
 </root>

@@ -3,11 +3,15 @@ using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Services.RoomListings;
 using RoomToRentRadar.ViewModels.RoomListings;
 using RoomToRentRadar.Infrastructure.Api;
+using RoomToRentRadar.Models.MapSearch;
+using RoomToRentRadar.Models.RoomListings;
 
 namespace RoomToRentRadar.Views.RoomListings;
 
 public partial class CreateListingPage : ContentPage
 {
+    private readonly CreateListingViewModel _viewModel;
+
     public CreateListingPage() : this(ResolveViewModel())
     {
     }
@@ -15,7 +19,22 @@ public partial class CreateListingPage : ContentPage
     public CreateListingPage(CreateListingViewModel viewModel)
     {
         InitializeComponent();
-        BindingContext = viewModel;
+        BindingContext = _viewModel = viewModel;
+        _viewModel.LocationPickerHandler = OpenLocationPickerAsync;
+    }
+
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+        _viewModel.RefreshLocationForSession();
+    }
+
+    private Task<ListingLocationPickerResult> OpenLocationPickerAsync(GeoCoordinate? initialLocation)
+    {
+        var services = Handler?.MauiContext?.Services ?? IPlatformApplication.Current?.Services;
+        return services?.GetService<ListingLocationPickerPage>() is { } picker
+            ? picker.PickAsync(this, initialLocation)
+            : Task.FromResult(new ListingLocationPickerResult(ListingLocationPickerOutcome.Failed));
     }
 
     private static CreateListingViewModel ResolveViewModel()
@@ -32,7 +51,8 @@ public partial class CreateListingPage : ContentPage
                                 ?? new CreateListingService(IPlatformApplication.Current.Services.GetService<IApiClient>() ?? new ApiClient(new HttpClient()));
             var mediaService = IPlatformApplication.Current.Services.GetService<IMediaPickerService>()
                                ?? new MediaPickerService();
-            return new CreateListingViewModel(createService, mediaService);
+            var authSession = IPlatformApplication.Current.Services.GetService<IAuthenticationSessionService>();
+            return new CreateListingViewModel(createService, mediaService, authSession);
         }
 
         return new CreateListingViewModel(
