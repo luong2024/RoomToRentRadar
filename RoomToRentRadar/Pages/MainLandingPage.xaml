@@ -114,11 +114,11 @@
             <HorizontalStackLayout VerticalOptions="Center">
                 <Label Text="{Binding ResultCountText}"
                        FontFamily="{StaticResource FontFamilySemibold}"
-                       FontSize="14"
+                       FontSize="{StaticResource FontSizeBodyMedium}"
                        FontAttributes="Bold"
                        TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
                 <Label Text="{Binding VerifiedOnlySuffixText}"
-                       FontSize="14"
+                       FontSize="{StaticResource FontSizeBodyMedium}"
                        TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
             </HorizontalStackLayout>
             <HorizontalStackLayout Grid.Column="1"
@@ -209,6 +209,7 @@
             </feedback:StateView>
 
             <!-- Compare tray (US10): shown once rooms can be picked for comparison -->
+            <!-- Navy in both themes, like the primary button: the allowed pair in ui-ux-spec §3.1.1 -->
             <Border IsVisible="{Binding HasCompareSelection}"
                     Margin="16,0,16,12"
                     HeightRequest="52"
@@ -217,7 +218,7 @@
                     MaximumWidthRequest="608"
                     StrokeThickness="0"
                     StrokeShape="RoundRectangle 14"
-                    BackgroundColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}"
+                    BackgroundColor="{StaticResource ActionPrimaryLight}"
                     SemanticProperties.Description="{Binding CompareNowText}">
                 <Border.GestureRecognizers>
                     <TapGestureRecognizer Command="{Binding OpenCompareCommand}" />
@@ -231,24 +232,24 @@
                            TextColor="{StaticResource ActionAccentDark}" />
                     <Label Grid.Column="1"
                            Text="{Binding CompareCountText}"
-                           FontSize="14"
+                           FontSize="{StaticResource FontSizeBodyMedium}"
                            VerticalOptions="Center"
-                           TextColor="{AppThemeBinding Light={StaticResource TextInverseLight}, Dark={StaticResource TextInverseDark}}" />
+                           TextColor="{StaticResource TextInverseLight}" />
                     <Label Grid.Column="3"
                            Text="{Binding CompareNowText}"
                            FontFamily="{StaticResource FontFamilySemibold}"
-                           FontSize="14"
+                           FontSize="{StaticResource FontSizeBodyMedium}"
                            FontAttributes="Bold"
                            VerticalOptions="Center"
                            AutomationProperties.IsInAccessibleTree="False"
-                           TextColor="{AppThemeBinding Light={StaticResource TextInverseLight}, Dark={StaticResource TextInverseDark}}" />
+                           TextColor="{StaticResource TextInverseLight}" />
                     <Label Grid.Column="4"
                            Text="{x:Static fonts:FluentUI.chevron_right_16_regular}"
                            FontFamily="{x:Static fonts:FluentUI.FontFamily}"
                            FontSize="16"
                            VerticalOptions="Center"
                            AutomationProperties.IsInAccessibleTree="False"
-                           TextColor="{AppThemeBinding Light={StaticResource TextInverseLight}, Dark={StaticResource TextInverseDark}}" />
+                           TextColor="{StaticResource TextInverseLight}" />
                 </Grid>
             </Border>
         </Grid>

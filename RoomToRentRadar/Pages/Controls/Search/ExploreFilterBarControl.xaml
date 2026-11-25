@@ -30,7 +30,7 @@
                 <Label Grid.Column="1"
                        Text="{Binding FiltersButtonText}"
                        FontFamily="{StaticResource FontFamilySemibold}"
-                       FontSize="14"
+                       FontSize="{StaticResource FontSizeBodyMedium}"
                        VerticalOptions="Center"
                        LineBreakMode="TailTruncation"
                        AutomationProperties.IsInAccessibleTree="False"
@@ -69,7 +69,7 @@
             <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
                 <Label Text="{Binding CurrentSortLabel}"
                        FontFamily="{StaticResource FontFamilySemibold}"
-                       FontSize="14"
+                       FontSize="{StaticResource FontSizeBodyMedium}"
                        VerticalOptions="Center"
                        AutomationProperties.IsInAccessibleTree="False"
                        TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
