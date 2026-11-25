@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Interfaces;
+using RoomToRentRadar.Core.Models.Authentication;
 using RoomToRentRadar.Models.RoomDetails;
 using RoomToRentRadar.Services.RoomDetails;
 
@@ -40,6 +41,46 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     [ObservableProperty]
     public partial List<SimilarRoomModel> SimilarRooms { get; set; } = [];
 
+    [ObservableProperty]
+    public partial RoomHouseRulesModel? HouseRules { get; set; }
+
+    [ObservableProperty]
+    public partial List<HouseRulesVersionModel> HouseRulesHistory { get; set; } = [];
+
+    [ObservableProperty]
+    public partial bool IsHouseRulesHistoryVisible { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsLoadingHistory { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsEditHouseRulesVisible { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanSaveHouseRules))]
+    public partial bool IsSavingHouseRules { get; set; }
+
+    [ObservableProperty]
+    public partial string HouseRulesEditError { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string EditQuietHours { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string EditGuestPolicy { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string EditCookingRules { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string EditParkingRules { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string EditAdditionalRulesText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string EditChangeNote { get; set; } = string.Empty;
+
     public bool HasRoom => Room is not null;
     public bool IsLoadStateVisible => IsNotFound || HasLoadError;
 
@@ -64,6 +105,41 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     public bool CanCallLandlord => IsAvailable && HasLandlordContact;
     public string DisplayPhoneNumber => Room?.LandlordPhone ?? "Contact information is unavailable";
 
+    // House Rules & Versioning (US11)
+    public bool HasStructuredHouseRules => HouseRules is not null && !HouseRules.IsLegacyFallback;
+    public bool ShowLegacyHouseRulesFallback =>
+        !HasStructuredHouseRules && ((HouseRules?.AdditionalRules.Count ?? 0) > 0 || (Room?.HouseRules.Count ?? 0) > 0);
+    public bool ShowEmptyHouseRulesState => !HasStructuredHouseRules && !ShowLegacyHouseRulesFallback;
+    public string HouseRulesVersionText => HouseRules?.VersionBadgeText ?? "Legacy";
+    public string HouseRulesSubtitleText => HasStructuredHouseRules
+        ? HouseRules!.NaturalStatusText
+        : "Building & living guidelines";
+    public bool CanViewHouseRulesHistory => HasStructuredHouseRules;
+    public bool HasHouseRulesHistory => HouseRulesHistory.Count > 0;
+    public bool HasHouseRulesEditError => !string.IsNullOrWhiteSpace(HouseRulesEditError);
+    public bool CanSaveHouseRules => !IsSavingHouseRules;
+    public bool CanEditHouseRules
+    {
+        get
+        {
+            var user = _sessionService.CurrentUser;
+            if (user is null || Room is null)
+            {
+                return false;
+            }
+
+            if (string.Equals(user.Role, UserRoleConstants.Admin, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return string.Equals(user.Role, UserRoleConstants.Landlord, StringComparison.OrdinalIgnoreCase)
+                && HouseRules?.LandlordId is Guid landlordId
+                && landlordId != Guid.Empty
+                && landlordId == user.Id;
+        }
+    }
+
     public RoomDetailViewModel(
         IRoomDetailService roomDetailService,
         IErrorHandler errorHandler,
@@ -76,6 +152,12 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         _sessionService = sessionService ?? throw new ArgumentNullException(nameof(sessionService));
         _navigateAsync = navigateAsync;
         _displayAlertAsync = displayAlertAsync;
+        _sessionService.CurrentUserChanged += OnCurrentUserChanged;
+    }
+
+    private void OnCurrentUserChanged(object? sender, Core.Models.Authentication.AuthUser? user)
+    {
+        OnPropertyChanged(nameof(CanEditHouseRules));
     }
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
@@ -130,6 +212,8 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         {
             IsBusy = true;
             Room = null;
+            HouseRules = null;
+            HouseRulesHistory = [];
             IsNotFound = false;
             HasLoadError = false;
             StatusMessage = string.Empty;
@@ -158,6 +242,22 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
             Title = room.Title;
             IsNotFound = false;
             HasLoadError = false;
+
+            if (room.StructuredHouseRules is not null)
+            {
+                HouseRules = room.StructuredHouseRules;
+            }
+            else
+            {
+                try
+                {
+                    HouseRules = await _roomDetailService.GetHouseRulesAsync(room.Id, token);
+                }
+                catch
+                {
+                    HouseRules = null;
+                }
+            }
 
             // Refresh computed properties
             NotifyStatusPropertiesChanged();
@@ -274,6 +374,161 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         await NavigateAsync("..");
     }
 
+    [RelayCommand]
+    public async Task OpenHouseRulesHistoryAsync()
+    {
+        if (Room is null || string.IsNullOrWhiteSpace(Room.Id))
+        {
+            return;
+        }
+
+        IsHouseRulesHistoryVisible = true;
+        IsLoadingHistory = true;
+        OnPropertyChanged(nameof(HasHouseRulesHistory));
+
+        try
+        {
+            HouseRulesHistory = await _roomDetailService.GetHouseRulesHistoryAsync(Room.Id);
+            OnPropertyChanged(nameof(HasHouseRulesHistory));
+        }
+        catch (Exception ex)
+        {
+            _errorHandler.HandleError(ex);
+        }
+        finally
+        {
+            IsLoadingHistory = false;
+        }
+    }
+
+    [RelayCommand]
+    public void CloseHouseRulesHistory()
+    {
+        IsHouseRulesHistoryVisible = false;
+    }
+
+    [RelayCommand]
+    public void OpenEditHouseRules()
+    {
+        if (!CanEditHouseRules)
+        {
+            return;
+        }
+
+        HouseRulesEditError = string.Empty;
+        OnPropertyChanged(nameof(HasHouseRulesEditError));
+
+        if (HouseRules is not null && !HouseRules.IsLegacyFallback)
+        {
+            EditQuietHours = HouseRules.QuietHours;
+            EditGuestPolicy = HouseRules.GuestPolicy;
+            EditCookingRules = HouseRules.CookingRules;
+            EditParkingRules = HouseRules.ParkingRules;
+            EditAdditionalRulesText = string.Join(Environment.NewLine, HouseRules.AdditionalRules);
+        }
+        else
+        {
+            EditQuietHours = string.Empty;
+            EditGuestPolicy = string.Empty;
+            EditCookingRules = string.Empty;
+            EditParkingRules = string.Empty;
+            EditAdditionalRulesText = Room is not null
+                ? string.Join(Environment.NewLine, Room.HouseRules)
+                : string.Empty;
+        }
+
+        EditChangeNote = string.Empty;
+        IsEditHouseRulesVisible = true;
+    }
+
+    [RelayCommand]
+    public void CloseEditHouseRules()
+    {
+        IsEditHouseRulesVisible = false;
+        HouseRulesEditError = string.Empty;
+        OnPropertyChanged(nameof(HasHouseRulesEditError));
+    }
+
+    [RelayCommand]
+    public async Task SaveHouseRulesAsync()
+    {
+        if (IsSavingHouseRules || Room is null || !CanEditHouseRules)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(EditQuietHours) ||
+            string.IsNullOrWhiteSpace(EditGuestPolicy) ||
+            string.IsNullOrWhiteSpace(EditCookingRules) ||
+            string.IsNullOrWhiteSpace(EditParkingRules))
+        {
+            HouseRulesEditError = "Quiet hours, guest policy, cooking rules, and parking rules are all required.";
+            OnPropertyChanged(nameof(HasHouseRulesEditError));
+            return;
+        }
+
+        IsSavingHouseRules = true;
+        HouseRulesEditError = string.Empty;
+        OnPropertyChanged(nameof(HasHouseRulesEditError));
+
+        try
+        {
+            var additional = EditAdditionalRulesText
+                .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToList();
+
+            var expectedVersion = HouseRules is not null && !HouseRules.IsLegacyFallback
+                ? HouseRules.Version
+                : (int?)null;
+
+            var request = new UpdateHouseRulesApiRequest(
+                QuietHours: EditQuietHours.Trim(),
+                GuestPolicy: EditGuestPolicy.Trim(),
+                CookingRules: EditCookingRules.Trim(),
+                ParkingRules: EditParkingRules.Trim(),
+                AdditionalRules: additional,
+                ChangeNote: string.IsNullOrWhiteSpace(EditChangeNote) ? null : EditChangeNote.Trim(),
+                ExpectedVersion: expectedVersion);
+
+            var updated = await _roomDetailService.UpdateHouseRulesAsync(Room.Id, request);
+            if (updated is not null)
+            {
+                HouseRules = updated;
+                Room.StructuredHouseRules = updated;
+                Room.HouseRules =
+                [
+                    $"Quiet hours: {updated.QuietHours}",
+                    $"Guest policy: {updated.GuestPolicy}",
+                    $"Cooking rules: {updated.CookingRules}",
+                    $"Parking rules: {updated.ParkingRules}",
+                    .. updated.AdditionalRules
+                ];
+                NotifyStatusPropertiesChanged();
+            }
+
+            IsEditHouseRulesVisible = false;
+            await DisplayAlertAsync(
+                "House Rules Updated",
+                $"House rules saved (version {HouseRules?.VersionBadgeText ?? "updated"}).",
+                "OK",
+                null);
+        }
+        catch (Exception ex)
+        {
+            var isConflict = ex.Message.Contains("409", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("conflict", StringComparison.OrdinalIgnoreCase);
+
+            HouseRulesEditError = isConflict
+                ? "House rules were updated by another session. Please close and reload the room before saving."
+                : ex.Message;
+            OnPropertyChanged(nameof(HasHouseRulesEditError));
+        }
+        finally
+        {
+            IsSavingHouseRules = false;
+        }
+    }
+
     private async Task NavigateAsync(string route)
     {
         try
@@ -312,5 +567,14 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         OnPropertyChanged(nameof(HasLandlordContact));
         OnPropertyChanged(nameof(CanCallLandlord));
         OnPropertyChanged(nameof(DisplayPhoneNumber));
+        OnPropertyChanged(nameof(HasStructuredHouseRules));
+        OnPropertyChanged(nameof(ShowLegacyHouseRulesFallback));
+        OnPropertyChanged(nameof(ShowEmptyHouseRulesState));
+        OnPropertyChanged(nameof(HouseRulesVersionText));
+        OnPropertyChanged(nameof(HouseRulesSubtitleText));
+        OnPropertyChanged(nameof(CanViewHouseRulesHistory));
+        OnPropertyChanged(nameof(CanEditHouseRules));
+        OnPropertyChanged(nameof(HasHouseRulesHistory));
+        OnPropertyChanged(nameof(HasHouseRulesEditError));
     }
 }

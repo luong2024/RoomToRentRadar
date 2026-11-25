@@ -382,8 +382,58 @@
 
                             <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" />
 
-                            <!-- Quick Specs Grid (only fields supplied by RoomDetailModel) -->
-                            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="10" VerticalOptions="Center">
+                            <!-- Quick Specs Grid: 2x2 on Phone for breathing room, 4 columns on Tablet/Desktop -->
+                            <!-- Phone: 2x2 -->
+                            <Grid
+                                ColumnDefinitions="*,*"
+                                ColumnSpacing="10"
+                                IsVisible="{OnIdiom Phone=True, Default=False}"
+                                RowDefinitions="Auto,Auto"
+                                RowSpacing="10"
+                                VerticalOptions="Center">
+                                <Border Grid.Row="0" Grid.Column="0" Padding="12" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}" StrokeShape="RoundRectangle 12" StrokeThickness="0">
+                                    <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+                                        <Label FontFamily="{x:Static f:FluentUI.FontFamily}" FontSize="20" Text="{x:Static f:FluentUI.grid_24_regular}" TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" VerticalOptions="Center" />
+                                        <VerticalStackLayout Spacing="1" VerticalOptions="Center">
+                                            <Label FontAttributes="Bold" FontSize="13" Text="{Binding Room.FormattedArea}" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                            <Label FontSize="11" Text="Area" TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                        </VerticalStackLayout>
+                                    </HorizontalStackLayout>
+                                </Border>
+
+                                <Border Grid.Row="0" Grid.Column="1" Padding="12" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}" StrokeShape="RoundRectangle 12" StrokeThickness="0">
+                                    <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+                                        <Label FontFamily="{x:Static f:FluentUI.FontFamily}" FontSize="20" Text="{x:Static f:FluentUI.building_home_24_regular}" TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" VerticalOptions="Center" />
+                                        <VerticalStackLayout Spacing="1" VerticalOptions="Center">
+                                            <Label FontAttributes="Bold" FontSize="13" LineBreakMode="TailTruncation" MaxLines="1" Text="{Binding Room.RoomType}" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                            <Label FontSize="11" Text="Room type" TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                        </VerticalStackLayout>
+                                    </HorizontalStackLayout>
+                                </Border>
+
+                                <Border Grid.Row="1" Grid.Column="0" IsVisible="{Binding Room.HasBedrooms}" Padding="12" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}" StrokeShape="RoundRectangle 12" StrokeThickness="0">
+                                    <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+                                        <Label FontFamily="{x:Static f:FluentUI.FontFamily}" FontSize="20" Text="{x:Static f:FluentUI.bed_24_regular}" TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" VerticalOptions="Center" />
+                                        <VerticalStackLayout Spacing="1" VerticalOptions="Center">
+                                            <Label FontAttributes="Bold" FontSize="13" Text="{Binding Room.Bedrooms, StringFormat='{0} bedrooms'}" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                            <Label FontSize="11" Text="Bedrooms" TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                        </VerticalStackLayout>
+                                    </HorizontalStackLayout>
+                                </Border>
+
+                                <Border Grid.Row="1" Grid.Column="1" IsVisible="{Binding Room.HasBathrooms}" Padding="12" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}" StrokeShape="RoundRectangle 12" StrokeThickness="0">
+                                    <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+                                        <Label FontFamily="{x:Static f:FluentUI.FontFamily}" FontSize="20" Text="{x:Static f:FluentUI.showerhead_24_regular}" TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" VerticalOptions="Center" />
+                                        <VerticalStackLayout Spacing="1" VerticalOptions="Center">
+                                            <Label FontAttributes="Bold" FontSize="13" Text="{Binding Room.Bathrooms, StringFormat='{0} bathrooms'}" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                            <Label FontSize="11" Text="Bathrooms" TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                        </VerticalStackLayout>
+                                    </HorizontalStackLayout>
+                                </Border>
+                            </Grid>
+
+                            <!-- Tablet / Desktop: 4 columns -->
+                            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="10" IsVisible="{OnIdiom Phone=False, Default=True}" VerticalOptions="Center">
                                 <!-- Area -->
                                 <Border
                                     Grid.Column="0"
@@ -572,39 +622,244 @@
                         </VerticalStackLayout>
                     </Border>
 
-                    <!-- House Rules Card -->
+                    <!-- House Rules Card (US11 AC1 & AC2: Shown before landlord contact) -->
                     <Border
-                        Padding="20"
+                        Padding="{OnIdiom Phone='16', Tablet='20', Desktop='22'}"
                         BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
                         Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
                         StrokeShape="RoundRectangle 18"
                         StrokeThickness="1">
-                        <VerticalStackLayout Spacing="12">
-                            <Label
-                                FontAttributes="Bold"
-                                FontSize="16"
-                                Text="House rules"
-                                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                        <VerticalStackLayout Spacing="14">
+                            <!-- Header with subtle subtitle + Past updates / Edit actions -->
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" VerticalOptions="Center">
+                                <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center">
+                                    <Label
+                                        FontAttributes="Bold"
+                                        FontSize="16"
+                                        Text="House rules"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                    <Label
+                                        FontSize="12"
+                                        Text="{Binding HouseRulesSubtitleText}"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                </VerticalStackLayout>
 
-                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Room.HouseRules}" Spacing="8">
-                                <BindableLayout.ItemTemplate>
-                                    <DataTemplate x:DataType="x:String">
-                                        <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
-                                            <Label
-                                                FontFamily="{x:Static f:FluentUI.FontFamily}"
-                                                FontSize="15"
-                                                Text="{x:Static f:FluentUI.checkmark_circle_16_regular}"
-                                                TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
-                                                VerticalOptions="Center" />
-                                            <Label
-                                                FontSize="13"
-                                                Text="{Binding .}"
-                                                TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}"
-                                                VerticalOptions="Center" />
-                                        </HorizontalStackLayout>
-                                    </DataTemplate>
-                                </BindableLayout.ItemTemplate>
+                                <Border
+                                    Grid.Column="1"
+                                    Padding="10,6"
+                                    BackgroundColor="Transparent"
+                                    IsVisible="{Binding CanViewHouseRulesHistory}"
+                                    StrokeShape="RoundRectangle 10"
+                                    StrokeThickness="0"
+                                    VerticalOptions="Center">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding OpenHouseRulesHistoryCommand}" />
+                                    </Border.GestureRecognizers>
+                                    <HorizontalStackLayout Spacing="5" VerticalOptions="Center">
+                                        <Label
+                                            FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                            FontSize="14"
+                                            Text="{x:Static f:FluentUI.history_16_regular}"
+                                            TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                            VerticalOptions="Center" />
+                                        <Label
+                                            FontAttributes="Bold"
+                                            FontSize="12.5"
+                                            Text="Past updates"
+                                            TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                            VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
+                                </Border>
+
+                                <Border
+                                    Grid.Column="2"
+                                    Padding="12,6"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}"
+                                    IsVisible="{Binding CanEditHouseRules}"
+                                    StrokeShape="RoundRectangle 10"
+                                    StrokeThickness="0"
+                                    VerticalOptions="Center">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding OpenEditHouseRulesCommand}" />
+                                    </Border.GestureRecognizers>
+                                    <HorizontalStackLayout Spacing="5" VerticalOptions="Center">
+                                        <Label
+                                            FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                            FontSize="14"
+                                            Text="{x:Static f:FluentUI.edit_16_regular}"
+                                            TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                            VerticalOptions="Center" />
+                                        <Label
+                                            FontAttributes="Bold"
+                                            FontSize="12.5"
+                                            Text="Edit"
+                                            TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                            VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
+                                </Border>
+                            </Grid>
+
+                            <!-- Structured 4-Section House Rules (US11 AC1) -->
+                            <VerticalStackLayout IsVisible="{Binding HasStructuredHouseRules}" Spacing="10">
+                                <!-- Phone: 1 column -->
+                                <VerticalStackLayout IsVisible="{OnIdiom Phone=True, Default=False}" Spacing="8">
+                                    <Border Padding="12" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}" Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" StrokeShape="RoundRectangle 12" StrokeThickness="1">
+                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" VerticalOptions="Center">
+                                            <Label Grid.Column="0" FontFamily="{x:Static f:FluentUI.FontFamily}" FontSize="18" Text="{x:Static f:FluentUI.weather_moon_20_regular}" TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" VerticalOptions="Center" />
+                                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                                <Label FontAttributes="Bold" FontSize="12" Text="Quiet hours" TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                                <Label FontSize="13" Text="{Binding HouseRules.QuietHours}" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                    </Border>
+                                    <Border Padding="12" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}" Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" StrokeShape="RoundRectangle 12" StrokeThickness="1">
+                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" VerticalOptions="Center">
+                                            <Label Grid.Column="0" FontFamily="{x:Static f:FluentUI.FontFamily}" FontSize="18" Text="{x:Static f:FluentUI.people_20_regular}" TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" VerticalOptions="Center" />
+                                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                                <Label FontAttributes="Bold" FontSize="12" Text="Guest policy" TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                                <Label FontSize="13" Text="{Binding HouseRules.GuestPolicy}" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                    </Border>
+                                    <Border Padding="12" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}" Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" StrokeShape="RoundRectangle 12" StrokeThickness="1">
+                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" VerticalOptions="Center">
+                                            <Label Grid.Column="0" FontFamily="{x:Static f:FluentUI.FontFamily}" FontSize="18" Text="{x:Static f:FluentUI.food_20_regular}" TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" VerticalOptions="Center" />
+                                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                                <Label FontAttributes="Bold" FontSize="12" Text="Cooking rules" TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                                <Label FontSize="13" Text="{Binding HouseRules.CookingRules}" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                    </Border>
+                                    <Border Padding="12" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}" Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" StrokeShape="RoundRectangle 12" StrokeThickness="1">
+                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" VerticalOptions="Center">
+                                            <Label Grid.Column="0" FontFamily="{x:Static f:FluentUI.FontFamily}" FontSize="18" Text="{x:Static f:FluentUI.clock_20_regular}" TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" VerticalOptions="Center" />
+                                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                                <Label FontAttributes="Bold" FontSize="12" Text="Parking rules" TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                                <Label FontSize="13" Text="{Binding HouseRules.ParkingRules}" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                    </Border>
+                                </VerticalStackLayout>
+
+                                <!-- Tablet / Desktop: 2x2 Grid -->
+                                <Grid
+                                    ColumnDefinitions="*,*"
+                                    ColumnSpacing="10"
+                                    IsVisible="{OnIdiom Phone=False, Default=True}"
+                                    RowDefinitions="Auto,Auto"
+                                    RowSpacing="10">
+                                    <Border Grid.Row="0" Grid.Column="0" Padding="14" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}" Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" StrokeShape="RoundRectangle 14" StrokeThickness="1">
+                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" VerticalOptions="Center">
+                                            <Label Grid.Column="0" FontFamily="{x:Static f:FluentUI.FontFamily}" FontSize="20" Text="{x:Static f:FluentUI.weather_moon_20_regular}" TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" VerticalOptions="Center" />
+                                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                                <Label FontAttributes="Bold" FontSize="12" Text="Quiet hours" TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                                <Label FontSize="13" LineHeight="1.35" Text="{Binding HouseRules.QuietHours}" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                    </Border>
+
+                                    <Border Grid.Row="0" Grid.Column="1" Padding="14" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}" Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" StrokeShape="RoundRectangle 14" StrokeThickness="1">
+                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" VerticalOptions="Center">
+                                            <Label Grid.Column="0" FontFamily="{x:Static f:FluentUI.FontFamily}" FontSize="20" Text="{x:Static f:FluentUI.people_20_regular}" TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" VerticalOptions="Center" />
+                                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                                <Label FontAttributes="Bold" FontSize="12" Text="Guest policy" TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                                <Label FontSize="13" LineHeight="1.35" Text="{Binding HouseRules.GuestPolicy}" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                    </Border>
+
+                                    <Border Grid.Row="1" Grid.Column="0" Padding="14" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}" Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" StrokeShape="RoundRectangle 14" StrokeThickness="1">
+                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" VerticalOptions="Center">
+                                            <Label Grid.Column="0" FontFamily="{x:Static f:FluentUI.FontFamily}" FontSize="20" Text="{x:Static f:FluentUI.food_20_regular}" TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" VerticalOptions="Center" />
+                                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                                <Label FontAttributes="Bold" FontSize="12" Text="Cooking rules" TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                                <Label FontSize="13" LineHeight="1.35" Text="{Binding HouseRules.CookingRules}" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                    </Border>
+
+                                    <Border Grid.Row="1" Grid.Column="1" Padding="14" BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}" Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" StrokeShape="RoundRectangle 14" StrokeThickness="1">
+                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" VerticalOptions="Center">
+                                            <Label Grid.Column="0" FontFamily="{x:Static f:FluentUI.FontFamily}" FontSize="20" Text="{x:Static f:FluentUI.clock_20_regular}" TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" VerticalOptions="Center" />
+                                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                                <Label FontAttributes="Bold" FontSize="12" Text="Parking rules" TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                                <Label FontSize="13" LineHeight="1.35" Text="{Binding HouseRules.ParkingRules}" TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+
+                                <!-- Additional regulations (reliable VerticalStackLayout) -->
+                                <VerticalStackLayout IsVisible="{Binding HouseRules.HasAdditionalRules}" Spacing="6">
+                                    <Label
+                                        FontAttributes="Bold"
+                                        FontSize="12.5"
+                                        Text="Good to know"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding HouseRules.AdditionalRules}" Spacing="6">
+                                        <BindableLayout.ItemTemplate>
+                                            <DataTemplate x:DataType="x:String">
+                                                <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                                                    <Label
+                                                        FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                                        FontSize="14"
+                                                        Text="{x:Static f:FluentUI.checkmark_circle_16_regular}"
+                                                        TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                                        VerticalOptions="Center" />
+                                                    <Label
+                                                        FontSize="13"
+                                                        Text="{Binding .}"
+                                                        TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                                        VerticalOptions="Center" />
+                                                </HorizontalStackLayout>
+                                            </DataTemplate>
+                                        </BindableLayout.ItemTemplate>
+                                    </VerticalStackLayout>
+                                </VerticalStackLayout>
                             </VerticalStackLayout>
+
+                            <!-- Legacy Fallback Rules -->
+                            <VerticalStackLayout IsVisible="{Binding ShowLegacyHouseRulesFallback}" Spacing="8">
+                                <FlexLayout
+                                    AlignContent="Start"
+                                    BindableLayout.ItemsSource="{Binding Room.HouseRules}"
+                                    Direction="Row"
+                                    JustifyContent="Start"
+                                    Wrap="Wrap">
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate x:DataType="x:String">
+                                            <Border
+                                                Margin="0,0,8,8"
+                                                Padding="12,7"
+                                                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}"
+                                                Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                                StrokeShape="RoundRectangle 12"
+                                                StrokeThickness="1">
+                                                <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                                                    <Label
+                                                        FontFamily="{x:Static f:FluentUI.FontFamily}"
+                                                        FontSize="14"
+                                                        Text="{x:Static f:FluentUI.checkmark_circle_16_regular}"
+                                                        TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                                                        VerticalOptions="Center" />
+                                                    <Label
+                                                        FontSize="13"
+                                                        Text="{Binding .}"
+                                                        TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                                                        VerticalOptions="Center" />
+                                                </HorizontalStackLayout>
+                                            </Border>
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </FlexLayout>
+                            </VerticalStackLayout>
+
+                            <!-- Empty State -->
+                            <Label
+                                FontSize="13"
+                                IsVisible="{Binding ShowEmptyHouseRulesState}"
+                                Text="No house rules have been provided by the landlord yet."
+                                TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
                         </VerticalStackLayout>
                     </Border>
 
@@ -797,6 +1052,155 @@
                 </Button>
             </Grid>
         </Border>
+
+        <!-- House Rules Version History Overlay (US11 AC3) -->
+        <Grid
+            Grid.Row="0"
+            Grid.RowSpan="3"
+            IsVisible="{Binding IsHouseRulesHistoryVisible}"
+            ZIndex="20">
+            <BoxView Color="#80000000">
+                <BoxView.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding CloseHouseRulesHistoryCommand}" />
+                </BoxView.GestureRecognizers>
+            </BoxView>
+            <Border
+                Margin="{OnIdiom Phone='16,24', Tablet='24,32', Desktop='32,40'}"
+                BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                HorizontalOptions="{OnIdiom Phone=Fill, Tablet=Center, Desktop=Center}"
+                MaximumHeightRequest="560"
+                MaximumWidthRequest="580"
+                Padding="{OnIdiom Phone='18', Tablet='22', Desktop='24'}"
+                Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                StrokeShape="RoundRectangle 18"
+                StrokeThickness="1"
+                VerticalOptions="Center"
+                WidthRequest="{OnIdiom Phone=-1, Tablet=520, Desktop=560}">
+                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="12">
+                    <Label
+                        Grid.Row="0"
+                        FontAttributes="Bold"
+                        FontSize="17"
+                        Text="Past updates"
+                        TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+
+                    <ScrollView Grid.Row="1">
+                        <VerticalStackLayout Spacing="10">
+                            <ActivityIndicator IsRunning="{Binding IsLoadingHistory}" IsVisible="{Binding IsLoadingHistory}" />
+                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding HouseRulesHistory}" Spacing="10">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="models:HouseRulesVersionModel">
+                                        <Border
+                                            Padding="14"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource DesktopRailBackgroundDark}}"
+                                            Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                            StrokeShape="RoundRectangle 12"
+                                            StrokeThickness="1">
+                                            <VerticalStackLayout Spacing="4">
+                                                <HorizontalStackLayout Spacing="8">
+                                                    <Label FontAttributes="Bold" FontSize="13" Text="{Binding EditionLabel}" TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}" />
+                                                    <Label FontSize="12" Text="{Binding FormattedUpdatedAt}" TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                                                </HorizontalStackLayout>
+                                                <Label FontAttributes="Italic" FontSize="12" IsVisible="{Binding HasChangeNote}" Text="{Binding ChangeNote}" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+                                                <Label FontSize="12" Text="{Binding QuietHours, StringFormat='Quiet hours: {0}'}" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+                                                <Label FontSize="12" Text="{Binding GuestPolicy, StringFormat='Guests: {0}'}" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+                                                <Label FontSize="12" Text="{Binding CookingRules, StringFormat='Cooking: {0}'}" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+                                                <Label FontSize="12" Text="{Binding ParkingRules, StringFormat='Parking: {0}'}" TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+                                            </VerticalStackLayout>
+                                        </Border>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </ScrollView>
+
+                    <Button
+                        Grid.Row="2"
+                        Command="{Binding CloseHouseRulesHistoryCommand}"
+                        CornerRadius="12"
+                        Text="Close" />
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Edit House Rules Overlay (US11 AC3 - Landlord Only) -->
+        <Grid
+            Grid.Row="0"
+            Grid.RowSpan="3"
+            IsVisible="{Binding IsEditHouseRulesVisible}"
+            ZIndex="21">
+            <BoxView Color="#80000000">
+                <BoxView.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding CloseEditHouseRulesCommand}" />
+                </BoxView.GestureRecognizers>
+            </BoxView>
+            <Border
+                Margin="{OnIdiom Phone='16,24', Tablet='24,32', Desktop='32,40'}"
+                BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+                HorizontalOptions="{OnIdiom Phone=Fill, Tablet=Center, Desktop=Center}"
+                MaximumHeightRequest="520"
+                MaximumWidthRequest="480"
+                Padding="{OnIdiom Phone='16', Tablet='18', Desktop='20'}"
+                Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                StrokeShape="RoundRectangle 16"
+                StrokeThickness="1"
+                VerticalOptions="Center"
+                WidthRequest="{OnIdiom Phone=-1, Tablet=440, Desktop=460}">
+                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10">
+                    <Label
+                        Grid.Row="0"
+                        FontAttributes="Bold"
+                        FontSize="16"
+                        Text="Edit house rules"
+                        TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+
+                    <ScrollView Grid.Row="1" Padding="0,0,12,0">
+                        <VerticalStackLayout Spacing="6">
+                            <Label
+                                FontSize="12"
+                                IsVisible="{Binding HasHouseRulesEditError}"
+                                Text="{Binding HouseRulesEditError}"
+                                TextColor="Red" />
+
+                            <Label FontAttributes="Bold" FontSize="12" Text="Quiet hours *" />
+                            <Entry FontSize="13" HeightRequest="38" HorizontalOptions="Fill" Placeholder="e.g. 22:00 - 06:00" Text="{Binding EditQuietHours}" />
+
+                            <Label FontAttributes="Bold" FontSize="12" Text="Guest policy *" />
+                            <Entry FontSize="13" HeightRequest="38" HorizontalOptions="Fill" Placeholder="e.g. Guests allowed until 21:30" Text="{Binding EditGuestPolicy}" />
+
+                            <Label FontAttributes="Bold" FontSize="12" Text="Cooking rules *" />
+                            <Entry FontSize="13" HeightRequest="38" HorizontalOptions="Fill" Placeholder="e.g. Electric cooker allowed" Text="{Binding EditCookingRules}" />
+
+                            <Label FontAttributes="Bold" FontSize="12" Text="Parking rules *" />
+                            <Entry FontSize="13" HeightRequest="38" HorizontalOptions="Fill" Placeholder="e.g. Free 1 motorbike slot" Text="{Binding EditParkingRules}" />
+
+                            <Label FontAttributes="Bold" FontSize="12" Text="Additional rules (one per line)" />
+                            <Editor AutoSize="TextChanges" FontSize="13" HorizontalOptions="Fill" MinimumHeightRequest="56" Placeholder="Optional extra rules" Text="{Binding EditAdditionalRulesText}" />
+
+                            <Label FontAttributes="Bold" FontSize="12" Text="Change note (optional)" />
+                            <Entry FontSize="13" HeightRequest="38" HorizontalOptions="Fill" Placeholder="Describe what changed" Text="{Binding EditChangeNote}" />
+                        </VerticalStackLayout>
+                    </ScrollView>
+
+                    <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <Button
+                            Grid.Column="0"
+                            BackgroundColor="Transparent"
+                            Command="{Binding CloseEditHouseRulesCommand}"
+                            Text="Cancel"
+                            TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+                        <Button
+                            Grid.Column="1"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                            Command="{Binding SaveHouseRulesCommand}"
+                            CornerRadius="12"
+                            IsEnabled="{Binding CanSaveHouseRules}"
+                            Text="Save"
+                            TextColor="White" />
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
 
     </Grid>
 </ContentPage>

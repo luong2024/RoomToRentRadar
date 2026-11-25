@@ -40,6 +40,7 @@ public class RoomDetailModel
     public bool HasLastUpdated => LastUpdated.HasValue;
     public List<RoomAmenityModel> Amenities { get; set; } = [];
     public List<string> HouseRules { get; set; } = [];
+    public RoomHouseRulesModel? StructuredHouseRules { get; set; }
     public List<SimilarRoomModel> SimilarRooms { get; set; } = [];
 
     // Helper tính toán & định dạng

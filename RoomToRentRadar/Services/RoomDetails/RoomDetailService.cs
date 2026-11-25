@@ -33,6 +33,46 @@ public sealed class RoomDetailService : IRoomDetailService
         return detail?.SimilarRooms ?? [];
     }
 
+    public async Task<RoomHouseRulesModel?> GetHouseRulesAsync(string roomId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(roomId))
+        {
+            return null;
+        }
+
+        var endpoint = $"api/v1/rooms/{Uri.EscapeDataString(roomId.Trim())}/house-rules";
+        var dto = await _apiClient.GetAsync<RoomHouseRulesApiDto>(endpoint, cancellationToken);
+        return dto is null ? null : MapHouseRulesDto(dto);
+    }
+
+    public async Task<List<HouseRulesVersionModel>> GetHouseRulesHistoryAsync(string roomId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(roomId))
+        {
+            return [];
+        }
+
+        var endpoint = $"api/v1/rooms/{Uri.EscapeDataString(roomId.Trim())}/house-rules/versions";
+        var dtos = await _apiClient.GetAsync<List<HouseRulesVersionApiDto>>(endpoint, cancellationToken);
+        return (dtos ?? []).Select(MapVersionDto).ToList();
+    }
+
+    public async Task<RoomHouseRulesModel?> UpdateHouseRulesAsync(
+        string roomId,
+        UpdateHouseRulesApiRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(roomId))
+        {
+            return null;
+        }
+
+        ArgumentNullException.ThrowIfNull(request);
+        var endpoint = $"api/v1/rooms/{Uri.EscapeDataString(roomId.Trim())}/house-rules";
+        var dto = await _apiClient.PutAsync<UpdateHouseRulesApiRequest, RoomHouseRulesApiDto>(endpoint, request, cancellationToken);
+        return dto is null ? null : MapHouseRulesDto(dto);
+    }
+
     private static RoomDetailModel MapDtoToModel(RoomDetailApiDto dto)
     {
         var status = ParseStatus(dto.Status, dto.IsAvailable);
@@ -57,6 +97,7 @@ public sealed class RoomDetailService : IRoomDetailService
         ImageUrls = dto.ImageUrls ?? [],
         LandlordPhone = dto.LandlordPhone,
         HouseRules = dto.HouseRules ?? [],
+        StructuredHouseRules = dto.StructuredHouseRules is null ? null : MapHouseRulesDto(dto.StructuredHouseRules),
         Amenities = (dto.Amenities ?? []).Select(amenity => new RoomAmenityModel
         {
             Name = amenity,
@@ -110,4 +151,35 @@ public sealed class RoomDetailService : IRoomDetailService
         if (lower.Contains("security") || lower.Contains("camera") || lower.Contains("an ninh")) return "\uf6a4";
         return "\uf2c8";
     }
+
+    private static RoomHouseRulesModel MapHouseRulesDto(RoomHouseRulesApiDto dto) =>
+        new()
+        {
+            RoomId = dto.RoomId,
+            LandlordId = dto.LandlordId,
+            Version = dto.Version,
+            QuietHours = dto.QuietHours,
+            GuestPolicy = dto.GuestPolicy,
+            CookingRules = dto.CookingRules,
+            ParkingRules = dto.ParkingRules,
+            AdditionalRules = dto.AdditionalRules ?? [],
+            UpdatedAtUtc = dto.UpdatedAtUtc,
+            UpdatedByUserId = dto.UpdatedByUserId,
+            IsLegacyFallback = dto.IsLegacyFallback
+        };
+
+    private static HouseRulesVersionModel MapVersionDto(HouseRulesVersionApiDto dto) =>
+        new()
+        {
+            RoomId = dto.RoomId,
+            Version = dto.Version,
+            QuietHours = dto.QuietHours,
+            GuestPolicy = dto.GuestPolicy,
+            CookingRules = dto.CookingRules,
+            ParkingRules = dto.ParkingRules,
+            AdditionalRules = dto.AdditionalRules ?? [],
+            ChangeNote = dto.ChangeNote,
+            UpdatedAtUtc = dto.UpdatedAtUtc,
+            UpdatedByUserId = dto.UpdatedByUserId
+        };
 }

@@ -393,4 +393,194 @@ public class RoomDetailViewModelTests
             Assert.That(alerts[0].Cancel, Is.Null);
         });
     }
+
+    [Test]
+    public async Task LoadRoomDetails_WithStructuredHouseRules_ShouldPopulateRulesAndVersion()
+    {
+        var ownerId = Guid.NewGuid();
+        var fakeRoom = new RoomDetailModel
+        {
+            Id = "room-11",
+            Title = "Phòng trọ mới",
+            Status = ListingStatus.Available,
+            StructuredHouseRules = new RoomHouseRulesModel
+            {
+                RoomId = "room-11",
+                LandlordId = ownerId,
+                Version = 2,
+                QuietHours = "22:00 - 06:00",
+                GuestPolicy = "No overnight guests",
+                CookingRules = "Electric cooker only",
+                ParkingRules = "1 motorbike included",
+                AdditionalRules = ["No pets"],
+                IsLegacyFallback = false
+            }
+        };
+        _serviceMock.Setup(s => s.GetRoomDetailAsync("room-11", It.IsAny<CancellationToken>())).ReturnsAsync(fakeRoom);
+
+        _viewModel.RoomId = "room-11";
+        await _viewModel.LoadRoomDetailsAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_viewModel.HasStructuredHouseRules, Is.True);
+            Assert.That(_viewModel.HouseRulesVersionText, Is.EqualTo("v2"));
+            Assert.That(_viewModel.HouseRules!.QuietHours, Is.EqualTo("22:00 - 06:00"));
+        });
+    }
+
+    [Test]
+    public void CanEditHouseRules_ShouldBeTrueOnlyForOwnerLandlordOrAdmin()
+    {
+        var ownerId = Guid.NewGuid();
+        var otherId = Guid.NewGuid();
+
+        _viewModel.Room = new RoomDetailModel { Id = "room-11", Status = ListingStatus.Available };
+        _viewModel.HouseRules = new RoomHouseRulesModel { RoomId = "room-11", LandlordId = ownerId, Version = 1 };
+
+        _sessionServiceMock.SetupGet(s => s.CurrentUser).Returns(new RoomToRentRadar.Core.Models.Authentication.AuthUser(ownerId, "s@ictu.edu.vn", "STUDENT", "local", true));
+        Assert.That(_viewModel.CanEditHouseRules, Is.False);
+
+        _sessionServiceMock.SetupGet(s => s.CurrentUser).Returns(new RoomToRentRadar.Core.Models.Authentication.AuthUser(otherId, "l2@ictu.edu.vn", "LANDLORD", "local", true));
+        Assert.That(_viewModel.CanEditHouseRules, Is.False);
+
+        _sessionServiceMock.SetupGet(s => s.CurrentUser).Returns(new RoomToRentRadar.Core.Models.Authentication.AuthUser(ownerId, "l1@ictu.edu.vn", "LANDLORD", "local", true));
+        Assert.That(_viewModel.CanEditHouseRules, Is.True);
+
+        _sessionServiceMock.SetupGet(s => s.CurrentUser).Returns(new RoomToRentRadar.Core.Models.Authentication.AuthUser(otherId, "admin@ictu.edu.vn", "ADMIN", "local", true));
+        Assert.That(_viewModel.CanEditHouseRules, Is.True);
+    }
+
+    [Test]
+    public async Task SaveHouseRules_WhenMissingRequiredField_ShouldSetErrorWithoutCallingService()
+    {
+        var ownerId = Guid.NewGuid();
+        _sessionServiceMock.SetupGet(s => s.CurrentUser).Returns(new RoomToRentRadar.Core.Models.Authentication.AuthUser(ownerId, "l@ictu.edu.vn", "LANDLORD", "local", true));
+        _viewModel.Room = new RoomDetailModel { Id = "room-11", Status = ListingStatus.Available };
+        _viewModel.HouseRules = new RoomHouseRulesModel { RoomId = "room-11", LandlordId = ownerId, Version = 1 };
+
+        _viewModel.EditQuietHours = "";
+        _viewModel.EditGuestPolicy = "Allowed";
+        _viewModel.EditCookingRules = "Allowed";
+        _viewModel.EditParkingRules = "1 bike";
+
+        await _viewModel.SaveHouseRulesAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_viewModel.HasHouseRulesEditError, Is.True);
+            _serviceMock.Verify(s => s.UpdateHouseRulesAsync(It.IsAny<string>(), It.IsAny<UpdateHouseRulesApiRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+        });
+    }
+
+    [Test]
+    public async Task SaveHouseRules_WhenValid_ShouldUpdateHouseRulesAndVersion()
+    {
+        var ownerId = Guid.NewGuid();
+        _sessionServiceMock.SetupGet(s => s.CurrentUser).Returns(new RoomToRentRadar.Core.Models.Authentication.AuthUser(ownerId, "l@ictu.edu.vn", "LANDLORD", "local", true));
+
+        var vm = new RoomDetailViewModel(
+            _serviceMock.Object,
+            _errorHandlerMock.Object,
+            _sessionServiceMock.Object,
+            displayAlertAsync: (_, _, _, _) => Task.FromResult(true))
+        {
+            Room = new RoomDetailModel { Id = "room-11", Status = ListingStatus.Available },
+            HouseRules = new RoomHouseRulesModel { RoomId = "room-11", LandlordId = ownerId, Version = 1 }
+        };
+
+        vm.EditQuietHours = "23:00 - 06:00";
+        vm.EditGuestPolicy = "Until 22:00";
+        vm.EditCookingRules = "Electric only";
+        vm.EditParkingRules = "1 bike";
+        vm.EditAdditionalRulesText = "No pets";
+        vm.EditChangeNote = "Updated quiet hours";
+
+        var updatedModel = new RoomHouseRulesModel
+        {
+            RoomId = "room-11",
+            LandlordId = ownerId,
+            Version = 2,
+            QuietHours = "23:00 - 06:00",
+            GuestPolicy = "Until 22:00",
+            CookingRules = "Electric only",
+            ParkingRules = "1 bike",
+            AdditionalRules = ["No pets"],
+            IsLegacyFallback = false
+        };
+
+        _serviceMock
+            .Setup(s => s.UpdateHouseRulesAsync("room-11", It.Is<UpdateHouseRulesApiRequest>(r => r.ExpectedVersion == 1), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(updatedModel);
+
+        await vm.SaveHouseRulesAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(vm.HouseRules!.Version, Is.EqualTo(2));
+            Assert.That(vm.HouseRulesVersionText, Is.EqualTo("v2"));
+            Assert.That(vm.IsEditHouseRulesVisible, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task OpenHouseRulesHistory_ShouldLoadVersions()
+    {
+        _viewModel.Room = new RoomDetailModel { Id = "room-11", Status = ListingStatus.Available };
+        _serviceMock.Setup(s => s.GetHouseRulesHistoryAsync("room-11", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new HouseRulesVersionModel { RoomId = "room-11", Version = 2, QuietHours = "23:00" },
+                new HouseRulesVersionModel { RoomId = "room-11", Version = 1, QuietHours = "22:00" }
+            ]);
+
+        await _viewModel.OpenHouseRulesHistoryAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_viewModel.IsHouseRulesHistoryVisible, Is.True);
+            Assert.That(_viewModel.HasHouseRulesHistory, Is.True);
+            Assert.That(_viewModel.HouseRulesHistory, Has.Count.EqualTo(2));
+        });
+    }
+
+    [Test]
+    public void CurrentUserChanged_ShouldNotifyCanEditHouseRules()
+    {
+        var changedProps = new List<string?>();
+        _viewModel.PropertyChanged += (_, e) => changedProps.Add(e.PropertyName);
+
+        _sessionServiceMock.Raise(
+            s => s.CurrentUserChanged += null,
+            _sessionServiceMock.Object,
+            new RoomToRentRadar.Core.Models.Authentication.AuthUser(Guid.NewGuid(), "l@ictu.edu.vn", "LANDLORD", "local", true));
+
+        Assert.That(changedProps, Does.Contain(nameof(RoomDetailViewModel.CanEditHouseRules)));
+    }
+
+    [Test]
+    public async Task SaveHouseRules_WhenConflict409Occurs_ShouldShowFriendlyErrorWithoutDoublePopup()
+    {
+        var ownerId = Guid.NewGuid();
+        _sessionServiceMock.SetupGet(s => s.CurrentUser).Returns(new RoomToRentRadar.Core.Models.Authentication.AuthUser(ownerId, "l@ictu.edu.vn", "LANDLORD", "local", true));
+        _viewModel.Room = new RoomDetailModel { Id = "room-11", Status = ListingStatus.Available };
+        _viewModel.HouseRules = new RoomHouseRulesModel { RoomId = "room-11", LandlordId = ownerId, Version = 1 };
+
+        _viewModel.EditQuietHours = "23:00";
+        _viewModel.EditGuestPolicy = "Allowed";
+        _viewModel.EditCookingRules = "Allowed";
+        _viewModel.EditParkingRules = "1 bike";
+
+        _serviceMock
+            .Setup(s => s.UpdateHouseRulesAsync("room-11", It.IsAny<UpdateHouseRulesApiRequest>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("409 Conflict"));
+
+        await _viewModel.SaveHouseRulesAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_viewModel.HasHouseRulesEditError, Is.True);
+            Assert.That(_viewModel.HouseRulesEditError, Does.Contain("another session"));
+            _errorHandlerMock.Verify(e => e.HandleError(It.IsAny<Exception>()), Times.Never);
+        });
+    }
 }

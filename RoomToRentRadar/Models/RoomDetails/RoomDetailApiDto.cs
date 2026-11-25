@@ -23,6 +23,7 @@ public class RoomDetailApiDto
     public int? Bathrooms { get; set; }
     public List<string> Amenities { get; set; } = [];
     public List<string> HouseRules { get; set; } = [];
+    public RoomHouseRulesApiDto? StructuredHouseRules { get; set; }
     public string LandlordPhone { get; set; } = string.Empty;
     public DateTime? LastUpdatedDate { get; set; }
     public bool IsVerified { get; set; }

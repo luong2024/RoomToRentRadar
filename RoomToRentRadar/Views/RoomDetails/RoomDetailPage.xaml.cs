@@ -9,4 +9,24 @@ public partial class RoomDetailPage : ContentPage
         InitializeComponent();
         BindingContext = viewModel;
     }
+
+    protected override bool OnBackButtonPressed()
+    {
+        if (BindingContext is RoomDetailViewModel vm)
+        {
+            if (vm.IsEditHouseRulesVisible)
+            {
+                vm.CloseEditHouseRulesCommand.Execute(null);
+                return true;
+            }
+
+            if (vm.IsHouseRulesHistoryVisible)
+            {
+                vm.CloseHouseRulesHistoryCommand.Execute(null);
+                return true;
+            }
+        }
+
+        return base.OnBackButtonPressed();
+    }
 }
