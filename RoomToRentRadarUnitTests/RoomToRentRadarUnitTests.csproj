@@ -38,6 +38,9 @@
     <Compile Include="..\RoomToRentRadar\Services\MockSpatialSearchService.cs" Link="Linked\Services\MockSpatialSearchService.cs" />
     <Compile Include="..\RoomToRentRadar\PageModels\MapSearchViewModel.cs" Link="Linked\PageModels\MapSearchViewModel.cs" />
     <Compile Include="..\RoomToRentRadar\Services\IFavouritesService.cs" Link="Linked\Services\IFavouritesService.cs" />
+    <Compile Include="..\RoomToRentRadar\Models\Contracts\FavouriteContracts.cs" Link="Linked\Models\Contracts\FavouriteContracts.cs" />
+    <Compile Include="..\RoomToRentRadar\Services\MockFavouritesService.cs" Link="Linked\Services\MockFavouritesService.cs" />
+    <Compile Include="..\RoomToRentRadar\PageModels\FavouritesViewModel.cs" Link="Linked\PageModels\FavouritesViewModel.cs" />
   </ItemGroup>
 
 </Project>
