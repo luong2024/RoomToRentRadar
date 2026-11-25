@@ -76,9 +76,11 @@ public sealed class AuthService(
             return null;
         }
 
-        var (token, tokenHash) = tokenGenerator.Create();
         var now = DateTime.UtcNow;
         var expiresAt = now.Add(SessionLifetime);
+        var (token, tokenHash) = tokenGenerator.Create(
+            new AuthTokenSubject(user.Id, user.Email, user.DisplayName, user.Role),
+            expiresAt);
 
         await authSessionRepository.AddAsync(
             new AuthSession

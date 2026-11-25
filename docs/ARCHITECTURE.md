@@ -177,7 +177,8 @@ root (`AddDataAccess`, `AddUseCases`, `AddInfrastructure`).
 ### 4.4 Authentication and roles
 
 - `POST /api/v1/auth/register` is public and accepts `student` or `landlord` only; admin accounts are provisioned by the system (demo seed / configuration), never self-registered.
-- `POST /api/v1/auth/login` issues an opaque server-side session token (32 random bytes, stored as a SHA-256 hash, 7-day expiry). The bearer handler resolves it to claims on every request. Session tokens are chosen over JWT so logout revokes access immediately.
+- `POST /api/v1/auth/login` issues an HS256-signed JWT access token (7-day expiry) carrying the user id, email, display name and role claims. The JwtBearer handler validates signature, issuer, audience and lifetime on every request. Each token is bound to a server-side `auth_sessions` row (stored as a SHA-256 hash) that is checked after signature validation, so logout still revokes access immediately.
+- The signing key comes from `Auth:Token:SigningKey` (user-secrets or the `Auth__Token__SigningKey` environment variable). Missing keys fail startup outside Development; Development falls back to a per-process key.
 - Role wire values are `student`, `landlord`, `moderator` and `admin`; the token's role claim drives `ModeratorOrAdmin` RBAC.
 - Passwords are stored as PBKDF2-SHA256 (100k iterations, 16-byte salt, fixed-time comparison).
 

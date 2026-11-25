@@ -21,14 +21,25 @@ public sealed class UserRepository(AppDbContext dbContext) : IUserRepository
             await dbContext.SaveChangesAsync(cancellationToken);
             return true;
         }
-        catch (DbUpdateException exception) when (IsDuplicateEmail(exception, user))
+        catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception, user))
         {
             dbContext.Entry(user).State = EntityState.Detached;
-            return false;
+
+            // SQLite does not name the violated unique index, so confirm the email is the
+            // conflicting column and let any other unique violation surface as a 500.
+            var emailTaken = await dbContext.Users.AsNoTracking().AnyAsync(
+                existing => existing.Email == user.Email,
+                cancellationToken);
+            if (emailTaken)
+            {
+                return false;
+            }
+
+            throw;
         }
     }
 
-    private static bool IsDuplicateEmail(DbUpdateException exception, User user)
+    private static bool IsUniqueConstraintViolation(DbUpdateException exception, User user)
         => exception.InnerException is SqliteException { SqliteErrorCode: 19, SqliteExtendedErrorCode: 2067 }
             && exception.Entries.Any(entry => ReferenceEquals(entry.Entity, user));
 }

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RoomToRentRadar.Ports.Inbound;
@@ -93,14 +94,12 @@ public sealed class AuthController(
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
     public async Task<IActionResult> Logout(CancellationToken cancellationToken)
     {
-        var token = Request.Headers.Authorization.ToString();
-        const string bearerPrefix = "Bearer ";
-        if (token.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
+        var token = await HttpContext.GetTokenAsync("access_token");
+        if (!string.IsNullOrEmpty(token))
         {
-            token = token[bearerPrefix.Length..].Trim();
+            await authUseCase.LogoutAsync(token, cancellationToken);
         }
 
-        await authUseCase.LogoutAsync(token, cancellationToken);
         return NoContent();
     }
 

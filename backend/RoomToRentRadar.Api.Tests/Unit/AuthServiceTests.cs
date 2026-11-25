@@ -113,7 +113,8 @@ public sealed class AuthServiceTests
         var repository = new FakeUserRepository { ExistingUser = user };
         var hasher = new FakePasswordHasher { VerifyResult = true };
         var sessions = new FakeAuthSessionRepository();
-        var service = CreateService(repository, new FakeUnitOfWork(), hasher, sessions);
+        var tokens = new FakeTokenGenerator();
+        var service = CreateService(repository, new FakeUnitOfWork(), hasher, sessions, tokens);
 
         var result = await service.LoginAsync("DEMO@example.test", "Password1", CancellationToken.None);
 
@@ -125,6 +126,11 @@ public sealed class AuthServiceTests
             Assert.That(hasher.DummyVerifyCount, Is.Zero);
             Assert.That(sessions.Added, Has.Count.EqualTo(1));
             Assert.That(sessions.Added[0].UserId, Is.EqualTo(user.Id));
+            Assert.That(sessions.Added[0].ExpiresAt, Is.EqualTo(tokens.ExpiresAt));
+            Assert.That(tokens.Subjects, Has.Count.EqualTo(1));
+            Assert.That(tokens.Subjects[0].UserId, Is.EqualTo(user.Id));
+            Assert.That(tokens.Subjects[0].Role, Is.EqualTo(UserRole.Student));
+            Assert.That(tokens.Subjects[0].Email, Is.EqualTo(user.Email));
         });
     }
 
@@ -132,12 +138,13 @@ public sealed class AuthServiceTests
         FakeUserRepository repository,
         FakeUnitOfWork unitOfWork,
         FakePasswordHasher? passwordHasher = null,
-        FakeAuthSessionRepository? authSessions = null)
+        FakeAuthSessionRepository? authSessions = null,
+        FakeTokenGenerator? tokenGenerator = null)
         => new(
             repository,
             authSessions ?? new FakeAuthSessionRepository(),
             passwordHasher ?? new FakePasswordHasher(),
-            new FakeTokenGenerator(),
+            tokenGenerator ?? new FakeTokenGenerator(),
             unitOfWork);
 
     private sealed class FakeUserRepository : IUserRepository
@@ -207,7 +214,16 @@ public sealed class AuthServiceTests
 
     private sealed class FakeTokenGenerator : ITokenGenerator
     {
-        public (string Token, string TokenHash) Create() => ("token", "token-hash");
+        public List<AuthTokenSubject> Subjects { get; } = [];
+
+        public DateTime? ExpiresAt { get; private set; }
+
+        public (string Token, string TokenHash) Create(AuthTokenSubject subject, DateTime expiresAt)
+        {
+            Subjects.Add(subject);
+            ExpiresAt = expiresAt;
+            return ("token", "token-hash");
+        }
 
         public string Hash(string token) => token;
     }

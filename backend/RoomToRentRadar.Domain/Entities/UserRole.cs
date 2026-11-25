@@ -16,7 +16,7 @@ public static class UserRoleWire
     public const string Moderator = "moderator";
     public const string Admin = "admin";
 
-    /// <summary>Roles a user can pick when registering. Admin accounts are provisioned.</summary>
+    /// <summary>Returns true when the role may be self-assigned at registration; admin accounts are provisioned.</summary>
     public static bool IsSelfService(UserRole role)
         => role is UserRole.Student or UserRole.Landlord;
 

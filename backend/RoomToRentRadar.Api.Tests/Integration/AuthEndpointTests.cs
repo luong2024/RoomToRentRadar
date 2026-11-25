@@ -65,6 +65,60 @@ public sealed class AuthEndpointTests
     }
 
     [Test]
+    public async Task Login_ReturnsSignedJwtWithUserClaims()
+    {
+        var login = await LoginAndReadAsync();
+
+        var segments = login.AccessToken.Split('.');
+        Assert.That(segments, Has.Length.EqualTo(3));
+
+        using var header = DecodeJwtSegment(segments[0]);
+        using var payload = DecodeJwtSegment(segments[1]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(header.RootElement.GetProperty("alg").GetString(), Is.EqualTo("HS256"));
+            Assert.That(payload.RootElement.GetProperty("iss").GetString(), Is.EqualTo("RoomToRentRadar.Api"));
+            Assert.That(payload.RootElement.GetProperty("aud").GetString(), Is.EqualTo("RoomToRentRadar"));
+            Assert.That(
+                payload.RootElement.GetProperty("sub").GetString(),
+                Is.EqualTo(TestUsersSeed.Id.ToString()));
+            Assert.That(payload.RootElement.GetProperty("role").GetString(), Is.EqualTo("student"));
+            Assert.That(
+                payload.RootElement.GetProperty("email").GetString(),
+                Is.EqualTo(TestUsersSeed.Email));
+        });
+    }
+
+    [Test]
+    public async Task ProtectedEndpoint_WithValidJwt_ReturnsOk()
+    {
+        var login = await LoginAndReadAsync();
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/favourites");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
+
+        var response = await _client.SendAsync(request);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+    }
+
+    [Test]
+    public async Task ProtectedEndpoint_WithTamperedJwt_ReturnsUnauthorizedProblem()
+    {
+        var login = await LoginAndReadAsync();
+        var segments = login.AccessToken.Split('.');
+        var signature = segments[2].ToCharArray();
+        signature[0] = signature[0] == 'A' ? 'B' : 'A';
+        segments[2] = new string(signature);
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/favourites");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", string.Join('.', segments));
+        var response = await _client.SendAsync(request);
+
+        await AssertProblemAsync(response, HttpStatusCode.Unauthorized, "unauthorized");
+    }
+
+    [Test]
     public async Task Login_IsCaseInsensitiveForEmail()
     {
         var response = await LoginAsync("DEMO@EXAMPLE.TEST", TestUsersSeed.Password);
@@ -260,12 +314,16 @@ public sealed class AuthEndpointTests
             CreateUser("race@example.test", hash, salt),
             CancellationToken.None);
         var storedCount = await dbContext.Users.CountAsync(user => user.Email == "race@example.test");
+        var addedEntries = dbContext.ChangeTracker
+            .Entries<User>()
+            .Count(entry => entry.State == EntityState.Added);
 
         Assert.Multiple(() =>
         {
             Assert.That(first, Is.True);
             Assert.That(second, Is.False);
             Assert.That(storedCount, Is.EqualTo(1));
+            Assert.That(addedEntries, Is.Zero);
         });
     }
 
@@ -305,6 +363,13 @@ public sealed class AuthEndpointTests
             Role = UserRole.Student,
             CreatedAt = DateTime.UtcNow
         };
+
+    private static JsonDocument DecodeJwtSegment(string segment)
+    {
+        var base64 = segment.Replace('-', '+').Replace('_', '/');
+        base64 = base64.PadRight(base64.Length + (4 - base64.Length % 4) % 4, '=');
+        return JsonDocument.Parse(Convert.FromBase64String(base64));
+    }
 
     private async Task<HttpResponseMessage> RegisterAsync(
         string email,
