@@ -6,9 +6,11 @@
              x:Class="RoomToRentRadar.Pages.Controls.Cards.RoomCardView"
              x:DataType="cards:RoomCardView">
 
-    <!-- Layout follows the approved design export (RoomCard.dc.html). -->
+    <!-- Layout follows the approved design export (RoomCard.dc.html).
+         Padding is set on every Border here: the app-wide Border style adds 15. -->
     <Border StrokeShape="RoundRectangle 14"
             StrokeThickness="1"
+            Padding="0"
             Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}">
         <Border.GestureRecognizers>
@@ -106,6 +108,7 @@
             <Border WidthRequest="48"
                     HeightRequest="48"
                     Margin="0,8,8,0"
+                    Padding="0"
                     HorizontalOptions="End"
                     VerticalOptions="Start"
                     StrokeThickness="0"

@@ -86,6 +86,7 @@
         <Border Grid.Column="2"
                 WidthRequest="48"
                 HeightRequest="48"
+                Padding="0"
                 StrokeThickness="1"
                 StrokeShape="RoundRectangle 12"
                 SemanticProperties.Description="{Binding MapDescription}"
