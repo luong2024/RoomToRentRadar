@@ -69,10 +69,19 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
     public bool IsContentVisible => !IsLoading && !HasError && !IsNotFound;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowUnavailableDebugPreview))]
     public partial bool IsAvailable { get; set; } = true;
 
     [ObservableProperty]
     public partial bool IsUnavailable { get; set; } = false;
+
+#if DEBUG
+    public bool IsDebugMode => true;
+#else
+    public bool IsDebugMode => false;
+#endif
+
+    public bool ShowUnavailableDebugPreview => IsDebugMode && IsAvailable;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsGuest))]
@@ -1068,6 +1077,9 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
         }
 #endif
     }
+
+    [RelayCommand]
+    public Task PreviewUnavailableDemoAsync() => SelectSimilarRoomAsync("seed-da-thue");
 
     [RelayCommand]
     public async Task SelectSimilarRoomAsync(string targetRoomId)

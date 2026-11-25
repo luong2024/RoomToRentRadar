@@ -22,6 +22,15 @@ public sealed class MockRoomGateway : IRoomGateway
     private const double MotorbikeSpeedKmPerHour = 30.0;
     private const double WalkingSpeedKmPerHour = 5.0;
 
+    // Mirrors the Rented demo seed row (seed-da-thue in RoomSeedData) for SCR-ROOM-01-UNAVAILABLE preview without polluting SampleRooms.All.
+    private static readonly SampleRoom RentedSeedRoom = new(
+        "seed-da-thue", "Nhà trọ đã thuê",
+        "Phòng đã cho thuê, chủ nhà chưa cập nhật trạng thái.",
+        RoomType.BoardingRoom, 1_400_000L, 1_400_000L, 17d, 2, Furnishing.Basic, new DateOnly(2026, 11, 1),
+        "Tổ 9", "Đồng Quang", "TP. Thái Nguyên", 21.5862, 105.8072,
+        3_500L, 50_000L, WaterPriceUnit.PerPerson, 100_000L, 50_000L, null,
+        true, new DateTime(2026, 11, 1, 8, 36, 0, DateTimeKind.Utc), new DateTime(2026, 11, 1, 8, 6, 0, DateTimeKind.Utc));
+
     public Task<PagedResult<RoomCardDto>> SearchRoomsAsync(RoomSearchRequest request, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -70,10 +79,10 @@ public sealed class MockRoomGateway : IRoomGateway
     public Task<RoomDetailDto> GetRoomDetailAsync(string roomId, string? campusId = null, CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
-        var room = FindRoom(roomId);
+        var (room, status) = FindDetailRoom(roomId);
         var campus = ResolveCampus(campusId);
         var detail = new RoomDetailDto(
-            room.Id, room.Title, room.Description, room.RoomType, ListingStatus.Available, true,
+            room.Id, room.Title, room.Description, room.RoomType, status, true,
             room.MonthlyRentVnd, room.DepositVnd, room.AreaM2, room.MaxOccupants, room.Furnishing, room.AvailableFrom,
             new AddressDto(room.AddressLine, room.Ward, room.District),
             new GeoPointDto(room.Latitude, room.Longitude),
@@ -101,7 +110,7 @@ public sealed class MockRoomGateway : IRoomGateway
     public Task<IReadOnlyList<RoomCardDto>> GetSimilarRoomsAsync(string roomId, string? campusId = null, CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
-        var room = FindRoom(roomId);
+        var (room, _) = FindDetailRoom(roomId);
         var campus = ResolveCampus(campusId);
         var similar = SampleRooms.All
             .Where(candidate => candidate.Id != room.Id)
@@ -117,7 +126,7 @@ public sealed class MockRoomGateway : IRoomGateway
 
     public Task<TravelTimesDto> GetRoomTravelTimesAsync(string roomId, string? campusId = null, CancellationToken ct = default)
     {
-        var room = FindRoom(roomId);
+        var (room, _) = FindDetailRoom(roomId);
         var campus = ResolveCampus(campusId);
         var distanceKm = Distance(campus, room);
         var distanceMeters = (int)Math.Round(distanceKm * 1000);
@@ -267,6 +276,11 @@ public sealed class MockRoomGateway : IRoomGateway
     private static SampleRoom FindRoom(string roomId) =>
         SampleRooms.Find(roomId)
             ?? throw new ApiException($"Room with ID '{roomId}' not found.", HttpStatusCode.NotFound, ProblemCodes.RoomNotFound);
+
+    private static (SampleRoom Room, ListingStatus Status) FindDetailRoom(string roomId) =>
+        string.Equals(roomId.Trim(), RentedSeedRoom.Id, StringComparison.Ordinal)
+            ? (RentedSeedRoom, ListingStatus.Rented)
+            : (FindRoom(roomId), ListingStatus.Available);
 
     private static double Distance(CampusDto campus, SampleRoom room) =>
         HaversineDistanceCalculator.CalculateDistanceKm(campus.Latitude, campus.Longitude, room.Latitude, room.Longitude);

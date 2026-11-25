@@ -620,6 +620,9 @@
   <data name="RoomDetail_BackToExplore" xml:space="preserve">
     <value>Back to Explore</value>
   </data>
+  <data name="RoomDetail_DebugPreviewUnavailable" xml:space="preserve">
+    <value>Debug: Preview unavailable room (Rented)</value>
+  </data>
 
   <!-- Placeholder screens (T00.15): shared PlaceholderPage titles, "Coming in" and id text -->
   <data name="Placeholder_ComingIn" xml:space="preserve">

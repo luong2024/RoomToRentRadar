@@ -240,6 +240,25 @@ public class MockRoomGatewayTests
     }
 
     [Test]
+    public async Task GetRoomDetailAsync_SeedRentedRoom_ReturnsRentedStatusAndSimilarRooms()
+    {
+        var seed = RoomSeedData.CreateRooms().Single(r => r.Id == "seed-da-thue");
+
+        var detail = await _gateway.GetRoomDetailAsync("seed-da-thue");
+        var similar = await _gateway.GetSimilarRoomsAsync("seed-da-thue");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(detail.Id, Is.EqualTo(seed.Id));
+            Assert.That(detail.Title, Is.EqualTo(seed.Title));
+            Assert.That(detail.Status, Is.EqualTo(ListingStatus.Rented));
+            Assert.That(detail.MonthlyRentVnd, Is.EqualTo(seed.MonthlyRentVnd));
+            Assert.That(similar, Is.Not.Empty);
+            Assert.That(similar.All(c => c.Status == ListingStatus.Available), Is.True);
+        });
+    }
+
+    [Test]
     public void GetRoomDetailAsync_UnknownRoom_ThrowsApiExceptionRoomNotFound()
     {
         var ex = Assert.ThrowsAsync<ApiException>(async () => await _gateway.GetRoomDetailAsync("does-not-exist"));

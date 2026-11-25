@@ -621,6 +621,9 @@
   <data name="RoomDetail_BackToExplore" xml:space="preserve">
     <value>Quay lại Khám phá</value>
   </data>
+  <data name="RoomDetail_DebugPreviewUnavailable" xml:space="preserve">
+    <value>Debug: Xem thử phòng đã thuê (Ảnh 2)</value>
+  </data>
 
   <!-- Placeholder screens (T00.15): shared PlaceholderPage titles, "Coming in" and id text -->
   <data name="Placeholder_ComingIn" xml:space="preserve">

@@ -925,6 +925,21 @@ public class RoomDetailPageModelTests
     }
 
     [Test]
+    public async Task PreviewUnavailableDemoAsync_NavigatesToRentedSeedRoom()
+    {
+        string? capturedRoute = null;
+        _sut.NavigateOverride = route =>
+        {
+            capturedRoute = route;
+            return Task.CompletedTask;
+        };
+
+        await _sut.PreviewUnavailableDemoAsync();
+
+        Assert.That(capturedRoute, Is.EqualTo("roomdetail?roomId=seed-da-thue&campusId=ictu"));
+    }
+
+    [Test]
     public void IsGuest_WhenSignedInChanges_UpdatesCorrectly()
     {
         // Assert initial guest state

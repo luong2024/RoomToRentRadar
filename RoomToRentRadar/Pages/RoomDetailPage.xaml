@@ -197,6 +197,25 @@
                             <!-- Landlord Block & Report Listing Action -->
                             <detail:LandlordBlockControl IsVisible="{Binding IsAvailable}" />
 
+                            <!-- Debug-only quick jump to SCR-ROOM-01-UNAVAILABLE (seed-da-thue) for QA/UAT -->
+                            <Border IsVisible="{Binding ShowUnavailableDebugPreview}"
+                                    StrokeShape="RoundRectangle 8"
+                                    StrokeThickness="1"
+                                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
+                                    HeightRequest="48"
+                                    Padding="12,0">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding PreviewUnavailableDemoCommand}" />
+                                </Border.GestureRecognizers>
+                                <Label Text="{loc:LocalizedStrings RoomDetail_DebugPreviewUnavailable}"
+                                       FontFamily="{StaticResource FontFamilySemibold}"
+                                       FontSize="{StaticResource FontSizeBodyMedium}"
+                                       TextColor="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}"
+                                       HorizontalTextAlignment="Center"
+                                       VerticalTextAlignment="Center" />
+                            </Border>
+
                         </VerticalStackLayout>
                     </VerticalStackLayout>
                 </ScrollView>
