@@ -34,7 +34,8 @@ public class HttpGatewayStubsTests
     private static readonly MethodInfo[] GatewayMethods =
         GatewayInterfaces.SelectMany(t => t.GetMethods()).ToArray();
 
-    private static readonly string[] RealOperationIds = ["searchRooms", "listCampuses", "getRoomDetail", "getSimilarRooms"];
+    private static readonly string[] RealOperationIds =
+        ["searchRooms", "listCampuses", "getRoomDetail", "getSimilarRooms", "getRoomTravelTimes"];
 
     private static IEnumerable<TestCaseData> StubCases() =>
         GatewayMethods
@@ -72,7 +73,7 @@ public class HttpGatewayStubsTests
     {
         var stubMethods = GatewayMethods.Where(m => !RealOperationIds.Contains(OperationId(m))).ToArray();
         Assert.That(GatewayMethods, Has.Length.EqualTo(50));
-        Assert.That(stubMethods, Has.Length.EqualTo(46));
+        Assert.That(stubMethods, Has.Length.EqualTo(45));
         foreach (var method in stubMethods)
         {
             var task = InvokeWithDefaultArgs(method);
@@ -87,6 +88,7 @@ public class HttpGatewayStubsTests
             "/api/campuses" => Json(Array.Empty<CampusDto>()),
             "/api/rooms/room-1" => Json(SampleRoomDetail()),
             "/api/rooms/room-1/similar" => Json(Array.Empty<RoomCardDto>()),
+            "/api/rooms/room-1/travel-times" => Json(new TravelTimesDto("ICTU", 0.5, false, [])),
             _ => new HttpResponseMessage(HttpStatusCode.NotFound)
         });
         using var client = new HttpClient(stub) { BaseAddress = new Uri("http://localhost") };
@@ -95,15 +97,18 @@ public class HttpGatewayStubsTests
         var campuses = await new HttpCampusGateway(client).ListCampusesAsync();
         var detail = await new HttpRoomGateway(client).GetRoomDetailAsync("room-1");
         var similar = await new HttpRoomGateway(client).GetSimilarRoomsAsync("room-1");
+        var travelTimes = await new HttpRoomGateway(client).GetRoomTravelTimesAsync("room-1");
 
         Assert.That(page.TotalCount, Is.EqualTo(0));
         Assert.That(campuses, Is.Empty);
         Assert.That(detail.Id, Is.EqualTo("room-1"));
         Assert.That(similar, Is.Empty);
+        Assert.That(travelTimes.CampusId, Is.EqualTo("ICTU"));
         Assert.That(stub.CountForPath("/api/rooms"), Is.EqualTo(1));
         Assert.That(stub.CountForPath("/api/campuses"), Is.EqualTo(1));
         Assert.That(stub.CountForPath("/api/rooms/room-1"), Is.EqualTo(1));
         Assert.That(stub.CountForPath("/api/rooms/room-1/similar"), Is.EqualTo(1));
+        Assert.That(stub.CountForPath("/api/rooms/room-1/travel-times"), Is.EqualTo(1));
     }
 
     [Test]
