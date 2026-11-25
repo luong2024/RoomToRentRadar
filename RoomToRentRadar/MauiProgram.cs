@@ -99,6 +99,22 @@ namespace RoomToRentRadar
             builder.Services.AddSingleton<SearchFilterViewModel>();
             builder.Services.AddTransient<FilterBottomSheet>();
 
+            // US08 / T08.1: Landlord Listing Creation API + Mock Fallback + CreateListingViewModel/Page
+            builder.Services
+                .AddRefitClient<ILandlordListingApiService>()
+                .ConfigureHttpClient(client =>
+                {
+                    var baseUrl = DeviceInfo.Platform == DevicePlatform.Android
+                        ? "http://10.0.2.2:5000"
+                        : "http://localhost:5000";
+                    client.BaseAddress = new Uri(baseUrl);
+                    client.Timeout = TimeSpan.FromSeconds(5);
+                });
+            builder.Services.AddSingleton<MockLandlordListingService>();
+            builder.Services.AddSingleton<ILandlordListingService, LandlordListingService>();
+            builder.Services.AddTransient<CreateListingViewModel>();
+            builder.Services.AddTransient<CreateListingPage>();
+
             return builder.Build();
         }
     }
