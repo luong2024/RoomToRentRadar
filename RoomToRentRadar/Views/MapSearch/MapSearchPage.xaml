@@ -17,16 +17,15 @@
                   HorizontalOptions="Fill"
                   VerticalOptions="Fill" />
 
-        <!-- Layer 1: GraphicsView capturing freehand touch draw or anchor drag in edit mode -->
+        <!-- Shared boundary preview and touch canvas -->
         <GraphicsView x:Name="CanvasView"
-                      IsVisible="{Binding IsInteractingMode}"
-                      InputTransparent="False"
+                      IsVisible="False"
+                      InputTransparent="True"
                       StartInteraction="OnCanvasStart"
                       DragInteraction="OnCanvasDrag"
                       EndInteraction="OnCanvasEnd"
                       HorizontalOptions="Fill"
-                      VerticalOptions="Fill"
-                      BackgroundColor="#0A2563EB" />
+                      VerticalOptions="Fill" />
 
         <!-- ============================================================== -->
         <!-- FLOATING TOP BAR (Modern White Card with Shadow & Back Button) -->
