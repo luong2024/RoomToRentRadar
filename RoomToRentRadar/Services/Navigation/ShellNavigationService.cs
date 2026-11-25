@@ -36,6 +36,11 @@ public sealed class ShellNavigationService : INavigationService
         return GoToRegisterAsync();
     }
 
+    public Task GoToOtpVerificationAsync(Guid challengeId, string email)
+        => NavigateAsync(
+            $"{AppRoutes.OtpVerification}?challenge_id={challengeId}&email={Uri.EscapeDataString(email)}",
+            DefaultAnimate);
+
     public Task GoToRoleRootAsync(AppUserRole? role)
         => RunNavigationAsync(async shell =>
         {
@@ -43,12 +48,21 @@ public sealed class ShellNavigationService : INavigationService
             if (shell is AppShell appShell)
             {
                 appShell.PrepareRoleTabsForNavigation(role);
-                await shell.GoToAsync(route, animate: false);
-                appShell.FinalizeRoleTabs(role);
             }
-            else
+
+            // Auth pages are pushed on top of the tab that opened them; drop them so
+            // returning to that tab shows its root instead of the sign-in pipeline.
+            var sectionNavigation = shell.CurrentItem?.CurrentItem?.Navigation;
+            if (sectionNavigation is { } navigation && navigation.NavigationStack.Count > 1)
             {
-                await shell.GoToAsync(route, animate: false);
+                await navigation.PopToRootAsync(animated: false);
+            }
+
+            await shell.GoToAsync(route, animate: false);
+
+            if (shell is AppShell completedShell)
+            {
+                completedShell.FinalizeRoleTabs(role);
             }
         });
 

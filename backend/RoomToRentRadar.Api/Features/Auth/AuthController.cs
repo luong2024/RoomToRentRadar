@@ -39,11 +39,12 @@ public sealed class AuthController(
 
     [HttpPost("register")]
     [EnableRateLimiting(AuthRateLimitPolicy.Name)]
-    [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status201Created, "application/json")]
+    [ProducesResponseType(typeof(RegisterChallengeResponse), StatusCodes.Status202Accepted, "application/json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict, "application/problem+json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests, "application/problem+json")]
-    public async Task<ActionResult<RegisterResponse>> Register(
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway, "application/problem+json")]
+    public async Task<ActionResult<RegisterChallengeResponse>> Register(
         [FromBody] RegisterRequest request,
         CancellationToken cancellationToken)
     {
@@ -52,18 +53,49 @@ public sealed class AuthController(
             return ToProblem(validationProblem!);
         }
 
-        var result = await authUseCase.RegisterAsync(command, cancellationToken);
-        if (result.Outcome == RegisterUserOutcome.EmailAlreadyRegistered)
+        var result = await authUseCase.BeginRegistrationAsync(command, cancellationToken);
+        return result.Outcome switch
         {
-            return ToProblem(AuthProblemFactory.EmailAlreadyRegisteredProblem());
+            BeginRegistrationOutcome.EmailAlreadyRegistered
+                => ToProblem(AuthProblemFactory.EmailAlreadyRegisteredProblem()),
+            BeginRegistrationOutcome.RoleNotAllowed
+                => ToProblem(AuthProblemFactory.InvalidRoleProblem()),
+            BeginRegistrationOutcome.EmailDeliveryFailed
+                => ToProblem(AuthProblemFactory.EmailDeliveryFailedProblem()),
+            _ => Accepted(result.Response)
+        };
+    }
+
+    [HttpPost("register/verify")]
+    [EnableRateLimiting(AuthRateLimitPolicy.VerifyName)]
+    [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK, "application/json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests, "application/problem+json")]
+    public async Task<ActionResult<LoginResponse>> VerifyRegistration(
+        [FromBody] VerifyRegistrationRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!RegistrationValidator.TryCreate(request, out var command, out var validationProblem))
+        {
+            return ToProblem(validationProblem!);
         }
 
-        if (result.Outcome == RegisterUserOutcome.RoleNotAllowed)
+        var result = await authUseCase.VerifyRegistrationAsync(command, cancellationToken);
+        if (result.Outcome == VerifyRegistrationOutcome.Verified)
         {
-            return ToProblem(AuthProblemFactory.InvalidRoleProblem());
+            return Ok(result.Response);
         }
 
-        return StatusCode(StatusCodes.Status201Created, result.Response);
+        var problem = result.Outcome switch
+        {
+            VerifyRegistrationOutcome.ChallengeExpired => AuthProblemFactory.ExpiredOtpChallengeProblem(),
+            VerifyRegistrationOutcome.InvalidCode => AuthProblemFactory.InvalidOtpProblem(result.AttemptsRemaining),
+            VerifyRegistrationOutcome.AttemptsExceeded => AuthProblemFactory.OtpAttemptsExceededProblem(),
+            VerifyRegistrationOutcome.EmailAlreadyRegistered => AuthProblemFactory.EmailAlreadyRegisteredProblem(),
+            _ => AuthProblemFactory.InvalidOtpChallengeProblem()
+        };
+        return ToProblem(problem);
     }
 
     [HttpPost("login")]
@@ -77,9 +109,9 @@ public sealed class AuthController(
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.Email)
-            || request.Email.Length > AuthLimits.EmailMaxLength
+            || request.Email.Length > AccountRules.EmailMaxLength
             || string.IsNullOrWhiteSpace(request.Password)
-            || request.Password.Length > AuthLimits.PasswordMaxLength)
+            || request.Password.Length > AccountRules.PasswordMaxLength)
         {
             return ToProblem(AuthProblemFactory.InvalidLoginRequestProblem());
         }

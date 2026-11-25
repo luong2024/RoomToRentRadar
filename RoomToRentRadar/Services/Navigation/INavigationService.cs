@@ -12,6 +12,8 @@ public interface INavigationService
 
     Task GoToRegisterAsync(AppUserRole? initialRole) => GoToRegisterAsync();
 
+    Task GoToOtpVerificationAsync(Guid challengeId, string email) => Task.CompletedTask;
+
     /// <summary>Navigates to the home tab for the signed-in role.</summary>
     Task GoToRoleRootAsync(AppUserRole? role);
 

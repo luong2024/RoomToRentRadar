@@ -97,7 +97,9 @@ Create a folder only when it contains code. Do not add empty layers.
 - Routes are declared in `AppRoutes` (`Constants/`) and registered in the `AppShell` constructor
   when they are not root shell content.
 - Pass parameters to the ViewModel with `IQueryAttributable`, not to the page.
-- After sign-in or registration the app calls `INavigationService.GoToRoleRootAsync(role)`:
+- Registration is two-step on the client too: `RegisterPage` starts the challenge and navigates to
+  `OtpVerificationPage` with the challenge id and email. After sign-in or a verified registration the
+  app calls `INavigationService.GoToRoleRootAsync(role)`:
   Student → `//home`, Landlord → `//my-listings`, Moderator/Admin → `//moderation`.
 - `AppShell` shows the `MyListings` tab only for Landlord and the `Moderation` tab only for
   Moderator/Admin. It observes `AuthService.SessionChanged` and only touches tab visibility on the
@@ -139,7 +141,7 @@ backend/
 ├── RoomToRentRadar.SqliteDataAccess/  EF Core adapter: AppDbContext, configurations, migrations,
 │                                      repositories, seeding; references Domain + Ports + Shared
 ├── RoomToRentRadar.Infrastructure/    External adapters: photo storage/processing, tokens, routing,
-│                                      background worker; references Ports
+│                                      background worker; references Ports + Shared
 └── RoomToRentRadar.Api/               Inbound HTTP adapter + composition root
     ├── Features/<Feature>/            Controllers, request validators, ProblemDetails factories
     ├── Configuration/                 MVC/JSON, OpenAPI, CORS and reverse-proxy extensions
@@ -161,8 +163,9 @@ root (`AddDataAccess`, `AddUseCases`, `AddInfrastructure`).
 - Validation limits (max lengths, upload caps) live once in `Ports/Models/<Area>` (for example
   `ListingLimits`, `PhotoUploadLimits`) and are shared by API validators and EF configurations.
   `Shared/Auth/AccountRules` is the deliberate exception: the mobile client cannot reference
-  `Ports`, so registration limits live in `Shared` and are shared by the API validator and the
-  mobile form.
+  `Ports`, so every registration limit (email/display name/password lengths, OTP length, lifetime,
+  attempts and the hash/salt column lengths) lives in `Shared` and is shared by the API validator,
+  EF configurations and the mobile form.
 - Multi-write operations use `IUnitOfWork.BeginTransactionAsync`; the port exposes
   `CommitAsync` and async disposal so use cases stay storage-agnostic.
 
@@ -192,11 +195,30 @@ root (`AddDataAccess`, `AddUseCases`, `AddInfrastructure`).
   `UserRoleWire` values live once in `Shared/Auth` (like `ListingStatus`); the `users` CHECK
   constraint, EF converters, the token role claim, `AccountRules` and the mobile `AppUserRoleWire`
   all derive from that single source.
-- `POST /api/v1/auth/register` creates self-service accounts for `student` and `landlord` only;
-  moderator and admin accounts are provisioned out of band. `RegistrationValidator`/`AuthLimits`
-  validate email format/length, display name length and a password of 8-128 characters containing
-  letters and digits. Duplicate emails return 409 `email_already_registered`, including a concurrent
-  insert that slips past the pre-check and is caught by the repository's unique-index handling.
+- Registration is a two-step, email-verified flow for `student` and `landlord` only; moderator and
+  admin accounts are provisioned out of band. `POST /api/v1/auth/register` validates email
+  format/length, display name length and a password of 8-128 characters containing letters and
+  digits (`RegistrationValidator`/`AccountRules`), hashes the password, generates a 6-digit OTP,
+  stores both hashes in a `registration_challenges` row (10-minute lifetime, 5 attempts) and emails
+  the code. A new registration for the same email first deletes that email's previous challenge, and
+  expired challenge rows are pruned on the same path. It returns 202 with `RegisterChallengeResponse`;
+  duplicate emails return 409 `email_already_registered`, including a concurrent insert caught by the
+  unique-index handling, and a failed email hand-off returns 502 `email_delivery_failed` after the
+  challenge is removed.
+- `POST /api/v1/auth/register/verify` checks the challenge and OTP, creates the user, starts a
+  session and returns `LoginResponse` so the client can redirect by role. Wrong codes consume an
+  attempt atomically in the repository (`UPDATE ... WHERE attempt_count < 5`), so parallel
+  submissions cannot exceed the cap. Unknown/expired challenges return 400 `invalid_otp_challenge`,
+  a wrong code returns 400 `invalid_otp` with an `attempts_remaining` extension, exhaustion returns
+  429 `otp_attempts_exceeded`, and an email that was registered in the meantime returns 409 after
+  the challenge is deleted. The user insert, session insert and challenge delete run in one
+  transaction. The challenge row stores only PBKDF2 hashes of the password and OTP.
+- Email delivery goes through the `IEmailSender` port. `Auth:Email:Smtp` configures host, port,
+  STARTTLS, timeout (default 8s, kept below the mobile client's 15s), credentials and from-address
+  (`System.Net.Mail`, no extra package); outside Development a missing host fails startup, and so
+  does STARTTLS disabled together with credentials. Development without SMTP falls back to
+  `FileEmailSender`, writing `.eml` files under `<ContentRoot>/outbox` (gitignored) and logging only
+  the path — never the OTP.
 - `POST /api/v1/auth/login` issues an HS256-signed JWT access token (7-day expiry) carrying the user
   id, email, display name and role claims. The JwtBearer handler validates signature, issuer,
   audience and lifetime on every request. Each token is bound to a server-side `auth_sessions` row
@@ -208,8 +230,9 @@ root (`AddDataAccess`, `AddUseCases`, `AddInfrastructure`).
 - Passwords are stored as PBKDF2-SHA256 (100k iterations, 16-byte salt, fixed-time comparison)
   through `IPasswordHasher`.
 - `POST /api/v1/auth/register` and `/login` share a fixed-window per-IP rate limit
-  (`Auth:RateLimitPerMinute`, default 10) and answer 429 `auth_rate_limited` with a `Retry-After`
-  header when exceeded.
+  (`Auth:RateLimitPerMinute`, default 10); `/register/verify` has its own bucket
+  (`Auth:VerifyRateLimitPerMinute`, default 20) so code retries do not consume the login/register
+  budget. Exceeded requests answer 429 `auth_rate_limited` with a `Retry-After` header.
 - Migration `AddStudentAndLandlordRoles` replaces the legacy `user` role: accounts that own at least
   one listing become `landlord` (they keep access to listing management and photo upload), all other
   legacy accounts become `student`. The `Down` migration merges both roles back to `user`.

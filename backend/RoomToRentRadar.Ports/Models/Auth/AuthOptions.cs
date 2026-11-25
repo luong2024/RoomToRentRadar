@@ -5,4 +5,6 @@ public sealed class AuthOptions
     public const string SectionName = "Auth";
 
     public int RateLimitPerMinute { get; set; } = 10;
+
+    public int VerifyRateLimitPerMinute { get; set; } = 20;
 }

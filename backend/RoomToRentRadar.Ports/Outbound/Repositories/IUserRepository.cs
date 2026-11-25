@@ -9,8 +9,7 @@ public interface IUserRepository
     /// <summary>
     /// Adds the user and saves immediately. Returns false when the unique email index
     /// rejects a concurrent insert, and leaves the context clean so the request can map a conflict.
-    /// Register writes no other entities, so the repository owns this commit; revisit the contract
-    /// if the use case starts persisting more than the user.
+    /// Callers that persist more entities in the same request must wrap this call in a transaction.
     /// </summary>
     Task<bool> TryAddAsync(User user, CancellationToken cancellationToken);
 }

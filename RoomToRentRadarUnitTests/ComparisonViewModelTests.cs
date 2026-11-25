@@ -368,7 +368,14 @@ public class ComparisonViewModelTests
         public Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The comparison screen does not sign in.");
 
-        public Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+        public Task<RegisterChallengeResponse> BeginRegistrationAsync(
+            RegisterRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The comparison screen does not register accounts.");
+
+        public Task<LoginResponse> VerifyRegistrationAsync(
+            VerifyRegistrationRequest request,
+            CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The comparison screen does not register accounts.");
 
         public Task<LoginResponse?> DemoLoginAsync(CancellationToken cancellationToken = default)

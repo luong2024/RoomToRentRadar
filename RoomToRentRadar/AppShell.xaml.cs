@@ -27,6 +27,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(RoomDetailPage));
         Routing.RegisterRoute(AppRoutes.Login, typeof(LoginPage));
         Routing.RegisterRoute(AppRoutes.Register, typeof(RegisterPage));
+        Routing.RegisterRoute(AppRoutes.OtpVerification, typeof(OtpVerificationPage));
         Routing.RegisterRoute(AppRoutes.Directions, typeof(DirectionsPage));
         Routing.RegisterRoute(AppRoutes.Comparison, typeof(ComparisonPage));
 
@@ -139,7 +140,7 @@ public partial class AppShell : Shell
                     return;
                 }
 
-                if (CurrentPage is LoginPage or RegisterPage)
+                if (CurrentPage is LoginPage or RegisterPage or OtpVerificationPage)
                 {
                     return;
                 }

@@ -656,7 +656,14 @@ public partial class MapSearchViewModelTests
         public Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+        public Task<RegisterChallengeResponse> BeginRegistrationAsync(
+            RegisterRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<LoginResponse> VerifyRegistrationAsync(
+            VerifyRegistrationRequest request,
+            CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task<LoginResponse?> DemoLoginAsync(CancellationToken cancellationToken = default)
@@ -760,7 +767,14 @@ public partial class MapSearchViewModelTests
         public Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+        public Task<RegisterChallengeResponse> BeginRegistrationAsync(
+            RegisterRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<LoginResponse> VerifyRegistrationAsync(
+            VerifyRegistrationRequest request,
+            CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task<LoginResponse?> DemoLoginAsync(CancellationToken cancellationToken = default)

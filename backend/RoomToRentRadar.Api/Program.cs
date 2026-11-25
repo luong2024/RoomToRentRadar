@@ -5,6 +5,7 @@ using RoomToRentRadar.Api.Features.Auth;
 using RoomToRentRadar.Api.Features.Travel;
 using RoomToRentRadar.Infrastructure;
 using RoomToRentRadar.Infrastructure.Auth;
+using RoomToRentRadar.Infrastructure.Email;
 using RoomToRentRadar.Infrastructure.Photos;
 using RoomToRentRadar.Ports.Outbound.Services;
 using RoomToRentRadar.SqliteDataAccess;
@@ -21,8 +22,13 @@ var authTokenOptions = AuthTokenOptions.Resolve(
     builder.Configuration,
     builder.Environment.IsDevelopment());
 
+var smtpEmailOptions = SmtpEmailOptions.Resolve(
+    builder.Configuration,
+    builder.Environment.IsDevelopment());
+
 builder.Services
     .AddSingleton(authTokenOptions)
+    .AddSingleton(smtpEmailOptions)
     .AddDataAccess(connectionString)
     .AddUseCases()
     .AddInfrastructure(builder.Configuration)
@@ -58,6 +64,14 @@ if (authTokenOptions.IsEphemeralSigningKey)
         "Auth:Token:SigningKey is not configured; using a per-process development key, so tokens are " +
         "invalidated on restart. Configure it with 'dotnet user-secrets set \"Auth:Token:SigningKey\" " +
         "\"<secret>\" --project RoomToRentRadar.Api' or the Auth__Token__SigningKey environment variable.");
+}
+
+if (!smtpEmailOptions.IsConfigured)
+{
+    app.Logger.LogWarning(
+        "Auth:Email:Smtp:Host is not configured; registration OTP emails are written to {OutboxDirectory}. " +
+        "Configure Auth:Email:Smtp with user-secrets or environment variables to send real email.",
+        FileEmailSender.ResolveOutboxDirectory(smtpEmailOptions, app.Environment.ContentRootPath));
 }
 
 await SqliteDatabaseSetup.EnableWalAsync(connectionString);
