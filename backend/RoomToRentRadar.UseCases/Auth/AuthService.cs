@@ -20,6 +20,11 @@ public sealed class AuthService(
         RegisterUserCommand command,
         CancellationToken cancellationToken)
     {
+        if (!UserRoleWire.SelfService.Contains(UserRoleWire.ToWireValue(command.Role)))
+        {
+            return RegisterUserResult.RoleNotAllowed();
+        }
+
         var email = User.NormalizeEmail(command.Email);
         var existing = await userRepository.FindByEmailAsync(email, cancellationToken);
         if (existing is not null)
@@ -40,7 +45,14 @@ public sealed class AuthService(
         };
 
         await userRepository.AddAsync(user, cancellationToken);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (DuplicateEmailException)
+        {
+            return RegisterUserResult.DuplicateEmail();
+        }
 
         return RegisterUserResult.Created(new RegisterResponse(
             user.Id,
@@ -58,7 +70,13 @@ public sealed class AuthService(
             User.NormalizeEmail(email),
             cancellationToken);
 
-        if (user is null || !passwordHasher.Verify(password, user.PasswordHash, user.PasswordSalt))
+        if (user is null)
+        {
+            passwordHasher.VerifyDummy(password);
+            return null;
+        }
+
+        if (!passwordHasher.Verify(password, user.PasswordHash, user.PasswordSalt))
         {
             return null;
         }

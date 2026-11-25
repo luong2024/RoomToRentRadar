@@ -1,11 +1,14 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Infrastructure.Auth;
 using RoomToRentRadar.Ports.Models.Auth;
+using RoomToRentRadar.Ports.Outbound.Repositories;
 using RoomToRentRadar.SqliteDataAccess;
 using RoomToRentRadar.Api.Tests.Infrastructure;
 using RoomToRentRadar.Shared.Auth;
@@ -89,6 +92,16 @@ public sealed class AuthEndpointTests
     public async Task Login_MissingPassword_ReturnsBadRequestProblem()
     {
         var response = await LoginAsync(TestUsersSeed.Email, string.Empty);
+
+        await AssertProblemAsync(response, HttpStatusCode.BadRequest, "invalid_login_request");
+    }
+
+    [Test]
+    public async Task Login_PasswordTooLong_ReturnsBadRequestProblem()
+    {
+        var response = await LoginAsync(
+            TestUsersSeed.Email,
+            new string('a', AuthLimits.PasswordMaxLength + 1));
 
         await AssertProblemAsync(response, HttpStatusCode.BadRequest, "invalid_login_request");
     }
@@ -207,6 +220,73 @@ public sealed class AuthEndpointTests
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
+
+    [Test]
+    public async Task Register_WithNullBody_ReturnsBadRequestProblem()
+    {
+        using var content = new StringContent("null", Encoding.UTF8, "application/json");
+
+        var response = await _client.PostAsync("/api/v1/auth/register", content);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/problem+json"));
+        });
+    }
+
+    [Test]
+    public async Task SaveChanges_WhenEmailUniqueIndexRaceIsLost_ThrowsDuplicateEmailException()
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var users = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var (hash, salt) = new PasswordHasher().Hash("Password1");
+
+        await users.AddAsync(CreateUser("race@example.test", hash, salt), CancellationToken.None);
+        await unitOfWork.SaveChangesAsync(CancellationToken.None);
+        await users.AddAsync(CreateUser("race@example.test", hash, salt), CancellationToken.None);
+
+        Assert.ThrowsAsync<DuplicateEmailException>(
+            () => unitOfWork.SaveChangesAsync(CancellationToken.None));
+    }
+
+    [Test]
+    public async Task AuthenticatedRequest_WithExpiredSession_ReturnsUnauthorizedProblem()
+    {
+        var login = await LoginAndReadAsync();
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var sessions = await dbContext.AuthSessions.ToListAsync();
+            Assert.That(sessions, Is.Not.Empty);
+
+            foreach (var session in sessions)
+            {
+                session.ExpiresAt = DateTime.UtcNow.AddMinutes(-1);
+            }
+
+            await dbContext.SaveChangesAsync();
+        }
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
+        var response = await _client.SendAsync(request);
+
+        await AssertProblemAsync(response, HttpStatusCode.Unauthorized, "unauthorized");
+    }
+
+    private static User CreateUser(string email, string hash, string salt)
+        => new()
+        {
+            Id = Guid.NewGuid(),
+            Email = email,
+            DisplayName = "Race User",
+            PasswordHash = hash,
+            PasswordSalt = salt,
+            Role = UserRole.Student,
+            CreatedAt = DateTime.UtcNow
+        };
 
     private async Task<HttpResponseMessage> RegisterAsync(
         string email,

@@ -65,7 +65,7 @@ public static class AuthProblemFactory
             Type = "https://tools.ietf.org/html/rfc9110#section-15.5.1",
             Status = StatusCodes.Status400BadRequest,
             Title = "Invalid login request",
-            Detail = "Email and password are required."
+            Detail = $"Email and password are required and the password must be at most {AuthLimits.PasswordMaxLength} characters."
         };
         problem.Extensions["code"] = InvalidLoginRequest;
         return problem;

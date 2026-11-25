@@ -45,7 +45,7 @@ public static class RegistrationValidator
         }
 
         if (!UserRoleWire.TryParse(request.Role?.Trim().ToLowerInvariant(), out var role)
-            || role is not (UserRole.Student or UserRole.Landlord))
+            || !UserRoleWire.SelfService.Contains(UserRoleWire.ToWireValue(role)))
         {
             problem = AuthProblemFactory.InvalidRoleProblem();
             return false;

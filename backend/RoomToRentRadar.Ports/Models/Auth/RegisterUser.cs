@@ -12,7 +12,8 @@ public sealed record RegisterUserCommand(
 public enum RegisterUserOutcome
 {
     Created,
-    EmailAlreadyRegistered
+    EmailAlreadyRegistered,
+    RoleNotAllowed
 }
 
 public sealed record RegisterUserResult(
@@ -24,4 +25,7 @@ public sealed record RegisterUserResult(
 
     public static RegisterUserResult DuplicateEmail()
         => new(RegisterUserOutcome.EmailAlreadyRegistered, null);
+
+    public static RegisterUserResult RoleNotAllowed()
+        => new(RegisterUserOutcome.RoleNotAllowed, null);
 }

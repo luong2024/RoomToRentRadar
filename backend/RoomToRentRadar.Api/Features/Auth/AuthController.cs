@@ -54,6 +54,11 @@ public sealed class AuthController(
             return ToProblem(AuthProblemFactory.EmailAlreadyRegisteredProblem());
         }
 
+        if (result.Outcome == RegisterUserOutcome.RoleNotAllowed)
+        {
+            return ToProblem(AuthProblemFactory.InvalidRoleProblem());
+        }
+
         return StatusCode(StatusCodes.Status201Created, result.Response);
     }
 
@@ -65,7 +70,9 @@ public sealed class AuthController(
         [FromBody] LoginRequest request,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
+        if (string.IsNullOrWhiteSpace(request.Email)
+            || string.IsNullOrWhiteSpace(request.Password)
+            || request.Password.Length > AuthLimits.PasswordMaxLength)
         {
             return ToProblem(AuthProblemFactory.InvalidLoginRequestProblem());
         }

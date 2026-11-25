@@ -38,4 +38,12 @@ public sealed class PasswordHasherTests
             Assert.That(hasher.Verify("Password1", second.Hash, second.Salt), Is.True);
         });
     }
+
+    [Test]
+    public void VerifyDummy_BurnsTheKdfAndRejectsArbitraryPassword()
+    {
+        var hasher = new PasswordHasher();
+
+        Assert.That(hasher.VerifyDummy("Password1"), Is.False);
+    }
 }
