@@ -12,6 +12,8 @@ public class RoomDetailsDto
     public double Area { get; set; }
     public string FormattedArea { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
     public string? ThumbnailUrl { get; set; }
     public List<string> ImageUrls { get; set; } = [];
     public string RoomType { get; set; } = string.Empty;

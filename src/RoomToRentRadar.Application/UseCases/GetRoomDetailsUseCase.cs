@@ -42,6 +42,8 @@ public class GetRoomDetailsUseCase : IGetRoomDetailsUseCase
             Area = room.Area,
             FormattedArea = $"{room.Area} m²",
             Address = isAvailable ? room.Address : string.Empty,
+            Latitude = isAvailable && room.IsVerified ? room.Latitude : null,
+            Longitude = isAvailable && room.IsVerified ? room.Longitude : null,
             ThumbnailUrl = isAvailable ? room.ThumbnailUrl : null,
             ImageUrls = isAvailable ? room.ImageUrls ?? [] : [],
             RoomType = room.RoomType,
