@@ -61,6 +61,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IProfileService, ProfileService>();
         services.AddSingleton<IProfileUiThreadDispatcher, MauiProfileUiThreadDispatcher>();
         services.AddSingleton<IRoomDetailService, RoomDetailService>();
+        services.AddSingleton<IListingReportService, ListingReportService>();
         services.AddSingleton<IMediaPickerService, MediaPickerService>();
         return services;
     }

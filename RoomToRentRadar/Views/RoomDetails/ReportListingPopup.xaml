@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<toolkit:Popup
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Views;assembly=CommunityToolkit.Maui"
+    xmlns:f="clr-namespace:Fonts"
+    xmlns:models="clr-namespace:RoomToRentRadar.Models.RoomDetails"
+    xmlns:vm="clr-namespace:RoomToRentRadar.ViewModels.RoomDetails"
+    x:Class="RoomToRentRadar.Views.RoomDetails.ReportListingPopup"
+    x:Name="ThisPopup"
+    x:DataType="vm:ReportListingPopupViewModel"
+    BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
+    Padding="0"
+    Margin="0"
+    CanBeDismissedByTappingOutsideOfPopup="True">
+
+    <Grid
+        x:Name="RootGrid"
+        RowDefinitions="Auto,*,Auto"
+        RowSpacing="16"
+        Padding="{OnIdiom Phone='18', Tablet='22', Desktop='24'}"
+        WidthRequest="{OnIdiom Phone='336', Tablet='540', Desktop='600'}"
+        MaximumHeightRequest="{OnIdiom Phone='560', Tablet='620', Desktop='640'}"
+        VerticalOptions="Center">
+
+        <!-- Header (Pinned Top) -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" VerticalOptions="Center">
+            <Border
+                Grid.Column="0"
+                BackgroundColor="{AppThemeBinding Light=#FEE2E2, Dark=#451A1A}"
+                HeightRequest="36"
+                WidthRequest="36"
+                Padding="0"
+                StrokeShape="RoundRectangle 10"
+                StrokeThickness="0"
+                VerticalOptions="Center">
+                <Label
+                    FontFamily="{x:Static f:FluentUI.FontFamily}"
+                    FontSize="18"
+                    HorizontalTextAlignment="Center"
+                    Text="{x:Static f:FluentUI.warning_20_regular}"
+                    TextColor="{AppThemeBinding Light=#DC2626, Dark=#F87171}"
+                    VerticalTextAlignment="Center" />
+            </Border>
+
+            <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
+                <Label
+                    FontAttributes="Bold"
+                    FontSize="15.5"
+                    Text="Report listing"
+                    TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                <Label
+                    FontSize="11.5"
+                    LineBreakMode="TailTruncation"
+                    MaxLines="1"
+                    Text="{Binding RoomTitle}"
+                    TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+            </VerticalStackLayout>
+
+            <Border
+                Grid.Column="2"
+                Padding="6"
+                BackgroundColor="Transparent"
+                StrokeThickness="0"
+                VerticalOptions="Center">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnCancelClicked" />
+                </Border.GestureRecognizers>
+                <Label
+                    FontFamily="{x:Static f:FluentUI.FontFamily}"
+                    FontSize="18"
+                    HorizontalTextAlignment="Center"
+                    Text="{x:Static f:FluentUI.dismiss_20_regular}"
+                    TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
+                    VerticalTextAlignment="Center" />
+            </Border>
+        </Grid>
+
+        <!-- Scrollable Middle Body -->
+        <ScrollView Grid.Row="1" VerticalScrollBarVisibility="Default">
+            <VerticalStackLayout Spacing="18" Padding="0,4,18,16">
+                <Label
+                    FontAttributes="Bold"
+                    FontSize="13"
+                    Text="Select a reason"
+                    TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+
+                <CollectionView
+                    ItemsSource="{Binding Reasons}"
+                    SelectionMode="None"
+                    VerticalScrollBarVisibility="Never">
+                    <CollectionView.ItemsLayout>
+                        <GridItemsLayout
+                            x:Name="ReasonsLayout"
+                            Orientation="Vertical"
+                            Span="1"
+                            HorizontalItemSpacing="14"
+                            VerticalItemSpacing="12" />
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="models:ReportReasonOption">
+                            <Border
+                                Padding="16,12"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}"
+                                Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                                StrokeShape="RoundRectangle 12"
+                                StrokeThickness="1">
+                                <Border.Triggers>
+                                    <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
+                                        <Setter Property="Stroke" Value="{StaticResource PrimaryBrand}" />
+                                        <Setter Property="StrokeThickness" Value="2" />
+                                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}" />
+                                    </DataTrigger>
+                                </Border.Triggers>
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer
+                                        Command="{Binding BindingContext.SelectReasonCommand, Source={x:Reference ThisPopup}}"
+                                        CommandParameter="{Binding .}" />
+                                </Border.GestureRecognizers>
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" VerticalOptions="Center">
+                                    <VerticalStackLayout Grid.Column="0" Spacing="1" VerticalOptions="Center">
+                                        <Label
+                                            FontAttributes="Bold"
+                                            FontSize="12.5"
+                                            LineBreakMode="TailTruncation"
+                                            MaxLines="1"
+                                            Text="{Binding Title}"
+                                            TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                                        <Label
+                                            FontSize="10.5"
+                                            LineBreakMode="WordWrap"
+                                            MaxLines="2"
+                                            Text="{Binding Description}"
+                                            TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}" />
+                                    </VerticalStackLayout>
+                                    <Label
+                                        Grid.Column="1"
+                                        FontAttributes="Bold"
+                                        FontSize="14"
+                                        IsVisible="{Binding IsSelected}"
+                                        Text="✓"
+                                        TextColor="{StaticResource PrimaryBrand}"
+                                        VerticalOptions="Center" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+                <!-- Note Section -->
+                <VerticalStackLayout Spacing="8" Margin="0,4,0,0">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label
+                            Grid.Column="0"
+                            FontAttributes="Bold"
+                            FontSize="12.5"
+                            Text="{Binding NoteLabelText}"
+                            TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                        <Label
+                            Grid.Column="1"
+                            FontSize="11"
+                            Text="{Binding NoteCharacterCountText}"
+                            TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}" />
+                    </Grid>
+
+                    <Border
+                        Padding="12,8"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}"
+                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                        StrokeShape="RoundRectangle 12"
+                        StrokeThickness="1">
+                        <Editor
+                            AutoSize="Disabled"
+                            FontSize="13"
+                            HeightRequest="76"
+                            MaxLength="500"
+                            Placeholder="Describe the issue you noticed..."
+                            PlaceholderColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
+                            Text="{Binding Note, Mode=TwoWay}"
+                            TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+                    </Border>
+                </VerticalStackLayout>
+
+                <!-- Validation Error -->
+                <Border
+                    IsVisible="{Binding HasValidationError}"
+                    BackgroundColor="{AppThemeBinding Light=#FEF2F2, Dark=#451A1A}"
+                    Stroke="{AppThemeBinding Light=#FCA5A5, Dark=#991B1B}"
+                    StrokeThickness="1"
+                    Padding="10,6"
+                    StrokeShape="RoundRectangle 10">
+                    <Label
+                        FontSize="12"
+                        LineBreakMode="WordWrap"
+                        Text="{Binding ValidationError}"
+                        TextColor="{AppThemeBinding Light=#DC2626, Dark=#FCA5A5}" />
+                </Border>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- Footer Actions (Pinned Bottom) -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="16" Margin="0,8,0,0">
+            <Button
+                Grid.Column="0"
+                Text="Cancel"
+                Clicked="OnCancelClicked"
+                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}"
+                BorderColor="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                BorderWidth="1"
+                CornerRadius="12"
+                FontAttributes="Bold"
+                FontSize="13.5"
+                HeightRequest="44"
+                TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
+
+            <Button
+                Grid.Column="1"
+                Text="Submit Report"
+                Clicked="OnSubmitClicked"
+                BackgroundColor="#DC2626"
+                CornerRadius="12"
+                FontAttributes="Bold"
+                FontSize="13.5"
+                HeightRequest="44"
+                TextColor="White" />
+        </Grid>
+    </Grid>
+</toolkit:Popup>

@@ -22,7 +22,7 @@
             StrokeShape="RoundRectangle 0"
             StrokeThickness="1"
             ZIndex="10">
-            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" VerticalOptions="Center">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" VerticalOptions="Center">
                 <!-- Back Button -->
                 <Border
                     Grid.Column="0"
@@ -62,6 +62,42 @@
                     Text="{Binding Title}"
                     TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
                     VerticalOptions="Center" />
+
+                <!-- Report Listing Button -->
+                <Border
+                    Grid.Column="2"
+                    Padding="10,6"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource SurfaceSubtleDark}}"
+                    IsVisible="{Binding HasRoom}"
+                    IsEnabled="{Binding CanReportListing}"
+                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
+                    StrokeShape="RoundRectangle 10"
+                    StrokeThickness="1"
+                    VerticalOptions="Center">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding ReportListingCommand}" />
+                    </Border.GestureRecognizers>
+                    <HorizontalStackLayout Spacing="5" VerticalOptions="Center">
+                        <Label
+                            FontFamily="{x:Static f:FluentUI.FontFamily}"
+                            FontSize="16"
+                            Text="{x:Static f:FluentUI.flag_20_regular}"
+                            TextColor="#DC2626"
+                            VerticalOptions="Center" />
+                        <Label
+                            FontAttributes="Bold"
+                            FontSize="12.5"
+                            Text="Report"
+                            TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}"
+                            VerticalOptions="Center">
+                            <Label.Triggers>
+                                <DataTrigger TargetType="Label" Binding="{Binding HasSubmittedReport}" Value="True">
+                                    <Setter Property="Text" Value="Reported" />
+                                </DataTrigger>
+                            </Label.Triggers>
+                        </Label>
+                    </HorizontalStackLayout>
+                </Border>
 
             </Grid>
         </Border>
