@@ -55,6 +55,14 @@
         Route="create-listing"
         SemanticProperties.Description="Đăng tin phòng trọ"
         SemanticProperties.Hint="Đăng tin phòng trọ mới kèm ảnh thực tế chờ kiểm duyệt"/>
+
+    <ShellContent
+        Title="So sánh phòng"
+        Icon="{StaticResource IconProjects}"
+        ContentTemplate="{DataTemplate pages:CompareRoomsPage}"
+        Route="compare-rooms"
+        SemanticProperties.Description="So sánh phòng trọ"
+        SemanticProperties.Hint="So sánh tối đa 3 phòng trọ cạnh nhau về giá, diện tích và khoảng cách ICTU"/>
     <ShellContent
         Title="Dashboard"
         Icon="{StaticResource IconDashboard}"
