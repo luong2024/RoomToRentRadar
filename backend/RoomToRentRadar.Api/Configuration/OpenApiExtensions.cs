@@ -33,8 +33,8 @@ public static class OpenApiExtensions
                     {
                         Type = SecuritySchemeType.Http,
                         Scheme = "bearer",
-                        BearerFormat = "opaque",
-                        Description = "Send the access token returned by POST /api/v1/auth/login."
+                        BearerFormat = "JWT",
+                        Description = "Send the JWT access token returned by POST /api/v1/auth/login."
                     }
                 };
 

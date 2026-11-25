@@ -11,6 +11,8 @@ namespace RoomToRentRadar.Api.Tests.Infrastructure;
 
 public sealed class ListingsApiFactory : WebApplicationFactory<Program>
 {
+    public const string TestSigningKey = "rtrr-test-signing-key-0123456789abcdef";
+
     private const string CreateNoUpdateTriggerSql =
         """
         CREATE TRIGGER "trg_moderation_audit_logs_no_update"
@@ -54,6 +56,7 @@ public sealed class ListingsApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("ConnectionStrings:Default", $"Data Source={DatabasePath}");
         builder.UseSetting("Storage:PhotoRootPath", MediaRootPath);
         builder.UseSetting("Alerts:Enabled", "false");
+        builder.UseSetting("Auth:Token:SigningKey", TestSigningKey);
         builder.ConfigureTestServices(services =>
         {
             services.AddSingleton<DbCommandInterceptor>(QueryCounter);

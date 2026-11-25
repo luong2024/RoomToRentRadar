@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RoomToRentRadar.Ports.Inbound;
+using RoomToRentRadar.Ports.Models.Auth;
 using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.SqliteDataAccess.Seed;
 
@@ -34,6 +36,33 @@ public sealed class AuthController(
         return response is null ? NotFound() : Ok(response);
     }
 
+    [HttpPost("register")]
+    [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status201Created, "application/json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict, "application/problem+json")]
+    public async Task<ActionResult<RegisterResponse>> Register(
+        [FromBody] RegisterRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!RegistrationValidator.TryCreate(request, out var command, out var validationProblem))
+        {
+            return ToProblem(validationProblem!);
+        }
+
+        var result = await authUseCase.RegisterAsync(command, cancellationToken);
+        if (result.Outcome == RegisterUserOutcome.EmailAlreadyRegistered)
+        {
+            return ToProblem(AuthProblemFactory.EmailAlreadyRegisteredProblem());
+        }
+
+        if (result.Outcome == RegisterUserOutcome.RoleNotAllowed)
+        {
+            return ToProblem(AuthProblemFactory.InvalidRoleProblem());
+        }
+
+        return StatusCode(StatusCodes.Status201Created, result.Response);
+    }
+
     [HttpPost("login")]
     [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK, "application/json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
@@ -42,7 +71,10 @@ public sealed class AuthController(
         [FromBody] LoginRequest request,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
+        if (string.IsNullOrWhiteSpace(request.Email)
+            || request.Email.Length > AuthLimits.EmailMaxLength
+            || string.IsNullOrWhiteSpace(request.Password)
+            || request.Password.Length > AuthLimits.PasswordMaxLength)
         {
             return ToProblem(AuthProblemFactory.InvalidLoginRequestProblem());
         }
@@ -62,14 +94,12 @@ public sealed class AuthController(
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
     public async Task<IActionResult> Logout(CancellationToken cancellationToken)
     {
-        var token = Request.Headers.Authorization.ToString();
-        const string bearerPrefix = "Bearer ";
-        if (token.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
+        var token = await HttpContext.GetTokenAsync("access_token");
+        if (!string.IsNullOrEmpty(token))
         {
-            token = token[bearerPrefix.Length..].Trim();
+            await authUseCase.LogoutAsync(token, cancellationToken);
         }
 
-        await authUseCase.LogoutAsync(token, cancellationToken);
         return NoContent();
     }
 

@@ -780,7 +780,7 @@ namespace RoomToRentRadar.SqliteDataAccess.Migrations
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
                         .HasColumnType("TEXT")
-                        .HasDefaultValue("user")
+                        .HasDefaultValue("student")
                         .HasColumnName("role");
 
                     b.HasKey("Id");
@@ -791,7 +791,7 @@ namespace RoomToRentRadar.SqliteDataAccess.Migrations
 
                     b.ToTable("users", null, t =>
                         {
-                            t.HasCheckConstraint("ck_users_role", "role IN ('user', 'moderator', 'admin')");
+                            t.HasCheckConstraint("ck_users_role", "role IN ('student', 'landlord', 'moderator', 'admin')");
                         });
                 });
 

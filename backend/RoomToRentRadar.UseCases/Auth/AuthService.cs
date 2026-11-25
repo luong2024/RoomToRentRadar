@@ -1,5 +1,6 @@
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Ports.Inbound;
+using RoomToRentRadar.Ports.Models.Auth;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 using RoomToRentRadar.Ports.Outbound.Services;
 using RoomToRentRadar.Shared.Auth;
@@ -15,6 +16,46 @@ public sealed class AuthService(
 {
     private static readonly TimeSpan SessionLifetime = TimeSpan.FromDays(7);
 
+    public async Task<RegisterUserResult> RegisterAsync(
+        RegisterUserCommand command,
+        CancellationToken cancellationToken)
+    {
+        if (!UserRoleWire.IsSelfService(command.Role))
+        {
+            return RegisterUserResult.RoleNotAllowed();
+        }
+
+        var email = User.NormalizeEmail(command.Email);
+        var existing = await userRepository.FindByEmailAsync(email, cancellationToken);
+        if (existing is not null)
+        {
+            return RegisterUserResult.DuplicateEmail();
+        }
+
+        var (hash, salt) = passwordHasher.Hash(command.Password);
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = email,
+            DisplayName = command.DisplayName,
+            PasswordHash = hash,
+            PasswordSalt = salt,
+            Role = command.Role,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        if (!await userRepository.TryAddAsync(user, cancellationToken))
+        {
+            return RegisterUserResult.DuplicateEmail();
+        }
+
+        return RegisterUserResult.Created(new RegisterResponse(
+            user.Id,
+            user.Email,
+            user.DisplayName,
+            UserRoleWire.ToWireValue(user.Role)));
+    }
+
     public async Task<LoginResponse?> LoginAsync(
         string email,
         string password,
@@ -24,14 +65,22 @@ public sealed class AuthService(
             User.NormalizeEmail(email),
             cancellationToken);
 
-        if (user is null || !passwordHasher.Verify(password, user.PasswordHash, user.PasswordSalt))
+        if (user is null)
+        {
+            passwordHasher.VerifyDummy(password);
+            return null;
+        }
+
+        if (!passwordHasher.Verify(password, user.PasswordHash, user.PasswordSalt))
         {
             return null;
         }
 
-        var (token, tokenHash) = tokenGenerator.Create();
         var now = DateTime.UtcNow;
         var expiresAt = now.Add(SessionLifetime);
+        var (token, tokenHash) = tokenGenerator.Create(
+            new AuthTokenSubject(user.Id, user.Email, user.DisplayName, user.Role),
+            expiresAt);
 
         await authSessionRepository.AddAsync(
             new AuthSession
@@ -45,7 +94,11 @@ public sealed class AuthService(
             cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new LoginResponse(token, expiresAt, user.DisplayName);
+        return new LoginResponse(
+            token,
+            expiresAt,
+            user.DisplayName,
+            UserRoleWire.ToWireValue(user.Role));
     }
 
     public Task<User?> AuthenticateAsync(string token, CancellationToken cancellationToken)

@@ -4,6 +4,7 @@ using RoomToRentRadar.Api.Configuration;
 using RoomToRentRadar.Api.Features.Auth;
 using RoomToRentRadar.Api.Features.Travel;
 using RoomToRentRadar.Infrastructure;
+using RoomToRentRadar.Infrastructure.Auth;
 using RoomToRentRadar.Infrastructure.Photos;
 using RoomToRentRadar.Ports.Outbound.Services;
 using RoomToRentRadar.SqliteDataAccess;
@@ -16,7 +17,12 @@ var connectionString = SqliteDatabaseSetup.NormalizeConnectionString(
     builder.Configuration,
     builder.Environment.ContentRootPath);
 
+var authTokenOptions = AuthTokenOptions.Resolve(
+    builder.Configuration,
+    builder.Environment.IsDevelopment());
+
 builder.Services
+    .AddSingleton(authTokenOptions)
     .AddDataAccess(connectionString)
     .AddUseCases()
     .AddInfrastructure(builder.Configuration)
@@ -24,7 +30,7 @@ builder.Services
     .AddListingsOpenApi()
     .AddDevelopmentCors()
     .AddReverseProxySupport(builder.Configuration)
-    .AddBearerAuthentication()
+    .AddBearerAuthentication(authTokenOptions)
     .AddTravelRateLimiting();
 
 builder.Services.AddMemoryCache(cache =>
@@ -43,6 +49,14 @@ if (string.IsNullOrWhiteSpace(app.Configuration["Travel:GoogleRoutesApiKey"]))
         "Travel:GoogleRoutesApiKey is not configured; travel estimates fall back to straight-line distances. " +
         "Configure it with 'dotnet user-secrets set \"Travel:GoogleRoutesApiKey\" \"<key>\" --project RoomToRentRadar.Api' " +
         "or the Travel__GoogleRoutesApiKey environment variable.");
+}
+
+if (authTokenOptions.IsEphemeralSigningKey)
+{
+    app.Logger.LogWarning(
+        "Auth:Token:SigningKey is not configured; using a per-process development key, so tokens are " +
+        "invalidated on restart. Configure it with 'dotnet user-secrets set \"Auth:Token:SigningKey\" " +
+        "\"<secret>\" --project RoomToRentRadar.Api' or the Auth__Token__SigningKey environment variable.");
 }
 
 await SqliteDatabaseSetup.EnableWalAsync(connectionString);
