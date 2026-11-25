@@ -5,6 +5,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:sf="clr-namespace:Syncfusion.Maui.Toolkit.SegmentedControl;assembly=Syncfusion.Maui.Toolkit"
     xmlns:home="clr-namespace:RoomToRentRadar.Features.Home"
+    xmlns:auth="clr-namespace:RoomToRentRadar.Features.Auth"
     Shell.FlyoutBehavior="Flyout"
     Title="RoomToRentRadar - ICTU">
 
@@ -21,6 +22,13 @@
     <!-- [ZONE 3: PHAM THI THUY - T13.2 ReportListingModalPage] -->
 
     <!-- [ZONE 4: LIEU HAI NAM - T01.2 LoginPage, T08.2 SearchAlertsPage] -->
+    <!-- T01.2: route "login-menu" (not "login") because "login"/"register" are already registered in AuthFeatureModule. -->
+    <ShellContent
+        Title="Đăng nhập / Đăng ký"
+        Icon="{StaticResource IconMeta}"
+        ContentTemplate="{DataTemplate auth:LoginPage}"
+        Route="login-menu"
+        SemanticProperties.Description="Đăng nhập hoặc tạo tài khoản RoomToRentRadar"/>
 
     <!-- Baseline Home Screen -->
     <ShellContent
