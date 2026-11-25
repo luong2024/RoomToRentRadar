@@ -41,6 +41,11 @@ public class CosmosRoomRepository : IRoomRepository
 
         var document = RoomDocument.FromDomain(room);
         document.ProjectionVersion = existing.ProjectionVersion;
+        if (room.Status == RoomStatus.Pending && !room.IsVerified && Guid.TryParse(room.LandlordId, out _))
+        {
+            // Store the visibility intent atomically with the landlord's edit or unpublish.
+            document.PendingVisibilitySyncId = Guid.NewGuid();
+        }
         try
         {
             await _container.ReplaceItemAsync(

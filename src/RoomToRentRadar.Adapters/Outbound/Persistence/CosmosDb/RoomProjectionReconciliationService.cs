@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Repositories;
+using RoomToRentRadar.Application.Ports.Outbound;
 
 public sealed class RoomProjectionReconciliationService : BackgroundService
 {
@@ -36,6 +37,22 @@ public sealed class RoomProjectionReconciliationService : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Room projection reconciliation pass failed; pending intents will be retried.");
+            }
+
+            try
+            {
+                await using var scope = _scopeFactory.CreateAsyncScope();
+                var repository = scope.ServiceProvider.GetRequiredService<CosmosRoomListingRepository>();
+                var cacheInvalidator = scope.ServiceProvider.GetRequiredService<IRoomListingCacheInvalidator>();
+                await repository.ReconcilePendingVisibilityAsync(cacheInvalidator, stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Room visibility reconciliation pass failed; pending rooms will be retried.");
             }
 
             try

@@ -120,8 +120,10 @@ public class CosmosRoomRepositoryTests
         Assert.That(roundTripped.LandlordId, Is.EqualTo(ownerId));
     }
 
-    [Test]
-    public async Task UpdateAsync_PreservesOwnerAndProjectionVersion()
+    [TestCase(RoomStatus.Available, false)]
+    [TestCase(RoomStatus.Pending, true)]
+    public async Task UpdateAsync_PreservesOwnerAndProjectionVersion(
+        RoomStatus status, bool queuesVisibilitySync)
     {
         var existing = new RoomDocument { Id = "owned-listing", ETag = "etag-current", ProjectionVersion = 42 };
         var readResponse = new Mock<ItemResponse<RoomDocument>>();
@@ -144,6 +146,7 @@ public class CosmosRoomRepositoryTests
         var room = new Room
         {
             Id = "owned-listing", LandlordId = Guid.NewGuid().ToString("D"), Title = "Updated",
+            Status = status,
             ConcurrencyToken = "etag-current"
         };
         await _repository.UpdateAsync(room);
@@ -152,6 +155,8 @@ public class CosmosRoomRepositoryTests
         {
             Assert.That(replacedDocument!.LandlordId, Is.EqualTo(room.LandlordId));
             Assert.That(replacedDocument.Title, Is.EqualTo("Updated"));
+            Assert.That(replacedDocument.Status, Is.EqualTo((int)status));
+            Assert.That(replacedDocument.PendingVisibilitySyncId.HasValue, Is.EqualTo(queuesVisibilitySync));
             Assert.That(replacedDocument.ProjectionVersion, Is.EqualTo(42));
             Assert.That(replacedOptions!.IfMatchEtag, Is.EqualTo("etag-current"));
         });

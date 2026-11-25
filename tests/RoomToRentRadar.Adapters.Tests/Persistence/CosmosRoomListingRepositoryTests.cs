@@ -9,6 +9,7 @@ using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.ValueObjects;
 using ListingRoomStatus = RoomToRentRadar.Domain.Enums.RoomStatus;
 using RoomToRentRadar.Application.DTOs;
+using RoomToRentRadar.Application.Ports.Outbound;
 
 namespace RoomToRentRadar.Adapters.Tests.Persistence;
 
@@ -59,6 +60,82 @@ public class CosmosRoomListingRepositoryTests
                 It.IsAny<CancellationToken>()), Times.Once);
         }
         roomsContainer.VerifyNoOtherCalls();
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task ReconcilePendingVisibilityAsync_ReplaysDurableIntentAfterProjectionOrCacheFailure(bool cacheFails)
+    {
+        var listings = new Mock<Container>();
+        var rooms = new Mock<Container>();
+        var outbox = new Mock<Container>(MockBehavior.Strict);
+        var roomId = "room-1";
+        var intent = Guid.NewGuid();
+        var pending = new RoomDocument { Id = roomId, ProjectionVersion = 42, PendingVisibilitySyncId = intent };
+        var invalidatedCampuses = new List<string>();
+        var failureActive = true;
+        var cache = new Mock<IRoomListingCacheInvalidator>();
+        cache.Setup(item => item.InvalidateCampusAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns((string campusId, CancellationToken _) =>
+            {
+                if (failureActive && cacheFails && campusId == "campus-b")
+                {
+                    return Task.FromException(new IOException("Cache unavailable."));
+                }
+                invalidatedCampuses.Add(campusId);
+                return Task.CompletedTask;
+            });
+        rooms.Setup(container => container.GetItemQueryIterator<RoomDocument>(
+                It.Is<QueryDefinition>(query => query.QueryText.Contains("IS_STRING(c.pendingVisibilitySyncId)")),
+                null, It.IsAny<QueryRequestOptions>()))
+            .Returns(() => VisibilityFeed(pending));
+        listings.Setup(container => container.GetItemQueryIterator<string>(It.IsAny<QueryDefinition>(), null, null))
+            .Returns(() => VisibilityFeed("campus-a", "campus-b"));
+        listings.Setup(container => container.PatchItemAsync<RoomListingDocument>(
+                roomId, It.IsAny<PartitionKey>(), It.IsAny<IReadOnlyList<PatchOperation>>(),
+                It.Is<PatchItemRequestOptions>(options => options.FilterPredicate!.Contains("c.projectionVersion <= 42")),
+                It.IsAny<CancellationToken>()))
+            .Returns((string _, PartitionKey campus, IReadOnlyList<PatchOperation> _, PatchItemRequestOptions _, CancellationToken _) =>
+                failureActive && !cacheFails && campus == new PartitionKey("campus-b")
+                    ? Task.FromException<ItemResponse<RoomListingDocument>>(new CosmosException("Unavailable.", HttpStatusCode.ServiceUnavailable, 0, "test", 0))
+                    : Task.FromResult(new Mock<ItemResponse<RoomListingDocument>>().Object));
+        rooms.Setup(container => container.PatchItemAsync<RoomDocument>(
+                roomId, new PartitionKey(roomId),
+                It.Is<IReadOnlyList<PatchOperation>>(patch => patch.Single().Path == "/pendingVisibilitySyncId"),
+                It.Is<PatchItemRequestOptions>(options => options.FilterPredicate!.Contains(intent.ToString("D"))),
+                It.IsAny<CancellationToken>()))
+            .Callback(() =>
+            {
+                Assert.That(invalidatedCampuses, Is.EquivalentTo(new[] { "campus-a", "campus-b" }));
+                pending.PendingVisibilitySyncId = null;
+            })
+            .ReturnsAsync(new Mock<ItemResponse<RoomDocument>>().Object);
+
+        await new CosmosRoomListingRepository(listings.Object, rooms.Object, outbox.Object)
+            .ReconcilePendingVisibilityAsync(cache.Object);
+
+        Assert.That(pending.PendingVisibilitySyncId, Is.EqualTo(intent));
+        rooms.Verify(container => container.PatchItemAsync<RoomDocument>(
+            It.IsAny<string>(), It.IsAny<PartitionKey>(), It.IsAny<IReadOnlyList<PatchOperation>>(),
+            It.IsAny<PatchItemRequestOptions>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        failureActive = false;
+        invalidatedCampuses.Clear();
+        await new CosmosRoomListingRepository(listings.Object, rooms.Object, outbox.Object)
+            .ReconcilePendingVisibilityAsync(cache.Object);
+
+        Assert.That(pending.PendingVisibilitySyncId, Is.Null);
+        Assert.That(invalidatedCampuses, Is.EquivalentTo(new[] { "campus-a", "campus-b" }));
+    }
+
+    private static FeedIterator<T> VisibilityFeed<T>(params T[] items)
+    {
+        var response = new Mock<FeedResponse<T>>();
+        response.Setup(item => item.GetEnumerator()).Returns(() => ((IEnumerable<T>)items).GetEnumerator());
+        var iterator = new Mock<FeedIterator<T>>();
+        iterator.SetupSequence(item => item.HasMoreResults).Returns(true).Returns(false);
+        iterator.Setup(item => item.ReadNextAsync(It.IsAny<CancellationToken>())).ReturnsAsync(response.Object);
+        return iterator.Object;
     }
 
     [Test]

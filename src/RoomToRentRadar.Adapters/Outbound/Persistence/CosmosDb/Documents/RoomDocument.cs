@@ -86,6 +86,9 @@ public sealed class RoomDocument : IProjectionVersionedDocument
     [JsonProperty("projectionVersion")]
     public long ProjectionVersion { get; set; }
 
+    [JsonProperty("pendingVisibilitySyncId", NullValueHandling = NullValueHandling.Ignore)]
+    public Guid? PendingVisibilitySyncId { get; set; }
+
     [JsonProperty("isDeleted")]
     public bool IsDeleted { get; set; }
 
