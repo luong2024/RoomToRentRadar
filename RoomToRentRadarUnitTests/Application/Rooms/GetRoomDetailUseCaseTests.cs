@@ -23,6 +23,8 @@ public class GetRoomDetailUseCaseTests
     private IUserRepository _userRepository = null!;
     private ICampusRepository _campusRepository = null!;
     private ICurrentUserContextPort _currentUserContext = null!;
+    private IRoomPhotoRepository _photoRepository = null!;
+    private IPhotoStoragePort _storage = null!;
     private GetRoomDetailUseCase _sut = null!;
 
     [SetUp]
@@ -32,14 +34,24 @@ public class GetRoomDetailUseCaseTests
         _userRepository = Substitute.For<IUserRepository>();
         _campusRepository = Substitute.For<ICampusRepository>();
         _currentUserContext = Substitute.For<ICurrentUserContextPort>();
+        _photoRepository = Substitute.For<IRoomPhotoRepository>();
+        _storage = Substitute.For<IPhotoStoragePort>();
 
         _campusRepository.GetDefaultCampusAsync(Arg.Any<CancellationToken>()).Returns(Ictu);
         _campusRepository.GetByIdAsync("ICTU", Arg.Any<CancellationToken>()).Returns(Ictu);
         _campusRepository.GetByIdAsync("TNUS", Arg.Any<CancellationToken>()).Returns(Tnus);
         _campusRepository.GetByIdAsync(Arg.Is<string>(id => id != "ICTU" && id != "TNUS"), Arg.Any<CancellationToken>())
             .Returns((Campus?)null);
+        _photoRepository.ListByRoomAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<RoomPhoto>());
 
-        _sut = new GetRoomDetailUseCase(_roomRepository, _userRepository, _campusRepository, _currentUserContext);
+        _sut = new GetRoomDetailUseCase(
+            _roomRepository,
+            _userRepository,
+            _campusRepository,
+            _currentUserContext,
+            _photoRepository,
+            _storage);
     }
 
     private static Room CreateSampleRoom(
@@ -190,7 +202,7 @@ public class GetRoomDetailUseCaseTests
     [TestCase(ListingStatus.PendingReview)]
     [TestCase(ListingStatus.Rejected)]
     [TestCase(ListingStatus.Suspended)]
-    public void ExecuteAsync_WhenRoomIsNonPublicAndCallerIsGuest_ThrowsRoomNotFound(ListingStatus hiddenStatus)
+    public Task ExecuteAsync_WhenRoomIsNonPublicAndCallerIsGuest_ThrowsRoomNotFound(ListingStatus hiddenStatus)
     {
         // Arrange (BR-LST-04a: PendingReview, Rejected, Suspended return 404 to non-owners)
         var room = CreateSampleRoom(status: hiddenStatus);
@@ -200,6 +212,7 @@ public class GetRoomDetailUseCaseTests
         // Act & Assert
         var ex = Assert.ThrowsAsync<EntityNotFoundException>(() => _sut.ExecuteAsync("room-001"));
         Assert.That(ex!.ErrorCode, Is.EqualTo(ProblemCodes.RoomNotFound));
+        return Task.CompletedTask;
     }
 
     [TestCase(ListingStatus.PendingReview)]
@@ -247,7 +260,7 @@ public class GetRoomDetailUseCaseTests
     }
 
     [Test]
-    public void ExecuteAsync_WhenRoomDoesNotExist_ThrowsRoomNotFound()
+    public Task ExecuteAsync_WhenRoomDoesNotExist_ThrowsRoomNotFound()
     {
         // Arrange
         _roomRepository.GetByIdAsync("non-existing-id", Arg.Any<CancellationToken>()).Returns((Room?)null);
@@ -255,10 +268,11 @@ public class GetRoomDetailUseCaseTests
         // Act & Assert
         var ex = Assert.ThrowsAsync<EntityNotFoundException>(() => _sut.ExecuteAsync("non-existing-id"));
         Assert.That(ex!.ErrorCode, Is.EqualTo(ProblemCodes.RoomNotFound));
+        return Task.CompletedTask;
     }
 
     [Test]
-    public void ExecuteAsync_WhenCampusNotFound_ThrowsCampusNotFound()
+    public Task ExecuteAsync_WhenCampusNotFound_ThrowsCampusNotFound()
     {
         // Arrange (BR-CMP-01)
         var room = CreateSampleRoom();
@@ -267,6 +281,7 @@ public class GetRoomDetailUseCaseTests
         // Act & Assert
         var ex = Assert.ThrowsAsync<DomainValidationException>(() => _sut.ExecuteAsync("room-001", campusId: "UNKNOWN_CAMPUS"));
         Assert.That(ex!.ErrorCode, Is.EqualTo(ProblemCodes.CampusNotFound));
+        return Task.CompletedTask;
     }
 
     [Test]
@@ -425,5 +440,15 @@ public class GetRoomDetailUseCaseTests
         var result = await _sut.ExecuteAsync("room-001");
 
         Assert.That(result.DistanceKm, Is.EqualTo(expectedTnusDistance));
+    }
+
+    [Test]
+    public void Constructor_WhenPhotoRepositoryOrStorageIsNull_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() =>
+            new GetRoomDetailUseCase(_roomRepository, _userRepository, _campusRepository, _currentUserContext, null!, _storage));
+
+        Assert.Throws<ArgumentNullException>(() =>
+            new GetRoomDetailUseCase(_roomRepository, _userRepository, _campusRepository, _currentUserContext, _photoRepository, null!));
     }
 }
