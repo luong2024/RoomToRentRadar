@@ -71,6 +71,7 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowUnavailableDebugPreview))]
+    [NotifyPropertyChangedFor(nameof(ShowDescription))]
     public partial bool IsAvailable { get; set; } = true;
 
     [ObservableProperty]
@@ -157,6 +158,15 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
     public partial string Title { get; set; } = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDescription))]
+    [NotifyPropertyChangedFor(nameof(ShowDescription))]
+    public partial string Description { get; set; } = string.Empty;
+
+    public bool HasDescription => !string.IsNullOrWhiteSpace(Description);
+
+    public bool ShowDescription => IsAvailable && HasDescription;
+
+    [ObservableProperty]
     public partial string PriceFormatted { get; set; } = string.Empty;
 
     [ObservableProperty]
@@ -216,6 +226,9 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     public partial string SafetyScoreFormatted { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool IsSafetyVerified { get; set; } = false;
 
     public ObservableCollection<SafetyCheckItem> SafetyChecklist { get; } = [];
 
@@ -316,18 +329,31 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
     #region Initialization & Data Loading
 
     [RelayCommand]
-    public async Task InitializeAsync()
+    public Task InitializeAsync() => LoadRoomAsync(showSkeleton: true);
+
+    [RelayCommand]
+    public Task RefreshAsync() => LoadRoomAsync(showSkeleton: false);
+
+    private async Task LoadRoomAsync(bool showSkeleton)
     {
         if (string.IsNullOrWhiteSpace(RoomId))
         {
             IsLoading = false;
+            IsBusy = false;
             IsNotFound = true;
             return;
         }
 
         try
         {
-            IsLoading = true;
+            if (showSkeleton)
+            {
+                IsLoading = true;
+            }
+            else
+            {
+                IsBusy = true;
+            }
             HasError = false;
             IsNotFound = false;
             ErrorMessage = string.Empty;
@@ -364,19 +390,21 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
         }
         finally
         {
-            IsLoading = false;
+            if (showSkeleton)
+            {
+                IsLoading = false;
+            }
+            else
+            {
+                IsBusy = false;
+            }
         }
-    }
-
-    [RelayCommand]
-    public async Task RefreshAsync()
-    {
-        await InitializeAsync();
     }
 
     private void PopulateRoomDetails(RoomDetailDto detail)
     {
         Title = detail.Title;
+        Description = detail.Description?.Trim() ?? string.Empty;
         IsFavourite = detail.IsFavourite;
         Latitude = detail.Location.Latitude;
         Longitude = detail.Location.Longitude;
@@ -646,7 +674,10 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
     private void PopulateSafety(SafetyDto safety)
     {
         SafetyChecklist.Clear();
-        int score = safety.Score > 0 ? (safety.Score <= 5 ? safety.Score : (int)Math.Round(safety.Score / 20.0)) : 4;
+        IsSafetyVerified = safety.IsVerified;
+        int score = safety.Score <= 0
+            ? 0
+            : (safety.Score <= 5 ? safety.Score : Math.Clamp((int)Math.Round(safety.Score / 20.0), 0, 5));
         string scoreFormat = safety.IsVerified
             ? AppResources.GetString("RoomDetail_SafetyScoreVerified")
             : AppResources.GetString("RoomDetail_SafetyScoreUnverified");

@@ -174,8 +174,9 @@
                 </HorizontalStackLayout>
             </Border>
 
-            <!-- Photo Counter Badge (e.g. "1 / 12") -->
-            <Border StrokeShape="RoundRectangle 9999"
+            <!-- Photo Counter Badge (e.g. "1 / 12"; hidden when no photos exist) -->
+            <Border IsVisible="{Binding HasPhotos}"
+                    StrokeShape="RoundRectangle 9999"
                     StrokeThickness="0"
                     BackgroundColor="#B3000000"
                     Padding="10,4"

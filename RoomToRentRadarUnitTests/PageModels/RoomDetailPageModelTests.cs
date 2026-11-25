@@ -681,10 +681,116 @@ public class RoomDetailPageModelTests
 
         // Assert
         Assert.That(_sut.SafetyScoreFormatted, Is.EqualTo("2/5 · Unverified"));
+        Assert.That(_sut.IsSafetyVerified, Is.False);
         Assert.That(_sut.SafetyChecklist, Has.Count.EqualTo(5));
         Assert.That(_sut.SafetyChecklist[0].IsVerified, Is.True); // CCTV
         Assert.That(_sut.SafetyChecklist[1].IsVerified, Is.False); // Secure entrance
         Assert.That(_sut.SafetyChecklist[2].IsVerified, Is.True); // Fire safety
+    }
+
+    [Test]
+    public async Task PopulateSafety_WhenScoreIsZero_KeepsZeroAndDoesNotDefaultToFour()
+    {
+        // Arrange (BR-LST-08: zero safety score must never be inflated to 4/5)
+        var testRoom = CreateSampleRoom(
+            status: ListingStatus.Available,
+            isVerified: true,
+            monthlyRent: 2000000,
+            deposit: 2000000,
+            areaM2: 20.0,
+            maxOccupants: 1,
+            furnishing: Furnishing.Basic,
+            availableFrom: null,
+            distanceKm: 1.0,
+            landlordPhone: null) with
+        {
+            Safety = new SafetyDto(0, false, [])
+        };
+
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu").Returns(CreateSampleTravelTimes("ICTU", 1.2));
+
+        // Act
+        await _sut.InitializeAsync();
+
+        // Assert
+        Assert.That(_sut.SafetyScoreFormatted, Is.EqualTo("0/5 · Unverified"));
+        Assert.That(_sut.IsSafetyVerified, Is.False);
+    }
+
+    [Test]
+    public async Task PopulateDescription_WhenAvailableAndNonEmpty_SetsShowDescriptionTrue()
+    {
+        // Arrange (US02 AC1)
+        var testRoom = CreateSampleRoom(
+            status: ListingStatus.Available,
+            isVerified: true,
+            monthlyRent: 2500000,
+            deposit: 2500000,
+            areaM2: 25.0,
+            maxOccupants: 2,
+            furnishing: Furnishing.Full,
+            availableFrom: null,
+            distanceKm: 1.2,
+            landlordPhone: null);
+
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu").Returns(CreateSampleTravelTimes("ICTU", 1.2));
+
+        // Act - Available with description
+        await _sut.InitializeAsync();
+        Assert.That(_sut.Description, Is.EqualTo("Beautiful spacious room with full natural light and private balcony."));
+        Assert.That(_sut.HasDescription, Is.True);
+        Assert.That(_sut.ShowDescription, Is.True);
+
+        // Act - Available with blank description
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom with { Description = "   " });
+        await _sut.InitializeAsync();
+        Assert.That(_sut.HasDescription, Is.False);
+        Assert.That(_sut.ShowDescription, Is.False);
+
+        // Act - Unavailable hides description
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom with { Status = ListingStatus.Rented });
+        await _sut.InitializeAsync();
+        Assert.That(_sut.ShowDescription, Is.False);
+    }
+
+    [Test]
+    public async Task RefreshAsync_DoesNotShowLoadingSkeletonAndResetsIsBusy()
+    {
+        // Arrange
+        var testRoom = CreateSampleRoom(
+            status: ListingStatus.Available,
+            isVerified: true,
+            monthlyRent: 2500000,
+            deposit: 2500000,
+            areaM2: 25.0,
+            maxOccupants: 2,
+            furnishing: Furnishing.Full,
+            availableFrom: null,
+            distanceKm: 1.2,
+            landlordPhone: null);
+
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu").Returns(CreateSampleTravelTimes("ICTU", 1.2));
+        await _sut.InitializeAsync();
+
+        var seenIsLoadingTrue = false;
+        _sut.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(RoomDetailPageModel.IsLoading) && _sut.IsLoading)
+            {
+                seenIsLoadingTrue = true;
+            }
+        };
+
+        // Act
+        await _sut.RefreshAsync();
+
+        // Assert
+        Assert.That(seenIsLoadingTrue, Is.False);
+        Assert.That(_sut.IsLoading, Is.False);
+        Assert.That(_sut.IsBusy, Is.False);
     }
 
     [Test]

@@ -51,7 +51,7 @@
 
             <!-- Scrollable Content with Pull-To-Refresh -->
             <RefreshView Grid.Row="0"
-                         Command="{Binding InitializeCommand}"
+                         Command="{Binding RefreshCommand}"
                          IsRefreshing="{Binding IsBusy}">
                 <ScrollView>
                     <VerticalStackLayout Spacing="0">
@@ -178,6 +178,28 @@
 
                             <!-- Key Facts Grid (Area, Room type, Occupants, Furnishing, Availability, Distance) -->
                             <detail:RoomKeyFactsGridControl IsVisible="{Binding IsAvailable}" />
+
+                            <!-- Room Description Card (US02 AC1) -->
+                            <Border IsVisible="{Binding ShowDescription}"
+                                    StrokeShape="RoundRectangle 12"
+                                    StrokeThickness="1"
+                                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+                                    Shadow="{StaticResource Elevation1Shadow}"
+                                    Padding="16">
+                                <VerticalStackLayout Spacing="8">
+                                    <Label Text="{loc:LocalizedStrings RoomDetail_Description}"
+                                           FontFamily="{StaticResource FontFamilySemibold}"
+                                           FontSize="{StaticResource FontSizeH3}"
+                                           FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                    <Label Text="{Binding Description}"
+                                           FontFamily="{StaticResource FontFamilyRegular}"
+                                           FontSize="{StaticResource FontSizeBodyMedium}"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}"
+                                           LineBreakMode="WordWrap" />
+                                </VerticalStackLayout>
+                            </Border>
 
                             <!-- Monthly Utility Costs Card -->
                             <detail:MonthlyCostsCardControl IsVisible="{Binding IsAvailable}" />
