@@ -28,7 +28,8 @@ public static partial class AppRoutes
     public const string ChatConversation = "chat/conversation";
     public const string SavedSearches = "saved-searches";
     public const string Notifications = "notifications";
-    public const string AccountCampus = "account/campus";
+    // Must not start with a tab route: MAUI reads "account/campus" as a path into the Account tab and throws.
+    public const string AccountCampus = "account-campus";
     public const string AccountLanguage = "account/language";
     public const string ListingEditor = "listings/editor";
     public const string AdminReview = "admin/review";
