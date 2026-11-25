@@ -73,7 +73,6 @@ app.MapControllers();
 // ISOLATED FEATURE ENDPOINT MODULES (LOCKED COMPOSITION ROOT)
 // Legacy Minimal API endpoints; each task migrates its file to Controllers/<Feature>Controller.cs.
 // ============================================================================
-app.MapRoomListingEndpoints();
 app.MapRoomDetailEndpoints();
 app.MapPhotoGalleryEndpoints();
 app.MapRoomSearchEndpoints();
