@@ -2,6 +2,8 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using RoomToRentRadar.Core.Interfaces;
+using RoomToRentRadar.Models.MapSearch;
 using RoomToRentRadar.Models.RoomListings;
 using RoomToRentRadar.Services.RoomListings;
 
@@ -16,13 +18,19 @@ public partial class CreateListingViewModel : ObservableObject
 
     private readonly ICreateListingService _createListingService;
     private readonly IMediaPickerService _mediaPickerService;
+    private readonly IAuthenticationSessionService? _sessionService;
+    private GeoCoordinate? _confirmedLocation;
+    private long? _locationSessionEpoch;
+    private bool _isPickingLocation;
 
     public CreateListingViewModel(
         ICreateListingService createListingService,
-        IMediaPickerService mediaPickerService)
+        IMediaPickerService mediaPickerService,
+        IAuthenticationSessionService? sessionService = null)
     {
         _createListingService = createListingService ?? throw new ArgumentNullException(nameof(createListingService));
         _mediaPickerService = mediaPickerService ?? throw new ArgumentNullException(nameof(mediaPickerService));
+        _sessionService = sessionService;
 
         RoomTypeOptions = RoomTypeOption.DefaultOptions;
         Photos = new ObservableCollection<ListingPhotoItem>();
@@ -34,6 +42,28 @@ public partial class CreateListingViewModel : ObservableObject
     public ObservableCollection<ListingPhotoItem> Photos { get; }
 
     public Func<Task>? NavigationBackHandler { get; set; }
+
+    internal Func<GeoCoordinate?, Task<ListingLocationPickerResult>>? LocationPickerHandler { get; set; }
+
+    public GeoCoordinate? ConfirmedLocation => _locationSessionEpoch == _sessionService?.SessionEpoch
+        ? _confirmedLocation
+        : null;
+
+    public string LocationSummary => ListingLocation.Describe(ConfirmedLocation);
+
+    [ObservableProperty]
+    public partial bool HasLocationNavigationError { get; private set; }
+
+    internal void RefreshLocationForSession()
+    {
+        if (_confirmedLocation is not null && ConfirmedLocation is null)
+        {
+            _confirmedLocation = null;
+            OnPropertyChanged(nameof(ConfirmedLocation));
+            OnPropertyChanged(nameof(LocationSummary));
+        }
+    }
+
 
     // Form Fields
     [ObservableProperty]
@@ -97,13 +127,15 @@ public partial class CreateListingViewModel : ObservableObject
 
     // Status properties
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(OpenLocationPickerCommand))]
     public partial bool IsLoading { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanSubmit))]
+    [NotifyCanExecuteChangedFor(nameof(OpenLocationPickerCommand))]
     public partial bool IsSubmitting { get; set; }
 
-    public bool CanSubmit => !IsSubmitting;
+    public bool CanSubmit => !IsSubmitting && !_isPickingLocation;
 
     [ObservableProperty]
     public partial bool HasError { get; set; }
@@ -183,6 +215,59 @@ public partial class CreateListingViewModel : ObservableObject
         }
     }
 
+    private bool CanOpenLocationPicker() => !IsLoading && !IsSubmitting && !_isPickingLocation;
+
+    [RelayCommand(CanExecute = nameof(CanOpenLocationPicker))]
+    public async Task OpenLocationPickerAsync()
+    {
+        if (!CanOpenLocationPicker())
+        {
+            return;
+        }
+
+        var sessionEpoch = _sessionService?.SessionEpoch;
+        RefreshLocationForSession();
+        SetPickingLocation(true);
+        HasLocationNavigationError = false;
+
+        try
+        {
+            var result = LocationPickerHandler is { } openPicker
+                ? await openPicker(ConfirmedLocation)
+                : new ListingLocationPickerResult(ListingLocationPickerOutcome.Failed);
+
+            if (sessionEpoch != _sessionService?.SessionEpoch)
+            {
+                return;
+            }
+
+            HasLocationNavigationError = result.Outcome == ListingLocationPickerOutcome.Failed;
+            if (result.Outcome == ListingLocationPickerOutcome.Confirmed &&
+                ListingLocation.IsValid(result.Location) && _confirmedLocation != result.Location)
+            {
+                _confirmedLocation = result.Location;
+                _locationSessionEpoch = sessionEpoch;
+                OnPropertyChanged(nameof(ConfirmedLocation));
+                OnPropertyChanged(nameof(LocationSummary));
+            }
+        }
+        catch (Exception)
+        {
+            HasLocationNavigationError = sessionEpoch == _sessionService?.SessionEpoch;
+        }
+        finally
+        {
+            SetPickingLocation(false);
+        }
+    }
+
+    private void SetPickingLocation(bool value)
+    {
+        _isPickingLocation = value;
+        OnPropertyChanged(nameof(CanSubmit));
+        OpenLocationPickerCommand.NotifyCanExecuteChanged();
+    }
+
     [RelayCommand]
     public void SelectRoomType(string? code)
     {
@@ -195,7 +280,7 @@ public partial class CreateListingViewModel : ObservableObject
     [RelayCommand]
     public async Task PickPhotosAsync(CancellationToken cancellationToken)
     {
-        if (IsSubmitting) return;
+        if (IsSubmitting || _isPickingLocation) return;
 
         try
         {
@@ -275,7 +360,7 @@ public partial class CreateListingViewModel : ObservableObject
     [RelayCommand]
     public async Task SubmitListingAsync(CancellationToken cancellationToken)
     {
-        if (IsSubmitting) return;
+        if (!CanSubmit) return;
 
         ClearStatusMessages();
 
@@ -335,6 +420,8 @@ public partial class CreateListingViewModel : ObservableObject
     [RelayCommand]
     public async Task GoBackAsync()
     {
+        if (_isPickingLocation) return;
+
         if (NavigationBackHandler != null)
         {
             await NavigationBackHandler.Invoke();

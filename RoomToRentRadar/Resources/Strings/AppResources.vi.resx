@@ -148,4 +148,18 @@
   <data name="Logout_Confirm_Yes" xml:space="preserve"><value>Đăng xuất</value></data>
   <data name="Logout_Confirm_No" xml:space="preserve"><value>Hủy</value></data>
   <data name="Logout_Success" xml:space="preserve"><value>Đăng xuất thành công</value></data>
+  <data name="ListingLocation_Title" xml:space="preserve"><value>Chọn vị trí phòng</value></data>
+  <data name="ListingLocation_Optional" xml:space="preserve"><value>Vị trí trên bản đồ (tùy chọn)</value></data>
+  <data name="ListingLocation_Open" xml:space="preserve"><value>Mở bản đồ chọn vị trí</value></data>
+  <data name="ListingLocation_Empty" xml:space="preserve"><value>Chưa chọn vị trí</value></data>
+  <data name="ListingLocation_Coordinates" xml:space="preserve"><value>Vị trí đã chọn: {0:F6}, {1:F6}</value></data>
+  <data name="ListingLocation_Cancel" xml:space="preserve"><value>Hủy</value></data>
+  <data name="ListingLocation_Confirm" xml:space="preserve"><value>Xác nhận vị trí</value></data>
+  <data name="ListingLocation_PinLabel" xml:space="preserve"><value>Vị trí phòng</value></data>
+  <data name="ListingLocation_MapHint" xml:space="preserve"><value>Chạm vào bản đồ để đặt hoặc di chuyển ghim.</value></data>
+  <data name="ListingLocation_MapLoading" xml:space="preserve"><value>Đang chờ bản đồ. Nếu bản đồ vẫn trống, hãy kiểm tra kết nối hoặc quay lại biểu mẫu.</value></data>
+  <data name="ListingLocation_MapOffline" xml:space="preserve"><value>Bản đồ cần kết nối Internet. Hãy kết nối lại hoặc hủy để quay lại biểu mẫu.</value></data>
+  <data name="ListingLocation_MapMissingKey" xml:space="preserve"><value>Bản build này chưa cấu hình Google Maps. Hãy đặt khóa trong secrets.props rồi build lại, hoặc hủy để tiếp tục.</value></data>
+  <data name="ListingLocation_MapUnavailable" xml:space="preserve"><value>Thiết bị này chưa hỗ trợ chọn vị trí. Bạn có thể gửi biểu mẫu mà không cần vị trí trên bản đồ.</value></data>
+  <data name="ListingLocation_NavigationError" xml:space="preserve"><value>Không thể mở hoặc đóng bản đồ. Vui lòng thử lại.</value></data>
 </root>

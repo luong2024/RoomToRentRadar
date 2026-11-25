@@ -1,5 +1,7 @@
 using Moq;
 using NUnit.Framework;
+using RoomToRentRadar.Core.Interfaces;
+using RoomToRentRadar.Models.MapSearch;
 using RoomToRentRadar.Models.RoomListings;
 using RoomToRentRadar.Services.RoomListings;
 using RoomToRentRadar.ViewModels.RoomListings;
@@ -33,6 +35,127 @@ public class CreateListingViewModelTests
         Assert.That(_viewModel.IsSubmitting, Is.False);
         Assert.That(_viewModel.HasError, Is.False);
         Assert.That(_viewModel.IsSuccess, Is.False);
+    }
+
+    [Test]
+    public async Task LocationPicker_ConfirmThenCancelPreservesSelectionAndForm()
+    {
+        var location = new GeoCoordinate(21.5855, 105.8075);
+        var photo = new ListingPhotoItem { FilePath = "room.jpg", FileName = "room.jpg" };
+        _viewModel.Title = "Room near campus";
+        _viewModel.Address = "Campus road";
+        _viewModel.TitleError = "Prior validation";
+        _viewModel.Photos.Add(photo);
+        _viewModel.LocationPickerHandler = _ => Task.FromResult(
+            new ListingLocationPickerResult(ListingLocationPickerOutcome.Confirmed, location));
+
+        await _viewModel.OpenLocationPickerAsync();
+
+        GeoCoordinate? reopenedAt = null;
+        _viewModel.LocationPickerHandler = initial =>
+        {
+            reopenedAt = initial;
+            return Task.FromResult(new ListingLocationPickerResult(ListingLocationPickerOutcome.Cancelled));
+        };
+        await _viewModel.OpenLocationPickerAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(reopenedAt, Is.EqualTo(location));
+            Assert.That(_viewModel.ConfirmedLocation, Is.EqualTo(location));
+            Assert.That(_viewModel.Title, Is.EqualTo("Room near campus"));
+            Assert.That(_viewModel.Address, Is.EqualTo("Campus road"));
+            Assert.That(_viewModel.TitleError, Is.EqualTo("Prior validation"));
+            Assert.That(_viewModel.Photos, Is.EqualTo(new[] { photo }));
+        });
+    }
+
+    [Test]
+    public async Task LocationPicker_DoubleOpenAndSubmitAreBlockedUntilNavigationCompletes()
+    {
+        var gate = new TaskCompletionSource<ListingLocationPickerResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var opens = 0;
+        _viewModel.LocationPickerHandler = _ =>
+        {
+            opens++;
+            return gate.Task;
+        };
+
+        var firstOpen = _viewModel.OpenLocationPickerAsync();
+        await _viewModel.OpenLocationPickerAsync();
+        await _viewModel.SubmitListingAsync(CancellationToken.None);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(opens, Is.EqualTo(1));
+            Assert.That(_viewModel.CanSubmit, Is.False);
+            Assert.That(_viewModel.HasError, Is.False);
+        });
+        _mockCreateListingService.VerifyNoOtherCalls();
+
+        gate.SetResult(new(ListingLocationPickerOutcome.Cancelled));
+        await firstOpen;
+
+        Assert.That(_viewModel.CanSubmit, Is.True);
+    }
+
+    [Test]
+    public async Task LocationPicker_NavigationFailureReleasesGuardAndCanBeRetried()
+    {
+        _viewModel.LocationPickerHandler = _ => throw new InvalidOperationException("Navigation failed.");
+
+        await _viewModel.OpenLocationPickerAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_viewModel.HasLocationNavigationError, Is.True);
+            Assert.That(_viewModel.CanSubmit, Is.True);
+            Assert.That(_viewModel.ConfirmedLocation, Is.Null);
+        });
+
+        _viewModel.LocationPickerHandler = _ => Task.FromResult(
+            new ListingLocationPickerResult(ListingLocationPickerOutcome.Confirmed, new GeoCoordinate(0, 0)));
+        await _viewModel.OpenLocationPickerAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_viewModel.HasLocationNavigationError, Is.False);
+            Assert.That(_viewModel.ConfirmedLocation, Is.EqualTo(new GeoCoordinate(0, 0)));
+        });
+    }
+
+    [Test]
+    public async Task LocationPicker_AccountSwitchDropsOldSelectionAndIgnoresPendingResult()
+    {
+        var activeEpoch = 1L;
+        var session = new Mock<IAuthenticationSessionService>();
+        session.SetupGet(service => service.SessionEpoch).Returns(() => activeEpoch);
+        var viewModel = new CreateListingViewModel(
+            _mockCreateListingService.Object, _mockMediaPickerService.Object, session.Object);
+        var location = new GeoCoordinate(21, 105);
+        viewModel.LocationPickerHandler = _ => Task.FromResult(
+            new ListingLocationPickerResult(ListingLocationPickerOutcome.Confirmed, location));
+        await viewModel.OpenLocationPickerAsync();
+        Assert.That(viewModel.ConfirmedLocation, Is.EqualTo(location));
+
+        var gate = new TaskCompletionSource<ListingLocationPickerResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        viewModel.LocationPickerHandler = _ => gate.Task;
+        var pendingOpen = viewModel.OpenLocationPickerAsync();
+
+        activeEpoch++;
+        gate.SetResult(new(ListingLocationPickerOutcome.Confirmed, new GeoCoordinate(22, 106)));
+        await pendingOpen;
+        Assert.That(viewModel.ConfirmedLocation, Is.Null);
+
+        GeoCoordinate? reopenedAt = location;
+        viewModel.LocationPickerHandler = initial =>
+        {
+            reopenedAt = initial;
+            return Task.FromResult(new ListingLocationPickerResult(ListingLocationPickerOutcome.Cancelled));
+        };
+        await viewModel.OpenLocationPickerAsync();
+
+        Assert.That(reopenedAt, Is.Null);
     }
 
     #region Title Validation Tests
