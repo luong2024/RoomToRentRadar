@@ -316,7 +316,7 @@
     <value>{0} ngày trước</value>
   </data>
   <data name="RoomDetail_PerMonth" xml:space="preserve">
-    <value>/ tháng</value>
+    <value>/tháng</value>
   </data>
   <data name="RoomDetail_Deposit" xml:space="preserve">
     <value>Tiền cọc {0} ({1})</value>
@@ -403,13 +403,13 @@
     <value>Gửi xe máy</value>
   </data>
   <data name="RoomDetail_PerKwh" xml:space="preserve">
-    <value>{0} đ / kWh</value>
+    <value>{0} / kWh</value>
   </data>
   <data name="RoomDetail_PerPerson" xml:space="preserve">
-    <value>{0} đ / người</value>
+    <value>{0} / người</value>
   </data>
   <data name="RoomDetail_PerM3" xml:space="preserve">
-    <value>{0} đ / m³</value>
+    <value>{0} / m³</value>
   </data>
   <data name="RoomDetail_Included" xml:space="preserve">
     <value>Đã bao gồm</value>
@@ -1040,12 +1040,6 @@
     <value>Vui lòng thử lại sau.</value>
   </data>
   <!-- Explore list SCR-HOME-01 and room card (T01.2) -->
-  <data name="Card_PriceMillion" xml:space="preserve">
-    <value>{0} tr/tháng</value>
-  </data>
-  <data name="Card_PriceThousand" xml:space="preserve">
-    <value>{0}k/tháng</value>
-  </data>
   <data name="Card_Distance" xml:space="preserve">
     <value>{0} km tới {1}</value>
   </data>
@@ -1093,5 +1087,17 @@
   </data>
   <data name="Explore_LoadMoreError" xml:space="preserve">
     <value>Không tải thêm được phòng.</value>
+  </data>
+  <data name="Price_ShortWithUnit" xml:space="preserve">
+    <value>{0}</value>
+  </data>
+  <data name="Price_FullWithUnit" xml:space="preserve">
+    <value>{0} ₫</value>
+  </data>
+  <data name="RoomDetail_UpdatedOn" xml:space="preserve">
+    <value>Cập nhật {0}</value>
+  </data>
+  <data name="RoomDetail_RelativeOnDate" xml:space="preserve">
+    <value>ngày {0}</value>
   </data>
 </root>
