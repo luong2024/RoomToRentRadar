@@ -166,7 +166,7 @@ public class FiltersPageModelTests
         Assert.That(model.ApplyCommand.CanExecute(null), Is.False);
 
         await Task.Delay(200);
-        _roomGateway.DidNotReceive().SearchRoomsAsync(Arg.Any<RoomSearchRequest>(), Arg.Any<CancellationToken>());
+        await _roomGateway.DidNotReceive().SearchRoomsAsync(Arg.Any<RoomSearchRequest>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -182,7 +182,7 @@ public class FiltersPageModelTests
         Assert.That(model.CanApply, Is.False);
 
         await Task.Delay(100);
-        _roomGateway.DidNotReceive().SearchRoomsAsync(Arg.Any<RoomSearchRequest>(), Arg.Any<CancellationToken>());
+        await _roomGateway.DidNotReceive().SearchRoomsAsync(Arg.Any<RoomSearchRequest>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
