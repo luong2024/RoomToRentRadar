@@ -195,6 +195,18 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                 houseRulesDomainEx.Message,
                 null),
 
+            ReportDomainException reportDomainEx => (
+                StatusCodes.Status400BadRequest,
+                "Listing Report Validation Error",
+                reportDomainEx.Message,
+                null),
+
+            DuplicateReportException duplicateReportEx => (
+                StatusCodes.Status409Conflict,
+                "Duplicate Listing Report",
+                duplicateReportEx.Message,
+                null),
+
             RateLimitExceededException rateLimitEx => (
                 StatusCodes.Status429TooManyRequests,
                 "Rate Limit Exceeded",

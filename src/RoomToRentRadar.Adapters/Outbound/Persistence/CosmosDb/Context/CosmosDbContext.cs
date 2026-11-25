@@ -22,11 +22,13 @@ public sealed class CosmosDbContext : ICosmosDbContext
     private readonly ICosmosContainer<UserProfileDocument> _userProfilesContainer;
     private readonly ICosmosContainer<FavouriteDocument> _favouritesContainer;
     private readonly ICosmosContainer<RoomHouseRulesDocument> _houseRulesContainer;
+    private readonly ICosmosContainer<ListingReportDocument> _listingReportsContainer;
     private readonly Container? _roomsCosmosContainer;
 
     public const string PartitionKeyPath = "/id";
     public const string FavouritesPartitionKeyPath = "/userId";
     public const string HouseRulesPartitionKeyPath = "/roomId";
+    public const string ListingReportsPartitionKeyPath = "/roomId";
     public const string UniqueTokenHashPath = "/tokenHash";
 
     public CosmosDbContext(IOptions<CosmosDbOptions> options)
@@ -57,6 +59,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
             _userProfilesContainer = new InMemoryCosmosContainer<UserProfileDocument>();
             _favouritesContainer = new InMemoryCosmosContainer<FavouriteDocument>();
             _houseRulesContainer = new InMemoryCosmosContainer<RoomHouseRulesDocument>();
+            _listingReportsContainer = new InMemoryCosmosContainer<ListingReportDocument>();
             _roomsCosmosContainer = null;
             _favouritesContainerEnsured = true;
         }
@@ -137,6 +140,10 @@ public sealed class CosmosDbContext : ICosmosDbContext
                 ? "RoomHouseRules"
                 : options.HouseRulesContainerName;
             var houseRulesCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, houseRulesContainerName);
+            var listingReportsContainerName = string.IsNullOrWhiteSpace(options.ListingReportsContainerName)
+                ? "ListingReports"
+                : options.ListingReportsContainerName;
+            var listingReportsCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, listingReportsContainerName);
             _roomsCosmosContainer = _cosmosClient.GetContainer(options.DatabaseName, options.RoomsContainerName);
 
             _usersContainer = new CosmosContainer<UserDocument>(usersCosmosContainer);
@@ -146,6 +153,7 @@ public sealed class CosmosDbContext : ICosmosDbContext
             _userProfilesContainer = new CosmosContainer<UserProfileDocument>(userProfilesCosmosContainer);
             _favouritesContainer = new CosmosContainer<FavouriteDocument>(favouritesCosmosContainer);
             _houseRulesContainer = new CosmosContainer<RoomHouseRulesDocument>(houseRulesCosmosContainer);
+            _listingReportsContainer = new CosmosContainer<ListingReportDocument>(listingReportsCosmosContainer);
         }
     }
 
@@ -162,6 +170,8 @@ public sealed class CosmosDbContext : ICosmosDbContext
     public ICosmosContainer<FavouriteDocument> Favourites => _favouritesContainer;
 
     public ICosmosContainer<RoomHouseRulesDocument> HouseRules => _houseRulesContainer;
+
+    public ICosmosContainer<ListingReportDocument> ListingReports => _listingReportsContainer;
 
     public Container? RoomsContainer => _roomsCosmosContainer;
 
@@ -303,6 +313,11 @@ public sealed class CosmosDbContext : ICosmosDbContext
             ? "RoomHouseRules"
             : _options.HouseRulesContainerName;
         await database.CreateContainerIfNotExistsAsync(houseRulesContainerName, HouseRulesPartitionKeyPath, cancellationToken: cancellationToken);
+
+        var listingReportsContainerName = string.IsNullOrWhiteSpace(_options.ListingReportsContainerName)
+            ? "ListingReports"
+            : _options.ListingReportsContainerName;
+        await database.CreateContainerIfNotExistsAsync(listingReportsContainerName, ListingReportsPartitionKeyPath, cancellationToken: cancellationToken);
         _favouritesContainerEnsured = true;
 
         var roomsContainerName = string.IsNullOrWhiteSpace(_options.RoomsContainerName) ? "Rooms" : _options.RoomsContainerName;

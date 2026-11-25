@@ -19,6 +19,8 @@ public interface ICosmosDbContext : IDisposable
 
     ICosmosContainer<RoomHouseRulesDocument> HouseRules { get; }
 
+    ICosmosContainer<ListingReportDocument> ListingReports { get; }
+
     Container? RoomsContainer { get; }
 
     Task EnsureDatabaseAndContainersAsync(CancellationToken cancellationToken = default);

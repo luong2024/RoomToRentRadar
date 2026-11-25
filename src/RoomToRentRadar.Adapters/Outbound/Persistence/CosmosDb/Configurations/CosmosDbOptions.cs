@@ -36,6 +36,8 @@ public sealed class CosmosDbOptions
 
     public string HouseRulesContainerName { get; set; } = "RoomHouseRules";
 
+    public string ListingReportsContainerName { get; set; } = "ListingReports";
+
     private string _roomsContainerName = "Rooms";
     private string? _containerName;
 

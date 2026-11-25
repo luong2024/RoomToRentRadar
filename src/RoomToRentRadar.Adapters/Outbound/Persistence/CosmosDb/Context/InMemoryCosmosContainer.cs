@@ -231,6 +231,39 @@ public sealed class InMemoryCosmosContainer<T> : ICosmosContainer<T> where T : c
 
                 return Task.FromResult<IReadOnlyList<T>>(rulesItems.Cast<T>().ToList());
             }
+            else if (typeof(T) == typeof(ListingReportDocument))
+            {
+                var reportItems = items.Cast<ListingReportDocument>();
+                var roomIdParam = GetQueryParameter(queryDefinition, "@roomId")?.ToString();
+                var reporterParam = GetQueryParameter(queryDefinition, "@reporterUserId")?.ToString();
+                var statusParam = GetQueryParameter(queryDefinition, "@status");
+                var pendingParam = GetQueryParameter(queryDefinition, "@pendingStatus");
+                var inReviewParam = GetQueryParameter(queryDefinition, "@inReviewStatus");
+
+                if (roomIdParam is not null)
+                {
+                    reportItems = reportItems.Where(r => string.Equals(r.RoomId, roomIdParam, StringComparison.Ordinal));
+                }
+
+                if (reporterParam is not null && Guid.TryParse(reporterParam, out var reporterGuid))
+                {
+                    reportItems = reportItems.Where(r => r.ReporterUserId == reporterGuid);
+                }
+
+                if (statusParam is not null)
+                {
+                    var statusInt = Convert.ToInt32(statusParam);
+                    reportItems = reportItems.Where(r => r.Status == statusInt);
+                }
+                else if (pendingParam is not null && inReviewParam is not null)
+                {
+                    var pendingInt = Convert.ToInt32(pendingParam);
+                    var inReviewInt = Convert.ToInt32(inReviewParam);
+                    reportItems = reportItems.Where(r => r.Status == pendingInt || r.Status == inReviewInt);
+                }
+
+                return Task.FromResult<IReadOnlyList<T>>(reportItems.Cast<T>().ToList());
+            }
 
             return Task.FromResult<IReadOnlyList<T>>(items);
         }
