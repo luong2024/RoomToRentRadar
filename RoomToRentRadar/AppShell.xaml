@@ -14,6 +14,7 @@
         <ShellContent x:Name="ExploreTab" Icon="explore_tab.png" Title="Khám phá" Route="home" />
         <ShellContent x:Name="FavouritesTab" Icon="favourites_tab.png" Title="Yêu thích" Route="favourites" />
         <ShellContent x:Name="MapTab" Icon="map_tab.png" Title="Bản đồ" Route="map" />
-        <ShellContent x:Name="MyListingsTab" Icon="listings_tab.png" Title="Tin của tôi" Route="my-listings" />
+        <ShellContent x:Name="MyListingsTab" Icon="listings_tab.png" Title="Tin của tôi" Route="my-listings" IsVisible="False" />
+        <ShellContent x:Name="ModerationTab" Icon="moderation_tab.png" Title="Kiểm duyệt" Route="moderation" IsVisible="False" />
     </TabBar>
 </Shell>

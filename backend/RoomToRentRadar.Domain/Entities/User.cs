@@ -1,3 +1,5 @@
+using RoomToRentRadar.Shared.Auth;
+
 namespace RoomToRentRadar.Domain.Entities;
 
 public sealed class User

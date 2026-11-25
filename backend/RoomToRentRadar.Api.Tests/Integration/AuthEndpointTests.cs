@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
@@ -59,9 +59,31 @@ public sealed class AuthEndpointTests
             Assert.That(login, Is.Not.Null);
             Assert.That(login!.AccessToken, Is.Not.Empty);
             Assert.That(login.DisplayName, Is.EqualTo(TestUsersSeed.DisplayName));
-            Assert.That(login.Role, Is.EqualTo("student"));
+            Assert.That(login.Role, Is.EqualTo(UserRoleWire.Student));
             Assert.That(login.ExpiresAt, Is.GreaterThan(DateTime.UtcNow));
         });
+    }
+
+    [Test]
+    public async Task Login_LandlordAccount_ReturnsLandlordRole()
+    {
+        const string email = "landlord@example.test";
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await TestUsersSeed.SeedAdditionalAsync(
+                dbContext,
+                Guid.NewGuid(),
+                email,
+                UserRole.Landlord,
+                "Landlord Tester");
+        }
+
+        var response = await LoginAsync(email, TestUsersSeed.Password);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var login = await response.Content.ReadFromJsonAsync<LoginResponse>(ApiJson.Options);
+        Assert.That(login!.Role, Is.EqualTo(UserRoleWire.Landlord));
     }
 
     [Test]

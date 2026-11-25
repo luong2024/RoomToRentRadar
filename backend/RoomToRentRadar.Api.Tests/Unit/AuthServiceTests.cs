@@ -2,6 +2,7 @@ using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Ports.Models.Auth;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 using RoomToRentRadar.Ports.Outbound.Services;
+using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.UseCases.Auth;
 
 namespace RoomToRentRadar.Api.Tests.Unit;

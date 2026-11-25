@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RoomToRentRadar.Api.Features.Auth;
 using RoomToRentRadar.Ports.Inbound;
 using RoomToRentRadar.Ports.Models.Common;
 using RoomToRentRadar.Ports.Models.Photos;
@@ -28,7 +29,7 @@ public sealed class ListingPhotosController(IListingPhotosUseCase listingPhotosU
         return result.IsSuccess ? Ok(result.Value) : ToProblem(result.Error!);
     }
 
-    [Authorize]
+    [Authorize(Policy = AuthPolicies.Landlord)]
     [HttpPost]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(PhotoUploadLimits.MaxRequestBodyBytes)]

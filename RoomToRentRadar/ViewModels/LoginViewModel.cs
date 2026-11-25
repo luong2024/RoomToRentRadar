@@ -1,6 +1,8 @@
+using System.Net;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Services;
+using RoomToRentRadar.Services.Api;
 using RoomToRentRadar.Services.Auth;
 using RoomToRentRadar.Services.ErrorHandling;
 using RoomToRentRadar.Services.Interactions;
@@ -53,30 +55,28 @@ public partial class LoginViewModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Password))
         {
-            ErrorMessage = "Enter your email and password.";
+            ErrorMessage = "Nhập email và mật khẩu.";
             return;
         }
 
         IsBusy = true;
         try
         {
-            var signedIn = await _authService.SignInAsync(
+            await _authService.SignInAsync(
                 Email.Trim(),
                 Password,
                 cancellationToken);
 
-            if (!signedIn)
-            {
-                ErrorMessage = "Email or password is incorrect.";
-                return;
-            }
-
             Password = string.Empty;
-            await _navigationService.GoBackAsync();
+            await _navigationService.GoToRoleRootAsync(_authService.CurrentRole);
+        }
+        catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            ErrorMessage = "Email hoặc mật khẩu không đúng.";
         }
         catch (Exception ex)
         {
-            ErrorMessage = "Could not sign in. Check your connection and try again.";
+            ErrorMessage = "Không thể đăng nhập. Kiểm tra kết nối và thử lại.";
             _errorHandler.HandleError(ex);
         }
         finally
@@ -87,4 +87,7 @@ public partial class LoginViewModel : ObservableObject
 
     [RelayCommand]
     private Task CancelAsync() => _navigationService.GoBackAsync();
+
+    [RelayCommand]
+    private Task GoToRegisterAsync() => _navigationService.GoToRegisterAsync();
 }

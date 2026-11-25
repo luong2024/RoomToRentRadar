@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Ports.Models.Auth;
+using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.SqliteDataAccess.Converters;
 
 namespace RoomToRentRadar.SqliteDataAccess.Configurations;

@@ -5,6 +5,7 @@ using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Api.Features.Auth;
 using RoomToRentRadar.Ports.Inbound;
 using RoomToRentRadar.Ports.Models.Moderation;
+using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.Shared.Moderation;
 using RoomToRentRadar.UseCases.Moderation;
 

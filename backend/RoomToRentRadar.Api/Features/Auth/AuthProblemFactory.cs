@@ -14,6 +14,7 @@ public static class AuthProblemFactory
     public const string EmailAlreadyRegistered = "email_already_registered";
     public const string Unauthorized = "unauthorized";
     public const string Forbidden = "forbidden";
+    public const string RateLimited = "auth_rate_limited";
 
     public static ProblemDetails InvalidEmailProblem(string detail)
         => RegistrationProblem(StatusCodes.Status400BadRequest, InvalidEmail, "Invalid email", detail);
@@ -81,6 +82,19 @@ public static class AuthProblemFactory
             Detail = "The email or password is incorrect."
         };
         problem.Extensions["code"] = InvalidCredentials;
+        return problem;
+    }
+
+    public static ProblemDetails RateLimitedProblem()
+    {
+        var problem = new ProblemDetails
+        {
+            Type = "https://tools.ietf.org/html/rfc6585#section-4",
+            Status = StatusCodes.Status429TooManyRequests,
+            Title = "Too many authentication requests",
+            Detail = "Authentication requests are limited per client. Retry after a short delay."
+        };
+        problem.Extensions["code"] = RateLimited;
         return problem;
     }
 

@@ -1,4 +1,4 @@
-using RoomToRentRadar.Services;
+﻿using RoomToRentRadar.Services;
 using RoomToRentRadar.Services.Auth;
 using RoomToRentRadar.Services.ErrorHandling;
 using RoomToRentRadar.Services.Interactions;
@@ -629,6 +629,9 @@ public partial class HomeViewModelTests
         public Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The home screen does not sign in.");
 
+        public Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The home screen does not register accounts.");
+
         public Task<LoginResponse?> DemoLoginAsync(CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The home screen does not sign in.");
 
@@ -688,6 +691,10 @@ public partial class HomeViewModelTests
         }
 
         public Task GoToLoginAsync() => Task.CompletedTask;
+
+        public Task GoToRegisterAsync() => Task.CompletedTask;
+
+        public Task GoToRoleRootAsync(RoomToRentRadar.Models.AppUserRole? role) => Task.CompletedTask;
 
         public Task GoToDirectionsAsync(
             double destinationLat,

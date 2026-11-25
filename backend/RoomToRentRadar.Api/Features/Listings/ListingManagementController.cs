@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RoomToRentRadar.Api.Features.Auth;
 using RoomToRentRadar.Ports.Inbound;
 using RoomToRentRadar.Ports.Models.Listings;
 using RoomToRentRadar.Ports.Models.Photos;
@@ -10,7 +11,7 @@ using RoomToRentRadar.Shared.Listings;
 namespace RoomToRentRadar.Api.Features.Listings;
 
 [ApiController]
-[Authorize]
+[Authorize(Policy = AuthPolicies.Landlord)]
 [Route("api/v1/listings")]
 public sealed class ListingManagementController(
     IListingManagementUseCase listingManagementUseCase,

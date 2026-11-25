@@ -1,4 +1,4 @@
-namespace RoomToRentRadar.Domain.Entities;
+namespace RoomToRentRadar.Shared.Auth;
 
 public enum UserRole
 {

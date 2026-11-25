@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using RoomToRentRadar.Helpers;
 using RoomToRentRadar.Services;
 using RoomToRentRadar.Services.Auth;
@@ -656,6 +656,9 @@ public partial class MapSearchViewModelTests
         public Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
+        public Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
         public Task<LoginResponse?> DemoLoginAsync(CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
@@ -755,6 +758,9 @@ public partial class MapSearchViewModelTests
             => throw new NotSupportedException();
 
         public Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
         public Task<LoginResponse?> DemoLoginAsync(CancellationToken cancellationToken = default)

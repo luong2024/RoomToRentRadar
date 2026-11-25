@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using RoomToRentRadar.Api.Features.Auth;
-using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Shared.Auth;
 
 namespace RoomToRentRadar.Api.Tests.Unit;

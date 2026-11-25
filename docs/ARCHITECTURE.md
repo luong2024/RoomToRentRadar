@@ -97,6 +97,11 @@ Create a folder only when it contains code. Do not add empty layers.
 - Routes are declared in `AppRoutes` (`Constants/`) and registered in the `AppShell` constructor
   when they are not root shell content.
 - Pass parameters to the ViewModel with `IQueryAttributable`, not to the page.
+- After sign-in or registration the app calls `INavigationService.GoToRoleRootAsync(role)`:
+  Student → `//home`, Landlord → `//my-listings`, Moderator/Admin → `//moderation`.
+- `AppShell` shows the `MyListings` tab only for Landlord and the `Moderation` tab only for
+  Moderator/Admin. It observes `AuthService.SessionChanged` and only touches tab visibility on the
+  main thread.
 
 ### 3.5 API communication
 
@@ -105,6 +110,10 @@ Create a folder only when it contains code. Do not add empty layers.
   Android emulator. Android debug builds allow cleartext traffic for local development.
 - Request/response types come from `RoomToRentRadar.Shared`.
 - Failures are reported through `IErrorHandler`; do not show alerts from ViewModels.
+- `AuthService` owns the session: it stores the token and role through `ITokenStore`
+  (`AppUserRole`), exposes `CurrentRole` and raises `SessionChanged`. ViewModels read the role from
+  the service, never from secure storage directly. Sessions stored before roles existed are treated
+  as Student.
 
 ### 3.6 Theming and layout
 
@@ -151,6 +160,9 @@ root (`AddDataAccess`, `AddUseCases`, `AddInfrastructure`).
   Repositories own EF queries, `ExecuteUpdateAsync` conditional updates and include graphs.
 - Validation limits (max lengths, upload caps) live once in `Ports/Models/<Area>` (for example
   `ListingLimits`, `PhotoUploadLimits`) and are shared by API validators and EF configurations.
+  `Shared/Auth/AccountRules` is the deliberate exception: the mobile client cannot reference
+  `Ports`, so registration limits live in `Shared` and are shared by the API validator and the
+  mobile form.
 - Multi-write operations use `IUnitOfWork.BeginTransactionAsync`; the port exposes
   `CommitAsync` and async disposal so use cases stay storage-agnostic.
 
@@ -174,13 +186,39 @@ root (`AddDataAccess`, `AddUseCases`, `AddInfrastructure`).
 - Schema changes use EF Core migrations. Never use `EnsureCreated`.
 - Development startup applies migrations and seeds sample data; this is a documented exception.
 
-### 4.4 Authentication and roles
+### 4.4 Authentication, roles and authorization
 
-- `POST /api/v1/auth/register` is public and accepts `student` or `landlord` only; admin accounts are provisioned by the system (demo seed / configuration), never self-registered.
-- `POST /api/v1/auth/login` issues an HS256-signed JWT access token (7-day expiry) carrying the user id, email, display name and role claims. The JwtBearer handler validates signature, issuer, audience and lifetime on every request. Each token is bound to a server-side `auth_sessions` row (stored as a SHA-256 hash) that is checked after signature validation, so logout still revokes access immediately.
-- The signing key comes from `Auth:Token:SigningKey` (user-secrets or the `Auth__Token__SigningKey` environment variable). Missing keys fail startup outside Development; Development falls back to a per-process key.
-- Role wire values are `student`, `landlord`, `moderator` and `admin`; the token's role claim drives `ModeratorOrAdmin` RBAC.
-- Passwords are stored as PBKDF2-SHA256 (100k iterations, 16-byte salt, fixed-time comparison).
+- Roles are `student`, `landlord`, `moderator` and `admin`. The `UserRole` enum and its
+  `UserRoleWire` values live once in `Shared/Auth` (like `ListingStatus`); the `users` CHECK
+  constraint, EF converters, the token role claim, `AccountRules` and the mobile `AppUserRoleWire`
+  all derive from that single source.
+- `POST /api/v1/auth/register` creates self-service accounts for `student` and `landlord` only;
+  moderator and admin accounts are provisioned out of band. `RegistrationValidator`/`AuthLimits`
+  validate email format/length, display name length and a password of 8-128 characters containing
+  letters and digits. Duplicate emails return 409 `email_already_registered`, including a concurrent
+  insert that slips past the pre-check and is caught by the repository's unique-index handling.
+- `POST /api/v1/auth/login` issues an HS256-signed JWT access token (7-day expiry) carrying the user
+  id, email, display name and role claims. The JwtBearer handler validates signature, issuer,
+  audience and lifetime on every request. Each token is bound to a server-side `auth_sessions` row
+  (stored as a SHA-256 hash) that is checked after signature validation, so logout still revokes
+  access immediately.
+- The signing key comes from `Auth:Token:SigningKey` (user-secrets or the
+  `Auth__Token__SigningKey` environment variable). Missing keys fail startup outside Development;
+  Development falls back to a per-process key.
+- Passwords are stored as PBKDF2-SHA256 (100k iterations, 16-byte salt, fixed-time comparison)
+  through `IPasswordHasher`.
+- `POST /api/v1/auth/register` and `/login` share a fixed-window per-IP rate limit
+  (`Auth:RateLimitPerMinute`, default 10) and answer 429 `auth_rate_limited` with a `Retry-After`
+  header when exceeded.
+- Migration `AddStudentAndLandlordRoles` replaces the legacy `user` role: accounts that own at least
+  one listing become `landlord` (they keep access to listing management and photo upload), all other
+  legacy accounts become `student`. The `Down` migration merges both roles back to `user`.
+- Authorization policies live in `Features/Auth/AuthPolicies.cs` and rely on the role claim issued by
+  the JWT handler. `Landlord` guards listing management (`api/v1/listings` create/update/unpublish)
+  and photo upload; `ModeratorOrAdmin` guards `api/v1/moderation/*`. Rejected calls return 401/403
+  with a `ProblemDetails` `code`.
+- The mobile moderation queue uses `GET /api/v1/moderation/listings?status=pending_review`
+  (cursor paginated) and `POST /api/v1/moderation/listings/{id}/approve`.
 
 ## 5. Testing
 

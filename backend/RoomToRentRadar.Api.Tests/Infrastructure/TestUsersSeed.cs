@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using RoomToRentRadar.SqliteDataAccess;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Infrastructure.Auth;
+using RoomToRentRadar.Shared.Auth;
 
 namespace RoomToRentRadar.Api.Tests.Infrastructure;
 
@@ -12,7 +13,6 @@ public static class TestUsersSeed
     public const string DisplayName = "Demo Tester";
 
     public static readonly Guid Id = new("aaaaaaaa-0000-0000-0000-000000000001");
-
     public static async Task<User> SeedAsync(AppDbContext dbContext, UserRole role = UserRole.Student)
     {
         var user = Create(Id, Email, DisplayName, Password, role);

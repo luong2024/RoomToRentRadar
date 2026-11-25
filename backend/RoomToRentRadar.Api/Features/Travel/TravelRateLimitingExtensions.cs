@@ -1,9 +1,8 @@
-using System.Globalization;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
+using RoomToRentRadar.Api.Configuration;
 using RoomToRentRadar.Ports.Models.Travel;
-using RoomToRentRadar.Shared.Serialization;
 
 namespace RoomToRentRadar.Api.Features.Travel;
 
@@ -28,22 +27,7 @@ public static class TravelRateLimitingExtensions
                         QueueLimit = 0
                     });
             });
-            rateLimiter.OnRejected = async (context, cancellationToken) =>
-            {
-                if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
-                {
-                    context.HttpContext.Response.Headers.RetryAfter =
-                        ((int)retryAfter.TotalSeconds).ToString(CultureInfo.InvariantCulture);
-                }
-
-                var problem = TravelProblemFactory.RateLimitedProblem();
-                context.HttpContext.Response.StatusCode = problem.Status!.Value;
-                await context.HttpContext.Response.WriteAsJsonAsync(
-                    problem,
-                    ApiJson.Options,
-                    "application/problem+json",
-                    cancellationToken);
-            };
+            rateLimiter.OnRejected = RateLimitResponseWriter.WriteRejectionAsync;
         });
 
         return services;

@@ -1,3 +1,4 @@
+﻿using RoomToRentRadar.Models;
 using RoomToRentRadar.Services;
 using RoomToRentRadar.Services.Auth;
 using RoomToRentRadar.Services.ErrorHandling;
@@ -18,12 +19,12 @@ namespace RoomToRentRadarUnitTests;
 public class LoginViewModelTests
 {
     [Test]
-    public async Task SignIn_WhenCredentialsValid_SavesTokenAndNavigatesBack()
+    public async Task SignIn_WhenCredentialsValid_SavesTokenAndNavigatesToRoleRoot()
     {
         var expiresAt = new DateTime(2026, 11, 18, 8, 0, 0, DateTimeKind.Utc);
         var apiClient = new FakeApiClient
         {
-            LoginResult = new LoginResponse("token-123", expiresAt, "Demo Tester", "student")
+            LoginResult = new LoginResponse("token-123", expiresAt, "Demo Tester", AppUserRoleWire.Student)
         };
         var tokenStore = new FakeTokenStore();
         var navigationService = new FakeNavigationService();
@@ -44,8 +45,42 @@ public class LoginViewModelTests
             Assert.That(apiClient.RequestedLogins[0].Password, Is.EqualTo("Demo-password-123"));
             Assert.That(tokenStore.AccessToken, Is.EqualTo("token-123"));
             Assert.That(tokenStore.ExpiresAt, Is.EqualTo(expiresAt));
-            Assert.That(navigationService.GoBackCount, Is.EqualTo(1));
+            Assert.That(tokenStore.SavedRole, Is.EqualTo(AppUserRole.Student));
+            Assert.That(navigationService.RoleRootRoles, Is.EqualTo(new[] { AppUserRole.Student }));
+            Assert.That(navigationService.GoBackCount, Is.Zero);
         });
+    }
+
+    [TestCase(AppUserRole.Student)]
+    [TestCase(AppUserRole.Landlord)]
+    [TestCase(AppUserRole.Moderator)]
+    [TestCase(AppUserRole.Admin)]
+    public async Task SignIn_RedirectsToTheRootOfTheSignedInRole(AppUserRole role)
+    {
+        var apiClient = new FakeApiClient
+        {
+            LoginResult = new LoginResponse("token-123", DateTime.UtcNow.AddDays(7), "Demo Tester", AppUserRoleWire.ToWireValue(role))
+        };
+        var tokenStore = new FakeTokenStore();
+        var navigationService = new FakeNavigationService();
+        var viewModel = CreateViewModel(apiClient, tokenStore, navigationService);
+        viewModel.Email = "demo@example.test";
+        viewModel.Password = "Demo-password-123";
+
+        await viewModel.SignInCommand.ExecuteAsync(null);
+
+        Assert.That(navigationService.RoleRootRoles, Is.EqualTo(new[] { role }));
+    }
+
+    [Test]
+    public async Task GoToRegister_NavigatesToTheRegistrationScreen()
+    {
+        var navigationService = new FakeNavigationService();
+        var viewModel = CreateViewModel(new FakeApiClient(), new FakeTokenStore(), navigationService);
+
+        await viewModel.GoToRegisterCommand.ExecuteAsync(null);
+
+        Assert.That(navigationService.GoToRegisterCount, Is.EqualTo(1));
     }
 
     [Test]
@@ -64,7 +99,7 @@ public class LoginViewModelTests
         {
             Assert.That(viewModel.IsBusy, Is.False);
             Assert.That(viewModel.HasError, Is.True);
-            Assert.That(viewModel.ErrorMessage, Is.EqualTo("Email or password is incorrect."));
+            Assert.That(viewModel.ErrorMessage, Is.EqualTo("Email hoặc mật khẩu không đúng."));
             Assert.That(tokenStore.AccessToken, Is.Null);
             Assert.That(navigationService.GoBackCount, Is.Zero);
         });
@@ -77,7 +112,7 @@ public class LoginViewModelTests
     {
         var apiClient = new FakeApiClient
         {
-            LoginResult = new LoginResponse("token-123", DateTime.UtcNow.AddDays(7), "Demo Tester", "student")
+            LoginResult = new LoginResponse("token-123", DateTime.UtcNow.AddDays(7), "Demo Tester", AppUserRoleWire.Student)
         };
         var tokenStore = new FakeTokenStore();
         var navigationService = new FakeNavigationService();
@@ -90,7 +125,7 @@ public class LoginViewModelTests
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.HasError, Is.True);
-            Assert.That(viewModel.ErrorMessage, Is.EqualTo("Enter your email and password."));
+            Assert.That(viewModel.ErrorMessage, Is.EqualTo("Nhập email và mật khẩu."));
             Assert.That(apiClient.RequestedLogins, Is.Empty);
             Assert.That(tokenStore.AccessToken, Is.Null);
             Assert.That(navigationService.GoBackCount, Is.Zero);
@@ -115,7 +150,7 @@ public class LoginViewModelTests
         {
             Assert.That(viewModel.IsBusy, Is.False);
             Assert.That(viewModel.HasError, Is.True);
-            Assert.That(viewModel.ErrorMessage, Is.EqualTo("Could not sign in. Check your connection and try again."));
+            Assert.That(viewModel.ErrorMessage, Is.EqualTo("Không thể đăng nhập. Kiểm tra kết nối và thử lại."));
             Assert.That(errorHandler.HandledExceptions, Has.Count.EqualTo(1));
             Assert.That(errorHandler.HandledExceptions[0], Is.SameAs(exception));
             Assert.That(tokenStore.AccessToken, Is.Null);
@@ -182,6 +217,9 @@ public class LoginViewModelTests
                 : Task.FromResult(LoginResult);
         }
 
+        public Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The login screen registers through the registration screen.");
+
         public Task<LoginResponse?> DemoLoginAsync(CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The login screen signs in with explicit credentials.");
 
@@ -219,15 +257,25 @@ public class LoginViewModelTests
 
         public DateTime? ExpiresAt { get; private set; }
 
+        public AppUserRole? SavedRole { get; private set; }
+
         public int ClearCount { get; private set; }
 
         public Task<string?> GetAccessTokenAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(AccessToken);
 
-        public Task SaveAsync(string accessToken, DateTime expiresAt, CancellationToken cancellationToken = default)
+        public Task<AppUserRole?> GetRoleAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(SavedRole);
+
+        public Task SaveAsync(
+            string accessToken,
+            DateTime expiresAt,
+            AppUserRole role,
+            CancellationToken cancellationToken = default)
         {
             AccessToken = accessToken;
             ExpiresAt = expiresAt;
+            SavedRole = role;
             return Task.CompletedTask;
         }
 
@@ -235,6 +283,7 @@ public class LoginViewModelTests
         {
             AccessToken = null;
             ExpiresAt = null;
+            SavedRole = null;
             ClearCount++;
             return Task.CompletedTask;
         }
@@ -258,12 +307,28 @@ public class LoginViewModelTests
 
         public int GoToLoginCount { get; private set; }
 
+        public int GoToRegisterCount { get; private set; }
+
+        public List<AppUserRole?> RoleRootRoles { get; } = new();
+
         public Task GoToRoomDetailAsync(Guid listingId)
             => throw new NotSupportedException("The login screen does not open room details.");
 
         public Task GoToLoginAsync()
         {
             GoToLoginCount++;
+            return Task.CompletedTask;
+        }
+
+        public Task GoToRegisterAsync()
+        {
+            GoToRegisterCount++;
+            return Task.CompletedTask;
+        }
+
+        public Task GoToRoleRootAsync(AppUserRole? role)
+        {
+            RoleRootRoles.Add(role);
             return Task.CompletedTask;
         }
 

@@ -2,9 +2,9 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Infrastructure.Auth;
 using RoomToRentRadar.Ports.Inbound;
+using RoomToRentRadar.Shared.Auth;
 
 namespace RoomToRentRadar.Api.Features.Auth;
 
@@ -91,6 +91,9 @@ public static class AuthenticationExtensions
             options.AddPolicy(AuthPolicies.ModeratorOrAdmin, policy => policy
                 .RequireAuthenticatedUser()
                 .RequireRole(UserRoleWire.Moderator, UserRoleWire.Admin));
+            options.AddPolicy(AuthPolicies.Landlord, policy => policy
+                .RequireAuthenticatedUser()
+                .RequireRole(UserRoleWire.Landlord));
         });
 
         return services;

@@ -3,9 +3,9 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
-using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Ports.Models.Auth;
 using RoomToRentRadar.Ports.Outbound.Services;
+using RoomToRentRadar.Shared.Auth;
 
 namespace RoomToRentRadar.Infrastructure.Auth;
 

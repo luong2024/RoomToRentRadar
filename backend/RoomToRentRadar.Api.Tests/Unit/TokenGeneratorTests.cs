@@ -2,9 +2,9 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
-using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Infrastructure.Auth;
 using RoomToRentRadar.Ports.Models.Auth;
+using RoomToRentRadar.Shared.Auth;
 
 namespace RoomToRentRadar.Api.Tests.Unit;
 

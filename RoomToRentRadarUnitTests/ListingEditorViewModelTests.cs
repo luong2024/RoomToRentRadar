@@ -410,7 +410,9 @@ public class ListingEditorViewModelTests
     {
         public Task<string?> GetAccessTokenAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(signedIn ? "test-token" : null);
-        public Task SaveAsync(string accessToken, DateTime expiresAt, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<AppUserRole?> GetRoleAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<AppUserRole?>(AppUserRole.Landlord);
+        public Task SaveAsync(string accessToken, DateTime expiresAt, AppUserRole role, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task ClearAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
@@ -419,6 +421,8 @@ public class ListingEditorViewModelTests
         public Task GoToListingEditorAsync(Guid? listingId = null) => Task.CompletedTask;
         public Task GoToRoomDetailAsync(Guid listingId) => Task.CompletedTask;
         public Task GoToLoginAsync() => Task.CompletedTask;
+        public Task GoToRegisterAsync() => Task.CompletedTask;
+        public Task GoToRoleRootAsync(AppUserRole? role) => Task.CompletedTask;
         public Task GoToDirectionsAsync(double destinationLat, double destinationLng, double? originLat, double? originLng) => Task.CompletedTask;
         public Task GoToComparisonAsync() => Task.CompletedTask;
         public Task GoBackAsync() => Task.CompletedTask;

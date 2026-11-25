@@ -540,6 +540,12 @@ public class RoomDetailTravelViewModelTests
         public Task GoToLoginAsync()
             => throw new NotSupportedException("The travel section does not open the login screen.");
 
+        public Task GoToRegisterAsync()
+            => throw new NotSupportedException("The travel section does not open the registration screen.");
+
+        public Task GoToRoleRootAsync(RoomToRentRadar.Models.AppUserRole? role)
+            => throw new NotSupportedException("The travel section does not navigate to a role root.");
+
         public Task GoToComparisonAsync()
             => throw new NotSupportedException("The travel section does not open room comparison.");
 

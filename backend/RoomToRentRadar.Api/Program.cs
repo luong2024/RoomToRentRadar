@@ -31,7 +31,8 @@ builder.Services
     .AddDevelopmentCors()
     .AddReverseProxySupport(builder.Configuration)
     .AddBearerAuthentication(authTokenOptions)
-    .AddTravelRateLimiting();
+    .AddTravelRateLimiting()
+    .AddAuthRateLimiting(builder.Configuration);
 
 builder.Services.AddMemoryCache(cache =>
 {

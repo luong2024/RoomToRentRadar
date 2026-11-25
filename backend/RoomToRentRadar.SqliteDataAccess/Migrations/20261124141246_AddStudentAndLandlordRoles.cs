@@ -12,7 +12,11 @@ namespace RoomToRentRadar.SqliteDataAccess.Migrations
         {
             // The legacy constraint only allows the old values, so the normalization
             // runs before the rebuild with check enforcement temporarily suspended.
+            // Legacy owners keep their listing-management access as landlords.
             migrationBuilder.Sql("PRAGMA ignore_check_constraints = ON;");
+            migrationBuilder.Sql(
+                "UPDATE users SET role = 'landlord' WHERE role = 'user' " +
+                "AND EXISTS (SELECT 1 FROM listings WHERE listings.owner_id = users.id);");
             migrationBuilder.Sql("UPDATE users SET role = 'student' WHERE role = 'user';");
             migrationBuilder.Sql("PRAGMA ignore_check_constraints = OFF;");
 

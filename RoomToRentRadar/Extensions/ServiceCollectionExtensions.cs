@@ -58,6 +58,15 @@ public static class ServiceCollectionExtensions
                 Timeout = TimeSpan.FromSeconds(15)
             });
         });
+        services.AddSingleton<IModerationClient>(serviceProvider =>
+        {
+            var handler = serviceProvider.GetRequiredService<AuthenticatedHttpMessageHandler>();
+            return new ModerationClient(new HttpClient(handler)
+            {
+                BaseAddress = new Uri(ApiConstants.BaseAddress),
+                Timeout = TimeSpan.FromSeconds(15)
+            });
+        });
         services.AddSingleton<IErrorHandler, ModalErrorHandler>();
         services.AddSingleton<IPreferences>(Preferences.Default);
         services.AddSingleton<ICampusSelectionStore, PreferencesCampusSelectionStore>();
@@ -93,8 +102,12 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ComparisonPage>();
         services.AddTransient<LoginViewModel>();
         services.AddTransient<LoginPage>();
+        services.AddTransient<RegisterViewModel>();
+        services.AddTransient<RegisterPage>();
         services.AddTransient<MyListingsViewModel>();
         services.AddTransient<MyListingsPage>();
+        services.AddTransient<ModerationQueueViewModel>();
+        services.AddTransient<ModerationQueuePage>();
         services.AddTransient<ListingEditorViewModel>();
         services.AddTransient<ListingEditorPage>();
         services.AddTransient<MapSearchViewModel>();

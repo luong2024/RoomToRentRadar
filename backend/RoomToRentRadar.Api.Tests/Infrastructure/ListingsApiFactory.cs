@@ -5,6 +5,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using RoomToRentRadar.Ports.Models.Auth;
 using RoomToRentRadar.SqliteDataAccess;
 
 namespace RoomToRentRadar.Api.Tests.Infrastructure;
@@ -60,6 +61,8 @@ public sealed class ListingsApiFactory : WebApplicationFactory<Program>
         builder.ConfigureTestServices(services =>
         {
             services.AddSingleton<DbCommandInterceptor>(QueryCounter);
+            // Auth limiter partitions are per-IP and shared across a fixture run.
+            services.Configure<AuthOptions>(options => options.RateLimitPerMinute = 1000);
             _configureTestServices?.Invoke(services);
         });
     }

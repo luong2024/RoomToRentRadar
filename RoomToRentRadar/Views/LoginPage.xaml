@@ -85,6 +85,12 @@
                 </VerticalStackLayout>
             </Border>
 
+            <buttons:SfButton Text="Chưa có tài khoản?  Đăng ký ngay" Command="{Binding GoToRegisterCommand}"
+                              Style="{StaticResource GhostSfButton}" HorizontalOptions="Center"
+                              AutomationId="LoginGoToRegister"
+                              SemanticProperties.Description="Đăng ký tài khoản mới"
+                              SemanticProperties.Hint="Mở trang đăng ký tài khoản sinh viên hoặc chủ phòng" />
+
             <buttons:SfButton Text="←  Quay lại phòng đang xem" Command="{Binding CancelCommand}"
                               Style="{StaticResource GhostSfButton}" HorizontalOptions="Center"
                               SemanticProperties.Description="Hủy đăng nhập"

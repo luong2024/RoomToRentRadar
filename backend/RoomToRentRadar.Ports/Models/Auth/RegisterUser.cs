@@ -1,4 +1,3 @@
-using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Shared.Auth;
 
 namespace RoomToRentRadar.Ports.Models.Auth;
