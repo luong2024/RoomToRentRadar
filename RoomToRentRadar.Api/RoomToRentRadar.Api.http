@@ -11,3 +11,40 @@ Accept: application/json
 
 GET {{RoomToRentRadar.Api_HostAddress}}/api/v1/listings/search?campusId=ictu-main&minRent=1600000&maxRent=2000000&minArea=18&maxArea=25&roomType=Studio&maxDistanceMeters=600&sortBy=distance
 Accept: application/json
+
+### US08 / T08.3 - Moderation Queue & Listing Management
+GET {{RoomToRentRadar.Api_HostAddress}}/api/v1/moderation/listings?moderationStatus=PendingReview
+Accept: application/json
+X-User-Id: mod-ictu-01
+X-User-Role: Moderator
+
+###
+PUT {{RoomToRentRadar.Api_HostAddress}}/api/v1/moderation/listings/room-2026-006/status
+Content-Type: application/json
+X-User-Id: mod-ictu-01
+X-User-Role: Moderator
+
+{
+  "decision": "Approve",
+  "note": "Thông tin và ảnh phòng đạt chuẩn."
+}
+
+###
+GET {{RoomToRentRadar.Api_HostAddress}}/api/v1/moderation/listings/room-2026-006/history
+Accept: application/json
+X-User-Id: mod-ictu-01
+X-User-Role: Moderator
+
+###
+GET {{RoomToRentRadar.Api_HostAddress}}/api/v1/landlord/listings
+Accept: application/json
+X-User-Id: usr-landlord-09
+
+###
+PATCH {{RoomToRentRadar.Api_HostAddress}}/api/v1/landlord/listings/room-2026-001/availability
+Content-Type: application/json
+X-User-Id: usr-landlord-09
+
+{
+  "status": "Rented"
+}
