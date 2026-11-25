@@ -231,8 +231,9 @@ public class MockRoomGatewayTests
             Assert.That(detail.IsVerified, Is.True);
             Assert.That(detail.DistanceKm, Is.EqualTo(
                 HaversineDistanceCalculator.CalculateDistanceKm(IctuLatitude, IctuLongitude, seed.Latitude, seed.Longitude)));
-            Assert.That(detail.Photos, Is.Empty);
-            Assert.That(detail.HouseRules, Is.Null);
+            Assert.That(detail.Photos, Has.Count.EqualTo(3));
+            Assert.That(detail.HouseRules, Is.Not.Null);
+            Assert.That(detail.Safety.Score, Is.EqualTo(4));
             Assert.That(detail.Landlord.Id, Is.EqualTo("seed-landlord"));
             Assert.That(detail.PublishedAtUtc, Is.EqualTo(seed.PublishedAtUtc));
         });

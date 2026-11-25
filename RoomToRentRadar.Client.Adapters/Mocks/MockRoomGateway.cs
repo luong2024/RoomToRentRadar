@@ -82,10 +82,14 @@ public sealed class MockRoomGateway : IRoomGateway
                 room.ElectricityPriceVndPerKwh, room.WaterPriceVnd, room.WaterPriceUnit,
                 room.InternetFeeVnd, room.ParkingFeeVnd, room.OtherFeesNote, EstimatedMonthlyTotal(room)),
             AmenitiesFor(room),
-            new SafetyDto(SafetyScore(room), room.IsSafetyVerified,
-                [SafetyFeature.Cctv, SafetyFeature.SecureEntrance, SafetyFeature.WellLitAccess]),
-            null,
-            Array.Empty<PhotoDto>(),
+            new SafetyDto(
+                SafetyScore(room),
+                room.IsSafetyVerified,
+                room.IsSafetyVerified
+                    ? [SafetyFeature.Cctv, SafetyFeature.SecureEntrance, SafetyFeature.FireSafety, SafetyFeature.WellLitAccess]
+                    : [SafetyFeature.Cctv, SafetyFeature.SecureEntrance, SafetyFeature.WellLitAccess]),
+            HouseRulesFor(room),
+            PhotosFor(room),
             new LandlordContactDto("seed-landlord", "Seed Landlord", true,
                 new DateTime(2026, 11, 1, 8, 0, 0, DateTimeKind.Utc), null, null),
             false,
@@ -281,7 +285,48 @@ public sealed class MockRoomGateway : IRoomGateway
         return amenities;
     }
 
-    private static int SafetyScore(SampleRoom room) => room.IsSafetyVerified ? 80 : 60;
+    private static int SafetyScore(SampleRoom room) => room.IsSafetyVerified ? 4 : 3;
+
+    private static HouseRulesDto HouseRulesFor(SampleRoom room) => new(
+        QuietHoursStart: "22:00",
+        QuietHoursEnd: "06:00",
+        CurfewTime: "23:00",
+        GuestPolicy: GuestPolicy.DaytimeOnly,
+        GuestPolicyNote: "Báo trước cho chủ nhà khi có khách",
+        CookingPolicy: room.RoomType == RoomType.Dormitory ? CookingPolicy.SharedKitchenOnly : CookingPolicy.Allowed,
+        ParkingAvailable: true,
+        ParkingRules: "Khu vực để xe tầng 1 có camera giám sát",
+        PetsAllowed: false,
+        SmokingAllowed: false,
+        OtherRules: "Giữ vệ sinh chung",
+        VersionNumber: 1,
+        UpdatedAtUtc: room.PublishedAtUtc
+    );
+
+    private static IReadOnlyList<PhotoDto> PhotosFor(SampleRoom room) =>
+    [
+        new(
+            $"{room.Id}-photo-1",
+            PhotoKind.Standard,
+            "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=400&q=70",
+            "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1600&q=85",
+            1600, 1200, 0),
+        new(
+            $"{room.Id}-photo-2",
+            PhotoKind.Standard,
+            "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=400&q=70",
+            "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1600&q=85",
+            1600, 1200, 1),
+        new(
+            $"{room.Id}-photo-3",
+            PhotoKind.Panorama,
+            "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=400&q=70",
+            "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1600&q=85",
+            2048, 1024, 2)
+    ];
 
     // Fixed mock estimate: rent plus the flat monthly fees; metered usage is not simulated.
     private static long EstimatedMonthlyTotal(SampleRoom room) =>
