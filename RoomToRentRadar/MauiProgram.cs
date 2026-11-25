@@ -123,6 +123,22 @@ namespace RoomToRentRadar
             builder.Services.AddSingleton<SearchFilterViewModel>();
             builder.Services.AddTransient<FilterBottomSheet>();
 
+            // US06 / T06.2: Favourites API + Mock + FavouritesViewModel/Page
+            builder.Services
+                .AddRefitClient<IFavouritesApiService>()
+                .ConfigureHttpClient(client =>
+                {
+                    var baseUrl = DeviceInfo.Platform == DevicePlatform.Android
+                        ? "http://10.0.2.2:5000"
+                        : "http://localhost:5000";
+                    client.BaseAddress = new Uri(baseUrl);
+                    client.Timeout = TimeSpan.FromSeconds(5);
+                });
+            builder.Services.AddSingleton<MockFavouritesService>();
+            builder.Services.AddSingleton<IFavouritesService, FavouritesService>();
+            builder.Services.AddSingleton(sp => new FavouritesViewModel(sp.GetRequiredService<IFavouritesService>()));
+            builder.Services.AddTransient<FavouritesPage>();
+
             return builder.Build();
         }
     }

@@ -1,14 +1,16 @@
 ﻿using System.Globalization;
+using CommunityToolkit.Mvvm.ComponentModel;
 using RoomToRentRadar.Models.Contracts;
 
 namespace RoomToRentRadar.Models;
 
 /// <summary>
-/// Item Model bind trực tiếp lên RoomListPage (Compiled Bindings).
+/// Item Model bind trực tiếp lên RoomListPage và FavouritesPage (Compiled Bindings).
 /// </summary>
-public sealed class RoomListingItemModel
+public sealed class RoomListingItemModel : ObservableObject
 {
     private static readonly CultureInfo ViCulture = CultureInfo.GetCultureInfo("vi-VN");
+    private bool _isFavourite;
 
     public required string Id { get; init; }
     public string CampusId { get; init; } = "ictu-main";
@@ -21,6 +23,23 @@ public sealed class RoomListingItemModel
     public string ThumbnailUrl { get; init; } = string.Empty;
     public string Status { get; init; } = "Available";
     public bool IsVerified { get; init; }
+
+    public bool IsFavourite
+    {
+        get => _isFavourite;
+        set
+        {
+            if (SetProperty(ref _isFavourite, value))
+            {
+                OnPropertyChanged(nameof(HeartIconText));
+                OnPropertyChanged(nameof(HeartColorHex));
+            }
+        }
+    }
+
+    public string HeartIconText => IsFavourite ? "♥" : "♡";
+    public string HeartColorHex => IsFavourite ? "#EF4444" : "#FFFFFF";
+    public string FavHeartAutomationId => $"FavHeartButton_{Id}";
 
     // Thuộc tính định dạng sẵn cho UI Mobile & fallback ảnh (US01 AC2)
     public string EffectiveThumbnail => string.IsNullOrWhiteSpace(ThumbnailUrl)

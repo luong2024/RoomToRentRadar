@@ -20,6 +20,7 @@ namespace RoomToRentRadar.PageModels
         public const int DefaultPageSize = 20;
 
         private readonly IListingsService _listingsService;
+        private readonly IFavouritesService? _favouritesService;
         private readonly HashSet<string> _loadedIds = new(StringComparer.Ordinal);
         private int _currentPage = 1;
         private bool _hasInitialized;
@@ -111,9 +112,10 @@ namespace RoomToRentRadar.PageModels
             set => SetProperty(ref _selectedRoom, value);
         }
 
-        public RoomListViewModel(IListingsService listingsService)
+        public RoomListViewModel(IListingsService listingsService, IFavouritesService? favouritesService = null)
         {
             _listingsService = listingsService;
+            _favouritesService = favouritesService;
             _selectedSortOption = SortOptions[0]; // Mặc định sortBy = "distance" (US01 AC1)
         }
 
@@ -155,6 +157,7 @@ namespace RoomToRentRadar.PageModels
                 _loadedIds.Clear();
 
                 AppendUniqueItems(result.Items);
+                await SyncFavouriteStatesAsync();
                 TotalCount = result.TotalCount > 0 ? result.TotalCount : Listings.Count;
 
                 if (result.Items.Count < DefaultPageSize || !result.HasNextPage)
@@ -207,6 +210,7 @@ namespace RoomToRentRadar.PageModels
                     CancellationToken.None);
 
                 AppendUniqueItems(result.Items);
+                await SyncFavouriteStatesAsync();
                 _currentPage = nextPage;
 
                 if (result.TotalCount > 0)
@@ -233,6 +237,26 @@ namespace RoomToRentRadar.PageModels
             finally
             {
                 IsLoadingMore = false;
+            }
+        }
+
+        [RelayCommand]
+        public async Task ToggleFavouriteAsync(RoomListingItemModel? room)
+        {
+            if (room is null || _favouritesService is null)
+                return;
+
+            await _favouritesService.ToggleFavouriteAsync(room);
+        }
+
+        public async Task SyncFavouriteStatesAsync()
+        {
+            if (_favouritesService is null)
+                return;
+
+            foreach (var item in Listings)
+            {
+                item.IsFavourite = await _favouritesService.IsFavouriteAsync(item.Id);
             }
         }
 

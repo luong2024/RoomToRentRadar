@@ -2,8 +2,10 @@
 <Border xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
         xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
         xmlns:models="clr-namespace:RoomToRentRadar.Models"
+        xmlns:controls="clr-namespace:RoomToRentRadar.Pages.Controls"
         xmlns:fonts="clr-namespace:Fonts"
         x:Class="RoomToRentRadar.Pages.Controls.RoomCardView"
+        x:Name="RoomCardRoot"
         x:DataType="models:RoomListingItemModel"
         AutomationId="{Binding CardAutomationId}"
         StrokeShape="RoundRectangle 5"
@@ -61,6 +63,29 @@
                            FontAttributes="Bold"
                            VerticalOptions="Center" />
                 </HorizontalStackLayout>
+            </Border>
+
+            <!-- Nút Yêu thích góc trên phải (US06 T06.2) -->
+            <Border Margin="8"
+                    HeightRequest="34"
+                    WidthRequest="34"
+                    HorizontalOptions="End"
+                    VerticalOptions="Start"
+                    AutomationId="{Binding FavHeartAutomationId}"
+                    BackgroundColor="#CC0F172A"
+                    Stroke="#475569"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 17">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer
+                        Command="{Binding Source={x:Reference RoomCardRoot}, Path=ToggleFavouriteCommand, x:DataType=controls:RoomCardView}"
+                        CommandParameter="{Binding .}" />
+                </Border.GestureRecognizers>
+                <Label Text="{Binding HeartIconText}"
+                       TextColor="{Binding HeartColorHex}"
+                       FontSize="17"
+                       HorizontalTextAlignment="Center"
+                       VerticalTextAlignment="Center" />
             </Border>
 
             <!-- Pill Giá thuê góc dưới trái (rent) -->
