@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- US01 / T01.2: registration screen for Student or Landlord. Logic lives in AuthPageModel (AC1, AC4). -->
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:auth="clr-namespace:RoomToRentRadar.Features.Auth"
+             x:Class="RoomToRentRadar.Features.Auth.RegisterPage"
+             x:DataType="auth:AuthPageModel"
+             Title="Đăng ký">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="16" MaximumWidthRequest="480">
+
+            <VerticalStackLayout Spacing="4" Margin="0,8,0,4">
+                <Label Text="Tạo tài khoản" FontSize="26" FontAttributes="Bold"
+                       TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDarkText}}" />
+                <Label Text="Dành cho sinh viên ICTU và chủ trọ quanh trường." FontSize="14" Opacity="0.8" />
+            </VerticalStackLayout>
+
+            <Border Padding="18" StrokeThickness="1" StrokeShape="RoundRectangle 12">
+                <VerticalStackLayout Spacing="12">
+
+                    <Label Text="Bạn là" FontAttributes="Bold" />
+                    <Picker ItemsSource="{Binding RoleOptions}"
+                            ItemDisplayBinding="{Binding DisplayName, x:DataType=auth:RoleOption}"
+                            SelectedItem="{Binding SelectedRole}"
+                            Title="Chọn vai trò"
+                            AutomationId="RegisterRolePicker"
+                            SemanticProperties.Description="Vai trò: Sinh viên hoặc Chủ trọ" />
+
+                    <Label Text="Họ và tên" FontAttributes="Bold" />
+                    <Entry Text="{Binding FullName}"
+                           Placeholder="Nguyễn Văn A"
+                           Keyboard="Text"
+                           ReturnType="Next"
+                           AutomationId="RegisterFullNameEntry" />
+
+                    <Label Text="Email" FontAttributes="Bold" />
+                    <Entry Text="{Binding Email}"
+                           Placeholder="sinhvien@ictu.edu.vn"
+                           Keyboard="Email"
+                           IsSpellCheckEnabled="False"
+                           IsTextPredictionEnabled="False"
+                           ReturnType="Next"
+                           AutomationId="RegisterEmailEntry" />
+
+                    <Label Text="Số điện thoại" FontAttributes="Bold" />
+                    <Entry Text="{Binding Phone}"
+                           Placeholder="0912345678"
+                           Keyboard="Telephone"
+                           ReturnType="Next"
+                           AutomationId="RegisterPhoneEntry" />
+
+                    <Label Text="Mật khẩu" FontAttributes="Bold" />
+                    <Entry Text="{Binding Password}"
+                           Placeholder="Ít nhất 6 ký tự"
+                           IsPassword="True"
+                           ReturnType="Next"
+                           AutomationId="RegisterPasswordEntry" />
+
+                    <Label Text="Nhập lại mật khẩu" FontAttributes="Bold" />
+                    <Entry Text="{Binding ConfirmPassword}"
+                           Placeholder="Nhập lại mật khẩu"
+                           IsPassword="True"
+                           ReturnType="Done"
+                           ReturnCommand="{Binding RegisterCommand}"
+                           AutomationId="RegisterConfirmPasswordEntry" />
+
+                    <!-- AC4: friendly error message (local validation or API response) -->
+                    <Border IsVisible="{Binding HasError}" Padding="12,8" StrokeThickness="0" StrokeShape="RoundRectangle 8"
+                            BackgroundColor="{AppThemeBinding Light=#FDECEA, Dark=#5C1F1A}">
+                        <Label Text="{Binding ErrorMessage}"
+                               TextColor="{AppThemeBinding Light=#B3261E, Dark=#F2B8B5}"
+                               AutomationId="RegisterErrorLabel" />
+                    </Border>
+
+                    <Grid>
+                        <Button Text="Đăng ký"
+                                Command="{Binding RegisterCommand}"
+                                AutomationId="RegisterButton"
+                                SemanticProperties.Hint="Tạo tài khoản mới" />
+                        <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
+                                           HorizontalOptions="End" Margin="0,0,12,0"
+                                           Color="{StaticResource White}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <HorizontalStackLayout HorizontalOptions="Center" Spacing="4">
+                <Label Text="Đã có tài khoản?" VerticalOptions="Center" />
+                <Button Text="Đăng nhập"
+                        Command="{Binding GoToLoginCommand}"
+                        BackgroundColor="Transparent"
+                        TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDarkText}}"
+                        FontAttributes="Bold"
+                        Padding="4,0"
+                        AutomationId="GoToLoginButton" />
+            </HorizontalStackLayout>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
