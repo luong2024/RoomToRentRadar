@@ -22,4 +22,22 @@ public interface ICosmosContainer<T> where T : class
     Task<IReadOnlyList<T>> QueryAsync(QueryDefinition queryDefinition, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<T>> QueryAsync(Func<T, bool> predicate, CancellationToken cancellationToken = default);
+
+    Task ExecuteBatchAsync(
+        string partitionKey,
+        IReadOnlyList<CosmosBatchOperation<T>> operations,
+        CancellationToken cancellationToken = default);
 }
+
+public enum CosmosBatchOperationType
+{
+    Create,
+    Upsert,
+    Replace
+}
+
+public sealed record CosmosBatchOperation<T>(
+    CosmosBatchOperationType Type,
+    T Item,
+    string? Id = null,
+    string? IfMatchEtag = null) where T : class;

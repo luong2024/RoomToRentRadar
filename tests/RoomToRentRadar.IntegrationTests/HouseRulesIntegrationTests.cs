@@ -1,9 +1,12 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Microsoft.Extensions.DependencyInjection;
 using RoomToRentRadar.Adapters.Inbound.WebApi.Contracts;
 using RoomToRentRadar.Application.DTOs;
+using RoomToRentRadar.Application.Ports.Outbound;
 using RoomToRentRadar.Domain.Entities;
+using RoomToRentRadar.Domain.ValueObjects;
 
 namespace RoomToRentRadar.IntegrationTests;
 
@@ -134,6 +137,75 @@ public class HouseRulesIntegrationTests
         Assert.That(roomDetail?.StructuredHouseRules?.Version, Is.EqualTo(2));
     }
 
+    [Test]
+    public async Task LegacyRoomWithoutLandlordId_Returns403UntilAdminAssignsVerifiedLandlord()
+    {
+        var landlordAuth = await RegisterAndLoginAsync("legacy.landlord@ictu.edu.vn", "LANDLORD");
+
+        var legacyRoom = new Room
+        {
+            Id = "room-legacy-no-owner",
+            Title = "Phòng cũ chưa gán chủ phòng",
+            Price = 1800000m,
+            Area = 18,
+            Address = "Đường Z115",
+            LandlordId = null,
+            Status = RoomStatus.Available,
+            IsVerified = true
+        };
+        _factory.RoomRepository.Upsert(legacyRoom);
+
+        var payload = new UpdateHouseRulesRequest(
+            QuietHours: "22:00 - 06:00",
+            GuestPolicy: "No overnight guests",
+            CookingRules: "Electric cooker allowed",
+            ParkingRules: "Free 1 motorbike");
+
+        // 1. Before ownership assignment, landlord gets 403 Forbidden
+        var beforeAssign = await SendAuthorizedPutAsync($"/api/v1/rooms/{legacyRoom.Id}/house-rules", landlordAuth.AccessToken, payload);
+        Assert.That(beforeAssign.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+
+        // 2. Non-admin cannot assign room landlord -> 403 Forbidden
+        var nonAdminAssign = await SendAuthorizedPutAsync(
+            $"/api/v1/rooms/{legacyRoom.Id}/landlord",
+            landlordAuth.AccessToken,
+            new AssignRoomLandlordRequest(landlordAuth.UserId));
+        Assert.That(nonAdminAssign.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+
+        // 3. Admin assigns verified landlord -> 204 NoContent
+        var adminToken = await CreateAdminAccessTokenAsync();
+        var adminAssign = await SendAuthorizedPutAsync(
+            $"/api/v1/rooms/{legacyRoom.Id}/landlord",
+            adminToken,
+            new AssignRoomLandlordRequest(landlordAuth.UserId));
+        Assert.That(adminAssign.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+        // 4. Assigned landlord can now create/update house rules -> 200 OK
+        var afterAssign = await SendAuthorizedPutAsync($"/api/v1/rooms/{legacyRoom.Id}/house-rules", landlordAuth.AccessToken, payload);
+        Assert.That(afterAssign.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var createdDto = await afterAssign.Content.ReadFromJsonAsync<RoomHouseRulesDto>();
+        Assert.Multiple(() =>
+        {
+            Assert.That(createdDto!.Version, Is.EqualTo(1));
+            Assert.That(createdDto.LandlordId, Is.EqualTo(landlordAuth.UserId));
+        });
+    }
+
+    private async Task<string> CreateAdminAccessTokenAsync()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var tokenService = scope.ServiceProvider.GetRequiredService<ITokenService>();
+        var adminUser = User.ProvisionAdminUser(
+            EmailAddress.Create("admin.verifier@ictu.edu.vn"),
+            "hashed-password",
+            DateTimeOffset.UtcNow);
+        await userRepository.AddAsync(adminUser);
+        await unitOfWork.SaveChangesAsync();
+        return tokenService.GenerateAccessToken(adminUser, DateTimeOffset.UtcNow).Token;
+    }
+
     private async Task<AuthSessionResponse> RegisterAndLoginAsync(string email, string role)
     {
         var reg = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterUserRequest(email, "StrongPassword123!", role));
@@ -145,7 +217,7 @@ public class HouseRulesIntegrationTests
         return (await login.Content.ReadFromJsonAsync<AuthSessionResponse>())!;
     }
 
-    private Task<HttpResponseMessage> SendAuthorizedPutAsync(string url, string token, UpdateHouseRulesRequest body)
+    private Task<HttpResponseMessage> SendAuthorizedPutAsync<T>(string url, string token, T body)
     {
         var request = new HttpRequestMessage(HttpMethod.Put, url)
         {

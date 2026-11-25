@@ -8,3 +8,5 @@ public sealed record UpdateHouseRulesRequest(
     IReadOnlyList<string>? AdditionalRules = null,
     string? ChangeNote = null,
     int? ExpectedVersion = null);
+
+public sealed record AssignRoomLandlordRequest(Guid LandlordId);

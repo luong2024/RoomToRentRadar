@@ -40,10 +40,12 @@ public sealed class CosmosHouseRulesRepository : IHouseRulesRepository
         }
 
         var normalizedRoomId = roomId.Trim();
-        var docs = await _dbContext.HouseRules.QueryAsync(
-            d => string.Equals(d.RoomId, normalizedRoomId, StringComparison.Ordinal) &&
-                 string.Equals(d.DocumentType, RoomHouseRulesDocument.RevisionDocumentType, StringComparison.Ordinal),
-            cancellationToken);
+        var query = new QueryDefinition(
+            "SELECT * FROM c WHERE c.roomId = @roomId AND c.documentType = @documentType")
+            .WithParameter("@roomId", normalizedRoomId)
+            .WithParameter("@documentType", RoomHouseRulesDocument.RevisionDocumentType);
+
+        var docs = await _dbContext.HouseRules.QueryAsync(query, cancellationToken);
 
         return docs
             .OrderByDescending(d => d.Version)
@@ -62,32 +64,46 @@ public sealed class CosmosHouseRulesRepository : IHouseRulesRepository
         var currentDoc = RoomHouseRulesDocument.FromCurrentDomain(houseRules);
         var revisionDoc = RoomHouseRulesDocument.FromRevisionDomain(newRevision);
 
+        CosmosBatchOperation<RoomHouseRulesDocument> currentOp;
+        if (houseRules.CurrentVersion == 1 && string.IsNullOrWhiteSpace(houseRules.ETag))
+        {
+            currentOp = new CosmosBatchOperation<RoomHouseRulesDocument>(
+                CosmosBatchOperationType.Create,
+                currentDoc,
+                currentDoc.Id);
+        }
+        else if (!string.IsNullOrWhiteSpace(houseRules.ETag))
+        {
+            currentOp = new CosmosBatchOperation<RoomHouseRulesDocument>(
+                CosmosBatchOperationType.Replace,
+                currentDoc,
+                currentDoc.Id,
+                houseRules.ETag);
+        }
+        else
+        {
+            currentOp = new CosmosBatchOperation<RoomHouseRulesDocument>(
+                CosmosBatchOperationType.Upsert,
+                currentDoc,
+                currentDoc.Id);
+        }
+
+        var revisionOp = new CosmosBatchOperation<RoomHouseRulesDocument>(
+            CosmosBatchOperationType.Create,
+            revisionDoc,
+            revisionDoc.Id);
+
         try
         {
-            if (houseRules.CurrentVersion == 1 && string.IsNullOrWhiteSpace(houseRules.ETag))
-            {
-                await _dbContext.HouseRules.CreateItemAsync(currentDoc, houseRules.RoomId, cancellationToken);
-            }
-            else if (!string.IsNullOrWhiteSpace(houseRules.ETag))
-            {
-                await _dbContext.HouseRules.ReplaceItemAsync(
-                    currentDoc,
-                    currentDoc.Id,
-                    houseRules.RoomId,
-                    houseRules.ETag,
-                    cancellationToken);
-            }
-            else
-            {
-                await _dbContext.HouseRules.UpsertItemAsync(currentDoc, houseRules.RoomId, cancellationToken);
-            }
+            await _dbContext.HouseRules.ExecuteBatchAsync(
+                houseRules.RoomId,
+                [currentOp, revisionOp],
+                cancellationToken);
         }
         catch (CosmosException ex) when (ex.StatusCode is HttpStatusCode.PreconditionFailed or HttpStatusCode.Conflict)
         {
             throw new ConcurrencyConflictException(
                 $"House rules for room '{houseRules.RoomId}' were modified concurrently. Please refresh and retry.");
         }
-
-        await _dbContext.HouseRules.CreateItemAsync(revisionDoc, newRevision.RoomId, cancellationToken);
     }
 }

@@ -115,6 +115,7 @@ public sealed class RoomDocument : IProjectionVersionedDocument
         detail.ThumbnailUrl = listing.ThumbnailUrl;
         detail.IsVerified = listing.VerificationStatus == 2;
         detail.Status = listing.Status;
+        detail.LandlordId ??= listing.LandlordId;
         // A listing's creation timestamp is only a valid initial value. It must
         // never overwrite the detail record's actual last-update timestamp.
         detail.LastUpdatedDate ??= listing.CreatedAtUtc;

@@ -16,3 +16,10 @@ public interface IUpdateRoomHouseRulesUseCase
 {
     Task<RoomHouseRulesDto> ExecuteAsync(UpdateHouseRulesCommand command, CancellationToken cancellationToken = default);
 }
+
+public interface IAssignRoomLandlordUseCase
+{
+    Task ExecuteAsync(AssignRoomLandlordCommand command, CancellationToken cancellationToken = default);
+}
+
+public sealed record AssignRoomLandlordCommand(string RoomId, Guid LandlordId);

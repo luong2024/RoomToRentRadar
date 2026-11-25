@@ -213,6 +213,24 @@ public sealed class InMemoryCosmosContainer<T> : ICosmosContainer<T> where T : c
                     }
                 }
             }
+            else if (typeof(T) == typeof(RoomHouseRulesDocument))
+            {
+                var rulesItems = items.Cast<RoomHouseRulesDocument>();
+                var roomIdParam = GetQueryParameter(queryDefinition, "@roomId")?.ToString();
+                var docTypeParam = GetQueryParameter(queryDefinition, "@documentType")?.ToString();
+
+                if (roomIdParam is not null)
+                {
+                    rulesItems = rulesItems.Where(r => string.Equals(r.RoomId, roomIdParam, StringComparison.Ordinal));
+                }
+
+                if (docTypeParam is not null)
+                {
+                    rulesItems = rulesItems.Where(r => string.Equals(r.DocumentType, docTypeParam, StringComparison.Ordinal));
+                }
+
+                return Task.FromResult<IReadOnlyList<T>>(rulesItems.Cast<T>().ToList());
+            }
 
             return Task.FromResult<IReadOnlyList<T>>(items);
         }
@@ -235,6 +253,91 @@ public sealed class InMemoryCosmosContainer<T> : ICosmosContainer<T> where T : c
                 .ToList();
 
             return Task.FromResult<IReadOnlyList<T>>(items);
+        }
+    }
+
+    public Task ExecuteBatchAsync(
+        string partitionKey,
+        IReadOnlyList<CosmosBatchOperation<T>> operations,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(partitionKey);
+        ArgumentNullException.ThrowIfNull(operations);
+
+        if (operations.Count == 0)
+        {
+            return Task.CompletedTask;
+        }
+
+        lock (_syncRoot)
+        {
+            var staged = new Dictionary<string, (string Json, string ETag)>(_storage, StringComparer.Ordinal);
+            var stagedItems = new List<(T Item, string Id, string NewEtag)>(operations.Count);
+
+            foreach (var op in operations)
+            {
+                ArgumentNullException.ThrowIfNull(op.Item);
+                var id = string.IsNullOrWhiteSpace(op.Id) ? GetItemId(op.Item) : op.Id;
+
+                switch (op.Type)
+                {
+                    case CosmosBatchOperationType.Create:
+                        if (staged.ContainsKey(id))
+                        {
+                            throw CreateConflictException($"Document with id '{id}' already exists.");
+                        }
+
+                        ValidateUniqueConstraints(op.Item);
+                        break;
+
+                    case CosmosBatchOperationType.Upsert:
+                        ValidateUniqueConstraints(op.Item, id);
+                        break;
+
+                    case CosmosBatchOperationType.Replace:
+                        if (!staged.TryGetValue(id, out var existing))
+                        {
+                            throw new CosmosException(
+                                $"Document with id '{id}' was not found.",
+                                HttpStatusCode.NotFound,
+                                0,
+                                Guid.NewGuid().ToString("N"),
+                                1.0);
+                        }
+
+                        if (op.IfMatchEtag is not null &&
+                            !string.Equals(existing.ETag, op.IfMatchEtag, StringComparison.Ordinal))
+                        {
+                            throw new CosmosException(
+                                $"Precondition failed: ETag '{op.IfMatchEtag}' does not match current document ETag '{existing.ETag}'.",
+                                HttpStatusCode.PreconditionFailed,
+                                0,
+                                Guid.NewGuid().ToString("N"),
+                                1.0);
+                        }
+
+                        ValidateUniqueConstraints(op.Item, id);
+                        break;
+
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(operations), op.Type, "Unsupported batch operation type.");
+                }
+
+                var newEtag = Guid.NewGuid().ToString("N");
+                var clone = Clone(op.Item);
+                SetItemETag(clone, newEtag);
+                var json = JsonConvert.SerializeObject(clone);
+                staged[id] = (json, newEtag);
+                stagedItems.Add((op.Item, id, newEtag));
+            }
+
+            foreach (var (item, id, newEtag) in stagedItems)
+            {
+                SetItemETag(item, newEtag);
+                _storage[id] = staged[id];
+            }
+
+            return Task.CompletedTask;
         }
     }
 
@@ -295,18 +398,11 @@ public sealed class InMemoryCosmosContainer<T> : ICosmosContainer<T> where T : c
 
     private static object? GetQueryParameter(QueryDefinition query, string name)
     {
-        var field = typeof(QueryDefinition).GetField("parameters", BindingFlags.Instance | BindingFlags.NonPublic);
-        if (field?.GetValue(query) is System.Collections.IEnumerable list)
+        foreach (var (paramName, paramValue) in query.GetQueryParameters())
         {
-            foreach (var item in list)
+            if (string.Equals(paramName, name, StringComparison.OrdinalIgnoreCase))
             {
-                var nameProp = item.GetType().GetProperty("Name");
-                var valProp = item.GetType().GetProperty("Value");
-                var paramName = nameProp?.GetValue(item)?.ToString();
-                if (string.Equals(paramName, name, StringComparison.OrdinalIgnoreCase))
-                {
-                    return valProp?.GetValue(item);
-                }
+                return paramValue;
             }
         }
 

@@ -337,6 +337,43 @@ public class CosmosRoomRepository : IRoomRepository
         return (items, totalCount);
     }
 
+    public async Task<bool> AssignLandlordAsync(string roomId, Guid landlordId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(roomId))
+        {
+            return false;
+        }
+
+        var trimmedId = roomId.Trim();
+        try
+        {
+            var response = await _container.ReadItemAsync<RoomDocument>(
+                id: trimmedId,
+                partitionKey: new PartitionKey(trimmedId),
+                cancellationToken: cancellationToken);
+
+            var document = response.Resource;
+            if (document is null || document.IsDeleted)
+            {
+                return false;
+            }
+
+            document.LandlordId = landlordId;
+            await _container.ReplaceItemAsync(
+                document,
+                document.Id,
+                new PartitionKey(document.Id),
+                new ItemRequestOptions { IfMatchEtag = document.ETag },
+                cancellationToken);
+
+            return true;
+        }
+        catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            return false;
+        }
+    }
+
     private static QueryDefinition BindParameters(QueryDefinition queryDef, SearchRoomsQuery query)
     {
         if (query.MinPrice.HasValue)

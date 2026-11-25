@@ -292,6 +292,9 @@ public sealed class CosmosDbInitializer
                             Status = status,
                             VerificationStatus = isVerified ? 2 : 0, // 2 = Verified (AC4 requirement)
                             ThumbnailUrl = doc["thumbnailUrl"]?.ToString(),
+                            LandlordId = Guid.TryParse(doc["landlordId"]?.ToString(), out var parsedLandlordId) && parsedLandlordId != Guid.Empty
+                                ? parsedLandlordId
+                                : null,
                             CreatedAtUtc = (DateTime?)doc["createdAtUtc"] ?? (DateTime?)doc["lastUpdatedDate"] ?? DateTime.UtcNow
                         };
 
@@ -913,6 +916,7 @@ public sealed class CosmosDbInitializer
         if (detail.Status != listing.Status) return true;
         if (detail.Latitude != listing.Latitude) return true;
         if (detail.Longitude != listing.Longitude) return true;
+        if (detail.LandlordId is null && listing.LandlordId is not null) return true;
 
         return false;
     }

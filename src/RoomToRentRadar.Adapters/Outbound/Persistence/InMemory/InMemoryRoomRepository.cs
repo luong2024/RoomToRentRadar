@@ -37,6 +37,17 @@ public class InMemoryRoomRepository : IRoomRepository
         return _rooms.TryRemove(id.Trim(), out _);
     }
 
+    public Task<bool> AssignLandlordAsync(string roomId, Guid landlordId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(roomId) || !_rooms.TryGetValue(roomId.Trim(), out var room))
+        {
+            return Task.FromResult(false);
+        }
+
+        room.LandlordId = landlordId;
+        return Task.FromResult(true);
+    }
+
     public Task<Room?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(id))
