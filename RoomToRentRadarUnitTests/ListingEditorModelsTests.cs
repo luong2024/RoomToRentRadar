@@ -99,6 +99,7 @@ public class ListingEditorModelsTests
         }
     }
 
+    [TestCase(ListingStatus.Draft, true, true, false)]
     [TestCase(ListingStatus.PendingReview, true, true, false)]
     [TestCase(ListingStatus.Published, true, true, false)]
     [TestCase(ListingStatus.Hidden, true, false, true)]

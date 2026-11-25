@@ -61,7 +61,7 @@ public sealed record OwnedListingItem(ManagedListingDto Listing)
     public bool IsPublished => Listing.Status == ListingStatus.Published;
     public bool IsPendingReview => Listing.Status == ListingStatus.PendingReview;
     public bool CanEdit => Listing.Status != ListingStatus.Removed;
-    public bool CanUnpublish => Listing.Status is ListingStatus.PendingReview or ListingStatus.Published;
+    public bool CanUnpublish => Listing.Status is ListingStatus.Draft or ListingStatus.PendingReview or ListingStatus.Published;
     public bool CanPublish => Listing.Status == ListingStatus.Hidden;
 }
 

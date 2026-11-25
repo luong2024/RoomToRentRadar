@@ -18,8 +18,6 @@ public sealed class ListingManagementController(
     IListingManagementUseCase listingManagementUseCase,
     IHouseRulesUseCase houseRulesUseCase) : ControllerBase
 {
-    private const int MinimumPhotosOnCreate = 3;
-
     [HttpGet("mine")]
     [ProducesResponseType(typeof(IReadOnlyList<ManagedListingDto>), StatusCodes.Status200OK, "application/json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
@@ -46,7 +44,7 @@ public sealed class ListingManagementController(
     {
         if (!ListingWriteValidator.TryValidate(
                 form,
-                MinimumPhotosOnCreate,
+                PhotoUploadLimits.MinimumPhotosPerListing,
                 requireCoordinates: true,
                 out var input,
                 out var validationProblem))
@@ -252,6 +250,8 @@ public sealed class ListingManagementController(
     private static ProblemDetails ToProblemDetails(ListingWriteError error) => error.Code switch
     {
         ListingWriteErrorCodes.NotFound => ListingWriteProblemFactory.NotFoundProblem(),
+        ListingWriteErrorCodes.TooFewPhotos => ListingWriteProblemFactory.TooFewPhotosProblem(
+            PhotoUploadLimits.MinimumPhotosPerListing),
         ListingWriteErrorCodes.InvalidPhoto => ListingWriteProblemFactory.InvalidPhotoProblem(),
         ListingWriteErrorCodes.PhotoLimitExceeded => ListingWriteProblemFactory.PhotoLimitExceededProblem(),
         ListingWriteErrorCodes.InvalidListingTransition => ListingWriteProblemFactory.InvalidListingTransitionProblem(),

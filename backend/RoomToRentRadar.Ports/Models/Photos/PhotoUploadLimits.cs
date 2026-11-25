@@ -2,6 +2,7 @@ namespace RoomToRentRadar.Ports.Models.Photos;
 
 public static class PhotoUploadLimits
 {
+    public const int MinimumPhotosPerListing = 3;
     public const int MaxFilesPerRequest = 10;
     public const long MaxFileBytes = 10L * 1024 * 1024;
     public const int MaxPhotosPerListing = 20;

@@ -44,6 +44,7 @@ public sealed record ListingWriteResult<T>(T? Value, ListingWriteError? Error)
 public static class ListingWriteErrorCodes
 {
     public const string NotFound = "listing_not_found";
+    public const string TooFewPhotos = "too_few_photos";
     public const string InvalidPhoto = "invalid_listing_photo";
     public const string PhotoLimitExceeded = "photo_limit_exceeded";
     public const string InvalidListingTransition = "invalid_listing_transition";
