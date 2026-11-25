@@ -48,7 +48,7 @@ public static class CultureFormatting
 
     /// <summary>
     /// Formats a non-negative VND amount using the provided culture without currency conversion.
-    /// <c>vi-VN</c>: <c>2.200.000 ₫</c> · <c>en-US</c>: <c>2,200,000 VND</c>.
+    /// <c>vi-VN</c>: <c>2.200.000 ₫</c> · <c>en-US</c>: <c>2,200,000 ₫</c>.
     /// </summary>
     public static string FormatCurrency(object? value, CultureInfo? culture = null)
     {
@@ -64,9 +64,7 @@ public static class CultureFormatting
 
         var effective = culture ?? CultureInfo.CurrentCulture;
         var formatted = amount.ToString("N0", effective);
-        return IsVietnamese(effective)
-            ? $"{formatted} ₫"
-            : $"{formatted} VND";
+        return $"{formatted} ₫";
     }
 
     /// <summary>

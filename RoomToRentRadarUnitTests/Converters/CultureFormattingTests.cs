@@ -63,11 +63,11 @@ public class CultureFormattingTests
 
     // UT07-UT13: Standard values in en-US (currency stays VND, never USD/$)
     [Test]
-    public void FormatCurrency_StandardValue_EnUs_StaysVndWithoutUsdSymbol()
+    public void FormatCurrency_StandardValue_EnUs_ReturnsCommaSeparatorWithDongSymbol()
     {
         var formatted = CultureFormatting.FormatCurrency(2200000m, EnUs);
 
-        Assert.That(formatted, Is.EqualTo("2,200,000 VND"));
+        Assert.That(formatted, Is.EqualTo("2,200,000 ₫"));
         Assert.That(formatted, Does.Not.Contain("$"));
         Assert.That(formatted, Does.Not.Contain("USD"));
     }
@@ -113,8 +113,8 @@ public class CultureFormattingTests
     public void Formatters_ZeroValue_ReturnsFormattedZeroNotFallback()
     {
         Assert.That(CultureFormatting.FormatCurrency(0m, ViVn), Is.EqualTo("0 ₫"));
-        Assert.That(CultureFormatting.FormatCurrency(0, EnUs), Is.EqualTo("0 VND"));
-        Assert.That(CultureFormatting.FormatCurrency(-0.0, EnUs), Is.EqualTo("0 VND"));
+        Assert.That(CultureFormatting.FormatCurrency(0, EnUs), Is.EqualTo("0 ₫"));
+        Assert.That(CultureFormatting.FormatCurrency(-0.0, EnUs), Is.EqualTo("0 ₫"));
         Assert.That(CultureFormatting.FormatNumber(0, ViVn), Is.EqualTo("0,00"));
         Assert.That(CultureFormatting.FormatNumber(-0.0, EnUs), Is.EqualTo("0.00"));
         Assert.That(CultureFormatting.FormatArea(0, ViVn), Is.EqualTo("0 m²"));
@@ -258,7 +258,7 @@ public class CultureFormattingTests
         var enDistance = CultureFormatting.FormatDistance(distance, EnUs);
 
         Assert.That(viRent, Is.EqualTo("2.200.000 ₫"));
-        Assert.That(enRent, Is.EqualTo("2,200,000 VND"));
+        Assert.That(enRent, Is.EqualTo("2,200,000 ₫"));
         Assert.That(viArea, Is.EqualTo("25,5 m²"));
         Assert.That(enArea, Is.EqualTo("25.5 m²"));
         Assert.That(viDistance, Is.EqualTo("1,5 km"));
@@ -280,7 +280,7 @@ public class CultureFormattingTests
             Thread.CurrentThread.CurrentCulture = ViVn;
             Thread.CurrentThread.CurrentUICulture = ViVn;
 
-            Assert.That(CultureFormatting.FormatCurrency(2200000m, EnUs), Is.EqualTo("2,200,000 VND"));
+            Assert.That(CultureFormatting.FormatCurrency(2200000m, EnUs), Is.EqualTo("2,200,000 ₫"));
             Assert.That(CultureFormatting.FormatNumber(12345.67, EnUs), Is.EqualTo("12,345.67"));
             Assert.That(CultureFormatting.FormatDate(new DateOnly(2026, 11, 25), EnUs), Is.EqualTo("11/25/2026"));
             Assert.That(CultureFormatting.FormatTime(new TimeOnly(16, 30), EnUs), Is.EqualTo("4:30 PM"));
