@@ -62,6 +62,14 @@ sqliteSettings.SeedAccounts = SeedAccountsLoader.Load(
     builder.Configuration,
     builder.Environment.IsDevelopment(),
     new Pbkdf2PasswordHasherAdapter());
+// T00.10: demo photos exist in Development only and are served straight from the committed folder.
+var seedMediaPath = Path.Combine(builder.Environment.ContentRootPath, SeedPhotoLoader.FolderName);
+var seedDemoPhotos = builder.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("DemoData:SeedPhotos");
+if (seedDemoPhotos)
+{
+    sqliteSettings.SeedPhotos = SeedPhotoLoader.Load(seedMediaPath);
+}
+
 builder.Services.AddSqliteDatastore(sqliteSettings);
 
 // ===== 3. Application =====
@@ -152,6 +160,16 @@ var app = builder.Build();
 app.UseMiddleware<ProblemDetailsMiddleware>();
 // 401/403/404/415 produced without a body (auth challenge, unknown route, unsupported media type) become problem+json with a stable errorCode.
 app.UseStatusCodePages(StatusCodeProblemPages.WriteAsync);
+
+if (seedDemoPhotos)
+{
+    // Only the images: the manifest and credits next to them are not published.
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(Path.Combine(seedMediaPath, SeedPhotoLoader.ImagesFolderName)),
+        RequestPath = SeedPhotoLoader.RequestPath
+    });
+}
 
 // ADR-008 / system-architecture §6.1: uploaded photos are served as immutable, year-long cacheable files.
 var mediaRootPath = Path.GetFullPath(
