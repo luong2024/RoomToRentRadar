@@ -4,6 +4,7 @@ public static class UserRoleConstants
 {
     public const string Student = "STUDENT";
     public const string Landlord = "LANDLORD";
+    public const string Admin = "ADMIN";
 
     public static bool IsValidRegistrationRole(string? role) =>
         role is Student or Landlord;

@@ -1,7 +1,7 @@
 using System.Globalization;
 using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Localization;
-using RoomToRentRadar.Features.Home.ViewModels;
+using RoomToRentRadar.ViewModels.Home;
 
 namespace RoomToRentRadarUnitTests.Features.Home;
 
@@ -84,7 +84,7 @@ public class HomeViewModelTests
 
             // Assert
             Assert.That(vm.Subtitle, Is.EqualTo("Find your ideal room around ICTU campus"));
-            Assert.That(vm.Title, Is.EqualTo("Smart Rent"));
+            Assert.That(vm.Title, Is.EqualTo("RoomToRentRadar"));
         }
         finally
         {

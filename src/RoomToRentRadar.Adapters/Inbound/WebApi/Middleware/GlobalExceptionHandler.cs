@@ -141,6 +141,24 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                 inactiveEx.Message,
                 null),
 
+            RouteNotFoundException routeNotFoundEx => (
+                StatusCodes.Status404NotFound,
+                "Route Not Found",
+                routeNotFoundEx.Message,
+                null),
+
+            RoutingProviderUnavailableException routingUnavailableEx => (
+                StatusCodes.Status502BadGateway,
+                "Routing Provider Unavailable",
+                routingUnavailableEx.Message,
+                null),
+
+            RoutingProviderTimeoutException routingTimeoutEx => (
+                StatusCodes.Status504GatewayTimeout,
+                "Routing Provider Timeout",
+                routingTimeoutEx.Message,
+                null),
+
             NotFoundException resourceNotFoundEx => (
                 StatusCodes.Status404NotFound,
                 "Resource Not Found",
@@ -163,6 +181,36 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                 StatusCodes.Status400BadRequest,
                 "Profile Validation Error",
                 profileDomainEx.Message,
+                null),
+
+            InvalidRoomPhotoException invalidPhotoEx => (
+                StatusCodes.Status400BadRequest,
+                "Invalid Room Photo",
+                invalidPhotoEx.Message,
+                null),
+
+            RoomPhotoNotFoundException photoNotFoundEx => (
+                StatusCodes.Status404NotFound,
+                "Room Photo Not Found",
+                photoNotFoundEx.Message,
+                null),
+
+            RoomPhotoQuotaExceededException photoQuotaEx => (
+                StatusCodes.Status409Conflict,
+                "Room Photo Quota Exceeded",
+                photoQuotaEx.Message,
+                null),
+
+            RoomGalleryAccessDeniedException galleryAccessDeniedEx => (
+                StatusCodes.Status403Forbidden,
+                "Gallery Access Denied",
+                galleryAccessDeniedEx.Message,
+                null),
+
+            PhotoStorageNotConfiguredException storageNotConfiguredEx => (
+                StatusCodes.Status503ServiceUnavailable,
+                "Photo Storage Unavailable",
+                storageNotConfiguredEx.Message,
                 null),
 
             RateLimitExceededException rateLimitEx => (

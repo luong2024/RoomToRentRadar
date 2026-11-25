@@ -4,12 +4,13 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:f="clr-namespace:Fonts"
-    xmlns:homeViews="clr-namespace:RoomToRentRadar.Features.Home.Views"
+    xmlns:homeViews="clr-namespace:RoomToRentRadar.Views.Home"
     xmlns:loc="clr-namespace:RoomToRentRadar.Core.Localization"
-    xmlns:authViews="clr-namespace:RoomToRentRadar.Features.Authentication.Views"
-    xmlns:roomViews="clr-namespace:RoomToRentRadar.Features.RoomListings.Views"
-    xmlns:profileViews="clr-namespace:RoomToRentRadar.Features.Profile.Views"
-    Title="Trọ ICTU"
+    xmlns:authViews="clr-namespace:RoomToRentRadar.Views.Authentication"
+    xmlns:roomViews="clr-namespace:RoomToRentRadar.Views.RoomListings"
+    xmlns:profileViews="clr-namespace:RoomToRentRadar.Views.Profile"
+    xmlns:mapViews="clr-namespace:RoomToRentRadar.Views.MapSearch"
+    Title="{loc:Translate App_Name}"
     FlyoutBackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource DesktopRailBackgroundDark}}"
     FlyoutVerticalScrollMode="{OnPlatform WinUI=Disabled, Default=Auto}"
     FlyoutWidth="296"
@@ -60,7 +61,7 @@
                             <Label
                                 FontAttributes="Bold"
                                 FontSize="15"
-                                Text="Trọ ICTU"
+                                Text="{loc:Translate App_Name}"
                                 TextColor="{AppThemeBinding Light={StaticResource TextPrimarySlate}, Dark={StaticResource TextPrimarySlateDark}}" />
                             <Label
                                 FontSize="12"
@@ -208,7 +209,19 @@
         SemanticProperties.Description="{loc:Translate Nav_Rooms}"
         SemanticProperties.Hint="{loc:Translate Nav_Rooms_Hint}" />
 
-    <FlyoutItem Title="Sign In / Register" Route="auth" Icon="{StaticResource IconProjects}">
+    <ShellContent
+        Title="Map Search"
+        ContentTemplate="{DataTemplate mapViews:MapSearchPage}"
+        Icon="{StaticResource IconNavMap}"
+        Route="map"
+        SemanticProperties.Description="Search room listings on map"
+        SemanticProperties.Hint="Navigate to map to draw search area" />
+
+    <FlyoutItem
+        x:Name="AuthFlyoutItem"
+        Title="{loc:Translate Nav_SignIn}"
+        Route="auth"
+        Icon="{StaticResource IconProjects}">
         <ShellContent
             x:Name="AuthShellContent"
             Title="Authentication"
@@ -219,11 +232,28 @@
 
     <ShellContent
         x:Name="ProfileShellContent"
-        Title="Hồ sơ"
+        Shell.FlyoutItemIsVisible="False"
+        Title="{loc:Translate Profile_Title}"
         Icon="{StaticResource IconProjects}"
         Route="profile"
         SemanticProperties.Description="View and edit your profile"
         SemanticProperties.Hint="Open your profile" />
+
+    <ShellContent
+        x:Name="CreateListingShellContent"
+        Title="Post Rental Listing"
+        Icon="ic_create_listing.png"
+        ContentTemplate="{DataTemplate roomViews:CreateListingPage}"
+        Route="create-listing"
+        SemanticProperties.Description="Post rental room listing"
+        SemanticProperties.Hint="Open rental listing creation form" />
+
+    <MenuItem
+        x:Name="LogoutMenuItem"
+        Text="{loc:Translate Nav_Logout}"
+        IconImageSource="{StaticResource IconLogout}"
+        Shell.FlyoutItemIsVisible="False"
+        Clicked="OnLogoutMenuItemClicked" />
 
     <Shell.FlyoutFooter>
         <VerticalStackLayout
@@ -233,139 +263,6 @@
             <BoxView
                 HeightRequest="1"
                 Color="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}" />
-
-            <!-- Expandable Language Selector Box (Tiếng Việt / English) -->
-            <VerticalStackLayout Spacing="6">
-                <!-- Trigger Box: Tap to show/hide language options -->
-                <Border
-                    x:Name="LanguageSelectorBox"
-                    Padding="12,10"
-                    BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
-                    MinimumHeightRequest="44"
-                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
-                    StrokeShape="RoundRectangle 12"
-                    StrokeThickness="1">
-                    <Border.GestureRecognizers>
-                        <TapGestureRecognizer Tapped="OnToggleLanguageMenuTapped" />
-                    </Border.GestureRecognizers>
-
-                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8" VerticalOptions="Center">
-                        <Label
-                            Grid.Column="0"
-                            FontFamily="{x:Static f:FluentUI.FontFamily}"
-                            FontSize="18"
-                            Text="{x:Static f:FluentUI.globe_20_regular}"
-                            TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
-                            VerticalOptions="Center" />
-
-                        <Label
-                            Grid.Column="1"
-                            FontAttributes="Bold"
-                            FontSize="12.5"
-                            Text="{loc:Translate Language_Label}"
-                            TextColor="{AppThemeBinding Light={StaticResource TextSecondarySlate}, Dark={StaticResource TextSecondarySlateDark}}"
-                            VerticalOptions="Center" />
-
-                        <Border
-                            Grid.Column="2"
-                            Padding="8,4"
-                            BackgroundColor="{AppThemeBinding Light={StaticResource PrimaryBrandSoft}, Dark={StaticResource PrimaryBrandSoftDark}}"
-                            StrokeShape="RoundRectangle 8"
-                            StrokeThickness="0"
-                            VerticalOptions="Center">
-                            <Label
-                                x:Name="SelectedLanguageBadgeLabel"
-                                FontAttributes="Bold"
-                                FontFamily="OpenSansSemibold"
-                                FontSize="12"
-                                Text="🇻🇳 Tiếng Việt"
-                                TextColor="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
-                                VerticalOptions="Center" />
-                        </Border>
-
-                        <Label
-                            x:Name="LanguageDropdownChevron"
-                            Grid.Column="3"
-                            FontFamily="{x:Static f:FluentUI.FontFamily}"
-                            FontSize="14"
-                            Text="{x:Static f:FluentUI.chevron_down_16_regular}"
-                            TextColor="{AppThemeBinding Light={StaticResource TextMutedSlate}, Dark={StaticResource TextMutedSlateDark}}"
-                            VerticalOptions="Center" />
-                    </Grid>
-                </Border>
-
-                <!-- Dropdown Language List (Shown when user taps the Language Selector Box) -->
-                <Border
-                    x:Name="LanguageOptionsPanel"
-                    Padding="6"
-                    BackgroundColor="{AppThemeBinding Light={StaticResource CardBackground}, Dark={StaticResource CardBackgroundDark}}"
-                    IsVisible="False"
-                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtle}, Dark={StaticResource BorderSubtleDark}}"
-                    StrokeShape="RoundRectangle 12"
-                    StrokeThickness="1">
-                    <VerticalStackLayout Spacing="4">
-                        <!-- Tiếng Việt Option -->
-                        <Border
-                            x:Name="VietnameseButton"
-                            Padding="10,9"
-                            MinimumHeightRequest="40"
-                            StrokeShape="RoundRectangle 8"
-                            StrokeThickness="0">
-                            <Border.GestureRecognizers>
-                                <TapGestureRecognizer Tapped="OnSelectVietnameseTapped" />
-                            </Border.GestureRecognizers>
-                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" VerticalOptions="Center">
-                                <Label Grid.Column="0" FontSize="15" Text="🇻🇳" VerticalOptions="Center" />
-                                <Label
-                                    x:Name="VietnameseLabel"
-                                    Grid.Column="1"
-                                    FontAttributes="Bold"
-                                    FontFamily="OpenSansSemibold"
-                                    FontSize="13"
-                                    Text="Tiếng Việt"
-                                    VerticalOptions="Center" />
-                                <Label
-                                    x:Name="VietnameseCheckmark"
-                                    Grid.Column="2"
-                                    FontFamily="{x:Static f:FluentUI.FontFamily}"
-                                    FontSize="15"
-                                    Text="{x:Static f:FluentUI.checkmark_16_regular}"
-                                    VerticalOptions="Center" />
-                            </Grid>
-                        </Border>
-
-                        <!-- English Option -->
-                        <Border
-                            x:Name="EnglishButton"
-                            Padding="10,9"
-                            MinimumHeightRequest="40"
-                            StrokeShape="RoundRectangle 8"
-                            StrokeThickness="0">
-                            <Border.GestureRecognizers>
-                                <TapGestureRecognizer Tapped="OnSelectEnglishTapped" />
-                            </Border.GestureRecognizers>
-                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" VerticalOptions="Center">
-                                <Label Grid.Column="0" FontSize="15" Text="🇬🇧" VerticalOptions="Center" />
-                                <Label
-                                    x:Name="EnglishLabel"
-                                    Grid.Column="1"
-                                    FontFamily="OpenSansSemibold"
-                                    FontSize="13"
-                                    Text="English"
-                                    VerticalOptions="Center" />
-                                <Label
-                                    x:Name="EnglishCheckmark"
-                                    Grid.Column="2"
-                                    FontFamily="{x:Static f:FluentUI.FontFamily}"
-                                    FontSize="15"
-                                    IsVisible="False"
-                                    Text="{x:Static f:FluentUI.checkmark_16_regular}"
-                                    VerticalOptions="Center" />
-                            </Grid>
-                        </Border>
-                    </VerticalStackLayout>
-                </Border>
-            </VerticalStackLayout>
 
             <HorizontalStackLayout HorizontalOptions="Center" Spacing="6" VerticalOptions="Center">
                 <Label

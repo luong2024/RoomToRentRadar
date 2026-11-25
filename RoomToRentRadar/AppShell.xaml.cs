@@ -1,15 +1,17 @@
 using System.Globalization;
 using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
+using CommunityToolkit.Maui.Extensions;
+using CommunityToolkit.Maui.Views;
 using Fonts;
 using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Core.Localization;
 using RoomToRentRadar.Core.Models.Authentication;
-using RoomToRentRadar.Features.Authentication.Views;
-using RoomToRentRadar.Features.Home.Views;
-using RoomToRentRadar.Features.Profile.Views;
-using RoomToRentRadar.Features.RoomListings.Views;
+using RoomToRentRadar.Views.Authentication;
+using RoomToRentRadar.Views.Home;
+using RoomToRentRadar.Views.Profile;
+using RoomToRentRadar.Views.RoomListings;
 using RoomToRentRadar.Infrastructure.Services;
 using Font = Microsoft.Maui.Font;
 
@@ -29,19 +31,20 @@ namespace RoomToRentRadar
             IAuthenticationSessionService? sessionService,
             IRouteGuardService? routeGuardService)
         {
+            LocalizationResourceManager.Instance.SetCulture(new CultureInfo("en"));
             InitializeComponent();
             _sessionService = sessionService;
             _routeGuardService = routeGuardService;
-            Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(Features.RoomDetails.Views.RoomDetailPage));
+            UpdateAuthVisibility();
+            Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(RoomToRentRadar.Views.RoomDetails.RoomDetailPage));
             Routing.RegisterRoute(AppRoutes.RoomDetails, typeof(RoomDetailsPage));
-
-            UpdateLanguageButtonStyles();
-            LocalizationResourceManager.Instance.PropertyChanged += (_, _) => UpdateLanguageButtonStyles();
+            Routing.RegisterRoute(AppRoutes.CreateListing, typeof(CreateListingPage));
 
             if (_sessionService != null)
             {
                 _sessionService.CurrentUserChanged += OnCurrentUserChanged;
             }
+            UpdateProfileVisibility();
         }
 
         public AppShell(
@@ -52,38 +55,40 @@ namespace RoomToRentRadar
             IAuthenticationSessionService sessionService,
             IRouteGuardService routeGuardService)
         {
+            LocalizationResourceManager.Instance.SetCulture(new CultureInfo("en"));
             InitializeComponent();
             _sessionService = sessionService;
             _routeGuardService = routeGuardService;
+            UpdateAuthVisibility();
 
             HomeShellContent.Content = homePage;
             RoomListingsShellContent.Content = roomListingsPage;
             AuthShellContent.Content = authPage;
             ProfileShellContent.Content = profilePage;
 
-            Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(Features.RoomDetails.Views.RoomDetailPage));
+            Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(RoomToRentRadar.Views.RoomDetails.RoomDetailPage));
             Routing.RegisterRoute(AppRoutes.RoomDetails, typeof(RoomDetailsPage));
-
-            UpdateLanguageButtonStyles();
-            LocalizationResourceManager.Instance.PropertyChanged += (_, _) => UpdateLanguageButtonStyles();
+            Routing.RegisterRoute(AppRoutes.CreateListing, typeof(CreateListingPage));
 
             if (_sessionService != null)
             {
                 _sessionService.CurrentUserChanged += OnCurrentUserChanged;
             }
+            UpdateProfileVisibility();
         }
 
         protected override async void OnNavigating(ShellNavigatingEventArgs args)
         {
             base.OnNavigating(args);
 
-            if (_isRedirecting || _routeGuardService == null || _sessionService == null)
+            if (_isRedirecting || _routeGuardService == null || _sessionService == null
+                || args.Source == ShellNavigationSource.Pop || args.Source == ShellNavigationSource.PopToRoot)
             {
                 return;
             }
 
             var targetUri = args.Target?.Location?.OriginalString;
-            if (string.IsNullOrWhiteSpace(targetUri))
+            if (string.IsNullOrWhiteSpace(targetUri) || targetUri == "..")
             {
                 return;
             }
@@ -192,76 +197,6 @@ namespace RoomToRentRadar
             });
         }
 
-        private void OnToggleLanguageMenuTapped(object? sender, EventArgs e)
-        {
-            LanguageOptionsPanel.IsVisible = !LanguageOptionsPanel.IsVisible;
-            LanguageDropdownChevron.Text = LanguageOptionsPanel.IsVisible
-                ? FluentUI.chevron_up_16_regular
-                : FluentUI.chevron_down_16_regular;
-        }
-
-        private void OnSelectVietnameseTapped(object? sender, EventArgs e)
-        {
-            LocalizationResourceManager.Instance.SetCulture(new CultureInfo("vi"));
-            LanguageOptionsPanel.IsVisible = false;
-            LanguageDropdownChevron.Text = FluentUI.chevron_down_16_regular;
-            UpdateLanguageButtonStyles();
-        }
-
-        private void OnSelectEnglishTapped(object? sender, EventArgs e)
-        {
-            LocalizationResourceManager.Instance.SetCulture(new CultureInfo("en"));
-            LanguageOptionsPanel.IsVisible = false;
-            LanguageDropdownChevron.Text = FluentUI.chevron_down_16_regular;
-            UpdateLanguageButtonStyles();
-        }
-
-        private void UpdateLanguageButtonStyles()
-        {
-            var isVi = LocalizationResourceManager.Instance.IsVietnamese;
-
-            var primaryBrand = Application.Current?.Resources.TryGetValue("PrimaryBrand", out var pColor) == true && pColor is Color p
-                ? p
-                : Color.FromArgb("#2563EB");
-
-            var primaryBrandSoft = Application.Current?.Resources.TryGetValue("PrimaryBrandSoft", out var psColor) == true && psColor is Color ps
-                ? ps
-                : Color.FromArgb("#EFF6FF");
-
-            var textPrimary = Application.Current?.Resources.TryGetValue("TextPrimarySlate", out var tpColor) == true && tpColor is Color tp
-                ? tp
-                : Color.FromArgb("#0F172A");
-
-            SelectedLanguageBadgeLabel.Text = isVi ? "🇻🇳 Tiếng Việt" : "🇬🇧 English";
-
-            if (isVi)
-            {
-                VietnameseButton.BackgroundColor = primaryBrandSoft;
-                VietnameseLabel.TextColor = primaryBrand;
-                VietnameseLabel.FontAttributes = FontAttributes.Bold;
-                VietnameseCheckmark.IsVisible = true;
-                VietnameseCheckmark.TextColor = primaryBrand;
-
-                EnglishButton.BackgroundColor = Colors.Transparent;
-                EnglishLabel.TextColor = textPrimary;
-                EnglishLabel.FontAttributes = FontAttributes.None;
-                EnglishCheckmark.IsVisible = false;
-            }
-            else
-            {
-                EnglishButton.BackgroundColor = primaryBrandSoft;
-                EnglishLabel.TextColor = primaryBrand;
-                EnglishLabel.FontAttributes = FontAttributes.Bold;
-                EnglishCheckmark.IsVisible = true;
-                EnglishCheckmark.TextColor = primaryBrand;
-
-                VietnameseButton.BackgroundColor = Colors.Transparent;
-                VietnameseLabel.TextColor = textPrimary;
-                VietnameseLabel.FontAttributes = FontAttributes.None;
-                VietnameseCheckmark.IsVisible = false;
-            }
-        }
-
         public void ConfigureSession(IAuthenticationSessionService sessionService)
         {
             if (ReferenceEquals(_sessionService, sessionService)) return;
@@ -276,17 +211,86 @@ namespace RoomToRentRadar
             UpdateProfileVisibility();
         }
 
-        private void UpdateProfileVisibility() =>
-            ProfileShellContent.IsVisible = _sessionService?.IsAuthenticated == true;
+        private void UpdateProfileVisibility() => UpdateAuthVisibility();
+        private void UpdateAuthVisibility()
+        {
+            var isAuthenticated = _sessionService?.IsAuthenticated == true;
+            if (ProfileShellContent != null)
+            {
+                ProfileShellContent.IsVisible = isAuthenticated;
+                Shell.SetFlyoutItemIsVisible(ProfileShellContent, isAuthenticated);
+            }
+
+            if (AuthFlyoutItem != null)
+            {
+                AuthFlyoutItem.IsVisible = !isAuthenticated;
+                Shell.SetFlyoutItemIsVisible(AuthFlyoutItem, !isAuthenticated);
+            }
+
+            if (AuthShellContent != null)
+            {
+                AuthShellContent.IsVisible = !isAuthenticated;
+                Shell.SetFlyoutItemIsVisible(AuthShellContent, !isAuthenticated);
+            }
+
+            if (LogoutMenuItem != null)
+            {
+                Shell.SetFlyoutItemIsVisible(LogoutMenuItem, isAuthenticated);
+            }
+
+            if (CreateListingShellContent != null)
+            {
+                var role = _sessionService?.CurrentUser?.Role;
+                var isLandlordOrAdmin = string.Equals(role, UserRoleConstants.Landlord, StringComparison.OrdinalIgnoreCase)
+                                        || string.Equals(role, UserRoleConstants.Admin, StringComparison.OrdinalIgnoreCase);
+                CreateListingShellContent.IsVisible = isLandlordOrAdmin;
+                Shell.SetFlyoutItemIsVisible(CreateListingShellContent, isLandlordOrAdmin);
+            }
+        }
+
+        private async void OnLogoutMenuItemClicked(object? sender, EventArgs e)
+        {
+            FlyoutIsPresented = false;
+
+            bool shouldLogout = false;
+            try
+            {
+                var popup = new LogoutConfirmationPopup();
+                var targetPage = CurrentPage ?? (Page)this;
+                targetPage.ShowPopup(popup);
+                shouldLogout = await popup.WaitForDecisionAsync();
+            }
+            catch
+            {
+                var confirmTitle = LocalizationResourceManager.Instance["Logout_Confirm_Title"] ?? "Log Out";
+                var confirmMessage = LocalizationResourceManager.Instance["Logout_Confirm_Message"] ?? "Are you sure you want to log out?";
+                var confirmYes = LocalizationResourceManager.Instance["Logout_Confirm_Yes"] ?? "Log Out";
+                var confirmNo = LocalizationResourceManager.Instance["Logout_Confirm_No"] ?? "Cancel";
+
+                var page = CurrentPage ?? this;
+                shouldLogout = await page.DisplayAlertAsync(confirmTitle, confirmMessage, confirmYes, confirmNo);
+            }
+
+            if (!shouldLogout)
+            {
+                return;
+            }
+
+            if (_sessionService != null)
+            {
+                await _sessionService.LogoutAsync();
+            }
+
+            await GoToAsync($"//{AppRoutes.Home}");
+
+            var successMsg = LocalizationResourceManager.Instance["Logout_Success"] ?? "Logged out successfully";
+            await DisplayToastAsync(successMsg);
+        }
 
         public void UpdateDesktopPaneCompactState(bool isCompact)
         {
             FlyoutHeaderExpandedPanel.IsVisible = !isCompact;
             FlyoutFooterExpandedPanel.IsVisible = !isCompact;
-            if (isCompact)
-            {
-                LanguageOptionsPanel.IsVisible = false;
-            }
         }
 
         public static async Task DisplaySnackbarAsync(string message)

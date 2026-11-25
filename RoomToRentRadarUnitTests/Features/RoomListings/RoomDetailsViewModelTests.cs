@@ -1,7 +1,7 @@
 using RoomToRentRadar.Core.Interfaces;
-using RoomToRentRadar.Features.RoomListings.Models;
-using RoomToRentRadar.Features.RoomListings.Services;
-using RoomToRentRadar.Features.RoomListings.ViewModels;
+using RoomToRentRadar.Models.RoomListings;
+using RoomToRentRadar.Services.RoomListings;
+using RoomToRentRadar.ViewModels.RoomListings;
 
 namespace RoomToRentRadarUnitTests.Features.RoomListings;
 
@@ -83,7 +83,7 @@ public class RoomDetailsViewModelTests
         public Task<PagedResponse<RoomListItemModel>> GetRoomListingsAsync(
             int page,
             int pageSize,
-            RoomSortOption sortBy = RoomSortOption.Newest,
+            RoomSortOption sortBy = RoomSortOption.DistanceAsc,
             string? search = null,
             RoomFilterCriteria? filter = null,
             CancellationToken cancellationToken = default) =>

@@ -301,6 +301,16 @@ public class RoomListingsApplicationPerformanceTests
             _rooms.RemoveAll(room => room.Id == roomId && room.CampusId == campusId);
             return Task.CompletedTask;
         }
+
+        public Task<PagedResult<RoomListing>> SearchByPolygonAsync(
+            GeoPolygon polygon,
+            RoomSearchFilter filter,
+            int pageIndex,
+            int pageSize,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new PagedResult<RoomListing>([], pageIndex, pageSize, 0));
+        }
     }
 
     private sealed class FakeCampusRepository : ICampusRepository
@@ -335,6 +345,7 @@ public class CosmosRoomListingPerformanceIntegrationTests
     private const string CampusId = "campus-ictu";
 
     private CosmosClient? _client;
+    private Database? _databaseRef;
     private Container? _container;
     private CosmosRoomListingRepository? _repository;
     private readonly GeoLocation _campusLocation = new(21.5852, 105.8074);
@@ -366,17 +377,83 @@ public class CosmosRoomListingPerformanceIntegrationTests
         {
             var dbResponse = await _client.CreateDatabaseIfNotExistsAsync(DatabaseName);
             var database = dbResponse.Database;
+            _databaseRef = database;
 
             var containerProperties = new ContainerProperties(ContainerName, "/campusId");
-            containerProperties.IndexingPolicy.SpatialIndexes.Add(new SpatialPath { Path = "/location/*" });
+            containerProperties.IndexingPolicy.SpatialIndexes.Add(new SpatialPath
+            {
+                Path = "/location/*",
+                SpatialTypes = { SpatialType.Point }
+            });
+            containerProperties.IndexingPolicy.CompositeIndexes.Add(new System.Collections.ObjectModel.Collection<CompositePath>
+            {
+                new() { Path = "/monthlyRentAmount", Order = CompositePathSortOrder.Ascending },
+                new() { Path = "/id", Order = CompositePathSortOrder.Ascending }
+            });
+            containerProperties.IndexingPolicy.CompositeIndexes.Add(new System.Collections.ObjectModel.Collection<CompositePath>
+            {
+                new() { Path = "/monthlyRentAmount", Order = CompositePathSortOrder.Descending },
+                new() { Path = "/id", Order = CompositePathSortOrder.Descending }
+            });
+            containerProperties.IndexingPolicy.CompositeIndexes.Add(new System.Collections.ObjectModel.Collection<CompositePath>
+            {
+                new() { Path = "/areaSquareMeters", Order = CompositePathSortOrder.Ascending },
+                new() { Path = "/id", Order = CompositePathSortOrder.Ascending }
+            });
+            containerProperties.IndexingPolicy.CompositeIndexes.Add(new System.Collections.ObjectModel.Collection<CompositePath>
+            {
+                new() { Path = "/areaSquareMeters", Order = CompositePathSortOrder.Descending },
+                new() { Path = "/id", Order = CompositePathSortOrder.Descending }
+            });
             var containerResponse = await database.CreateContainerIfNotExistsAsync(containerProperties);
             _container = containerResponse.Container;
+
+            var existingProps = (await _container.ReadContainerAsync()).Resource;
+            var indexingPolicy = existingProps.IndexingPolicy ?? new IndexingPolicy();
+            existingProps.IndexingPolicy = indexingPolicy;
+            var needsUpdate = false;
+            if (!indexingPolicy.CompositeIndexes.Any(ci => ci.Any(p => p.Path == "/monthlyRentAmount")))
+            {
+                indexingPolicy.CompositeIndexes.Add(new System.Collections.ObjectModel.Collection<CompositePath>
+                {
+                    new() { Path = "/monthlyRentAmount", Order = CompositePathSortOrder.Ascending },
+                    new() { Path = "/id", Order = CompositePathSortOrder.Ascending }
+                });
+                indexingPolicy.CompositeIndexes.Add(new System.Collections.ObjectModel.Collection<CompositePath>
+                {
+                    new() { Path = "/monthlyRentAmount", Order = CompositePathSortOrder.Descending },
+                    new() { Path = "/id", Order = CompositePathSortOrder.Descending }
+                });
+                needsUpdate = true;
+            }
+            if (!indexingPolicy.CompositeIndexes.Any(ci => ci.Any(p => p.Path == "/areaSquareMeters")))
+            {
+                indexingPolicy.CompositeIndexes.Add(new System.Collections.ObjectModel.Collection<CompositePath>
+                {
+                    new() { Path = "/areaSquareMeters", Order = CompositePathSortOrder.Ascending },
+                    new() { Path = "/id", Order = CompositePathSortOrder.Ascending }
+                });
+                indexingPolicy.CompositeIndexes.Add(new System.Collections.ObjectModel.Collection<CompositePath>
+                {
+                    new() { Path = "/areaSquareMeters", Order = CompositePathSortOrder.Descending },
+                    new() { Path = "/id", Order = CompositePathSortOrder.Descending }
+                });
+                needsUpdate = true;
+            }
+            if (needsUpdate)
+            {
+                await _container.ReplaceContainerAsync(existingProps);
+            }
 
             var options = Options.Create(new CosmosDbOptions
             {
                 DatabaseName = DatabaseName,
-                ContainerName = ContainerName
+                ContainerName = ContainerName,
+                RoomsContainerName = "Rooms_Canonical_PerfIntegrationTest",
+                RoomProjectionSyncOutboxContainerName = "RoomProjectionSyncOutbox_PerfIntegrationTest"
             });
+            await database.CreateContainerIfNotExistsAsync(new ContainerProperties(options.Value.RoomsContainerName, "/id"));
+            await database.CreateContainerIfNotExistsAsync(new ContainerProperties(options.Value.RoomProjectionSyncOutboxContainerName, "/id"));
             _repository = new CosmosRoomListingRepository(_client, options);
 
             // Seed test data: 60 available & verified rooms, 10 occupied, 10 unverified (realistic pagination dataset)
@@ -427,6 +504,7 @@ public class CosmosRoomListingPerformanceIntegrationTests
         }
         catch (Exception ex) when (ex is HttpRequestException ||
                                   ex is System.Net.Sockets.SocketException ||
+                                  ex is CosmosException ||
                                   ex.InnerException is HttpRequestException ||
                                   ex.InnerException is System.Net.Sockets.SocketException ||
                                   ex.Message.Contains("Connection refused", StringComparison.OrdinalIgnoreCase))
@@ -438,6 +516,12 @@ public class CosmosRoomListingPerformanceIntegrationTests
     [OneTimeTearDown]
     public async Task OneTimeTearDown()
     {
+        if (_databaseRef is not null)
+        {
+            try { await _databaseRef.GetContainer("Rooms_Canonical_PerfIntegrationTest").DeleteContainerAsync(); } catch { }
+            try { await _databaseRef.GetContainer("RoomProjectionSyncOutbox_PerfIntegrationTest").DeleteContainerAsync(); } catch { }
+        }
+
         if (_container is not null)
         {
             try

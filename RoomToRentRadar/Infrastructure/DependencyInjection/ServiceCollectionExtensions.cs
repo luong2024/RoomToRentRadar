@@ -1,17 +1,17 @@
 using RoomToRentRadar.Core.Interfaces;
-using RoomToRentRadar.Features.Authentication.ViewModels;
-using RoomToRentRadar.Features.Authentication.Views;
-using RoomToRentRadar.Features.Home.ViewModels;
-using RoomToRentRadar.Features.Home.Views;
-using RoomToRentRadar.Features.RoomDetails.Services;
-using RoomToRentRadar.Features.RoomDetails.ViewModels;
-using RoomToRentRadar.Features.RoomDetails.Views;
-using RoomToRentRadar.Features.RoomListings.Services;
-using RoomToRentRadar.Features.RoomListings.ViewModels;
-using RoomToRentRadar.Features.RoomListings.Views;
-using RoomToRentRadar.Features.Profile.Services;
-using RoomToRentRadar.Features.Profile.ViewModels;
-using RoomToRentRadar.Features.Profile.Views;
+using RoomToRentRadar.ViewModels.Authentication;
+using RoomToRentRadar.Views.Authentication;
+using RoomToRentRadar.ViewModels.Home;
+using RoomToRentRadar.Views.Home;
+using RoomToRentRadar.Services.RoomDetails;
+using RoomToRentRadar.ViewModels.RoomDetails;
+using RoomToRentRadar.Views.RoomDetails;
+using RoomToRentRadar.Services.RoomListings;
+using RoomToRentRadar.ViewModels.RoomListings;
+using RoomToRentRadar.Views.RoomListings;
+using RoomToRentRadar.Services.Profile;
+using RoomToRentRadar.ViewModels.Profile;
+using RoomToRentRadar.Views.Profile;
 using RoomToRentRadar.Infrastructure.Adapters;
 using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Infrastructure.Services;
@@ -61,6 +61,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IProfileService, ProfileService>();
         services.AddSingleton<IProfileUiThreadDispatcher, MauiProfileUiThreadDispatcher>();
         services.AddSingleton<IRoomDetailService, RoomDetailService>();
+        services.AddSingleton<IMediaPickerService, MediaPickerService>();
         return services;
     }
 
@@ -72,6 +73,8 @@ public static class ServiceCollectionExtensions
         services.AddTransient<AuthViewModel>();
         services.AddTransient<AuthPage>();
         services.AddTransient<IRoomListingsService, RoomListingsService>();
+        services.AddTransient<IFavouritesService, FavouritesService>();
+        services.AddTransient<IFavoriteFeedbackService, FavoriteFeedbackService>();
         services.AddTransient<RoomListingsViewModel>();
         services.AddTransient<RoomListingsPage>();
         services.AddTransient<RoomDetailsViewModel>();
@@ -81,6 +84,11 @@ public static class ServiceCollectionExtensions
 
         services.AddTransient<RoomDetailViewModel>();
         services.AddTransient<RoomDetailPage>();
+        services.AddTransient<RoomToRentRadar.ViewModels.MapSearch.MapSearchViewModel>();
+        services.AddTransient<RoomToRentRadar.Views.MapSearch.MapSearchPage>();
+        services.AddTransient<ICreateListingService, CreateListingService>();
+        services.AddTransient<CreateListingViewModel>();
+        services.AddTransient<CreateListingPage>();
         return services;
     }
 }

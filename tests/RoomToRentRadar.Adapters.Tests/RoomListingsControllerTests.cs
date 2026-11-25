@@ -104,6 +104,78 @@ public class RoomListingsControllerTests
         Assert.That(notFoundResult.Value, Is.InstanceOf<ProblemDetails>());
     }
 
+    [Test]
+    public async Task SpatialSearchAsync_WhenSuccessful_ShouldReturnOkWithPagedResult()
+    {
+        var spatialUseCase = new FakeSearchRoomsInPolygonUseCase();
+        var sampleDto = new SpatialRoomSearchResultDto(
+            "room-01",
+            "Cozy Studio",
+            2500000m,
+            "VND",
+            25.0,
+            "Thai Nguyen",
+            21.5855,
+            105.8075,
+            true,
+            null,
+            "campus-ictu");
+
+        spatialUseCase.ResultToReturn = new PagedResult<SpatialRoomSearchResultDto>([sampleDto], 1, 10, 1);
+        var controller = new RoomListingsController(_useCase, spatialUseCase);
+
+        var request = new SpatialRoomSearchRequestDto
+        {
+            PolygonCoordinates = [new(21.585, 105.807), new(21.586, 105.807), new(21.585, 105.808)],
+            PageIndex = 1,
+            PageSize = 10
+        };
+
+        var actionResult = await controller.SpatialSearchAsync(request, CancellationToken.None);
+
+        Assert.That(actionResult, Is.InstanceOf<OkObjectResult>());
+        var okResult = (OkObjectResult)actionResult;
+        Assert.That(okResult.Value, Is.InstanceOf<PagedResult<SpatialRoomSearchResultDto>>());
+        var pagedResult = (PagedResult<SpatialRoomSearchResultDto>)okResult.Value!;
+        Assert.That(pagedResult.TotalCount, Is.EqualTo(1));
+        Assert.That(pagedResult.Items[0].Latitude, Is.EqualTo(21.5855));
+    }
+
+    [Test]
+    public async Task SpatialSearchAsync_WhenValidationFails_ShouldReturnBadRequestProblemDetails()
+    {
+        var spatialUseCase = new FakeSearchRoomsInPolygonUseCase
+        {
+            ExceptionToThrow = new ValidationException("PolygonCoordinates", "A polygon must contain at least 3 vertices.")
+        };
+        var controller = new RoomListingsController(_useCase, spatialUseCase);
+
+        var request = new SpatialRoomSearchRequestDto();
+        var actionResult = await controller.SpatialSearchAsync(request, CancellationToken.None);
+
+        Assert.That(actionResult, Is.InstanceOf<BadRequestObjectResult>());
+        var badRequest = (BadRequestObjectResult)actionResult;
+        Assert.That(badRequest.Value, Is.InstanceOf<ValidationProblemDetails>());
+    }
+
+    private sealed class FakeSearchRoomsInPolygonUseCase : ISearchRoomsInPolygonUseCase
+    {
+        public PagedResult<SpatialRoomSearchResultDto>? ResultToReturn { get; set; }
+        public Exception? ExceptionToThrow { get; set; }
+
+        public Task<PagedResult<SpatialRoomSearchResultDto>> ExecuteAsync(
+            SpatialRoomSearchRequestDto request,
+            CancellationToken cancellationToken = default)
+        {
+            if (ExceptionToThrow is not null)
+            {
+                throw ExceptionToThrow;
+            }
+
+            return Task.FromResult(ResultToReturn ?? new PagedResult<SpatialRoomSearchResultDto>([], 1, 10, 0));
+        }
+    }
+
     private sealed class FakeGetRoomListingsUseCase : IGetRoomListingsUseCase
     {
         public PagedResult<RoomListingDto>? ResultToReturn { get; set; }

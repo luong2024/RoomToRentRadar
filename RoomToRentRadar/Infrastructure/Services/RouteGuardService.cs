@@ -58,10 +58,20 @@ public class RouteGuardService : IRouteGuardService
         }
 
         // 4. Role-restricted routes
+        if (IsCreateListingRoute(normalizedRoute))
+        {
+            var isLandlordOrAdmin = string.Equals(currentUser.Role, UserRoleConstants.Landlord, StringComparison.OrdinalIgnoreCase)
+                                   || string.Equals(currentUser.Role, UserRoleConstants.Admin, StringComparison.OrdinalIgnoreCase);
+
+            return isLandlordOrAdmin
+                ? RouteAccessStatus.Allowed
+                : RouteAccessStatus.AccessDeniedRoleMismatch;
+        }
+
         if (IsRoommateMatchingRoute(normalizedRoute))
         {
             var isStudentOrAdmin = string.Equals(currentUser.Role, UserRoleConstants.Student, StringComparison.OrdinalIgnoreCase)
-                                   || string.Equals(currentUser.Role, "ADMIN", StringComparison.OrdinalIgnoreCase);
+                                   || string.Equals(currentUser.Role, UserRoleConstants.Admin, StringComparison.OrdinalIgnoreCase);
 
             return isStudentOrAdmin
                 ? RouteAccessStatus.Allowed
@@ -232,7 +242,8 @@ public class RouteGuardService : IRouteGuardService
 
         // Relative detail routes (room-detail and rooms/details) are pushed onto the stack without leading "//"
         if (normalizedBase == AppRoutes.RoomDetail.ToLowerInvariant() ||
-            normalizedBase == AppRoutes.RoomDetails.ToLowerInvariant())
+            normalizedBase == AppRoutes.RoomDetails.ToLowerInvariant() ||
+            normalizedBase == AppRoutes.CreateListing.ToLowerInvariant())
         {
             return $"{normalizedBase}{querySuffix}";
         }
@@ -265,10 +276,18 @@ public class RouteGuardService : IRouteGuardService
 
     private static bool IsPublicRoute(string normalizedRoute)
     {
-        return normalizedRoute == AppRoutes.Home.ToLowerInvariant()
+        return normalizedRoute == ".."
+               || normalizedRoute == AppRoutes.Home.ToLowerInvariant()
                || normalizedRoute == AppRoutes.RoomListings.ToLowerInvariant()
                || normalizedRoute == AppRoutes.RoomDetail.ToLowerInvariant()
                || normalizedRoute == AppRoutes.RoomDetails.ToLowerInvariant();
+    }
+
+    private static bool IsCreateListingRoute(string normalizedRoute)
+    {
+        return normalizedRoute == AppRoutes.CreateListing.ToLowerInvariant()
+               || normalizedRoute == "create-listing"
+               || normalizedRoute == "rooms/create";
     }
 
     private static bool IsProfileRoute(string normalizedRoute)

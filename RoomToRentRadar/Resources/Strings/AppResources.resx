@@ -21,107 +21,131 @@
   <resheader name="version"><value>2.0</value></resheader>
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
-  <data name="App_Name" xml:space="preserve"><value>Smart Rent</value></data>
-  <data name="Campus_Location" xml:space="preserve"><value>ĐH CNTT&amp;TT (ICTU) • Thái Nguyên</value></data>
-  <data name="Menu_Open" xml:space="preserve"><value>Mở menu chính</value></data>
-  <data name="Notification_Title" xml:space="preserve"><value>Thông báo</value></data>
-  <data name="Profile_Title" xml:space="preserve"><value>Hồ sơ cá nhân</value></data>
-  <data name="Nav_SectionTitle" xml:space="preserve"><value>ĐIỀU HƯỚNG CHÍNH</value></data>
-  <data name="Nav_Home" xml:space="preserve"><value>Trang chủ</value></data>
-  <data name="Nav_Home_Hint" xml:space="preserve"><value>Đi tới trang chủ</value></data>
-  <data name="Nav_Rooms" xml:space="preserve"><value>Danh sách phòng</value></data>
-  <data name="Nav_Rooms_Hint" xml:space="preserve"><value>Đi tới danh sách phòng trọ quanh ICTU</value></data>
-  <data name="Badge_Verified" xml:space="preserve"><value>100% Xác thực</value></data>
-  <data name="Badge_Radius" xml:space="preserve"><value>Bán kính &lt; 2km</value></data>
-  <data name="Language_Label" xml:space="preserve"><value>Ngôn ngữ / Language</value></data>
+  <data name="App_Name" xml:space="preserve"><value>RoomToRentRadar</value></data>
+  <data name="Campus_Location" xml:space="preserve"><value>ICTU Campus • Thai Nguyen</value></data>
+  <data name="Menu_Open" xml:space="preserve"><value>Open main menu</value></data>
+  <data name="Notification_Title" xml:space="preserve"><value>Notifications</value></data>
+  <data name="Profile_Title" xml:space="preserve"><value>Profile</value></data>
+  <data name="Nav_SectionTitle" xml:space="preserve"><value>MAIN NAVIGATION</value></data>
+  <data name="Nav_Home" xml:space="preserve"><value>Home</value></data>
+  <data name="Nav_Home_Hint" xml:space="preserve"><value>Go to home page</value></data>
+  <data name="Nav_Rooms" xml:space="preserve"><value>Room Listings</value></data>
+  <data name="Nav_Rooms_Hint" xml:space="preserve"><value>Go to room listings around ICTU</value></data>
+  <data name="Badge_Verified" xml:space="preserve"><value>100% Verified</value></data>
+  <data name="Badge_Radius" xml:space="preserve"><value>Radius &lt; 2km</value></data>
+  <data name="Language_Label" xml:space="preserve"><value>Language</value></data>
   <data name="Language_Vietnamese" xml:space="preserve"><value>Tiếng Việt</value></data>
   <data name="Language_English" xml:space="preserve"><value>English</value></data>
-  <data name="Footer_Version" xml:space="preserve"><value>Smart Rent • ICTU v1.0</value></data>
-  <data name="Title_ExploreRooms" xml:space="preserve"><value>Khám phá phòng trọ</value></data>
-  <data name="Result_Summary_Format" xml:space="preserve"><value>Tìm thấy {0} phòng quanh ICTU</value></data>
-  <data name="Result_Summary_Updating" xml:space="preserve"><value>Đang cập nhật danh sách phòng quanh ICTU</value></data>
-  <data name="Search_Placeholder" xml:space="preserve"><value>Tìm tên phòng, đường Z115, tiện ích...</value></data>
-  <data name="Filter_SortTooltip" xml:space="preserve"><value>Bộ lọc và sắp xếp theo giá</value></data>
-  <data name="Filter_Active_Format" xml:space="preserve"><value>Đang lọc: {0}</value></data>
-  <data name="Sort_Newest" xml:space="preserve"><value>Mới nhất</value></data>
-  <data name="Sort_PriceAsc" xml:space="preserve"><value>Giá: Thấp đến Cao</value></data>
-  <data name="Sort_PriceDesc" xml:space="preserve"><value>Giá: Cao đến Thấp</value></data>
-  <data name="Sort_DistanceAsc" xml:space="preserve"><value>Gần ICTU nhất</value></data>
-  <data name="Filter_AirConditioner" xml:space="preserve"><value>Điều hòa</value></data>
-  <data name="Filter_Mezzanine" xml:space="preserve"><value>Gác xép</value></data>
-  <data name="Filter_FullFurniture" xml:space="preserve"><value>Full nội thất</value></data>
-  <data name="State_LoadingMessage" xml:space="preserve"><value>Đang tìm phòng trọ...</value></data>
-  <data name="State_LoadingMore" xml:space="preserve"><value>Đang tải thêm phòng...</value></data>
-  <data name="State_EmptyTitle" xml:space="preserve"><value>Chưa tìm thấy phòng trọ!</value></data>
-  <data name="State_EmptyDesc" xml:space="preserve"><value>Không có phòng nào khớp với từ khóa tìm kiếm hoặc tiêu chí lọc hiện tại của bạn quanh khu vực ICTU.</value></data>
-  <data name="State_SuggestionsTitle" xml:space="preserve"><value>Gợi ý tìm kiếm:</value></data>
-  <data name="State_Suggestion1" xml:space="preserve"><value>Mở rộng khoảng giá tìm kiếm</value></data>
-  <data name="State_Suggestion2" xml:space="preserve"><value>Tăng bán kính tìm kiếm quanh trường</value></data>
-  <data name="State_Suggestion3" xml:space="preserve"><value>Thử thay đổi hoặc bỏ bớt các bộ lọc tiện ích</value></data>
-  <data name="Action_ResetFilters" xml:space="preserve"><value>Xóa bộ lọc tìm kiếm</value></data>
-  <data name="State_ErrorTitle" xml:space="preserve"><value>Không thể tải dữ liệu</value></data>
-  <data name="State_ErrorNetwork" xml:space="preserve"><value>Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.</value></data>
-  <data name="State_ErrorServer" xml:space="preserve"><value>Không thể tải danh sách phòng trọ. Vui lòng thử lại sau.</value></data>
-  <data name="Action_Retry" xml:space="preserve"><value>Thử lại</value></data>
-  <data name="Home_BannerPill" xml:space="preserve"><value>CỔNG THÔNG TIN PHÒNG TRỌ SINH VIÊN ICTU</value></data>
-  <data name="Home_Subtitle" xml:space="preserve"><value>Tìm phòng trọ lý tưởng quanh ĐH CNTT&amp;TT (ICTU)</value></data>
-  <data name="Home_IntroDesc" xml:space="preserve"><value>Tra cứu nhanh phòng trọ quanh trường ĐH CNTT&amp;TT Thái Nguyên với giá thuê minh bạch, khoảng cách thực tế tới cổng trường và bộ lọc tiện nghi trực quan.</value></data>
-  <data name="Home_SearchPlaceholder" xml:space="preserve"><value>Nhập tên đường (Z115, Quyết Thắng) hoặc tiện ích (Điều hòa, Gác xép)...</value></data>
-  <data name="Home_CtaButton" xml:space="preserve"><value>Khám phá phòng trọ ngay</value></data>
-  <data name="Home_PopularTags" xml:space="preserve"><value>Tìm nhanh phổ biến:</value></data>
-  <data name="RoomDetails_Title" xml:space="preserve"><value>Chi tiết phòng trọ</value></data>
-  <data name="RoomDetails_Back" xml:space="preserve"><value>Quay lại danh sách</value></data>
-  <data name="RoomDetails_NotFound" xml:space="preserve"><value>Không tìm thấy thông tin phòng trọ.</value></data>
-  <data name="RoomDetails_AmenitiesTitle" xml:space="preserve"><value>Tiện nghi nổi bật</value></data>
-  <data name="Home_Tag_AirConditioner" xml:space="preserve"><value>❄️ Có điều hòa</value></data>
-  <data name="Home_Tag_PrivateBathroom" xml:space="preserve"><value>🚿 Khép kín</value></data>
-  <data name="Home_Tag_Mezzanine" xml:space="preserve"><value>🪜 Có gác xép</value></data>
-  <data name="Home_Tag_StreetZ115" xml:space="preserve"><value>📍 Đường Z115</value></data>
-  <data name="Home_Tag_WaterHeater" xml:space="preserve"><value>🔥 Bình nóng lạnh</value></data>
-  <data name="Home_Stat_VerifiedTitle" xml:space="preserve"><value>100+ Phòng xác thực</value></data>
-  <data name="Home_Stat_VerifiedDesc" xml:space="preserve"><value>Hình ảnh &amp; thông tin kiểm duyệt</value></data>
-  <data name="Home_Stat_NearCampusTitle" xml:space="preserve"><value>Gần trường &lt; 2 km</value></data>
-  <data name="Home_Stat_NearCampusDesc" xml:space="preserve"><value>Đi bộ hoặc xe đạp tới giảng đường</value></data>
-  <data name="Home_Stat_PriceTitle" xml:space="preserve"><value>Giá sinh viên từ 1,1tr</value></data>
-  <data name="Home_Stat_PriceDesc" xml:space="preserve"><value>Phù hợp ngân sách ở ghép &amp; ở một mình</value></data>
-  <data name="Home_Guide_Title" xml:space="preserve"><value>Tìm phòng dễ dàng chỉ với 3 bước</value></data>
-  <data name="Home_Guide_Subtitle" xml:space="preserve"><value>Được thiết kế tối ưu cho tân sinh viên và sinh viên ĐH CNTT&amp;TT (ICTU)</value></data>
-  <data name="Home_Guide_ViewAll" xml:space="preserve"><value>Xem tất cả phòng</value></data>
-  <data name="Home_Step1_Title" xml:space="preserve"><value>1. Chọn tiêu chí &amp; mức giá</value></data>
-  <data name="Home_Step1_Desc" xml:space="preserve"><value>Sắp xếp theo phòng mới đăng, khoảng cách gần trường hoặc giá từ thấp đến cao.</value></data>
-  <data name="Home_Step2_Title" xml:space="preserve"><value>2. Kiểm tra tiện ích sẵn có</value></data>
-  <data name="Home_Step2_Desc" xml:space="preserve"><value>Xem ngay diện tích, điều hòa, nóng lạnh, gác xép và nhãn xác thực trên từng thẻ phòng.</value></data>
-  <data name="Home_Step3_Title" xml:space="preserve"><value>3. Xem chi tiết &amp; liên hệ</value></data>
-  <data name="Home_Step3_Desc" xml:space="preserve"><value>Bấm vào phòng bất kỳ để xem thông tin chi tiết và chọn phòng ưng ý nhanh nhất.</value></data>
-  <data name="Listings_HeaderTitle" xml:space="preserve"><value>Phòng trọ quanh ICTU</value></data>
-  <data name="Location_ThaiNguyen" xml:space="preserve"><value>Thái Nguyên</value></data>
-  <data name="Action_Search" xml:space="preserve"><value>Tìm</value></data>
-  <data name="Sort_Prefix" xml:space="preserve"><value>Sắp xếp:</value></data>
-  <data name="Sort_Price" xml:space="preserve"><value>Giá</value></data>
-  <data name="Result_Summary_WithSearch" xml:space="preserve"><value>Tìm thấy {0} phòng cho &quot;{1}&quot;</value></data>
-  <data name="Empty_NoRooms" xml:space="preserve"><value>Chưa có phòng trọ nào phù hợp.</value></data>
-  <data name="Action_ReloadList" xml:space="preserve"><value>Tải lại danh sách</value></data>
-  <data name="Card_Verified" xml:space="preserve"><value>Đã xác thực</value></data>
-  <data name="Card_Available" xml:space="preserve"><value>Còn trống</value></data>
-  <data name="Card_ViewDetails" xml:space="preserve"><value>Xem chi tiết</value></data>
-  <data name="Filter_SheetTitle" xml:space="preserve"><value>Lọc phòng trọ</value></data>
-  <data name="Filter_SheetSubtitle" xml:space="preserve"><value>Tìm chỗ ở sinh viên phù hợp nhất</value></data>
-  <data name="Filter_PriceRange" xml:space="preserve"><value>Khoảng giá</value></data>
-  <data name="Filter_PriceUnder1M" xml:space="preserve"><value>Dưới 1M</value></data>
+  <data name="Footer_Version" xml:space="preserve"><value>RoomToRentRadar • ICTU v1.0</value></data>
+  <data name="Title_ExploreRooms" xml:space="preserve"><value>Explore Rooms</value></data>
+  <data name="Result_Summary_Format" xml:space="preserve"><value>Found {0} rooms around ICTU</value></data>
+  <data name="Result_Summary_Updating" xml:space="preserve"><value>Updating room listings around ICTU</value></data>
+  <data name="Search_Placeholder" xml:space="preserve"><value>Search by room name, street, amenities...</value></data>
+  <data name="Filter_SortTooltip" xml:space="preserve"><value>Filter and sort by price</value></data>
+  <data name="Filter_Active_Format" xml:space="preserve"><value>Filtering: {0}</value></data>
+  <data name="Sort_Newest" xml:space="preserve"><value>Newest</value></data>
+  <data name="Sort_PriceAsc" xml:space="preserve"><value>Price: Low to High</value></data>
+  <data name="Sort_PriceDesc" xml:space="preserve"><value>Price: High to Low</value></data>
+  <data name="Sort_DistanceAsc" xml:space="preserve"><value>Closest to ICTU</value></data>
+  <data name="Filter_AirConditioner" xml:space="preserve"><value>Air conditioner</value></data>
+  <data name="Filter_Mezzanine" xml:space="preserve"><value>Mezzanine</value></data>
+  <data name="Filter_FullFurniture" xml:space="preserve"><value>Full furniture</value></data>
+  <data name="State_LoadingMessage" xml:space="preserve"><value>Searching for rooms...</value></data>
+  <data name="State_LoadingMore" xml:space="preserve"><value>Loading more rooms...</value></data>
+  <data name="State_EmptyTitle" xml:space="preserve"><value>No rooms found!</value></data>
+  <data name="State_EmptyDesc" xml:space="preserve"><value>No properties match your current search keywords or filters around the ICTU campus.</value></data>
+  <data name="State_SuggestionsTitle" xml:space="preserve"><value>Search suggestions:</value></data>
+  <data name="State_Suggestion1" xml:space="preserve"><value>Expand rental price range</value></data>
+  <data name="State_Suggestion2" xml:space="preserve"><value>Increase search radius around campus</value></data>
+  <data name="State_Suggestion3" xml:space="preserve"><value>Try adjusting or clearing amenity filters</value></data>
+  <data name="Action_ResetFilters" xml:space="preserve"><value>Reset search filters</value></data>
+  <data name="State_ErrorTitle" xml:space="preserve"><value>Unable to load data</value></data>
+  <data name="State_ErrorNetwork" xml:space="preserve"><value>Cannot connect to server. Please check your network connection.</value></data>
+  <data name="State_ErrorServer" xml:space="preserve"><value>Cannot load room listings. Please try again later.</value></data>
+  <data name="Action_Retry" xml:space="preserve"><value>Retry</value></data>
+  <data name="Home_BannerPill" xml:space="preserve"><value>ICTU STUDENT ROOM RENTAL PORTAL</value></data>
+  <data name="Home_Subtitle" xml:space="preserve"><value>Find your ideal room around ICTU campus</value></data>
+  <data name="Home_IntroDesc" xml:space="preserve"><value>Quickly look up rooms around ICTU Thai Nguyen with transparent prices, actual distance to campus, and intuitive filters.</value></data>
+  <data name="Home_SearchPlaceholder" xml:space="preserve"><value>Enter street name (Z115, Quyet Thang) or amenities (Air-con, Loft)...</value></data>
+  <data name="Home_CtaButton" xml:space="preserve"><value>Explore rooms now</value></data>
+  <data name="Home_PopularTags" xml:space="preserve"><value>Popular searches:</value></data>
+  <data name="RoomDetails_Title" xml:space="preserve"><value>Room Details</value></data>
+  <data name="RoomDetails_Back" xml:space="preserve"><value>Back to listings</value></data>
+  <data name="RoomDetails_NotFound" xml:space="preserve"><value>Room information not found.</value></data>
+  <data name="RoomDetails_AmenitiesTitle" xml:space="preserve"><value>Highlights &amp; Amenities</value></data>
+  <data name="Home_Tag_AirConditioner" xml:space="preserve"><value>❄️ Air conditioner</value></data>
+  <data name="Home_Tag_PrivateBathroom" xml:space="preserve"><value>🚿 Private bath</value></data>
+  <data name="Home_Tag_Mezzanine" xml:space="preserve"><value>🪜 Mezzanine</value></data>
+  <data name="Home_Tag_StreetZ115" xml:space="preserve"><value>📍 Z115 Street</value></data>
+  <data name="Home_Tag_WaterHeater" xml:space="preserve"><value>🔥 Water heater</value></data>
+  <data name="Home_Stat_VerifiedTitle" xml:space="preserve"><value>100+ Verified rooms</value></data>
+  <data name="Home_Stat_VerifiedDesc" xml:space="preserve"><value>Curated photos &amp; verified info</value></data>
+  <data name="Home_Stat_NearCampusTitle" xml:space="preserve"><value>Near campus &lt; 2 km</value></data>
+  <data name="Home_Stat_NearCampusDesc" xml:space="preserve"><value>Walk or bike to lecture halls</value></data>
+  <data name="Home_Stat_PriceTitle" xml:space="preserve"><value>Student prices from 1.1M</value></data>
+  <data name="Home_Stat_PriceDesc" xml:space="preserve"><value>Fits solo or shared room budgets</value></data>
+  <data name="Home_Guide_Title" xml:space="preserve"><value>Find a room easily in 3 steps</value></data>
+  <data name="Home_Guide_Subtitle" xml:space="preserve"><value>Optimized for ICTU students and freshmen</value></data>
+  <data name="Home_Guide_ViewAll" xml:space="preserve"><value>View all rooms</value></data>
+  <data name="Home_Step1_Title" xml:space="preserve"><value>1. Select criteria &amp; price</value></data>
+  <data name="Home_Step1_Desc" xml:space="preserve"><value>Sort by closest to campus or lowest price.</value></data>
+  <data name="Home_Step2_Title" xml:space="preserve"><value>2. Check available amenities</value></data>
+  <data name="Home_Step2_Desc" xml:space="preserve"><value>Check room area, AC, water heater, mezzanine, and verified badge on each card.</value></data>
+  <data name="Home_Step3_Title" xml:space="preserve"><value>3. View details &amp; contact</value></data>
+  <data name="Home_Step3_Desc" xml:space="preserve"><value>Tap any room to see complete details and reach landlords directly.</value></data>
+  <data name="Listings_HeaderTitle" xml:space="preserve"><value>Rooms around ICTU</value></data>
+  <data name="Location_ThaiNguyen" xml:space="preserve"><value>Thai Nguyen</value></data>
+  <data name="Action_Search" xml:space="preserve"><value>Search</value></data>
+  <data name="Sort_Prefix" xml:space="preserve"><value>Sort:</value></data>
+  <data name="Sort_Price" xml:space="preserve"><value>Price</value></data>
+  <data name="Result_Summary_WithSearch" xml:space="preserve"><value>Found {0} rooms for &quot;{1}&quot;</value></data>
+  <data name="Empty_NoRooms" xml:space="preserve"><value>No matching rooms found.</value></data>
+  <data name="Action_ReloadList" xml:space="preserve"><value>Reload listings</value></data>
+  <data name="Card_Verified" xml:space="preserve"><value>Verified</value></data>
+  <data name="Card_Available" xml:space="preserve"><value>Available</value></data>
+  <data name="Card_ViewDetails" xml:space="preserve"><value>View details</value></data>
+  <data name="Filter_SheetTitle" xml:space="preserve"><value>Filter Rooms</value></data>
+  <data name="Filter_SheetSubtitle" xml:space="preserve"><value>Find your ideal student accommodation</value></data>
+  <data name="Filter_PriceRange" xml:space="preserve"><value>Price Range</value></data>
+  <data name="Filter_PriceUnder1M" xml:space="preserve"><value>Under 1M</value></data>
   <data name="Filter_Price1MTo2M" xml:space="preserve"><value>1M – 2M</value></data>
   <data name="Filter_Price2MTo3M" xml:space="preserve"><value>2M – 3M</value></data>
-  <data name="Filter_MinPrice" xml:space="preserve"><value>Giá tối thiểu</value></data>
-  <data name="Filter_MaxPrice" xml:space="preserve"><value>Giá tối đa</value></data>
-  <data name="Filter_RoomType" xml:space="preserve"><value>Loại phòng</value></data>
-  <data name="Filter_PrivateRoom" xml:space="preserve"><value>Phòng riêng</value></data>
-  <data name="Filter_SharedRoom" xml:space="preserve"><value>Ở ghép</value></data>
-  <data name="Filter_Amenities" xml:space="preserve"><value>Tiện nghi</value></data>
-  <data name="Filter_Amenity_AirCon" xml:space="preserve"><value>Điều hòa</value></data>
+  <data name="Filter_MinPrice" xml:space="preserve"><value>Min Price</value></data>
+  <data name="Filter_MaxPrice" xml:space="preserve"><value>Max Price</value></data>
+  <data name="Filter_RoomType" xml:space="preserve"><value>Room Type</value></data>
+  <data name="Filter_PrivateRoom" xml:space="preserve"><value>Private Room</value></data>
+  <data name="Filter_SharedRoom" xml:space="preserve"><value>Shared Room</value></data>
+  <data name="Filter_Amenities" xml:space="preserve"><value>Amenities</value></data>
+  <data name="Filter_Amenity_AirCon" xml:space="preserve"><value>Air Conditioner</value></data>
   <data name="Filter_Amenity_Wifi" xml:space="preserve"><value>Wi-Fi</value></data>
-  <data name="Filter_Amenity_Parking" xml:space="preserve"><value>Chỗ để xe</value></data>
-  <data name="Filter_Amenity_Bathroom" xml:space="preserve"><value>Khép kín</value></data>
-  <data name="Filter_Amenity_Washing" xml:space="preserve"><value>Máy giặt</value></data>
-  <data name="Filter_Amenity_Kitchen" xml:space="preserve"><value>Bếp nấu</value></data>
-  <data name="Filter_ResetAll" xml:space="preserve"><value>Đặt lại</value></data>
-  <data name="Filter_ShowResults_Format" xml:space="preserve"><value>Xem kết quả ({0})</value></data>
+  <data name="Filter_Amenity_Parking" xml:space="preserve"><value>Parking</value></data>
+  <data name="Filter_Amenity_Bathroom" xml:space="preserve"><value>Private Bathroom</value></data>
+  <data name="Filter_Amenity_Washing" xml:space="preserve"><value>Washing Machine</value></data>
+  <data name="Filter_Amenity_Kitchen" xml:space="preserve"><value>Kitchen</value></data>
+  <data name="Filter_ResetAll" xml:space="preserve"><value>Reset All</value></data>
+  <data name="Filter_ShowResults_Format" xml:space="preserve"><value>Show Results ({0})</value></data>
+  <data name="Filter_AreaRange" xml:space="preserve"><value>Area Range</value></data>
+  <data name="Filter_MinArea" xml:space="preserve"><value>Min Area</value></data>
+  <data name="Filter_MaxArea" xml:space="preserve"><value>Max Area</value></data>
+  <data name="Filter_Distance" xml:space="preserve"><value>Radius around ICTU</value></data>
+  <data name="Filter_Distance_Format" xml:space="preserve"><value>Within {0} km</value></data>
+  <data name="Filter_AllRooms" xml:space="preserve"><value>All</value></data>
+  <data name="Filter_Apartment" xml:space="preserve"><value>Mini Apartment</value></data>
+  <data name="Filter_Apply" xml:space="preserve"><value>Apply</value></data>
+  <data name="Validation_MinPriceGreaterThanMax" xml:space="preserve"><value>Minimum price cannot be greater than maximum price.</value></data>
+  <data name="Validation_PriceNegative" xml:space="preserve"><value>Price cannot be negative.</value></data>
+  <data name="Validation_MinAreaGreaterThanMax" xml:space="preserve"><value>Minimum area cannot be greater than maximum area.</value></data>
+  <data name="Validation_AreaNegative" xml:space="preserve"><value>Area cannot be negative.</value></data>
+  <data name="ActiveFilter_ClearAll" xml:space="preserve"><value>Clear all filters</value></data>
+  <data name="Filter_DistanceDisabled" xml:space="preserve"><value>Off</value></data>
+  <data name="CreateListing_PageTitle" xml:space="preserve"><value>Post a Room Listing</value></data>
+  <data name="Nav_CreateListing" xml:space="preserve"><value>Post Listing</value></data>
+  <data name="Nav_SignIn" xml:space="preserve"><value>Sign In / Register</value></data>
+  <data name="Nav_Logout" xml:space="preserve"><value>Log Out</value></data>
+  <data name="Logout_Confirm_Title" xml:space="preserve"><value>Log Out</value></data>
+  <data name="Logout_Confirm_Message" xml:space="preserve"><value>Are you sure you want to log out?</value></data>
+  <data name="Logout_Confirm_Subtitle" xml:space="preserve"><value>After logging out, you will need to sign in again to continue using the system.</value></data>
+  <data name="Logout_Confirm_Yes" xml:space="preserve"><value>Log Out</value></data>
+  <data name="Logout_Confirm_No" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Logout_Success" xml:space="preserve"><value>Logged out successfully</value></data>
 </root>

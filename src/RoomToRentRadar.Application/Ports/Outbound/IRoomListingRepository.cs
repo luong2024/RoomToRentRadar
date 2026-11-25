@@ -33,4 +33,17 @@ public interface IRoomListingRepository
         string roomId,
         string campusId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Searches for verified and available room listings within a geographic polygon boundary (US05 / T05.2).
+    /// </summary>
+    Task<PagedResult<RoomListing>> SearchByPolygonAsync(
+        GeoPolygon polygon,
+        RoomSearchFilter filter,
+        int pageIndex,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(new PagedResult<RoomListing>([], pageIndex, pageSize, 0));
+    }
 }

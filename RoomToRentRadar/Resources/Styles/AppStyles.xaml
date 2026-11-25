@@ -68,8 +68,20 @@
                      Color="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
                      Size="20" />
 
+    <FontImageSource x:Key="IconLogout"
+                     Glyph="{x:Static f:FluentUI.sign_out_20_regular}"
+                     FontFamily="{x:Static f:FluentUI.FontFamily}"
+                     Color="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                     Size="20" />
+
     <FontImageSource x:Key="IconNavRooms"
                      Glyph="{x:Static f:FluentUI.building_24_regular}"
+                     FontFamily="{x:Static f:FluentUI.FontFamily}"
+                     Color="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
+                     Size="20" />
+
+    <FontImageSource x:Key="IconNavMap"
+                     Glyph="{x:Static f:FluentUI.map_24_regular}"
                      FontFamily="{x:Static f:FluentUI.FontFamily}"
                      Color="{AppThemeBinding Light={StaticResource PrimaryBrand}, Dark={StaticResource PrimaryBrandDark}}"
                      Size="20" />
@@ -89,7 +101,7 @@
     <FontImageSource x:Key="IconAdd"
                 Glyph="{x:Static f:FluentUI.add_32_regular}"
                 FontFamily="{x:Static f:FluentUI.FontFamily}"
-                Color="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource LightOnDarkBackground}}"
+                Color="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}"
                 Size="{StaticResource IconSize}" />
 
     <FontImageSource x:Key="IconDelete"
