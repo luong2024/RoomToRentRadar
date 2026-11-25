@@ -34,7 +34,7 @@ while read local_ref local_sha remote_ref remote_sha; do
 done
 
 echo "[Group-5 Gatekeeper] Đang kiểm tra build & chạy API Contract / Unit Tests trước khi push '$current_branch'..."
-dotnet test RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj --nologo -v q --blame-hang-timeout 30s
+dotnet test backend/RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj --nologo -v q --blame-hang-timeout 30s
 if [ $? -ne 0 ]; then
     echo "============================================================================" >&2
     echo "[CHẶN PUSH] Build hoặc Unit Tests đang FAIL (hoặc bị treo quá 30s)! Hãy sửa lỗi trước khi push." >&2
