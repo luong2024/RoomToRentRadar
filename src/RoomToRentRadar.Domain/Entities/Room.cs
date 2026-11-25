@@ -26,6 +26,7 @@ public class Room
     public int? Bathrooms { get; set; }
     public List<string> Amenities { get; set; } = [];
     public List<string> HouseRules { get; set; } = [];
+    public Guid? LandlordId { get; set; }
     public string LandlordPhone { get; set; } = string.Empty;
     public DateTime? LastUpdatedDate { get; set; }
     public double? Latitude { get; set; }

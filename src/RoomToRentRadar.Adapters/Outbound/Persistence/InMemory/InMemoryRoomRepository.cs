@@ -48,6 +48,22 @@ public class InMemoryRoomRepository : IRoomRepository
         return Task.FromResult(room);
     }
 
+    public Task<bool> AssignLandlordAsync(string roomId, Guid landlordId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(roomId) || landlordId == Guid.Empty)
+        {
+            return Task.FromResult(false);
+        }
+
+        if (!_rooms.TryGetValue(roomId.Trim(), out var room))
+        {
+            return Task.FromResult(false);
+        }
+
+        room.LandlordId = landlordId;
+        return Task.FromResult(true);
+    }
+
     public Task<IReadOnlyList<Room>> GetByIdsAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default)
     {
         if (ids is null || ids.Count == 0)

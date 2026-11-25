@@ -13,7 +13,8 @@ builder.Services
     .AddRoomDetailServices(builder.Configuration)
     .AddInboundAdapters(builder.Configuration)
     .AddProfileFeature()
-    .AddFavouritesFeature();
+    .AddFavouritesFeature()
+    .AddRoomGalleryFeature(builder.Configuration, builder.Environment);
 
 var app = builder.Build();
 
