@@ -222,6 +222,359 @@
                     </Border>
                 </VerticalStackLayout>
 
+                <!-- SECTION 8: CULTURE-AWARE FORMATTING -->
+                <VerticalStackLayout Spacing="12" Margin="0,0,0,24">
+                    <Label Text="8. CULTURE-AWARE FORMATTING"
+                           Style="{StaticResource TextH3}"
+                           SemanticProperties.HeadingLevel="Level2" />
+                    <Label Text="Preview formatting without changing raw values or global app language."
+                           Style="{StaticResource TextBodyMedium}" />
+
+                    <!-- Culture Controls Card -->
+                    <Border Style="{StaticResource BaseCardBorderStyle}">
+                        <VerticalStackLayout Spacing="12">
+                            <!-- Local Culture Preview Switcher (non-color-only state with Fluent checkmark) -->
+                            <Grid ColumnDefinitions="*, *" ColumnSpacing="12">
+                                <Border Grid.Column="0"
+                                        StrokeShape="RoundRectangle 12"
+                                        MinimumHeightRequest="{StaticResource MinTouchTarget}"
+                                        Padding="12,10"
+                                        StrokeThickness="1.5"
+                                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+                                        SemanticProperties.Description="Preview Vietnamese culture vi-VN">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding SelectPreviewCultureCommand}"
+                                                              CommandParameter="vi-VN" />
+                                    </Border.GestureRecognizers>
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding IsVietnamesePreview}" Value="True">
+                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}" />
+                                            <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionAccentDark}}" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                    <Grid ColumnDefinitions="Auto, *"
+                                          ColumnSpacing="6"
+                                          HorizontalOptions="Center"
+                                          VerticalOptions="Center">
+                                        <Label Grid.Column="0"
+                                               Text="{x:Static fonts:FluentUI.checkmark_circle_16_regular}"
+                                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                               FontSize="16"
+                                               VerticalTextAlignment="Center"
+                                               IsVisible="{Binding IsVietnamesePreview}"
+                                               TextColor="{StaticResource White}" />
+                                        <Label Grid.Column="1"
+                                               Text="Tiếng Việt (vi-VN)"
+                                               FontFamily="{StaticResource FontFamilySemibold}"
+                                               FontSize="{StaticResource FontSizeBodyMedium}"
+                                               VerticalTextAlignment="Center"
+                                               HorizontalTextAlignment="Center"
+                                               LineBreakMode="WordWrap"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}">
+                                            <Label.Triggers>
+                                                <DataTrigger TargetType="Label" Binding="{Binding IsVietnamesePreview}" Value="True">
+                                                    <Setter Property="TextColor" Value="{StaticResource White}" />
+                                                </DataTrigger>
+                                            </Label.Triggers>
+                                        </Label>
+                                    </Grid>
+                                </Border>
+
+                                <Border Grid.Column="1"
+                                        StrokeShape="RoundRectangle 12"
+                                        MinimumHeightRequest="{StaticResource MinTouchTarget}"
+                                        Padding="12,10"
+                                        StrokeThickness="1.5"
+                                        Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+                                        SemanticProperties.Description="Preview English culture en-US">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding SelectPreviewCultureCommand}"
+                                                              CommandParameter="en-US" />
+                                    </Border.GestureRecognizers>
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding IsEnglishPreview}" Value="True">
+                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionPrimaryDark}}" />
+                                            <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionAccentDark}}" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                    <Grid ColumnDefinitions="Auto, *"
+                                          ColumnSpacing="6"
+                                          HorizontalOptions="Center"
+                                          VerticalOptions="Center">
+                                        <Label Grid.Column="0"
+                                               Text="{x:Static fonts:FluentUI.checkmark_circle_16_regular}"
+                                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                               FontSize="16"
+                                               VerticalTextAlignment="Center"
+                                               IsVisible="{Binding IsEnglishPreview}"
+                                               TextColor="{StaticResource White}" />
+                                        <Label Grid.Column="1"
+                                               Text="English (en-US)"
+                                               FontFamily="{StaticResource FontFamilySemibold}"
+                                               FontSize="{StaticResource FontSizeBodyMedium}"
+                                               VerticalTextAlignment="Center"
+                                               HorizontalTextAlignment="Center"
+                                               LineBreakMode="WordWrap"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}">
+                                            <Label.Triggers>
+                                                <DataTrigger TargetType="Label" Binding="{Binding IsEnglishPreview}" Value="True">
+                                                    <Setter Property="TextColor" Value="{StaticResource White}" />
+                                                </DataTrigger>
+                                            </Label.Triggers>
+                                        </Label>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+
+                            <!-- Culture Status & Reset to App Culture -->
+                            <Border Style="{StaticResource SubtleContainerBorderStyle}" Padding="12,10">
+                                <VerticalStackLayout Spacing="4">
+                                    <Label Text="{Binding CultureStatusText}"
+                                           FontFamily="{StaticResource FontFamilySemibold}"
+                                           FontSize="{StaticResource FontSizeBodyMedium}"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}" />
+                                    <Label Text="{Binding PreviewModeText}"
+                                           Style="{StaticResource TextBodyMedium}" />
+                                </VerticalStackLayout>
+                            </Border>
+
+                            <Button Text="Use app culture"
+                                    Style="{StaticResource OutlineButton}"
+                                    Command="{Binding UseAppCultureCommand}"
+                                    HorizontalOptions="Start"
+                                    SemanticProperties.Description="Reset formatting preview to follow the current app culture" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- 6 Culture-Aware Converter Previews -->
+                    <Border Style="{StaticResource BaseCardBorderStyle}">
+                        <VerticalStackLayout Spacing="12">
+                            <!-- 1. Currency -->
+                            <Grid ColumnDefinitions="*, Auto" ColumnSpacing="12">
+                                <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                    <Label Text="Currency"
+                                           FontFamily="{StaticResource FontFamilySemibold}"
+                                           FontSize="{StaticResource FontSizeBodyMedium}"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                    <Label Text="{Binding DemoCurrencyInputText}"
+                                           Style="{StaticResource TextBodyMedium}" />
+                                </VerticalStackLayout>
+                                <Label Grid.Column="1"
+                                       Style="{StaticResource TextH3}"
+                                       HorizontalTextAlignment="End"
+                                       VerticalTextAlignment="Center">
+                                    <Label.Text>
+                                        <MultiBinding Mode="OneWay" Converter="{StaticResource CurrencyConverter}">
+                                            <Binding Path="DemoCurrencyAmount" />
+                                            <Binding Path="PreviewCulture" />
+                                        </MultiBinding>
+                                    </Label.Text>
+                                </Label>
+                            </Grid>
+
+                            <BoxView HeightRequest="1"
+                                     Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
+
+                            <!-- 2. Number -->
+                            <Grid ColumnDefinitions="*, Auto" ColumnSpacing="12">
+                                <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                    <Label Text="Number"
+                                           FontFamily="{StaticResource FontFamilySemibold}"
+                                           FontSize="{StaticResource FontSizeBodyMedium}"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                    <Label Text="{Binding DemoNumberInputText}"
+                                           Style="{StaticResource TextBodyMedium}" />
+                                </VerticalStackLayout>
+                                <Label Grid.Column="1"
+                                       Style="{StaticResource TextH3}"
+                                       HorizontalTextAlignment="End"
+                                       VerticalTextAlignment="Center">
+                                    <Label.Text>
+                                        <MultiBinding Mode="OneWay" Converter="{StaticResource NumberConverter}">
+                                            <Binding Path="DemoNumberValue" />
+                                            <Binding Path="PreviewCulture" />
+                                        </MultiBinding>
+                                    </Label.Text>
+                                </Label>
+                            </Grid>
+
+                            <BoxView HeightRequest="1"
+                                     Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
+
+                            <!-- 3. Date -->
+                            <Grid ColumnDefinitions="*, Auto" ColumnSpacing="12">
+                                <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                    <Label Text="Date"
+                                           FontFamily="{StaticResource FontFamilySemibold}"
+                                           FontSize="{StaticResource FontSizeBodyMedium}"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                    <Label Text="{Binding DemoDateInputText}"
+                                           Style="{StaticResource TextBodyMedium}" />
+                                </VerticalStackLayout>
+                                <Label Grid.Column="1"
+                                       Style="{StaticResource TextH3}"
+                                       HorizontalTextAlignment="End"
+                                       VerticalTextAlignment="Center">
+                                    <Label.Text>
+                                        <MultiBinding Mode="OneWay" Converter="{StaticResource DateConverter}">
+                                            <Binding Path="DemoDateValue" />
+                                            <Binding Path="PreviewCulture" />
+                                        </MultiBinding>
+                                    </Label.Text>
+                                </Label>
+                            </Grid>
+
+                            <BoxView HeightRequest="1"
+                                     Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
+
+                            <!-- 4. Time -->
+                            <Grid ColumnDefinitions="*, Auto" ColumnSpacing="12">
+                                <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                    <Label Text="Time"
+                                           FontFamily="{StaticResource FontFamilySemibold}"
+                                           FontSize="{StaticResource FontSizeBodyMedium}"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                    <Label Text="{Binding DemoTimeInputText}"
+                                           Style="{StaticResource TextBodyMedium}" />
+                                </VerticalStackLayout>
+                                <Label Grid.Column="1"
+                                       Style="{StaticResource TextH3}"
+                                       HorizontalTextAlignment="End"
+                                       VerticalTextAlignment="Center">
+                                    <Label.Text>
+                                        <MultiBinding Mode="OneWay" Converter="{StaticResource TimeConverter}">
+                                            <Binding Path="DemoTimeValue" />
+                                            <Binding Path="PreviewCulture" />
+                                        </MultiBinding>
+                                    </Label.Text>
+                                </Label>
+                            </Grid>
+
+                            <BoxView HeightRequest="1"
+                                     Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
+
+                            <!-- 5. Area -->
+                            <Grid ColumnDefinitions="*, Auto" ColumnSpacing="12">
+                                <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                    <Label Text="Area"
+                                           FontFamily="{StaticResource FontFamilySemibold}"
+                                           FontSize="{StaticResource FontSizeBodyMedium}"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                    <Label Text="{Binding DemoAreaInputText}"
+                                           Style="{StaticResource TextBodyMedium}" />
+                                </VerticalStackLayout>
+                                <Label Grid.Column="1"
+                                       Style="{StaticResource TextH3}"
+                                       HorizontalTextAlignment="End"
+                                       VerticalTextAlignment="Center">
+                                    <Label.Text>
+                                        <MultiBinding Mode="OneWay" Converter="{StaticResource AreaConverter}">
+                                            <Binding Path="DemoAreaValue" />
+                                            <Binding Path="PreviewCulture" />
+                                        </MultiBinding>
+                                    </Label.Text>
+                                </Label>
+                            </Grid>
+
+                            <BoxView HeightRequest="1"
+                                     Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
+
+                            <!-- 6. Distance -->
+                            <Grid ColumnDefinitions="*, Auto" ColumnSpacing="12">
+                                <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                    <Label Text="Distance"
+                                           FontFamily="{StaticResource FontFamilySemibold}"
+                                           FontSize="{StaticResource FontSizeBodyMedium}"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                    <Label Text="{Binding DemoDistanceInputText}"
+                                           Style="{StaticResource TextBodyMedium}" />
+                                </VerticalStackLayout>
+                                <Label Grid.Column="1"
+                                       Style="{StaticResource TextH3}"
+                                       HorizontalTextAlignment="End"
+                                       VerticalTextAlignment="Center">
+                                    <Label.Text>
+                                        <MultiBinding Mode="OneWay" Converter="{StaticResource DistanceConverter}">
+                                            <Binding Path="DemoDistanceValue" />
+                                            <Binding Path="PreviewCulture" />
+                                        </MultiBinding>
+                                    </Label.Text>
+                                </Label>
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- Optional Preview: SampleRoom values formatted via converters without modifying RoomCardView -->
+                    <Border Style="{StaticResource BaseCardBorderStyle}">
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="Preview room values (SampleRoom)"
+                                   FontFamily="{StaticResource FontFamilySemibold}"
+                                   FontSize="{StaticResource FontSizeBodyMedium}"
+                                   TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}" />
+
+                            <Grid ColumnDefinitions="Auto, *" ColumnSpacing="8">
+                                <Label Grid.Column="0"
+                                       Text="Price:"
+                                       Style="{StaticResource TextBodyMedium}" />
+                                <Label Grid.Column="1"
+                                       FontFamily="{StaticResource FontFamilySemibold}"
+                                       FontSize="{StaticResource FontSizeBodyMedium}"
+                                       LineBreakMode="WordWrap"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}">
+                                    <Label.Text>
+                                        <MultiBinding Mode="OneWay"
+                                                      Converter="{StaticResource CurrencyConverter}"
+                                                      StringFormat="{}{0} / month">
+                                            <Binding Path="SampleRoom.PricePerMonth" />
+                                            <Binding Path="PreviewCulture" />
+                                        </MultiBinding>
+                                    </Label.Text>
+                                </Label>
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*, *" ColumnSpacing="12">
+                                <Grid Grid.Column="0" ColumnDefinitions="Auto, *" ColumnSpacing="6">
+                                    <Label Grid.Column="0"
+                                           Text="Area:"
+                                           Style="{StaticResource TextBodyMedium}" />
+                                    <Label Grid.Column="1"
+                                           FontFamily="{StaticResource FontFamilySemibold}"
+                                           FontSize="{StaticResource FontSizeBodyMedium}"
+                                           LineBreakMode="WordWrap"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}">
+                                        <Label.Text>
+                                            <MultiBinding Mode="OneWay" Converter="{StaticResource AreaConverter}">
+                                                <Binding Path="SampleRoom.AreaSquareMeters" />
+                                                <Binding Path="PreviewCulture" />
+                                            </MultiBinding>
+                                        </Label.Text>
+                                    </Label>
+                                </Grid>
+
+                                <Grid Grid.Column="1" ColumnDefinitions="Auto, *" ColumnSpacing="6">
+                                    <Label Grid.Column="0"
+                                           Text="Distance:"
+                                           Style="{StaticResource TextBodyMedium}" />
+                                    <Label Grid.Column="1"
+                                           FontFamily="{StaticResource FontFamilySemibold}"
+                                           FontSize="{StaticResource FontSizeBodyMedium}"
+                                           LineBreakMode="WordWrap"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}">
+                                        <Label.Text>
+                                            <MultiBinding Mode="OneWay" Converter="{StaticResource DistanceConverter}">
+                                                <Binding Path="SampleRoom.DistanceMeters" />
+                                                <Binding Path="PreviewCulture" />
+                                            </MultiBinding>
+                                        </Label.Text>
+                                    </Label>
+                                </Grid>
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+
             </VerticalStackLayout>
         </ScrollView>
     </Grid>

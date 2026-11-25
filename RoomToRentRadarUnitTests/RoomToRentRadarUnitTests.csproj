@@ -44,6 +44,7 @@
     <Compile Include="..\RoomToRentRadar\PageModels\Base\*.cs" Link="PageModels\Base\%(Filename)%(Extension)" />
     <Compile Include="..\RoomToRentRadar\PageModels\MainLandingPageModel.cs" Link="PageModels\MainLandingPageModel.cs" />
     <Compile Include="..\RoomToRentRadar\PageModels\FiltersPageModel.cs" Link="PageModels\FiltersPageModel.cs" />
+    <Compile Include="..\RoomToRentRadar\PageModels\UiCatalogPageModel.cs" Link="PageModels\UiCatalogPageModel.cs" />
     <Compile Include="..\RoomToRentRadar\Pages\Controls\Cards\Models\*.cs" Link="Pages\Controls\Cards\Models\%(Filename)%(Extension)" />
     <EmbeddedResource Include="..\RoomToRentRadar\Resources\Strings\AppResources.resx" Link="Resources\Strings\AppResources.resx">
       <LogicalName>RoomToRentRadar.Resources.Strings.AppResources.resources</LogicalName>

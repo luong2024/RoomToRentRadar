@@ -1,5 +1,7 @@
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using RoomToRentRadar.Converters;
 using RoomToRentRadar.Pages.Controls.Cards.Models;
 
 namespace RoomToRentRadar.PageModels;
@@ -24,8 +26,58 @@ public partial class UiCatalogPageModel : ObservableObject
     [ObservableProperty]
     public partial string FeedbackMessage { get; set; } = "Click components below to test interactivity.";
 
+    // Section 8: Culture-aware formatting demo state (local preview; never mutates global culture)
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AppCultureName))]
+    [NotifyPropertyChangedFor(nameof(CultureStatusText))]
+    public partial CultureInfo AppCulture { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PreviewCultureName))]
+    [NotifyPropertyChangedFor(nameof(IsVietnamesePreview))]
+    [NotifyPropertyChangedFor(nameof(IsEnglishPreview))]
+    [NotifyPropertyChangedFor(nameof(CultureStatusText))]
+    [NotifyPropertyChangedFor(nameof(PreviewModeText))]
+    public partial CultureInfo PreviewCulture { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsManualOverride))]
+    [NotifyPropertyChangedFor(nameof(PreviewModeText))]
+    [NotifyPropertyChangedFor(nameof(CultureStatusText))]
+    public partial bool IsUsingAppCulture { get; set; } = true;
+
+    public bool IsManualOverride => !IsUsingAppCulture;
+    public bool IsVietnamesePreview => CultureFormatting.IsVietnamese(PreviewCulture);
+    public bool IsEnglishPreview => !IsVietnamesePreview;
+    public string AppCultureName => GetDisplayCultureName(AppCulture);
+    public string PreviewCultureName => GetDisplayCultureName(PreviewCulture);
+    public string CultureStatusText => $"App: {AppCultureName}  ·  Preview: {PreviewCultureName}";
+    public string PreviewModeText => IsUsingAppCulture
+        ? "Mode: Following app culture"
+        : "Mode: Local preview override";
+
+    // Fixed typed demo inputs for deterministic converter previews
+    public decimal DemoCurrencyAmount { get; } = 2200000m;
+    public double DemoNumberValue { get; } = 12345.67;
+    public DateOnly DemoDateValue { get; } = new(2026, 11, 25);
+    public TimeOnly DemoTimeValue { get; } = new(16, 30);
+    public double DemoAreaValue { get; } = 25.5;
+    public double DemoDistanceValue { get; } = 1500d;
+
+    // Invariant input labels for side-by-side verification
+    public string DemoCurrencyInputText => $"Input: {DemoCurrencyAmount.ToString(CultureInfo.InvariantCulture)}";
+    public string DemoNumberInputText => $"Input: {DemoNumberValue.ToString(CultureInfo.InvariantCulture)}";
+    public string DemoDateInputText => $"Input: {DemoDateValue.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}";
+    public string DemoTimeInputText => $"Input: {DemoTimeValue.ToString("HH:mm", CultureInfo.InvariantCulture)}";
+    public string DemoAreaInputText => $"Input: {DemoAreaValue.ToString(CultureInfo.InvariantCulture)} m²";
+    public string DemoDistanceInputText => $"Input: {DemoDistanceValue.ToString(CultureInfo.InvariantCulture)} m";
+
     public UiCatalogPageModel()
     {
+        var initialCulture = GetCurrentAppCulture();
+        AppCulture = initialCulture;
+        PreviewCulture = initialCulture;
+
         SampleRoom = new RoomCardDisplayModel
         {
             Id = "room-demo-01",
@@ -40,6 +92,40 @@ public partial class UiCatalogPageModel : ObservableObject
             IsBookmarked = false,
             Amenities = ["Wifi", "Air Conditioner", "Water Heater", "Private Bath"]
         };
+    }
+
+    /// <summary>
+    /// Synchronizes with the live app culture and resets any manual preview override
+    /// whenever the catalog page appears (so language changes made in Account are visible immediately).
+    /// </summary>
+    public void OnAppearing()
+    {
+        SyncWithAppCulture(resetOverride: true);
+    }
+
+    /// <summary>
+    /// Handles live app culture notifications while the catalog page is visible.
+    /// Updates <see cref="PreviewCulture"/> automatically only when following app culture.
+    /// </summary>
+    public void OnAppCultureChanged()
+    {
+        SyncWithAppCulture(resetOverride: false);
+    }
+
+    [RelayCommand]
+    private void SelectPreviewCulture(string? cultureCode)
+    {
+        var targetCulture = CultureFormatting.ResolveCulture(cultureCode, AppCulture);
+        IsUsingAppCulture = false;
+        PreviewCulture = targetCulture;
+        FeedbackMessage = $"Previewing {PreviewCultureName} (app culture remains {AppCultureName}).";
+    }
+
+    [RelayCommand]
+    private void UseAppCulture()
+    {
+        SyncWithAppCulture(resetOverride: true);
+        FeedbackMessage = $"Following app culture ({AppCultureName}).";
     }
 
     [RelayCommand]
@@ -84,4 +170,26 @@ public partial class UiCatalogPageModel : ObservableObject
         SearchQuery = string.Empty;
         FeedbackMessage = "Clicked 'Reset Filters' on EmptyStateView!";
     }
+
+    private void SyncWithAppCulture(bool resetOverride)
+    {
+        var current = GetCurrentAppCulture();
+        AppCulture = current;
+
+        if (resetOverride)
+        {
+            IsUsingAppCulture = true;
+            PreviewCulture = current;
+        }
+        else if (IsUsingAppCulture)
+        {
+            PreviewCulture = current;
+        }
+    }
+
+    private static CultureInfo GetCurrentAppCulture() =>
+        CultureInfo.CurrentCulture;
+
+    private static string GetDisplayCultureName(CultureInfo culture) =>
+        string.IsNullOrWhiteSpace(culture.Name) ? CultureFormatting.EnglishCulture.Name : culture.Name;
 }
