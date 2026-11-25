@@ -17,10 +17,15 @@ using RoomToRentRadar.Datastore.Sqlite;
 using RoomToRentRadar.Datastore.Sqlite.Configurations;
 using RoomToRentRadar.Infrastructure;
 using RoomToRentRadar.Infrastructure.Adapters.Media;
+using RoomToRentRadar.Infrastructure.Adapters.Routing;
 using RoomToRentRadar.Infrastructure.Adapters.Security;
 using RoomToRentRadar.Ports.Outbound.ExternalServices;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddJsonFile(
+    $"appsettings.{builder.Environment.EnvironmentName}.local.json",
+    optional: true,
+    reloadOnChange: true);
 
 // ===== 1. Controllers & JSON =====
 builder.Services.AddControllers(options =>
@@ -83,7 +88,36 @@ if (useMockSso && !builder.Environment.IsDevelopment())
 
 var mediaSettings = builder.Configuration.GetSection(MediaSettings.SectionName).Get<MediaSettings>()
     ?? new MediaSettings();
-builder.Services.AddInfrastructure(jwtSettings, useMockSsoVerifier: useMockSso, mediaSettings: mediaSettings);
+
+var routingSettings = builder.Configuration.GetSection(RoutingSettings.SectionName).Get<RoutingSettings>()
+    ?? new RoutingSettings();
+var useMockRouting = builder.Configuration.GetValue("Routing:UseMock", defaultValue: false);
+if (useMockRouting && !builder.Environment.IsDevelopment())
+{
+    throw new InvalidOperationException("CRITICAL: Mock routing adapter is strictly prohibited outside the Development environment.");
+}
+
+if (!useMockRouting && string.IsNullOrWhiteSpace(routingSettings.OpenRouteServiceApiKey))
+{
+    if (!builder.Environment.IsDevelopment())
+    {
+        throw new InvalidOperationException("CRITICAL: Routing:OpenRouteServiceApiKey must be configured in Production/Staging environments.");
+    }
+
+    Console.WriteLine("DEVELOPMENT WARNING: No Routing:OpenRouteServiceApiKey configured; routing requests will return straight-line fallback.");
+}
+
+if (!useMockRouting)
+{
+    builder.Services.AddHttpClient<ITravelTimePort, OpenRouteServiceTravelTimeAdapter>();
+}
+
+builder.Services.AddInfrastructure(
+    jwtSettings,
+    useMockSsoVerifier: useMockSso,
+    mediaSettings: mediaSettings,
+    useMockRouting: useMockRouting,
+    routingSettings: routingSettings);
 
 // BR-MED-03: hourly sweep of uploads that were never attached to a listing.
 builder.Services.AddHostedService<PhotoCleanupService>();

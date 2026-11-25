@@ -32,6 +32,7 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
     private bool _disposed;
 
     private readonly List<AmenityDisplayItem> _allAmenities = [];
+    private TravelTimesDto? _lastTravelTimes;
 
     #region Query & Navigation Properties
 
@@ -293,6 +294,7 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
             HasError = false;
             IsNotFound = false;
             ErrorMessage = string.Empty;
+            _lastTravelTimes = null;
 
             // Check authentication state for BR-AUTH-07 / BR-CNT-01
             IsSignedIn = await _sessionStore.HasValidTokenAsync();
@@ -409,8 +411,7 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
         // Address & Commute
         AddressFormatted = $"{detail.Address.AddressLine}, {detail.Address.Ward}, {detail.Address.District}";
         CampusName = !string.IsNullOrWhiteSpace(CampusId) ? CampusId : "ICTU";
-        CommuteHeaderFormatted = string.Format(AppResources.GetString("RoomDetail_GettingToCampus"), CampusName, detail.DistanceKm.ToString("0.0", CultureInfo.InvariantCulture));
-        StraightLineNotice = string.Format(AppResources.GetString("RoomDetail_StraightLineNotice"), detail.DistanceKm.ToString("0.0", CultureInfo.InvariantCulture), CampusName);
+        UpdateCommuteNotices(detail.DistanceKm);
 
         // Landlord contact block
         PopulateLandlord(detail.Landlord);
@@ -737,54 +738,76 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
     {
         try
         {
-            CommuteTimes.Clear();
             var travel = await _roomGateway.GetRoomTravelTimesAsync(RoomId, CampusId);
-            if (travel != null && travel.Items.Count > 0)
-            {
-                HasTravelTimes = true;
-                IsCommuteFallback = travel.IsFallback;
-
-                foreach (var item in travel.Items)
-                {
-                    int mins = (int)Math.Max(1, Math.Round(item.DurationSeconds / 60.0));
-                    string timeFormatted = item.IsEstimate
-                        ? string.Format(AppResources.GetString("RoomDetail_MinutesEst"), mins)
-                        : string.Format(AppResources.GetString("RoomDetail_Minutes"), mins);
-
-                    var commuteItem = item.Mode switch
-                    {
-                        TravelMode.Motorbike => new CommuteModeItem(item.Mode, FluentUI.vehicle_motorcycle_24_regular, timeFormatted, AppResources.GetString("TravelMode_Motorbike")),
-                        TravelMode.Bus => new CommuteModeItem(item.Mode, FluentUI.vehicle_bus_24_regular, timeFormatted, AppResources.GetString("TravelMode_Bus")),
-                        _ => new CommuteModeItem(item.Mode, FluentUI.person_walking_24_regular, timeFormatted, AppResources.GetString("TravelMode_Walking"))
-                    };
-                    CommuteTimes.Add(commuteItem);
-                }
-            }
-            else
-            {
-                PopulateDefaultEstimatedCommute();
-            }
+            _lastTravelTimes = travel;
+            ApplyTravelTimes(travel);
         }
         catch
         {
-            PopulateDefaultEstimatedCommute();
+            _lastTravelTimes = null;
+            ApplyTravelTimeFallback();
         }
     }
 
-    private void PopulateDefaultEstimatedCommute()
+    private void ApplyTravelTimes(TravelTimesDto? travel)
+    {
+        if (travel == null)
+        {
+            ApplyTravelTimeFallback();
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(travel.CampusId))
+        {
+            CampusName = travel.CampusId;
+        }
+
+        UpdateCommuteNotices(travel.StraightLineDistanceKm);
+
+        CommuteTimes.Clear();
+        if (travel.IsFallback || travel.Items.Count == 0)
+        {
+            HasTravelTimes = false;
+            IsCommuteFallback = true;
+            return;
+        }
+
+        IsCommuteFallback = false;
+        HasTravelTimes = true;
+
+        foreach (var item in travel.Items)
+        {
+            int mins = (int)Math.Max(1, Math.Round(item.DurationSeconds / 60.0));
+            string timeFormatted = item.IsEstimate
+                ? string.Format(AppResources.GetString("RoomDetail_MinutesEst"), mins)
+                : string.Format(AppResources.GetString("RoomDetail_Minutes"), mins);
+
+            var commuteItem = item.Mode switch
+            {
+                TravelMode.Motorbike => new CommuteModeItem(item.Mode, FluentUI.vehicle_motorcycle_24_regular, timeFormatted, AppResources.GetString("TravelMode_Motorbike")),
+                TravelMode.Bus => new CommuteModeItem(item.Mode, FluentUI.vehicle_bus_24_regular, timeFormatted, AppResources.GetString("TravelMode_Bus")),
+                _ => new CommuteModeItem(item.Mode, FluentUI.person_walking_24_regular, timeFormatted, AppResources.GetString("TravelMode_Walking"))
+            };
+            CommuteTimes.Add(commuteItem);
+        }
+    }
+
+    private void ApplyTravelTimeFallback()
     {
         CommuteTimes.Clear();
-        if (Room == null) return;
+        HasTravelTimes = false;
+        IsCommuteFallback = true;
+        if (Room != null)
+        {
+            UpdateCommuteNotices(Room.DistanceKm);
+        }
+    }
 
-        double distanceKm = Room.DistanceKm;
-        int motorbikeMins = (int)Math.Max(1, Math.Round(distanceKm / 30.0 * 60));
-        int busMins = (int)Math.Max(5, Math.Round(distanceKm / 15.0 * 60 + 5));
-        int walkMins = (int)Math.Max(2, Math.Round(distanceKm / 5.0 * 60));
-
-        CommuteTimes.Add(new CommuteModeItem(TravelMode.Motorbike, FluentUI.vehicle_motorcycle_24_regular, string.Format(AppResources.GetString("RoomDetail_Minutes"), motorbikeMins), AppResources.GetString("TravelMode_Motorbike")));
-        CommuteTimes.Add(new CommuteModeItem(TravelMode.Bus, FluentUI.vehicle_bus_24_regular, string.Format(AppResources.GetString("RoomDetail_MinutesEst"), busMins), AppResources.GetString("TravelMode_Bus")));
-        CommuteTimes.Add(new CommuteModeItem(TravelMode.Walking, FluentUI.person_walking_24_regular, string.Format(AppResources.GetString("RoomDetail_Minutes"), walkMins), AppResources.GetString("TravelMode_Walking")));
-        HasTravelTimes = true;
+    private void UpdateCommuteNotices(double straightLineDistanceKm)
+    {
+        var distanceFormatted = straightLineDistanceKm.ToString("0.0", CultureInfo.InvariantCulture);
+        CommuteHeaderFormatted = string.Format(AppResources.GetString("RoomDetail_GettingToCampus"), CampusName, distanceFormatted);
+        StraightLineNotice = string.Format(AppResources.GetString("RoomDetail_StraightLineNotice"), distanceFormatted, CampusName);
     }
 
     #endregion
@@ -1060,6 +1083,14 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
         if (Room != null)
         {
             PopulateRoomDetails(Room);
+            if (_lastTravelTimes != null)
+            {
+                ApplyTravelTimes(_lastTravelTimes);
+            }
+            else if (IsCommuteFallback)
+            {
+                ApplyTravelTimeFallback();
+            }
         }
     }
 

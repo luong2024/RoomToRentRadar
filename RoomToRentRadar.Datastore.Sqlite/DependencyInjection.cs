@@ -24,6 +24,7 @@ namespace RoomToRentRadar.Datastore.Sqlite
             services.AddScoped<IUnitOfWork, SqliteUnitOfWork>();
             services.AddScoped<ICampusRepository, SqliteCampusRepository>();
             services.AddScoped<IRoomSearchReadModel, SqliteRoomSearchReadModel>();
+            services.AddScoped<ITravelTimeCacheRepository, SqliteTravelTimeCacheRepository>();
 
             return services;
         }

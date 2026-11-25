@@ -130,6 +130,80 @@ public class HttpRoomGatewayDetailTests
         Assert.That(ex.ErrorCode, Is.EqualTo(ProblemCodes.RoomNotFound));
     }
 
+    [Test]
+    public async Task GetRoomTravelTimesAsync_ValidRoomId_ReturnsThreeModesFromApi()
+    {
+        var dto = new TravelTimesDto(
+            CampusId: "ICTU",
+            StraightLineDistanceKm: 1.2,
+            IsFallback: false,
+            Items:
+            [
+                new(TravelMode.Motorbike, 1850, 300, false),
+                new(TravelMode.Bus, 1850, 1080, true),
+                new(TravelMode.Walking, 1620, 1180, false)
+            ]);
+        var (gateway, stub) = CreateGateway(_ => JsonResponse(HttpStatusCode.OK, dto));
+
+        var result = await gateway.GetRoomTravelTimesAsync("room-xyz");
+
+        var recorded = stub.Requests.Single();
+        Assert.Multiple(() =>
+        {
+            Assert.That(recorded.Method, Is.EqualTo(HttpMethod.Get));
+            Assert.That(recorded.Path, Is.EqualTo("/api/rooms/room-xyz/travel-times"));
+            Assert.That(string.IsNullOrEmpty(recorded.Uri.Query), Is.True);
+            Assert.That(result.CampusId, Is.EqualTo("ICTU"));
+            Assert.That(result.IsFallback, Is.False);
+            Assert.That(result.Items, Has.Count.EqualTo(3));
+            Assert.That(result.Items[1].Mode, Is.EqualTo(TravelMode.Bus));
+            Assert.That(result.Items[1].IsEstimate, Is.True);
+        });
+    }
+
+    [Test]
+    public async Task GetRoomTravelTimesAsync_WithCampusId_AppendsEscapedCampusIdQuery()
+    {
+        var dto = new TravelTimesDto("TNUS", 1.8, true, []);
+        var (gateway, stub) = CreateGateway(_ => JsonResponse(HttpStatusCode.OK, dto));
+
+        var result = await gateway.GetRoomTravelTimesAsync("room-xyz", "TNUS");
+
+        var recorded = stub.Requests.Single();
+        var query = HttpUtility.ParseQueryString(recorded.Uri.Query);
+        Assert.Multiple(() =>
+        {
+            Assert.That(recorded.Path, Is.EqualTo("/api/rooms/room-xyz/travel-times"));
+            Assert.That(query["campusId"], Is.EqualTo("TNUS"));
+            Assert.That(result.IsFallback, Is.True);
+            Assert.That(result.Items, Is.Empty);
+        });
+    }
+
+    [Test]
+    public void GetRoomTravelTimesAsync_UnknownCampus_ThrowsApiExceptionWithCampusNotFound()
+    {
+        var (gateway, _) = CreateGateway(_ => Problem(HttpStatusCode.BadRequest, ProblemCodes.CampusNotFound));
+
+        var ex = Assert.ThrowsAsync<ApiException>(async () =>
+            await gateway.GetRoomTravelTimesAsync("room-xyz", "NOPE"));
+
+        Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(ex.ErrorCode, Is.EqualTo(ProblemCodes.CampusNotFound));
+    }
+
+    [Test]
+    public void GetRoomTravelTimesAsync_RoomNotFound_ThrowsApiExceptionWithRoomNotFound()
+    {
+        var (gateway, _) = CreateGateway(_ => Problem(HttpStatusCode.NotFound, ProblemCodes.RoomNotFound));
+
+        var ex = Assert.ThrowsAsync<ApiException>(async () =>
+            await gateway.GetRoomTravelTimesAsync("missing-room"));
+
+        Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        Assert.That(ex.ErrorCode, Is.EqualTo(ProblemCodes.RoomNotFound));
+    }
+
     private static (HttpRoomGateway Gateway, StubHttpMessageHandler Stub) CreateGateway(
         Func<HttpRequestMessage, HttpResponseMessage> responder)
     {
