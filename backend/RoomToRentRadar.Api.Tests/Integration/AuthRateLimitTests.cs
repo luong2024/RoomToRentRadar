@@ -45,10 +45,29 @@ public sealed class AuthRateLimitTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.Created));
-            Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+            Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
+            Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
         });
         await AssertRateLimitedProblemAsync(third);
+    }
+
+    [Test]
+    public async Task VerifyRegistration_ExceedingPerIpLimit_Returns429Problem()
+    {
+        using var factory = CreateFactory();
+        await factory.InitializeDatabaseAsync();
+        using var client = factory.CreateClient();
+
+        var begin = await PostRegisterAsync(client, "verify.limit@example.test");
+        var first = await PostVerifyAsync(client, Guid.NewGuid());
+        var second = await PostVerifyAsync(client, Guid.NewGuid());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(begin.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
+            Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        });
+        await AssertRateLimitedProblemAsync(second);
     }
 
     private static ListingsApiFactory CreateFactory()
@@ -65,6 +84,12 @@ public sealed class AuthRateLimitTests
         => client.PostAsJsonAsync(
             "/api/v1/auth/register",
             new RegisterRequest(email, "Validpass123", "Rate Limited", UserRoleWire.Student),
+            ApiJson.Options);
+
+    private static Task<HttpResponseMessage> PostVerifyAsync(HttpClient client, Guid challengeId)
+        => client.PostAsJsonAsync(
+            "/api/v1/auth/register/verify",
+            new VerifyRegistrationRequest(challengeId, FixedOtpGenerator.DefaultCode),
             ApiJson.Options);
 
     private static async Task AssertRateLimitedProblemAsync(HttpResponseMessage response)

@@ -104,6 +104,8 @@ public static class ServiceCollectionExtensions
         services.AddTransient<LoginPage>();
         services.AddTransient<RegisterViewModel>();
         services.AddTransient<RegisterPage>();
+        services.AddTransient<OtpVerificationViewModel>();
+        services.AddTransient<OtpVerificationPage>();
         services.AddTransient<MyListingsViewModel>();
         services.AddTransient<MyListingsPage>();
         services.AddTransient<ModerationQueueViewModel>();

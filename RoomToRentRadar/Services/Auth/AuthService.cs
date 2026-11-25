@@ -32,22 +32,19 @@ public sealed class AuthService(IApiClient apiClient, ITokenStore tokenStore)
         await ApplySessionAsync(response, cancellationToken);
     }
 
-    public async Task RegisterAsync(
+    public Task<RegisterChallengeResponse> BeginRegistrationAsync(
         RegisterRequest request,
         CancellationToken cancellationToken = default)
-    {
-        await apiClient.RegisterAsync(request, cancellationToken);
+        => apiClient.BeginRegistrationAsync(request, cancellationToken);
 
-        var response = await apiClient.LoginAsync(
-            new LoginRequest(request.Email, request.Password),
+    public async Task VerifyRegistrationAsync(
+        Guid challengeId,
+        string code,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await apiClient.VerifyRegistrationAsync(
+            new VerifyRegistrationRequest(challengeId, code),
             cancellationToken);
-        if (response is null)
-        {
-            throw new ApiException(
-                HttpStatusCode.Unauthorized,
-                "The account was created but the session could not be started.",
-                "invalid_credentials");
-        }
 
         await ApplySessionAsync(response, cancellationToken);
     }

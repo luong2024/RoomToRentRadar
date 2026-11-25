@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using RoomToRentRadar.Ports.Models.Auth;
+using RoomToRentRadar.Ports.Outbound.Services;
 using RoomToRentRadar.SqliteDataAccess;
 
 namespace RoomToRentRadar.Api.Tests.Infrastructure;
@@ -45,6 +46,10 @@ public sealed class ListingsApiFactory : WebApplicationFactory<Program>
 
     public QueryCountingInterceptor QueryCounter { get; } = new();
 
+    public RecordingEmailSender EmailSink { get; } = new();
+
+    public FixedOtpGenerator OtpCodes { get; } = new();
+
     public string DatabasePath => Path.Combine(_directory, "test.db");
 
     public string MediaRootPath => Path.Combine(_directory, "media");
@@ -58,11 +63,14 @@ public sealed class ListingsApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Storage:PhotoRootPath", MediaRootPath);
         builder.UseSetting("Alerts:Enabled", "false");
         builder.UseSetting("Auth:Token:SigningKey", TestSigningKey);
+        builder.UseSetting("Auth:Email:Smtp:Host", "smtp.test.invalid");
         builder.ConfigureTestServices(services =>
         {
             services.AddSingleton<DbCommandInterceptor>(QueryCounter);
             // Auth limiter partitions are per-IP and shared across a fixture run.
             services.Configure<AuthOptions>(options => options.RateLimitPerMinute = 1000);
+            services.AddSingleton<IOtpGenerator>(OtpCodes);
+            services.AddSingleton<IEmailSender>(EmailSink);
             _configureTestServices?.Invoke(services);
         });
     }
@@ -92,6 +100,7 @@ public sealed class ListingsApiFactory : WebApplicationFactory<Program>
         await dbContext.Notifications.ExecuteDeleteAsync();
         await dbContext.SavedSearchAlertLogs.ExecuteDeleteAsync();
         await dbContext.SavedSearches.ExecuteDeleteAsync();
+        await dbContext.RegistrationChallenges.ExecuteDeleteAsync();
         await dbContext.AuthSessions.ExecuteDeleteAsync();
         await dbContext.Users.ExecuteDeleteAsync();
         await dbContext.ListingHouseRuleVersions.ExecuteDeleteAsync();
@@ -105,6 +114,8 @@ public sealed class ListingsApiFactory : WebApplicationFactory<Program>
         await dbContext.Database.ExecuteSqlRawAsync(CreateNoDeleteTriggerSql);
 
         QueryCounter.Reset();
+        EmailSink.Reset();
+        OtpCodes.Reset();
         ClearMediaDirectory();
     }
 

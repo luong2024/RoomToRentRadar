@@ -14,6 +14,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<ListingHouseRuleVersion> ListingHouseRuleVersions => Set<ListingHouseRuleVersion>();
     public DbSet<User> Users => Set<User>();
     public DbSet<AuthSession> AuthSessions => Set<AuthSession>();
+    public DbSet<RegistrationChallenge> RegistrationChallenges => Set<RegistrationChallenge>();
     public DbSet<SavedSearch> SavedSearches => Set<SavedSearch>();
     public DbSet<SavedSearchAlertLog> SavedSearchAlertLogs => Set<SavedSearchAlertLog>();
     public DbSet<Notification> Notifications => Set<Notification>();

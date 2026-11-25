@@ -270,7 +270,14 @@ public class LoginViewModelTests
                 : Task.FromResult(LoginResult);
         }
 
-        public Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+        public Task<RegisterChallengeResponse> BeginRegistrationAsync(
+            RegisterRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The login screen registers through the registration screen.");
+
+        public Task<LoginResponse> VerifyRegistrationAsync(
+            VerifyRegistrationRequest request,
+            CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The login screen registers through the registration screen.");
 
         public Task<LoginResponse?> DemoLoginAsync(CancellationToken cancellationToken = default)

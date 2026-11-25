@@ -1,4 +1,5 @@
-﻿using RoomToRentRadar.Models;
+﻿using System.Net;
+using RoomToRentRadar.Models;
 using RoomToRentRadar.Services;
 using RoomToRentRadar.Services.Auth;
 using RoomToRentRadar.Services.ErrorHandling;
@@ -99,30 +100,62 @@ public class AuthServiceTests
     }
 
     [Test]
-    public async Task Register_SavesSessionRoleAndRaisesSessionChanged()
+    public async Task BeginRegistration_ReturnsChallengeWithoutStartingSession()
     {
+        var challengeId = Guid.NewGuid();
         var expiresAt = new DateTime(2026, 12, 2, 8, 0, 0, DateTimeKind.Utc);
         var apiClient = new FakeApiClient
         {
-            RegisterResult = new RegisterResponse(
-                Guid.NewGuid(),
+            BeginRegistrationResult = new RegisterChallengeResponse(
+                challengeId,
                 "landlord@example.test",
-                "New Landlord",
-                AppUserRoleWire.Landlord),
-            LoginResult = new LoginResponse("register-token", expiresAt, "New Landlord", AppUserRoleWire.Landlord)
+                expiresAt)
         };
         var tokenStore = new FakeTokenStore();
         var service = new AuthService(apiClient, tokenStore);
         var sessionChanges = 0;
         service.SessionChanged += (_, _) => sessionChanges++;
 
-        await service.RegisterAsync(
+        var challenge = await service.BeginRegistrationAsync(
             new RegisterRequest("landlord@example.test", "Password-123", "New Landlord", AppUserRoleWire.Landlord));
 
         Assert.Multiple(() =>
         {
+            Assert.That(challenge.ChallengeId, Is.EqualTo(challengeId));
+            Assert.That(challenge.ExpiresAt, Is.EqualTo(expiresAt));
             Assert.That(apiClient.RequestedRegistration?.Role, Is.EqualTo(AppUserRoleWire.Landlord));
+            Assert.That(tokenStore.AccessToken, Is.Null);
+            Assert.That(service.CurrentRole, Is.Null);
+            Assert.That(sessionChanges, Is.Zero);
+        });
+    }
+
+    [Test]
+    public async Task VerifyRegistration_SavesSessionRoleAndRaisesSessionChanged()
+    {
+        var challengeId = Guid.NewGuid();
+        var expiresAt = new DateTime(2026, 12, 2, 8, 0, 0, DateTimeKind.Utc);
+        var apiClient = new FakeApiClient
+        {
+            VerifyRegistrationResult = new LoginResponse(
+                "register-token",
+                expiresAt,
+                "New Landlord",
+                AppUserRoleWire.Landlord)
+        };
+        var tokenStore = new FakeTokenStore();
+        var service = new AuthService(apiClient, tokenStore);
+        var sessionChanges = 0;
+        service.SessionChanged += (_, _) => sessionChanges++;
+
+        await service.VerifyRegistrationAsync(challengeId, "246810");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(apiClient.RequestedVerification?.ChallengeId, Is.EqualTo(challengeId));
+            Assert.That(apiClient.RequestedVerification?.Code, Is.EqualTo("246810"));
             Assert.That(tokenStore.AccessToken, Is.EqualTo("register-token"));
+            Assert.That(tokenStore.ExpiresAt, Is.EqualTo(expiresAt));
             Assert.That(tokenStore.Role, Is.EqualTo(AppUserRole.Landlord));
             Assert.That(service.CurrentRole, Is.EqualTo(AppUserRole.Landlord));
             Assert.That(sessionChanges, Is.EqualTo(1));
@@ -130,21 +163,22 @@ public class AuthServiceTests
     }
 
     [Test]
-    public async Task Register_WhenFollowUpLoginFails_ThrowsUnauthorizedAndKeepsSessionEmpty()
+    public async Task VerifyRegistration_WhenApiRejectsCode_KeepsSessionEmpty()
     {
         var apiClient = new FakeApiClient
         {
-            RegisterResult = new RegisterResponse(
-                Guid.NewGuid(),
-                "landlord@example.test",
-                "New Landlord",
-                AppUserRoleWire.Landlord)
+            VerifyRegistrationException = new ApiException(
+                HttpStatusCode.BadRequest,
+                "Invalid code.",
+                "invalid_otp",
+                attemptsRemaining: 4)
         };
         var tokenStore = new FakeTokenStore();
         var service = new AuthService(apiClient, tokenStore);
 
-        Assert.ThrowsAsync<ApiException>(async () => await service.RegisterAsync(
-            new RegisterRequest("landlord@example.test", "Password-123", "New Landlord", AppUserRoleWire.Landlord)));
+        Assert.ThrowsAsync<ApiException>(async () => await service.VerifyRegistrationAsync(
+            Guid.NewGuid(),
+            "000000"));
 
         Assert.Multiple(() =>
         {
@@ -217,11 +251,19 @@ public class AuthServiceTests
 
         public Exception? DemoLoginException { get; set; }
 
-        public RegisterResponse? RegisterResult { get; set; }
+        public RegisterChallengeResponse? BeginRegistrationResult { get; set; }
+
+        public Exception? BeginRegistrationException { get; set; }
 
         public LoginResponse? LoginResult { get; set; }
 
+        public LoginResponse? VerifyRegistrationResult { get; set; }
+
+        public Exception? VerifyRegistrationException { get; set; }
+
         public RegisterRequest? RequestedRegistration { get; private set; }
+
+        public VerifyRegistrationRequest? RequestedVerification { get; private set; }
 
         public Task<ListingSearchResultDto> GetListingsAsync(
             int limit,
@@ -256,13 +298,37 @@ public class AuthServiceTests
                 : Task.FromResult(DemoLoginResult);
         }
 
-        public Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+        public Task<RegisterChallengeResponse> BeginRegistrationAsync(
+            RegisterRequest request,
+            CancellationToken cancellationToken = default)
         {
             RequestedRegistration = request;
 
-            return RegisterResult is { } result
+            if (BeginRegistrationException is { } exception)
+            {
+                return Task.FromException<RegisterChallengeResponse>(exception);
+            }
+
+            return BeginRegistrationResult is { } result
                 ? Task.FromResult(result)
-                : Task.FromException<RegisterResponse>(new NotSupportedException("No registration result was configured."));
+                : Task.FromException<RegisterChallengeResponse>(
+                    new NotSupportedException("No registration challenge was configured."));
+        }
+
+        public Task<LoginResponse> VerifyRegistrationAsync(
+            VerifyRegistrationRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            RequestedVerification = request;
+
+            if (VerifyRegistrationException is { } exception)
+            {
+                return Task.FromException<LoginResponse>(exception);
+            }
+
+            return VerifyRegistrationResult is { } result
+                ? Task.FromResult(result)
+                : Task.FromException<LoginResponse>(new NotSupportedException("No verification result was configured."));
         }
 
         public Task LogoutAsync(CancellationToken cancellationToken = default)

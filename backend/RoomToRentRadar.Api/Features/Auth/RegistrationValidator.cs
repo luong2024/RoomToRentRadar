@@ -11,7 +11,7 @@ public static class RegistrationValidator
 
     public static bool TryCreate(
         RegisterRequest request,
-        out RegisterUserCommand command,
+        out BeginRegistrationCommand command,
         out ProblemDetails? problem)
     {
         command = null!;
@@ -50,7 +50,26 @@ public static class RegistrationValidator
             return false;
         }
 
-        command = new RegisterUserCommand(email, password, displayName, role);
+        command = new BeginRegistrationCommand(email, password, displayName, role);
+        return true;
+    }
+
+    public static bool TryCreate(
+        VerifyRegistrationRequest request,
+        out VerifyRegistrationCommand command,
+        out ProblemDetails? problem)
+    {
+        command = null!;
+        problem = null;
+
+        var code = request.Code?.Trim();
+        if (request.ChallengeId == Guid.Empty || !AccountRules.IsOtpCodeValid(code))
+        {
+            problem = AuthProblemFactory.InvalidOtpRequestProblem();
+            return false;
+        }
+
+        command = new VerifyRegistrationCommand(request.ChallengeId, code!);
         return true;
     }
 }

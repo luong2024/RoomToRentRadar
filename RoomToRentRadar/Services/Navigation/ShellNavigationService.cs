@@ -31,6 +31,10 @@ public sealed class ShellNavigationService : INavigationService
         return GoToRegisterAsync();
     }
 
+    public Task GoToOtpVerificationAsync(Guid challengeId, string email)
+        => GetShell().GoToAsync(
+            $"{AppRoutes.OtpVerification}?challenge_id={challengeId}&email={Uri.EscapeDataString(email)}");
+
     public Task GoToRoleRootAsync(AppUserRole? role)
         => MainThread.InvokeOnMainThreadAsync(() => GetShell().GoToAsync(role switch
         {

@@ -9,6 +9,12 @@ public static class AccountRules
     public const int DisplayNameMaxLength = 120;
     public const int PasswordMinLength = 8;
     public const int PasswordMaxLength = 128;
+    public const int OtpLength = 6;
+    public const int OtpLifetimeMinutes = 10;
+    public const int OtpMaxAttempts = 5;
+
+    public static bool IsOtpCodeValid(string? code)
+        => code is { Length: OtpLength } && code.All(char.IsAsciiDigit);
 
     public static bool IsEmailValid(string? email)
         => !string.IsNullOrWhiteSpace(email)

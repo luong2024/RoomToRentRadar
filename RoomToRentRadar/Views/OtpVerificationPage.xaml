@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewModels="clr-namespace:RoomToRentRadar.ViewModels"
+             xmlns:buttons="clr-namespace:Syncfusion.Maui.Toolkit.Buttons;assembly=Syncfusion.Maui.Toolkit"
+             xmlns:inputLayout="clr-namespace:Syncfusion.Maui.Toolkit.TextInputLayout;assembly=Syncfusion.Maui.Toolkit"
+             xmlns:progressBar="clr-namespace:Syncfusion.Maui.Toolkit.ProgressBar;assembly=Syncfusion.Maui.Toolkit"
+             x:Class="RoomToRentRadar.Views.OtpVerificationPage"
+             x:DataType="viewModels:OtpVerificationViewModel"
+             Title="Xác nhận email"
+             Shell.NavBarIsVisible="True"
+             SafeAreaEdges="All">
+    <ContentPage.Resources>
+        <Style x:Key="OtpEntry" TargetType="Entry">
+            <Setter Property="FontSize" Value="22" />
+            <Setter Property="CharacterSpacing" Value="8" />
+            <Setter Property="HorizontalTextAlignment" Value="Center" />
+            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+            <Setter Property="PlaceholderColor" Value="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+            <Setter Property="BackgroundColor" Value="Transparent" />
+            <Setter Property="MinimumHeightRequest" Value="46" />
+        </Style>
+    </ContentPage.Resources>
+    <ScrollView>
+        <VerticalStackLayout x:Name="OtpContent" Padding="20,16,20,16" Spacing="14"
+                             MaximumWidthRequest="460" HorizontalOptions="Fill">
+            <Label Text="Xác nhận email" FontSize="24" FontFamily="OpenSansSemibold"
+                   CharacterSpacing="-0.4" SemanticProperties.HeadingLevel="Level1" />
+
+            <VerticalStackLayout Spacing="2">
+                <Label Text="Chúng tôi đã gửi mã xác nhận gồm 6 chữ số tới:" Style="{StaticResource Caption}" />
+                <Label Text="{Binding Email}" FontFamily="OpenSansSemibold" FontSize="14"
+                       AutomationId="OtpEmail" SemanticProperties.Description="Email nhận mã xác nhận" />
+                <Label Text="Mã có hiệu lực trong 10 phút." Style="{StaticResource Caption}" FontSize="11.5" />
+            </VerticalStackLayout>
+
+            <Border Padding="18,16" StrokeShape="RoundRectangle 20">
+                <Border.Shadow>
+                    <Shadow Brush="{StaticResource InkBrush}" Offset="0,4" Radius="12" Opacity="0.05" />
+                </Border.Shadow>
+                <VerticalStackLayout Spacing="12">
+                    <VerticalStackLayout Spacing="3">
+                        <inputLayout:SfTextInputLayout Hint="Mã xác nhận" ShowHelperText="False" HasError="{Binding HasCodeError}">
+                            <Entry Text="{Binding Code}" Keyboard="Numeric" ReturnType="Go" MaxLength="6"
+                                   ReturnCommand="{Binding VerifyCommand}" Placeholder="123456"
+                                   AutomationId="OtpCode" SemanticProperties.Description="Mã xác nhận từ email"
+                                   Style="{StaticResource OtpEntry}" />
+                        </inputLayout:SfTextInputLayout>
+                        <Label Text="{Binding CodeError}" IsVisible="{Binding HasCodeError}"
+                               AutomationId="OtpCodeError" FontSize="12"
+                               TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                    </VerticalStackLayout>
+
+                    <Border IsVisible="{Binding HasError}" Padding="12,8" StrokeThickness="0"
+                            StrokeShape="RoundRectangle 12"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource DangerSoft}, Dark={StaticResource DangerSoftDark}}">
+                        <Label Text="{Binding ErrorMessage}"
+                               TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+                               FontSize="12" FontFamily="OpenSansSemibold" />
+                    </Border>
+
+                    <progressBar:SfLinearProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" />
+
+                    <Grid HeightRequest="48">
+                        <buttons:SfButton Text="Xác nhận" Command="{Binding VerifyCommand}" IsEnabled="{Binding IsNotBusy}"
+                                          AutomationId="OtpSubmit" HorizontalOptions="Fill" Padding="40,0"
+                                          SemanticProperties.Description="Xác nhận mã"
+                                          SemanticProperties.Hint="Kích hoạt tài khoản và chuyển đến màn hình theo vai trò">
+                            <buttons:SfButton.Triggers>
+                                <DataTrigger TargetType="buttons:SfButton" Binding="{Binding IsBusy}" Value="True">
+                                    <Setter Property="Text" Value="Đang xác nhận…" />
+                                </DataTrigger>
+                            </buttons:SfButton.Triggers>
+                        </buttons:SfButton>
+                        <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" InputTransparent="True"
+                                           HorizontalOptions="End" WidthRequest="20" HeightRequest="20" Margin="0,0,14,0" Color="{StaticResource Muted}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <buttons:SfButton Text="←  Quay lại đăng ký" Command="{Binding BackCommand}"
+                              Style="{StaticResource GhostSfButton}" HorizontalOptions="Center"
+                              AutomationId="OtpBack"
+                              SemanticProperties.Description="Quay lại trang đăng ký"
+                              SemanticProperties.Hint="Trở về biểu mẫu đăng ký để đổi email hoặc gửi lại mã" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

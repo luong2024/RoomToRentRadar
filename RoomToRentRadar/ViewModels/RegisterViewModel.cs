@@ -148,7 +148,7 @@ public partial class RegisterViewModel : ObservableObject, IQueryAttributable
         IsBusy = true;
         try
         {
-            await _authService.RegisterAsync(
+            var challenge = await _authService.BeginRegistrationAsync(
                 new RegisterRequest(
                     Email.Trim(),
                     Password,
@@ -158,13 +158,17 @@ public partial class RegisterViewModel : ObservableObject, IQueryAttributable
 
             Password = string.Empty;
             ConfirmPassword = string.Empty;
-            await _navigationService.GoToRoleRootAsync(AppUserRole.Student);
+            await _navigationService.GoToOtpVerificationAsync(challenge.ChallengeId, challenge.Email);
         }
         catch (ApiException ex) when (ex.Code == "email_already_registered")
         {
             const string duplicateMessage = "Email này đã được đăng ký. Hãy đăng nhập hoặc dùng email khác.";
             EmailError = duplicateMessage;
             ErrorMessage = duplicateMessage;
+        }
+        catch (ApiException ex) when (ex.Code == "email_delivery_failed")
+        {
+            ErrorMessage = "Không gửi được email xác nhận. Kiểm tra địa chỉ email và thử lại.";
         }
         catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.TooManyRequests)
         {

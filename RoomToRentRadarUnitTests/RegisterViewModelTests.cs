@@ -18,20 +18,15 @@ namespace RoomToRentRadarUnitTests;
 public class RegisterViewModelTests
 {
     [Test]
-    public async Task Register_WhenFormValid_SavesSessionAndNavigatesToRoleRoot()
+    public async Task Register_WhenFormValid_StartsRegistrationAndNavigatesToOtp()
     {
+        var challengeId = Guid.NewGuid();
         var apiClient = new FakeApiClient
         {
-            RegisterResult = new RegisterResponse(
-                Guid.NewGuid(),
+            BeginResult = new RegisterChallengeResponse(
+                challengeId,
                 "landlord@example.test",
-                "New Landlord",
-                AppUserRoleWire.Landlord),
-            LoginResult = new LoginResponse(
-                "register-token",
-                DateTime.UtcNow.AddDays(7),
-                "New Landlord",
-                AppUserRoleWire.Landlord)
+                DateTime.UtcNow.AddMinutes(10))
         };
         var tokenStore = new FakeTokenStore();
         var navigationService = new FakeNavigationService();
@@ -55,9 +50,11 @@ public class RegisterViewModelTests
             Assert.That(apiClient.Registrations[0].Email, Is.EqualTo("landlord@example.test"));
             Assert.That(apiClient.Registrations[0].Password, Is.EqualTo("Password-123"));
             Assert.That(apiClient.Registrations[0].Role, Is.EqualTo(AppUserRoleWire.Landlord));
-            Assert.That(tokenStore.AccessToken, Is.EqualTo("register-token"));
-            Assert.That(tokenStore.Role, Is.EqualTo(AppUserRole.Landlord));
-            Assert.That(navigationService.RoleRootRoles, Is.EqualTo(new[] { AppUserRole.Student }));
+            Assert.That(navigationService.OtpNavigations, Has.Count.EqualTo(1));
+            Assert.That(navigationService.OtpNavigations[0].ChallengeId, Is.EqualTo(challengeId));
+            Assert.That(navigationService.OtpNavigations[0].Email, Is.EqualTo("landlord@example.test"));
+            Assert.That(navigationService.RoleRootRoles, Is.Empty);
+            Assert.That(tokenStore.AccessToken, Is.Null);
         });
     }
 
@@ -66,16 +63,10 @@ public class RegisterViewModelTests
     {
         var apiClient = new FakeApiClient
         {
-            RegisterResult = new RegisterResponse(
+            BeginResult = new RegisterChallengeResponse(
                 Guid.NewGuid(),
                 "student@example.test",
-                "New Student",
-                AppUserRoleWire.Student),
-            LoginResult = new LoginResponse(
-                "register-token",
-                DateTime.UtcNow.AddDays(7),
-                "New Student",
-                AppUserRoleWire.Student)
+                DateTime.UtcNow.AddMinutes(10))
         };
         var navigationService = new FakeNavigationService();
         var viewModel = CreateViewModel(apiClient, new FakeTokenStore(), navigationService);
@@ -90,7 +81,37 @@ public class RegisterViewModelTests
         {
             Assert.That(viewModel.SelectedRole, Is.EqualTo(AppUserRole.Student));
             Assert.That(apiClient.Registrations[0].Role, Is.EqualTo(AppUserRoleWire.Student));
-            Assert.That(navigationService.RoleRootRoles, Is.EqualTo(new[] { AppUserRole.Student }));
+            Assert.That(navigationService.OtpNavigations, Has.Count.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task Register_WhenEmailDeliveryFails_ShowsDeliveryErrorAndDoesNotNavigate()
+    {
+        var apiClient = new FakeApiClient
+        {
+            BeginException = new ApiException(
+                HttpStatusCode.BadGateway,
+                "Email delivery failed.",
+                "email_delivery_failed")
+        };
+        var navigationService = new FakeNavigationService();
+        var viewModel = CreateViewModel(apiClient, new FakeTokenStore(), navigationService);
+        viewModel.DisplayName = "New Student";
+        viewModel.Email = "student@example.test";
+        viewModel.Password = "Password-123";
+        viewModel.ConfirmPassword = "Password-123";
+
+        await viewModel.RegisterCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.IsBusy, Is.False);
+            Assert.That(
+                viewModel.ErrorMessage,
+                Is.EqualTo("Không gửi được email xác nhận. Kiểm tra địa chỉ email và thử lại."));
+            Assert.That(viewModel.HasEmailError, Is.False);
+            Assert.That(navigationService.OtpNavigations, Is.Empty);
         });
     }
 
@@ -137,7 +158,7 @@ public class RegisterViewModelTests
     {
         var apiClient = new FakeApiClient
         {
-            RegisterException = new ApiException(
+            BeginException = new ApiException(
                 HttpStatusCode.Conflict,
                 "Email already registered.",
                 "email_already_registered")
@@ -204,7 +225,7 @@ public class RegisterViewModelTests
     {
         var apiClient = new FakeApiClient
         {
-            RegisterException = new ApiException(
+            BeginException = new ApiException(
                 HttpStatusCode.TooManyRequests,
                 "Too many requests.",
                 "rate_limit_exceeded")
@@ -235,7 +256,7 @@ public class RegisterViewModelTests
     {
         var apiClient = new FakeApiClient
         {
-            RegisterException = new ApiException(
+            BeginException = new ApiException(
                 HttpStatusCode.BadRequest,
                 "Invalid registration.",
                 "invalid_registration_request")
@@ -257,7 +278,7 @@ public class RegisterViewModelTests
     public async Task Register_WhenApiThrows_ShowsConnectionErrorAndReportsException()
     {
         var exception = new HttpRequestException("network down");
-        var apiClient = new FakeApiClient { RegisterException = exception };
+        var apiClient = new FakeApiClient { BeginException = exception };
         var errorHandler = new FakeErrorHandler();
         var viewModel = CreateViewModel(
             apiClient,
@@ -341,20 +362,25 @@ public class RegisterViewModelTests
     {
         public List<RegisterRequest> Registrations { get; } = new();
 
-        public RegisterResponse? RegisterResult { get; set; }
+        public RegisterChallengeResponse? BeginResult { get; set; }
 
-        public LoginResponse? LoginResult { get; set; }
+        public Exception? BeginException { get; set; }
 
-        public Exception? RegisterException { get; set; }
-
-        public Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+        public Task<RegisterChallengeResponse> BeginRegistrationAsync(
+            RegisterRequest request,
+            CancellationToken cancellationToken = default)
         {
             Registrations.Add(request);
 
-            return RegisterException is { } exception
-                ? Task.FromException<RegisterResponse>(exception)
-                : Task.FromResult(RegisterResult!);
+            return BeginException is { } exception
+                ? Task.FromException<RegisterChallengeResponse>(exception)
+                : Task.FromResult(BeginResult!);
         }
+
+        public Task<LoginResponse> VerifyRegistrationAsync(
+            VerifyRegistrationRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The registration screen verifies on the OTP screen.");
 
         public Task<ListingSearchResultDto> GetListingsAsync(
             int limit,
@@ -378,7 +404,7 @@ public class RegisterViewModelTests
             => throw new NotSupportedException("The registration screen does not load listing contacts.");
 
         public Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
-            => Task.FromResult(LoginResult);
+            => throw new NotSupportedException("The registration screen does not sign in directly.");
 
         public Task<LoginResponse?> DemoLoginAsync(CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The registration screen does not use the demo login.");
@@ -453,7 +479,15 @@ public class RegisterViewModelTests
     {
         public List<AppUserRole?> RoleRootRoles { get; } = new();
 
+        public List<(Guid ChallengeId, string Email)> OtpNavigations { get; } = new();
+
         public int GoBackCount { get; private set; }
+
+        public Task GoToOtpVerificationAsync(Guid challengeId, string email)
+        {
+            OtpNavigations.Add((challengeId, email));
+            return Task.CompletedTask;
+        }
 
         public Task GoToRoleRootAsync(AppUserRole? role)
         {
