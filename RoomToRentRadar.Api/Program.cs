@@ -3,6 +3,7 @@ using RoomToRentRadar.Api.Repositories;
 using RoomToRentRadar.Api.Services;
 using RoomToRentRadar.Api.Services.Favourites;
 using RoomToRentRadar.Api.Services.Moderation;
+using RoomToRentRadar.Api.Services.SavedSearches;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +20,10 @@ builder.Services.AddScoped<IFavouriteService, FavouriteService>();
 builder.Services.AddScoped<IListingModerationService, ListingModerationService>();
 builder.Services.AddScoped<ISpatialSearchService, SpatialSearchService>();
 builder.Services.AddPhotoPipeline(builder.Configuration);
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<ISavedSearchRepository, InMemorySavedSearchRepository>();
+builder.Services.AddScoped<ISavedSearchService, SavedSearchService>();
+builder.Services.AddScoped<ISavedSearchAlertRules, SavedSearchAlertRules>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
