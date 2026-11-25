@@ -18,15 +18,18 @@ public sealed class HouseRulesController : ControllerBase
     private readonly IGetRoomHouseRulesUseCase _getHouseRulesUseCase;
     private readonly IGetHouseRulesHistoryUseCase _getHouseRulesHistoryUseCase;
     private readonly IUpdateRoomHouseRulesUseCase _updateHouseRulesUseCase;
+    private readonly IAssignRoomLandlordUseCase? _assignRoomLandlordUseCase;
 
     public HouseRulesController(
         IGetRoomHouseRulesUseCase getHouseRulesUseCase,
         IGetHouseRulesHistoryUseCase getHouseRulesHistoryUseCase,
-        IUpdateRoomHouseRulesUseCase updateHouseRulesUseCase)
+        IUpdateRoomHouseRulesUseCase updateHouseRulesUseCase,
+        IAssignRoomLandlordUseCase? assignRoomLandlordUseCase = null)
     {
         _getHouseRulesUseCase = getHouseRulesUseCase ?? throw new ArgumentNullException(nameof(getHouseRulesUseCase));
         _getHouseRulesHistoryUseCase = getHouseRulesHistoryUseCase ?? throw new ArgumentNullException(nameof(getHouseRulesHistoryUseCase));
         _updateHouseRulesUseCase = updateHouseRulesUseCase ?? throw new ArgumentNullException(nameof(updateHouseRulesUseCase));
+        _assignRoomLandlordUseCase = assignRoomLandlordUseCase;
     }
 
     [HttpGet]
@@ -98,5 +101,29 @@ public sealed class HouseRulesController : ControllerBase
 
         var result = await _updateHouseRulesUseCase.ExecuteAsync(command, cancellationToken);
         return Ok(result);
+    }
+
+    [HttpPut("~/api/v1/rooms/{roomId}/landlord")]
+    [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AssignLandlord(
+        [FromRoute] string roomId,
+        [FromBody] AssignRoomLandlordRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (_assignRoomLandlordUseCase is null)
+        {
+            throw new InvalidOperationException("AssignRoomLandlordUseCase is not configured.");
+        }
+
+        await _assignRoomLandlordUseCase.ExecuteAsync(
+            new AssignRoomLandlordCommand(roomId, request.LandlordId),
+            cancellationToken);
+
+        return NoContent();
     }
 }

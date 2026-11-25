@@ -28,6 +28,7 @@ public static class RoomDetailServiceRegistration
         services.TryAddScoped<IGetRoomHouseRulesUseCase, GetRoomHouseRulesUseCase>();
         services.TryAddScoped<IGetHouseRulesHistoryUseCase, GetHouseRulesHistoryUseCase>();
         services.TryAddScoped<IUpdateRoomHouseRulesUseCase, UpdateRoomHouseRulesUseCase>();
+        services.TryAddScoped<IAssignRoomLandlordUseCase, AssignRoomLandlordUseCase>();
 
         if (string.Equals(endpoint, "in-memory", StringComparison.OrdinalIgnoreCase))
         {

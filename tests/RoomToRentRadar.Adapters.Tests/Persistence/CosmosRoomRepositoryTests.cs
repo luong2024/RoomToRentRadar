@@ -219,6 +219,49 @@ public class CosmosRoomRepositoryTests
     }
 
     [Test]
+    public void MergeListingFields_WhenExistingDetailLacksLandlordId_BackfillsFromListing()
+    {
+        var landlordId = Guid.NewGuid();
+        var existing = new RoomDocument
+        {
+            Id = "room-legacy-1",
+            LandlordId = null
+        };
+        var listing = new RoomListingDocument
+        {
+            Id = "room-legacy-1",
+            LandlordId = landlordId,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        var merged = RoomDocument.MergeListingFields(listing, existing);
+
+        Assert.That(merged.LandlordId, Is.EqualTo(landlordId));
+    }
+
+    [Test]
+    public void MergeListingFields_WhenExistingDetailHasLandlordId_PreservesExistingLandlordId()
+    {
+        var existingLandlordId = Guid.NewGuid();
+        var listingLandlordId = Guid.NewGuid();
+        var existing = new RoomDocument
+        {
+            Id = "room-detail-2",
+            LandlordId = existingLandlordId
+        };
+        var listing = new RoomListingDocument
+        {
+            Id = "room-detail-2",
+            LandlordId = listingLandlordId,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        var merged = RoomDocument.MergeListingFields(listing, existing);
+
+        Assert.That(merged.LandlordId, Is.EqualTo(existingLandlordId));
+    }
+
+    [Test]
     public void MergeListingFields_WhenDetailIsNew_InitializesLastUpdatedDateFromListingCreation()
     {
         var createdAt = new DateTime(2026, 11, 17, 0, 0, 0, DateTimeKind.Utc);

@@ -104,4 +104,60 @@ public sealed class CosmosContainer<T> : ICosmosContainer<T> where T : class
     {
         throw new NotSupportedException("In-memory predicates are for the in-memory test container. Use QueryDefinition for Cosmos DB.");
     }
+
+    public async Task ExecuteBatchAsync(
+        string partitionKey,
+        IReadOnlyList<CosmosBatchOperation<T>> operations,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(partitionKey);
+        ArgumentNullException.ThrowIfNull(operations);
+
+        if (operations.Count == 0)
+        {
+            return;
+        }
+
+        var batch = _container.CreateTransactionalBatch(new PartitionKey(partitionKey));
+        foreach (var op in operations)
+        {
+            ArgumentNullException.ThrowIfNull(op.Item);
+
+            switch (op.Type)
+            {
+                case CosmosBatchOperationType.Create:
+                    batch.CreateItem(op.Item);
+                    break;
+                case CosmosBatchOperationType.Upsert:
+                    batch.UpsertItem(op.Item);
+                    break;
+                case CosmosBatchOperationType.Replace:
+                    if (string.IsNullOrWhiteSpace(op.Id))
+                    {
+                        throw new ArgumentException("Item id is required for a replace batch operation.", nameof(operations));
+                    }
+
+                    var options = op.IfMatchEtag is not null
+                        ? new TransactionalBatchItemRequestOptions { IfMatchEtag = op.IfMatchEtag }
+                        : null;
+                    batch.ReplaceItem(op.Id, op.Item, options);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(operations), op.Type, "Unsupported batch operation type.");
+            }
+        }
+
+        using var response = await batch.ExecuteAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new CosmosException(
+                string.IsNullOrWhiteSpace(response.ErrorMessage)
+                    ? $"Transactional batch failed with status code {(int)response.StatusCode}."
+                    : response.ErrorMessage,
+                response.StatusCode,
+                0,
+                response.ActivityId,
+                response.RequestCharge);
+        }
+    }
 }
