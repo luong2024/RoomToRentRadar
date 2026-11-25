@@ -29,6 +29,7 @@ public class GetRoomDetailsUseCase : IGetRoomDetailsUseCase
         }
 
         var isAvailable = room.Status == RoomStatus.Available;
+        var location = room.IsDisplayable ? room.GetLocation() : null;
 
         var dto = new RoomDetailsDto
         {
@@ -51,6 +52,8 @@ public class GetRoomDetailsUseCase : IGetRoomDetailsUseCase
             HouseRules = room.HouseRules ?? [],
             LandlordPhone = isAvailable ? room.LandlordPhone : string.Empty,
             LastUpdatedDate = room.LastUpdatedDate,
+            Latitude = location?.Latitude,
+            Longitude = location?.Longitude,
             IsVerified = room.IsVerified,
             Status = room.Status.ToString(),
             IsAvailable = isAvailable,

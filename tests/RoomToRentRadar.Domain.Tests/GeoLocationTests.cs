@@ -31,6 +31,24 @@ public class GeoLocationTests
         Assert.Throws<InvalidLocationException>(() => new GeoLocation(lat, lon));
     }
 
+    [TestCase(0, 0)]
+    [TestCase(-90, -180)]
+    [TestCase(-90, 180)]
+    [TestCase(90, -180)]
+    [TestCase(90, 180)]
+    public void FromOptional_AcceptsZeroAndInclusiveBounds(double latitude, double longitude)
+    {
+        Assert.That(GeoLocation.FromOptional(latitude, longitude), Is.EqualTo(new GeoLocation(latitude, longitude)));
+    }
+
+    [Test]
+    public void FromOptional_DistinguishesAbsenceFromHalfPair()
+    {
+        Assert.That(GeoLocation.FromOptional(null, null), Is.Null);
+        Assert.Throws<InvalidLocationException>(() => GeoLocation.FromOptional(null, 105.8));
+        Assert.Throws<InvalidLocationException>(() => GeoLocation.FromOptional(21.5, null));
+    }
+
     [Test]
     public void DistanceToKm_SameLocation_ShouldBeZero()
     {

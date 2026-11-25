@@ -14,7 +14,7 @@ public readonly record struct GeoLocation
 
     public GeoLocation(double latitude, double longitude)
     {
-        if (!double.IsFinite(latitude) || !double.IsFinite(longitude) || latitude is < -90.0 or > 90.0 || longitude is < -180.0 or > 180.0)
+        if (!IsValid(latitude, longitude))
         {
             throw new InvalidLocationException(latitude, longitude);
         }
@@ -22,6 +22,25 @@ public readonly record struct GeoLocation
         Latitude = latitude;
         Longitude = longitude;
     }
+
+    public static GeoLocation? FromOptional(double? latitude, double? longitude)
+    {
+        if (latitude is null && longitude is null)
+        {
+            return null;
+        }
+
+        if (latitude is not double lat || longitude is not double lon)
+        {
+            throw new InvalidLocationException();
+        }
+
+        return new GeoLocation(lat, lon);
+    }
+
+    internal static bool IsValid(double latitude, double longitude) =>
+        double.IsFinite(latitude) && latitude is >= -90 and <= 90 &&
+        double.IsFinite(longitude) && longitude is >= -180 and <= 180;
 
     /// <summary>
     /// Calculates distance in kilometers to another location using the Haversine formula,

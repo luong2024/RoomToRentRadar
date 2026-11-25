@@ -1,5 +1,7 @@
 namespace RoomToRentRadar.Application.Ports.Inbound;
 
+using RoomToRentRadar.Domain.ValueObjects;
+
 public static class ListingPhotoLimits
 {
     public const int MaxCount = 20;
@@ -17,9 +19,18 @@ public sealed record ListingWriteRequest(
     string? RoomType,
     string? Description,
     IReadOnlyList<ListingImageUpload> Photos,
-    IReadOnlyList<string>? ImageUrlsToRetain = null);
+    IReadOnlyList<string>? ImageUrlsToRetain = null,
+    double? Latitude = null,
+    double? Longitude = null);
 
-public sealed record ListingWriteResult(string ListingId, string Status, IReadOnlyList<string> ImageUrls);
+public sealed record ListingWriteResult(string ListingId, string Status, IReadOnlyList<string> ImageUrls, GeoLocation? Location = null);
+
+public sealed record ListingCoordinatesResult(string ListingId, GeoLocation? Location);
+
+public interface IGetListingCoordinatesUseCase
+{
+    Task<ListingCoordinatesResult> ExecuteAsync(Guid ownerId, string listingId, CancellationToken cancellationToken = default);
+}
 
 public interface ICreateListingUseCase
 {

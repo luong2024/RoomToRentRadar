@@ -125,6 +125,25 @@ public class GetRoomDetailsUseCaseTests
         });
     }
 
+    [TestCase(RoomStatus.Available, true, true)]
+    [TestCase(RoomStatus.Available, false, false)]
+    [TestCase(RoomStatus.Pending, true, false)]
+    [TestCase(RoomStatus.Rented, true, false)]
+    public async Task Details_CoordinatesFollowPublicVisibility(RoomStatus status, bool isVerified, bool expectCoordinates)
+    {
+        _roomRepository.Add(new Room
+        {
+            Id = "room-with-location", Status = status, IsVerified = isVerified, Latitude = 21.5944, Longitude = 105.8482
+        });
+
+        var details = await _useCase.ExecuteAsync("room-with-location", isUserVerified: true);
+        Assert.Multiple(() =>
+        {
+            Assert.That(details.Latitude, Is.EqualTo(expectCoordinates ? 21.5944 : (double?)null));
+            Assert.That(details.Longitude, Is.EqualTo(expectCoordinates ? 105.8482 : (double?)null));
+        });
+    }
+
     private sealed class FakeRoomRepository : IRoomRepository
     {
         private readonly List<Room> _rooms = [];

@@ -3,6 +3,7 @@ namespace RoomToRentRadar.IntegrationTests;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using RoomToRentRadar.Adapters.Inbound.WebApi.Contracts;
 using RoomToRentRadar.Application.DTOs;
 using RoomToRentRadar.Domain.Entities;
@@ -53,6 +54,8 @@ public sealed class LandlordListingsIntegrationTests
         {
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
             Assert.That(result.Status, Is.EqualTo("Pending"));
+            Assert.That(result.Latitude, Is.Null);
+            Assert.That(result.Longitude, Is.Null);
             Assert.That(created, Is.Not.Null);
             Assert.That(created!.LandlordId, Is.EqualTo(landlord.UserId));
             Assert.That(created.Status, Is.EqualTo(RoomStatus.Pending));
@@ -64,6 +67,174 @@ public sealed class LandlordListingsIntegrationTests
         var publicResponse = await _client.GetAsync("/api/rooms");
         var publicListings = await publicResponse.Content.ReadFromJsonAsync<SearchRoomsResult>();
         Assert.That(publicListings!.Items.Any(item => item.Id == result.ListingId), Is.False);
+    }
+
+    [Test]
+    [SetCulture("vi-VN")]
+    public async Task ListingCoordinates_RoundTripInvariantMultipartThenKeepPairWhenOmittedOrBlank()
+    {
+        var landlord = await RegisterAndLoginAsync("LANDLORD");
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", landlord.AccessToken);
+        using var create = CreateForm(3);
+        create.Add(new StringContent(" 21.5944123456789 "), "latitude");
+        create.Add(new StringContent("1.058482123456789e2"), "longitude");
+        create.Add(new StringContent(Guid.NewGuid().ToString("D")), "ownerId");
+        create.Add(new StringContent("Available"), "status");
+
+        using var createdResponse = await _client.PostAsync("/api/v1/landlord/listings", create);
+        Assert.That(createdResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+        var created = (await createdResponse.Content.ReadFromJsonAsync<ListingWriteResponse>())!;
+        var path = $"/api/v1/landlord/listings/{created.ListingId}";
+
+        using var replace = CreateForm(0);
+        replace.Add(new StringContent("0"), "latitude");
+        replace.Add(new StringContent("-180"), "longitude");
+        using var replacedResponse = await _client.PutAsync(path, replace);
+        Assert.That(replacedResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var replaced = (await replacedResponse.Content.ReadFromJsonAsync<ListingWriteResponse>())!;
+
+        using var omitted = CreateForm(0);
+        using var omittedResponse = await _client.PutAsync(path, omitted);
+        Assert.That(omittedResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var omittedResult = (await omittedResponse.Content.ReadFromJsonAsync<ListingWriteResponse>())!;
+
+        using var blank = CreateForm(0);
+        blank.Add(new StringContent("  "), "latitude");
+        blank.Add(new StringContent(""), "longitude");
+        using var blankResponse = await _client.PutAsync(path, blank);
+        Assert.That(blankResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var blankResult = (await blankResponse.Content.ReadFromJsonAsync<ListingWriteResponse>())!;
+        var ownerRead = (await _client.GetFromJsonAsync<ListingCoordinatesResponse>(path))!;
+        var publicRead = (await _client.GetFromJsonAsync<RoomDetailsDto>($"/api/rooms/{created.ListingId}"))!;
+        var room = (await _factory.RoomRepository.GetByIdAsync(created.ListingId))!;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(created.Latitude, Is.EqualTo(21.5944123456789));
+            Assert.That(created.Longitude, Is.EqualTo(105.8482123456789));
+            Assert.That(replaced.Latitude, Is.Zero);
+            Assert.That(replaced.Longitude, Is.EqualTo(-180));
+            Assert.That(omittedResult.Latitude, Is.EqualTo(replaced.Latitude));
+            Assert.That(omittedResult.Longitude, Is.EqualTo(replaced.Longitude));
+            Assert.That(blankResult.Latitude, Is.EqualTo(replaced.Latitude));
+            Assert.That(blankResult.Longitude, Is.EqualTo(replaced.Longitude));
+            Assert.That(ownerRead.ListingId, Is.EqualTo(created.ListingId));
+            Assert.That(ownerRead.Latitude, Is.Zero);
+            Assert.That(ownerRead.Longitude, Is.EqualTo(-180));
+            Assert.That(publicRead.Latitude, Is.Null);
+            Assert.That(publicRead.Longitude, Is.Null);
+            Assert.That(room.LandlordId, Is.EqualTo(landlord.UserId));
+            Assert.That(room.Status, Is.EqualTo(RoomStatus.Pending));
+            Assert.That(room.ImageUrls, Is.EqualTo(created.ImageUrls));
+        });
+    }
+
+    [TestCase("21,5", "105.8", false, "latitude", TestName = "InvalidMultipartCoordinates_RejectDecimalComma")]
+    [TestCase("2,150", "105.8", false, "latitude", TestName = "InvalidMultipartCoordinates_RejectThousandsSeparator")]
+    [TestCase("null", "105.8", false, "latitude", TestName = "InvalidMultipartCoordinates_RejectLiteralNull")]
+    [TestCase("21.5\0", "105.8", false, "latitude", TestName = "InvalidMultipartCoordinates_RejectNulSuffix")]
+    [TestCase("21.5", "105.8", true, "latitude", TestName = "InvalidMultipartCoordinates_RejectDuplicateIgnoringCase")]
+    [TestCase("21.5", null, false, "coordinates", TestName = "InvalidMultipartCoordinates_RejectOmittedLongitude")]
+    [TestCase("21.5", " ", false, "coordinates", TestName = "InvalidMultipartCoordinates_RejectBlankLongitude")]
+    [TestCase("NaN", "105.8", false, "coordinates", TestName = "InvalidMultipartCoordinates_RejectNonFinite")]
+    [TestCase("21.5", "1e400", false, "coordinates", TestName = "InvalidMultipartCoordinates_RejectOverflow")]
+    public async Task InvalidMultipartCoordinates_Return400AndKeepExistingListing(
+        string latitude, string? longitude, bool duplicateLatitude, string expectedField)
+    {
+        var landlord = await RegisterAndLoginAsync("LANDLORD");
+        var created = await CreateListingAsync(landlord.AccessToken);
+        var before = (await _factory.RoomRepository.GetByIdAsync(created.ListingId))!;
+        var originalLocation = new GeoLocation(21.25, 105.75);
+        before.SetLocation(originalLocation);
+        var originalImages = before.ImageUrls.ToArray();
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", landlord.AccessToken);
+        using var form = CreateForm(1, "Do not save this title");
+        form.Add(new StringContent(latitude), "latitude");
+        if (longitude is not null) form.Add(new StringContent(longitude), "longitude");
+        if (duplicateLatitude) form.Add(new StringContent(latitude), "LATITUDE");
+
+        using var response = await _client.PutAsync($"/api/v1/landlord/listings/{created.ListingId}", form);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        using var problem = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var saved = (await _factory.RoomRepository.GetByIdAsync(created.ListingId))!;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(problem.RootElement.GetProperty("errors").TryGetProperty(expectedField, out _), Is.True);
+            Assert.That(saved.Title, Is.EqualTo("Integration listing"));
+            Assert.That(saved.GetLocation(), Is.EqualTo(originalLocation));
+            Assert.That(saved.ImageUrls, Is.EqualTo(originalImages));
+            Assert.That(_factory.ListingImageStorage.StoredUrls, Has.Count.EqualTo(3));
+        });
+    }
+
+    [Test]
+    public async Task CreateListing_BlankCoordinateFieldsStoreNoLocation()
+    {
+        var landlord = await RegisterAndLoginAsync("LANDLORD");
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", landlord.AccessToken);
+        using var form = CreateForm(3);
+        form.Add(new StringContent(""), "latitude");
+        form.Add(new StringContent("  "), "longitude");
+
+        using var response = await _client.PostAsync("/api/v1/landlord/listings", form);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+        var listing = (await response.Content.ReadFromJsonAsync<ListingWriteResponse>())!;
+        var room = (await _factory.RoomRepository.GetByIdAsync(listing.ListingId))!;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(listing.Latitude, Is.Null);
+            Assert.That(listing.Longitude, Is.Null);
+            Assert.That(room.GetLocation(), Is.Null);
+        });
+    }
+
+    [Test]
+    public async Task CreateListing_MultipartWithoutBoundary_Returns400WithoutUploading()
+    {
+        var landlord = await RegisterAndLoginAsync("LANDLORD");
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", landlord.AccessToken);
+        using var malformed = new StringContent("invalid multipart body");
+        malformed.Headers.ContentType = new MediaTypeHeaderValue("multipart/form-data");
+
+        using var response = await _client.PostAsync("/api/v1/landlord/listings", malformed);
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(_factory.ListingImageStorage.StoredUrls, Is.Empty);
+        });
+    }
+
+    [Test]
+    public async Task GetListingCoordinates_RequiresLandlordAndConcealsListingsOwnedByOthers()
+    {
+        var landlord = await RegisterAndLoginAsync("LANDLORD");
+        var anotherLandlord = await RegisterAndLoginAsync("LANDLORD");
+        var student = await RegisterAndLoginAsync("STUDENT");
+        var listing = await CreateListingAsync(landlord.AccessToken);
+        var path = $"/api/v1/landlord/listings/{listing.ListingId}";
+
+        using var anonymous = await _client.GetAsync(path);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", student.AccessToken);
+        using var forbidden = await _client.GetAsync(path);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", anotherLandlord.AccessToken);
+        using var wrongOwner = await _client.GetAsync(path);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", landlord.AccessToken);
+        using var missing = await _client.GetAsync("/api/v1/landlord/listings/does-not-exist");
+        using var own = await _client.GetAsync(path);
+
+        Assert.That(own.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var existing = (await own.Content.ReadFromJsonAsync<ListingCoordinatesResponse>())!;
+        Assert.Multiple(() =>
+        {
+            Assert.That(anonymous.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+            Assert.That(forbidden.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+            Assert.That(wrongOwner.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            Assert.That(missing.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            Assert.That(existing.Latitude, Is.Null);
+            Assert.That(existing.Longitude, Is.Null);
+        });
     }
 
     [Test]

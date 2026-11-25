@@ -28,14 +28,13 @@ public sealed class UpdateListingUseCase : IUpdateListingUseCase
     {
         if (ownerId == Guid.Empty) throw new RequestValidationException("ownerId", "A valid landlord identity is required.");
         if (string.IsNullOrWhiteSpace(listingId)) throw new NotFoundException("Listing was not found.");
-        ListingRequestValidator.Validate(request, requireNewPhotos: false);
-
         var existing = await _roomRepository.GetByIdAsync(listingId, cancellationToken);
         if (existing is null || existing.LandlordId != ownerId)
         {
             throw new NotFoundException("Listing was not found.");
         }
 
+        var locationUpdate = ListingRequestValidator.Validate(request, requireNewPhotos: false);
         var retained = request.ImageUrlsToRetain ?? existing.ImageUrls;
         if (retained.Any(url => string.IsNullOrWhiteSpace(url) || !existing.ImageUrls.Contains(url, StringComparer.Ordinal)))
         {
@@ -78,7 +77,7 @@ public sealed class UpdateListingUseCase : IUpdateListingUseCase
             updated.Status = RoomStatus.Pending;
             updated.IsVerified = false;
             updated.LastUpdatedDate = DateTime.UtcNow;
-            await _roomRepository.UpdateAsync(updated, cancellationToken);
+            await _roomRepository.UpdateAsync(updated, locationUpdate, cancellationToken);
         }
         catch
         {
@@ -95,7 +94,7 @@ public sealed class UpdateListingUseCase : IUpdateListingUseCase
 
         var removed = oldUrls.Except(updated.ImageUrls, StringComparer.Ordinal);
         await ListingImageCleanup.DeleteBestEffortAsync(_imageStorage, removed, CancellationToken.None);
-        return new ListingWriteResult(updated.Id, updated.Status.ToString(), updated.ImageUrls);
+        return new ListingWriteResult(updated.Id, updated.Status.ToString(), updated.ImageUrls, locationUpdate ?? existing.GetLocation());
     }
 
     private static Room CopyRoom(Room room) => new()

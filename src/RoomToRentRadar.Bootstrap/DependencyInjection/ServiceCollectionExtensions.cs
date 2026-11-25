@@ -40,6 +40,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISearchRoomsUseCase, SearchRoomsUseCase>();
         services.AddScoped<ISearchRoomsInPolygonUseCase, SearchRoomsInPolygonUseCase>();
         services.AddScoped<IRoutingService, RoutingService>();
+        services.AddScoped<IGetListingCoordinatesUseCase, GetListingCoordinatesUseCase>();
         services.AddScoped<ICreateListingUseCase, CreateListingUseCase>();
         services.AddScoped<IUpdateListingUseCase, UpdateListingUseCase>();
         services.AddScoped<IUnpublishListingUseCase, UnpublishListingUseCase>();

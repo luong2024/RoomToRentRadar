@@ -5,6 +5,7 @@ using RoomToRentRadar.Adapters.Outbound.Persistence.CosmosDb.Repositories;
 using RoomToRentRadar.Application.DTOs;
 using RoomToRentRadar.Application.Exceptions;
 using RoomToRentRadar.Domain.Entities;
+using RoomToRentRadar.Domain.Exceptions;
 using System.Net;
 
 namespace RoomToRentRadar.Adapters.Tests.Persistence;
@@ -85,6 +86,17 @@ public class CosmosRoomRepositoryTests
             Assert.That(result.Longitude, Is.EqualTo(room.Longitude));
             Assert.That(result.Title, Is.EqualTo(room.Title));
         });
+    }
+
+    [TestCase(21.5, null)]
+    [TestCase(null, 105.8)]
+    [TestCase(21.5, double.NegativeInfinity)]
+    public void CreateAsync_RejectsInvalidDomainCoordinatesBeforeCallingCosmos(double? latitude, double? longitude)
+    {
+        var room = new Room { Id = "invalid-room", Latitude = latitude, Longitude = longitude };
+
+        Assert.ThrowsAsync<InvalidLocationException>(() => _repository.CreateAsync(room));
+        _containerMock.VerifyNoOtherCalls();
     }
 
     [Test]
