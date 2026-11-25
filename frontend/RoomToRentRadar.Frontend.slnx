@@ -1,0 +1,11 @@
+<Solution>
+  <Project Path="RoomToRentRadar/RoomToRentRadar.csproj">
+    <Deploy Solution="Debug|*" />
+  </Project>
+  <Project Path="RoomToRentRadarUIAppiumTests/RoomToRentRadarUIAppiumTests.csproj" />
+  <!-- Shared contracts (Models + interfaces) live in the backend; Infrastructure is referenced only during the transition. -->
+  <Folder Name="/shared (backend)/">
+    <Project Path="../backend/RoomToRentRadar.Core/RoomToRentRadar.Core.csproj" />
+    <Project Path="../backend/RoomToRentRadar.Infrastructure/RoomToRentRadar.Infrastructure.csproj" />
+  </Folder>
+</Solution>

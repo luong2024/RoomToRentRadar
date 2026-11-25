@@ -1,9 +1,10 @@
 # =============================================================================
 # RoomToRentRadar — backend (ASP.NET Core MVC Web API + SQLite) in Docker.
-# The MAUI app (frontend) runs separately and calls this API over HTTP:
+# Lives in backend/. The MAUI app (frontend/) runs separately and calls this API over HTTP:
 #   Windows: http://localhost:8080      Android emulator: http://10.0.2.2:8080
 #
-# First time:  copy .env.example to .env and set JWT_SIGNING_KEY (never commit .env)
+# Run from backend/:  cd backend
+# First time:  copy .env.example to .env (both in backend/) and set JWT_SIGNING_KEY (never commit .env)
 # Start:       docker compose up --build -d
 # Logs:        docker compose logs -f api
 # Stop:        docker compose down          (add -v to also delete the database volume)
@@ -14,8 +15,9 @@ name: roomtorentradar
 services:
   api:
     build:
-      context: .
-      dockerfile: RoomToRentRadar.Api/Dockerfile
+      # Build from the repository root: the image needs global.json and Directory.Build.props from there.
+      context: ..
+      dockerfile: backend/RoomToRentRadar.Api/Dockerfile
     image: roomtorentradar-api:local
     container_name: roomtorentradar-api
     ports:
