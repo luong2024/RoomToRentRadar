@@ -526,7 +526,7 @@ public partial class ListingEditorViewModel(IListingManagementClient client, Aut
         foreach (var photo in listing.Photos) ExistingPhotos.Add(new ExistingListingPhoto(photo));
         StatusText = ListingStatusText.For(listing.Status);
         CanSave = listing.Status != ListingStatus.Removed;
-        CanUnpublish = listing.Status is ListingStatus.PendingReview or ListingStatus.Published;
+        CanUnpublish = listing.Status is ListingStatus.Draft or ListingStatus.PendingReview or ListingStatus.Published;
         CanPublish = listing.Status == ListingStatus.Hidden;
         OnPropertyChanged(nameof(PhotoCountText));
     }

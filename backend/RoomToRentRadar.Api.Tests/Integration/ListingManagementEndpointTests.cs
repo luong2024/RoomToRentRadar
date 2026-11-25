@@ -400,14 +400,46 @@ public sealed class ListingManagementEndpointTests
     [Test]
     public async Task Update_PublishedListing_ResetsToPendingReviewAndBumpsVersion()
     {
+        var listingId = TestListingsSeed.IdFor(3);
         var ownerId = await DemoUserIdAsync();
-        await AssignOwnerAsync(TestListingsSeed.IdFor(3), ownerId);
+        await AssignOwnerAsync(listingId, ownerId);
+        await using (var seedScope = _factory.Services.CreateAsyncScope())
+        {
+            var seedDb = seedScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            seedDb.ListingPhotos.AddRange(
+                new ListingPhoto
+                {
+                    Id = Guid.NewGuid(),
+                    ListingId = listingId,
+                    Url = "/media/test/extra-1.jpg",
+                    ThumbUrl = "/media/test/thumbs/extra-1.jpg",
+                    Width = 800,
+                    Height = 600,
+                    Kind = ListingPhotoKind.Photo,
+                    SortOrder = 1,
+                    IsCover = false
+                },
+                new ListingPhoto
+                {
+                    Id = Guid.NewGuid(),
+                    ListingId = listingId,
+                    Url = "/media/test/extra-2.jpg",
+                    ThumbUrl = "/media/test/thumbs/extra-2.jpg",
+                    Width = 800,
+                    Height = 600,
+                    Kind = ListingPhotoKind.Photo,
+                    SortOrder = 2,
+                    IsCover = false
+                });
+            await seedDb.SaveChangesAsync();
+        }
+
         var token = await AccessTokenAsync();
 
         using var form = CreateForm(DefaultFields(title: "Refreshed listing"), photos: []);
         var response = await SendAsync(
             HttpMethod.Put,
-            $"/api/v1/listings/{TestListingsSeed.IdFor(3)}",
+            $"/api/v1/listings/{listingId}",
             form,
             token);
 
@@ -422,10 +454,10 @@ public sealed class ListingManagementEndpointTests
         await using var scope = _factory.Services.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var stored = await dbContext.Listings.AsNoTracking()
-            .SingleAsync(x => x.Id == TestListingsSeed.IdFor(3));
+            .SingleAsync(x => x.Id == listingId);
         Assert.That(stored.Version, Is.EqualTo(1));
 
-        var publicDetail = await _client.GetAsync($"/api/v1/listings/{TestListingsSeed.IdFor(3)}");
+        var publicDetail = await _client.GetAsync($"/api/v1/listings/{listingId}");
         Assert.That(publicDetail.StatusCode, Is.EqualTo(HttpStatusCode.Gone));
     }
 
@@ -1063,6 +1095,177 @@ public sealed class ListingManagementEndpointTests
         var queue = await queueResponse.Content.ReadFromJsonAsync<ModerationReportQueueDto>(ApiJson.Options);
         Assert.That(queue, Is.Not.Null);
         Assert.That(queue!.Items.Select(x => x.ListingId), Does.Not.Contain(created.Id));
+    }
+
+    [Test]
+    public async Task Update_ListingWithFewerThanThreeTotalPhotos_ReturnsTooFewPhotos()
+    {
+        var listingId = TestListingsSeed.IdFor(3);
+        var ownerId = await DemoUserIdAsync();
+        await AssignOwnerAsync(listingId, ownerId);
+
+        using var form = CreateForm(
+            DefaultFields(title: "Still too few photos"),
+            [(TestImageFactory.CreateJpeg(), "image/jpeg", "second.jpg")]);
+        using var response = await SendAsync(
+            HttpMethod.Put,
+            $"/api/v1/listings/{listingId}",
+            form,
+            await AccessTokenAsync());
+
+        var problem = await ReadProblemAsync(response, HttpStatusCode.BadRequest);
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                problem.GetProperty("code").GetString(),
+                Is.EqualTo(ListingWriteProblemFactory.TooFewPhotos));
+            Assert.That(StoredFileCount(listingId), Is.Zero);
+        });
+
+        var rows = await GetPhotoRowsAsync(listingId);
+        Assert.That(rows, Has.Count.EqualTo(1));
+    }
+
+    [Test]
+    public async Task Create_NewListing_StaysPendingAndHiddenUntilAdminApproves()
+    {
+        const string adminEmail = "admin@example.test";
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await TestUsersSeed.SeedAdditionalAsync(
+                dbContext,
+                Guid.NewGuid(),
+                adminEmail,
+                UserRole.Admin,
+                "Admin Tester");
+        }
+
+        var ownerToken = await AccessTokenAsync();
+        var created = await CreateListingAsync(ownerToken);
+        Assert.That(created.Status, Is.EqualTo(ListingStatus.PendingReview));
+
+        using var beforeDetail = await _client.GetAsync($"/api/v1/listings/{created.Id}");
+        Assert.That(beforeDetail.StatusCode, Is.EqualTo(HttpStatusCode.Gone));
+        Assert.That(await SearchIdsAsync(), Does.Not.Contain(created.Id));
+
+        using var beforeMineResponse = await SendAsync(HttpMethod.Get, "/api/v1/listings/mine", null, ownerToken);
+        var beforeMine = await beforeMineResponse.Content.ReadFromJsonAsync<List<ManagedListingDto>>(ApiJson.Options);
+        Assert.That(beforeMine!.Single(x => x.Id == created.Id).Status, Is.EqualTo(ListingStatus.PendingReview));
+
+        var adminToken = await LoginAsync(adminEmail, TestUsersSeed.Password);
+        using var approveResponse = await SendAsync(
+            HttpMethod.Post,
+            $"/api/v1/moderation/listings/{created.Id}/approve",
+            content: null,
+            adminToken);
+        Assert.That(approveResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+        using var afterDetail = await _client.GetAsync($"/api/v1/listings/{created.Id}");
+        Assert.That(afterDetail.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(await SearchIdsAsync(), Does.Contain(created.Id));
+
+        using var afterMineResponse = await SendAsync(HttpMethod.Get, "/api/v1/listings/mine", null, ownerToken);
+        var afterMine = await afterMineResponse.Content.ReadFromJsonAsync<List<ManagedListingDto>>(ApiJson.Options);
+        Assert.That(afterMine!.Single(x => x.Id == created.Id).Status, Is.EqualTo(ListingStatus.Published));
+    }
+
+    [TestCase(ListingStatus.Draft)]
+    [TestCase(ListingStatus.PendingReview)]
+    [TestCase(ListingStatus.Published)]
+    [TestCase(ListingStatus.Hidden)]
+    public async Task Edit_And_Unpublish_AllowedFromDraftPendingPublishedAndHiddenStates(ListingStatus initialStatus)
+    {
+        var token = await AccessTokenAsync();
+        var created = await CreateListingAsync(token);
+
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var listing = await dbContext.Listings.SingleAsync(x => x.Id == created.Id);
+            listing.Status = initialStatus;
+            await dbContext.SaveChangesAsync();
+        }
+
+        var updatedTitle = $"Edited from {initialStatus}";
+        using var form = CreateForm(DefaultFields(title: updatedTitle), photos: []);
+        using var editResponse = await SendAsync(
+            HttpMethod.Put,
+            $"/api/v1/listings/{created.Id}",
+            form,
+            token);
+        Assert.That(editResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var edited = await ReadDetailAsync(editResponse);
+        var expectedStatusAfterEdit = initialStatus == ListingStatus.Published
+            ? ListingStatus.PendingReview
+            : initialStatus;
+        Assert.Multiple(() =>
+        {
+            Assert.That(edited.Title, Is.EqualTo(updatedTitle));
+            Assert.That(edited.Status, Is.EqualTo(expectedStatusAfterEdit));
+        });
+
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var listing = await dbContext.Listings.SingleAsync(x => x.Id == created.Id);
+            listing.Status = initialStatus;
+            await dbContext.SaveChangesAsync();
+        }
+
+        using var unpublishResponse = await SendAsync(
+            HttpMethod.Post,
+            $"/api/v1/listings/{created.Id}/unpublish",
+            content: null,
+            token);
+        Assert.That(unpublishResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var unpublished = await ReadDetailAsync(unpublishResponse);
+        Assert.That(unpublished.Status, Is.EqualTo(ListingStatus.Hidden));
+    }
+
+    [Test]
+    public async Task Update_WithUnsupportedPhotoType_ReturnsUnsupportedPhotoType()
+    {
+        var token = await AccessTokenAsync();
+        var created = await CreateListingAsync(token);
+
+        using var form = CreateForm(
+            DefaultFields(),
+            [(TestImageFactory.CreateWebp(), "image/webp", "extra.webp")]);
+        using var response = await SendAsync(
+            HttpMethod.Put,
+            $"/api/v1/listings/{created.Id}",
+            form,
+            token);
+
+        var problem = await ReadProblemAsync(response, HttpStatusCode.UnsupportedMediaType);
+        Assert.That(
+            problem.GetProperty("code").GetString(),
+            Is.EqualTo(ListingWriteProblemFactory.UnsupportedPhotoType));
+        Assert.That(await GetPhotoRowsAsync(created.Id), Has.Count.EqualTo(3));
+    }
+
+    [Test]
+    public async Task Update_WithPhotoOverTenMegabytes_ReturnsPhotoTooLarge()
+    {
+        var token = await AccessTokenAsync();
+        var created = await CreateListingAsync(token);
+        var oversized = new byte[PhotoUploadLimits.MaxFileBytes + 1];
+
+        using var form = CreateForm(
+            DefaultFields(),
+            [(oversized, "image/jpeg", "huge.jpg")]);
+        using var response = await SendAsync(
+            HttpMethod.Put,
+            $"/api/v1/listings/{created.Id}",
+            form,
+            token);
+
+        var problem = await ReadProblemAsync(response, HttpStatusCode.RequestEntityTooLarge);
+        Assert.That(
+            problem.GetProperty("code").GetString(),
+            Is.EqualTo(ListingWriteProblemFactory.PhotoTooLarge));
+        Assert.That(await GetPhotoRowsAsync(created.Id), Has.Count.EqualTo(3));
     }
 
     private static (string Name, string Value)[] DefaultFields(

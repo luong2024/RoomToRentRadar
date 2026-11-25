@@ -101,6 +101,12 @@ public sealed class ListingManagementService(
                 ListingWriteErrorCodes.InvalidListingTransition);
         }
 
+        if (listing.Photos.Count + command.Photos.Count < PhotoUploadLimits.MinimumPhotosPerListing)
+        {
+            return ListingWriteResult<ManagedListingDto>.Failure(
+                ListingWriteErrorCodes.TooFewPhotos);
+        }
+
         if (listing.Photos.Count + command.Photos.Count > PhotoUploadLimits.MaxPhotosPerListing)
         {
             return ListingWriteResult<ManagedListingDto>.Failure(

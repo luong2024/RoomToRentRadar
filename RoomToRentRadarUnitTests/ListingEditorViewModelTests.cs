@@ -490,6 +490,43 @@ public class ListingEditorViewModelTests
     }
 
     [Test]
+    public async Task LoadAndUnpublishCommands_DraftListing_EnablesSavingAndUnpublishingThenTransitionsToHidden()
+    {
+        // Arrange
+        var client = new FakeClient();
+        client.Saved = client.Saved with { Status = ListingStatus.Draft };
+        var alerts = new FakeAlertPrompt { ConfirmResult = true };
+        var viewModel = CreateViewModel(client, alerts: alerts);
+        viewModel.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = client.Saved.Id.ToString() });
+
+        // Act
+        await viewModel.LoadCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.StatusText, Is.EqualTo(ListingStatusText.For(ListingStatus.Draft)));
+            Assert.That(viewModel.CanSave, Is.True);
+            Assert.That(viewModel.CanUnpublish, Is.True);
+            Assert.That(viewModel.CanPublish, Is.False);
+        });
+
+        // Act
+        await viewModel.UnpublishCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(alerts.ConfirmCalls, Is.EqualTo(1));
+            Assert.That(client.UnpublishCalls, Is.EqualTo(1));
+            Assert.That(viewModel.StatusText, Is.EqualTo(ListingStatusText.For(ListingStatus.Hidden)));
+            Assert.That(viewModel.CanUnpublish, Is.False);
+            Assert.That(viewModel.CanPublish, Is.True);
+            Assert.That(viewModel.CanSave, Is.True);
+        });
+    }
+
+    [Test]
     public async Task UseCurrentLocationCommand_Success_PopulatesSixDecimalCoordinatesShowsAccuracyAndRaisesResolvedEvent()
     {
         var previousCulture = CultureInfo.CurrentCulture;
