@@ -1,3 +1,4 @@
+using RoomToRentRadar.Helpers;
 using RoomToRentRadar.ViewModels;
 
 namespace RoomToRentRadar.Views;
@@ -16,8 +17,6 @@ public partial class FavouritesPage : ContentPage
     {
         base.OnAppearing();
 
-        // Refreshing on every appearance keeps prices and availability current
-        // and pulls in favourites saved from other devices.
         if (_viewModel.LoadCommand.CanExecute(null))
         {
             _viewModel.LoadCommand.Execute(null);
@@ -33,11 +32,12 @@ public partial class FavouritesPage : ContentPage
         }
     }
 
-    private async void OnRemoveClicked(object? sender, EventArgs e)
+    private async void OnRemoveTapped(object? sender, TappedEventArgs e)
     {
-        if (sender is Button { BindingContext: FavouriteRoomItem item }
+        if (e.Parameter is FavouriteRoomItem item
             && _viewModel.RemoveCommand.CanExecute(item))
         {
+            MotionEffects.TryLightHaptic();
             await _viewModel.RemoveCommand.ExecuteAsync(item);
         }
     }

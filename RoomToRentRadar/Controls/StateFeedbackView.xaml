@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:buttons="clr-namespace:Syncfusion.Maui.Toolkit.Buttons;assembly=Syncfusion.Maui.Toolkit"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Controls"
+             x:Class="RoomToRentRadar.Controls.StateFeedbackView"
+             x:Name="RootView"
+             x:DataType="controls:StateFeedbackView"
+             VerticalOptions="Center">
+
+    <Border Style="{StaticResource LiquidGlassCard}"
+            Padding="26,28"
+            MaximumWidthRequest="440"
+            HorizontalOptions="Fill">
+        <VerticalStackLayout Spacing="12" HorizontalOptions="Fill">
+
+            <!-- Specular Liquid Glass Icon Orb -->
+            <Border WidthRequest="60"
+                    HeightRequest="60"
+                    HorizontalOptions="Center"
+                    StrokeShape="RoundRectangle 22"
+                    StrokeThickness="1.2"
+                    Stroke="{AppThemeBinding Light=#FFFFFFFF, Dark=#4538BDF8}"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource BrandTint}, Dark={StaticResource BrandTintDark}}">
+                <Image Source="{Binding IconSource, Source={x:Reference RootView}}"
+                       WidthRequest="26"
+                       HeightRequest="26"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center" />
+            </Border>
+
+            <Label Text="{Binding EyebrowText, Source={x:Reference RootView}}"
+                   IsVisible="{Binding HasEyebrow, Source={x:Reference RootView}}"
+                   Style="{StaticResource Eyebrow}"
+                   HorizontalTextAlignment="Center"
+                   Margin="0,2,0,0" />
+
+            <Label Text="{Binding TitleText, Source={x:Reference RootView}}"
+                   Style="{StaticResource SectionTitle}"
+                   FontSize="19"
+                   HorizontalTextAlignment="Center" />
+
+            <Label Text="{Binding SubtitleText, Source={x:Reference RootView}}"
+                   Style="{StaticResource BodyText}"
+                   FontSize="14"
+                   HorizontalTextAlignment="Center" />
+
+            <buttons:SfButton Text="{Binding ActionText, Source={x:Reference RootView}}"
+                              Command="{Binding ActionCommand, Source={x:Reference RootView}}"
+                              IsVisible="{Binding HasAction, Source={x:Reference RootView}}"
+                              Style="{StaticResource LiquidPrimaryButton}"
+                              Margin="0,8,0,0"
+                              HorizontalOptions="Fill" />
+
+        </VerticalStackLayout>
+    </Border>
+</ContentView>

@@ -1,4 +1,5 @@
 using System.Globalization;
+using RoomToRentRadar.Helpers;
 using RoomToRentRadar.Shared.Listings;
 
 namespace RoomToRentRadar.Models;
@@ -18,10 +19,8 @@ public sealed record MapListingItem(ListingSummaryDto Listing, double DistanceKm
 
     public string AreaText => $"{Listing.AreaM2.ToString("0.#", Vietnamese)} m²";
 
-    public string PhotoSource => Uri.TryCreate(Listing.CoverPhotoUrl, UriKind.Absolute, out var photo)
-        && photo.Scheme == Uri.UriSchemeHttps
-            ? photo.AbsoluteUri
-            : $"room_{Listing.Id.ToByteArray()[0] % 3 + 1}.png";
+    public string PhotoSource => MediaUrlResolver.Resolve(Listing.CoverPhotoUrl)
+        ?? $"room_{Listing.Id.ToByteArray()[0] % 3 + 1}.png";
 
     public string BedroomText => $"{Listing.Bedrooms} phòng ngủ";
 

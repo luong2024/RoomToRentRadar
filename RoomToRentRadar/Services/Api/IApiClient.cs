@@ -15,6 +15,9 @@ public interface IApiClient
 
     Task<ListingDetailFetchResult> GetListingDetailAsync(Guid id, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<ListingPhotoDto>> GetListingPhotosAsync(Guid id, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<ListingPhotoDto>>([]);
+
     Task<IReadOnlyList<ListingSummaryDto>> GetSimilarListingsAsync(
         Guid id,
         int limit = 4,

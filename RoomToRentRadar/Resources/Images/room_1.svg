@@ -1,14 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
-<rect width="800" height="450" fill="#F3EFEA"/><path d="M0 340h800v110H0Z" fill="#E6DED3"/><path d="M0 340h800" stroke="#FFFFFF" stroke-width="5"/>
-<rect x="460" y="30" width="225" height="245" rx="4" fill="#FFFFFF"/><rect x="477" y="46" width="191" height="211" fill="#F0F2F2"/>
-<path d="m477 195 70-88 50 40 71-87v197H477" fill="#D7DDE0"/><path d="M573 46v211M477 151h191" stroke="#FFFFFF" stroke-width="9"/>
-<path d="M438 22h34v267h-44ZM676 22h29l12 267h-41Z" fill="#E4DED8"/>
-<rect x="100" y="212" width="300" height="131" rx="9" fill="#8D837B"/><rect x="80" y="270" width="365" height="101" rx="10" fill="#CBBFB3"/><rect x="80" y="267" width="365" height="31" rx="10" fill="#FFFFFF"/>
-<rect x="111" y="242" width="110" height="48" rx="12" fill="#FFFFFF"/><rect x="233" y="242" width="110" height="48" rx="12" fill="#E8DBD4"/>
-<path d="M262 290h183v79H262Z" fill="#B3A095"/><path d="M280 297v65m17-65v65m17-65v65" stroke="#FFFFFF" stroke-opacity=".25" stroke-width="3"/>
-<rect x="94" y="369" width="13" height="19" fill="#8D837B"/><rect x="418" y="369" width="13" height="19" fill="#8D837B"/>
-<ellipse cx="560" cy="394" rx="160" ry="28" fill="#FFFFFF"/><rect x="573" y="286" width="142" height="13" rx="4" fill="#847B72"/><path d="m587 299-8 81m119-81 8 81" stroke="#847B72" stroke-width="10"/>
-<path d="M641 269v-65" stroke="#718174" stroke-width="5"/><ellipse cx="621" cy="222" rx="24" ry="10" transform="rotate(30 621 222)" fill="#A0AA9C"/><ellipse cx="660" cy="204" rx="24" ry="10" transform="rotate(-35 660 204)" fill="#C4C4B8"/><path d="m622 257 7 29h28l7-29Z" fill="#918984"/>
-<rect x="146" y="65" width="94" height="107" rx="4" fill="#6D6764"/><rect x="153" y="72" width="80" height="93" fill="#F7F4F0"/><circle cx="192" cy="105" r="20" fill="#A0AA9C"/><path d="m153 157 28-36 52 44h-80" fill="#CBBFB3"/>
-<path d="M350 0v74" stroke="#918984" stroke-width="3"/><path d="m319 99 13-27h36l13 27Z" fill="#9E7D9E"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+  <defs>
+    <linearGradient id="wall1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EBF3FF"/>
+      <stop offset="100%" stop-color="#DCE9FA"/>
+    </linearGradient>
+    <linearGradient id="sky1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#BAE6FD"/>
+      <stop offset="100%" stop-color="#F0F9FF"/>
+    </linearGradient>
+    <linearGradient id="bed1" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0055D4"/>
+      <stop offset="100%" stop-color="#0891B2"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="500" fill="url(#wall1)"/>
+  <rect y="365" width="800" height="135" fill="#D5E2F2"/>
+  <!-- Sunlit Panoramic Window -->
+  <rect x="210" y="55" width="380" height="235" rx="22" fill="#FFFFFF" opacity="0.92"/>
+  <rect x="226" y="71" width="348" height="203" rx="14" fill="url(#sky1)"/>
+  <line x1="400" y1="71" x2="400" y2="274" stroke="#FFFFFF" stroke-width="6"/>
+  <!-- Diagonal Sunlight Sheen -->
+  <polygon points="226,71 360,71 280,274 226,274" fill="#FFFFFF" opacity="0.45"/>
+  <!-- Modern Low Bed & Pillows -->
+  <rect x="175" y="312" width="450" height="86" rx="22" fill="url(#bed1)"/>
+  <rect x="215" y="282" width="130" height="42" rx="14" fill="#FFFFFF"/>
+  <rect x="365" y="286" width="120" height="38" rx="14" fill="#7DD3FC"/>
+  <!-- Glass Pendant Light -->
+  <line x1="650" y1="0" x2="650" y2="130" stroke="#64748B" stroke-width="3"/>
+  <circle cx="650" cy="152" r="26" fill="#FFFFFF" opacity="0.88"/>
 </svg>

@@ -69,6 +69,21 @@ public sealed class ApiClient(HttpClient httpClient) : IApiClient
             : new ListingDetailFetchResult(ListingDetailFetchOutcome.Found, detail);
     }
 
+    public async Task<IReadOnlyList<ListingPhotoDto>> GetListingPhotosAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.GetAsync($"api/v1/listings/{id}/photos", cancellationToken);
+        if (!response.IsSuccessStatusCode)
+            return [];
+
+        var photos = await response.Content.ReadFromJsonAsync<List<ListingPhotoDto>>(
+            ApiJson.Options,
+            cancellationToken);
+
+        return photos ?? [];
+    }
+
     public async Task<IReadOnlyList<ListingSummaryDto>> GetSimilarListingsAsync(
         Guid id,
         int limit = 4,

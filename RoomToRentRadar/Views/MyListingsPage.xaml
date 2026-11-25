@@ -3,44 +3,58 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:RoomToRentRadar.ViewModels"
              xmlns:models="clr-namespace:RoomToRentRadar.Models"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Controls"
              xmlns:buttons="clr-namespace:Syncfusion.Maui.Toolkit.Buttons;assembly=Syncfusion.Maui.Toolkit"
              xmlns:progressBar="clr-namespace:Syncfusion.Maui.Toolkit.ProgressBar;assembly=Syncfusion.Maui.Toolkit"
              x:Class="RoomToRentRadar.Views.MyListingsPage"
              x:DataType="vm:MyListingsViewModel"
              Title="Tin của tôi"
-             SafeAreaEdges="All">
+             SafeAreaEdges="Container">
     <ContentPage.Resources>
         <Color x:Key="WarmAccentDark">#F2B872</Color>
         <SolidColorBrush x:Key="DangerSoftDarkBrush" Color="{StaticResource DangerSoftDark}" />
     </ContentPage.Resources>
 
-    <Grid RowDefinitions="Auto,Auto,*" RowSpacing="0" HorizontalOptions="Fill">
-        <!-- 8.1 Full-Width White-First Screen Header -->
-        <Border StrokeShape="Rectangle" StrokeThickness="0" HorizontalOptions="Fill"
-                BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
-            <VerticalStackLayout Spacing="0" HorizontalOptions="Fill">
-                <Grid Padding="16,14" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8"
-                      MaximumWidthRequest="960" HorizontalOptions="Fill">
-                    <VerticalStackLayout Spacing="2" VerticalOptions="Center">
-                        <Label Text="Tin của tôi" Style="{StaticResource ScreenTitle}" FontSize="22"
-                               SemanticProperties.HeadingLevel="Level1" />
-                        <Label Text="Quản lý và cập nhật phòng cho thuê của bạn" Style="{StaticResource Caption}" FontSize="12" />
+    <Grid>
+        <controls:LiquidBackdropView />
+
+        <Grid RowDefinitions="Auto,Auto,*" RowSpacing="0" HorizontalOptions="Fill">
+            <!-- Floating Liquid Glass Header (2-row layout prevents button clipping on narrow phones) -->
+            <ContentView Padding="16,10,16,6">
+                <Border Style="{StaticResource LiquidFloatingPanel}" Padding="16,12" MaximumWidthRequest="960">
+                    <VerticalStackLayout Spacing="10">
+                        <VerticalStackLayout Spacing="1">
+                            <Label Text="Tin của tôi" Style="{StaticResource ScreenTitle}" FontSize="20"
+                                   SemanticProperties.HeadingLevel="Level1" />
+                            <Label Text="Quản lý và cập nhật phòng cho thuê của bạn" Style="{StaticResource Caption}" FontSize="11.5" />
+                        </VerticalStackLayout>
+
+                        <Grid ColumnDefinitions="*,*"
+                              ColumnSpacing="10"
+                              IsVisible="{Binding IsAuthenticated}">
+                            <buttons:SfButton Grid.Column="0"
+                                              Text="+ Đăng tin"
+                                              Command="{Binding CreateCommand}"
+                                              Style="{StaticResource LiquidPrimaryButton}"
+                                              HorizontalOptions="Fill"
+                                              HeightRequest="42"
+                                              MinimumHeightRequest="42"
+                                              Padding="12,0"
+                                              FontSize="13" />
+                            <buttons:SfButton Grid.Column="1"
+                                              Text="Đăng xuất"
+                                              Command="{Binding SignOutCommand}"
+                                              Style="{StaticResource OutlineSfButton}"
+                                              HorizontalOptions="Fill"
+                                              HeightRequest="42"
+                                              MinimumHeightRequest="42"
+                                              Padding="12,0"
+                                              FontSize="13"
+                                              AutomationId="MyListingsSignOut" />
+                        </Grid>
                     </VerticalStackLayout>
-                    <buttons:SfButton Grid.Column="1" Text="+ Đăng tin" Command="{Binding CreateCommand}"
-                                      IsVisible="{Binding IsAuthenticated}" VerticalOptions="Center"
-                                      HeightRequest="42" Padding="12,0" />
-                    <buttons:SfButton Grid.Column="2" Text="Làm mới" Command="{Binding LoadCommand}"
-                                      IsVisible="{Binding IsAuthenticated}" Style="{StaticResource SoftSfButton}"
-                                      VerticalOptions="Center" HeightRequest="42" Padding="12,0"
-                                      AutomationId="MyListingsRefresh" />
-                    <buttons:SfButton Grid.Column="3" Text="Đăng xuất" Command="{Binding SignOutCommand}"
-                                      IsVisible="{Binding IsAuthenticated}" Style="{StaticResource OutlineSfButton}"
-                                      VerticalOptions="Center" HeightRequest="42" Padding="10,0"
-                                      AutomationId="MyListingsSignOut" />
-                </Grid>
-                <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}" />
-            </VerticalStackLayout>
-        </Border>
+                </Border>
+            </ContentView>
 
         <!-- Progress, Status Banner & Dashboard Filter Bar -->
         <VerticalStackLayout Grid.Row="1" Padding="16,8,16,0" Spacing="8"
@@ -52,12 +66,8 @@
                         <Setter Property="IsVisible" Value="False" />
                     </DataTrigger>
                 </Border.Triggers>
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                    <Label Text="{Binding Message}" Style="{StaticResource Caption}" FontSize="12.5"
-                           VerticalOptions="Center" SemanticProperties.Description="Thông báo quản lý tin" />
-                    <buttons:SfButton Grid.Column="1" Text="Tải lại" Command="{Binding LoadCommand}"
-                                      Style="{StaticResource SoftSfButton}" WidthRequest="88" />
-                </Grid>
+                <Label Text="{Binding Message}" Style="{StaticResource Caption}" FontSize="12.5"
+                       VerticalOptions="Center" SemanticProperties.Description="Thông báo quản lý tin" />
             </Border>
             <ContentView IsVisible="{Binding IsAuthenticated}">
                 <VerticalStackLayout Spacing="8" Padding="0,2,0,4" IsVisible="{Binding HasAnyListings}">
@@ -113,7 +123,7 @@
                     <VerticalStackLayout Spacing="6">
                         <Label Text="DÀNH CHO CHỦ PHÒNG" Style="{StaticResource Eyebrow}"
                                TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
-                        <Label Text="Quản lý phòng trọ dễ dàng" FontSize="22" FontFamily="OpenSansSemibold"
+                        <Label Text="Quản lý phòng trọ dễ dàng" FontSize="22" FontFamily="FontSemiBold"
                                CharacterSpacing="-0.4" />
                         <Label Text="{Binding Message}" Style="{StaticResource Caption}" FontSize="13.5" LineHeight="1.35" />
                     </VerticalStackLayout>
@@ -124,9 +134,13 @@
             </Border>
         </ScrollView>
 
-        <!-- 8.3 & 8.4 Authenticated Listings ScrollView + BindableLayout (Prevents WinUI 3 Card Clipping) -->
-        <ScrollView Grid.Row="2" IsVisible="{Binding IsAuthenticated}">
-            <VerticalStackLayout Padding="16,10,16,24" Spacing="12"
+        <!-- 8.3 & 8.4 Authenticated Listings Pull-to-Refresh + ScrollView + BindableLayout -->
+        <RefreshView Grid.Row="2"
+                     IsVisible="{Binding IsAuthenticated}"
+                     Refreshing="OnRefreshing"
+                     RefreshColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}">
+        <ScrollView>
+            <VerticalStackLayout Padding="16,10,16,116" Spacing="12"
                                  MaximumWidthRequest="960" HorizontalOptions="Fill">
                 <Border Padding="24,28" Margin="0,4" VerticalOptions="Start" StrokeShape="RoundRectangle 22"
                         IsVisible="{Binding ShowEmptyState}">
@@ -136,7 +150,7 @@
                             <Image Source="radar_mark.png" WidthRequest="28" HeightRequest="28" />
                         </Border>
                         <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
-                        <Label Text="Bạn chưa có tin đăng nào" FontFamily="OpenSansSemibold" FontSize="17" HorizontalTextAlignment="Center">
+                        <Label Text="Bạn chưa có tin đăng nào" FontFamily="FontSemiBold" FontSize="17" HorizontalTextAlignment="Center">
                             <Label.Triggers>
                                 <DataTrigger TargetType="Label" Binding="{Binding IsFilteredEmpty}" Value="True">
                                     <Setter Property="Text" Value="Không có tin nào ở trạng thái này" />
@@ -195,7 +209,7 @@
                                         </Border>
                                         <VerticalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
                                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                                <Label Text="{Binding PriceText}" FontFamily="OpenSansSemibold" FontSize="17"
+                                                <Label Text="{Binding PriceText}" FontFamily="FontSemiBold" FontSize="17"
                                                        TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}"
                                                        VerticalOptions="Center" MaxLines="1" LineBreakMode="TailTruncation" />
                                                 <Border Grid.Column="1" Padding="10,4" StrokeThickness="0" StrokeShape="RoundRectangle 12"
@@ -209,7 +223,7 @@
                                                             <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource AvailableBg}, Dark={StaticResource AvailableBgDark}}" />
                                                         </DataTrigger>
                                                     </Border.Triggers>
-                                                    <Label Text="{Binding StatusText}" FontFamily="OpenSansSemibold" FontSize="11.5"
+                                                    <Label Text="{Binding StatusText}" FontFamily="FontSemiBold" FontSize="11.5"
                                                            TextColor="{AppThemeBinding Light={StaticResource AccentPressed}, Dark={StaticResource AccentDark}}">
                                                         <Label.Triggers>
                                                             <DataTrigger TargetType="Label" Binding="{Binding IsPendingReview}" Value="True">
@@ -267,5 +281,7 @@
                 </VerticalStackLayout>
             </VerticalStackLayout>
         </ScrollView>
+        </RefreshView>
+        </Grid>
     </Grid>
 </ContentPage>

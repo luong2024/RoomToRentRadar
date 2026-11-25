@@ -1,14 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
-<rect width="800" height="450" fill="#F6F3EF"/><path d="M0 340h800v110H0Z" fill="#E6DED3"/><path d="M0 340h800" stroke="#FFFFFF" stroke-width="5"/>
-<rect x="460" y="30" width="225" height="245" rx="4" fill="#FFFFFF"/><rect x="477" y="46" width="191" height="211" fill="#E4DED8"/>
-<path d="m477 195 70-88 50 40 71-87v197H477" fill="#D8DDE0"/><path d="M573 46v211M477 151h191" stroke="#FFFFFF" stroke-width="9"/>
-<path d="M438 22h34v267h-44ZM676 22h29l12 267h-41Z" fill="#F7F4F0"/>
-<rect x="100" y="212" width="300" height="131" rx="9" fill="#847B72"/><rect x="80" y="270" width="365" height="101" rx="10" fill="#9E7D9E"/><rect x="80" y="267" width="365" height="31" rx="10" fill="#FFFFFF"/>
-<rect x="111" y="242" width="110" height="48" rx="12" fill="#FFFFFF"/><rect x="233" y="242" width="110" height="48" rx="12" fill="#E8DBD4"/>
-<path d="M262 290h183v79H262Z" fill="#CBBFB3"/><path d="M280 297v65m17-65v65m17-65v65" stroke="#FFFFFF" stroke-opacity=".25" stroke-width="3"/>
-<rect x="94" y="369" width="13" height="19" fill="#847B72"/><rect x="418" y="369" width="13" height="19" fill="#847B72"/>
-<ellipse cx="560" cy="394" rx="160" ry="28" fill="#FFFFFF"/><rect x="573" y="286" width="142" height="13" rx="4" fill="#918984"/><path d="m587 299-8 81m119-81 8 81" stroke="#918984" stroke-width="10"/>
-<path d="M641 269v-65" stroke="#C4C4B8" stroke-width="5"/><ellipse cx="621" cy="222" rx="24" ry="10" transform="rotate(30 621 222)" fill="#A0AA9C"/><ellipse cx="660" cy="204" rx="24" ry="10" transform="rotate(-35 660 204)" fill="#CBBFB3"/><path d="m622 257 7 29h28l7-29Z" fill="#8D837B"/>
-<rect x="146" y="65" width="94" height="107" rx="4" fill="#8D837B"/><rect x="153" y="72" width="80" height="93" fill="#F6F3EF"/><circle cx="192" cy="105" r="20" fill="#9E7D9E"/><path d="m153 157 28-36 52 44h-80" fill="#A9B2A2"/>
-<path d="M350 0v74" stroke="#918984" stroke-width="3"/><path d="m319 99 13-27h36l13 27Z" fill="#CBBFB3"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+  <defs>
+    <linearGradient id="wall3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EEF2FF"/>
+      <stop offset="100%" stop-color="#E0F2FE"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="500" fill="url(#wall3)"/>
+  <rect y="368" width="800" height="132" fill="#D4E2F4"/>
+  <!-- Arched Studio Window -->
+  <path d="M140 320 L140 155 A110 110 0 0 1 360 155 L360 320 Z" fill="#F8FAFC" stroke="#FFFFFF" stroke-width="8"/>
+  <path d="M156 308 L156 158 A94 94 0 0 1 344 158 L344 308 Z" fill="#BAE6FD" opacity="0.6"/>
+  <!-- Modern Study Desk & Bed -->
+  <rect x="430" y="285" width="275" height="98" rx="24" fill="#0066FF"/>
+  <rect x="460" y="256" width="110" height="40" rx="14" fill="#FFFFFF"/>
+  <circle cx="585" cy="145" r="38" fill="#FFFFFF" opacity="0.82"/>
+  <circle cx="585" cy="145" r="20" fill="#38BDF8" opacity="0.5"/>
 </svg>

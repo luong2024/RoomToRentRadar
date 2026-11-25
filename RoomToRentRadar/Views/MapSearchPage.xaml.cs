@@ -24,9 +24,10 @@ public partial class MapSearchPage : ContentPage
 {
     private const double PinHitRadiusPixels = 36;
 
-    private static readonly MapsuiColor AccentColor = new(121, 84, 119, 255);
-    private static readonly MapsuiColor AccentFill = new(121, 84, 119, 28);
-    private static readonly MapsuiColor InkColor = new(48, 41, 54, 255);
+    private static readonly MapsuiColor AccentColor = new(0, 102, 255, 255);
+    private static readonly MapsuiColor SelectedPinColor = new(6, 182, 212, 255);
+    private static readonly MapsuiColor AccentFill = new(0, 102, 255, 38);
+    private static readonly MapsuiColor InkColor = new(11, 21, 38, 255);
     private static readonly MapsuiColor SurfaceColor = new(255, 255, 255, 255);
     private static readonly GeometryFactory GeometryFactory = new(new PrecisionModel(), 4326);
 
@@ -358,11 +359,11 @@ public partial class MapSearchPage : ContentPage
         {
             Text = $"\u00a0 {pin["PriceLabel"]} \u00a0",
             ForeColor = isSelected ? SurfaceColor : InkColor,
-            BackColor = new MapsuiBrush(isSelected ? AccentColor : SurfaceColor),
-            BorderColor = isSelected ? SurfaceColor : new MapsuiColor(229, 223, 232, 255),
-            BorderThickness = isSelected ? 2 : 1,
-            CornerRounding = 12,
-            Font = new Mapsui.Styles.Font { Size = 12, Bold = true },
+            BackColor = new MapsuiBrush(isSelected ? SelectedPinColor : SurfaceColor),
+            BorderColor = isSelected ? SurfaceColor : AccentColor,
+            BorderThickness = isSelected ? 2.2 : 1.4,
+            CornerRounding = 14,
+            Font = new Mapsui.Styles.Font { Size = 12.5, Bold = true },
             Halo = null,
             HorizontalAlignment = LabelStyle.HorizontalAlignmentEnum.Center,
             VerticalAlignment = LabelStyle.VerticalAlignmentEnum.Center,

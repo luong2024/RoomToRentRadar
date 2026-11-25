@@ -2,15 +2,17 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:RoomToRentRadar.ViewModels"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Controls"
              xmlns:buttons="clr-namespace:Syncfusion.Maui.Toolkit.Buttons;assembly=Syncfusion.Maui.Toolkit"
              x:Class="RoomToRentRadar.Views.AccountSettingsPage"
              x:DataType="vm:AccountSettingsViewModel"
              Title="Cài đặt tài khoản"
              Shell.NavBarIsVisible="False"
-             SafeAreaEdges="All">
+             Shell.TabBarIsVisible="False"
+             SafeAreaEdges="Container">
     <ContentPage.Resources>
         <Style x:Key="SettingsRowTitle" TargetType="Label">
-            <Setter Property="FontFamily" Value="OpenSansSemibold" />
+            <Setter Property="FontFamily" Value="FontSemiBold" />
             <Setter Property="FontSize" Value="14" />
             <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
         </Style>
@@ -18,35 +20,42 @@
             <Setter Property="FontSize" Value="12" />
         </Style>
         <Style x:Key="SettingsIconTile" TargetType="Border">
-            <Setter Property="WidthRequest" Value="38" />
-            <Setter Property="HeightRequest" Value="38" />
-            <Setter Property="StrokeThickness" Value="0" />
-            <Setter Property="StrokeShape" Value="RoundRectangle 12" />
+            <Setter Property="WidthRequest" Value="40" />
+            <Setter Property="HeightRequest" Value="40" />
+            <Setter Property="StrokeThickness" Value="1" />
+            <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource GlassSpecularRimLight}, Dark={StaticResource GlassSpecularRimDark}}" />
+            <Setter Property="StrokeShape" Value="RoundRectangle 14" />
             <Setter Property="VerticalOptions" Value="Center" />
-            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}" />
+            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource BrandTint}, Dark={StaticResource BrandTintDark}}" />
         </Style>
     </ContentPage.Resources>
 
-    <Grid RowDefinitions="Auto,*" RowSpacing="0"
-          MaximumWidthRequest="1120" HorizontalOptions="Fill">
-        <!-- Header -->
-        <Border StrokeShape="Rectangle" StrokeThickness="0"
-                BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
-            <VerticalStackLayout Spacing="0">
-                <Grid Padding="10,10,16,10" ColumnDefinitions="Auto,*" ColumnSpacing="6">
-                    <ImageButton Source="back_icon.png" Style="{StaticResource IconImageButton}"
-                                 Command="{Binding GoBackCommand}"
-                                 AutomationId="SettingsBack"
-                                 SemanticProperties.Description="Quay lại trang tài khoản" />
-                    <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
-                        <Label Text="Cài đặt tài khoản" Style="{StaticResource ScreenTitle}" FontSize="20"
-                               SemanticProperties.HeadingLevel="Level1" />
-                        <Label Text="Thông báo, quyền riêng tư và bảo mật" Style="{StaticResource Caption}" FontSize="12" />
-                    </VerticalStackLayout>
-                </Grid>
-                <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}" />
-            </VerticalStackLayout>
-        </Border>
+    <Grid>
+        <controls:LiquidBackdropView />
+
+        <Grid RowDefinitions="Auto,*" RowSpacing="0"
+              MaximumWidthRequest="1120" HorizontalOptions="Fill">
+            <!-- Floating Liquid Glass Header -->
+            <ContentView Padding="16,10,16,6">
+                <Border Style="{StaticResource LiquidFloatingPanel}" Padding="12,10">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                        <Border Style="{StaticResource LiquidOrbBorder}"
+                                AutomationId="SettingsBack"
+                                SemanticProperties.Description="Quay lại trang tài khoản">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding GoBackCommand}" />
+                            </Border.GestureRecognizers>
+                            <Image Source="back_icon.png" WidthRequest="18" HeightRequest="18"
+                                   HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
+                            <Label Text="Cài đặt tài khoản" Style="{StaticResource ScreenTitle}" FontSize="19"
+                                   SemanticProperties.HeadingLevel="Level1" />
+                            <Label Text="Thông báo, quyền riêng tư và bảo mật" Style="{StaticResource Caption}" FontSize="11.5" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+            </ContentView>
 
         <!-- Loading -->
         <VerticalStackLayout Grid.Row="1" IsVisible="{Binding IsLoadingState}" Spacing="12"
@@ -61,7 +70,7 @@
                 <VerticalStackLayout Spacing="14">
                     <Label Text="CẦN ĐĂNG NHẬP" Style="{StaticResource Eyebrow}"
                            TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
-                    <Label Text="Đăng nhập để xem cài đặt" FontSize="22" FontFamily="OpenSansSemibold" />
+                    <Label Text="Đăng nhập để xem cài đặt" FontSize="22" FontFamily="FontSemiBold" />
                     <Label Text="Bạn cần đăng nhập trước khi thay đổi cài đặt tài khoản."
                            Style="{StaticResource Caption}" FontSize="13.5" LineHeight="1.35" />
                     <buttons:SfButton Text="Đăng nhập" Command="{Binding SignInCommand}" HorizontalOptions="Fill"
@@ -74,7 +83,7 @@
         <ScrollView Grid.Row="1" Padding="16,20" IsVisible="{Binding IsErrorState}">
             <Border Padding="24,28" StrokeShape="RoundRectangle 22" VerticalOptions="Start" MaximumWidthRequest="460" HorizontalOptions="Fill">
                 <VerticalStackLayout Spacing="12">
-                    <Label Text="Chưa tải được cài đặt" FontSize="22" FontFamily="OpenSansSemibold" />
+                    <Label Text="Chưa tải được cài đặt" FontSize="22" FontFamily="FontSemiBold" />
                     <Label Text="{Binding Message}" Style="{StaticResource Caption}" FontSize="13.5" LineHeight="1.35" />
                     <buttons:SfButton Text="Thử lại" Command="{Binding LoadCommand}" HorizontalOptions="Start"
                                       AutomationId="SettingsRetry" />
@@ -89,7 +98,7 @@
                 <Border Padding="16,14" StrokeShape="RoundRectangle 20">
                     <VerticalStackLayout Spacing="4">
                         <Label Text="Tài khoản" Style="{StaticResource SectionTitle}" FontSize="16" />
-                        <Label Text="{Binding Email}" FontSize="14" FontFamily="OpenSansSemibold"
+                        <Label Text="{Binding Email}" FontSize="14" FontFamily="FontSemiBold"
                                AutomationId="SettingsEmail"
                                TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
                         <Label Text="Email dùng để đăng nhập và nhận thông báo quan trọng."
@@ -178,7 +187,7 @@
                                         <Border Padding="7,1" StrokeThickness="0" StrokeShape="RoundRectangle 8"
                                                 VerticalOptions="Center"
                                                 BackgroundColor="{AppThemeBinding Light={StaticResource WarmSoft}, Dark={StaticResource WarmSoftDark}}">
-                                            <Label Text="Sắp ra mắt" FontFamily="OpenSansSemibold" FontSize="9.5"
+                                            <Label Text="Sắp ra mắt" FontFamily="FontSemiBold" FontSize="9.5"
                                                    TextColor="{AppThemeBinding Light={StaticResource WarmAccent}, Dark=#F2C48F}" />
                                         </Border>
                                     </HorizontalStackLayout>
@@ -204,7 +213,7 @@
                                         <Border Padding="7,1" StrokeThickness="0" StrokeShape="RoundRectangle 8"
                                                 VerticalOptions="Center"
                                                 BackgroundColor="{AppThemeBinding Light={StaticResource WarmSoft}, Dark={StaticResource WarmSoftDark}}">
-                                            <Label Text="Sắp ra mắt" FontFamily="OpenSansSemibold" FontSize="9.5"
+                                            <Label Text="Sắp ra mắt" FontFamily="FontSemiBold" FontSize="9.5"
                                                    TextColor="{AppThemeBinding Light={StaticResource WarmAccent}, Dark=#F2C48F}" />
                                         </Border>
                                     </HorizontalStackLayout>
@@ -238,7 +247,7 @@
                                         <Border Padding="7,1" StrokeThickness="0" StrokeShape="RoundRectangle 8"
                                                 VerticalOptions="Center"
                                                 BackgroundColor="{AppThemeBinding Light={StaticResource WarmSoft}, Dark={StaticResource WarmSoftDark}}">
-                                            <Label Text="Sắp ra mắt" FontFamily="OpenSansSemibold" FontSize="9.5"
+                                            <Label Text="Sắp ra mắt" FontFamily="FontSemiBold" FontSize="9.5"
                                                    TextColor="{AppThemeBinding Light={StaticResource WarmAccent}, Dark=#F2C48F}" />
                                         </Border>
                                     </HorizontalStackLayout>
@@ -264,7 +273,7 @@
                                         <Border Padding="7,1" StrokeThickness="0" StrokeShape="RoundRectangle 8"
                                                 VerticalOptions="Center"
                                                 BackgroundColor="{AppThemeBinding Light={StaticResource WarmSoft}, Dark={StaticResource WarmSoftDark}}">
-                                            <Label Text="Sắp ra mắt" FontFamily="OpenSansSemibold" FontSize="9.5"
+                                            <Label Text="Sắp ra mắt" FontFamily="FontSemiBold" FontSize="9.5"
                                                    TextColor="{AppThemeBinding Light={StaticResource WarmAccent}, Dark=#F2C48F}" />
                                         </Border>
                                     </HorizontalStackLayout>
@@ -311,5 +320,6 @@
                                   SemanticProperties.Description="Đăng xuất khỏi tài khoản" />
             </VerticalStackLayout>
         </ScrollView>
+        </Grid>
     </Grid>
 </ContentPage>

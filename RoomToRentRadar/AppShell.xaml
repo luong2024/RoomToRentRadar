@@ -1,21 +1,43 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <Shell xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
        xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-       x:Class="RoomToRentRadar.AppShell" Title="Room Radar"
-       FlyoutBehavior="Disabled" Shell.NavBarIsVisible="False"
-       Shell.TabBarBackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}"
-       Shell.TabBarForegroundColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}"
-       Shell.TabBarTitleColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}"
+       x:Class="RoomToRentRadar.AppShell"
+       Title="Room Radar"
+       FlyoutBehavior="Disabled"
+       Shell.NavBarIsVisible="False"
+       Shell.TabBarBackgroundColor="{AppThemeBinding Light=#EBFAFDFE, Dark=#E60D1729}"
+       Shell.TabBarForegroundColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}"
+       Shell.TabBarTitleColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}"
        Shell.TabBarUnselectedColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}"
-       Shell.BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}"
-       Shell.ForegroundColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}"
-       Shell.TitleColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}">
+       BackgroundColor="{AppThemeBinding Light={StaticResource CanvasLight}, Dark={StaticResource CanvasDark}}">
+
     <TabBar>
-        <ShellContent x:Name="ExploreTab" Icon="explore_tab.png" Title="Khám phá" Route="home" />
-        <ShellContent x:Name="FavouritesTab" Icon="favourites_tab.png" Title="Yêu thích" Route="favourites" />
-        <ShellContent x:Name="MapTab" Icon="map_tab.png" Title="Bản đồ" Route="map" />
-        <ShellContent x:Name="MyListingsTab" Icon="listings_tab.png" Title="Tin của tôi" Route="my-listings" IsVisible="False" />
-        <ShellContent x:Name="ModerationTab" Icon="moderation_tab.png" Title="Kiểm duyệt" Route="moderation" IsVisible="False" />
-        <ShellContent x:Name="ProfileTab" Icon="person_icon.png" Title="Tài khoản" Route="profile" />
+        <ShellContent x:Name="ExploreTab"
+                      Title="Khám phá"
+                      Icon="explore_tab.png"
+                      Route="home" />
+        <ShellContent x:Name="FavouritesTab"
+                      Title="Đã lưu"
+                      Icon="favourites_tab.png"
+                      Route="favourites" />
+        <ShellContent x:Name="MapTab"
+                      Title="Bản đồ"
+                      Icon="map_tab.png"
+                      Route="map" />
+        <ShellContent x:Name="MyListingsTab"
+                      Title="Tin của tôi"
+                      Icon="listings_tab.png"
+                      Route="my-listings"
+                      IsVisible="False" />
+        <ShellContent x:Name="ModerationTab"
+                      Title="Kiểm duyệt"
+                      Icon="moderation_tab.png"
+                      Route="moderation"
+                      IsVisible="False" />
+        <ShellContent x:Name="ProfileTab"
+                      Title="Tài khoản"
+                      Icon="person_icon.png"
+                      Route="profile" />
     </TabBar>
+
 </Shell>

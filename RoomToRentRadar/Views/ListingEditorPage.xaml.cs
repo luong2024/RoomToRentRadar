@@ -18,8 +18,9 @@ namespace RoomToRentRadar.Views;
 public partial class ListingEditorPage : ContentPage
 {
     private readonly ListingEditorViewModel _model;
-    private readonly TileLayer _tileLayer;
+    private TileLayer? _tileLayer;
     private readonly MemoryLayer _locationLayer = new("Vị trí phòng") { Style = null };
+    private bool _mapInitialized;
     private bool _observing;
     private bool _disposed;
     private bool _mapUpdateQueued;
@@ -29,6 +30,14 @@ public partial class ListingEditorPage : ContentPage
     {
         InitializeComponent();
         BindingContext = _model = model;
+    }
+
+    private void InitializeMapIfNeeded()
+    {
+        if (_mapInitialized || _disposed)
+            return;
+
+        _mapInitialized = true;
         _tileLayer = new TileLayer(new HttpTileSource(new GlobalSphericalMercator(),
             "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
             name: "Esri World Street Map", attribution: new Attribution(
@@ -39,6 +48,13 @@ public partial class ListingEditorPage : ContentPage
         LocationMap.Map.Layers.Add(_locationLayer);
         var (x, y) = SphericalMercator.FromLonLat(106.7009, 10.7769);
         LocationMap.Map.Navigator.CenterOnAndZoomTo(new MPoint(x, y), 8);
+        QueueMapPinUpdate(null);
+    }
+
+    private async void OnBackTapped(object? sender, TappedEventArgs e)
+    {
+        if (Shell.Current is not null)
+            await Shell.Current.GoToAsync("..");
     }
 
     protected override void OnAppearing()
@@ -53,7 +69,7 @@ public partial class ListingEditorPage : ContentPage
             _model.LongitudeField.PropertyChanged += OnLocationChanged;
             _model.CurrentLocationResolved += OnCurrentLocationResolved;
         }
-        QueueMapPinUpdate(null);
+        Dispatcher.Dispatch(InitializeMapIfNeeded);
         if (_model.LoadCommand.CanExecute(null)) _model.LoadCommand.Execute(null);
     }
 
@@ -80,7 +96,7 @@ public partial class ListingEditorPage : ContentPage
                 _observing = false;
                 LocationMap.IsVisible = false;
                 try { LocationMap.Map.Layers.Clear(); } catch { }
-                try { _tileLayer.Dispose(); } catch { }
+                try { _tileLayer?.Dispose(); } catch { }
             }
 
             _model.ReleaseSelectedPhotos();

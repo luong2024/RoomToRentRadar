@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:RoomToRentRadar.ViewModels"
              xmlns:models="clr-namespace:RoomToRentRadar.Models"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Controls"
              xmlns:buttons="clr-namespace:Syncfusion.Maui.Toolkit.Buttons;assembly=Syncfusion.Maui.Toolkit"
              xmlns:cards="clr-namespace:Syncfusion.Maui.Toolkit.Cards;assembly=Syncfusion.Maui.Toolkit"
              xmlns:chips="clr-namespace:Syncfusion.Maui.Toolkit.Chips;assembly=Syncfusion.Maui.Toolkit"
@@ -13,8 +14,9 @@
              x:Class="RoomToRentRadar.Views.ListingEditorPage"
              x:DataType="vm:ListingEditorViewModel"
              Title="{Binding PageTitle}"
-             Shell.NavBarIsVisible="True"
-             SafeAreaEdges="All">
+             Shell.NavBarIsVisible="False"
+             Shell.TabBarIsVisible="False"
+             SafeAreaEdges="Container">
     <ContentPage.Resources>
         <SolidColorBrush x:Key="DangerSoftDarkBrush" Color="{StaticResource DangerSoftDark}" />
         <Style x:Key="FieldError" TargetType="Label">
@@ -23,7 +25,7 @@
             <Setter Property="Margin" Value="4,0,0,0" />
         </Style>
         <Style x:Key="SectionLabel" TargetType="Label">
-            <Setter Property="FontFamily" Value="OpenSansSemibold" />
+            <Setter Property="FontFamily" Value="FontSemiBold" />
             <Setter Property="FontSize" Value="13" />
             <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
         </Style>
@@ -46,39 +48,69 @@
         </Style>
     </ContentPage.Resources>
 
-    <Grid RowDefinitions="*,Auto">
-    <ScrollView>
-        <VerticalStackLayout Padding="20,16,20,36" Spacing="16" MaximumWidthRequest="740" HorizontalOptions="Fill">
-            <!-- Header Summary Card -->
-            <cards:SfCardView Padding="18" Style="{StaticResource ElevatedCard}"
-                              IndicatorColor="{StaticResource Accent}" IndicatorPosition="Top" IndicatorThickness="4">
-                <VerticalStackLayout Spacing="10">
-                    <VerticalStackLayout Spacing="8">
-                        <Label Text="{Binding PageTitle}" FontSize="24" FontFamily="OpenSansSemibold" CharacterSpacing="-0.4"
-                               SemanticProperties.HeadingLevel="Level1" VerticalOptions="Center" />
-                        <chips:SfChip Text="{Binding StatusText}" HorizontalOptions="Start" Style="{StaticResource AccentSfChip}"
-                                      IsEnabled="False" VerticalOptions="Center" />
-                    </VerticalStackLayout>
-                    <Label Text="{Binding Message}" AutomationId="ListingFormMessage" Style="{StaticResource Caption}" FontSize="13">
-                        <Label.Triggers>
-                            <DataTrigger TargetType="Label" Binding="{Binding Message}" Value="">
-                                <Setter Property="IsVisible" Value="False" />
-                            </DataTrigger>
-                        </Label.Triggers>
-                    </Label>
-                    <VerticalStackLayout Spacing="8">
-                        <buttons:SfButton Text="Đăng nhập để lưu tin" Command="{Binding SignInCommand}">
-                            <buttons:SfButton.Triggers>
-                                <DataTrigger TargetType="buttons:SfButton" Binding="{Binding IsAuthenticated}" Value="True">
+    <Grid>
+        <controls:LiquidBackdropView />
+        <Grid RowDefinitions="Auto,*,Auto">
+            <!-- Floating Liquid Glass Header (high-contrast Ink/InkDark title, no duplicate NavBar) -->
+            <ContentView Grid.Row="0" Padding="16,10,16,6">
+                <Border Style="{StaticResource LiquidFloatingPanel}" Padding="12,10" MaximumWidthRequest="740">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                        <Border Grid.Column="0"
+                                Style="{StaticResource LiquidOrbBorder}"
+                                SemanticProperties.Description="Quay lại">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnBackTapped" />
+                            </Border.GestureRecognizers>
+                            <Image Source="back_icon.png" WidthRequest="18" HeightRequest="18"
+                                   HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+                        <Label Grid.Column="1"
+                               Text="{Binding PageTitle}"
+                               Style="{StaticResource ScreenTitle}"
+                               FontSize="19"
+                               VerticalOptions="Center"
+                               MaxLines="1"
+                               LineBreakMode="TailTruncation"
+                               SemanticProperties.HeadingLevel="Level1" />
+                        <chips:SfChip Grid.Column="2"
+                                      Text="{Binding StatusText}"
+                                      Style="{StaticResource AccentSfChip}"
+                                      IsEnabled="False"
+                                      VerticalOptions="Center" />
+                    </Grid>
+                </Border>
+            </ContentView>
+
+            <ScrollView Grid.Row="1">
+                    <VerticalStackLayout Padding="16,8,16,32" Spacing="14" MaximumWidthRequest="740" HorizontalOptions="Fill">
+                        <!-- Status / Sign-in Banner (only shown when needed; pull down to refresh) -->
+                        <Border Style="{StaticResource LiquidGlassCard}" Padding="14,12">
+                            <Border.Triggers>
+                                <MultiTrigger TargetType="Border">
+                                    <MultiTrigger.Conditions>
+                                        <BindingCondition Binding="{Binding IsAuthenticated}" Value="True" />
+                                        <BindingCondition Binding="{Binding Message}" Value="" />
+                                    </MultiTrigger.Conditions>
                                     <Setter Property="IsVisible" Value="False" />
-                                </DataTrigger>
-                            </buttons:SfButton.Triggers>
-                        </buttons:SfButton>
-                        <buttons:SfButton Text="Tải lại" Command="{Binding LoadCommand}" Style="{StaticResource SoftSfButton}" />
-                    </VerticalStackLayout>
-                    <progressBar:SfLinearProgressBar IsIndeterminate="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
-                </VerticalStackLayout>
-            </cards:SfCardView>
+                                </MultiTrigger>
+                            </Border.Triggers>
+                            <VerticalStackLayout Spacing="10">
+                                <Label Text="{Binding Message}" AutomationId="ListingFormMessage" Style="{StaticResource Caption}" FontSize="13">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding Message}" Value="">
+                                            <Setter Property="IsVisible" Value="False" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                                <buttons:SfButton Text="Đăng nhập để lưu tin" Command="{Binding SignInCommand}">
+                                    <buttons:SfButton.Triggers>
+                                        <DataTrigger TargetType="buttons:SfButton" Binding="{Binding IsAuthenticated}" Value="True">
+                                            <Setter Property="IsVisible" Value="False" />
+                                        </DataTrigger>
+                                    </buttons:SfButton.Triggers>
+                                </buttons:SfButton>
+                            </VerticalStackLayout>
+                        </Border>
 
             <!-- Step 01: Basic Info -->
             <Border Padding="18" StrokeThickness="1" StrokeShape="RoundRectangle 22"
@@ -88,7 +120,7 @@
                     <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
                         <Border WidthRequest="28" HeightRequest="28" StrokeThickness="0" StrokeShape="RoundRectangle 10"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}">
-                            <Label Text="01" FontSize="11" FontFamily="OpenSansSemibold"
+                            <Label Text="01" FontSize="11" FontFamily="FontSemiBold"
                                    TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}"
                                    HorizontalTextAlignment="Center" VerticalTextAlignment="Center" />
                         </Border>
@@ -161,7 +193,7 @@
                     <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
                         <Border WidthRequest="28" HeightRequest="28" StrokeThickness="0" StrokeShape="RoundRectangle 10"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}">
-                            <Label Text="02" FontSize="11" FontFamily="OpenSansSemibold"
+                            <Label Text="02" FontSize="11" FontFamily="FontSemiBold"
                                    TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}"
                                    HorizontalTextAlignment="Center" VerticalTextAlignment="Center" />
                         </Border>
@@ -259,7 +291,7 @@
                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
                         <Border WidthRequest="28" HeightRequest="28" StrokeThickness="0" StrokeShape="RoundRectangle 10"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}">
-                            <Label Text="03" FontSize="11" FontFamily="OpenSansSemibold"
+                            <Label Text="03" FontSize="11" FontFamily="FontSemiBold"
                                    TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}"
                                    HorizontalTextAlignment="Center" VerticalTextAlignment="Center" />
                         </Border>
@@ -331,7 +363,7 @@
                         <HorizontalStackLayout Spacing="10" Padding="4,6" VerticalOptions="Center">
                             <Border WidthRequest="28" HeightRequest="28" StrokeThickness="0" StrokeShape="RoundRectangle 10"
                                     BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}">
-                                <Label Text="04" FontSize="11" FontFamily="OpenSansSemibold"
+                                <Label Text="04" FontSize="11" FontFamily="FontSemiBold"
                                        TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}"
                                        HorizontalTextAlignment="Center" VerticalTextAlignment="Center" />
                             </Border>
@@ -360,7 +392,7 @@
                     <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
                         <Border WidthRequest="28" HeightRequest="28" StrokeThickness="0" StrokeShape="RoundRectangle 10"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}">
-                            <Label Text="05" FontSize="11" FontFamily="OpenSansSemibold"
+                            <Label Text="05" FontSize="11" FontFamily="FontSemiBold"
                                    TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}"
                                    HorizontalTextAlignment="Center" VerticalTextAlignment="Center" />
                         </Border>
@@ -433,7 +465,7 @@
 
         </VerticalStackLayout>
     </ScrollView>
-    <Border Grid.Row="1" Padding="20,12,20,16" StrokeShape="Rectangle" StrokeThickness="0"
+    <Border Grid.Row="2" Padding="20,12,20,16" StrokeShape="Rectangle" StrokeThickness="0"
             IsVisible="{Binding IsAuthenticated}" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
         <Grid RowDefinitions="Auto,Auto" RowSpacing="8" MaximumWidthRequest="740" HorizontalOptions="Fill">
             <Grid HeightRequest="50">
@@ -467,5 +499,6 @@
             </HorizontalStackLayout>
         </Grid>
     </Border>
+        </Grid>
     </Grid>
 </ContentPage>

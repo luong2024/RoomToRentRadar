@@ -27,4 +27,17 @@ public partial class MyListingsPage : ContentPage
         _model.DetachAuthSession();
         base.OnDisappearing();
     }
+
+    private async void OnRefreshing(object? sender, EventArgs e)
+    {
+        try
+        {
+            await _model.LoadCommand.ExecuteAsync(null);
+        }
+        finally
+        {
+            if (sender is RefreshView refreshView)
+                refreshView.IsRefreshing = false;
+        }
+    }
 }
