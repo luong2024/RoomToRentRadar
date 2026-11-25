@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading;
@@ -13,6 +13,7 @@ namespace RoomToRentRadar.PageModels;
 public partial class MapSearchViewModel : ObservableObject
 {
     private readonly ISpatialSearchService _spatialSearchService;
+    private readonly INavigationService? _navigationService;
 
     private bool _isDrawingMode;
     private bool _hasPolygon;
@@ -22,9 +23,10 @@ public partial class MapSearchViewModel : ObservableObject
     private bool _hasError;
     private string _errorMessage = string.Empty;
 
-    public MapSearchViewModel(ISpatialSearchService spatialSearchService)
+    public MapSearchViewModel(ISpatialSearchService spatialSearchService, INavigationService? navigationService = null)
     {
         _spatialSearchService = spatialSearchService;
+        _navigationService = navigationService;
     }
 
     /// <summary>
@@ -160,5 +162,17 @@ public partial class MapSearchViewModel : ObservableObject
         {
             IsSearching = false;
         }
+    }
+
+    [RelayCommand]
+    public async Task OpenRoomDetailAsync(SpatialSearchPinDto? room)
+    {
+        if (room is null || _navigationService is null)
+            return;
+
+        await _navigationService.GoToAsync("room-detail-view", new Dictionary<string, object>
+        {
+            ["id"] = room.Id
+        });
     }
 }

@@ -2,9 +2,12 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:maps="clr-namespace:Microsoft.Maui.Controls.Maps;assembly=Microsoft.Maui.Controls.Maps"
+             xmlns:pages="clr-namespace:RoomToRentRadar.Pages"
              xmlns:pageModels="clr-namespace:RoomToRentRadar.PageModels"
+             xmlns:contracts="clr-namespace:RoomToRentRadar.Models.Contracts"
              xmlns:fonts="clr-namespace:Fonts"
              x:Class="RoomToRentRadar.Pages.MapSearchPage"
+             x:Name="MapSearchPageRoot"
              x:DataType="pageModels:MapSearchViewModel"
              Title="Tìm theo bản đồ">
 
@@ -90,33 +93,77 @@
             </Border>
         </Grid>
 
-        <!-- Thanh trạng thái & số phòng tìm được (handoff sang T05.3) -->
+        <!-- Thanh trạng thái & danh sách phòng tìm được (nối sang Chi tiết phòng & handoff T05.3) -->
         <Border Grid.Row="1"
                 Padding="14,12"
                 BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark={StaticResource DarkSecondaryBackground}}"
                 Stroke="{AppThemeBinding Light=#E2E8F0, Dark=#32323C}"
                 StrokeThickness="1"
                 StrokeShape="RoundRectangle 0">
-            <Grid ColumnDefinitions="*,Auto"
-                  ColumnSpacing="10">
-                <VerticalStackLayout Grid.Column="0"
-                                     Spacing="2"
-                                     VerticalOptions="Center">
-                    <Label Text="{Binding StatusMessage}"
-                           FontSize="13.5"
-                           FontAttributes="Bold"
-                           TextColor="{AppThemeBinding Light=#0F172A, Dark=#F8FAFC}" />
-                    <Label Text="{Binding ErrorMessage}"
-                           IsVisible="{Binding HasError}"
-                           FontSize="12"
-                           TextColor="#DC2626" />
-                </VerticalStackLayout>
+            <VerticalStackLayout Spacing="8">
+                <Grid ColumnDefinitions="*,Auto"
+                      ColumnSpacing="10">
+                    <VerticalStackLayout Grid.Column="0"
+                                         Spacing="2"
+                                         VerticalOptions="Center">
+                        <Label Text="{Binding StatusMessage}"
+                               FontSize="13.5"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=#0F172A, Dark=#F8FAFC}" />
+                        <Label Text="{Binding ErrorMessage}"
+                               IsVisible="{Binding HasError}"
+                               FontSize="12"
+                               TextColor="#DC2626" />
+                    </VerticalStackLayout>
 
-                <ActivityIndicator Grid.Column="1"
-                                   IsRunning="{Binding IsSearching}"
-                                   IsVisible="{Binding IsSearching}"
-                                   VerticalOptions="Center" />
-            </Grid>
+                    <ActivityIndicator Grid.Column="1"
+                                       IsRunning="{Binding IsSearching}"
+                                       IsVisible="{Binding IsSearching}"
+                                       VerticalOptions="Center" />
+                </Grid>
+
+                <CollectionView AutomationId="MapMatchedRoomsList"
+                                ItemsSource="{Binding MatchedRooms}"
+                                IsVisible="{Binding HasPolygon}"
+                                HeightRequest="78"
+                                SelectionMode="None">
+                    <CollectionView.ItemsLayout>
+                        <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="contracts:SpatialSearchPinDto">
+                            <Border WidthRequest="215"
+                                    Padding="10,8"
+                                    BackgroundColor="{AppThemeBinding Light=#F8FAFC, Dark=#1E293B}"
+                                    Stroke="#CBD5E1"
+                                    StrokeThickness="1"
+                                    StrokeShape="RoundRectangle 8">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer
+                                        Command="{Binding Source={x:Reference MapSearchPageRoot}, Path=ViewModel.OpenRoomDetailCommand, x:DataType=pages:MapSearchPage}"
+                                        CommandParameter="{Binding .}" />
+                                </Border.GestureRecognizers>
+                                <VerticalStackLayout Spacing="2" VerticalOptions="Center">
+                                    <Label Text="{Binding Title}"
+                                           FontSize="12.5"
+                                           FontAttributes="Bold"
+                                           MaxLines="1"
+                                           LineBreakMode="TailTruncation" />
+                                    <Label Text="{Binding Rent, StringFormat='{0:N0} đ/tháng'}"
+                                           FontSize="12"
+                                           FontAttributes="Bold"
+                                           TextColor="#1D4ED8" />
+                                    <Label Text="{Binding Address}"
+                                           FontSize="10.5"
+                                           TextColor="#64748B"
+                                           MaxLines="1"
+                                           LineBreakMode="TailTruncation" />
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </VerticalStackLayout>
         </Border>
     </Grid>
 </ContentPage>

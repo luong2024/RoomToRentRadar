@@ -18,11 +18,13 @@ public partial class MapSearchPage : ContentPage
     private readonly MapSearchViewModel _viewModel;
     private readonly PolygonOverlayDrawable _drawable = new();
 
+    public MapSearchViewModel ViewModel => _viewModel;
+
     public MapSearchPage(MapSearchViewModel viewModel)
     {
-        InitializeComponent();
         _viewModel = viewModel;
         BindingContext = _viewModel;
+        InitializeComponent();
 
         PolygonCanvas.Drawable = _drawable;
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
