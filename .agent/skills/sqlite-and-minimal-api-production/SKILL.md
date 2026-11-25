@@ -1,16 +1,17 @@
 ---
 name: sqlite-and-minimal-api-production
-description: Production patterns and guardrails for implementing SQLite Repositories (Microsoft.Data.Sqlite) in RoomToRentRadar.Infrastructure and ASP.NET Core Minimal API Endpoints in RoomToRentRadar.Api without package bloat or runtime cast errors.
+description: Production patterns and guardrails for implementing SQLite Repositories (Microsoft.Data.Sqlite) in RoomToRentRadar.Infrastructure and ASP.NET Core MVC Controllers (JWT, DataAnnotations, Docker) in RoomToRentRadar.Api without package bloat or runtime cast errors. (Folder name kept for compatibility; the API now uses MVC Controllers, not Minimal API.)
 ---
 
-# SQLite & ASP.NET Core Minimal API Production Guardrails Skill
+# SQLite & ASP.NET Core MVC Web API Production Guardrails Skill
 
 ## Mục đích
-Hướng dẫn AI Agent khi thực hiện 10 Task Backend (`T01.1`, `T02.1`, `T03.1`, `T04.1`, `T05.1`, `T07.1`, `T08.1`, `T09.2`, `T12.1`, `T13.1`) viết code truy vấn SQLite trong `RoomToRentRadar.Infrastructure` và ánh xạ HTTP Endpoints trong `RoomToRentRadar.Api` đạt chuẩn Production, an toàn kiểu dữ liệu, chống SQL Injection và không làm hỏng `.csproj`.
+Hướng dẫn AI Agent khi thực hiện 10 Task Backend (`T01.1`, `T02.1`, `T03.1`, `T04.1`, `T05.1`, `T07.1`, `T08.1`, `T09.2`, `T12.1`, `T13.1`) viết code truy vấn SQLite trong `RoomToRentRadar.Infrastructure` và Controller MVC trong `RoomToRentRadar.Api` (chạy trong Docker) đạt chuẩn Production, an toàn kiểu dữ liệu, chống SQL Injection và không làm hỏng `.csproj`.
 
 ## Khi nào kích hoạt Skill này
 - Khi viết code trong `RoomToRentRadar.Infrastructure/Repositories/` hoặc `Services/`.
-- Khi viết code trong `RoomToRentRadar.Api/Endpoints/*Endpoints.cs`.
+- Khi viết code trong `RoomToRentRadar.Api/Controllers/*Controller.cs` hoặc `RoomToRentRadar.Api/Models/*Models.cs`.
+- Khi chuyển một file Minimal API cũ `RoomToRentRadar.Api/Endpoints/*Endpoints.cs` sang Controller.
 
 ---
 
@@ -63,36 +64,72 @@ Hướng dẫn AI Agent khi thực hiện 10 Task Backend (`T01.1`, `T02.1`, `T0
 
 ---
 
-## 2. Chuẩn Viết ASP.NET Core Minimal API Trong `RoomToRentRadar.Api/Endpoints/`
+## 2. Chuẩn Viết Controller MVC Trong `RoomToRentRadar.Api/Controllers/`
+
+Web API theo mô hình **MVC**: **M** = DTO trong `Api/Models/<Feature>Models.cs`, **C** = `Api/Controllers/<Feature>Controller.cs`, **V** = dữ liệu JSON trả về. Mẫu chuẩn để copy: `Controllers/AuthController.cs` + `Models/AuthModels.cs`.
 
 1. **Tuyệt đối KHÔNG sửa `RoomToRentRadar.Api/Program.cs`:**
-   - `Program.cs` đã gọi sẵn tất cả `app.Map...Endpoints()`. Mỗi Task chỉ sửa đúng 1 file `*Endpoints.cs` của mình.
-2. **Mẫu chuẩn viết Endpoint có kiểm tra đầu vào (Validation) và mã HTTP rõ ràng:**
+   - `Program.cs` đã bật sẵn `AddControllers()`, `MapControllers()` và JWT. Controller mới tự được nhận, mỗi Task chỉ sửa Controller và Models của mình.
+   - Nếu Api cần đăng ký repository/service thật mới (ví dụ `AddSingleton<IFavoriteRepository, FavoriteRepository>()`), báo `@architect` (`@quangtldc0301`) thêm vào `Program.cs`.
+   - **Không thêm route mới vào `Api/Endpoints/*Endpoints.cs`** (Minimal API cũ). Khi làm Task, chuyển route sang Controller rồi xóa file Endpoint tương ứng và dòng `app.Map...Endpoints()` (báo `@architect`).
+2. **Model (DTO) kiểm tra đầu vào bằng DataAnnotations, thông báo tiếng Việt:**
+   - Với `record`, gắn attribute **trên tham số** (`[Required] string Email`). **CẤM** dùng `[property: Required]`: MVC ném lỗi và trả 500 cho mọi request.
+   - `[ApiController]` tự trả **400** dạng `ErrorResponse { message, errors }` (cấu hình sẵn trong `Program.cs`) trước khi vào action.
    ```csharp
-   // Ví dụ trong RoomDetailEndpoints.cs (T03.1):
-   public static IEndpointRouteBuilder MapRoomDetailEndpoints(this IEndpointRouteBuilder app)
+   // Api/Models/FavoriteModels.cs (T07.1)
+   namespace RoomToRentRadar.Api.Models
    {
-       var group = app.MapGroup("/api/rooms");
-
-       group.MapGet("/{id:int}", async (int id, IRoomListingRepository repo) =>
-       {
-           if (id <= 0)
-               return Results.BadRequest(new { message = "Mã phòng không hợp lệ." });
-
-           var room = await repo.GetByIdAsync(id);
-           return room is not null
-               ? Results.Ok(room)
-               : Results.NotFound(new { message = "Không tìm thấy phòng trọ." });
-       });
-
-       group.MapGet("/{id:int}/similar", async (int id, string? ward, decimal? targetRent, IRoomListingRepository repo) =>
-       {
-           var similar = await repo.GetSimilarRoomsAsync(id, ward ?? "Quyết Thắng", targetRent ?? 1500000m, limit: 3);
-           return Results.Ok(similar);
-       });
-
-       return app;
+       public sealed record FavoriteRoomResponse(int Id, string Title, decimal MonthlyRent, string Status, bool IsVerified);
    }
    ```
-3. **Khi hoàn thành một Repository/Service mới trong `Infrastructure`:**
-   - Nhớ đăng ký `services.AddSingleton<IRoomListingRepository, RoomListingRepository>();` (hoặc Interface tương ứng của Task) vào đúng `<Feature>FeatureModule.cs` để ứng dụng tự động chuyển từ bản `InMemory*` sang bản SQLite thật.
+3. **Mẫu Controller chuẩn: mã HTTP rõ ràng, người gọi lấy từ JWT:**
+   ```csharp
+   // Api/Controllers/RoomDetailController.cs (T03.1)
+   [ApiController]
+   [Route("api/rooms")]
+   [Produces("application/json")]
+   public sealed class RoomDetailController : ControllerBase
+   {
+       private readonly IRoomListingRepository _rooms;
+
+       public RoomDetailController(IRoomListingRepository rooms) => _rooms = rooms; // Constructor Injection
+
+       [HttpGet("{id:int}")]
+       [ProducesResponseType<RoomListing>(StatusCodes.Status200OK)]
+       [ProducesResponseType<ErrorResponse>(StatusCodes.Status404NotFound)]
+       public async Task<IActionResult> GetById(int id)
+       {
+           if (id <= 0)
+               return BadRequest(new ErrorResponse("Mã phòng không hợp lệ."));
+
+           var room = await _rooms.GetByIdAsync(id);
+           return room is not null
+               ? Ok(room)
+               : NotFound(new ErrorResponse("Không tìm thấy phòng trọ."));
+       }
+   }
+
+   // Route cần đăng nhập (T07.1): userId lấy từ token, KHÔNG nhận từ client
+   [HttpGet]
+   [Authorize]
+   public async Task<IActionResult> GetMine()
+   {
+       if (!AuthController.TryGetUserId(User, out var userId))
+           return Unauthorized(new ErrorResponse("Token không hợp lệ."));
+       return Ok(await _favorites.GetFavoriteRoomsAsync(userId));
+   }
+   ```
+   - Phân quyền theo role: `[Authorize(Roles = Constants.UserRoles.Landlord + "," + Constants.UserRoles.Admin)]` (claim `role` trong JWT).
+   - **CẤM dùng `IAuthService.CurrentUser` trong Controller**: biến này dùng chung cho mọi request trong web server.
+   - Không trả dữ liệu nhạy cảm (`PasswordHash`; số điện thoại chủ trọ cho khách theo US03 AC4): map sang DTO trong `Models/`.
+   - Nếu tên `Models` bị trùng giữa `RoomToRentRadar.Api.Models` và `RoomToRentRadar.Models`, dùng alias: `using UserAccount = RoomToRentRadar.Models.UserAccount;`.
+4. **Khi hoàn thành một Repository/Service mới trong `Infrastructure`:**
+   - **App MAUI (giai đoạn chuyển tiếp):** đăng ký `services.AddSingleton<IRoomListingRepository, RoomListingRepository>();` (hoặc Interface tương ứng của Task) vào đúng `<Feature>FeatureModule.cs` để chuyển từ bản `InMemory*` sang bản SQLite thật.
+   - **Web API:** báo `@architect` đăng ký cùng dòng đó trong `Api/Program.cs`, nếu không API vẫn dùng bản `InMemory*`.
+5. **Chạy thử trong Docker trước khi báo hoàn tất:**
+   ```powershell
+   docker compose up --build -d
+   # gọi thử các route của Task (thêm request mẫu vào RoomToRentRadar.Api/RoomToRentRadar.Api.http)
+   docker compose down
+   ```
+   CI build `Core`, `Infrastructure`, `Api` với `--warnaserror`: code mới không được có cảnh báo biên dịch.
