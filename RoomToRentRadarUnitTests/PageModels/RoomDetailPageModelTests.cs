@@ -120,7 +120,7 @@ public class RoomDetailPageModelTests
         Assert.That(_sut.SafetyChecklist, Has.Count.EqualTo(5));
 
         // Assert - House Rules
-        Assert.That(_sut.HouseRulesList, Has.Count.EqualTo(5));
+        Assert.That(_sut.HouseRulesList, Has.Count.EqualTo(7));
         Assert.That(_sut.HouseRulesList[0].Title, Is.EqualTo("Quiet hours"));
         Assert.That(_sut.HouseRulesList[0].Detail, Is.EqualTo("22:00 – 06:00"));
         Assert.That(_sut.HouseRulesList[1].Title, Is.EqualTo("Curfew"));
@@ -131,6 +131,10 @@ public class RoomDetailPageModelTests
         Assert.That(_sut.HouseRulesList[3].Detail, Is.EqualTo("Shared kitchen only"));
         Assert.That(_sut.HouseRulesList[4].Title, Is.EqualTo("Parking"));
         Assert.That(_sut.HouseRulesList[4].Detail, Is.EqualTo("Motorbikes in the yard, one per room"));
+        Assert.That(_sut.HouseRulesList[5].Title, Is.EqualTo("Pets"));
+        Assert.That(_sut.HouseRulesList[5].Detail, Is.EqualTo("Not allowed"));
+        Assert.That(_sut.HouseRulesList[6].Title, Is.EqualTo("Smoking"));
+        Assert.That(_sut.HouseRulesList[6].Detail, Is.EqualTo("Not allowed"));
 
         // Assert - Commute Times
         Assert.That(_sut.CommuteTimes, Has.Count.EqualTo(3));
@@ -278,7 +282,8 @@ public class RoomDetailPageModelTests
         Assert.That(_sut.IsNotFound, Is.False);
         Assert.That(_sut.IsLoading, Is.False);
         Assert.That(_sut.IsContentVisible, Is.False);
-        Assert.That(_sut.ErrorMessage, Does.Contain("Network connection failed"));
+        Assert.That(_sut.ErrorMessage, Is.EqualTo(AppResources.GetString("Error_Unexpected")));
+        Assert.That(_sut.ErrorMessage, Does.Not.Contain("Network connection failed"));
     }
 
     [Test]
@@ -1194,6 +1199,204 @@ public class RoomDetailPageModelTests
             Assert.That(_sut.CommuteTimes[1].TimeFormatted, Is.EqualTo("~18 phút"));
             Assert.That(_sut.CommuteTimes[2].Label, Is.EqualTo("Đi bộ"));
             Assert.That(_sut.CommuteTimes[2].TimeFormatted, Is.EqualTo("20 phút"));
+        });
+    }
+
+    [Test]
+    public async Task InitializeAsync_WhenOtherFeesNotePresent_ExposesFormattedOtherFeesNote()
+    {
+        var baseRoom = CreateSampleRoom(
+            status: ListingStatus.Available,
+            isVerified: true,
+            monthlyRent: 2500000,
+            deposit: 2500000,
+            areaM2: 25.0,
+            maxOccupants: 2,
+            furnishing: Furnishing.Full,
+            availableFrom: null,
+            distanceKm: 1.2,
+            landlordPhone: null);
+
+        var testRoom = baseRoom with
+        {
+            Utilities = baseRoom.Utilities with { OtherFeesNote = "Rác 20.000 đ/tháng" }
+        };
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+
+        await _sut.InitializeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_sut.CostBreakdownRows, Has.Count.EqualTo(5));
+            Assert.That(_sut.HasOtherFeesNote, Is.True);
+            Assert.That(_sut.OtherFeesNoteFormatted, Is.EqualTo("Other fees: Rác 20.000 đ/tháng"));
+        });
+    }
+
+    [Test]
+    public async Task PopulateHouseRules_WhenGuestNoteParkingUnavailableAndOtherRulesPresent_PopulatesAllFields()
+    {
+        var baseRoom = CreateSampleRoom(
+            status: ListingStatus.Available,
+            isVerified: true,
+            monthlyRent: 2500000,
+            deposit: 2500000,
+            areaM2: 25.0,
+            maxOccupants: 2,
+            furnishing: Furnishing.Full,
+            availableFrom: null,
+            distanceKm: 1.2,
+            landlordPhone: null);
+
+        var testRoom = baseRoom with
+        {
+            HouseRules = new HouseRulesDto(
+                QuietHoursStart: null,
+                QuietHoursEnd: null,
+                CurfewTime: null,
+                GuestPolicy: GuestPolicy.DaytimeOnly,
+                GuestPolicyNote: "Leave before 21:00",
+                CookingPolicy: CookingPolicy.Allowed,
+                ParkingAvailable: false,
+                ParkingRules: null,
+                PetsAllowed: true,
+                SmokingAllowed: true,
+                OtherRules: "Keep shared hallway clean",
+                VersionNumber: 1,
+                UpdatedAtUtc: DateTime.UtcNow)
+        };
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+
+        await _sut.InitializeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_sut.HouseRulesList, Has.Count.EqualTo(6));
+            Assert.That(_sut.HouseRulesList[0].Detail, Is.EqualTo("Daytime only · Leave before 21:00"));
+            Assert.That(_sut.HouseRulesList[2].Detail, Is.EqualTo("No motorbike parking"));
+            Assert.That(_sut.HouseRulesList[3].Title, Is.EqualTo("Pets"));
+            Assert.That(_sut.HouseRulesList[3].Detail, Is.EqualTo("Allowed"));
+            Assert.That(_sut.HouseRulesList[4].Title, Is.EqualTo("Smoking"));
+            Assert.That(_sut.HouseRulesList[4].Detail, Is.EqualTo("Allowed"));
+            Assert.That(_sut.HouseRulesList[5].Title, Is.EqualTo("Other rules"));
+            Assert.That(_sut.HouseRulesList[5].Detail, Is.EqualTo("Keep shared hallway clean"));
+        });
+    }
+
+    [Test]
+    public async Task PopulateAmenities_WhenElevatorAndDryingAreaPresent_UsesLocalizedNames()
+    {
+        var baseRoom = CreateSampleRoom(
+            status: ListingStatus.Available,
+            isVerified: true,
+            monthlyRent: 2500000,
+            deposit: 2500000,
+            areaM2: 25.0,
+            maxOccupants: 2,
+            furnishing: Furnishing.Full,
+            availableFrom: null,
+            distanceKm: 1.2,
+            landlordPhone: null);
+
+        var testRoom = baseRoom with
+        {
+            Amenities = [Amenity.Elevator, Amenity.DryingArea]
+        };
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+
+        await _sut.InitializeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_sut.AmenitiesDisplayList[0].Name, Is.EqualTo("Elevator"));
+            Assert.That(_sut.AmenitiesDisplayList[1].Name, Is.EqualTo("Drying area"));
+        });
+
+        LocalizedStrings.Instance.SetCulture(new CultureInfo("vi-VN"));
+        await _sut.InitializeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_sut.AmenitiesDisplayList[0].Name, Is.EqualTo("Thang máy"));
+            Assert.That(_sut.AmenitiesDisplayList[1].Name, Is.EqualTo("Khu phơi đồ"));
+        });
+    }
+
+    [Test]
+    public async Task InitializeAsync_WhenRoomIsUnpublished_SetsUnpublishedStatusBadge()
+    {
+        var testRoom = CreateSampleRoom(
+            status: ListingStatus.Unpublished,
+            isVerified: true,
+            monthlyRent: 2500000,
+            deposit: 2500000,
+            areaM2: 25.0,
+            maxOccupants: 2,
+            furnishing: Furnishing.Full,
+            availableFrom: null,
+            distanceKm: 1.2,
+            landlordPhone: null);
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetSimilarRoomsAsync("room-test-1", "ictu").Returns([]);
+
+        await _sut.InitializeAsync();
+
+        Assert.That(_sut.StatusBadgeText, Is.EqualTo(AppResources.GetString("RoomDetail_StatusUnpublished")));
+    }
+
+    [Test]
+    public async Task InitializeAsync_WhenGatewayThrowsNetworkApiException_MapsLocalizedErrorMessage()
+    {
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu")
+            .ThrowsAsync(new ApiException("SocketException: raw stack", 0, ApiErrorCodes.NetworkError));
+
+        await _sut.InitializeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_sut.HasError, Is.True);
+            Assert.That(_sut.ErrorMessage, Is.EqualTo(AppResources.GetString("Error_NETWORK_ERROR")));
+            Assert.That(_sut.ErrorMessage, Does.Not.Contain("SocketException"));
+        });
+    }
+
+    [Test]
+    public async Task InitializeAsync_WhenCultureIsVietnamese_FormatsShortPricesDistancesAndDatesPerLocale()
+    {
+        var viCulture = new CultureInfo("vi-VN");
+        LocalizedStrings.Instance.SetCulture(viCulture);
+
+        var availableDate = new DateOnly(2026, 12, 1);
+        var testRoom = CreateSampleRoom(
+            status: ListingStatus.Rented,
+            isVerified: true,
+            monthlyRent: 2500000,
+            deposit: 950000,
+            areaM2: 25.0,
+            maxOccupants: 2,
+            furnishing: Furnishing.Full,
+            availableFrom: availableDate,
+            distanceKm: 1.2,
+            landlordPhone: null);
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetSimilarRoomsAsync("room-test-1", "ictu").Returns(
+        [
+            new("sim-950k", "Phòng sinh viên", 950000, 18.0, RoomType.BoardingRoom, 0.4, true, ListingStatus.Available, null, 21.5, 105.8, DateTime.UtcNow, false)
+        ]);
+
+        await _sut.InitializeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_sut.PriceShortFormatted, Is.EqualTo("2,5 tr/tháng"));
+            Assert.That(_sut.DepositShortFormatted, Is.EqualTo("Cọc 950k"));
+            Assert.That(_sut.EstimatedTotalFormatted, Is.EqualTo("~2,95 tr/tháng"));
+            Assert.That(_sut.KeyFacts[4].Value, Is.EqualTo(availableDate.ToString("d MMM", viCulture)));
+            Assert.That(_sut.KeyFacts[5].Value, Is.EqualTo("1,2 km"));
+            Assert.That(_sut.SimilarRooms[0].PriceFormatted, Is.EqualTo("950k/tháng"));
+            Assert.That(_sut.SimilarRooms[0].DistanceFormatted, Is.EqualTo("Cách phòng này 0,4 km"));
+            Assert.That(_sut.LandlordBadge, Does.Contain(testRoom.Landlord.MemberSinceUtc.ToString("MMM yyyy", viCulture)));
+            Assert.That(_sut.StraightLineNotice, Does.Contain("1,2 km"));
         });
     }
 

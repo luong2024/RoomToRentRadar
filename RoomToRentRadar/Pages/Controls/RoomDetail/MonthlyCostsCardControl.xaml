@@ -73,6 +73,14 @@
                    FontFamily="{StaticResource FontFamilyRegular}"
                    FontSize="{StaticResource FontSizeCaption}"
                    TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+
+            <!-- Other Fees Note (BR-LST-03) -->
+            <Label Text="{Binding OtherFeesNoteFormatted}"
+                   IsVisible="{Binding HasOtherFeesNote}"
+                   LineBreakMode="WordWrap"
+                   FontFamily="{StaticResource FontFamilyRegular}"
+                   FontSize="{StaticResource FontSizeCaption}"
+                   TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
         </VerticalStackLayout>
     </Border>
 </ContentView>

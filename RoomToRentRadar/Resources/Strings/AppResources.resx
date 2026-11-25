@@ -425,6 +425,18 @@
   <data name="RoomDetail_EstimateNote" xml:space="preserve">
     <value>Estimate: 100 kWh electricity, 1 person water.</value>
   </data>
+  <data name="RoomDetail_OtherFeesFormat" xml:space="preserve">
+    <value>Other fees: {0}</value>
+  </data>
+  <data name="RoomDetail_ShortMillionFormat" xml:space="preserve">
+    <value>{0}M</value>
+  </data>
+  <data name="RoomDetail_ShortThousandFormat" xml:space="preserve">
+    <value>{0}k</value>
+  </data>
+  <data name="RoomDetail_ShortPerMonthFormat" xml:space="preserve">
+    <value>{0}/mo</value>
+  </data>
   <data name="RoomDetail_Amenities" xml:space="preserve">
     <value>Amenities</value>
   </data>
@@ -481,6 +493,12 @@
   </data>
   <data name="Amenity_Window" xml:space="preserve">
     <value>Window</value>
+  </data>
+  <data name="Amenity_Elevator" xml:space="preserve">
+    <value>Elevator</value>
+  </data>
+  <data name="Amenity_DryingArea" xml:space="preserve">
+    <value>Drying area</value>
   </data>
   <data name="RoomDetail_Safety" xml:space="preserve">
     <value>Safety</value>
@@ -547,6 +565,30 @@
   </data>
   <data name="HouseRule_ParkingYard" xml:space="preserve">
     <value>Motorbikes in the yard, one per room</value>
+  </data>
+  <data name="HouseRule_ParkingUnavailable" xml:space="preserve">
+    <value>No motorbike parking</value>
+  </data>
+  <data name="HouseRule_Pets" xml:space="preserve">
+    <value>Pets</value>
+  </data>
+  <data name="HouseRule_PetsAllowed" xml:space="preserve">
+    <value>Allowed</value>
+  </data>
+  <data name="HouseRule_PetsNotAllowed" xml:space="preserve">
+    <value>Not allowed</value>
+  </data>
+  <data name="HouseRule_Smoking" xml:space="preserve">
+    <value>Smoking</value>
+  </data>
+  <data name="HouseRule_SmokingAllowed" xml:space="preserve">
+    <value>Allowed</value>
+  </data>
+  <data name="HouseRule_SmokingNotAllowed" xml:space="preserve">
+    <value>Not allowed</value>
+  </data>
+  <data name="HouseRule_OtherRules" xml:space="preserve">
+    <value>Other rules</value>
   </data>
   <data name="RoomDetail_GettingToCampus" xml:space="preserve">
     <value>Getting to {0} · {1} km</value>
