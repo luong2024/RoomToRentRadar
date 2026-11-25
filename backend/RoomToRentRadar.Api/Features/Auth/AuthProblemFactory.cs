@@ -11,6 +11,7 @@ public static class AuthProblemFactory
     public const string InvalidRegistrationRequest = "invalid_registration_request";
     public const string EmailAlreadyRegistered = "email_already_registered";
     public const string UnsupportedRegistrationRole = "unsupported_registration_role";
+    public const string RateLimited = "auth_rate_limited";
 
     public static ProblemDetails InvalidLoginRequestProblem()
     {
@@ -74,6 +75,19 @@ public static class AuthProblemFactory
             Detail = "Only student and landlord accounts can be registered; admin accounts are provisioned by the system administrator."
         };
         problem.Extensions["code"] = UnsupportedRegistrationRole;
+        return problem;
+    }
+
+    public static ProblemDetails RateLimitedProblem()
+    {
+        var problem = new ProblemDetails
+        {
+            Type = "https://tools.ietf.org/html/rfc6585#section-4",
+            Status = StatusCodes.Status429TooManyRequests,
+            Title = "Too many authentication requests",
+            Detail = "Authentication requests are limited per client. Retry after a short delay."
+        };
+        problem.Extensions["code"] = RateLimited;
         return problem;
     }
 

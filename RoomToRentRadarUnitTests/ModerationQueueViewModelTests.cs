@@ -2,6 +2,7 @@ using System.Net;
 using RoomToRentRadar.Models;
 using RoomToRentRadar.Services.Api;
 using RoomToRentRadar.Services.Auth;
+using RoomToRentRadar.Services.ErrorHandling;
 using RoomToRentRadar.Services.Interactions;
 using RoomToRentRadar.Services.Navigation;
 using RoomToRentRadar.Shared.Listings;
@@ -116,7 +117,11 @@ public class ModerationQueueViewModelTests
     public async Task Load_WhenApiFails_ShowsErrorStateWithMessage()
     {
         var client = new FakeModerationClient { ListException = new HttpRequestException("offline") };
-        var viewModel = CreateViewModel(client, SignedInAs(AppUserRole.Moderator));
+        var errorHandler = new FakeErrorHandler();
+        var viewModel = CreateViewModel(
+            client,
+            SignedInAs(AppUserRole.Moderator),
+            errorHandler: errorHandler);
 
         await viewModel.LoadCommand.ExecuteAsync(null);
 
@@ -126,6 +131,30 @@ public class ModerationQueueViewModelTests
             Assert.That(viewModel.IsErrorState, Is.True);
             Assert.That(viewModel.HasMessage, Is.True);
             Assert.That(viewModel.IsBusy, Is.False);
+            Assert.That(errorHandler.Errors, Has.Count.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task Load_WhenRoleLookupFails_ShowsErrorState()
+    {
+        var client = new FakeModerationClient();
+        var tokenStore = new FakeTokenStore
+        {
+            AccessToken = "test-token",
+            RoleException = new InvalidOperationException("secure storage unavailable")
+        };
+        var errorHandler = new FakeErrorHandler();
+        var viewModel = CreateViewModel(client, tokenStore, errorHandler: errorHandler);
+
+        await viewModel.LoadCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.State, Is.EqualTo(ModerationQueueState.Error));
+            Assert.That(viewModel.IsBusy, Is.False);
+            Assert.That(client.Requests, Is.Empty);
+            Assert.That(errorHandler.Errors, Has.Count.EqualTo(1));
         });
     }
 
@@ -318,12 +347,14 @@ public class ModerationQueueViewModelTests
         FakeModerationClient client,
         FakeTokenStore tokenStore,
         FakeAlertPrompt? prompt = null,
-        FakeNavigationService? navigationService = null)
+        FakeNavigationService? navigationService = null,
+        FakeErrorHandler? errorHandler = null)
         => new(
             client,
             new AuthService(null!, tokenStore),
             navigationService ?? new FakeNavigationService(),
-            prompt ?? new FakeAlertPrompt());
+            prompt ?? new FakeAlertPrompt(),
+            errorHandler ?? new FakeErrorHandler());
 
     private static FakeTokenStore SignedInAs(AppUserRole role)
         => new() { AccessToken = "test-token", Role = role };
@@ -379,17 +410,28 @@ public class ModerationQueueViewModelTests
         }
     }
 
+    private sealed class FakeErrorHandler : IErrorHandler
+    {
+        public List<Exception> Errors { get; } = [];
+
+        public void HandleError(Exception ex) => Errors.Add(ex);
+    }
+
     private sealed class FakeTokenStore : ITokenStore
     {
         public string? AccessToken { get; set; }
 
         public AppUserRole? Role { get; set; }
 
+        public Exception? RoleException { get; set; }
+
         public Task<string?> GetAccessTokenAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(AccessToken);
 
         public Task<AppUserRole?> GetRoleAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(Role);
+            => RoleException is { } exception
+                ? Task.FromException<AppUserRole?>(exception)
+                : Task.FromResult(Role);
 
         public Task SaveAsync(
             string accessToken,

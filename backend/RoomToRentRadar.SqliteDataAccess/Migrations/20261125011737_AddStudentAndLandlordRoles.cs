@@ -10,8 +10,9 @@ namespace RoomToRentRadar.SqliteDataAccess.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // SQLite cannot alter a CHECK constraint in place, so rebuild the table and
-            // remap the legacy user role to student in the same copy.
+            // SQLite cannot alter a CHECK constraint in place, so rebuild the table in the same copy.
+            // Legacy "user" accounts that own at least one listing become landlords so they keep
+            // access to listing management; other legacy accounts remain renters (students).
             migrationBuilder.Sql("PRAGMA foreign_keys = 0;", suppressTransaction: true);
             migrationBuilder.Sql(
                 """
@@ -27,7 +28,11 @@ namespace RoomToRentRadar.SqliteDataAccess.Migrations
                 );
                 INSERT INTO "ef_temp_users" ("id", "created_at", "display_name", "email", "password_hash", "password_salt", "role")
                 SELECT "id", "created_at", "display_name", "email", "password_hash", "password_salt",
-                    CASE WHEN "role" = 'user' THEN 'student' ELSE "role" END
+                    CASE
+                        WHEN "role" <> 'user' THEN "role"
+                        WHEN EXISTS (SELECT 1 FROM "listings" WHERE "listings"."owner_id" = "users"."id") THEN 'landlord'
+                        ELSE 'student'
+                    END
                 FROM "users";
                 DROP TABLE "users";
                 ALTER TABLE "ef_temp_users" RENAME TO "users";

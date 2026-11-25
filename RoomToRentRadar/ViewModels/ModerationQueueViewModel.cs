@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Models;
 using RoomToRentRadar.Services.Api;
 using RoomToRentRadar.Services.Auth;
+using RoomToRentRadar.Services.ErrorHandling;
 using RoomToRentRadar.Services.Interactions;
 using RoomToRentRadar.Services.Navigation;
 
@@ -28,6 +29,7 @@ public partial class ModerationQueueViewModel : ObservableObject
     private readonly AuthService _authService;
     private readonly INavigationService _navigationService;
     private readonly IAlertPrompt _alertPrompt;
+    private readonly IErrorHandler _errorHandler;
 
     private string? _nextCursor;
 
@@ -56,12 +58,14 @@ public partial class ModerationQueueViewModel : ObservableObject
         IModerationClient client,
         AuthService authService,
         INavigationService navigationService,
-        IAlertPrompt alertPrompt)
+        IAlertPrompt alertPrompt,
+        IErrorHandler errorHandler)
     {
         _client = client;
         _authService = authService;
         _navigationService = navigationService;
         _alertPrompt = alertPrompt;
+        _errorHandler = errorHandler;
         State = ModerationQueueState.Loading;
         Message = string.Empty;
     }
@@ -90,38 +94,33 @@ public partial class ModerationQueueViewModel : ObservableObject
         Items.Clear();
         _nextCursor = null;
         HasMore = false;
-
-        var role = await _authService.GetCurrentRoleAsync(cancellationToken);
-        if (role is null)
-        {
-            State = ModerationQueueState.SignedOut;
-            return;
-        }
-
-        if (role is not (AppUserRole.Moderator or AppUserRole.Admin))
-        {
-            State = ModerationQueueState.Denied;
-            return;
-        }
-
         State = ModerationQueueState.Loading;
         IsBusy = true;
         try
         {
+            var role = await _authService.GetCurrentRoleAsync(cancellationToken);
+            if (role is null)
+            {
+                State = ModerationQueueState.SignedOut;
+                return;
+            }
+
+            if (role is not (AppUserRole.Moderator or AppUserRole.Admin))
+            {
+                State = ModerationQueueState.Denied;
+                return;
+            }
+
             await LoadNextPageAsync(cancellationToken);
-        }
-        catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
-        {
-            State = ModerationQueueState.SignedOut;
-        }
-        catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
-        {
-            State = ModerationQueueState.Denied;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            State = ModerationQueueState.Error;
-            Message = "Không thể tải hàng đợi kiểm duyệt. Kiểm tra kết nối và thử lại.";
+            if (!TryHandleAccessFailure(ex))
+            {
+                State = ModerationQueueState.Error;
+                Message = "Không thể tải hàng đợi kiểm duyệt. Kiểm tra kết nối và thử lại.";
+                _errorHandler.HandleError(ex);
+            }
         }
         finally
         {
@@ -142,17 +141,13 @@ public partial class ModerationQueueViewModel : ObservableObject
         {
             await LoadNextPageAsync(cancellationToken);
         }
-        catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
-        {
-            State = ModerationQueueState.SignedOut;
-        }
-        catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
-        {
-            State = ModerationQueueState.Denied;
-        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            Message = "Không thể tải thêm tin chờ duyệt.";
+            if (!TryHandleAccessFailure(ex))
+            {
+                Message = "Không thể tải thêm tin chờ duyệt.";
+                _errorHandler.HandleError(ex);
+            }
         }
         finally
         {
@@ -188,17 +183,33 @@ public partial class ModerationQueueViewModel : ObservableObject
         {
             await RemoveApprovedAsync(item, "Tin này không còn tồn tại", cancellationToken);
         }
-        catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
-        {
-            State = ModerationQueueState.SignedOut;
-        }
-        catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
-        {
-            State = ModerationQueueState.Denied;
-        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            Message = "Không thể duyệt tin. Kiểm tra kết nối và thử lại.";
+            if (!TryHandleAccessFailure(ex))
+            {
+                Message = "Không thể duyệt tin. Kiểm tra kết nối và thử lại.";
+                _errorHandler.HandleError(ex);
+            }
+        }
+    }
+
+    private bool TryHandleAccessFailure(Exception exception)
+    {
+        if (exception is not ApiException apiException)
+        {
+            return false;
+        }
+
+        switch (apiException.StatusCode)
+        {
+            case HttpStatusCode.Unauthorized:
+                State = ModerationQueueState.SignedOut;
+                return true;
+            case HttpStatusCode.Forbidden:
+                State = ModerationQueueState.Denied;
+                return true;
+            default:
+                return false;
         }
     }
 

@@ -6,5 +6,5 @@ public interface IUserRepository
 {
     Task<User?> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken);
 
-    Task AddAsync(User user, CancellationToken cancellationToken);
+    Task<bool> TryAddAsync(User user, CancellationToken cancellationToken);
 }

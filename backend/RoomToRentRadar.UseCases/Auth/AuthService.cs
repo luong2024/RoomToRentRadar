@@ -61,7 +61,11 @@ public sealed class AuthService(
             CreatedAt = DateTime.UtcNow
         };
 
-        await userRepository.AddAsync(user, cancellationToken);
+        if (!await userRepository.TryAddAsync(user, cancellationToken))
+        {
+            return AuthRegistrationResult.EmailAlreadyRegistered();
+        }
+
         var response = await CreateSessionAsync(user, cancellationToken);
         return AuthRegistrationResult.Registered(response);
     }

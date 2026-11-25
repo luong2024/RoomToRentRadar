@@ -1,3 +1,4 @@
+using System.Net;
 using RoomToRentRadar.Models;
 using RoomToRentRadar.Services.Api;
 using RoomToRentRadar.Shared.Auth;
@@ -10,7 +11,7 @@ public sealed class AuthService(IApiClient apiClient, ITokenStore tokenStore)
 
     public event EventHandler? SessionChanged;
 
-    public async Task<bool> SignInAsync(
+    public async Task SignInAsync(
         string email,
         string password,
         CancellationToken cancellationToken = default)
@@ -18,11 +19,13 @@ public sealed class AuthService(IApiClient apiClient, ITokenStore tokenStore)
         var response = await apiClient.LoginAsync(new LoginRequest(email, password), cancellationToken);
         if (response is null)
         {
-            return false;
+            throw new ApiException(
+                HttpStatusCode.Unauthorized,
+                "The email or password is incorrect.",
+                "invalid_credentials");
         }
 
         await ApplySessionAsync(response, cancellationToken);
-        return true;
     }
 
     public async Task RegisterAsync(

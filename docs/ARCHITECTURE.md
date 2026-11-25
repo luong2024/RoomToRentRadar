@@ -160,6 +160,9 @@ root (`AddDataAccess`, `AddUseCases`, `AddInfrastructure`).
   Repositories own EF queries, `ExecuteUpdateAsync` conditional updates and include graphs.
 - Validation limits (max lengths, upload caps) live once in `Ports/Models/<Area>` (for example
   `ListingLimits`, `PhotoUploadLimits`) and are shared by API validators and EF configurations.
+  `Shared/Auth/AccountRules` is the deliberate exception: the mobile client cannot reference
+  `Ports`, so registration limits live in `Shared` and are shared by the API validator and the
+  mobile form.
 - Multi-write operations use `IUnitOfWork.BeginTransactionAsync`; the port exposes
   `CommitAsync` and async disposal so use cases stay storage-agnostic.
 
@@ -185,15 +188,25 @@ root (`AddDataAccess`, `AddUseCases`, `AddInfrastructure`).
 
 ### 4.4 Roles and authorization
 
-- Roles are `student`, `landlord`, `moderator` and `admin` (`UserRoleWire`). The same wire values are
-  used by the `users` CHECK constraint, the role claim and the mobile `AppUserRole`.
+- Roles are `student`, `landlord`, `moderator` and `admin`. The `UserRole` enum and its
+  `UserRoleWire` values live once in `Shared/Auth` (like `ListingStatus`); the `users` CHECK
+  constraint, EF converters, the role claim, `RegistrationRoles` and the mobile `AppUserRoleWire`
+  all derive from that single source.
 - `POST /api/v1/auth/register` creates self-service accounts for `student` and `landlord` only;
   moderator and admin accounts are provisioned out of band. Registration validates `AccountRules`
   (email format/length, display name length, password 8–128 characters with letters and digits) and
   rejects duplicate emails with 409 `email_already_registered`.
+- Migration `AddStudentAndLandlordRoles` replaces the legacy `user` role: accounts that own at least
+  one listing become `landlord` (they keep access to listing management and photo upload), all other
+  legacy accounts become `student`. The `Down` migration merges both roles back to `user`.
 - `POST /api/v1/auth/login` returns `LoginResponse(AccessToken, ExpiresAt, DisplayName, Role)`.
   Passwords are hashed through `IPasswordHasher`; sessions are opaque bearer tokens stored hashed in
   `auth_sessions`.
+- `POST /api/v1/auth/register` and `/login` share a fixed-window per-IP rate limit
+  (`Auth:RateLimitPerMinute`, default 10) and answer 429 `auth_rate_limited` with a `Retry-After`
+  header when exceeded. A concurrent duplicate registration that slips past the pre-check is
+  translated by the repository's unique-index handling into the same 409
+  `email_already_registered` problem.
 - Authorization policies live in `Features/Auth/AuthPolicies.cs` and rely on the role claim issued by
   `BearerTokenAuthenticationHandler`. `Landlord` guards listing management (`api/v1/listings`
   create/update/unpublish) and photo upload; `ModeratorOrAdmin` guards `api/v1/moderation/*`.

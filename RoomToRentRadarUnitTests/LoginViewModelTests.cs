@@ -99,7 +99,7 @@ public class LoginViewModelTests
         {
             Assert.That(viewModel.IsBusy, Is.False);
             Assert.That(viewModel.HasError, Is.True);
-            Assert.That(viewModel.ErrorMessage, Is.EqualTo("Email or password is incorrect."));
+            Assert.That(viewModel.ErrorMessage, Is.EqualTo("Email hoặc mật khẩu không đúng."));
             Assert.That(tokenStore.AccessToken, Is.Null);
             Assert.That(navigationService.GoBackCount, Is.Zero);
         });
@@ -125,7 +125,7 @@ public class LoginViewModelTests
         Assert.Multiple(() =>
         {
             Assert.That(viewModel.HasError, Is.True);
-            Assert.That(viewModel.ErrorMessage, Is.EqualTo("Enter your email and password."));
+            Assert.That(viewModel.ErrorMessage, Is.EqualTo("Nhập email và mật khẩu."));
             Assert.That(apiClient.RequestedLogins, Is.Empty);
             Assert.That(tokenStore.AccessToken, Is.Null);
             Assert.That(navigationService.GoBackCount, Is.Zero);
@@ -150,7 +150,7 @@ public class LoginViewModelTests
         {
             Assert.That(viewModel.IsBusy, Is.False);
             Assert.That(viewModel.HasError, Is.True);
-            Assert.That(viewModel.ErrorMessage, Is.EqualTo("Could not sign in. Check your connection and try again."));
+            Assert.That(viewModel.ErrorMessage, Is.EqualTo("Không thể đăng nhập. Kiểm tra kết nối và thử lại."));
             Assert.That(errorHandler.HandledExceptions, Has.Count.EqualTo(1));
             Assert.That(errorHandler.HandledExceptions[0], Is.SameAs(exception));
             Assert.That(tokenStore.AccessToken, Is.Null);

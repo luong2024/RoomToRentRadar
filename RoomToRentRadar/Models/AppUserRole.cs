@@ -1,3 +1,5 @@
+using RoomToRentRadar.Shared.Auth;
+
 namespace RoomToRentRadar.Models;
 
 public enum AppUserRole
@@ -10,13 +12,13 @@ public enum AppUserRole
 
 public static class AppUserRoleWire
 {
-    public const string Student = "student";
+    public const string Student = UserRoleWire.Student;
 
-    public const string Landlord = "landlord";
+    public const string Landlord = UserRoleWire.Landlord;
 
-    public const string Moderator = "moderator";
+    public const string Moderator = UserRoleWire.Moderator;
 
-    public const string Admin = "admin";
+    public const string Admin = UserRoleWire.Admin;
 
     public static AppUserRole? TryParse(string? value)
         => value?.Trim().ToLowerInvariant() switch

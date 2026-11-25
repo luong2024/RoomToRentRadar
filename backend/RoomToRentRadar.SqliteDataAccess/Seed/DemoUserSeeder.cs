@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Ports.Outbound.Services;
+using RoomToRentRadar.Shared.Auth;
 
 namespace RoomToRentRadar.SqliteDataAccess.Seed;
 

@@ -2,8 +2,8 @@ using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
-using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Ports.Inbound;
+using RoomToRentRadar.Shared.Auth;
 
 namespace RoomToRentRadar.Api.Features.Auth;
 

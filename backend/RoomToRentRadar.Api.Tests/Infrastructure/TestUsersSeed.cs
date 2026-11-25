@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using RoomToRentRadar.SqliteDataAccess;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Infrastructure.Auth;
+using RoomToRentRadar.Shared.Auth;
 
 namespace RoomToRentRadar.Api.Tests.Infrastructure;
 

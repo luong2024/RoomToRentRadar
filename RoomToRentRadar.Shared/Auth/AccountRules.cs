@@ -43,8 +43,8 @@ public static class AccountRules
 /// <summary>Wire values of the roles a user may pick when registering.</summary>
 public static class RegistrationRoles
 {
-    public const string Student = "student";
-    public const string Landlord = "landlord";
+    public const string Student = UserRoleWire.Student;
+    public const string Landlord = UserRoleWire.Landlord;
 
     public static readonly IReadOnlyList<string> All = [Student, Landlord];
 
