@@ -71,6 +71,23 @@ public class MockVsRealApiParityTests
         });
     }
 
+    [TestCase(null)]
+    [TestCase("TNUE")]
+    [CancelAfter(30000)]
+    public async Task GetRoomTravelTimesAsync_MockMatchesRealApi(string? campusId)
+    {
+        var real = await _httpGateway.GetRoomTravelTimesAsync("seed-z115", campusId);
+        var mock = await _mockGateway.GetRoomTravelTimesAsync("seed-z115", campusId);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(mock.CampusId, Is.EqualTo(real.CampusId));
+            Assert.That(mock.StraightLineDistanceKm, Is.EqualTo(real.StraightLineDistanceKm));
+            Assert.That(mock.IsFallback, Is.EqualTo(real.IsFallback));
+            Assert.That(mock.Items, Is.EqualTo(real.Items));
+        });
+    }
+
     // Private copy of ClientAdaptersEndToEndTests.CreateFactory, with SeedDemoRooms=true (PLAN Phase 6/8).
     private static WebApplicationFactory<Program> CreateFactory() =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(webHost =>
@@ -83,5 +100,6 @@ public class MockVsRealApiParityTests
             webHost.UseSetting("Jwt:SigningKey", JwtSigningKey);
             webHost.UseSetting("Jwt:Issuer", "RoomToRentRadar.Api");
             webHost.UseSetting("Jwt:Audience", "RoomToRentRadar.Client");
+            webHost.UseSetting("Routing:UseMock", "true");
         });
 }

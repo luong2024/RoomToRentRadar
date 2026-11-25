@@ -292,6 +292,93 @@ public class HttpRoomGatewayTests
         Assert.ThrowsAsync<ArgumentException>(async () => await gateway.GetSimilarRoomsAsync(invalidId));
     }
 
+    [Test]
+    public async Task GetRoomTravelTimesAsync_ValidRoomId_CallsEndpointAndDeserializesModes()
+    {
+        var expected = new TravelTimesDto(
+            CampusId: "ICTU",
+            StraightLineDistanceKm: 1.2,
+            IsFallback: false,
+            Items:
+            [
+                new TravelTimeItemDto(TravelMode.Motorbike, 1850, 300, false),
+                new TravelTimeItemDto(TravelMode.Bus, 1850, 1080, true),
+                new TravelTimeItemDto(TravelMode.Walking, 1620, 1180, false)
+            ]);
+        var (gateway, stub) = CreateGateway(_ => JsonResponse(HttpStatusCode.OK, expected));
+
+        var result = await gateway.GetRoomTravelTimesAsync("room-123");
+
+        var recorded = stub.Requests.Single();
+        Assert.Multiple(() =>
+        {
+            Assert.That(recorded.Method, Is.EqualTo(HttpMethod.Get));
+            Assert.That(recorded.Path, Is.EqualTo("/api/rooms/room-123/travel-times"));
+            Assert.That(recorded.Uri.Query, Is.Empty);
+            Assert.That(result.CampusId, Is.EqualTo("ICTU"));
+            Assert.That(result.IsFallback, Is.False);
+            Assert.That(result.StraightLineDistanceKm, Is.EqualTo(1.2));
+            Assert.That(result.Items, Is.EqualTo(expected.Items));
+        });
+    }
+
+    [Test]
+    public async Task GetRoomTravelTimesAsync_WithCampusId_AppendsEscapedCampusId()
+    {
+        var expected = new TravelTimesDto("ICTU Campus", 1.2, true, Array.Empty<TravelTimeItemDto>());
+        var (gateway, stub) = CreateGateway(_ => JsonResponse(HttpStatusCode.OK, expected));
+
+        await gateway.GetRoomTravelTimesAsync("room-123", "ICTU Campus");
+
+        var recorded = stub.Requests.Single();
+        Assert.That(recorded.Path, Is.EqualTo("/api/rooms/room-123/travel-times"));
+        Assert.That(recorded.Uri.Query, Is.EqualTo("?campusId=ICTU%20Campus"));
+    }
+
+    [Test]
+    public async Task GetRoomTravelTimesAsync_FallbackResponse_DeserializesEmptyItems()
+    {
+        const string json = """
+            {"campusId":"ICTU","straightLineDistanceKm":1.2,"isFallback":true,"items":[]}
+            """;
+        var (gateway, _) = CreateGateway(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        });
+
+        var result = await gateway.GetRoomTravelTimesAsync("room-123");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.CampusId, Is.EqualTo("ICTU"));
+            Assert.That(result.IsFallback, Is.True);
+            Assert.That(result.StraightLineDistanceKm, Is.EqualTo(1.2));
+            Assert.That(result.Items, Is.Empty);
+        });
+    }
+
+    [TestCase("")]
+    [TestCase("   ")]
+    public void GetRoomTravelTimesAsync_InvalidRoomId_ThrowsArgumentException(string invalidId)
+    {
+        var (gateway, _) = CreateGateway(_ => JsonResponse(HttpStatusCode.OK,
+            new TravelTimesDto("ICTU", 0, true, Array.Empty<TravelTimeItemDto>())));
+
+        Assert.ThrowsAsync<ArgumentException>(async () => await gateway.GetRoomTravelTimesAsync(invalidId));
+    }
+
+    [TestCase(HttpStatusCode.NotFound, ProblemCodes.RoomNotFound)]
+    [TestCase(HttpStatusCode.BadRequest, ProblemCodes.CampusNotFound)]
+    public void GetRoomTravelTimesAsync_ProblemResponse_ThrowsApiExceptionWithErrorCode(HttpStatusCode status, string errorCode)
+    {
+        var (gateway, _) = CreateGateway(_ => Problem(status, errorCode));
+
+        var ex = Assert.ThrowsAsync<ApiException>(async () => await gateway.GetRoomTravelTimesAsync("room-123", "NOPE"));
+
+        Assert.That(ex!.StatusCode, Is.EqualTo(status));
+        Assert.That(ex.ErrorCode, Is.EqualTo(errorCode));
+    }
+
     private static (HttpRoomGateway Gateway, StubHttpMessageHandler Stub) CreateGateway(
         Func<HttpRequestMessage, HttpResponseMessage> responder)
     {

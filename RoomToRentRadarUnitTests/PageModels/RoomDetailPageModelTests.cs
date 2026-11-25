@@ -65,6 +65,16 @@ public class RoomDetailPageModelTests
             landlordPhone: null); // Hidden for guests (BR-CNT-01)
 
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu").Returns(new TravelTimesDto(
+            CampusId: "ICTU",
+            StraightLineDistanceKm: 1.2,
+            IsFallback: false,
+            Items:
+            [
+                new TravelTimeItemDto(TravelMode.Motorbike, 1850, 480, false),
+                new TravelTimeItemDto(TravelMode.Bus, 1850, 1140, true),
+                new TravelTimeItemDto(TravelMode.Walking, 1500, 1500, false)
+            ]));
 
         // Act
         await _sut.InitializeAsync();
@@ -127,6 +137,12 @@ public class RoomDetailPageModelTests
         // Assert - Commute Times
         Assert.That(_sut.CommuteTimes, Has.Count.EqualTo(3));
         Assert.That(_sut.HasTravelTimes, Is.True);
+        Assert.That(_sut.IsCommuteFallback, Is.False);
+        Assert.That(_sut.CommuteTimes[0].TimeFormatted, Is.EqualTo("8 mins"));
+        Assert.That(_sut.CommuteTimes[0].DistanceFormatted, Is.EqualTo("1.9 km"));
+        Assert.That(_sut.CommuteTimes[1].TimeFormatted, Is.EqualTo("~19 mins"));
+        Assert.That(_sut.CommuteTimes[2].TimeFormatted, Is.EqualTo("25 mins"));
+        Assert.That(_sut.CommuteTimes[2].DistanceFormatted, Is.EqualTo("1.5 km"));
 
         // Assert - Landlord Contact Privacy for Guest (AC4 & BR-CNT-01)
         Assert.That(_sut.IsSignedIn, Is.False);
@@ -159,6 +175,16 @@ public class RoomDetailPageModelTests
         };
 
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu").Returns(new TravelTimesDto(
+            CampusId: "ICTU",
+            StraightLineDistanceKm: 1.2,
+            IsFallback: false,
+            Items:
+            [
+                new TravelTimeItemDto(TravelMode.Motorbike, 1850, 480, false),
+                new TravelTimeItemDto(TravelMode.Bus, 1850, 1140, true),
+                new TravelTimeItemDto(TravelMode.Walking, 1500, 1500, false)
+            ]));
         _roomGateway.GetSimilarRoomsAsync("room-test-1", "ictu").Returns(similarRooms);
 
         // Act
@@ -232,6 +258,16 @@ public class RoomDetailPageModelTests
             landlordPhone: "0912345678");
 
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu").Returns(new TravelTimesDto(
+            CampusId: "ICTU",
+            StraightLineDistanceKm: 1.2,
+            IsFallback: false,
+            Items:
+            [
+                new TravelTimeItemDto(TravelMode.Motorbike, 1850, 480, false),
+                new TravelTimeItemDto(TravelMode.Bus, 1850, 1140, true),
+                new TravelTimeItemDto(TravelMode.Walking, 1500, 1500, false)
+            ]));
 
         // Act
         await _sut.InitializeAsync();
@@ -261,6 +297,16 @@ public class RoomDetailPageModelTests
             landlordPhone: null);
 
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu").Returns(new TravelTimesDto(
+            CampusId: "ICTU",
+            StraightLineDistanceKm: 1.2,
+            IsFallback: false,
+            Items:
+            [
+                new TravelTimeItemDto(TravelMode.Motorbike, 1850, 480, false),
+                new TravelTimeItemDto(TravelMode.Bus, 1850, 1140, true),
+                new TravelTimeItemDto(TravelMode.Walking, 1500, 1500, false)
+            ]));
         await _sut.InitializeAsync();
 
         Assert.That(_sut.AmenitiesDisplayList, Has.Count.EqualTo(8));
@@ -300,6 +346,16 @@ public class RoomDetailPageModelTests
             landlordPhone: null);
 
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu").Returns(new TravelTimesDto(
+            CampusId: "ICTU",
+            StraightLineDistanceKm: 1.2,
+            IsFallback: false,
+            Items:
+            [
+                new TravelTimeItemDto(TravelMode.Motorbike, 1850, 480, false),
+                new TravelTimeItemDto(TravelMode.Bus, 1850, 1140, true),
+                new TravelTimeItemDto(TravelMode.Walking, 1500, 1500, false)
+            ]));
         await _sut.InitializeAsync();
 
         bool alertPrompted = false;
@@ -343,6 +399,16 @@ public class RoomDetailPageModelTests
             landlordPhone: "0912345678");
 
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu").Returns(new TravelTimesDto(
+            CampusId: "ICTU",
+            StraightLineDistanceKm: 1.2,
+            IsFallback: false,
+            Items:
+            [
+                new TravelTimeItemDto(TravelMode.Motorbike, 1850, 480, false),
+                new TravelTimeItemDto(TravelMode.Bus, 1850, 1140, true),
+                new TravelTimeItemDto(TravelMode.Walking, 1500, 1500, false)
+            ]));
         await _sut.InitializeAsync();
 
         string? dialedPhone = null;
@@ -374,6 +440,16 @@ public class RoomDetailPageModelTests
             landlordPhone: "0912345678");
 
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu").Returns(new TravelTimesDto(
+            CampusId: "ICTU",
+            StraightLineDistanceKm: 1.2,
+            IsFallback: false,
+            Items:
+            [
+                new TravelTimeItemDto(TravelMode.Motorbike, 1850, 480, false),
+                new TravelTimeItemDto(TravelMode.Bus, 1850, 1140, true),
+                new TravelTimeItemDto(TravelMode.Walking, 1500, 1500, false)
+            ]));
         await _sut.InitializeAsync();
 
         string? launchedUrl = null;
@@ -409,6 +485,16 @@ public class RoomDetailPageModelTests
             landlordPhone: "0912345678");
 
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu").Returns(new TravelTimesDto(
+            CampusId: "ICTU",
+            StraightLineDistanceKm: 1.2,
+            IsFallback: false,
+            Items:
+            [
+                new TravelTimeItemDto(TravelMode.Motorbike, 1850, 480, false),
+                new TravelTimeItemDto(TravelMode.Bus, 1850, 1140, true),
+                new TravelTimeItemDto(TravelMode.Walking, 1500, 1500, false)
+            ]));
         await _sut.InitializeAsync();
 
         Assert.That(_sut.IsFavourite, Is.False);
@@ -447,6 +533,16 @@ public class RoomDetailPageModelTests
             landlordPhone: "0912345678");
 
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu").Returns(new TravelTimesDto(
+            CampusId: "ICTU",
+            StraightLineDistanceKm: 1.2,
+            IsFallback: false,
+            Items:
+            [
+                new TravelTimeItemDto(TravelMode.Motorbike, 1850, 480, false),
+                new TravelTimeItemDto(TravelMode.Bus, 1850, 1140, true),
+                new TravelTimeItemDto(TravelMode.Walking, 1500, 1500, false)
+            ]));
         await _sut.InitializeAsync();
 
         _favouriteGateway.AddFavouriteAsync("room-test-1")
@@ -494,6 +590,16 @@ public class RoomDetailPageModelTests
             landlordPhone: null);
 
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu").Returns(new TravelTimesDto(
+            CampusId: "ICTU",
+            StraightLineDistanceKm: 1.2,
+            IsFallback: false,
+            Items:
+            [
+                new TravelTimeItemDto(TravelMode.Motorbike, 1850, 480, false),
+                new TravelTimeItemDto(TravelMode.Bus, 1850, 1140, true),
+                new TravelTimeItemDto(TravelMode.Walking, 1500, 1500, false)
+            ]));
         await _sut.InitializeAsync();
 
         string? targetRoute = null;
@@ -527,6 +633,16 @@ public class RoomDetailPageModelTests
             landlordPhone: null);
 
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu").Returns(new TravelTimesDto(
+            CampusId: "ICTU",
+            StraightLineDistanceKm: 1.2,
+            IsFallback: false,
+            Items:
+            [
+                new TravelTimeItemDto(TravelMode.Motorbike, 1850, 480, false),
+                new TravelTimeItemDto(TravelMode.Bus, 1850, 1140, true),
+                new TravelTimeItemDto(TravelMode.Walking, 1500, 1500, false)
+            ]));
         await _sut.InitializeAsync();
 
         Assert.That(_sut.StatusBadgeText, Is.EqualTo("Verified · Available"));
@@ -570,6 +686,16 @@ public class RoomDetailPageModelTests
         };
 
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu").Returns(new TravelTimesDto(
+            CampusId: "ICTU",
+            StraightLineDistanceKm: 1.2,
+            IsFallback: false,
+            Items:
+            [
+                new TravelTimeItemDto(TravelMode.Motorbike, 1850, 480, false),
+                new TravelTimeItemDto(TravelMode.Bus, 1850, 1140, true),
+                new TravelTimeItemDto(TravelMode.Walking, 1500, 1500, false)
+            ]));
 
         // Act
         await _sut.InitializeAsync();
@@ -601,6 +727,16 @@ public class RoomDetailPageModelTests
         };
 
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu").Returns(new TravelTimesDto(
+            CampusId: "ICTU",
+            StraightLineDistanceKm: 1.2,
+            IsFallback: false,
+            Items:
+            [
+                new TravelTimeItemDto(TravelMode.Motorbike, 1850, 480, false),
+                new TravelTimeItemDto(TravelMode.Bus, 1850, 1140, true),
+                new TravelTimeItemDto(TravelMode.Walking, 1500, 1500, false)
+            ]));
 
         // Act
         await _sut.InitializeAsync();
@@ -633,6 +769,16 @@ public class RoomDetailPageModelTests
         };
 
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu").Returns(new TravelTimesDto(
+            CampusId: "ICTU",
+            StraightLineDistanceKm: 1.2,
+            IsFallback: false,
+            Items:
+            [
+                new TravelTimeItemDto(TravelMode.Motorbike, 1850, 480, false),
+                new TravelTimeItemDto(TravelMode.Bus, 1850, 1140, true),
+                new TravelTimeItemDto(TravelMode.Walking, 1500, 1500, false)
+            ]));
 
         // Act
         await _sut.InitializeAsync();
@@ -659,6 +805,16 @@ public class RoomDetailPageModelTests
             landlordPhone: null);
 
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu").Returns(new TravelTimesDto(
+            CampusId: "ICTU",
+            StraightLineDistanceKm: 1.2,
+            IsFallback: false,
+            Items:
+            [
+                new TravelTimeItemDto(TravelMode.Motorbike, 1850, 480, false),
+                new TravelTimeItemDto(TravelMode.Bus, 1850, 1140, true),
+                new TravelTimeItemDto(TravelMode.Walking, 1500, 1500, false)
+            ]));
 
         // Act
         await _sut.InitializeAsync();
@@ -705,6 +861,16 @@ public class RoomDetailPageModelTests
             landlordPhone: null);
 
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu").Returns(new TravelTimesDto(
+            CampusId: "ICTU",
+            StraightLineDistanceKm: 1.2,
+            IsFallback: false,
+            Items:
+            [
+                new TravelTimeItemDto(TravelMode.Motorbike, 1850, 480, false),
+                new TravelTimeItemDto(TravelMode.Bus, 1850, 1140, true),
+                new TravelTimeItemDto(TravelMode.Walking, 1500, 1500, false)
+            ]));
         await _sut.InitializeAsync();
 
         string? sharedText = null;
@@ -759,6 +925,16 @@ public class RoomDetailPageModelTests
             landlordPhone: "0912345678");
 
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu").Returns(new TravelTimesDto(
+            CampusId: "ICTU",
+            StraightLineDistanceKm: 1.2,
+            IsFallback: false,
+            Items:
+            [
+                new TravelTimeItemDto(TravelMode.Motorbike, 1850, 480, false),
+                new TravelTimeItemDto(TravelMode.Bus, 1850, 1140, true),
+                new TravelTimeItemDto(TravelMode.Walking, 1500, 1500, false)
+            ]));
         await _sut.InitializeAsync();
 
         string? messageRoute = null;
@@ -792,6 +968,16 @@ public class RoomDetailPageModelTests
             landlordPhone: null);
 
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu").Returns(new TravelTimesDto(
+            CampusId: "ICTU",
+            StraightLineDistanceKm: 1.2,
+            IsFallback: false,
+            Items:
+            [
+                new TravelTimeItemDto(TravelMode.Motorbike, 1850, 480, false),
+                new TravelTimeItemDto(TravelMode.Bus, 1850, 1140, true),
+                new TravelTimeItemDto(TravelMode.Walking, 1500, 1500, false)
+            ]));
         await _sut.InitializeAsync();
 
         bool alertPrompted = false;
@@ -840,6 +1026,16 @@ public class RoomDetailPageModelTests
             landlordPhone: null);
 
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu").Returns(new TravelTimesDto(
+            CampusId: "ICTU",
+            StraightLineDistanceKm: 1.2,
+            IsFallback: false,
+            Items:
+            [
+                new TravelTimeItemDto(TravelMode.Motorbike, 1850, 480, false),
+                new TravelTimeItemDto(TravelMode.Bus, 1850, 1140, true),
+                new TravelTimeItemDto(TravelMode.Walking, 1500, 1500, false)
+            ]));
         await _sut.InitializeAsync();
         Assert.That(_sut.StatusBadgeText, Is.EqualTo("Verified · Available"));
 
@@ -893,6 +1089,174 @@ public class RoomDetailPageModelTests
         // Assert
         Assert.That(alertPrompted, Is.True);
         Assert.That(navigatedRoute, Is.EqualTo("//login"));
+    }
+
+    [Test]
+    public async Task InitializeAsync_TravelTimesWithMetersAndKm_FormatsDistanceAndDurationPerMode()
+    {
+        var testRoom = CreateSampleRoom(
+            ListingStatus.Available, true, 2500000, 2500000, 25.0, 2, Furnishing.Full, null, 0.5, null);
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu").Returns(new TravelTimesDto(
+            CampusId: "ICTU",
+            StraightLineDistanceKm: 0.5,
+            IsFallback: false,
+            Items:
+            [
+                new TravelTimeItemDto(TravelMode.Motorbike, 850, 120, false),
+                new TravelTimeItemDto(TravelMode.Bus, 850, 792, true),
+                new TravelTimeItemDto(TravelMode.Walking, 1240, 900, false)
+            ]));
+
+        await _sut.InitializeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_sut.HasTravelTimes, Is.True);
+            Assert.That(_sut.IsCommuteFallback, Is.False);
+            Assert.That(_sut.CommuteTimes, Has.Count.EqualTo(3));
+            Assert.That(_sut.CommuteTimes[0].DistanceFormatted, Is.EqualTo("850 m"));
+            Assert.That(_sut.CommuteTimes[0].TimeFormatted, Is.EqualTo("2 mins"));
+            Assert.That(_sut.CommuteTimes[1].DistanceFormatted, Is.EqualTo("850 m"));
+            Assert.That(_sut.CommuteTimes[1].TimeFormatted, Is.EqualTo("~13 mins"));
+            Assert.That(_sut.CommuteTimes[2].DistanceFormatted, Is.EqualTo("1.2 km"));
+            Assert.That(_sut.CommuteTimes[2].TimeFormatted, Is.EqualTo("15 mins"));
+        });
+    }
+
+    [Test]
+    public async Task InitializeAsync_WhenCampusIdIsNullAndUserSignedIn_UsesProfileSelectedCampus()
+    {
+        _sut.CampusId = null;
+        _sut.CampusName = "ICTU";
+        _sessionStore.HasValidTokenAsync().Returns(true);
+        _sessionStore.GetCachedUserProfileAsync().Returns(new UserProfileDto(
+            "u-1", "student@ictu.edu.vn", "Student", "Student", "Local", null, "DTC01", true,
+            DateTime.UtcNow, SelectedCampusId: "TNUS", PreferredLanguage: "en"));
+
+        var testRoom = CreateSampleRoom(
+            ListingStatus.Available, true, 2500000, 2500000, 25.0, 2, Furnishing.Full, null, 2.4, null);
+        _roomGateway.GetRoomDetailAsync("room-test-1", "TNUS").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "TNUS").Returns(new TravelTimesDto(
+            "TNUS", 2.4, false,
+            [
+                new TravelTimeItemDto(TravelMode.Motorbike, 3100, 380, false),
+                new TravelTimeItemDto(TravelMode.Bus, 3100, 1208, true),
+                new TravelTimeItemDto(TravelMode.Walking, 2700, 1940, false)
+            ]));
+
+        await _sut.InitializeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_sut.CampusName, Is.EqualTo("TNUS"));
+            Assert.That(_sut.CommuteHeaderFormatted, Does.Contain("TNUS"));
+            Assert.That(_sut.HasTravelTimes, Is.True);
+        });
+        await _roomGateway.Received(1).GetRoomDetailAsync("room-test-1", "TNUS");
+        await _roomGateway.Received(1).GetRoomTravelTimesAsync("room-test-1", "TNUS");
+    }
+
+    [Test]
+    public async Task InitializeAsync_WhenCampusIdIsNullAndSearchStoreHasCampus_UsesSearchStoreCampus()
+    {
+        var searchStore = new RoomToRentRadar.Services.Search.Core.SearchCriteriaStore();
+        searchStore.SetCampus("TNUE", "TNUE");
+        using var sut = new RoomDetailPageModel(_roomGateway, _sessionStore, _favouriteGateway, searchStore)
+        {
+            RoomId = "room-test-1"
+        };
+
+        var testRoom = CreateSampleRoom(
+            ListingStatus.Available, true, 2500000, 2500000, 25.0, 2, Furnishing.Full, null, 3.1, null);
+        _roomGateway.GetRoomDetailAsync("room-test-1", "TNUE").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "TNUE").Returns(
+            new TravelTimesDto("TNUE", 3.1, true, Array.Empty<TravelTimeItemDto>()));
+
+        await sut.InitializeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(sut.CampusName, Is.EqualTo("TNUE"));
+            Assert.That(sut.IsCommuteFallback, Is.True);
+            Assert.That(sut.HasTravelTimes, Is.False);
+        });
+        await _roomGateway.Received(1).GetRoomTravelTimesAsync("room-test-1", "TNUE");
+    }
+
+    [Test]
+    public async Task InitializeAsync_WhenTravelTimesFallback_HidesCommuteGridAndShowsStraightLineNotice()
+    {
+        var testRoom = CreateSampleRoom(
+            ListingStatus.Available, true, 2500000, 2500000, 25.0, 2, Furnishing.Full, null, 1.2, null);
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu").Returns(
+            new TravelTimesDto("ICTU", 1.2, IsFallback: true, Items: Array.Empty<TravelTimeItemDto>()));
+
+        await _sut.InitializeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_sut.HasError, Is.False);
+            Assert.That(_sut.IsCommuteFallback, Is.True);
+            Assert.That(_sut.HasTravelTimes, Is.False);
+            Assert.That(_sut.CommuteTimes, Is.Empty);
+            Assert.That(_sut.StraightLineNotice, Does.Contain("1.2 km"));
+            Assert.That(_sut.StraightLineNotice, Does.Contain("ICTU"));
+        });
+    }
+
+    [Test]
+    public async Task InitializeAsync_WhenTravelTimesGatewayThrows_HidesCommuteGridAndShowsStraightLineNotice()
+    {
+        var testRoom = CreateSampleRoom(
+            ListingStatus.Available, true, 2500000, 2500000, 25.0, 2, Furnishing.Full, null, 1.4, null);
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu")
+            .Returns(Task.FromException<TravelTimesDto>(new HttpRequestException("Timeout")));
+
+        await _sut.InitializeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_sut.HasError, Is.False);
+            Assert.That(_sut.IsContentVisible, Is.True);
+            Assert.That(_sut.IsCommuteFallback, Is.True);
+            Assert.That(_sut.HasTravelTimes, Is.False);
+            Assert.That(_sut.CommuteTimes, Is.Empty);
+            Assert.That(_sut.StraightLineNotice, Does.Contain("1.4 km"));
+        });
+    }
+
+    [Test]
+    public async Task CultureChanged_UpdatesCommuteTimesAndStraightLineNoticeToVietnamese()
+    {
+        var testRoom = CreateSampleRoom(
+            ListingStatus.Available, true, 2500000, 2500000, 25.0, 2, Furnishing.Full, null, 1.2, null);
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetRoomTravelTimesAsync("room-test-1", "ictu").Returns(new TravelTimesDto(
+            "ICTU", 1.2, false,
+            [
+                new TravelTimeItemDto(TravelMode.Motorbike, 1850, 480, false),
+                new TravelTimeItemDto(TravelMode.Bus, 1850, 1140, true),
+                new TravelTimeItemDto(TravelMode.Walking, 1500, 1500, false)
+            ]));
+
+        await _sut.InitializeAsync();
+
+        LocalizedStrings.Instance.SetCulture(new CultureInfo("vi-VN"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_sut.CommuteTimes[0].Label, Is.EqualTo("Xe máy"));
+            Assert.That(_sut.CommuteTimes[0].TimeFormatted, Is.EqualTo("8 phút"));
+            Assert.That(_sut.CommuteTimes[0].DistanceFormatted, Is.EqualTo("1,9 km"));
+            Assert.That(_sut.CommuteTimes[1].Label, Is.EqualTo("Xe buýt (dự tính)"));
+            Assert.That(_sut.CommuteTimes[1].TimeFormatted, Is.EqualTo("~19 phút"));
+            Assert.That(_sut.CommuteTimes[2].Label, Is.EqualTo("Đi bộ"));
+            Assert.That(_sut.CommuteHeaderFormatted, Does.Contain("Đến ICTU"));
+            Assert.That(_sut.StraightLineNotice, Does.Contain("1,2 km"));
+        });
     }
 
     private static RoomDetailDto CreateSampleRoom(

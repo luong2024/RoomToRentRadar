@@ -288,20 +288,52 @@ public class MockRoomGatewayTests
     }
 
     [Test]
-    public async Task GetRoomTravelTimesAsync_SeedRoom_ReturnsFallbackEstimates()
+    public async Task GetRoomTravelTimesAsync_SeedRoom_ReturnsAllThreeModesMatchingSpec()
     {
         var travel = await _gateway.GetRoomTravelTimesAsync("seed-z115");
 
         Assert.Multiple(() =>
         {
             Assert.That(travel.CampusId, Is.EqualTo("ICTU"));
-            Assert.That(travel.IsFallback, Is.True);
+            Assert.That(travel.IsFallback, Is.False);
             Assert.That(travel.StraightLineDistanceKm, Is.EqualTo(
                 HaversineDistanceCalculator.CalculateDistanceKm(IctuLatitude, IctuLongitude, 21.5875, 105.8080)));
-            Assert.That(travel.Items, Has.Count.EqualTo(2));
-            Assert.That(travel.Items.All(i => i.IsEstimate), Is.True);
-            Assert.That(travel.Items.Select(i => i.Mode).ToList(), Is.EqualTo(new[] { TravelMode.Motorbike, TravelMode.Walking }));
-            Assert.That(travel.Items.All(i => i.DurationSeconds > 0 && i.DistanceMeters > 0), Is.True);
+            Assert.That(travel.Items, Has.Count.EqualTo(3));
+
+            var motorbike = travel.Items[0];
+            var bus = travel.Items[1];
+            var walking = travel.Items[2];
+
+            Assert.That(motorbike.Mode, Is.EqualTo(TravelMode.Motorbike));
+            Assert.That(motorbike.IsEstimate, Is.False);
+            Assert.That(motorbike.DistanceMeters, Is.GreaterThan(0));
+            Assert.That(motorbike.DurationSeconds, Is.GreaterThan(0));
+
+            Assert.That(bus.Mode, Is.EqualTo(TravelMode.Bus));
+            Assert.That(bus.IsEstimate, Is.True);
+            Assert.That(bus.DistanceMeters, Is.EqualTo(motorbike.DistanceMeters));
+            Assert.That(bus.DurationSeconds, Is.EqualTo(
+                (int)Math.Round(motorbike.DurationSeconds * 1.6, MidpointRounding.AwayFromZero) + 600));
+
+            Assert.That(walking.Mode, Is.EqualTo(TravelMode.Walking));
+            Assert.That(walking.IsEstimate, Is.False);
+            Assert.That(walking.DistanceMeters, Is.GreaterThan(0));
+            Assert.That(walking.DurationSeconds, Is.GreaterThan(0));
+        });
+    }
+
+    [Test]
+    public async Task GetRoomTravelTimesAsync_WithCampusId_UsesRequestedCampus()
+    {
+        var travel = await _gateway.GetRoomTravelTimesAsync("seed-z115", "TNUE");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(travel.CampusId, Is.EqualTo("TNUE"));
+            Assert.That(travel.IsFallback, Is.False);
+            Assert.That(travel.StraightLineDistanceKm, Is.EqualTo(
+                HaversineDistanceCalculator.CalculateDistanceKm(TnueLatitude, TnueLongitude, 21.5875, 105.8080)));
+            Assert.That(travel.Items, Has.Count.EqualTo(3));
         });
     }
 
