@@ -21,11 +21,17 @@
                              HorizontalOptions="Center"
                              VerticalOptions="Center"
                              Spacing="8">
-            <Label Text="{x:Static fonts:FluentUI.home_48_regular}"
-                   FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                   FontSize="48"
-                   HorizontalTextAlignment="Center"
-                   TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+            <Image WidthRequest="48"
+                   HeightRequest="48"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center">
+                <Image.Source>
+                    <FontImageSource Glyph="{x:Static fonts:FluentUI.home_48_regular}"
+                                     FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                     Size="48"
+                                     Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                </Image.Source>
+            </Image>
             <Label Text="{loc:LocalizedStrings RoomDetail_NoPhotos}"
                    FontSize="{StaticResource FontSizeCaption}"
                    HorizontalTextAlignment="Center"
@@ -53,12 +59,17 @@
                 <Border.GestureRecognizers>
                     <TapGestureRecognizer Command="{Binding GoBackCommand}" />
                 </Border.GestureRecognizers>
-                <Label Text="{x:Static fonts:FluentUI.chevron_left_24_regular}"
-                       FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                       FontSize="22"
-                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
-                       HorizontalTextAlignment="Center"
-                       VerticalTextAlignment="Center" />
+                <Image WidthRequest="22"
+                       HeightRequest="22"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center">
+                    <Image.Source>
+                        <FontImageSource Glyph="{x:Static fonts:FluentUI.chevron_left_24_regular}"
+                                         FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                         Size="22"
+                                         Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                    </Image.Source>
+                </Image>
             </Border>
 
             <!-- Actions: Share & Favourite -->
@@ -76,12 +87,17 @@
                     <Border.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding ShareListingCommand}" />
                     </Border.GestureRecognizers>
-                    <Label Text="{x:Static fonts:FluentUI.share_24_regular}"
-                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                           FontSize="20"
-                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
-                           HorizontalTextAlignment="Center"
-                           VerticalTextAlignment="Center" />
+                    <Image WidthRequest="20"
+                           HeightRequest="20"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center">
+                        <Image.Source>
+                            <FontImageSource Glyph="{x:Static fonts:FluentUI.share_24_regular}"
+                                             FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                             Size="20"
+                                             Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                        </Image.Source>
+                    </Image>
                 </Border>
 
                 <!-- Favourite Button -->
@@ -95,18 +111,17 @@
                     <Border.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding ToggleFavouriteCommand}" />
                     </Border.GestureRecognizers>
-                    <Label Text="{Binding FavouriteIconGlyph}"
-                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                           FontSize="20"
-                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
-                           HorizontalTextAlignment="Center"
-                           VerticalTextAlignment="Center">
-                        <Label.Triggers>
-                            <DataTrigger TargetType="Label" Binding="{Binding IsFavourite}" Value="True">
-                                <Setter Property="TextColor" Value="{StaticResource StatusDangerLight}" />
-                            </DataTrigger>
-                        </Label.Triggers>
-                    </Label>
+                    <Image WidthRequest="20"
+                           HeightRequest="20"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center">
+                        <Image.Source>
+                            <FontImageSource Glyph="{Binding FavouriteIconGlyph}"
+                                             FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                             Size="20"
+                                             Color="{Binding FavouriteIconColor}" />
+                        </Image.Source>
+                    </Image>
                 </Border>
             </HorizontalStackLayout>
         </Grid>
@@ -126,11 +141,16 @@
                     <TapGestureRecognizer Command="{Binding Open360ViewCommand}" />
                 </Border.GestureRecognizers>
                 <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
-                    <Label Text="{x:Static fonts:FluentUI.arrow_rotate_clockwise_24_regular}"
-                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                           FontSize="16"
-                           TextColor="White"
-                           VerticalTextAlignment="Center" />
+                    <Image WidthRequest="16"
+                           HeightRequest="16"
+                           VerticalOptions="Center">
+                        <Image.Source>
+                            <FontImageSource Glyph="{x:Static fonts:FluentUI.arrow_rotate_clockwise_24_regular}"
+                                             FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                             Size="16"
+                                             Color="White" />
+                        </Image.Source>
+                    </Image>
                     <Label Text="{loc:LocalizedStrings RoomDetail_360View}"
                            FontFamily="{StaticResource FontFamilySemibold}"
                            FontSize="{StaticResource FontSizeBadge}"

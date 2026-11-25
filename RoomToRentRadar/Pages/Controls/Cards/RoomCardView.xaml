@@ -56,12 +56,17 @@
                         <TapGestureRecognizer Command="{Binding BookmarkCommand}"
                                               CommandParameter="{Binding Room.Id}" />
                     </Border.GestureRecognizers>
-                    <Label Text="{Binding BookmarkIconGlyph}"
-                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                           FontSize="20"
-                           TextColor="{Binding BookmarkIconColor}"
-                           HorizontalTextAlignment="Center"
-                           VerticalTextAlignment="Center" />
+                    <Image WidthRequest="20"
+                           HeightRequest="20"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center">
+                        <Image.Source>
+                            <FontImageSource Glyph="{Binding BookmarkIconGlyph}"
+                                             FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                             Size="20"
+                                             Color="{Binding BookmarkIconColor}" />
+                        </Image.Source>
+                    </Image>
                 </Border>
             </Grid>
 

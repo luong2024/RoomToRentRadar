@@ -29,22 +29,31 @@
                         AlignContent="Start">
                 <BindableLayout.ItemTemplate>
                     <DataTemplate x:DataType="models:AmenityDisplayItem">
-                        <HorizontalStackLayout FlexLayout.Basis="48%"
-                                               Spacing="10"
-                                               Margin="0,5"
-                                               VerticalOptions="Center">
-                            <Label Text="{Binding IconGlyph}"
-                                   FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                                   FontSize="20"
-                                   TextColor="{AppThemeBinding Light={StaticResource ActionAccentLight}, Dark={StaticResource ActionAccentDark}}"
-                                   VerticalTextAlignment="Center" />
-                            <Label Text="{Binding Name}"
+                        <Grid FlexLayout.Basis="48%"
+                              ColumnDefinitions="28, *"
+                              ColumnSpacing="8"
+                              Margin="0,5"
+                              VerticalOptions="Center">
+                            <Image Grid.Column="0"
+                                   WidthRequest="20"
+                                   HeightRequest="20"
+                                   HorizontalOptions="Start"
+                                   VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="{Binding IconGlyph}"
+                                                     FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                     Size="20"
+                                                     Color="{AppThemeBinding Light={StaticResource ActionAccentLight}, Dark={StaticResource ActionAccentDark}}" />
+                                </Image.Source>
+                            </Image>
+                            <Label Grid.Column="1"
+                                   Text="{Binding Name}"
                                    FontFamily="{StaticResource FontFamilyRegular}"
                                    FontSize="{StaticResource FontSizeBodyMedium}"
                                    TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
                                    LineBreakMode="TailTruncation"
                                    VerticalTextAlignment="Center" />
-                        </HorizontalStackLayout>
+                        </Grid>
                     </DataTemplate>
                 </BindableLayout.ItemTemplate>
             </FlexLayout>

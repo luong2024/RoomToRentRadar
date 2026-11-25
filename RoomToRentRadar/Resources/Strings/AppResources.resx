@@ -272,6 +272,9 @@
   <data name="RoomDetail_Title" xml:space="preserve">
     <value>Room Details</value>
   </data>
+  <data name="RoomDetail_NoPhotos" xml:space="preserve">
+    <value>No photos available for this listing</value>
+  </data>
   <data name="RoomDetail_360View" xml:space="preserve">
     <value>360° view</value>
   </data>

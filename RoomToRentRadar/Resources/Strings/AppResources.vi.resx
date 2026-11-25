@@ -273,6 +273,9 @@
   <data name="RoomDetail_Title" xml:space="preserve">
     <value>Chi tiết phòng</value>
   </data>
+  <data name="RoomDetail_NoPhotos" xml:space="preserve">
+    <value>Chưa có ảnh cho tin đăng này</value>
+  </data>
   <data name="RoomDetail_360View" xml:space="preserve">
     <value>Xem 360°</value>
   </data>
