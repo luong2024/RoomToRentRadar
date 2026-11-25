@@ -27,22 +27,26 @@ public sealed class UpdateListingUseCase : IUpdateListingUseCase
     private readonly IRoomPhotoRepository _photoRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPhotoStoragePort _storage;
+    private readonly ITravelTimeCacheRepository _travelTimeCacheRepository;
 
     public UpdateListingUseCase(
         IRoomRepository roomRepository,
         IRoomPhotoRepository photoRepository,
         IUnitOfWork unitOfWork,
-        IPhotoStoragePort storage)
+        IPhotoStoragePort storage,
+        ITravelTimeCacheRepository travelTimeCacheRepository)
     {
         ArgumentNullException.ThrowIfNull(roomRepository);
         ArgumentNullException.ThrowIfNull(photoRepository);
         ArgumentNullException.ThrowIfNull(unitOfWork);
         ArgumentNullException.ThrowIfNull(storage);
+        ArgumentNullException.ThrowIfNull(travelTimeCacheRepository);
 
         _roomRepository = roomRepository;
         _photoRepository = photoRepository;
         _unitOfWork = unitOfWork;
         _storage = storage;
+        _travelTimeCacheRepository = travelTimeCacheRepository;
     }
 
     public async Task<MyListingDetailDto> ExecuteAsync(UpdateListingCommand command, CancellationToken ct = default)
@@ -86,11 +90,14 @@ public sealed class UpdateListingUseCase : IUpdateListingUseCase
             .ValidateAsync(listing.PhotoIds, command.LandlordId, room.Id, _photoRepository, utcNow, ct)
             .ConfigureAwait(false);
 
+        var pinMoved = !room.Latitude.Equals(listing.Location.Latitude)
+            || !room.Longitude.Equals(listing.Location.Longitude);
+
         room.UpdateDetails(ToDetails(listing, photos.HasAddedNewPhotos));
 
         var removedPhotos = new List<Domain.Entities.RoomPhoto>();
         await _unitOfWork.ExecuteAsync(
-            innerCt => UpdateRoomAndPhotosAsync(command.LandlordId, room, photos.OrderedIds, removedPhotos, innerCt),
+            innerCt => UpdateRoomAndPhotosAsync(command.LandlordId, room, photos.OrderedIds, removedPhotos, pinMoved, innerCt),
             ct).ConfigureAwait(false);
 
         // After commit: the rows are gone, so a failed file delete must not fail the request.
@@ -100,15 +107,22 @@ public sealed class UpdateListingUseCase : IUpdateListingUseCase
         return LandlordListingMapper.ToDetail(room, storedPhotos, _storage);
     }
 
-    /// <summary>Body of the unit of work: room + children, photo removal and re-attach are one commit.</summary>
+    /// <summary>Body of the unit of work: room + children, photo removal, pin-cache invalidation and re-attach are one commit.</summary>
     private async Task UpdateRoomAndPhotosAsync(
         string landlordId,
         Domain.Aggregates.Room room,
         IReadOnlyList<string> photoIds,
         List<Domain.Entities.RoomPhoto> removedPhotos,
+        bool pinMoved,
         CancellationToken ct)
     {
         await _roomRepository.UpdateAsync(room, ct).ConfigureAwait(false);
+
+        if (pinMoved)
+        {
+            // BR-TRV-03: invalidate cached travel times whenever the room pin moves.
+            await _travelTimeCacheRepository.InvalidateByRoomIdAsync(room.Id, ct).ConfigureAwait(false);
+        }
 
         var removed = await _photoRepository
             .RemoveNotInListAsync(room.Id, photoIds, ct)

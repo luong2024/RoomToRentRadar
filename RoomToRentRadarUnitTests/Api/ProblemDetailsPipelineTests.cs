@@ -48,6 +48,7 @@ public class ProblemDetailsPipelineTests
             webHost.UseSetting("Jwt:SigningKey", JwtSigningKey);
             webHost.UseSetting("Jwt:Issuer", "RoomToRentRadar.Api");
             webHost.UseSetting("Jwt:Audience", "RoomToRentRadar.Client");
+            webHost.UseSetting("Routing:OpenRouteServiceApiKey", "test-ors-api-key");
 
             if (configureTestServices is not null)
             {

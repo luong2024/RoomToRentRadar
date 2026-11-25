@@ -387,4 +387,43 @@ public class GetRoomDetailUseCaseTests
         Assert.That(result.Photos[1].Id, Is.EqualTo("p1"));
         Assert.That(result.Photos[1].SortOrder, Is.EqualTo(2));
     }
+
+    [Test]
+    public async Task ExecuteAsync_AuthenticatedUserWithoutQueryCampus_UsesProfileSelectedCampus()
+    {
+        var room = CreateSampleRoom();
+        var landlord = CreateSampleLandlord();
+        var student = User.Reconstitute(
+            id: "student-tnus",
+            email: "student@ictu.edu.vn",
+            fullName: "Sinh Viên TNUS",
+            passwordHash: "hash",
+            role: UserRole.Student,
+            authProvider: AuthProvider.Local,
+            ssoSubjectId: null,
+            phoneNumber: null,
+            studentCode: null,
+            isVerified: true,
+            failedLoginCount: 0,
+            lockoutEndUtc: null,
+            createdAtUtc: new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc),
+            updatedAtUtc: new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc),
+            refreshTokens: null,
+            selectedCampusId: "TNUS",
+            preferredLanguage: "vi",
+            version: 1);
+
+        _roomRepository.GetByIdAsync("room-001", Arg.Any<CancellationToken>()).Returns(room);
+        _userRepository.GetByIdAsync("landlord-001", Arg.Any<CancellationToken>()).Returns(landlord);
+        _userRepository.GetByIdAsync("student-tnus", Arg.Any<CancellationToken>()).Returns(student);
+        _currentUserContext.IsAuthenticated.Returns(true);
+        _currentUserContext.UserId.Returns("student-tnus");
+
+        var expectedTnusDistance = RoomToRentRadar.Domain.Services.HaversineDistanceCalculator
+            .CalculateDistanceKm(Tnus.Latitude, Tnus.Longitude, room.Latitude, room.Longitude);
+
+        var result = await _sut.ExecuteAsync("room-001");
+
+        Assert.That(result.DistanceKm, Is.EqualTo(expectedTnusDistance));
+    }
 }

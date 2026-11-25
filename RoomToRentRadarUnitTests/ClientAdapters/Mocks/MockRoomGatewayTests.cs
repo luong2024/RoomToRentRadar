@@ -308,19 +308,24 @@ public class MockRoomGatewayTests
     }
 
     [Test]
-    public async Task GetRoomTravelTimesAsync_SeedRoom_ReturnsFallbackEstimates()
+    public async Task GetRoomTravelTimesAsync_SeedRoom_ReturnsThreeModesWithBusEstimate()
     {
         var travel = await _gateway.GetRoomTravelTimesAsync("seed-z115");
 
         Assert.Multiple(() =>
         {
             Assert.That(travel.CampusId, Is.EqualTo("ICTU"));
-            Assert.That(travel.IsFallback, Is.True);
+            Assert.That(travel.IsFallback, Is.False);
             Assert.That(travel.StraightLineDistanceKm, Is.EqualTo(
                 HaversineDistanceCalculator.CalculateDistanceKm(IctuLatitude, IctuLongitude, 21.5875, 105.8080)));
-            Assert.That(travel.Items, Has.Count.EqualTo(2));
-            Assert.That(travel.Items.All(i => i.IsEstimate), Is.True);
-            Assert.That(travel.Items.Select(i => i.Mode).ToList(), Is.EqualTo(new[] { TravelMode.Motorbike, TravelMode.Walking }));
+            Assert.That(travel.Items, Has.Count.EqualTo(3));
+            Assert.That(travel.Items.Select(i => i.Mode).ToList(), Is.EqualTo(new[]
+            {
+                TravelMode.Motorbike, TravelMode.Bus, TravelMode.Walking
+            }));
+            Assert.That(travel.Items[0].IsEstimate, Is.False);
+            Assert.That(travel.Items[1].IsEstimate, Is.True);
+            Assert.That(travel.Items[2].IsEstimate, Is.False);
             Assert.That(travel.Items.All(i => i.DurationSeconds > 0 && i.DistanceMeters > 0), Is.True);
         });
     }

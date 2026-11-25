@@ -778,4 +778,160 @@
   <data name="Explore_Empty_Action" xml:space="preserve">
     <value>Clear filters</value>
   </data>
+  <data name="Filters_Title" xml:space="preserve">
+    <value>Filters</value>
+  </data>
+  <data name="Filters_Clear" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="Filters_CloseDescription" xml:space="preserve">
+    <value>Close filters</value>
+  </data>
+  <data name="Filters_MonthlyRent" xml:space="preserve">
+    <value>Monthly rent</value>
+  </data>
+  <data name="Filters_Area" xml:space="preserve">
+    <value>Area</value>
+  </data>
+  <data name="Filters_RoomType" xml:space="preserve">
+    <value>Room type</value>
+  </data>
+  <data name="Filters_MaxDistanceToCampus" xml:space="preserve">
+    <value>Max distance to {0}</value>
+  </data>
+  <data name="Filters_SortBy" xml:space="preserve">
+    <value>Sort by</value>
+  </data>
+  <data name="Filters_Range_Any" xml:space="preserve">
+    <value>Any</value>
+  </data>
+  <data name="Filters_MinLabel" xml:space="preserve">
+    <value>Min</value>
+  </data>
+  <data name="Filters_MaxLabel" xml:space="preserve">
+    <value>Max</value>
+  </data>
+  <data name="Filters_MinRentPlaceholder" xml:space="preserve">
+    <value>Min (VND)</value>
+  </data>
+  <data name="Filters_MaxRentPlaceholder" xml:space="preserve">
+    <value>Max (VND)</value>
+  </data>
+  <data name="Filters_MinAreaPlaceholder" xml:space="preserve">
+    <value>Min (m²)</value>
+  </data>
+  <data name="Filters_MaxAreaPlaceholder" xml:space="preserve">
+    <value>Max (m²)</value>
+  </data>
+  <data name="Filters_Preset_Under1_5M" xml:space="preserve">
+    <value>Under 1.5M</value>
+  </data>
+  <data name="Filters_Preset_Under2M" xml:space="preserve">
+    <value>Under 2M</value>
+  </data>
+  <data name="Filters_Preset_Under3M" xml:space="preserve">
+    <value>Under 3M</value>
+  </data>
+  <data name="Filters_Chip_UnderAmount" xml:space="preserve">
+    <value>Under {0}</value>
+  </data>
+  <data name="Filters_Chip_FromAmount" xml:space="preserve">
+    <value>From {0}</value>
+  </data>
+  <data name="Filters_Chip_RangeAmount" xml:space="preserve">
+    <value>{0}{2} – {1}{2}</value>
+  </data>
+  <data name="Filters_Chip_MinArea" xml:space="preserve">
+    <value>≥ {0} m²</value>
+  </data>
+  <data name="Filters_Chip_MaxArea" xml:space="preserve">
+    <value>≤ {0} m²</value>
+  </data>
+  <data name="Filters_Chip_AreaRange" xml:space="preserve">
+    <value>{0}–{1} m²</value>
+  </data>
+  <data name="Filters_Chip_MaxDistance" xml:space="preserve">
+    <value>≤ {0} km</value>
+  </data>
+  <data name="Filters_DistanceOption" xml:space="preserve">
+    <value>{0} km</value>
+  </data>
+  <data name="Filters_PriceUnitMillion" xml:space="preserve">
+    <value>{0}M</value>
+  </data>
+  <data name="Filters_PriceUnitThousand" xml:space="preserve">
+    <value>{0}k</value>
+  </data>
+  <data name="Filters_UnitMillion" xml:space="preserve">
+    <value>M</value>
+  </data>
+  <data name="Filters_UnitThousand" xml:space="preserve">
+    <value>k</value>
+  </data>
+  <data name="Filters_ShowRoomsPlural" xml:space="preserve">
+    <value>Show {0} rooms</value>
+  </data>
+  <data name="Filters_ShowRoomsSingular" xml:space="preserve">
+    <value>Show 1 room</value>
+  </data>
+  <data name="Filters_ShowRoomsZero" xml:space="preserve">
+    <value>Show 0 rooms</value>
+  </data>
+  <data name="Filters_ShowRoomsFallback" xml:space="preserve">
+    <value>Show rooms</value>
+  </data>
+  <data name="Filters_Counting" xml:space="preserve">
+    <value>Counting rooms...</value>
+  </data>
+  <data name="Sort_Distance" xml:space="preserve">
+    <value>Nearest to campus</value>
+  </data>
+  <data name="Sort_Distance_Short" xml:space="preserve">
+    <value>Nearest</value>
+  </data>
+  <data name="Sort_PriceAsc" xml:space="preserve">
+    <value>Price: low to high</value>
+  </data>
+  <data name="Sort_PriceAsc_Short" xml:space="preserve">
+    <value>Price ↑</value>
+  </data>
+  <data name="Sort_PriceDesc" xml:space="preserve">
+    <value>Price: high to low</value>
+  </data>
+  <data name="Sort_PriceDesc_Short" xml:space="preserve">
+    <value>Price ↓</value>
+  </data>
+  <data name="Sort_Newest" xml:space="preserve">
+    <value>Newest</value>
+  </data>
+  <data name="Sort_Newest_Short" xml:space="preserve">
+    <value>Newest</value>
+  </data>
+  <data name="Explore_FiltersButton" xml:space="preserve">
+    <value>Filters</value>
+  </data>
+  <data name="Explore_FiltersButtonDescription" xml:space="preserve">
+    <value>Open filters, {0} active</value>
+  </data>
+  <data name="Explore_SortButtonDescription" xml:space="preserve">
+    <value>Change sort order</value>
+  </data>
+  <data name="Explore_ClearAll" xml:space="preserve">
+    <value>Clear all</value>
+  </data>
+  <data name="Explore_RemoveChipDescription" xml:space="preserve">
+    <value>Remove filter {0}</value>
+  </data>
+  <data name="Explore_RoomsCountPlural" xml:space="preserve">
+    <value>{0} rooms</value>
+  </data>
+  <data name="Explore_RoomsCountSingular" xml:space="preserve">
+    <value>1 room</value>
+  </data>
+  <data name="Explore_VerifiedOnlySuffix" xml:space="preserve">
+    <value> · verified only</value>
+  </data>
+  <data name="Common_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
 </root>
