@@ -250,11 +250,14 @@ public class SearchRoomsUseCaseTests
     [Test]
     public async Task ExecuteAsync_WithMaxDistance_ComputesBoundingBoxAroundCampus()
     {
-        // ADR-006: deltaLat = km / 110.574; deltaLng = km / (111.320 * cos(lat))
+        // ADR-006: deltaLat = km / 110.574; deltaLng = km / (111.320 * cos(lat)).
+        // T04.3 / BR-SRCH-03: the box is padded by the 0.05 km rounding window so rooms that round into
+        // range are not dropped by the prefilter.
         await _sut.ExecuteAsync(new RoomSearchRequest(MaxDistanceKm: 2.0));
 
-        var deltaLat = 2.0 / 110.574;
-        var deltaLng = 2.0 / (111.320 * Math.Cos(21.5851 * Math.PI / 180.0));
+        var paddedDistanceKm = 2.0 + 0.05;
+        var deltaLat = paddedDistanceKm / 110.574;
+        var deltaLng = paddedDistanceKm / (111.320 * Math.Cos(21.5851 * Math.PI / 180.0));
 
         Assert.That(_capturedFilter, Is.Not.Null);
         Assert.Multiple(() =>

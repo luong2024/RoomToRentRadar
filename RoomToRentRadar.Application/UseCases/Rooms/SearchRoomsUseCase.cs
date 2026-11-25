@@ -21,6 +21,11 @@ public sealed class SearchRoomsUseCase : ISearchRoomsUseCase
     private const double KmPerDegreeLatitude = 110.574;
     private const double KmPerDegreeLongitudeAtEquator = 111.320;
 
+    // BR-SRCH-03 rounds distance to 0.1 km, so a room up to 0.05 km beyond maxDistanceKm can still round
+    // down into range. Pad the prefilter by that rounding window (plus the small constant mismatch between
+    // the ADR-006 degree constants above and the Haversine earth radius) so the exact cut decides, not the box.
+    private const double BoundingBoxPaddingKm = 0.05;
+
     private readonly ICampusRepository _campusRepository;
     private readonly IRoomSearchReadModel _readModel;
 
@@ -210,9 +215,9 @@ public sealed class SearchRoomsUseCase : ISearchRoomsUseCase
 
         if (request.MaxDistanceKm.HasValue)
         {
-            var maxDistanceKm = request.MaxDistanceKm.Value;
-            var deltaLat = maxDistanceKm / KmPerDegreeLatitude;
-            var deltaLng = maxDistanceKm / (KmPerDegreeLongitudeAtEquator * Math.Cos(originLatitude * Math.PI / 180.0));
+            var paddedDistanceKm = request.MaxDistanceKm.Value + BoundingBoxPaddingKm;
+            var deltaLat = paddedDistanceKm / KmPerDegreeLatitude;
+            var deltaLng = paddedDistanceKm / (KmPerDegreeLongitudeAtEquator * Math.Cos(originLatitude * Math.PI / 180.0));
 
             minLat = originLatitude - deltaLat;
             maxLat = originLatitude + deltaLat;

@@ -38,28 +38,64 @@ public sealed class SqliteRoomSearchReadModel : IRoomSearchReadModel
             INNER JOIN Users u ON u.Id = r.LandlordId
             WHERE r.Status = 'Available'
               AND u.IsVerified = 1
-              AND (@MinRent IS NULL OR r.MonthlyRentVnd >= @MinRent)
-              AND (@MaxRent IS NULL OR r.MonthlyRentVnd <= @MaxRent)
-              AND (@MinArea IS NULL OR r.AreaM2 >= @MinArea)
-              AND (@MaxArea IS NULL OR r.AreaM2 <= @MaxArea)
-              AND (@MinLat IS NULL OR r.Latitude >= @MinLat)
-              AND (@MaxLat IS NULL OR r.Latitude <= @MaxLat)
-              AND (@MinLng IS NULL OR r.Longitude >= @MinLng)
-              AND (@MaxLng IS NULL OR r.Longitude <= @MaxLng)
+              AND r.VerifiedAtUtc IS NOT NULL
             """);
 
+        // BR-LST-06 / T04.3: only append conditions that are actually requested. The previous
+        // "(@Param IS NULL OR r.Column >= @Param)" shape prevented SQLite from pushing the range into
+        // IX_Rooms_Status_Rent / IX_Rooms_Status_Lat_Lng (full table scan on Rooms).
         var conn = _dbContext.CreateOpenConnection();
         try
         {
             await using var cmd = conn.CreateCommand();
-            cmd.Parameters.AddWithValue("@MinRent", (object?)filter.MinRentVnd ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@MaxRent", (object?)filter.MaxRentVnd ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@MinArea", (object?)filter.MinAreaM2 ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@MaxArea", (object?)filter.MaxAreaM2 ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@MinLat", (object?)filter.MinLat ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@MaxLat", (object?)filter.MaxLat ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@MinLng", (object?)filter.MinLng ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@MaxLng", (object?)filter.MaxLng ?? DBNull.Value);
+
+            if (filter.MinRentVnd is { } minRentVnd)
+            {
+                sql.Append("\n  AND r.MonthlyRentVnd >= @MinRent");
+                cmd.Parameters.AddWithValue("@MinRent", minRentVnd);
+            }
+
+            if (filter.MaxRentVnd is { } maxRentVnd)
+            {
+                sql.Append("\n  AND r.MonthlyRentVnd <= @MaxRent");
+                cmd.Parameters.AddWithValue("@MaxRent", maxRentVnd);
+            }
+
+            if (filter.MinAreaM2 is { } minAreaM2)
+            {
+                sql.Append("\n  AND r.AreaM2 >= @MinArea");
+                cmd.Parameters.AddWithValue("@MinArea", minAreaM2);
+            }
+
+            if (filter.MaxAreaM2 is { } maxAreaM2)
+            {
+                sql.Append("\n  AND r.AreaM2 <= @MaxArea");
+                cmd.Parameters.AddWithValue("@MaxArea", maxAreaM2);
+            }
+
+            if (filter.MinLat is { } minLat)
+            {
+                sql.Append("\n  AND r.Latitude >= @MinLat");
+                cmd.Parameters.AddWithValue("@MinLat", minLat);
+            }
+
+            if (filter.MaxLat is { } maxLat)
+            {
+                sql.Append("\n  AND r.Latitude <= @MaxLat");
+                cmd.Parameters.AddWithValue("@MaxLat", maxLat);
+            }
+
+            if (filter.MinLng is { } minLng)
+            {
+                sql.Append("\n  AND r.Longitude >= @MinLng");
+                cmd.Parameters.AddWithValue("@MinLng", minLng);
+            }
+
+            if (filter.MaxLng is { } maxLng)
+            {
+                sql.Append("\n  AND r.Longitude <= @MaxLng");
+                cmd.Parameters.AddWithValue("@MaxLng", maxLng);
+            }
 
             if (filter.RoomTypes is { Count: > 0 } roomTypes)
             {
