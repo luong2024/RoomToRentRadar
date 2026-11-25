@@ -17,6 +17,10 @@ public static class ControllerIdentityHelper
             ?? controller.User?.FindFirstValue("sub");
         var headerId = controller.Request?.Headers[UserIdHeader].FirstOrDefault();
         var raw = !string.IsNullOrWhiteSpace(claimId) ? claimId : headerId;
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            raw = GetDevelopmentFallbackUserId(controller);
+        }
 
         if (string.IsNullOrWhiteSpace(raw) || raw.Trim().Length > 100)
         {
@@ -31,6 +35,21 @@ public static class ControllerIdentityHelper
         userId = raw.Trim();
         errorResult = null;
         return true;
+    }
+
+    /// <summary>
+    /// Chỉ môi trường Development: khi chưa có đăng nhập (US13) và app MAUI chưa gửi header,
+    /// dùng <c>DevAuth:FallbackUserId</c> trong appsettings.Development.json. Không cấp quyền Moderator.
+    /// </summary>
+    private static string? GetDevelopmentFallbackUserId(ControllerBase controller)
+    {
+        var services = controller.HttpContext?.RequestServices;
+        if (services?.GetService<IWebHostEnvironment>() is not { } env || !env.IsDevelopment())
+        {
+            return null;
+        }
+
+        return services.GetService<IConfiguration>()?["DevAuth:FallbackUserId"];
     }
 
     public static bool TryResolveModerator(
