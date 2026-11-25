@@ -272,6 +272,28 @@ public class UpdateListingUseCaseTests
         Assert.That(_unitOfWork.Executions, Is.Zero);
     }
 
+    [Test]
+    public async Task ExecuteAsync_WhenPinCoordinatesChange_InvalidatesTravelTimeCacheInsideUnitOfWork()
+    {
+        var movedRequest = AppTestData.ListingRequest(new[] { "p1", "p2", "p3" }) with
+        {
+            Location = new RoomToRentRadar.Ports.Contracts.Responses.Rooms.GeoPointDto(_room.Latitude + 0.005, _room.Longitude + 0.005)
+        };
+        var command = new UpdateListingCommand("landlord-1", "room-1", "\"3\"", movedRequest);
+
+        await _useCase.ExecuteAsync(command);
+
+        await _travelTimeCache.Received(1).InvalidateByRoomIdAsync("room-1", Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WhenPinCoordinatesUnchanged_DoesNotInvalidateTravelTimeCache()
+    {
+        await _useCase.ExecuteAsync(Command(ifMatch: "\"3\"", "p1", "p2", "p3"));
+
+        await _travelTimeCache.DidNotReceiveWithAnyArgs().InvalidateByRoomIdAsync(default!, default);
+    }
+
     private UpdateListingCommand Command(string? ifMatch, params string[] photoIds) =>
         new("landlord-1", "room-1", ifMatch, AppTestData.ListingRequest(photoIds));
 
