@@ -61,7 +61,7 @@ public class RoomDetailPageModelTests
             areaM2: 25.0,
             maxOccupants: 2,
             furnishing: Furnishing.Full,
-            availableFrom: new DateOnly(2026, 12, 1),
+            availableFrom: new DateOnly(2099, 12, 1),
             distanceKm: 1.2,
             landlordPhone: null); // Hidden for guests (BR-CNT-01)
 
@@ -81,9 +81,9 @@ public class RoomDetailPageModelTests
 
         // Assert - Header & Pricing
         Assert.That(_sut.Title, Is.EqualTo("Private room with balcony near ICTU"));
-        Assert.That(_sut.PriceFormatted, Is.EqualTo("2,500,000 đ"));
-        Assert.That(_sut.PeriodFormatted, Is.EqualTo("/ month"));
-        Assert.That(_sut.DepositFormatted, Is.EqualTo("Deposit 2,500,000 đ (1 month)"));
+        Assert.That(_sut.PriceFormatted, Is.EqualTo("2.5M"));
+        Assert.That(_sut.PeriodFormatted, Is.EqualTo("/mo"));
+        Assert.That(_sut.DepositFormatted, Is.EqualTo("Deposit 2.5M VND (1 month)"));
         Assert.That(_sut.StatusBadgeText, Is.EqualTo("Verified · Available"));
 
         // Assert - Key Facts (6 cards grouped into 2 rows of 3)
@@ -93,22 +93,22 @@ public class RoomDetailPageModelTests
         Assert.That(_sut.KeyFactRows[0].Second!.Value, Is.EqualTo("Boarding room"));
         Assert.That(_sut.KeyFactRows[0].Third!.Value, Is.EqualTo("2 people"));
         Assert.That(_sut.KeyFactRows[1].First.Value, Is.EqualTo("Full"));
-        Assert.That(_sut.KeyFactRows[1].Second!.Value, Is.EqualTo("1 Dec"));
+        Assert.That(_sut.KeyFactRows[1].Second!.Value, Is.EqualTo("1 Dec 2099"));
         Assert.That(_sut.KeyFactRows[1].Third!.Value, Is.EqualTo("1.2 km"));
         Assert.That(_sut.KeyFacts[0].Value, Is.EqualTo("25 m²"));
         Assert.That(_sut.KeyFacts[1].Value, Is.EqualTo("Boarding room"));
         Assert.That(_sut.KeyFacts[2].Value, Is.EqualTo("2 people"));
         Assert.That(_sut.KeyFacts[3].Value, Is.EqualTo("Full"));
-        Assert.That(_sut.KeyFacts[4].Value, Is.EqualTo("1 Dec"));
+        Assert.That(_sut.KeyFacts[4].Value, Is.EqualTo("1 Dec 2099"));
         Assert.That(_sut.KeyFacts[5].Value, Is.EqualTo("1.2 km"));
 
         // Assert - Monthly Costs (5 breakdown rows + estimated total)
         Assert.That(_sut.CostBreakdownRows, Has.Count.EqualTo(5));
-        Assert.That(_sut.CostBreakdownRows[0].ValueFormatted, Is.EqualTo("2,500,000 đ")); // Rent
-        Assert.That(_sut.CostBreakdownRows[1].ValueFormatted, Is.EqualTo("3,500 đ / kWh")); // Electricity
-        Assert.That(_sut.CostBreakdownRows[2].ValueFormatted, Is.EqualTo("100,000 đ / person")); // Water
+        Assert.That(_sut.CostBreakdownRows[0].ValueFormatted, Is.EqualTo("2,500,000 ₫")); // Rent
+        Assert.That(_sut.CostBreakdownRows[1].ValueFormatted, Is.EqualTo("3,500 ₫ / kWh")); // Electricity
+        Assert.That(_sut.CostBreakdownRows[2].ValueFormatted, Is.EqualTo("100,000 ₫ / person")); // Water
         Assert.That(_sut.CostBreakdownRows[3].ValueFormatted, Is.EqualTo("Included")); // Internet
-        Assert.That(_sut.CostBreakdownRows[4].ValueFormatted, Is.EqualTo("50,000 đ")); // Parking
+        Assert.That(_sut.CostBreakdownRows[4].ValueFormatted, Is.EqualTo("50,000 ₫")); // Parking
         Assert.That(_sut.EstimatedTotalFormatted, Is.EqualTo("~2.95M/mo"));
 
         // Assert - Amenities (11 provided, top 8 displayed initially)
@@ -188,7 +188,7 @@ public class RoomDetailPageModelTests
         Assert.That(_sut.IsAvailable, Is.False);
         Assert.That(_sut.IsUnavailable, Is.True);
         Assert.That(_sut.UnavailableBannerText, Does.Contain("This room is no longer available. It was marked as rented"));
-        Assert.That(_sut.UnavailableSummaryFormatted, Is.EqualTo("1,800,000 đ / month · 18 m² · Boarding room"));
+        Assert.That(_sut.UnavailableSummaryFormatted, Is.EqualTo("1.8M/mo · 18 m² · Boarding room"));
         Assert.That(_sut.ContactDisabledText, Is.EqualTo("Contact is disabled for unavailable rooms"));
         Assert.That(_sut.SimilarRooms, Has.Count.EqualTo(2));
         Assert.That(_sut.SimilarRooms[0].Title, Is.EqualTo("Room near Tân Thịnh market"));
@@ -630,7 +630,7 @@ public class RoomDetailPageModelTests
 
         // Assert
         Assert.That(_sut.StatusBadgeText, Is.EqualTo("Đã xác minh · Còn phòng"));
-        Assert.That(_sut.PeriodFormatted, Is.EqualTo("/ tháng"));
+        Assert.That(_sut.PeriodFormatted, Is.EqualTo("/tháng"));
         Assert.That(_sut.KeyFacts[0].Label, Is.EqualTo("Diện tích"));
         Assert.That(_sut.KeyFacts[1].Label, Is.EqualTo("Loại phòng"));
         Assert.That(_sut.HouseRulesList[0].Title, Is.EqualTo("Giờ yên tĩnh"));
@@ -671,8 +671,8 @@ public class RoomDetailPageModelTests
 
         // Assert
         Assert.That(_sut.CostBreakdownRows[1].ValueFormatted, Is.EqualTo("Included")); // Electricity null -> Included
-        Assert.That(_sut.CostBreakdownRows[2].ValueFormatted, Is.EqualTo("15,000 đ / m³")); // Water per m3
-        Assert.That(_sut.CostBreakdownRows[3].ValueFormatted, Is.EqualTo("50,000 đ")); // Internet
+        Assert.That(_sut.CostBreakdownRows[2].ValueFormatted, Is.EqualTo("15,000 ₫ / m³")); // Water per m3
+        Assert.That(_sut.CostBreakdownRows[3].ValueFormatted, Is.EqualTo("50,000 ₫")); // Internet
         Assert.That(_sut.CostBreakdownRows[4].ValueFormatted, Is.EqualTo("Free")); // Parking null -> Free
     }
 
@@ -931,7 +931,7 @@ public class RoomDetailPageModelTests
 
         // Assert
         Assert.That(sharedText, Does.Contain("Private room with balcony near ICTU"));
-        Assert.That(sharedText, Does.Contain("2,500,000 đ"));
+        Assert.That(sharedText, Does.Contain("2,500,000 ₫"));
     }
 
     [Test]
@@ -1382,13 +1382,77 @@ public class RoomDetailPageModelTests
         });
     }
 
+    // T00.18: an amount the short form cannot show exactly is written in full (ui-ux-spec §6).
+    [Test]
+    public async Task InitializeAsync_WithAnOddRent_ShowsTheExactAmount()
+    {
+        var testRoom = CreateSampleRoom(
+            status: ListingStatus.Available,
+            isVerified: true,
+            monthlyRent: 2454321,
+            deposit: 2454321,
+            areaM2: 25.0,
+            maxOccupants: 2,
+            furnishing: Furnishing.Full,
+            availableFrom: new DateOnly(2020, 1, 15),
+            distanceKm: 1.2,
+            landlordPhone: null);
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+
+        await _sut.InitializeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_sut.PriceFormatted, Is.EqualTo("2,454,321 ₫"));
+            Assert.That(_sut.PeriodFormatted, Is.EqualTo("/mo"));
+            Assert.That(_sut.PriceShortFormatted, Is.EqualTo("2,454,321 ₫/mo"));
+            Assert.That(_sut.DepositFormatted, Is.EqualTo("Deposit 2,454,321 VND (1 month)"));
+            Assert.That(_sut.DepositShortFormatted, Is.EqualTo("Deposit 2,454,321 VND"));
+            Assert.That(_sut.CostBreakdownRows[0].ValueFormatted, Is.EqualTo("2,454,321 ₫"));
+            Assert.That(_sut.KeyFacts[4].Value, Is.EqualTo("15 Jan 2020"));
+        });
+    }
+
+    // T00.18: dates older than seven days are written as dates (ui-ux-spec §6).
+    [TestCase("en-US", "d MMM yyyy", "Updated {0}", "marked as rented on {0}.")]
+    [TestCase("vi-VN", "dd/MM/yyyy", "Cập nhật {0}", "đã thuê ngày {0}.")]
+    public async Task InitializeAsync_WithAnOldListing_ShowsTheUpdateDate(
+        string culture, string pattern, string updated, string banner)
+    {
+        var cultureInfo = new CultureInfo(culture);
+        LocalizedStrings.Instance.SetCulture(cultureInfo);
+        var lastUpdated = DateTime.UtcNow.AddDays(-24);
+        var testRoom = CreateSampleRoom(
+            status: ListingStatus.Rented,
+            isVerified: true,
+            monthlyRent: 2500000,
+            deposit: 2500000,
+            areaM2: 25.0,
+            maxOccupants: 2,
+            furnishing: Furnishing.Full,
+            availableFrom: null,
+            distanceKm: 1.2,
+            landlordPhone: null) with { LastUpdatedAtUtc = lastUpdated };
+        _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
+        _roomGateway.GetSimilarRoomsAsync("room-test-1", "ictu").Returns([]);
+
+        await _sut.InitializeAsync();
+
+        var date = lastUpdated.ToString(pattern, cultureInfo);
+        Assert.Multiple(() =>
+        {
+            Assert.That(_sut.UpdatedAgoText, Is.EqualTo(string.Format(updated, date)));
+            Assert.That(_sut.UnavailableBannerText, Does.EndWith(string.Format(banner, date)));
+        });
+    }
+
     [Test]
     public async Task InitializeAsync_WhenCultureIsVietnamese_FormatsShortPricesDistancesAndDatesPerLocale()
     {
         var viCulture = new CultureInfo("vi-VN");
         LocalizedStrings.Instance.SetCulture(viCulture);
 
-        var availableDate = new DateOnly(2026, 12, 1);
+        var availableDate = new DateOnly(2099, 12, 1);
         var testRoom = CreateSampleRoom(
             status: ListingStatus.Rented,
             isVerified: true,
@@ -1413,7 +1477,7 @@ public class RoomDetailPageModelTests
             Assert.That(_sut.PriceShortFormatted, Is.EqualTo("2,5 tr/tháng"));
             Assert.That(_sut.DepositShortFormatted, Is.EqualTo("Cọc 950k"));
             Assert.That(_sut.EstimatedTotalFormatted, Is.EqualTo("~2,95 tr/tháng"));
-            Assert.That(_sut.KeyFacts[4].Value, Is.EqualTo(availableDate.ToString("d MMM", viCulture)));
+            Assert.That(_sut.KeyFacts[4].Value, Is.EqualTo("01/12/2099"));
             Assert.That(_sut.KeyFacts[5].Value, Is.EqualTo("1,2 km"));
             Assert.That(_sut.SimilarRooms[0].PriceFormatted, Is.EqualTo("950k/tháng"));
             Assert.That(_sut.SimilarRooms[0].DistanceFormatted, Is.EqualTo("Cách phòng này 0,4 km"));

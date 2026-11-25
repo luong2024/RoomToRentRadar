@@ -315,7 +315,7 @@
     <value>{0} days ago</value>
   </data>
   <data name="RoomDetail_PerMonth" xml:space="preserve">
-    <value>/ month</value>
+    <value>/mo</value>
   </data>
   <data name="RoomDetail_Deposit" xml:space="preserve">
     <value>Deposit {0} ({1})</value>
@@ -402,13 +402,13 @@
     <value>Motorbike parking</value>
   </data>
   <data name="RoomDetail_PerKwh" xml:space="preserve">
-    <value>{0} đ / kWh</value>
+    <value>{0} / kWh</value>
   </data>
   <data name="RoomDetail_PerPerson" xml:space="preserve">
-    <value>{0} đ / person</value>
+    <value>{0} / person</value>
   </data>
   <data name="RoomDetail_PerM3" xml:space="preserve">
-    <value>{0} đ / m³</value>
+    <value>{0} / m³</value>
   </data>
   <data name="RoomDetail_Included" xml:space="preserve">
     <value>Included</value>
@@ -1092,5 +1092,11 @@
   </data>
   <data name="Price_FullWithUnit" xml:space="preserve">
     <value>{0} VND</value>
+  </data>
+  <data name="RoomDetail_UpdatedOn" xml:space="preserve">
+    <value>Updated {0}</value>
+  </data>
+  <data name="RoomDetail_RelativeOnDate" xml:space="preserve">
+    <value>on {0}</value>
   </data>
 </root>

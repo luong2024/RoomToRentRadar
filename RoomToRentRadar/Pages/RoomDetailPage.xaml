@@ -141,7 +141,7 @@
                             <!-- Pricing & Deposit Display (Available only) -->
                             <VerticalStackLayout Spacing="4"
                                                  IsVisible="{Binding IsAvailable}">
-                                <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                                <HorizontalStackLayout Spacing="2" VerticalOptions="Center">
                                     <Label Text="{Binding PriceFormatted}"
                                            FontFamily="{StaticResource FontFamilySemibold}"
                                            FontSize="{StaticResource FontSizeDisplay}"
