@@ -56,6 +56,33 @@ public class SeedMediaEndpointTests
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
+    [Test]
+    public async Task Development_WithoutTheImageFolder_StartsAndServesNoSeedPhotos()
+    {
+        // Like running the built assembly: the content root has no SeedMedia/rooms folder.
+        var contentRoot = Path.Combine(Path.GetTempPath(), $"rtr_no_seed_media_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(contentRoot, "SeedMedia"));
+        try
+        {
+            using var factory = CreateFactory("Development", seedPhotos: true)
+                .WithWebHostBuilder(webHost => webHost.UseContentRoot(contentRoot));
+            using var client = factory.CreateClient();
+
+            var health = await client.GetAsync("/api/health");
+            var image = await client.GetAsync(ImagePath);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(health.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+                Assert.That(image.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            });
+        }
+        finally
+        {
+            Directory.Delete(contentRoot, recursive: true);
+        }
+    }
+
     [TestCase("Production", null)]
     [TestCase("Production", true)]
     [TestCase("Development", false)]
