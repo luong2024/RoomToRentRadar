@@ -112,7 +112,7 @@ public class CosmosRoomRepositoryTests
     [Test]
     public void RoomDocument_FromDomainAndToDomain_PreservesLandlordOwnerId()
     {
-        var ownerId = Guid.NewGuid().ToString("D");
+        var ownerId = Guid.NewGuid();
         var room = new Room { Id = "owned-listing", LandlordId = ownerId };
 
         var roundTripped = RoomDocument.FromDomain(room).ToDomain();
@@ -145,7 +145,7 @@ public class CosmosRoomRepositoryTests
 
         var room = new Room
         {
-            Id = "owned-listing", LandlordId = Guid.NewGuid().ToString("D"), Title = "Updated",
+            Id = "owned-listing", LandlordId = Guid.NewGuid(), Title = "Updated",
             Status = status,
             ConcurrencyToken = "etag-current"
         };

@@ -1,6 +1,5 @@
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 
 namespace RoomToRentRadar.Models.RoomListings;
 
@@ -36,6 +35,17 @@ public sealed partial class RoomListItemModel : ObservableObject
     [ObservableProperty]
     public partial bool IsFavorite { get; set; }
 
+    [ObservableProperty]
+    public partial bool IsFavoriteBusy { get; set; }
+
+    public bool CanToggleFavorite => !IsFavoriteBusy;
+
+    public string FavoriteAccessibilityText => IsFavorite ? "Remove room from favorites" : "Add room to favorites";
+
+    partial void OnIsFavoriteChanged(bool value) => OnPropertyChanged(nameof(FavoriteAccessibilityText));
+
+    partial void OnIsFavoriteBusyChanged(bool value) => OnPropertyChanged(nameof(CanToggleFavorite));
+
     public IReadOnlyList<string> Amenities { get; init; } = [];
 
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
@@ -61,9 +71,4 @@ public sealed partial class RoomListItemModel : ObservableObject
             ? Amenities.Take(3).ToList()
             : ["Basic amenities"];
 
-    [RelayCommand]
-    public void ToggleFavorite()
-    {
-        IsFavorite = !IsFavorite;
-    }
 }

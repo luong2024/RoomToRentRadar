@@ -26,7 +26,7 @@ public sealed class UnpublishListingUseCase : IUnpublishListingUseCase
         if (ownerId == Guid.Empty) throw new RequestValidationException("ownerId", "A valid landlord identity is required.");
         if (string.IsNullOrWhiteSpace(listingId)) throw new NotFoundException("Listing was not found.");
         var room = await _roomRepository.GetByIdAsync(listingId, cancellationToken);
-        if (room is null || !Guid.TryParse(room.LandlordId, out var storedOwnerId) || storedOwnerId != ownerId)
+        if (room is null || room.LandlordId != ownerId)
         {
             throw new NotFoundException("Listing was not found.");
         }

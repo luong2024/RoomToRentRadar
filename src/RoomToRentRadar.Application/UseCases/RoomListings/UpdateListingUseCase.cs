@@ -31,7 +31,7 @@ public sealed class UpdateListingUseCase : IUpdateListingUseCase
         ListingRequestValidator.Validate(request, requireNewPhotos: false);
 
         var existing = await _roomRepository.GetByIdAsync(listingId, cancellationToken);
-        if (existing is null || !Guid.TryParse(existing.LandlordId, out var storedOwnerId) || storedOwnerId != ownerId)
+        if (existing is null || existing.LandlordId != ownerId)
         {
             throw new NotFoundException("Listing was not found.");
         }

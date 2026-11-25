@@ -41,7 +41,8 @@ public class CosmosRoomRepository : IRoomRepository
 
         var document = RoomDocument.FromDomain(room);
         document.ProjectionVersion = existing.ProjectionVersion;
-        if (room.Status == RoomStatus.Pending && !room.IsVerified && Guid.TryParse(room.LandlordId, out _))
+        if (room.Status == RoomStatus.Pending && !room.IsVerified &&
+            room.LandlordId is Guid landlordId && landlordId != Guid.Empty)
         {
             // Store the visibility intent atomically with the landlord's edit or unpublish.
             document.PendingVisibilitySyncId = Guid.NewGuid();
@@ -71,6 +72,46 @@ public class CosmosRoomRepository : IRoomRepository
         catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
             return null;
+        }
+    }
+
+    public async Task<bool> AssignLandlordAsync(string roomId, Guid landlordId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(roomId) || landlordId == Guid.Empty)
+        {
+            return false;
+        }
+
+        var trimmedId = roomId.Trim();
+        try
+        {
+            var response = await _container.ReadItemAsync<RoomDocument>(
+                id: trimmedId,
+                partitionKey: new PartitionKey(trimmedId),
+                cancellationToken: cancellationToken);
+
+            var document = response.Resource;
+            if (document is null || document.IsDeleted)
+            {
+                return false;
+            }
+
+            document.LandlordId = landlordId;
+            var requestOptions = !string.IsNullOrWhiteSpace(document.ETag)
+                ? new ItemRequestOptions { IfMatchEtag = document.ETag }
+                : null;
+
+            await _container.ReplaceItemAsync(
+                document,
+                trimmedId,
+                new PartitionKey(trimmedId),
+                requestOptions,
+                cancellationToken);
+            return true;
+        }
+        catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            return false;
         }
     }
 

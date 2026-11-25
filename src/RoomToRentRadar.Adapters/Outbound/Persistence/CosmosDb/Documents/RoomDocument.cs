@@ -62,11 +62,11 @@ public sealed class RoomDocument : IProjectionVersionedDocument
     [JsonProperty("houseRules")]
     public List<string> HouseRules { get; set; } = [];
 
+    [JsonProperty("landlordId")]
+    public Guid? LandlordId { get; set; }
+
     [JsonProperty("landlordPhone")]
     public string LandlordPhone { get; set; } = string.Empty;
-
-    [JsonProperty("landlordId")]
-    public string? LandlordId { get; set; }
 
     [JsonProperty("createdAt")]
     public DateTime CreatedAt { get; set; }
@@ -128,6 +128,9 @@ public sealed class RoomDocument : IProjectionVersionedDocument
             Coordinates = [listing.Longitude, listing.Latitude]
         };
 
+        // Preserve explicitly assigned room owner; backfill from trusted listing source only if missing.
+        detail.LandlordId ??= listing.LandlordId;
+
         // A new document has no gallery yet, so its thumbnail is a reasonable
         // initial image. Existing galleries are never replaced by listing data.
         if (existingDetail is null && !string.IsNullOrWhiteSpace(listing.ThumbnailUrl))
@@ -170,8 +173,8 @@ public sealed class RoomDocument : IProjectionVersionedDocument
             Bathrooms = room.Bathrooms,
             Amenities = room.Amenities.ToList(),
             HouseRules = room.HouseRules.ToList(),
-            LandlordPhone = room.LandlordPhone,
             LandlordId = room.LandlordId,
+            LandlordPhone = room.LandlordPhone,
             LastUpdatedDate = room.LastUpdatedDate,
             CreatedAt = room.CreatedAt != default ? room.CreatedAt : (room.LastUpdatedDate ?? DateTime.UtcNow),
             Latitude = room.Latitude,
@@ -209,8 +212,8 @@ public sealed class RoomDocument : IProjectionVersionedDocument
             Bathrooms = Bathrooms,
             Amenities = Amenities ?? [],
             HouseRules = HouseRules ?? [],
-            LandlordPhone = LandlordPhone,
             LandlordId = LandlordId,
+            LandlordPhone = LandlordPhone,
             ConcurrencyToken = ETag,
             LastUpdatedDate = LastUpdatedDate,
             CreatedAt = CreatedAt != default ? CreatedAt : (LastUpdatedDate ?? DateTime.UtcNow),

@@ -18,6 +18,12 @@ public sealed class InMemoryCosmosContainer<T> : ICosmosContainer<T> where T : c
     /// </summary>
     public Func<string, Task>? OnReadAsync { get; set; }
 
+    /// <summary>
+    /// Invoked immediately before a transactional batch acquires the write lock.
+    /// Useful in tests to deterministically simulate concurrent batches or mid-batch failures.
+    /// </summary>
+    public Func<IReadOnlyList<CosmosBatchOperation<T>>, Task>? OnBeforeBatchAsync { get; set; }
+
     public Task<T> CreateItemAsync(T item, string partitionKey, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -131,6 +137,117 @@ public sealed class InMemoryCosmosContainer<T> : ICosmosContainer<T> where T : c
         {
             _storage.TryRemove(id, out _);
             return Task.CompletedTask;
+        }
+    }
+
+    public async Task ExecuteTransactionalBatchAsync(
+        string partitionKey,
+        IReadOnlyList<CosmosBatchOperation<T>> operations,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(partitionKey);
+        ArgumentNullException.ThrowIfNull(operations);
+
+        if (operations.Count == 0)
+        {
+            return;
+        }
+
+        if (OnBeforeBatchAsync is not null)
+        {
+            await OnBeforeBatchAsync(operations);
+        }
+
+        lock (_syncRoot)
+        {
+            // Stage all mutations against a copy so any failure leaves _storage completely untouched.
+            var staged = new Dictionary<string, (string Json, string ETag)>(_storage, StringComparer.Ordinal);
+            var stagedItemsToUpdateETag = new List<(T Item, string ETag)>();
+
+            foreach (var op in operations)
+            {
+                switch (op.Type)
+                {
+                    case CosmosBatchOperationType.Create:
+                    {
+                        var item = op.Item ?? throw new ArgumentException($"Create operation for '{op.Id}' requires an item.");
+                        var id = string.IsNullOrWhiteSpace(op.Id) ? GetItemId(item) : op.Id;
+                        if (staged.ContainsKey(id))
+                        {
+                            throw CreateConflictException($"Document with id '{id}' already exists.");
+                        }
+
+                        var newEtag = Guid.NewGuid().ToString("N");
+                        SetItemETag(item, newEtag);
+                        staged[id] = (JsonConvert.SerializeObject(item), newEtag);
+                        stagedItemsToUpdateETag.Add((item, newEtag));
+                        break;
+                    }
+                    case CosmosBatchOperationType.Replace:
+                    {
+                        var item = op.Item ?? throw new ArgumentException($"Replace operation for '{op.Id}' requires an item.");
+                        if (!staged.TryGetValue(op.Id, out var existing))
+                        {
+                            throw new CosmosException(
+                                $"Document with id '{op.Id}' was not found.",
+                                HttpStatusCode.NotFound,
+                                0,
+                                Guid.NewGuid().ToString("N"),
+                                1.0);
+                        }
+
+                        if (op.IfMatchEtag is not null && !string.Equals(existing.ETag, op.IfMatchEtag, StringComparison.Ordinal))
+                        {
+                            throw new CosmosException(
+                                $"Precondition failed: ETag '{op.IfMatchEtag}' does not match current document ETag '{existing.ETag}'.",
+                                HttpStatusCode.PreconditionFailed,
+                                0,
+                                Guid.NewGuid().ToString("N"),
+                                1.0);
+                        }
+
+                        var newEtag = Guid.NewGuid().ToString("N");
+                        SetItemETag(item, newEtag);
+                        staged[op.Id] = (JsonConvert.SerializeObject(item), newEtag);
+                        stagedItemsToUpdateETag.Add((item, newEtag));
+                        break;
+                    }
+                    case CosmosBatchOperationType.Delete:
+                    {
+                        if (!staged.TryGetValue(op.Id, out var existing))
+                        {
+                            throw new CosmosException(
+                                $"Document with id '{op.Id}' was not found.",
+                                HttpStatusCode.NotFound,
+                                0,
+                                Guid.NewGuid().ToString("N"),
+                                1.0);
+                        }
+
+                        if (op.IfMatchEtag is not null && !string.Equals(existing.ETag, op.IfMatchEtag, StringComparison.Ordinal))
+                        {
+                            throw new CosmosException(
+                                $"Precondition failed: ETag '{op.IfMatchEtag}' does not match current document ETag '{existing.ETag}'.",
+                                HttpStatusCode.PreconditionFailed,
+                                0,
+                                Guid.NewGuid().ToString("N"),
+                                1.0);
+                        }
+
+                        staged.Remove(op.Id);
+                        break;
+                    }
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(operations), op.Type, "Unsupported transactional batch operation.");
+                }
+            }
+
+            // Commit atomically
+            _storage.Clear();
+            foreach (var kvp in staged)
+            {
+                _storage[kvp.Key] = kvp.Value;
+            }
         }
     }
 

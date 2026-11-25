@@ -38,7 +38,7 @@ public sealed class ListingUseCasesTests
         Assert.Multiple(() =>
         {
             Assert.That(created, Is.Not.Null);
-            Assert.That(created!.LandlordId, Is.EqualTo(OwnerId.ToString("D")));
+            Assert.That(created!.LandlordId, Is.EqualTo(OwnerId));
             Assert.That(created.Status, Is.EqualTo(RoomStatus.Pending));
             Assert.That(created.IsVerified, Is.False);
             Assert.That(created.Deposit, Is.Zero);
@@ -359,7 +359,7 @@ public sealed class ListingUseCasesTests
 
     private static Room ExistingListing(Guid ownerId, List<string> photos) => new()
     {
-        Id = "listing-1", LandlordId = ownerId.ToString("D"), Title = "Original title", Address = "Old address",
+        Id = "listing-1", LandlordId = ownerId, Title = "Original title", Address = "Old address",
         Price = 2000000, Deposit = 0, Area = 20, RoomType = "BoardingRoom", ImageUrls = photos,
         ThumbnailUrl = photos[0], Status = RoomStatus.Pending, CreatedAt = DateTime.UtcNow
     };

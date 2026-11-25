@@ -863,7 +863,7 @@ public sealed class CosmosDbInitializer
                     }
 
                     if (existingDetail.ProjectionVersion == listing.ProjectionVersion &&
-                        !string.IsNullOrWhiteSpace(existingDetail.LandlordId) &&
+                        existingDetail.LandlordId is Guid landlordId && landlordId != Guid.Empty &&
                         existingDetail.Status == (int)DetailRoomStatus.Pending &&
                         !existingDetail.IsVerified)
                     {

@@ -26,8 +26,8 @@ public class Room
     public int? Bathrooms { get; set; }
     public List<string> Amenities { get; set; } = [];
     public List<string> HouseRules { get; set; } = [];
+    public Guid? LandlordId { get; set; }
     public string LandlordPhone { get; set; } = string.Empty;
-    public string? LandlordId { get; set; }
     /// <summary>
     /// Persistence concurrency token captured when this room was read.
     /// It is not part of the room's serialized document or API contract.

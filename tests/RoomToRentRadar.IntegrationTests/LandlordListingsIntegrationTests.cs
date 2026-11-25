@@ -54,7 +54,7 @@ public sealed class LandlordListingsIntegrationTests
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
             Assert.That(result.Status, Is.EqualTo("Pending"));
             Assert.That(created, Is.Not.Null);
-            Assert.That(created!.LandlordId, Is.EqualTo(landlord.UserId.ToString("D")));
+            Assert.That(created!.LandlordId, Is.EqualTo(landlord.UserId));
             Assert.That(created.Status, Is.EqualTo(RoomStatus.Pending));
             Assert.That(created.IsVerified, Is.False);
             Assert.That(created.Deposit, Is.Zero);

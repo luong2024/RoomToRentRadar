@@ -73,7 +73,7 @@ internal static class ListingRequestValidator
         return new Room
         {
             Id = id,
-            LandlordId = ownerId.ToString("D"),
+            LandlordId = ownerId,
             Title = request.Title!.Trim(),
             Address = request.Address!.Trim(),
             Price = request.MonthlyRentVnd,

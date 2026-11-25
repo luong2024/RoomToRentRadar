@@ -83,6 +83,54 @@ public sealed class CosmosContainer<T> : ICosmosContainer<T> where T : class
         }
     }
 
+    public async Task ExecuteTransactionalBatchAsync(
+        string partitionKey,
+        IReadOnlyList<CosmosBatchOperation<T>> operations,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(partitionKey);
+        ArgumentNullException.ThrowIfNull(operations);
+
+        if (operations.Count == 0)
+        {
+            return;
+        }
+
+        var batch = _container.CreateTransactionalBatch(new PartitionKey(partitionKey));
+        foreach (var op in operations)
+        {
+            var options = op.IfMatchEtag is not null
+                ? new TransactionalBatchItemRequestOptions { IfMatchEtag = op.IfMatchEtag }
+                : null;
+
+            switch (op.Type)
+            {
+                case CosmosBatchOperationType.Create:
+                    batch.CreateItem(op.Item ?? throw new ArgumentException($"Create operation for '{op.Id}' requires an item."));
+                    break;
+                case CosmosBatchOperationType.Replace:
+                    batch.ReplaceItem(op.Id, op.Item ?? throw new ArgumentException($"Replace operation for '{op.Id}' requires an item."), options);
+                    break;
+                case CosmosBatchOperationType.Delete:
+                    batch.DeleteItem(op.Id, options);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(operations), op.Type, "Unsupported transactional batch operation.");
+            }
+        }
+
+        using var response = await batch.ExecuteAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new CosmosException(
+                response.ErrorMessage ?? $"Transactional batch failed with status {(int)response.StatusCode}.",
+                response.StatusCode,
+                0,
+                response.ActivityId,
+                response.RequestCharge);
+        }
+    }
+
     public async Task<IReadOnlyList<T>> QueryAsync(
         QueryDefinition queryDefinition,
         CancellationToken cancellationToken = default)

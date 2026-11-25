@@ -19,7 +19,11 @@ namespace RoomToRentRadar
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()
+#if WINDOWS
+                .UseMauiCommunityToolkit(options => options.SetShouldEnableSnackbarOnWindows(true))
+#elif ANDROID || IOS || MACCATALYST
                 .UseMauiCommunityToolkit()
+#endif
                 .UseMauiMaps()
                 .ConfigureSyncfusionToolkit()
                 .ConfigureMauiHandlers(handlers =>

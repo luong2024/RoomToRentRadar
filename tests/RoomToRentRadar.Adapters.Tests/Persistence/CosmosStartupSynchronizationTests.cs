@@ -315,7 +315,7 @@ public class CosmosStartupSynchronizationTests
         var editedDetail = new RoomDocument
         {
             Id = projection.Id,
-            LandlordId = Guid.NewGuid().ToString("D"),
+            LandlordId = Guid.NewGuid(),
             Title = "New title waiting for review",
             ThumbnailUrl = "https://img.test/new.jpg",
             Status = (int)DetailRoomStatus.Pending,
@@ -357,7 +357,7 @@ public class CosmosStartupSynchronizationTests
         var olderDetail = new RoomDocument
         {
             Id = "room-older",
-            LandlordId = isLandlordEditPending ? Guid.NewGuid().ToString("D") : null,
+            LandlordId = isLandlordEditPending ? Guid.NewGuid() : null,
             Title = "Old Title",
             Price = 2_000_000m,
             Area = 20.0,
