@@ -1,17 +1,34 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:maps="clr-namespace:Microsoft.Maui.Controls.Maps;assembly=Microsoft.Maui.Controls.Maps"
+             xmlns:local="clr-namespace:RoomToRentRadar.Views.MapSearch"
+             xmlns:f="clr-namespace:Fonts"
              xmlns:vm="clr-namespace:RoomToRentRadar.ViewModels.MapSearch"
              x:Class="RoomToRentRadar.Views.MapSearch.MapSearchPage"
              x:DataType="vm:MapSearchViewModel"
              Title="Map Search"
              Shell.NavBarIsVisible="False"
-             BackgroundColor="{AppThemeBinding Light=#F8FAFC, Dark=#0F172A}">
+             BackgroundColor="#F8FAFC">
+
+    <ContentPage.Resources>
+        <Style x:Key="MapIconButton" TargetType="Button">
+            <Setter Property="FontFamily" Value="{x:Static f:FluentUI.FontFamily}" />
+            <Setter Property="FontSize" Value="22" />
+            <Setter Property="FontAutoScalingEnabled" Value="False" />
+            <Setter Property="WidthRequest" Value="48" />
+            <Setter Property="HeightRequest" Value="48" />
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="BorderWidth" Value="1" />
+            <Setter Property="BorderColor" Value="#E2E8F0" />
+            <Setter Property="BackgroundColor" Value="#FFFFFF" />
+            <Setter Property="TextColor" Value="#1E293B" />
+        </Style>
+    </ContentPage.Resources>
 
     <Grid>
         <!-- Layer 0: Base Google Map (Edge-to-edge full screen) -->
-        <maps:Map x:Name="SearchMap"
+        <local:MapSearchMap x:Name="SearchMap"
                   IsShowingUser="True"
                   MapType="Street"
                   HorizontalOptions="Fill"
@@ -27,47 +44,34 @@
                       HorizontalOptions="Fill"
                       VerticalOptions="Fill" />
 
-        <!-- ============================================================== -->
-        <!-- FLOATING TOP BAR (Modern White Card with Shadow & Back Button) -->
-        <!-- ============================================================== -->
         <Grid VerticalOptions="Start"
-              Margin="16,40,16,0"
-              ColumnDefinitions="Auto,*,Auto">
+              Margin="16,40,68,0"
+              ColumnDefinitions="Auto,*,Auto"
+              ColumnSpacing="8">
+            <HorizontalStackLayout Spacing="8" IsVisible="{Binding ShowSavedAreas}">
+                <Button Style="{StaticResource MapIconButton}"
+                        Text="{x:Static f:FluentUI.arrow_counterclockwise_24_regular}"
+                        IsVisible="{Binding ShowCompletedToolbar}"
+                        SemanticProperties.Description="Draw again"
+                        Command="{Binding DrawAgainCommand}" />
+                <Button Style="{StaticResource MapIconButton}"
+                        Text="{x:Static f:FluentUI.bookmark_multiple_24_regular}"
+                        SemanticProperties.Description="Saved areas"
+                        Clicked="OnSavedAreasClicked" />
+            </HorizontalStackLayout>
 
-            <!-- Left: Back / Home Button -->
-            <Border Grid.Column="0"
-                    StrokeThickness="1"
-                    Stroke="{AppThemeBinding Light=#E2E8F0, Dark=#334155}"
-                    BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E293B}"
-                    Padding="12,8"
-                    StrokeShape="RoundRectangle 20"
-                    VerticalOptions="Center"
-                    Shadow="{Shadow Brush='#1E3A8A', Offset='0,4', Radius=16, Opacity=0.10}">
-                <Border.GestureRecognizers>
-                    <TapGestureRecognizer Command="{Binding HandleBackCommand}" />
-                </Border.GestureRecognizers>
-                <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
-                    <Label Text="←"
-                           FontSize="15"
-                           FontFamily="SegoeSemibold"
-                           TextColor="{AppThemeBinding Light=#0F172A, Dark=#F8FAFC}"
-                           VerticalOptions="Center" />
-                    <Label Text="{Binding BackButtonText}"
-                           FontSize="13"
-                           FontFamily="SegoeSemibold"
-                           TextColor="{AppThemeBinding Light=#0F172A, Dark=#F8FAFC}"
-                           VerticalOptions="Center" />
-                </HorizontalStackLayout>
-            </Border>
+            <Button Style="{StaticResource MapIconButton}"
+                    Text="{x:Static f:FluentUI.arrow_left_24_regular}"
+                    IsVisible="{Binding IsInteractingMode}"
+                    SemanticProperties.Description="{Binding BackButtonText}"
+                    Command="{Binding HandleBackCommand}" />
 
-            <!-- Center: Status Card (Visible when in Drawing or Editing mode) -->
             <Border Grid.Column="1"
                     IsVisible="{Binding IsInteractingMode}"
                     StrokeThickness="1"
-                    Stroke="{AppThemeBinding Light=#E2E8F0, Dark=#334155}"
-                    BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E293B}"
+                    Stroke="#E2E8F0"
+                    BackgroundColor="#FFFFFF"
                     Padding="14,8"
-                    Margin="8,0"
                     StrokeShape="RoundRectangle 20"
                     HorizontalOptions="Center"
                     VerticalOptions="Center"
@@ -75,37 +79,22 @@
                 <Label Text="{Binding StatusMessage}"
                        FontSize="12"
                        FontFamily="SegoeSemibold"
-                       TextColor="{AppThemeBinding Light=#2563EB, Dark=#60A5FA}"
+                       TextColor="#2563EB"
                        HorizontalTextAlignment="Center"
                        VerticalOptions="Center" />
             </Border>
 
-            <!-- Right: Done Button (Visible when in Edit mode) -->
-            <Border Grid.Column="2"
+            <Button Grid.Column="2"
+                    Style="{StaticResource MapIconButton}"
+                    Text="{x:Static f:FluentUI.checkmark_24_regular}"
                     IsVisible="{Binding IsEditingMode}"
-                    StrokeThickness="0"
+                    SemanticProperties.Description="Done editing"
+                    Command="{Binding FinishEditingCommand}"
+                    BorderWidth="0"
                     Background="{StaticResource PrimaryBrandGradient}"
-                    Padding="14,8"
-                    StrokeShape="RoundRectangle 20"
-                    VerticalOptions="Center"
-                    Shadow="{Shadow Brush='#1E3A8A', Offset='0,4', Radius=16, Opacity=0.15}">
-                <Border.GestureRecognizers>
-                    <TapGestureRecognizer Command="{Binding FinishEditingCommand}" />
-                </Border.GestureRecognizers>
-                <Label Text="Done"
-                       FontSize="13"
-                       FontFamily="SegoeSemibold"
-                       TextColor="White"
-                       HorizontalOptions="Center"
-                       VerticalOptions="Center" />
-            </Border>
+                    TextColor="White" />
         </Grid>
 
-        <!-- ============================================================== -->
-        <!-- FLOATING BOTTOM TOOLBAR (Rightmove & Auth Card Modern Style)   -->
-        <!-- ============================================================== -->
-        
-        <!-- STATE 1: Before Drawing -> Prominent 'Draw area' Action Button -->
         <Border VerticalOptions="End"
                 HorizontalOptions="Center"
                 Margin="20,0,20,32"
@@ -124,69 +113,105 @@
                     FontSize="15" />
         </Border>
 
-        <!-- STATE 2: Completed Polygon -> Floating Action Toolbar -->
-        <Border VerticalOptions="End"
+        <VerticalStackLayout VerticalOptions="End"
                 HorizontalOptions="Center"
-                Margin="16,0,16,28"
-                Padding="8,6"
-                IsVisible="{Binding ShowCompletedToolbar}"
-                StrokeShape="RoundRectangle 30"
-                Stroke="{AppThemeBinding Light=#E2E8F0, Dark=#334155}"
-                BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E293B}">
-            
-            <Border.Shadow>
-                <Shadow Brush="#1E3A8A" Offset="0,10" Radius="26" Opacity="0.14" />
-            </Border.Shadow>
+                Margin="12,0,12,28"
+                Spacing="8"
+                MaximumWidthRequest="480"
+                IsVisible="{Binding ShowCompletedToolbar}">
+            <Border IsVisible="{Binding HasSelectedRoom}"
+                    Padding="10"
+                    StrokeShape="RoundRectangle 16"
+                    Stroke="#E2E8F0"
+                    BackgroundColor="#FFFFFF">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10"
+                          SemanticProperties.Hint="Opens room details">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnRoomPreviewTapped" />
+                        </Grid.GestureRecognizers>
+                        <Image Source="{Binding SelectedRoom.ThumbnailUrl}"
+                               IsVisible="{Binding SelectedRoom.HasThumbnail, TargetNullValue=False}"
+                               WidthRequest="76"
+                               HeightRequest="76"
+                               Aspect="AspectFill" />
+                        <VerticalStackLayout Grid.Column="1" Spacing="2">
+                            <Label Text="{Binding SelectedRoom.Title}" TextColor="#0F172A" FontAttributes="Bold"
+                                   MaxLines="1" LineBreakMode="TailTruncation" />
+                            <Label Text="{Binding SelectedRoom.PriceDisplay}" FontAttributes="Bold"
+                                   TextColor="#1D4ED8" />
+                            <Label Text="{Binding SelectedRoom.AreaDisplay}" TextColor="#475569" FontSize="12" />
+                            <Label Text="{Binding SelectedRoom.Address}" TextColor="#475569" FontSize="12"
+                                   MaxLines="2" LineBreakMode="TailTruncation" />
+                        </VerticalStackLayout>
+                    </Grid>
+                    <Button Grid.Column="1" Text="×" MinimumWidthRequest="44" MinimumHeightRequest="44"
+                            VerticalOptions="Start" Padding="0"
+                            BackgroundColor="Transparent"
+                            TextColor="#334155"
+                            SemanticProperties.Description="Close room preview"
+                            Clicked="OnClosePreviewClicked" />
+                </Grid>
+            </Border>
 
-            <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
-                <!-- Action 1: Draw again -->
-                <Button Text="↺ Draw again"
-                        Command="{Binding DrawAgainCommand}"
-                        BackgroundColor="{AppThemeBinding Light=#F8FAFC, Dark=#1E293B}"
-                        TextColor="{AppThemeBinding Light=#334155, Dark=#E2E8F0}"
-                        BorderColor="{AppThemeBinding Light=#CBD5E1, Dark=#475569}"
-                        BorderWidth="1"
-                        CornerRadius="24"
-                        Padding="14,0"
-                        HeightRequest="44"
-                        FontFamily="SegoeSemibold"
-                        FontSize="13" />
+            <Border IsVisible="{Binding HasSearchMessage}"
+                    HorizontalOptions="Center"
+                    Padding="12,4"
+                    StrokeShape="RoundRectangle 16"
+                    Stroke="#E2E8F0"
+                    BackgroundColor="#FFFFFF">
+                <HorizontalStackLayout Spacing="6">
+                    <ActivityIndicator Color="#2563EB" IsRunning="{Binding IsSearching}" IsVisible="{Binding IsSearching}" />
+                    <Label Text="{Binding SearchMessage}" TextColor="#334155" VerticalOptions="Center"
+                           FontSize="12" HorizontalTextAlignment="Center" />
+                </HorizontalStackLayout>
+            </Border>
 
-                <!-- Action 2: Edit area (Fine-tune polygon points) -->
-                <Button Text="⚲ Edit area"
-                        Command="{Binding StartEditingCommand}"
-                        BackgroundColor="{AppThemeBinding Light=#F1F5F9, Dark=#334155}"
-                        TextColor="{AppThemeBinding Light=#1E293B, Dark=#F8FAFC}"
-                        BorderColor="{AppThemeBinding Light=#CBD5E1, Dark=#475569}"
-                        BorderWidth="1"
-                        CornerRadius="24"
-                        Padding="14,0"
-                        HeightRequest="44"
-                        FontFamily="SegoeSemibold"
-                        FontSize="13" />
+            <Border HorizontalOptions="Center"
+                    Padding="6"
+                    StrokeShape="RoundRectangle 22"
+                    Stroke="#E2E8F0"
+                    BackgroundColor="#FFFFFF">
 
-                <!-- Action 3: Confirm Area (Boundary confirmation button) -->
-                <Button Text="Confirm Area ✓"
-                        Command="{Binding ConfirmAreaCommand}"
-                        Background="{StaticResource PrimaryBrandGradient}"
-                        TextColor="White"
-                        CornerRadius="24"
-                        Padding="18,0"
-                        HeightRequest="44"
-                        FontFamily="SegoeSemibold"
-                        FontSize="13" />
+                <Border.Shadow>
+                    <Shadow Brush="#1E3A8A" Offset="0,10" Radius="26" Opacity="0.14" />
+                </Border.Shadow>
 
-                <!-- Action 4: Clear Polygon -->
-                <Button Text="🗑"
-                        Command="{Binding ClearPolygonCommand}"
-                        BackgroundColor="#FEF2F2"
-                        TextColor="#DC2626"
-                        CornerRadius="22"
-                        WidthRequest="44"
-                        HeightRequest="44"
-                        Padding="0"
-                        FontSize="14" />
-            </HorizontalStackLayout>
-        </Border>
+                <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+                    <Button Style="{StaticResource MapIconButton}"
+                            Text="{x:Static f:FluentUI.edit_24_regular}"
+                            SemanticProperties.Description="Edit area"
+                            Command="{Binding StartEditingCommand}" />
+                    <Button Style="{StaticResource MapIconButton}"
+                            Text="{x:Static f:FluentUI.heart_24_regular}"
+                            IsVisible="{Binding IsAreaConfirmed}"
+                            SemanticProperties.Description="Save area"
+                            Clicked="OnSaveAreaClicked" />
+                    <Button Style="{StaticResource MapIconButton}"
+                            Text="{x:Static f:FluentUI.delete_24_regular}"
+                            SemanticProperties.Description="Clear area"
+                            Command="{Binding ClearPolygonCommand}" />
+                    <Button Text="Confirm Area"
+                            Command="{Binding ConfirmAreaCommand}"
+                            Background="{StaticResource PrimaryBrandGradient}"
+                            TextColor="White"
+                            CornerRadius="16"
+                            Padding="12,0"
+                            HeightRequest="48"
+                            FontFamily="SegoeSemibold"
+                            FontSize="13">
+                        <Button.Triggers>
+                            <DataTrigger TargetType="Button" Binding="{Binding CanRetrySearch}" Value="True">
+                                <Setter Property="Text" Value="Try again" />
+                            </DataTrigger>
+                            <DataTrigger TargetType="Button" Binding="{Binding IsSearching}" Value="True">
+                                <Setter Property="IsEnabled" Value="False" />
+                            </DataTrigger>
+                        </Button.Triggers>
+                    </Button>
+
+                </HorizontalStackLayout>
+            </Border>
+        </VerticalStackLayout>
     </Grid>
 </ContentPage>

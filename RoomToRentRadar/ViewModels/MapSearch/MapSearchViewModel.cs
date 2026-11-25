@@ -25,6 +25,7 @@ public partial class MapSearchViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanStartDrawing))]
     [NotifyPropertyChangedFor(nameof(IsInteractingMode))]
+    [NotifyPropertyChangedFor(nameof(ShowSavedAreas))]
     [NotifyPropertyChangedFor(nameof(ShowCompletedToolbar))]
     [NotifyPropertyChangedFor(nameof(BackButtonText))]
     private bool _isDrawingMode;
@@ -32,6 +33,7 @@ public partial class MapSearchViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanStartDrawing))]
     [NotifyPropertyChangedFor(nameof(IsInteractingMode))]
+    [NotifyPropertyChangedFor(nameof(ShowSavedAreas))]
     [NotifyPropertyChangedFor(nameof(ShowCompletedToolbar))]
     [NotifyPropertyChangedFor(nameof(BackButtonText))]
     private bool _isEditingMode;
@@ -43,6 +45,7 @@ public partial class MapSearchViewModel : ObservableObject
 
     public bool CanStartDrawing => !IsDrawingMode && !IsEditingMode && !HasDrawnPolygon;
     public bool IsInteractingMode => IsDrawingMode || IsEditingMode;
+    public bool ShowSavedAreas => !IsInteractingMode;
     public bool ShowCompletedToolbar => HasDrawnPolygon && !IsDrawingMode && !IsEditingMode;
     public string BackButtonText => IsInteractingMode ? "Back" : "Home";
 
@@ -65,17 +68,12 @@ public partial class MapSearchViewModel : ObservableObject
 
     public Action? OnNavigateBackRequested { get; set; }
 
-    public Func<string, string, string, Task>? AlertHandler { get; set; }
-
-    public MapSearchViewModel()
-    {
-    }
-
     [RelayCommand]
     public void StartDrawing()
     {
         if (IsEditingMode)
             CancelDrawing();
+        CancelSearch();
         IsEditingMode = false;
         IsDrawingMode = true;
         StatusMessage = "Draw a freehand loop around the area you care about";
@@ -88,6 +86,8 @@ public partial class MapSearchViewModel : ObservableObject
             return;
 
         IsDrawingMode = false;
+        CancelSearch();
+        SelectedRoom = null;
         _boundaryBeforeEdit = (PolygonCoordinates.ToArray(), IsAreaConfirmed);
         IsEditingMode = true;
         BuildEditAnchors();
@@ -102,6 +102,11 @@ public partial class MapSearchViewModel : ObservableObject
             SetInvalidBoundaryStatus();
             return;
         }
+
+        if (_boundaryBeforeEdit is { } snapshot && PolygonCoordinates.SequenceEqual(snapshot.Points))
+            IsAreaConfirmed = snapshot.Confirmed;
+        else
+            ResetSearchResults();
 
         _boundaryBeforeEdit = null;
         IsEditingMode = false;
@@ -149,6 +154,7 @@ public partial class MapSearchViewModel : ObservableObject
     [RelayCommand]
     public void ClearPolygon()
     {
+        ResetSearchResults();
         _boundaryBeforeEdit = null;
         CurrentArea.Clear();
         PolygonCoordinates.Clear();
@@ -166,45 +172,6 @@ public partial class MapSearchViewModel : ObservableObject
     {
         ClearPolygon();
         StartDrawing();
-    }
-
-    /// <summary>
-    /// Confirms the defined search area boundary.
-    /// Note: Room filtering within this polygon will be implemented in task T05.2.
-    /// </summary>
-    [RelayCommand]
-    public async Task ConfirmAreaAsync()
-    {
-        if (!HasDrawnPolygon || PolygonCoordinates.Count < 3)
-        {
-            StatusMessage = "Please draw a valid area before confirming.";
-            return;
-        }
-
-        if (!HasValidBoundary())
-        {
-            StartEditing();
-            SetInvalidBoundaryStatus();
-            return;
-        }
-
-        IsAreaConfirmed = true;
-        StatusMessage = $"Area confirmed with {VertexCount} vertices. Ready for search integration (T05.2).";
-
-        if (AlertHandler != null)
-        {
-            await AlertHandler.Invoke(
-                "Search Area Confirmed",
-                $"Search boundary with {VertexCount} vertices has been recorded.\n\nRoom filtering within this polygon will be implemented in task T05.2.",
-                "OK");
-        }
-        else if (Shell.Current is not null)
-        {
-            await Shell.Current.DisplayAlertAsync(
-                "Search Area Confirmed",
-                $"Search boundary with {VertexCount} vertices has been recorded.\n\nRoom filtering within this polygon will be implemented in task T05.2.",
-                "OK");
-        }
     }
 
     private bool HasValidBoundary() =>
@@ -225,6 +192,7 @@ public partial class MapSearchViewModel : ObservableObject
 
     public void CompleteDrawing(IEnumerable<GeoCoordinate> geoPoints)
     {
+        ResetSearchResults();
         _boundaryBeforeEdit = null;
         IsAreaConfirmed = false;
         PolygonCoordinates.Clear();

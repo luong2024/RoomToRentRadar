@@ -279,6 +279,7 @@ public class RouteGuardService : IRouteGuardService
         return normalizedRoute == ".."
                || normalizedRoute == AppRoutes.Home.ToLowerInvariant()
                || normalizedRoute == AppRoutes.RoomListings.ToLowerInvariant()
+               || normalizedRoute == AppRoutes.MapSearch
                || normalizedRoute == AppRoutes.RoomDetail.ToLowerInvariant()
                || normalizedRoute == AppRoutes.RoomDetails.ToLowerInvariant();
     }

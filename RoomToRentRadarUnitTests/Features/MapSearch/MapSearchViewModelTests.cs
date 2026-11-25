@@ -1,5 +1,9 @@
+using Moq;
 using NUnit.Framework;
+using RoomToRentRadar.Infrastructure.Api;
 using RoomToRentRadar.Models.MapSearch;
+using RoomToRentRadar.Models.RoomListings;
+using RoomToRentRadar.Services.MapSearch;
 using RoomToRentRadar.ViewModels.MapSearch;
 
 namespace RoomToRentRadarUnitTests.Features.MapSearch;
@@ -8,6 +12,11 @@ namespace RoomToRentRadarUnitTests.Features.MapSearch;
 public class MapSearchViewModelTests
 {
     private MapSearchViewModel _viewModel = null!;
+    private readonly Guid _accountId = Guid.NewGuid();
+    private readonly Guid _otherAccountId = Guid.NewGuid();
+    private Mock<IApiClient> _api = null!;
+    private string _savedAreasPath = null!;
+    private const string SpatialSearchEndpoint = "api/v1/rooms/spatial-search";
 
     [TestCase(.01, true)]
     [TestCase(1.0, true)]
@@ -38,7 +47,6 @@ public class MapSearchViewModelTests
     public async Task HandleBack_DuringInvalidEdit_RestoresConfirmedBoundary()
     {
         GeoCoordinate[] original = [new(0, 0), new(0, .01), new(.01, 0)];
-        _viewModel.AlertHandler = (_, _, _) => Task.CompletedTask;
         _viewModel.CompleteDrawing(original);
         await _viewModel.ConfirmAreaAsync();
         _viewModel.StartEditing();
@@ -131,8 +139,29 @@ public class MapSearchViewModelTests
     [SetUp]
     public void SetUp()
     {
-        _viewModel = new MapSearchViewModel();
+        _api = new Mock<IApiClient>(MockBehavior.Strict);
+        StubSearch((request, _) => Task.FromResult(new PagedResponse<MapSearchRoom>(
+            [], request.PageIndex, request.PageSize, 0)));
+        _savedAreasPath = Path.Combine(Path.GetTempPath(), $"map-areas-{Guid.NewGuid():N}.json");
+        _viewModel = new MapSearchViewModel(_api.Object, new SavedMapAreaStore(_savedAreasPath));
     }
+
+    [TearDown]
+    public void TearDown()
+    {
+        File.Delete(_savedAreasPath);
+        foreach (var accountId in new[] { _accountId, _otherAccountId })
+        {
+            string accountPath = Path.ChangeExtension(_savedAreasPath, $"{accountId:N}.json");
+            File.Delete(accountPath);
+            File.Delete(accountPath + ".tmp");
+        }
+    }
+
+    private void StubSearch(Func<MapSearchRequest, CancellationToken, Task<PagedResponse<MapSearchRoom>>> search) =>
+        _api.Setup(api => api.PostAsync<MapSearchRequest, PagedResponse<MapSearchRoom>>(
+            SpatialSearchEndpoint, It.IsAny<MapSearchRequest>(), It.IsAny<CancellationToken>()))
+            .Returns((string _, MapSearchRequest request, CancellationToken cancellation) => search(request, cancellation)!);
 
     [Test]
     public void StartDrawing_ShouldEnableDrawingModeAndSetMessage()
@@ -404,7 +433,7 @@ public class MapSearchViewModelTests
     }
 
     [Test]
-    public async Task ViewPropertiesAsync_WhenPolygonValid_ShouldTriggerAlertAndReportStatus()
+    public async Task ViewPropertiesAsync_WhenPolygonValid_SearchesAndReportsEmptyResults()
     {
         // Arrange
         var testPoints = new List<GeoCoordinate>
@@ -416,39 +445,24 @@ public class MapSearchViewModelTests
         };
         _viewModel.CompleteDrawing(testPoints);
 
-        bool alertCalled = false;
-        _viewModel.AlertHandler = (title, message, cancel) =>
-        {
-            alertCalled = true;
-            Assert.That(title, Does.Contain("Confirmed"));
-            Assert.That(message, Does.Contain("T05.2"));
-            return Task.CompletedTask;
-        };
-
         // Act
         await _viewModel.ViewPropertiesCommand.ExecuteAsync(null);
 
         // Assert
-        Assert.That(alertCalled, Is.True);
-        Assert.That(_viewModel.StatusMessage, Does.Contain("confirmed"));
+        _api.Verify(api => api.PostAsync<MapSearchRequest, PagedResponse<MapSearchRoom>>(
+            SpatialSearchEndpoint, It.IsAny<MapSearchRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+        Assert.That(_viewModel.SearchMessage, Is.EqualTo("No rooms found in this area."));
     }
 
     [Test]
     public async Task ViewPropertiesAsync_WhenNoPolygon_ShouldRejectWithWarning()
     {
         // Arrange
-        bool alertCalled = false;
-        _viewModel.AlertHandler = (_, _, _) =>
-        {
-            alertCalled = true;
-            return Task.CompletedTask;
-        };
-
         // Act
         await _viewModel.ViewPropertiesCommand.ExecuteAsync(null);
 
         // Assert
-        Assert.That(alertCalled, Is.False);
+        _api.VerifyNoOtherCalls();
         Assert.That(_viewModel.StatusMessage, Does.Contain("Please draw a valid area"));
     }
 
@@ -513,7 +527,7 @@ public class MapSearchViewModelTests
     }
 
     [Test]
-    public async Task ConfirmArea_WhenPolygonIsValid_ShouldSetIsAreaConfirmedAndShowAlert()
+    public async Task ConfirmArea_WhenBoundaryWasEdited_SendsFinalCoordinatesInOrder()
     {
         // Arrange
         var testPoints = new List<GeoCoordinate>
@@ -523,44 +537,229 @@ public class MapSearchViewModelTests
             new(21.5950, 105.8200)
         };
         _viewModel.CompleteDrawing(testPoints);
-
-        bool alertCalled = false;
-        _viewModel.AlertHandler = (title, message, cancel) =>
-        {
-            alertCalled = true;
-            Assert.That(title, Is.EqualTo("Search Area Confirmed"));
-            Assert.That(message, Does.Contain("3 vertices"));
-            Assert.That(message, Does.Contain("T05.2"));
-            return Task.CompletedTask;
-        };
+        _viewModel.StartEditing();
+        var movedPoint = new GeoCoordinate(21.5960, 105.8080);
+        _viewModel.UpdateAnchorPosition(1, movedPoint);
+        _viewModel.FinishEditing();
+        var boundary = _viewModel.PolygonCoordinates.ToArray();
 
         // Act
         await _viewModel.ConfirmAreaCommand.ExecuteAsync(null);
 
         // Assert
-        Assert.That(alertCalled, Is.True);
+        Assert.That(boundary[1], Is.EqualTo(movedPoint));
+        _api.Verify(api => api.PostAsync<MapSearchRequest, PagedResponse<MapSearchRoom>>(
+            SpatialSearchEndpoint,
+            It.Is<MapSearchRequest>(request => request.PageIndex == 1 && request.PolygonCoordinates.SequenceEqual(boundary)),
+            It.IsAny<CancellationToken>()), Times.Once);
         Assert.That(_viewModel.IsAreaConfirmed, Is.True);
-        Assert.That(_viewModel.StatusMessage, Does.Contain("Area confirmed"));
     }
 
     [Test]
     public async Task ConfirmArea_WhenNoPolygon_ShouldRejectAndNotConfirm()
     {
         // Arrange
-        bool alertCalled = false;
-        _viewModel.AlertHandler = (_, _, _) =>
-        {
-            alertCalled = true;
-            return Task.CompletedTask;
-        };
-
         // Act
         await _viewModel.ConfirmAreaCommand.ExecuteAsync(null);
 
         // Assert
-        Assert.That(alertCalled, Is.False);
+        _api.VerifyNoOtherCalls();
         Assert.That(_viewModel.IsAreaConfirmed, Is.False);
         Assert.That(_viewModel.StatusMessage, Does.Contain("Please draw a valid area"));
+    }
+
+    [Test]
+    public async Task ConfirmArea_PagesThroughResultsAndKeepsOneRoomPerId()
+    {
+        var first = CreateRoom("first");
+        var second = CreateRoom("second");
+        var pages = new List<int>();
+        StubSearch((request, _) =>
+        {
+            pages.Add(request.PageIndex);
+            MapSearchRoom[] rooms = request.PageIndex == 1 ? [first] : [first, second];
+            return Task.FromResult(new PagedResponse<MapSearchRoom>(rooms, request.PageIndex, 2, 3));
+        });
+        _viewModel.CompleteDrawing(ValidBoundary());
+
+        await _viewModel.ConfirmAreaAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(pages, Is.EqualTo(new[] { 1, 2 }));
+            Assert.That(_viewModel.Rooms, Is.EqualTo(new[] { first, second }));
+            Assert.That(_viewModel.SearchMessage, Is.EqualTo("2 rooms found"));
+        });
+    }
+
+    [Test]
+    public async Task ConfirmArea_WhenClearedAndSearchedAgain_IgnoresLateResponse()
+    {
+        var oldResponse = new TaskCompletionSource<PagedResponse<MapSearchRoom>>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var oldToken = CancellationToken.None;
+        var currentRoom = CreateRoom("current");
+        var boundary = ValidBoundary();
+        StubSearch((request, token) =>
+        {
+            if (!request.PolygonCoordinates.Contains(boundary[0]))
+                return Task.FromResult(new PagedResponse<MapSearchRoom>([currentRoom], 1, 50, 1));
+
+            oldToken = token;
+            return oldResponse.Task;
+        });
+        _viewModel.CompleteDrawing(boundary);
+        var oldSearch = _viewModel.ConfirmAreaAsync();
+
+        _viewModel.ClearPolygon();
+        _viewModel.CompleteDrawing(boundary.Select(point => point with { Latitude = point.Latitude + 1 }));
+        await _viewModel.ConfirmAreaAsync();
+        oldResponse.SetResult(new PagedResponse<MapSearchRoom>([CreateRoom("old")], 1, 50, 1));
+        await oldSearch;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(oldToken.IsCancellationRequested, Is.True);
+            Assert.That(_viewModel.Rooms, Is.EqualTo(new[] { currentRoom }));
+            Assert.That(_viewModel.SearchMessage, Is.EqualTo("1 room found"));
+            Assert.That(_viewModel.IsSearching, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task CancelEdit_RestoresConfirmedBoundaryAndResults()
+    {
+        var room = CreateRoom("first");
+        StubSearch((_, _) => Task.FromResult(new PagedResponse<MapSearchRoom>([room], 1, 50, 1)));
+        _viewModel.CompleteDrawing(ValidBoundary());
+        var boundary = _viewModel.PolygonCoordinates.ToArray();
+        await _viewModel.ConfirmAreaAsync();
+
+        _viewModel.StartEditing();
+        _viewModel.UpdateAnchorPosition(1, new GeoCoordinate(21.613, 105.814));
+        _viewModel.CancelDrawing();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_viewModel.PolygonCoordinates, Is.EqualTo(boundary));
+            Assert.That(_viewModel.IsAreaConfirmed, Is.True);
+            Assert.That(_viewModel.Rooms, Is.EqualTo(new[] { room }));
+        });
+    }
+
+    [Test]
+    public async Task ConfirmArea_AfterRequestFailure_CanRetrySameBoundary()
+    {
+        var room = CreateRoom("available");
+        StubSearch((_, _) => Task.FromException<PagedResponse<MapSearchRoom>>(new HttpRequestException()));
+        _viewModel.CompleteDrawing(ValidBoundary());
+        await _viewModel.ConfirmAreaAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_viewModel.IsSearching, Is.False);
+            Assert.That(_viewModel.CanRetrySearch, Is.True);
+            Assert.That(_viewModel.SearchMessage, Does.Contain("Try again"));
+        });
+
+        StubSearch((_, _) => Task.FromResult(new PagedResponse<MapSearchRoom>([room], 1, 50, 1)));
+        await _viewModel.ConfirmAreaAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_viewModel.CanRetrySearch, Is.False);
+            Assert.That(_viewModel.Rooms, Is.EqualTo(new[] { room }));
+        });
+    }
+
+    [Test]
+    public async Task SavedArea_AfterReload_CanRenameSearchAndDelete()
+    {
+        _viewModel.CompleteDrawing(ValidBoundary());
+        var boundary = _viewModel.PolygonCoordinates.ToArray();
+        await _viewModel.ConfirmAreaAsync();
+        Assert.That(await _viewModel.SaveCurrentAreaAsync(_accountId, "  Near campus  "), Is.True);
+
+        var reloaded = new MapSearchViewModel(_api.Object, new SavedMapAreaStore(_savedAreasPath));
+        var saved = (await reloaded.GetSavedAreasAsync(_accountId)).Single();
+        Assert.That(saved.Name, Is.EqualTo("Near campus"));
+        Assert.That(saved.Boundary, Is.EqualTo(boundary));
+        await reloaded.RenameSavedAreaAsync(_accountId, saved.Id, "Campus west");
+        saved = (await reloaded.GetSavedAreasAsync(_accountId)).Single();
+        Assert.That(saved.Name, Is.EqualTo("Campus west"));
+
+        var latestRoom = CreateRoom("latest");
+        _api.Invocations.Clear();
+        StubSearch((_, _) => Task.FromResult(new PagedResponse<MapSearchRoom>([latestRoom], 1, 50, 1)));
+        await reloaded.OpenSavedAreaAsync(saved);
+
+        _api.Verify(api => api.PostAsync<MapSearchRequest, PagedResponse<MapSearchRoom>>(
+            SpatialSearchEndpoint, It.Is<MapSearchRequest>(request => request.PolygonCoordinates.SequenceEqual(boundary)),
+            It.IsAny<CancellationToken>()), Times.Once);
+        Assert.That(reloaded.PolygonCoordinates, Is.EqualTo(boundary));
+        Assert.That(reloaded.Rooms, Is.EqualTo(new[] { latestRoom }));
+
+        await reloaded.DeleteSavedAreaAsync(_accountId, saved.Id);
+        Assert.That(await new SavedMapAreaStore(_savedAreasPath).LoadAsync(_accountId), Is.Empty);
+    }
+
+    [Test]
+    public async Task SavedAreas_WhenAccountsShareADevice_OnlyTheOwnerCanReadChangeOrDelete()
+    {
+        _viewModel.CompleteDrawing(ValidBoundary());
+        await _viewModel.ConfirmAreaAsync();
+        await _viewModel.SaveCurrentAreaAsync(_accountId, "Campus north");
+        var saved = (await _viewModel.GetSavedAreasAsync(_accountId)).Single();
+
+        Assert.That(await _viewModel.GetSavedAreasAsync(_otherAccountId), Is.Empty);
+        await _viewModel.RenameSavedAreaAsync(_otherAccountId, saved.Id, "Another account's name");
+        await _viewModel.DeleteSavedAreaAsync(_otherAccountId, saved.Id);
+
+        var unchanged = (await _viewModel.GetSavedAreasAsync(_accountId)).Single();
+        Assert.Multiple(() =>
+        {
+            Assert.That(unchanged.Id, Is.EqualTo(saved.Id));
+            Assert.That(unchanged.Name, Is.EqualTo(saved.Name));
+            Assert.That(unchanged.Boundary, Is.EqualTo(saved.Boundary));
+        });
+        Assert.That(await _viewModel.GetSavedAreasAsync(_otherAccountId), Is.Empty);
+    }
+
+    [Test]
+    public async Task SaveCurrentArea_AfterBoundaryIsCleared_ReturnsFalseAndDoesNotWrite()
+    {
+        _viewModel.CompleteDrawing(ValidBoundary());
+        await _viewModel.ConfirmAreaAsync();
+        _viewModel.ClearPolygon();
+
+        Assert.That(await _viewModel.SaveCurrentAreaAsync(_accountId, "Campus north"), Is.False);
+        Assert.That(await _viewModel.GetSavedAreasAsync(_accountId), Is.Empty);
+    }
+
+    [Test]
+    public void OpenSavedArea_WhenBoundaryIsMissing_RejectsTheRecordWithoutSearching()
+    {
+        var area = new SavedMapArea(Guid.NewGuid(), "Missing boundary", null!);
+
+        Assert.ThrowsAsync<InvalidDataException>(() => _viewModel.OpenSavedAreaAsync(area));
+        _api.VerifyNoOtherCalls();
+    }
+
+    private static GeoCoordinate[] ValidBoundary() =>
+        [new(21.58, 105.80), new(21.60, 105.81), new(21.58, 105.83)];
+
+    private static MapSearchRoom CreateRoom(string id) =>
+        new(id, "Room near campus", 1_500_000m, "VND", 20, "Campus Road", 21.5855, 105.8075, null);
+
+    [TestCase(2_000_000, "VND", "2 tr")]
+    [TestCase(1_450_000, "VND", "1,45 tr")]
+    [TestCase(850_000, "vnd", "0,85 tr")]
+    [TestCase(150, "USD", "150 USD")]
+    public void PriceTag_AbbreviatesVietnameseRentAndKeepsOtherCurrencies(int rent, string currency, string expected)
+    {
+        var room = CreateRoom("price-tag") with { MonthlyRent = rent, Currency = currency };
+
+        Assert.That(room.PriceTag, Is.EqualTo(expected));
     }
 
     [Test]
