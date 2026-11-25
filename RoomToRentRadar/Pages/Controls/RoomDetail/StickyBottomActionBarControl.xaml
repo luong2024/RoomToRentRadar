@@ -51,12 +51,17 @@
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding CallLandlordCommand}" />
                         </Border.GestureRecognizers>
-                        <Label Text="{x:Static fonts:FluentUI.call_24_regular}"
-                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                               FontSize="20"
-                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
-                               HorizontalTextAlignment="Center"
-                               VerticalTextAlignment="Center" />
+                        <Image WidthRequest="20"
+                               HeightRequest="20"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center">
+                            <Image.Source>
+                                <FontImageSource Glyph="{x:Static fonts:FluentUI.call_24_regular}"
+                                                 FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                 Size="20"
+                                                 Color="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                            </Image.Source>
+                        </Image>
                     </Border>
 
                     <!-- Zalo Action Button (Touch Target 56x48) -->
@@ -92,12 +97,17 @@
                         <HorizontalStackLayout Spacing="6"
                                                VerticalOptions="Center"
                                                HorizontalOptions="Center">
-                            <Label Text="{x:Static fonts:FluentUI.chat_20_regular}"
-                                   FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                                   FontSize="18"
-                                   TextColor="White"
-                                   VerticalTextAlignment="Center" />
-                            <Label Text="{loc:LocalizedStrings RoomDetail_MessageAction}"
+                            <Image WidthRequest="18"
+                                   HeightRequest="18"
+                                   VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="{x:Static fonts:FluentUI.chat_20_regular}"
+                                                     FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                     Size="18"
+                                                     Color="White" />
+                                </Image.Source>
+                            </Image>
+                            <Label Text="{loc:LocalizedStrings RoomDetail_ActionMessage}"
                                    FontFamily="{StaticResource FontFamilySemibold}"
                                    FontSize="{StaticResource FontSizeBodyMedium}"
                                    FontAttributes="Bold"
@@ -122,11 +132,16 @@
                     <HorizontalStackLayout Spacing="6"
                                            VerticalOptions="Center"
                                            HorizontalOptions="Center">
-                        <Label Text="{x:Static fonts:FluentUI.person_20_regular}"
-                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                               FontSize="18"
-                               TextColor="White"
-                               VerticalTextAlignment="Center" />
+                        <Image WidthRequest="18"
+                               HeightRequest="18"
+                               VerticalOptions="Center">
+                            <Image.Source>
+                                <FontImageSource Glyph="{x:Static fonts:FluentUI.person_20_regular}"
+                                                 FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                 Size="18"
+                                                 Color="White" />
+                            </Image.Source>
+                        </Image>
                         <Label Text="{loc:LocalizedStrings RoomDetail_SignInToContact}"
                                FontFamily="{StaticResource FontFamilySemibold}"
                                FontSize="{StaticResource FontSizeBodyMedium}"

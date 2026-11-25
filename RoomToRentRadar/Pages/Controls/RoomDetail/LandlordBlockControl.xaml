@@ -47,11 +47,16 @@
 
                     <!-- Verified Landlord with Checkmark -->
                     <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
-                        <Label Text="{x:Static fonts:FluentUI.shield_checkmark_16_regular}"
-                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                               FontSize="14"
-                               TextColor="{AppThemeBinding Light={StaticResource StatusSuccessTextLight}, Dark={StaticResource StatusSuccessDark}}"
-                               VerticalTextAlignment="Center" />
+                        <Image WidthRequest="14"
+                               HeightRequest="14"
+                               VerticalOptions="Center">
+                            <Image.Source>
+                                <FontImageSource Glyph="{x:Static fonts:FluentUI.shield_checkmark_16_regular}"
+                                                 FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                 Size="14"
+                                                 Color="{AppThemeBinding Light={StaticResource StatusSuccessTextLight}, Dark={StaticResource StatusSuccessDark}}" />
+                            </Image.Source>
+                        </Image>
                         <Label Text="{Binding LandlordBadge}"
                                FontFamily="{StaticResource FontFamilyRegular}"
                                FontSize="{StaticResource FontSizeCaption}"
@@ -72,11 +77,16 @@
                 <TapGestureRecognizer Command="{Binding ReportListingCommand}" />
             </Border.GestureRecognizers>
             <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
-                <Label Text="{x:Static fonts:FluentUI.flag_20_regular}"
-                       FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                       FontSize="18"
-                       TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
-                       VerticalTextAlignment="Center" />
+                <Image WidthRequest="18"
+                       HeightRequest="18"
+                       VerticalOptions="Center">
+                    <Image.Source>
+                        <FontImageSource Glyph="{x:Static fonts:FluentUI.flag_20_regular}"
+                                         FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                         Size="18"
+                                         Color="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                    </Image.Source>
+                </Image>
                 <Label Text="{loc:LocalizedStrings RoomDetail_ReportListing}"
                        FontFamily="{StaticResource FontFamilyRegular}"
                        FontSize="{StaticResource FontSizeBodyMedium}"

@@ -9,6 +9,15 @@ namespace RoomToRentRadar.Pages.Controls.RoomDetail.Models;
 public sealed record KeyFactItem(string IconGlyph, string Label, string Value);
 
 /// <summary>
+/// Display row model grouping up to three key fact cards into a fixed 3-column grid row.
+/// </summary>
+public sealed record KeyFactRowItem(KeyFactItem First, KeyFactItem? Second, KeyFactItem? Third)
+{
+    public bool HasSecond => Second is not null;
+    public bool HasThird => Third is not null;
+}
+
+/// <summary>
 /// Display model for a line item in the monthly utility costs breakdown.
 /// </summary>
 public sealed record CostRowItem(string Label, string ValueFormatted, bool IsHighlighted = false);
@@ -52,4 +61,8 @@ public sealed record SimilarRoomDisplayModel(
     string Title,
     string PriceFormatted,
     string DistanceFormatted,
-    string? ThumbnailUrl);
+    string? ThumbnailUrl)
+{
+    public bool HasThumbnail => !string.IsNullOrWhiteSpace(ThumbnailUrl);
+    public bool HasNoThumbnail => !HasThumbnail;
+}

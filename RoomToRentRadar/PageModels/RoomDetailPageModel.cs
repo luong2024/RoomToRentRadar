@@ -96,7 +96,28 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
     #region Hero Gallery Properties
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CurrentPhotoIndexZeroBased))]
     public partial int CurrentPhotoIndex { get; set; } = 1;
+
+    public int CurrentPhotoIndexZeroBased
+    {
+        get => Math.Max(0, CurrentPhotoIndex - 1);
+        set
+        {
+            int oneBased = Photos.Count == 0
+                ? 1
+                : Math.Clamp(value + 1, 1, Photos.Count);
+            if (CurrentPhotoIndex != oneBased)
+            {
+                CurrentPhotoIndex = oneBased;
+            }
+        }
+    }
+
+    partial void OnCurrentPhotoIndexChanged(int value)
+    {
+        PhotoCounterText = $"{value} / {TotalPhotosCount}";
+    }
 
     [ObservableProperty]
     public partial int TotalPhotosCount { get; set; } = 1;
@@ -151,6 +172,8 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
     #region Key Facts & Monthly Costs Collections
 
     public ObservableCollection<KeyFactItem> KeyFacts { get; } = [];
+
+    public ObservableCollection<KeyFactRowItem> KeyFactRows { get; } = [];
 
     public ObservableCollection<CostRowItem> CostBreakdownRows { get; } = [];
 
@@ -394,21 +417,20 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
             : string.Format(AppResources.GetString("RoomDetail_UnavailableBanner"), relativeTime);
         ContactDisabledText = AppResources.GetString("RoomDetail_ContactDisabled");
 
-        // Photos gallery setup
+        // Photos gallery setup (sorted by SortOrder so carousel starts on cover)
         Photos.Clear();
-        foreach (var photo in detail.Photos)
+        var orderedPhotos = detail.Photos.OrderBy(p => p.SortOrder).ToList();
+        foreach (var photo in orderedPhotos)
         {
             Photos.Add(photo);
         }
-        TotalPhotosCount = Math.Max(1, detail.Photos.Count);
+        TotalPhotosCount = Math.Max(1, orderedPhotos.Count);
         CurrentPhotoIndex = 1;
         PhotoCounterText = $"{CurrentPhotoIndex} / {TotalPhotosCount}";
-        HasPhotos = detail.Photos.Count > 0;
-        HeroCoverUrl = detail.Photos.OrderBy(p => p.SortOrder).FirstOrDefault()?.OriginalUrl
-            ?? detail.Photos.OrderBy(p => p.SortOrder).FirstOrDefault()?.MediumUrl
-            ?? detail.Photos.FirstOrDefault()?.OriginalUrl
-            ?? detail.Photos.FirstOrDefault()?.MediumUrl;
-        Is360Available = detail.Photos.Any(p => p.Kind == PhotoKind.Panorama);
+        HasPhotos = orderedPhotos.Count > 0;
+        HeroCoverUrl = orderedPhotos.FirstOrDefault()?.OriginalUrl
+            ?? orderedPhotos.FirstOrDefault()?.MediumUrl;
+        Is360Available = orderedPhotos.Any(p => p.Kind == PhotoKind.Panorama);
 
         // Key Facts Grid (2x3)
         PopulateKeyFacts(detail);
@@ -486,6 +508,20 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
             FluentUI.location_24_regular,
             string.Format(AppResources.GetString("RoomDetail_ToCampus"), CampusName),
             $"{detail.DistanceKm:0.0} km"));
+
+        UpdateKeyFactRows();
+    }
+
+    private void UpdateKeyFactRows()
+    {
+        KeyFactRows.Clear();
+        for (int i = 0; i < KeyFacts.Count; i += 3)
+        {
+            var first = KeyFacts[i];
+            var second = i + 1 < KeyFacts.Count ? KeyFacts[i + 1] : null;
+            var third = i + 2 < KeyFacts.Count ? KeyFacts[i + 2] : null;
+            KeyFactRows.Add(new KeyFactRowItem(first, second, third));
+        }
     }
 
     private static string FormatRoomType(RoomType roomType) => roomType switch

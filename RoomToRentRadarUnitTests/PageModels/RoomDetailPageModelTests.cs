@@ -84,8 +84,15 @@ public class RoomDetailPageModelTests
         Assert.That(_sut.DepositFormatted, Is.EqualTo("Deposit 2,500,000 đ (1 month)"));
         Assert.That(_sut.StatusBadgeText, Is.EqualTo("Verified · Available"));
 
-        // Assert - Key Facts
+        // Assert - Key Facts (6 cards grouped into 2 rows of 3)
         Assert.That(_sut.KeyFacts, Has.Count.EqualTo(6));
+        Assert.That(_sut.KeyFactRows, Has.Count.EqualTo(2));
+        Assert.That(_sut.KeyFactRows[0].First.Value, Is.EqualTo("25 m²"));
+        Assert.That(_sut.KeyFactRows[0].Second!.Value, Is.EqualTo("Boarding room"));
+        Assert.That(_sut.KeyFactRows[0].Third!.Value, Is.EqualTo("2 people"));
+        Assert.That(_sut.KeyFactRows[1].First.Value, Is.EqualTo("Full"));
+        Assert.That(_sut.KeyFactRows[1].Second!.Value, Is.EqualTo("1 Dec"));
+        Assert.That(_sut.KeyFactRows[1].Third!.Value, Is.EqualTo("1.2 km"));
         Assert.That(_sut.KeyFacts[0].Value, Is.EqualTo("25 m²"));
         Assert.That(_sut.KeyFacts[1].Value, Is.EqualTo("Boarding room"));
         Assert.That(_sut.KeyFacts[2].Value, Is.EqualTo("2 people"));
@@ -723,7 +730,15 @@ public class RoomDetailPageModelTests
         Assert.That(_sut.HasPhotos, Is.True);
         Assert.That(_sut.Is360Available, Is.True);
         Assert.That(_sut.PhotoCounterText, Is.EqualTo("1 / 2"));
+        Assert.That(_sut.CurrentPhotoIndexZeroBased, Is.EqualTo(0));
         Assert.That(_sut.HeroCoverUrl, Is.EqualTo("orig1.jpg"));
+
+        // Act - Swipe to second photo in CarouselView
+        _sut.CurrentPhotoIndexZeroBased = 1;
+
+        // Assert - Counter updates to 2 / 2
+        Assert.That(_sut.CurrentPhotoIndex, Is.EqualTo(2));
+        Assert.That(_sut.PhotoCounterText, Is.EqualTo("2 / 2"));
     }
 
     [Test]

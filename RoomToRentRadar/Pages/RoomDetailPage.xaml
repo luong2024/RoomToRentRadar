@@ -28,9 +28,9 @@
 
         <!-- 2. ERROR STATE WITH RETRY -->
         <feedback:ErrorRetryView IsVisible="{Binding HasError}"
-                                 Title="{loc:LocalizedStrings Common_Error}"
+                                 Title="{loc:LocalizedStrings State_Error_Title}"
                                  ErrorMessage="{Binding ErrorMessage}"
-                                 RetryText="{loc:LocalizedStrings Common_Retry}"
+                                 RetryText="{loc:LocalizedStrings State_Retry}"
                                  RetryCommand="{Binding InitializeCommand}"
                                  VerticalOptions="Center"
                                  HorizontalOptions="Center" />
@@ -40,7 +40,7 @@
                                  IconGlyph="{x:Static fonts:FluentUI.search_info_24_regular}"
                                  Title="{loc:LocalizedStrings RoomDetail_NotFoundTitle}"
                                  Message="{Binding ErrorMessage}"
-                                 ActionText="{loc:LocalizedStrings Common_Back}"
+                                 ActionText="{loc:LocalizedStrings RoomDetail_BackToExplore}"
                                  ActionCommand="{Binding GoBackCommand}"
                                  VerticalOptions="Center"
                                  HorizontalOptions="Center" />
@@ -74,11 +74,16 @@
                                         BackgroundColor="{AppThemeBinding Light=#1516A34A, Dark=#254CB5AE}"
                                         Padding="10,4">
                                     <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
-                                        <Label Text="{x:Static fonts:FluentUI.checkmark_circle_16_regular}"
-                                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                                               FontSize="14"
-                                               TextColor="{AppThemeBinding Light={StaticResource StatusSuccessTextLight}, Dark={StaticResource StatusSuccessDark}}"
-                                               VerticalTextAlignment="Center" />
+                                        <Image WidthRequest="14"
+                                               HeightRequest="14"
+                                               VerticalOptions="Center">
+                                            <Image.Source>
+                                                <FontImageSource Glyph="{x:Static fonts:FluentUI.checkmark_circle_16_regular}"
+                                                                 FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                                 Size="14"
+                                                                 Color="{AppThemeBinding Light={StaticResource StatusSuccessTextLight}, Dark={StaticResource StatusSuccessDark}}" />
+                                            </Image.Source>
+                                        </Image>
                                         <Label Text="{Binding StatusBadgeText}"
                                                FontFamily="{StaticResource FontFamilySemibold}"
                                                FontSize="{StaticResource FontSizeBadge}"
