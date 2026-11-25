@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using RoomToRentRadar.Infrastructure;
 using RoomToRentRadar.Infrastructure.Adapters.Mocks;
+using RoomToRentRadar.Infrastructure.Adapters.Routing;
 using RoomToRentRadar.Infrastructure.Adapters.Security;
 using RoomToRentRadar.Ports.Outbound.ExternalServices;
 
@@ -27,6 +28,28 @@ public class InfrastructureSecurityAndConfigTests
 
         var descriptor = services.Single(d => d.ServiceType == typeof(IIctuSsoVerifierPort));
         Assert.That(descriptor.ImplementationType, Is.EqualTo(typeof(MockIctuSsoVerifierAdapter)));
+    }
+
+    [Test]
+    public void AddInfrastructure_DefaultCall_RegistersRealOpenRouteServiceAdapter()
+    {
+        var services = new ServiceCollection();
+        services.AddInfrastructure();
+        using var provider = services.BuildServiceProvider();
+
+        var port = provider.GetRequiredService<ITravelTimePort>();
+        Assert.That(port, Is.TypeOf<OpenRouteServiceTravelTimeAdapter>());
+    }
+
+    [Test]
+    public void AddInfrastructure_ExplicitMockRoutingTrue_RegistersMockTravelTimeAdapter()
+    {
+        var services = new ServiceCollection();
+        services.AddInfrastructure(useMockRouting: true);
+        using var provider = services.BuildServiceProvider();
+
+        var port = provider.GetRequiredService<ITravelTimePort>();
+        Assert.That(port, Is.TypeOf<MockTravelTimeAdapter>());
     }
 }
 

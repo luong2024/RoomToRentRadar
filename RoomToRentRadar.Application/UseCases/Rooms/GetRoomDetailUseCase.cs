@@ -51,35 +51,11 @@ public sealed class GetRoomDetailUseCase : IGetRoomDetailUseCase
 
         // BR-LST-04a: Available, Rented, Unpublished are viewable by public.
         // PendingReview, Rejected, Suspended return 404 to non-owners/non-admins.
-        if (room.Status != ListingStatus.Available &&
-            room.Status != ListingStatus.Rented &&
-            room.Status != ListingStatus.Unpublished)
-        {
-            var isOwner = _currentUserContext.IsAuthenticated &&
-                          string.Equals(_currentUserContext.UserId, room.LandlordId, StringComparison.Ordinal);
-            var isAdmin = _currentUserContext.IsAuthenticated &&
-                          string.Equals(_currentUserContext.Role, "Admin", StringComparison.OrdinalIgnoreCase);
+        RoomQueryHelper.EnsureViewable(room, roomId, _currentUserContext);
 
-            if (!isOwner && !isAdmin)
-            {
-                throw new EntityNotFoundException(
-                    ProblemCodes.RoomNotFound,
-                    $"Room with ID '{roomId}' was not found or is not public.");
-            }
-        }
-
-        // BR-CMP-01: Resolve campus for distance calculation
-        Campus campus;
-        if (string.IsNullOrWhiteSpace(campusId))
-        {
-            campus = await _campusRepository.GetDefaultCampusAsync(ct)
-                ?? throw new InvalidOperationException("Default campus (ICTU) is not configured.");
-        }
-        else
-        {
-            campus = await _campusRepository.GetByIdAsync(campusId.Trim(), ct)
-                ?? throw new DomainValidationException($"Campus with ID '{campusId}' was not found.", ProblemCodes.CampusNotFound);
-        }
+        // BR-CMP-01..03: Resolve campus (explicit -> authenticated profile -> default ICTU)
+        var campus = await RoomQueryHelper.ResolveCampusAsync(
+            campusId, _campusRepository, _userRepository, _currentUserContext, ct);
 
         // BR-AUTH-07 / AC4: Unmasked phone for authenticated users only
         var landlord = await _userRepository.GetByIdAsync(room.LandlordId, ct);

@@ -6,6 +6,7 @@ using RoomToRentRadar.Client.Adapters.Abstractions;
 using RoomToRentRadar.PageModels;
 using RoomToRentRadar.Ports.Contracts.Requests.Auth;
 using RoomToRentRadar.Ports.Contracts.Responses.Auth;
+using RoomToRentRadar.Ports.Contracts.Responses.Campuses;
 using RoomToRentRadar.Services.Navigation.Core;
 
 namespace RoomToRentRadarUnitTests.PageModels;
@@ -258,5 +259,104 @@ public class AccountPageModelTests
         // Assert
         Assert.That(model.LanguageName, Is.EqualTo("Tiếng Việt"));
         Assert.That(model.RoleBadgeText, Is.EqualTo("Chủ trọ · đã xác minh"));
+    }
+
+    // ----- T13.4: campus row (SCR-ACC-02, BR-CMP-02) -----
+
+    private static ICampusSelectionService CampusService(string id)
+    {
+        var service = Substitute.For<ICampusSelectionService>();
+        service.SelectedCampusId.Returns(id);
+        return service;
+    }
+
+    [Test]
+    public async Task NavigateCampus_NavigatesToAccountCampusRoute_NoAlert()
+    {
+        string? navigatedRoute = null;
+        var alerts = 0;
+        var model = new AccountPageModel(_authGateway, _sessionStore)
+        {
+            NavigateOverride = route =>
+            {
+                navigatedRoute = route;
+                return Task.CompletedTask;
+            },
+            DisplayAlertOverride = (_, _, _) =>
+            {
+                alerts++;
+                return Task.CompletedTask;
+            }
+        };
+
+        await model.NavigateCampusCommand.ExecuteAsync(null);
+
+        Assert.That(navigatedRoute, Is.EqualTo(AppRoutes.AccountCampus));
+        Assert.That(alerts, Is.Zero);
+    }
+
+    [Test]
+    public void CampusName_ShowsSelectedShortName()
+    {
+        var service = CampusService("TNUT");
+        service.SelectedCampus.Returns(new CampusDto("TNUT", "Name", "TNUT-short", 21.5, 105.8, false));
+
+        var model = new AccountPageModel(_authGateway, _sessionStore, campusSelection: service);
+
+        Assert.That(model.CampusName, Is.EqualTo("TNUT-short"));
+    }
+
+    [Test]
+    public void CampusName_UpdatesWhenSelectionChanged()
+    {
+        var service = CampusService("ICTU");
+        var model = new AccountPageModel(_authGateway, _sessionStore, campusSelection: service);
+
+        service.SelectedCampusId.Returns("TUMP");
+        service.SelectedCampusChanged += Raise.Event();
+
+        Assert.That(model.CampusName, Is.EqualTo("TUMP"));
+        GC.KeepAlive(model);
+    }
+
+    [Test]
+    public async Task Initialize_SynchronizesCampusAndLoadsNames()
+    {
+        var service = CampusService("ICTU");
+        service.SynchronizeAsync(Arg.Any<CancellationToken>()).Returns(_ =>
+        {
+            service.SelectedCampusId.Returns("TNUE");
+            return Task.CompletedTask;
+        });
+        var model = new AccountPageModel(_authGateway, _sessionStore, campusSelection: service);
+
+        await model.InitializeAsync();
+
+        await service.Received(1).SynchronizeAsync(Arg.Any<CancellationToken>());
+        await service.Received(1).GetCampusesAsync(Arg.Any<bool>(), Arg.Any<CancellationToken>());
+        Assert.That(model.CampusName, Is.EqualTo("TNUE"));
+    }
+
+    [Test]
+    public async Task Initialize_CampusLoadThrows_IsSwallowed()
+    {
+        var service = CampusService("TNUT");
+        service.GetCampusesAsync(Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new ApiException("offline", 0));
+        var model = new AccountPageModel(_authGateway, _sessionStore, campusSelection: service);
+
+        await model.InitializeAsync();
+
+        Assert.That(model.CampusName, Is.EqualTo("TNUT"));
+    }
+
+    [Test]
+    public async Task NoCampusService_StillWorks()
+    {
+        var model = new AccountPageModel(_authGateway, _sessionStore);
+
+        await model.InitializeAsync();
+
+        Assert.That(model.CampusName, Is.EqualTo("ICTU"));
     }
 }

@@ -52,8 +52,15 @@ public sealed class HttpRoomGateway : IRoomGateway
         return await ApiResponseReader.ReadAsync<List<RoomCardDto>>(response, _logger, ct);
     }
 
-    public Task<TravelTimesDto> GetRoomTravelTimesAsync(string roomId, string? campusId = null, CancellationToken ct = default) =>
-        Pending.For<TravelTimesDto>("T09.1", "getRoomTravelTimes");
+    public async Task<TravelTimesDto> GetRoomTravelTimesAsync(string roomId, string? campusId = null, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
+        var url = string.IsNullOrWhiteSpace(campusId)
+            ? $"/api/rooms/{Uri.EscapeDataString(roomId)}/travel-times"
+            : $"/api/rooms/{Uri.EscapeDataString(roomId)}/travel-times?campusId={Uri.EscapeDataString(campusId.Trim())}";
+        using var response = await _httpClient.GetAsync(url, ct);
+        return await ApiResponseReader.ReadAsync<TravelTimesDto>(response, _logger, ct);
+    }
 
     private static string BuildSearchUrl(RoomSearchRequest request)
     {

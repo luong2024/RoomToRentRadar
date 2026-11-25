@@ -944,4 +944,38 @@
   <data name="Catalog_Input" xml:space="preserve"><value>Input:</value></data>
   <data name="Catalog_PreviewFeedback" xml:space="preserve"><value>Previewing {0} (app culture remains {1}).</value></data>
   <data name="Catalog_FollowFeedback" xml:space="preserve"><value>Following app culture ({0}).</value></data>
+  <!-- Campus picker SCR-ACC-02 (T13.4) -->
+  <data name="Campus_Title" xml:space="preserve">
+    <value>Measure distances from</value>
+  </data>
+  <data name="Campus_Subtitle" xml:space="preserve">
+    <value>ICTU is used by default. Studying at another Thái Nguyên University school? Pick it to see distances and travel times from there.</value>
+  </data>
+  <data name="Campus_Search_Placeholder" xml:space="preserve">
+    <value>Search campus</value>
+  </data>
+  <data name="Campus_UseThisCampus" xml:space="preserve">
+    <value>Use this campus</value>
+  </data>
+  <data name="Campus_Close_Description" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Campus_Row_Selected" xml:space="preserve">
+    <value>selected</value>
+  </data>
+  <data name="Campus_NoMatch_Title" xml:space="preserve">
+    <value>No campus matches your search</value>
+  </data>
+  <data name="Campus_NoMatch_Message" xml:space="preserve">
+    <value>Try a different name or code.</value>
+  </data>
+  <data name="Campus_Load_Error_Title" xml:space="preserve">
+    <value>Couldn't load campuses</value>
+  </data>
+  <data name="Campus_Empty_Title" xml:space="preserve">
+    <value>No campuses available</value>
+  </data>
+  <data name="Campus_Empty_Message" xml:space="preserve">
+    <value>Please try again later.</value>
+  </data>
 </root>

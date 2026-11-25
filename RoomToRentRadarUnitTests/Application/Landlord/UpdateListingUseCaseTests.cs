@@ -21,6 +21,7 @@ public class UpdateListingUseCaseTests
     private IRoomPhotoRepository _photos = null!;
     private InlineUnitOfWork _unitOfWork = null!;
     private FakePhotoStorage _storage = null!;
+    private ITravelTimeCacheRepository _travelTimeCache = null!;
     private UpdateListingUseCase _useCase = null!;
     private readonly Dictionary<string, RoomPhoto> _photosById = new(StringComparer.Ordinal);
     private Room _room = null!;
@@ -34,7 +35,8 @@ public class UpdateListingUseCaseTests
         _photos = Substitute.For<IRoomPhotoRepository>();
         _unitOfWork = new InlineUnitOfWork();
         _storage = new FakePhotoStorage();
-        _useCase = new UpdateListingUseCase(_rooms, _photos, _unitOfWork, _storage);
+        _travelTimeCache = Substitute.For<ITravelTimeCacheRepository>();
+        _useCase = new UpdateListingUseCase(_rooms, _photos, _unitOfWork, _storage, _travelTimeCache);
 
         _room = AppTestData.NewRoom("room-1", status: ListingStatus.Available, version: 3);
         _photosById.Clear();
@@ -268,6 +270,28 @@ public class UpdateListingUseCaseTests
         Assert.That(exception!.ErrorCode, Is.EqualTo("INVALID_FURNISHING"));
         await _rooms.DidNotReceiveWithAnyArgs().UpdateAsync(default!, default);
         Assert.That(_unitOfWork.Executions, Is.Zero);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WhenPinCoordinatesChange_InvalidatesTravelTimeCacheInsideUnitOfWork()
+    {
+        var movedRequest = AppTestData.ListingRequest(new[] { "p1", "p2", "p3" }) with
+        {
+            Location = new RoomToRentRadar.Ports.Contracts.Responses.Rooms.GeoPointDto(_room.Latitude + 0.005, _room.Longitude + 0.005)
+        };
+        var command = new UpdateListingCommand("landlord-1", "room-1", "\"3\"", movedRequest);
+
+        await _useCase.ExecuteAsync(command);
+
+        await _travelTimeCache.Received(1).InvalidateByRoomIdAsync("room-1", Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WhenPinCoordinatesUnchanged_DoesNotInvalidateTravelTimeCache()
+    {
+        await _useCase.ExecuteAsync(Command(ifMatch: "\"3\"", "p1", "p2", "p3"));
+
+        await _travelTimeCache.DidNotReceiveWithAnyArgs().InvalidateByRoomIdAsync(default!, default);
     }
 
     private UpdateListingCommand Command(string? ifMatch, params string[] photoIds) =>

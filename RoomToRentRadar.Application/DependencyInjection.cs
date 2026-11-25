@@ -4,12 +4,14 @@ using RoomToRentRadar.Application.UseCases.Auth;
 using RoomToRentRadar.Application.UseCases.Campuses;
 using RoomToRentRadar.Application.UseCases.Landlord;
 using RoomToRentRadar.Application.UseCases.Photos;
+using RoomToRentRadar.Application.UseCases.Profile;
 using RoomToRentRadar.Application.UseCases.Rooms;
 using RoomToRentRadar.Ports.Inbound.UseCases.Audit;
 using RoomToRentRadar.Ports.Inbound.UseCases.Auth;
 using RoomToRentRadar.Ports.Inbound.UseCases.Campuses;
 using RoomToRentRadar.Ports.Inbound.UseCases.Landlord;
 using RoomToRentRadar.Ports.Inbound.UseCases.Photos;
+using RoomToRentRadar.Ports.Inbound.UseCases.Profile;
 using RoomToRentRadar.Ports.Inbound.UseCases.Rooms;
 
 namespace RoomToRentRadar.Application;
@@ -29,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<ISearchRoomsUseCase, SearchRoomsUseCase>();
         services.AddScoped<IGetRoomDetailUseCase, GetRoomDetailUseCase>();
         services.AddScoped<IGetSimilarRoomsUseCase, GetSimilarRoomsUseCase>();
+        services.AddScoped<IGetRoomTravelTimesUseCase, GetRoomTravelTimesUseCase>();
 
         // US08 / T08.2 — photo upload and landlord listing CRUD (UC-30..UC-33).
         services.AddScoped<IUploadPhotoUseCase, UploadPhotoUseCase>();
@@ -46,6 +49,9 @@ public static class DependencyInjection
 
         // T00.8 — campuses reference list (BR-CMP-01).
         services.AddScoped<IListCampusesUseCase, ListCampusesUseCase>();
+
+        // T13.4 — own profile update, incl. selected campus (BR-CMP-02, UC-24).
+        services.AddScoped<IUpdateMyProfileUseCase, UpdateMyProfileUseCase>();
 
         return services;
     }

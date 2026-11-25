@@ -13,7 +13,7 @@ public class SqliteMigratorTests
     private static readonly string[] BaselineTableNames =
     [
         "AuditLogs", "Campuses", "HouseRuleVersions", "RoomAmenities", "RoomPhotos",
-        "RoomSafetyFeatures", "Rooms", "UserRefreshTokens", "Users"
+        "RoomSafetyFeatures", "Rooms", "TravelTimeEstimates", "UserRefreshTokens", "Users"
     ];
 
     private static readonly string[] BaselineIndexNames =
@@ -22,6 +22,7 @@ public class SqliteMigratorTests
         "IX_RoomPhotos_RoomId_SortOrder", "IX_RoomPhotos_UploadedByUserId_AttachedAtUtc",
         "IX_Rooms_LandlordId", "IX_Rooms_NeedsReReview", "IX_Rooms_Status_Lat_Lng",
         "IX_Rooms_Status_PublishedAtUtc", "IX_Rooms_Status_Rent",
+        "IX_TravelTimeEstimates_ComputedAtUtc",
         "IX_UserRefreshTokens_UserId", "IX_Users_NormalizedEmail"
     ];
 
@@ -53,7 +54,7 @@ public class SqliteMigratorTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(applied, Is.EqualTo(new[] { 1, 2, 3, 4 }));
+            Assert.That(applied, Is.EqualTo(new[] { 1, 2, 3, 4, 5 }));
             Assert.That(ReadNames(connection, "table"), Is.EquivalentTo(BaselineTableNames));
             Assert.That(ReadNames(connection, "index"), Is.EquivalentTo(BaselineIndexNames));
             Assert.That(ReadScalarLong(connection, "SELECT COUNT(1) FROM pragma_foreign_key_check;"), Is.Zero,
@@ -101,6 +102,10 @@ public class SqliteMigratorTests
                 "Id", "RoomId", "VersionNumber", "QuietHoursStart", "QuietHoursEnd", "CurfewTime",
                 "GuestPolicy", "GuestPolicyNote", "CookingPolicy", "ParkingAvailable", "ParkingRules",
                 "PetsAllowed", "SmokingAllowed", "OtherRules", "CreatedByUserId", "CreatedAtUtc"
+            }));
+            Assert.That(ReadColumns(connection, "TravelTimeEstimates"), Is.EquivalentTo(new[]
+            {
+                "RoomId", "CampusId", "Mode", "DistanceMeters", "DurationSeconds", "Source", "ComputedAtUtc"
             }));
         });
     }
@@ -259,7 +264,7 @@ public class SqliteMigratorTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(applied, Is.EqualTo(new[] { 2, 3, 4 }));
+            Assert.That(applied, Is.EqualTo(new[] { 2, 3, 4, 5 }));
             Assert.That(ReadScalarLong(connection, "SELECT COUNT(1) FROM Users;"), Is.EqualTo(1));
             Assert.That(ReadScalarLong(connection, "SELECT COUNT(1) FROM UserRefreshTokens;"), Is.EqualTo(1));
             Assert.That(ReadScalarText(connection, "SELECT SelectedCampusId FROM Users WHERE Id = 'user-old';"), Is.EqualTo("ICTU"));

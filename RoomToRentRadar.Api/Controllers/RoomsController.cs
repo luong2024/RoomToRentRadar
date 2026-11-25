@@ -18,19 +18,23 @@ public sealed class RoomsController : ControllerBase
     private readonly ISearchRoomsUseCase? _searchRoomsUseCase;
     private readonly IGetRoomDetailUseCase? _getRoomDetailUseCase;
     private readonly IGetSimilarRoomsUseCase? _getSimilarRoomsUseCase;
+    private readonly IGetRoomTravelTimesUseCase? _getRoomTravelTimesUseCase;
 
     [ActivatorUtilitiesConstructor]
     public RoomsController(
         ISearchRoomsUseCase searchRoomsUseCase,
         IGetRoomDetailUseCase getRoomDetailUseCase,
-        IGetSimilarRoomsUseCase getSimilarRoomsUseCase)
+        IGetSimilarRoomsUseCase getSimilarRoomsUseCase,
+        IGetRoomTravelTimesUseCase getRoomTravelTimesUseCase)
     {
         ArgumentNullException.ThrowIfNull(searchRoomsUseCase);
         ArgumentNullException.ThrowIfNull(getRoomDetailUseCase);
         ArgumentNullException.ThrowIfNull(getSimilarRoomsUseCase);
+        ArgumentNullException.ThrowIfNull(getRoomTravelTimesUseCase);
         _searchRoomsUseCase = searchRoomsUseCase;
         _getRoomDetailUseCase = getRoomDetailUseCase;
         _getSimilarRoomsUseCase = getSimilarRoomsUseCase;
+        _getRoomTravelTimesUseCase = getRoomTravelTimesUseCase;
     }
 
     /// <summary>
@@ -42,6 +46,7 @@ public sealed class RoomsController : ControllerBase
         _searchRoomsUseCase = searchRoomsUseCase;
         _getRoomDetailUseCase = null;
         _getSimilarRoomsUseCase = null;
+        _getRoomTravelTimesUseCase = null;
     }
 
     /// <summary>
@@ -55,6 +60,19 @@ public sealed class RoomsController : ControllerBase
         _searchRoomsUseCase = null;
         _getRoomDetailUseCase = getRoomDetailUseCase;
         _getSimilarRoomsUseCase = getSimilarRoomsUseCase;
+        _getRoomTravelTimesUseCase = null;
+    }
+
+    /// <summary>
+    /// Test helper constructor for TravelTimes test suite (T09.1).
+    /// </summary>
+    public RoomsController(IGetRoomTravelTimesUseCase getRoomTravelTimesUseCase)
+    {
+        ArgumentNullException.ThrowIfNull(getRoomTravelTimesUseCase);
+        _searchRoomsUseCase = null;
+        _getRoomDetailUseCase = null;
+        _getSimilarRoomsUseCase = null;
+        _getRoomTravelTimesUseCase = getRoomTravelTimesUseCase;
     }
 
     // [AllowAnonymous] đặt trên action thay vì class: mọi action ghi sau này vẫn mặc định yêu cầu xác thực.
@@ -232,5 +250,39 @@ public sealed class RoomsController : ControllerBase
         }
 
         return Ok(similarRooms);
+    }
+
+    /// <summary>
+    /// getRoomTravelTimes: Returns estimated travel times or straight-line fallback (US09, UC-12, BR-TRV-01..04).
+    /// </summary>
+    [HttpGet("{roomId}/travel-times")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(TravelTimesDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<TravelTimesDto>> GetRoomTravelTimes(
+        string roomId,
+        [FromQuery] string? campusId = null,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(roomId))
+        {
+            var invalidProblem = new ProblemDetails
+            {
+                Title = "Invalid room request",
+                Detail = "Room ID cannot be empty or whitespace.",
+                Status = StatusCodes.Status400BadRequest
+            };
+            invalidProblem.Extensions["errorCode"] = ProblemCodes.ValidationFailed;
+            return BadRequest(invalidProblem);
+        }
+
+        if (_getRoomTravelTimesUseCase == null)
+        {
+            return StatusCode(StatusCodes.Status501NotImplemented);
+        }
+
+        var result = await _getRoomTravelTimesUseCase.ExecuteAsync(roomId, campusId, ct);
+        return Ok(result);
     }
 }
