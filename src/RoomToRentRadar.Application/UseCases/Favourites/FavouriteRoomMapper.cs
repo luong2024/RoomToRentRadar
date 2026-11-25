@@ -43,8 +43,8 @@ internal static class FavouriteRoomMapper
             };
         }
 
-        // Strict fail-closed availability check: must be both Available and Verified
-        var isAvailable = room.Status == RoomStatus.Available && room.IsVerified;
+        var isAvailable = room.IsDisplayable;
+        var location = isAvailable ? room.GetLocation() : null;
         var imageUrls = (room.ImageUrls ?? [])
             .Where(url => !string.IsNullOrWhiteSpace(url))
             .Select(url => url.Trim())
@@ -73,8 +73,8 @@ internal static class FavouriteRoomMapper
             Amenities = room.Amenities ?? [],
             ImageUrls = imageUrls,
             ThumbnailUrl = thumbnailUrl,
-            Latitude = room.Latitude,
-            Longitude = room.Longitude,
+            Latitude = location?.Latitude,
+            Longitude = location?.Longitude,
             IsVerified = room.IsVerified,
             Status = room.Status.ToString(),
             IsAvailable = isAvailable,

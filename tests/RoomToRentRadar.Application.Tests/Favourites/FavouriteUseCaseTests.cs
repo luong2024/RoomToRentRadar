@@ -212,6 +212,31 @@ public class FavouriteUseCaseTests
     }
 
     [Test]
+    public async Task GetMyFavourites_HidesCoordinatesAfterRoomReturnsToPending()
+    {
+        var userId = Guid.NewGuid();
+        var room = CreateSampleRoom("room-with-location", RoomStatus.Available, isVerified: true);
+        room.Latitude = 21.5944;
+        room.Longitude = 105.8482;
+        _roomRepository.Seed(room);
+        await _addFavouriteUseCase.ExecuteAsync(userId, room.Id);
+
+        var published = (await _getMyFavouritesUseCase.ExecuteAsync(userId)).Items.Single();
+        room.Status = RoomStatus.Pending;
+        room.IsVerified = false;
+        var pending = (await _getMyFavouritesUseCase.ExecuteAsync(userId)).Items.Single();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(published.Latitude, Is.EqualTo(21.5944));
+            Assert.That(published.Longitude, Is.EqualTo(105.8482));
+            Assert.That(pending.IsAvailable, Is.False);
+            Assert.That(pending.Latitude, Is.Null);
+            Assert.That(pending.Longitude, Is.Null);
+        });
+    }
+
+    [Test]
     public async Task SyncFavourites_WhenNullOrEmptyPayload_ShouldReturnExistingFavouritesWithZeroAdded()
     {
         var userId = Guid.NewGuid();

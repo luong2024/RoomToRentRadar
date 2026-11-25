@@ -40,6 +40,8 @@ public class Room
     public double? Longitude { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    public bool IsDisplayable => Status == RoomStatus.Available && IsVerified;
+
     // Older documents can contain an incomplete or invalid pair.
     public GeoLocation? GetLocation() =>
         Latitude is double latitude && Longitude is double longitude && GeoLocation.IsValid(latitude, longitude)

@@ -105,6 +105,7 @@ public sealed class LandlordListingsIntegrationTests
         Assert.That(blankResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var blankResult = (await blankResponse.Content.ReadFromJsonAsync<ListingWriteResponse>())!;
         var ownerRead = (await _client.GetFromJsonAsync<ListingCoordinatesResponse>(path))!;
+        var publicRead = (await _client.GetFromJsonAsync<RoomDetailsDto>($"/api/rooms/{created.ListingId}"))!;
         var room = (await _factory.RoomRepository.GetByIdAsync(created.ListingId))!;
 
         Assert.Multiple(() =>
@@ -120,6 +121,8 @@ public sealed class LandlordListingsIntegrationTests
             Assert.That(ownerRead.ListingId, Is.EqualTo(created.ListingId));
             Assert.That(ownerRead.Latitude, Is.Zero);
             Assert.That(ownerRead.Longitude, Is.EqualTo(-180));
+            Assert.That(publicRead.Latitude, Is.Null);
+            Assert.That(publicRead.Longitude, Is.Null);
             Assert.That(room.LandlordId, Is.EqualTo(landlord.UserId));
             Assert.That(room.Status, Is.EqualTo(RoomStatus.Pending));
             Assert.That(room.ImageUrls, Is.EqualTo(created.ImageUrls));
