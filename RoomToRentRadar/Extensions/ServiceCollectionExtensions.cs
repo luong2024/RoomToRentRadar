@@ -6,7 +6,9 @@ using RoomToRentRadar.Services;
 using RoomToRentRadar.Services.Auth;
 using RoomToRentRadar.Services.ErrorHandling;
 using RoomToRentRadar.Services.Interactions;
+using RoomToRentRadar.Services.Media;
 using RoomToRentRadar.Services.Navigation;
+using RoomToRentRadar.Services.Profile;
 using RoomToRentRadar.Services.Storage;
 using RoomToRentRadar.ViewModels;
 using RoomToRentRadar.Views;
@@ -67,6 +69,17 @@ public static class ServiceCollectionExtensions
                 Timeout = TimeSpan.FromSeconds(15)
             });
         });
+        services.AddSingleton<IProfileClient>(serviceProvider =>
+        {
+            var handler = serviceProvider.GetRequiredService<AuthenticatedHttpMessageHandler>();
+            return new ProfileClient(new HttpClient(handler)
+            {
+                BaseAddress = new Uri(ApiConstants.BaseAddress),
+                Timeout = TimeSpan.FromSeconds(15)
+            });
+        });
+        services.AddSingleton<IProfileDetailsStore, InMemoryProfileDetailsStore>();
+        services.AddSingleton<IAvatarPicker, MediaPickerAvatarPicker>();
         services.AddSingleton<IErrorHandler, ModalErrorHandler>();
         services.AddSingleton<IPreferences>(Preferences.Default);
         services.AddSingleton<ICampusSelectionStore, PreferencesCampusSelectionStore>();
@@ -110,6 +123,12 @@ public static class ServiceCollectionExtensions
         services.AddTransient<MyListingsPage>();
         services.AddTransient<ModerationQueueViewModel>();
         services.AddTransient<ModerationQueuePage>();
+        services.AddTransient<ProfileViewModel>();
+        services.AddTransient<ProfilePage>();
+        services.AddTransient<EditProfileViewModel>();
+        services.AddTransient<EditProfilePage>();
+        services.AddTransient<AccountSettingsViewModel>();
+        services.AddTransient<AccountSettingsPage>();
         services.AddTransient<ListingEditorViewModel>();
         services.AddTransient<ListingEditorPage>();
         services.AddTransient<MapSearchViewModel>();

@@ -212,6 +212,25 @@ public class AuthServiceTests
     }
 
     [Test]
+    public async Task UpdateCurrentDisplayName_TrimsAndRaisesSessionChangedOnlyWhenChanged()
+    {
+        var tokenStore = new FakeTokenStore { AccessToken = "stored-token", Role = AppUserRole.Student };
+        var service = new AuthService(new FakeApiClient(), tokenStore);
+        await service.EnsureSignedInAsync();
+        var sessionChanges = 0;
+        service.SessionChanged += (_, _) => sessionChanges++;
+
+        service.UpdateCurrentDisplayName("  Tên Mới  ");
+        service.UpdateCurrentDisplayName("Tên Mới");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(service.CurrentDisplayName, Is.EqualTo("Tên Mới"));
+            Assert.That(sessionChanges, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
     public async Task EnsureSignedIn_WhenDemoLoginUnavailable_ReturnsFalse()
     {
         var apiClient = new FakeApiClient { DemoLoginResult = null };

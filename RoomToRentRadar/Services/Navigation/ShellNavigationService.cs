@@ -56,6 +56,21 @@ public sealed class ShellNavigationService : INavigationService
             });
         });
 
+    public Task GoToProfileAsync()
+        => GetShell().GoToAsync($"//{AppRoutes.Profile}");
+
+    public Task GoToEditProfileAsync()
+        => GetShell().GoToAsync(AppRoutes.EditProfile);
+
+    public Task GoToAccountSettingsAsync()
+        => GetShell().GoToAsync(AppRoutes.AccountSettings);
+
+    public Task GoToFavouritesAsync()
+        => GetShell().GoToAsync($"//{AppRoutes.Favourites}");
+
+    public Task GoToMyListingsAsync()
+        => GetShell().GoToAsync($"//{AppRoutes.MyListings}");
+
     public Task GoToListingEditorAsync(Guid? listingId = null)
         => GetShell().GoToAsync(listingId is { } id
             ? $"{AppRoutes.ListingEditor}?id={id}"

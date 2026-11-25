@@ -180,6 +180,30 @@ public sealed class AuthService(
             DateTime.UtcNow,
             cancellationToken);
 
+    public async Task<UserProfileDto?> GetProfileAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var user = await userRepository.FindByIdAsync(userId, cancellationToken);
+        return user is null ? null : ToProfile(user);
+    }
+
+    public async Task<UserProfileDto?> UpdateDisplayNameAsync(
+        Guid userId,
+        string displayName,
+        CancellationToken cancellationToken)
+    {
+        var user = await userRepository.FindByIdAsync(userId, cancellationToken);
+        if (user is null)
+        {
+            return null;
+        }
+
+        user.DisplayName = displayName.Trim();
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return ToProfile(user);
+    }
+
     public async Task LogoutAsync(string token, CancellationToken cancellationToken)
     {
         var session = await authSessionRepository.FindByTokenHashAsync(
@@ -219,4 +243,12 @@ public sealed class AuthService(
             user.DisplayName,
             UserRoleWire.ToWireValue(user.Role));
     }
+
+    private static UserProfileDto ToProfile(User user)
+        => new(
+            user.Id,
+            user.Email,
+            user.DisplayName,
+            UserRoleWire.ToWireValue(user.Role),
+            user.CreatedAt);
 }

@@ -399,6 +399,78 @@ public sealed class AuthServiceTests
         });
     }
 
+    [Test]
+    public async Task GetProfile_WithKnownUser_ReturnsAccountDetails()
+    {
+        var user = CreateUser("profile@example.test");
+        user.DisplayName = "Profile Owner";
+        user.Role = UserRole.Landlord;
+        var repository = new FakeUserRepository { ExistingUser = user };
+        var service = CreateService(repository, new FakeUnitOfWork());
+
+        var profile = await service.GetProfileAsync(user.Id, CancellationToken.None);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(profile, Is.Not.Null);
+            Assert.That(profile!.UserId, Is.EqualTo(user.Id));
+            Assert.That(profile.Email, Is.EqualTo(user.Email));
+            Assert.That(profile.DisplayName, Is.EqualTo("Profile Owner"));
+            Assert.That(profile.Role, Is.EqualTo("landlord"));
+            Assert.That(profile.CreatedAt, Is.EqualTo(user.CreatedAt));
+        });
+    }
+
+    [Test]
+    public async Task GetProfile_WithUnknownUser_ReturnsNull()
+    {
+        var service = CreateService(new FakeUserRepository(), new FakeUnitOfWork());
+
+        var profile = await service.GetProfileAsync(Guid.NewGuid(), CancellationToken.None);
+
+        Assert.That(profile, Is.Null);
+    }
+
+    [Test]
+    public async Task UpdateDisplayName_WithKnownUser_TrimsAndSaves()
+    {
+        var user = CreateUser("profile@example.test");
+        var repository = new FakeUserRepository { ExistingUser = user };
+        var unitOfWork = new FakeUnitOfWork();
+        var service = CreateService(repository, unitOfWork);
+
+        var profile = await service.UpdateDisplayNameAsync(
+            user.Id,
+            "  New Name  ",
+            CancellationToken.None);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(profile, Is.Not.Null);
+            Assert.That(profile!.DisplayName, Is.EqualTo("New Name"));
+            Assert.That(user.DisplayName, Is.EqualTo("New Name"));
+            Assert.That(unitOfWork.SaveCount, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task UpdateDisplayName_WithUnknownUser_ReturnsNullWithoutSaving()
+    {
+        var unitOfWork = new FakeUnitOfWork();
+        var service = CreateService(new FakeUserRepository(), unitOfWork);
+
+        var profile = await service.UpdateDisplayNameAsync(
+            Guid.NewGuid(),
+            "New Name",
+            CancellationToken.None);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(profile, Is.Null);
+            Assert.That(unitOfWork.SaveCount, Is.Zero);
+        });
+    }
+
     private static AuthService CreateService(
         FakeUserRepository repository,
         FakeUnitOfWork unitOfWork,
@@ -461,6 +533,9 @@ public sealed class AuthServiceTests
 
         public Task<User?> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken)
             => Task.FromResult(ExistingUser);
+
+        public Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken)
+            => Task.FromResult(ExistingUser is { } user && user.Id == id ? user : null);
 
         public Task<bool> TryAddAsync(User user, CancellationToken cancellationToken)
         {

@@ -115,6 +115,18 @@ public sealed class AuthService(IApiClient apiClient, ITokenStore tokenStore)
         }
     }
 
+    public void UpdateCurrentDisplayName(string? displayName)
+    {
+        var normalized = string.IsNullOrWhiteSpace(displayName) ? null : displayName.Trim();
+        if (normalized == CurrentDisplayName)
+        {
+            return;
+        }
+
+        CurrentDisplayName = normalized;
+        SessionChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     public async Task<bool> IsSignedInAsync(CancellationToken cancellationToken = default)
         => await tokenStore.GetAccessTokenAsync(cancellationToken) is not null;
 

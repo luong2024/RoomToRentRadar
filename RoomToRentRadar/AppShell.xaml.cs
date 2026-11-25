@@ -20,6 +20,7 @@ public partial class AppShell : Shell
         MapTab.ContentTemplate = new DataTemplate(() => services.GetRequiredService<MapSearchPage>());
         MyListingsTab.ContentTemplate = new DataTemplate(() => services.GetRequiredService<MyListingsPage>());
         ModerationTab.ContentTemplate = new DataTemplate(() => services.GetRequiredService<ModerationQueuePage>());
+        ProfileTab.ContentTemplate = new DataTemplate(() => services.GetRequiredService<ProfilePage>());
         Routing.RegisterRoute(AppRoutes.ListingEditor, typeof(ListingEditorPage));
         Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(RoomDetailPage));
         Routing.RegisterRoute(AppRoutes.Login, typeof(LoginPage));
@@ -27,6 +28,8 @@ public partial class AppShell : Shell
         Routing.RegisterRoute(AppRoutes.OtpVerification, typeof(OtpVerificationPage));
         Routing.RegisterRoute(AppRoutes.Directions, typeof(DirectionsPage));
         Routing.RegisterRoute(AppRoutes.Comparison, typeof(ComparisonPage));
+        Routing.RegisterRoute(AppRoutes.EditProfile, typeof(EditProfilePage));
+        Routing.RegisterRoute(AppRoutes.AccountSettings, typeof(AccountSettingsPage));
 
         _authService.SessionChanged += OnSessionChanged;
         _ = RefreshRoleAsync();

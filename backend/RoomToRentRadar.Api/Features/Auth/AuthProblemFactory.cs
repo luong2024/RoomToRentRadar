@@ -19,6 +19,7 @@ public static class AuthProblemFactory
     public const string EmailDeliveryFailed = "email_delivery_failed";
     public const string Unauthorized = "unauthorized";
     public const string Forbidden = "forbidden";
+    public const string ProfileNotFound = "profile_not_found";
     public const string RateLimited = "auth_rate_limited";
 
     public static ProblemDetails InvalidEmailProblem(string detail)
@@ -176,6 +177,19 @@ public static class AuthProblemFactory
             Detail = "The current account does not have permission to access this resource."
         };
         problem.Extensions["code"] = Forbidden;
+        return problem;
+    }
+
+    public static ProblemDetails ProfileNotFoundProblem()
+    {
+        var problem = new ProblemDetails
+        {
+            Type = "https://tools.ietf.org/html/rfc9110#section-15.5.5",
+            Status = StatusCodes.Status404NotFound,
+            Title = "Profile not found",
+            Detail = "The signed-in account no longer exists."
+        };
+        problem.Extensions["code"] = ProfileNotFound;
         return problem;
     }
 }

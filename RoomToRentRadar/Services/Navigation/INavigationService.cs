@@ -17,6 +17,16 @@ public interface INavigationService
     /// <summary>Navigates to the home tab for the signed-in role.</summary>
     Task GoToRoleRootAsync(AppUserRole? role);
 
+    Task GoToProfileAsync() => Task.CompletedTask;
+
+    Task GoToEditProfileAsync() => Task.CompletedTask;
+
+    Task GoToAccountSettingsAsync() => Task.CompletedTask;
+
+    Task GoToFavouritesAsync() => Task.CompletedTask;
+
+    Task GoToMyListingsAsync() => Task.CompletedTask;
+
     Task GoToListingEditorAsync(Guid? listingId = null);
 
     Task GoToDirectionsAsync(
