@@ -54,10 +54,16 @@ namespace RoomToRentRadar
             builder.Services.AddSingleton<ISearchCriteriaStore, SearchCriteriaStore>();
             builder.Services.AddSingleton<IPreferencesStore, MauiPreferencesStore>();
             builder.Services.AddSingleton<ICampusSelectionService, CampusSelectionService>();
+            builder.Services.AddSingleton<CampusSearchBridge>();
 
             builder.Services.AddAppPages();
 
-            return builder.Build();
+            var app = builder.Build();
+
+            // Created eagerly: the stored campus must apply before the first search, and sign-in must be observed.
+            app.Services.GetRequiredService<CampusSearchBridge>();
+
+            return app;
         }
     }
 }
