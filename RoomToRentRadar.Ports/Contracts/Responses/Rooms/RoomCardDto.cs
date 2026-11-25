@@ -16,5 +16,6 @@ public sealed record RoomCardDto(
     double Latitude,
     double Longitude,
     DateTime? PublishedAtUtc,
-    bool IsFavourite
+    bool IsFavourite,
+    Furnishing? Furnishing = null
 );

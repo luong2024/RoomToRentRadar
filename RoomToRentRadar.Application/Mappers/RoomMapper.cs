@@ -7,6 +7,7 @@ using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.Domain.Services;
 using RoomToRentRadar.Ports.Contracts.Responses.Photos;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
+using RoomToRentRadar.Ports.Outbound.ExternalServices;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 
 /// <summary>
@@ -19,7 +20,8 @@ public static class RoomMapper
         Room room,
         User? landlord,
         Campus campus,
-        bool isPhoneVisible)
+        bool isPhoneVisible,
+        IReadOnlyList<PhotoDto>? photos = null)
     {
         ArgumentNullException.ThrowIfNull(room);
         ArgumentNullException.ThrowIfNull(campus);
@@ -97,10 +99,14 @@ public static class RoomMapper
             Latitude: room.Latitude,
             Longitude: room.Longitude);
 
+        // BR-LST-08: the features listed are exactly the ones the score counts.
         var safety = new SafetyDto(
-            Score: 0,
+            Score: room.SafetyScore,
             IsVerified: room.IsSafetyVerified,
-            Features: Array.Empty<SafetyFeature>());
+            Features: room.SafetyFeatures
+                .Where(f => !room.IsSafetyVerified || f.IsConfirmed)
+                .Select(f => f.Feature)
+                .ToList());
 
         var furnishing = Enum.TryParse<Furnishing>(room.Furnishing, true, out var parsedFurnishing)
             ? parsedFurnishing
@@ -123,22 +129,43 @@ public static class RoomMapper
             Location: location,
             DistanceKm: distanceKm,
             Utilities: utilities,
-            Amenities: Array.Empty<Amenity>(),
+            Amenities: room.Amenities,
             Safety: safety,
-            HouseRules: null,
-            Photos: Array.Empty<PhotoDto>(),
+            HouseRules: ToHouseRulesDto(room.CurrentHouseRules),
+            Photos: photos ?? Array.Empty<PhotoDto>(),
             Landlord: landlordContact,
             IsFavourite: false,
             PublishedAtUtc: room.PublishedAtUtc,
             LastUpdatedAtUtc: room.LastUpdatedAtUtc);
     }
 
+    private static HouseRulesDto? ToHouseRulesDto(HouseRuleVersion? rules) =>
+        rules is null
+            ? null
+            : new HouseRulesDto(
+                QuietHoursStart: rules.QuietHoursStart,
+                QuietHoursEnd: rules.QuietHoursEnd,
+                CurfewTime: rules.CurfewTime,
+                GuestPolicy: rules.GuestPolicy,
+                GuestPolicyNote: rules.GuestPolicyNote,
+                CookingPolicy: rules.CookingPolicy,
+                ParkingAvailable: rules.ParkingAvailable,
+                ParkingRules: rules.ParkingRules,
+                PetsAllowed: rules.PetsAllowed,
+                SmokingAllowed: rules.SmokingAllowed,
+                OtherRules: rules.OtherRules,
+                VersionNumber: rules.VersionNumber,
+                // A version is immutable, so its creation time is when the rules last changed (BR-HR-02).
+                UpdatedAtUtc: rules.CreatedAtUtc);
+
     public static RoomCardDto ToCardDto(
         RoomSearchCandidate candidate,
-        Campus campus)
+        Campus campus,
+        IPhotoStoragePort storage)
     {
         ArgumentNullException.ThrowIfNull(candidate);
         ArgumentNullException.ThrowIfNull(campus);
+        ArgumentNullException.ThrowIfNull(storage);
 
         var distanceKm = HaversineDistanceCalculator.CalculateDistanceKm(
             candidate.Latitude, candidate.Longitude, campus.Latitude, campus.Longitude);
@@ -152,10 +179,11 @@ public static class RoomMapper
             DistanceKm: distanceKm,
             IsVerified: candidate.IsVerified,
             Status: candidate.Status,
-            CoverThumbUrl: candidate.CoverThumbUrl,
+            CoverThumbUrl: candidate.CoverThumbPath is null ? null : storage.GetPublicUrl(candidate.CoverThumbPath),
             Latitude: candidate.Latitude,
             Longitude: candidate.Longitude,
             PublishedAtUtc: candidate.PublishedAtUtc,
-            IsFavourite: false);
+            IsFavourite: false,
+            Furnishing: candidate.Furnishing);
     }
 }

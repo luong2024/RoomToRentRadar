@@ -23,6 +23,8 @@ public class GetRoomDetailUseCaseTests
     private IUserRepository _userRepository = null!;
     private ICampusRepository _campusRepository = null!;
     private ICurrentUserContextPort _currentUserContext = null!;
+    private IRoomPhotoRepository _photoRepository = null!;
+    private IPhotoStoragePort _photoStorage = null!;
     private GetRoomDetailUseCase _sut = null!;
 
     [SetUp]
@@ -39,7 +41,14 @@ public class GetRoomDetailUseCaseTests
         _campusRepository.GetByIdAsync(Arg.Is<string>(id => id != "ICTU" && id != "TNUS"), Arg.Any<CancellationToken>())
             .Returns((Campus?)null);
 
-        _sut = new GetRoomDetailUseCase(_roomRepository, _userRepository, _campusRepository, _currentUserContext);
+        _photoRepository = Substitute.For<IRoomPhotoRepository>();
+        _photoRepository.ListByRoomAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<RoomPhoto>());
+        _photoStorage = Substitute.For<IPhotoStoragePort>();
+        _photoStorage.GetPublicUrl(Arg.Any<string>()).Returns(call => $"https://media.test/{call.Arg<string>()}");
+
+        _sut = new GetRoomDetailUseCase(
+            _roomRepository, _userRepository, _campusRepository, _currentUserContext, _photoRepository, _photoStorage);
     }
 
     private static Room CreateSampleRoom(
@@ -70,6 +79,52 @@ public class GetRoomDetailUseCaseTests
             availableFrom: new DateOnly(2026, 11, 1),
             verifiedAtUtc: new DateTime(2026, 11, 2, 0, 0, 0, DateTimeKind.Utc),
             publishedAtUtc: new DateTime(2026, 11, 2, 0, 0, 0, DateTimeKind.Utc));
+    }
+
+    private static RoomPhoto Photo(string id, int sortOrder) => RoomPhoto.Reconstitute(
+        id: id,
+        roomId: "room-001",
+        uploadedByUserId: "landlord-001",
+        kind: PhotoKind.Standard,
+        contentType: RoomPhoto.JpegContentType,
+        sizeBytes: 1000,
+        width: 1280,
+        height: 853,
+        originalPath: $"rooms/{id}/medium.jpg",
+        mediumPath: $"rooms/{id}/medium.jpg",
+        thumbPath: $"rooms/{id}/thumb.jpg",
+        sortOrder: sortOrder,
+        createdAtUtc: new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc),
+        attachedAtUtc: new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc));
+
+    // ----------------------------------------------------------------- T00.10: photos
+
+    [Test]
+    public async Task ExecuteAsync_ReturnsPhotosOrderedBySortOrder_WithPublicUrls()
+    {
+        _roomRepository.GetByIdAsync("room-001", Arg.Any<CancellationToken>()).Returns(CreateSampleRoom());
+        _photoRepository.ListByRoomAsync("room-001", Arg.Any<CancellationToken>())
+            .Returns(new[] { Photo("p2", 1), Photo("p1", 0) });
+
+        var detail = await _sut.ExecuteAsync("room-001");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(detail.Photos.Select(p => p.Id), Is.EqualTo(new[] { "p1", "p2" }));
+            Assert.That(detail.Photos[0].ThumbUrl, Is.EqualTo("https://media.test/rooms/p1/thumb.jpg"));
+            Assert.That(detail.Photos[0].MediumUrl, Is.EqualTo("https://media.test/rooms/p1/medium.jpg"));
+        });
+    }
+
+    [Test]
+    public async Task ExecuteAsync_HiddenListing_NeverReadsPhotos()
+    {
+        _roomRepository.GetByIdAsync("room-001", Arg.Any<CancellationToken>())
+            .Returns(CreateSampleRoom(status: ListingStatus.PendingReview));
+
+        Assert.ThrowsAsync<EntityNotFoundException>(async () => await _sut.ExecuteAsync("room-001"));
+
+        await _photoRepository.DidNotReceive().ListByRoomAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     private static User CreateSampleLandlord(string id = "landlord-001", string phone = "0987654321")

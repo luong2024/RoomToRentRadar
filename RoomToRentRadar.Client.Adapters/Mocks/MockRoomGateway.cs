@@ -204,7 +204,7 @@ public sealed class MockRoomGateway : IRoomGateway
     private static RoomCardDto ToCard(RankedRoom match) => new(
         match.Room.Id, match.Room.Title, match.Room.MonthlyRentVnd, match.Room.AreaM2, match.Room.RoomType,
         match.DistanceKm, true, ListingStatus.Available, null, match.Room.Latitude, match.Room.Longitude,
-        match.Room.PublishedAtUtc, false);
+        match.Room.PublishedAtUtc, false, match.Room.Furnishing);
 
     // Ruling 21: only null means the default sort; "" / blanks / wrong case are INVALID_SORT_OPTION.
     private static string NormalizeSort(string? sort)

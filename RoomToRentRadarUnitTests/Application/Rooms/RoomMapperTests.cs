@@ -77,6 +77,95 @@ public class RoomMapperTests
             publishedAtUtc: new DateTime(2026, 11, 2, 0, 0, 0, DateTimeKind.Utc));
     }
 
+    // ----------------------------------------------------------------- T00.10: room children
+
+    private static Room RoomWithChildren(bool safetyVerified)
+    {
+        var room = Room.Reconstitute(
+            id: "room-1",
+            landlordId: "landlord-1",
+            title: "Phòng trọ cao cấp gần cổng trường ICTU",
+            roomType: RoomType.BoardingRoom,
+            monthlyRentVnd: 2_000_000L,
+            depositVnd: 2_000_000L,
+            areaM2: 25.0,
+            addressLine: "Số 123 Đường Z115",
+            ward: "Tân Thịnh",
+            district: "TP. Thái Nguyên",
+            latitude: 21.5875,
+            longitude: 105.8080,
+            status: ListingStatus.Available,
+            createdAtUtc: new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc),
+            lastUpdatedAtUtc: new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc),
+            version: 1,
+            isSafetyVerified: safetyVerified);
+        var rules = HouseRuleVersion.Reconstitute(
+            id: "hr-2",
+            roomId: "room-1",
+            versionNumber: 2,
+            guestPolicy: GuestPolicy.DaytimeOnly,
+            cookingPolicy: CookingPolicy.Allowed,
+            parkingAvailable: true,
+            petsAllowed: false,
+            smokingAllowed: false,
+            createdByUserId: "landlord-1",
+            createdAtUtc: new DateTime(2026, 11, 5, 0, 0, 0, DateTimeKind.Utc),
+            curfewTime: "23:30");
+        room.SetChildren(
+            [Amenity.Wifi, Amenity.Bed],
+            [
+                new RoomSafetyFeatureEntry(SafetyFeature.Cctv, IsConfirmed: true),
+                new RoomSafetyFeatureEntry(SafetyFeature.FireSafety, IsConfirmed: false)
+            ],
+            rules);
+        return room;
+    }
+
+    [Test]
+    public void ToDetailDto_MapsAmenitiesAndCurrentHouseRules()
+    {
+        var dto = RoomMapper.ToDetailDto(RoomWithChildren(safetyVerified: true), null, Ictu, isPhoneVisible: false);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(dto.Amenities, Is.EquivalentTo(new[] { Amenity.Wifi, Amenity.Bed }));
+            Assert.That(dto.HouseRules!.VersionNumber, Is.EqualTo(2));
+            Assert.That(dto.HouseRules.CurfewTime, Is.EqualTo("23:30"));
+            Assert.That(dto.HouseRules.GuestPolicy, Is.EqualTo(GuestPolicy.DaytimeOnly));
+            Assert.That(dto.HouseRules.UpdatedAtUtc, Is.EqualTo(new DateTime(2026, 11, 5, 0, 0, 0, DateTimeKind.Utc)));
+        });
+    }
+
+    // BR-LST-08: verified score counts confirmed features only; before verification the declared ones are shown.
+    [TestCase(true, 1, new[] { SafetyFeature.Cctv })]
+    [TestCase(false, 2, new[] { SafetyFeature.Cctv, SafetyFeature.FireSafety })]
+    public void ToDetailDto_SafetyListsExactlyTheCountedFeatures(bool verified, int score, SafetyFeature[] features)
+    {
+        var dto = RoomMapper.ToDetailDto(RoomWithChildren(verified), null, Ictu, isPhoneVisible: false);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(dto.Safety.IsVerified, Is.EqualTo(verified));
+            Assert.That(dto.Safety.Score, Is.EqualTo(score));
+            Assert.That(dto.Safety.Features, Is.EquivalentTo(features));
+        });
+    }
+
+    [Test]
+    public void ToDetailDto_RoomWithoutChildren_ReturnsEmptyListsAndNoHouseRules()
+    {
+        var dto = RoomMapper.ToDetailDto(CreateSampleRoom(), null, Ictu, isPhoneVisible: false);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(dto.Amenities, Is.Empty);
+            Assert.That(dto.Safety.Score, Is.Zero);
+            Assert.That(dto.Safety.Features, Is.Empty);
+            Assert.That(dto.HouseRules, Is.Null);
+            Assert.That(dto.Photos, Is.Empty);
+        });
+    }
+
     [Test]
     public void ToDetailDto_WhenGivenValidRoomAndLandlord_MapsAllFieldsCorrectly()
     {
