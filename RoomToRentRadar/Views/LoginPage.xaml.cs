@@ -1,3 +1,4 @@
+using RoomToRentRadar.Helpers;
 using RoomToRentRadar.ViewModels;
 
 namespace RoomToRentRadar.Views;
@@ -10,18 +11,10 @@ public partial class LoginPage : ContentPage
         BindingContext = viewModel;
     }
 
-    protected override async void OnAppearing()
+    protected override void OnAppearing()
     {
         base.OnAppearing();
-        LoginContent.CancelAnimations();
-#if ANDROID
-        if (OperatingSystem.IsAndroidVersionAtLeast(26) && !Android.Animation.ValueAnimator.AreAnimatorsEnabled())
-            return;
-#endif
-        LoginContent.Opacity = 0;
-        LoginContent.TranslationY = 8;
-        await Task.WhenAll(LoginContent.FadeToAsync(1, 200, Easing.CubicOut),
-            LoginContent.TranslateToAsync(0, 0, 200, Easing.CubicOut));
+        _ = MotionEffects.FadeSlideInAsync(LoginContent, 10, 200);
     }
 
     protected override void OnDisappearing()

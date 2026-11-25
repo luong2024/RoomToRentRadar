@@ -1,32 +1,67 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Controls"
+             xmlns:buttons="clr-namespace:Syncfusion.Maui.Toolkit.Buttons;assembly=Syncfusion.Maui.Toolkit"
              x:Class="RoomToRentRadar.Views.DirectionsPage"
              Title="Chỉ đường"
-             Shell.NavBarIsVisible="True"
-             SafeAreaEdges="All">
+             Shell.TabBarIsVisible="False"
+             SafeAreaEdges="Container">
 
+    <!-- Zero {Binding} expressions preserved per docs/ARCHITECTURE.md §3.2 -->
     <Grid>
-        <WebView x:Name="MapWebView"
-                 Navigating="OnNavigating"
-                 Navigated="OnNavigated"
-                 AutomationId="DirectionsWebView"
-                 SemanticProperties.Description="Bản đồ chỉ đường tới phòng" />
+        <controls:LiquidBackdropView />
 
-        <Border x:Name="LoadingPanel"
-                VerticalOptions="Center"
-                HorizontalOptions="Center"
-                Padding="18"
-                BackgroundColor="{StaticResource SoftSurface}"
-                StrokeThickness="0"
-                StrokeShape="RoundRectangle 18">
-            <VerticalStackLayout Spacing="10" HorizontalOptions="Center">
-                <ActivityIndicator IsRunning="True"
-                                   HorizontalOptions="Center"
-                                   SemanticProperties.Description="Đang tải bản đồ chỉ đường" />
-                <Label Text="Đang tải bản đồ chỉ đường..."
-                       Style="{StaticResource Caption}" />
-            </VerticalStackLayout>
-        </Border>
+        <Grid RowDefinitions="Auto,*,Auto" Padding="16,10,16,16" RowSpacing="12">
+
+            <!-- 1. Floating Liquid Glass Route Header -->
+            <Border Grid.Row="0" Style="{StaticResource LiquidFloatingPanel}" Padding="12,10">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" VerticalOptions="Center">
+                    <Border Grid.Column="0"
+                            Style="{StaticResource LiquidOrbBorder}"
+                            AutomationId="DirectionsBackButton"
+                            SemanticProperties.Description="Quay lại">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnBackClicked" />
+                        </Border.GestureRecognizers>
+                        <Image Source="back_icon.png" WidthRequest="18" HeightRequest="18" HorizontalOptions="Center" VerticalOptions="Center" />
+                    </Border>
+
+                    <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                        <Label Text="LỘ TRÌNH DI CHUYỂN" Style="{StaticResource Eyebrow}" />
+                        <Label x:Name="RouteSubtitleLabel"
+                               Text="Đang tải bản đồ chỉ đường..."
+                               Style="{StaticResource CardTitle}"
+                               FontSize="15"
+                               MaxLines="1"
+                               LineBreakMode="TailTruncation" />
+                    </VerticalStackLayout>
+                </Grid>
+            </Border>
+
+            <!-- 2. Rounded Map Viewport -->
+            <Grid Grid.Row="1">
+                <Border Style="{StaticResource LiquidGlassCard}" Padding="0">
+                    <WebView x:Name="DirectionsWebView" HorizontalOptions="Fill" VerticalOptions="Fill" />
+                </Border>
+
+                <Border x:Name="ErrorBanner"
+                        IsVisible="False"
+                        Style="{StaticResource LiquidGlassCard}"
+                        VerticalOptions="Center"
+                        HorizontalOptions="Center"
+                        Padding="22">
+                    <Label Text="Tọa độ điểm đến không hợp lệ." Style="{StaticResource SectionTitle}" />
+                </Border>
+            </Grid>
+
+            <!-- 3. External Maps Action -->
+            <buttons:SfButton x:Name="OpenExternalMapsButton"
+                              Grid.Row="2"
+                              Text="Mở bằng Google Maps / Bản đồ ngoài"
+                              Clicked="OnOpenExternalMapsClicked"
+                              Style="{StaticResource LiquidPrimaryButton}" />
+
+        </Grid>
     </Grid>
 </ContentPage>

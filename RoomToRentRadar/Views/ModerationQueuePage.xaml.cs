@@ -20,4 +20,17 @@ public partial class ModerationQueuePage : ContentPage
             _model.LoadCommand.Execute(null);
         }
     }
+
+    private async void OnRefreshing(object? sender, EventArgs e)
+    {
+        try
+        {
+            await _model.LoadCommand.ExecuteAsync(null);
+        }
+        finally
+        {
+            if (sender is RefreshView refreshView)
+                refreshView.IsRefreshing = false;
+        }
+    }
 }

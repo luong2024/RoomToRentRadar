@@ -24,8 +24,19 @@ public static class MauiProgram
             .UseMauiCommunityToolkit()
             .UseSkiaSharp()
             .ConfigureSyncfusionToolkit()
+            .ConfigureMauiHandlers(handlers =>
+            {
+#if ANDROID
+                handlers.AddHandler<Shell, RoomToRentRadar.Platforms.Android.LiquidGlassShellRenderer>();
+#endif
+            })
             .ConfigureFonts(fonts =>
             {
+                fonts.AddFont("BeVietnamPro-Regular.ttf", "FontRegular");
+                fonts.AddFont("BeVietnamPro-Medium.ttf", "FontMedium");
+                fonts.AddFont("BeVietnamPro-SemiBold.ttf", "FontSemiBold");
+                fonts.AddFont("BeVietnamPro-Bold.ttf", "FontBold");
+                fonts.AddFont("FluentSystemIcons-Regular.ttf", "FluentIcons");
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });

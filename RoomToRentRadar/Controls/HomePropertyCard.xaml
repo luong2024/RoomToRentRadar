@@ -1,42 +1,92 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:RoomToRentRadar.ViewModels"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Controls"
              x:Class="RoomToRentRadar.Controls.HomePropertyCard"
              x:Name="CardRoot"
              x:DataType="vm:HomeListingItem">
-    <Border StrokeThickness="0" StrokeShape="RoundRectangle 18" Padding="0" WidthRequest="252"
+
+    <!-- LIQUID GLASS PROPERTY CARD: Specular Rim + Vibrant Unobstructed Photo + Frosted Price Capsule -->
+    <Border Style="{StaticResource LiquidGlassCard}"
+            Padding="0"
             SemanticProperties.Description="{Binding Title}">
-        <Border.Shadow>
-            <Shadow Brush="{StaticResource InkBrush}" Offset="0,6" Radius="18" Opacity="0.05" />
-        </Border.Shadow>
-        <VerticalStackLayout Spacing="0">
-            <Border StrokeThickness="0" StrokeShape="RoundRectangle 18,18,0,0" HeightRequest="152" Padding="0">
-                <Grid BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
-                    <Image Source="{Binding Illustration}" Aspect="AspectFill" SemanticProperties.Description="Hình minh họa khi chưa có ảnh phòng" />
-                    <Image Source="{Binding PhotoSource}" IsVisible="{Binding HasCoverPhoto}" Aspect="AspectFill" SemanticProperties.Description="Ảnh phòng trọ" />
-                    <Border Margin="10" Padding="11,6" HorizontalOptions="Start" VerticalOptions="End" StrokeThickness="0"
-                            StrokeShape="RoundRectangle 9" BackgroundColor="#BF3B332C">
-                        <Label Text="{Binding PriceText}" FontSize="13.5" FontFamily="OpenSansSemibold" TextColor="White" />
+        <Border.GestureRecognizers>
+            <TapGestureRecognizer
+                Command="{Binding OpenCommand, Source={x:Reference CardRoot}, x:DataType=controls:HomePropertyCard}"
+                CommandParameter="{Binding .}" />
+        </Border.GestureRecognizers>
+
+        <Grid RowDefinitions="206,Auto">
+
+            <!-- 1. Vibrant Unobstructed Room Photo Stage with Floating Liquid Glass Overlays -->
+            <Border Grid.Row="0"
+                    StrokeThickness="0"
+                    StrokeShape="RoundRectangle 25,25,0,0"
+                    Padding="0"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
+                <Grid>
+                    <Image Source="{Binding Illustration}"
+                           Aspect="AspectFill"
+                           SemanticProperties.Description="Ảnh minh họa phòng trọ" />
+                    <Image Source="{Binding PhotoSource}"
+                           IsVisible="{Binding HasCoverPhoto}"
+                           Aspect="AspectFill"
+                           SemanticProperties.Description="Ảnh thực tế phòng trọ" />
+
+                    <!-- Top-Left: Liquid Glass Verified / Availability Pill -->
+                    <Border HorizontalOptions="Start"
+                            VerticalOptions="Start"
+                            Margin="12"
+                            Padding="11,6"
+                            StrokeThickness="1"
+                            Stroke="#B8FFFFFF"
+                            StrokeShape="RoundRectangle 999"
+                            BackgroundColor="{AppThemeBinding Light=#E6FFFFFF, Dark=#D90E192D}">
+                        <HorizontalStackLayout Spacing="6">
+                            <BoxView WidthRequest="7.5"
+                                     HeightRequest="7.5"
+                                     CornerRadius="4"
+                                     VerticalOptions="Center"
+                                     Color="{AppThemeBinding Light={StaticResource Available}, Dark={StaticResource AvailableDark}}" />
+                            <Label Text="Còn trống"
+                                   FontFamily="FontSemiBold"
+                                   FontSize="11.5"
+                                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                        </HorizontalStackLayout>
                     </Border>
-                    <Border WidthRequest="34" HeightRequest="34" Margin="10" Padding="0"
-                            HorizontalOptions="End" VerticalOptions="Start"
-                            StrokeThickness="0" StrokeShape="RoundRectangle 17"
-                            BackgroundColor="#E6FFFFFF"
-                            AutomationId="HomeCardCompare"
-                            SemanticProperties.Description="Thêm hoặc bỏ phòng khỏi bảng so sánh">
+
+                    <!-- Top-Right: Specular Liquid Glass Compare Orb -->
+                    <Border HorizontalOptions="End"
+                            VerticalOptions="Start"
+                            Margin="12"
+                            WidthRequest="42"
+                            HeightRequest="42"
+                            StrokeThickness="1.2"
+                            Stroke="#D8FFFFFF"
+                            StrokeShape="RoundRectangle 21"
+                            BackgroundColor="#ECFFFFFF"
+                            SemanticProperties.Description="Chọn so sánh phòng">
+                        <Border.Shadow>
+                            <Shadow Brush="#220B2545" Offset="0,4" Radius="10" Opacity="0.18" />
+                        </Border.Shadow>
                         <Border.Triggers>
                             <DataTrigger TargetType="Border" Binding="{Binding IsCompared}" Value="True">
-                                <Setter Property="BackgroundColor" Value="{StaticResource Accent}" />
+                                <Setter Property="Background" Value="{StaticResource LiquidSapphireBrush}" />
+                                <Setter Property="Stroke" Value="#99FFFFFF" />
                             </DataTrigger>
                         </Border.Triggers>
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer
-                                Command="{Binding CompareCommand, Source={x:Reference CardRoot}}"
+                                Command="{Binding CompareCommand, Source={x:Reference CardRoot}, x:DataType=controls:HomePropertyCard}"
                                 CommandParameter="{Binding .}" />
                         </Border.GestureRecognizers>
-                        <Image Source="compare_icon.png" WidthRequest="18" HeightRequest="18"
-                               HorizontalOptions="Center" VerticalOptions="Center"
-                               InputTransparent="True">
+
+                        <Image Source="compare_icon.png"
+                               WidthRequest="18"
+                               HeightRequest="18"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center">
                             <Image.Triggers>
                                 <DataTrigger TargetType="Image" Binding="{Binding IsCompared}" Value="True">
                                     <Setter Property="Source" Value="compare_icon_light.png" />
@@ -44,35 +94,95 @@
                             </Image.Triggers>
                         </Image>
                     </Border>
+
+                    <!-- Bottom-Left: Floating Frosted Liquid Glass Price Capsule -->
+                    <Border HorizontalOptions="Start"
+                            VerticalOptions="End"
+                            Margin="12"
+                            Padding="13,7"
+                            StrokeThickness="1.2"
+                            Stroke="{AppThemeBinding Light=#EAFFFFFF, Dark=#5538BDF8}"
+                            StrokeShape="RoundRectangle 16"
+                            BackgroundColor="{AppThemeBinding Light=#EEFFFFFF, Dark=#E30D172A}">
+                        <Border.Shadow>
+                            <Shadow Brush="#20081830" Offset="0,4" Radius="12" Opacity="0.16" />
+                        </Border.Shadow>
+                        <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+                            <Label Text="{Binding PriceText}"
+                                   FontFamily="FontBold"
+                                   FontSize="16.5"
+                                   TextColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}" />
+                            <Label Text="/ tháng"
+                                   FontFamily="FontMedium"
+                                   FontSize="11.5"
+                                   VerticalOptions="End"
+                                   Margin="0,0,0,1"
+                                   TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                        </HorizontalStackLayout>
+                    </Border>
                 </Grid>
             </Border>
-            <VerticalStackLayout Padding="14,12,14,14" Spacing="5">
-                <Label Text="{Binding Title}" FontFamily="OpenSansSemibold" FontSize="16" CharacterSpacing="-0.2"
-                       MaxLines="1" LineBreakMode="TailTruncation"
-                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                <Label Text="{Binding Address}" FontSize="12" MaxLines="1" LineBreakMode="TailTruncation"
-                       TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
-                <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="10" Margin="0,5,0,0">
-                    <HorizontalStackLayout Spacing="6">
-                        <Border WidthRequest="28" HeightRequest="28" StrokeThickness="0" StrokeShape="RoundRectangle 14"
-                                BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
-                            <Image Source="bed_icon.png" WidthRequest="15" HeightRequest="15" />
+
+            <!-- 2. High-Clarity Frosted Porcelain Content Footer -->
+            <VerticalStackLayout Grid.Row="1" Padding="16,13,16,16" Spacing="8">
+
+                <!-- Metadata Spec Chips + Action Cue -->
+                <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                    <HorizontalStackLayout Grid.Column="0" Spacing="6">
+                        <Border Padding="9,4"
+                                StrokeThickness="1"
+                                Stroke="{AppThemeBinding Light=#CCFFFFFF, Dark={StaticResource LineDark}}"
+                                StrokeShape="RoundRectangle 10"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource BrandTint}, Dark={StaticResource BrandTintDark}}">
+                            <Label Text="{Binding AreaText}"
+                                   FontFamily="FontSemiBold"
+                                   FontSize="11.5"
+                                   TextColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}" />
                         </Border>
-                        <Label Text="{Binding BedroomsText}" FontSize="12" FontFamily="OpenSansSemibold" VerticalOptions="Center"
-                               TextColor="{AppThemeBinding Light={StaticResource BodyInk}, Dark={StaticResource InkDark}}" />
-                    </HorizontalStackLayout>
-                    <HorizontalStackLayout Grid.Column="1" Spacing="6">
-                        <Border WidthRequest="28" HeightRequest="28" StrokeThickness="0" StrokeShape="RoundRectangle 14"
-                                BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
-                            <Image Source="area_icon.png" WidthRequest="14" HeightRequest="14" />
+
+                        <Border Padding="9,4"
+                                StrokeThickness="1"
+                                Stroke="{AppThemeBinding Light={StaticResource SubtleLine}, Dark={StaticResource LineDark}}"
+                                StrokeShape="RoundRectangle 10"
+                                BackgroundColor="{AppThemeBinding Light=#CCF0F6FF, Dark={StaticResource SoftSurfaceDark}}">
+                            <Label Text="{Binding BedroomsText}"
+                                   FontFamily="FontSemiBold"
+                                   FontSize="11.5"
+                                   TextColor="{AppThemeBinding Light={StaticResource InkSecondary}, Dark={StaticResource InkSecondaryDark}}" />
                         </Border>
-                        <Label Text="{Binding AreaText}" FontSize="12" FontFamily="OpenSansSemibold" VerticalOptions="Center"
-                               TextColor="{AppThemeBinding Light={StaticResource BodyInk}, Dark={StaticResource InkDark}}" />
                     </HorizontalStackLayout>
-                    <Label Grid.Column="2" Text="Còn trống" FontSize="11" HorizontalOptions="End" VerticalOptions="Center"
-                           TextColor="{AppThemeBinding Light={StaticResource Available}, Dark={StaticResource AvailableDark}}" />
+
+                    <Label Grid.Column="1"
+                           Text="Chi tiết →"
+                           FontFamily="FontSemiBold"
+                           FontSize="12"
+                           VerticalOptions="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}" />
                 </Grid>
+
+                <!-- Room Title -->
+                <Label Text="{Binding Title}"
+                       Style="{StaticResource CardTitle}"
+                       MaxLines="2"
+                       LineBreakMode="TailTruncation" />
+
+                <!-- Address Line -->
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalOptions="Center">
+                    <Image Grid.Column="0"
+                           Source="location_pin.png"
+                           WidthRequest="14"
+                           HeightRequest="14"
+                           Opacity="0.85"
+                           VerticalOptions="Center" />
+                    <Label Grid.Column="1"
+                           Text="{Binding Address}"
+                           Style="{StaticResource Caption}"
+                           MaxLines="1"
+                           LineBreakMode="TailTruncation" />
+                </Grid>
+
             </VerticalStackLayout>
-        </VerticalStackLayout>
+
+        </Grid>
     </Border>
 </ContentView>

@@ -1,146 +1,255 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:mapsui="clr-namespace:Mapsui.UI.Maui;assembly=Mapsui.UI.Maui"
-             xmlns:models="clr-namespace:RoomToRentRadar.Models"
              xmlns:vm="clr-namespace:RoomToRentRadar.ViewModels"
+             xmlns:models="clr-namespace:RoomToRentRadar.Models"
+             xmlns:mapsui="clr-namespace:Mapsui.UI.Maui;assembly=Mapsui.UI.Maui"
              xmlns:buttons="clr-namespace:Syncfusion.Maui.Toolkit.Buttons;assembly=Syncfusion.Maui.Toolkit"
-             xmlns:cards="clr-namespace:Syncfusion.Maui.Toolkit.Cards;assembly=Syncfusion.Maui.Toolkit"
              xmlns:inputLayout="clr-namespace:Syncfusion.Maui.Toolkit.TextInputLayout;assembly=Syncfusion.Maui.Toolkit"
              xmlns:progressBar="clr-namespace:Syncfusion.Maui.Toolkit.ProgressBar;assembly=Syncfusion.Maui.Toolkit"
              x:Class="RoomToRentRadar.Views.MapSearchPage"
-             x:DataType="vm:MapSearchViewModel" Title="Bản đồ" SafeAreaEdges="All">
-    <ContentPage.Resources>
-        <Style x:Key="MapPanel" TargetType="cards:SfCardView">
-            <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource SurfaceBrush}, Dark={StaticResource SurfaceDarkBrush}}" />
-            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
-            <Setter Property="BorderColor" Value="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}" />
-            <Setter Property="BorderWidth" Value="1" />
-            <Setter Property="CornerRadius" Value="20" />
-            <Setter Property="Shadow"><Setter.Value><Shadow Brush="{StaticResource InkBrush}" Offset="0,4" Radius="14" Opacity="0.12" /></Setter.Value></Setter>
-        </Style>
-        <Style x:Key="MapAction" TargetType="buttons:SfButton" BasedOn="{StaticResource PrimaryActionButton}">
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="Padding" Value="12,0" />
-        </Style>
-        <Style x:Key="MapSoftAction" TargetType="buttons:SfButton" BasedOn="{StaticResource SecondaryActionButton}">
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="Padding" Value="12,0" />
-        </Style>
-        <Style x:Key="MapFloatingIcon" TargetType="ImageButton" BasedOn="{StaticResource IconImageButton}">
-            <Setter Property="WidthRequest" Value="50" />
-            <Setter Property="HeightRequest" Value="50" />
-            <Setter Property="Padding" Value="13" />
-            <Setter Property="Shadow"><Setter.Value><Shadow Brush="{StaticResource InkBrush}" Offset="0,3" Radius="10" Opacity="0.14" /></Setter.Value></Setter>
-        </Style>
-    </ContentPage.Resources>
-    <Grid RowDefinitions="*,Auto" RowSpacing="0">
-      <!-- Map content has its own viewport, leaving SDK attribution above the toolbar. -->
-      <Grid Grid.Row="0">
-        <mapsui:MapControl x:Name="MapView" AutomationId="PolygonMap" />
-        <VerticalStackLayout VerticalOptions="Start" Margin="16,12" Spacing="8" InputTransparent="True" CascadeInputTransparent="False">
-            <cards:SfCardView x:Name="HeaderPanel" Style="{StaticResource MapPanel}" Padding="14,12" MaximumWidthRequest="760" HorizontalOptions="Fill">
-                <Grid ColumnDefinitions="38,*" ColumnSpacing="10">
-                    <Border WidthRequest="38" HeightRequest="38" BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}" StrokeThickness="0" StrokeShape="RoundRectangle 12">
-                        <Image Source="radar_mark.png" WidthRequest="24" HeightRequest="24" />
-                    </Border>
-                    <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
-                        <Label Text="{Binding MapHeading}" FontFamily="OpenSansSemibold" FontSize="16" MaxLines="1" LineBreakMode="TailTruncation" />
-                        <Label Text="{Binding MapSubtitle}" Style="{StaticResource Caption}" FontSize="12" MaxLines="1" LineBreakMode="TailTruncation" AutomationId="PolygonResultCount" />
-                    </VerticalStackLayout>
-                </Grid>
-            </cards:SfCardView>
-            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8" IsVisible="{Binding ShowStartDrawing}">
-                <buttons:SfButton Text="Đã lưu" Command="{Binding ToggleSavedAreasCommand}" Style="{StaticResource OutlineActionButton}" FontSize="12" Padding="8,0" AutomationId="OpenPolygonSavedPanel" />
-                <buttons:SfButton Grid.Column="1" Text="Thông báo" Command="{Binding ToggleNotificationsCommand}" Style="{StaticResource OutlineActionButton}" FontSize="12" Padding="8,0" AutomationId="OpenNotificationsPanel" />
-                <buttons:SfButton Grid.Column="2" Text="Sắp xếp ↓" Clicked="OnSortClicked" Style="{StaticResource OutlineActionButton}" FontSize="12" Padding="8,0" SemanticProperties.Description="{Binding SelectedSortLabel}" AutomationId="PolygonSort" />
-            </Grid>
-            <Border Padding="12,10" IsVisible="{Binding IsDrawing}" StrokeThickness="0" BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}" StrokeShape="RoundRectangle 14">
-                <Label Text="{Binding DrawingHint}" Style="{StaticResource Caption}" FontSize="12" MaxLines="3" AutomationId="PolygonDrawingHint" />
-            </Border>
-            <Border Padding="12,4,4,4" IsVisible="{Binding HasMapNotice}" StrokeShape="RoundRectangle 14">
-                <Grid ColumnDefinitions="*,44" ColumnSpacing="8">
-                    <Label Text="{Binding MapNotice}" Style="{StaticResource Caption}" FontSize="12" MaxLines="3" AutomationId="MapNotice" VerticalOptions="Center" />
-                    <buttons:SfButton Grid.Column="1" Text="×" Clicked="OnDismissNoticeClicked" Style="{StaticResource IconActionButton}" WidthRequest="44" MinimumWidthRequest="44" FontSize="22" Padding="0" SemanticProperties.Description="Đóng thông báo bản đồ" />
-                </Grid>
-            </Border>
-            <Border Padding="12,8" StrokeThickness="0" IsVisible="{Binding IsMapLoading}" HorizontalOptions="Start" StrokeShape="RoundRectangle 12">
-                <HorizontalStackLayout Spacing="8">
-                    <ActivityIndicator IsRunning="{Binding IsMapLoading}" WidthRequest="16" HeightRequest="16" />
-                    <Label Text="Đang tải bản đồ…" Style="{StaticResource Caption}" FontSize="12" VerticalOptions="Center" />
-                </HorizontalStackLayout>
-            </Border>
-        </VerticalStackLayout>
+             x:Name="MapPageRoot"
+             x:DataType="vm:MapSearchViewModel"
+             Title="Bản đồ"
+             SafeAreaEdges="Container">
 
-        <!-- One-handed controls remain on the map, clear of cards and attribution. -->
-        <VerticalStackLayout HorizontalOptions="End" VerticalOptions="Center" Margin="0,0,16,0" Spacing="10" IsVisible="{Binding ShowFloatingControls}">
-            <ImageButton x:Name="LocateButton" Clicked="OnLocateClicked" Style="{StaticResource MapFloatingIcon}" AutomationId="LocateCurrentPosition"
-                              Source="locate_icon.png"
-                              SemanticProperties.Description="Định vị vị trí hiện tại" />
-            <ImageButton Clicked="OnFocusAreaClicked" IsEnabled="{Binding HasDraft}" Style="{StaticResource MapFloatingIcon}" AutomationId="FocusPolygonArea"
-                              Source="focus_area.png"
-                              SemanticProperties.Description="Đưa khu vực đã chọn vào giữa bản đồ" />
-        </VerticalStackLayout>
+    <Grid>
+        <!-- 1. FULL-BLEED INTERACTIVE MAPSUI CANVAS -->
+        <mapsui:MapControl x:Name="MapView" />
 
-        <VerticalStackLayout VerticalOptions="End" Margin="16,0,16,24" Spacing="8" InputTransparent="True" CascadeInputTransparent="False">
-            <cards:SfCardView Style="{StaticResource MapPanel}" Padding="16" IsVisible="{Binding IsBusy}" AutomationId="MapSearchLoading">
-                <HorizontalStackLayout Spacing="12">
-                    <ActivityIndicator IsRunning="{Binding IsBusy}" WidthRequest="24" HeightRequest="24" />
-                    <VerticalStackLayout Spacing="2">
-                        <Label Text="Đang tìm phòng…" FontFamily="OpenSansSemibold" FontSize="14" />
-                        <Label Text="Trong ranh giới khu vực bạn đã chọn" Style="{StaticResource Caption}" FontSize="12" />
-                    </VerticalStackLayout>
-                </HorizontalStackLayout>
-            </cards:SfCardView>
-            <cards:SfCardView Style="{StaticResource MapPanel}" Padding="16" IsVisible="{Binding ShowSearchState}" AutomationId="MapSearchState">
-                <VerticalStackLayout Spacing="10">
-                    <Label Text="{Binding SearchStateTitle}" FontFamily="OpenSansSemibold" FontSize="16" />
-                    <Label Text="{Binding SearchStateHint}" Style="{StaticResource Caption}" FontSize="12" />
-                    <buttons:SfButton Text="Tìm lại trong vùng" Command="{Binding SearchCommand}" IsEnabled="{Binding CanSearchAgain}" Style="{StaticResource SecondaryActionButton}" />
-                </VerticalStackLayout>
-            </cards:SfCardView>
-            <cards:SfCardView x:Name="PreviewPanel" Style="{StaticResource MapPanel}" Padding="12" IsVisible="{Binding ShowPreviewCard}" AutomationId="PolygonPreview" MaximumWidthRequest="560" HorizontalOptions="Fill">
-                <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="90,*,44" ColumnSpacing="12" RowSpacing="10">
-                    <Border Grid.RowSpan="2" StrokeThickness="0" StrokeShape="RoundRectangle 14" HeightRequest="116" VerticalOptions="Start">
-                        <Image Source="{Binding SelectedListing.PhotoSource}" Aspect="AspectFill" SemanticProperties.Description="Ảnh phòng đang xem trước" />
-                    </Border>
-                    <VerticalStackLayout Grid.Column="1" Spacing="4">
-                        <Label Text="{Binding SelectedListing.RentText}" FontFamily="OpenSansSemibold" FontSize="17" TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" MaxLines="1" LineBreakMode="TailTruncation" />
-                        <Label Text="{Binding SelectedListing.Title}" FontFamily="OpenSansSemibold" FontSize="13" MaxLines="2" LineBreakMode="TailTruncation" />
-                        <Label Text="{Binding SelectedListing.AreaText}" Style="{StaticResource Caption}" FontSize="12" />
-                        <Label Text="{Binding SelectedListing.AddressText}" Style="{StaticResource Caption}" FontSize="11" MaxLines="1" LineBreakMode="TailTruncation" />
-                    </VerticalStackLayout>
-                    <buttons:SfButton Grid.Column="2" Text="×" Command="{Binding ClearSelectionCommand}" Style="{StaticResource IconActionButton}" WidthRequest="44" MinimumWidthRequest="44" FontSize="22" Padding="0" VerticalOptions="Start" SemanticProperties.Description="Đóng thẻ xem trước" />
-                    <buttons:SfButton Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="Xem chi tiết →" Style="{StaticResource MapAction}" Command="{Binding OpenSelectedListingCommand}" AutomationId="OpenPolygonPreview" />
-                </Grid>
-            </cards:SfCardView>
-            <cards:SfCardView x:Name="ResultsPanel" Style="{StaticResource MapPanel}" Padding="12" IsVisible="{Binding HasResults}" AutomationId="PolygonOrderedResults">
-                <cards:SfCardView.Triggers>
-                    <DataTrigger TargetType="cards:SfCardView" Binding="{Binding IsSavedPanelOpen}" Value="True"><Setter Property="IsVisible" Value="False" /></DataTrigger>
-                    <DataTrigger TargetType="cards:SfCardView" Binding="{Binding IsNotificationsPanelOpen}" Value="True"><Setter Property="IsVisible" Value="False" /></DataTrigger>
-                    <DataTrigger TargetType="cards:SfCardView" Binding="{Binding ShowPreviewCard}" Value="True"><Setter Property="IsVisible" Value="False" /></DataTrigger>
-                </cards:SfCardView.Triggers>
-                <Grid RowDefinitions="Auto,104" RowSpacing="8">
-                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                        <VerticalStackLayout VerticalOptions="Center" Spacing="2">
-                            <Label Text="Phòng trong khu vực" FontFamily="OpenSansSemibold" FontSize="14" />
-                            <Label Text="{Binding SelectedSortLabel}" Style="{StaticResource Caption}" FontSize="11" />
+        <!-- 2. LIQUID GLASS SPATIAL OVERLAY STAGE -->
+        <Grid RowDefinitions="Auto,*,Auto"
+              Padding="{OnPlatform Android='14,10,14,102', Default='14,10,14,16'}"
+              InputTransparent="False"
+              CascadeInputTransparent="False">
+
+            <!-- ==================== TOP FLOATING LIQUID GLASS COMMAND BAR ==================== -->
+            <VerticalStackLayout x:Name="HeaderPanel"
+                                 Grid.Row="0"
+                                 Spacing="8"
+                                 MaximumWidthRequest="680"
+                                 HorizontalOptions="Fill">
+
+                <Border Style="{StaticResource LiquidFloatingPanel}" Padding="15,10">
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" VerticalOptions="Center">
+                        <VerticalStackLayout Spacing="2" VerticalOptions="Center">
+                            <Label Text="{Binding MapHeading}"
+                                   FontFamily="FontBold"
+                                   FontSize="15.5"
+                                   MaxLines="1"
+                                   LineBreakMode="TailTruncation"
+                                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                            <Label Text="{Binding MapSubtitle}"
+                                   Style="{StaticResource Caption}"
+                                   FontSize="12"
+                                   MaxLines="1"
+                                   LineBreakMode="TailTruncation" />
                         </VerticalStackLayout>
-                        <ActivityIndicator Grid.Column="1" IsRunning="{Binding IsLoadingMore}" IsVisible="{Binding IsLoadingMore}" WidthRequest="20" HeightRequest="20" />
-                        <buttons:SfButton Grid.Column="2" Text="Tải thêm" Command="{Binding LoadMoreCommand}" IsEnabled="{Binding CanLoadMore}" Style="{StaticResource TextActionButton}" FontSize="12" Padding="8,0" AutomationId="LoadMorePolygonResults" />
+
+                        <Border Grid.Column="1"
+                                Style="{StaticResource LiquidOrbBorder}"
+                                AutomationId="MapSavedAreasButton"
+                                SemanticProperties.Description="Khu vực đã lưu">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding ToggleSavedAreasCommand}" />
+                            </Border.GestureRecognizers>
+                            <Image Source="bookmark_icon.png" WidthRequest="18" HeightRequest="18" HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+
+                        <Border Grid.Column="2"
+                                Style="{StaticResource LiquidOrbBorder}"
+                                AutomationId="MapNotificationsButton"
+                                SemanticProperties.Description="Thông báo khu vực">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding ToggleNotificationsCommand}" />
+                            </Border.GestureRecognizers>
+                            <Image Source="bell_icon.png" WidthRequest="18" HeightRequest="18" HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
                     </Grid>
-                    <CollectionView x:Name="ResultCards" Grid.Row="1" ItemsSource="{Binding Listings}" SelectedItem="{Binding SelectedListing, Mode=TwoWay}" SelectionMode="Single" ItemsLayout="HorizontalList" ItemSizingStrategy="MeasureFirstItem" HorizontalScrollBarVisibility="Never" AutomationId="PolygonResultCards">
+                </Border>
+
+                <progressBar:SfLinearProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" />
+
+                <!-- Dismissible Glass Toast -->
+                <Border IsVisible="{Binding HasMapNotice}"
+                        Style="{StaticResource LiquidFloatingPanel}"
+                        Padding="14,9">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <Label Text="{Binding MapNotice}" FontFamily="FontMedium" FontSize="12.5" VerticalOptions="Center" />
+                        <buttons:SfButton Grid.Column="1"
+                                          Text="Đóng"
+                                          Clicked="OnDismissNoticeClicked"
+                                          Style="{StaticResource GhostSfButton}"
+                                          HeightRequest="34"
+                                          MinimumHeightRequest="34" />
+                    </Grid>
+                </Border>
+
+                <!-- Floating Liquid Glass Action Pills -->
+                <HorizontalStackLayout Spacing="8" HorizontalOptions="Center">
+                    <buttons:SfButton IsVisible="{Binding ShowStartDrawing}"
+                                      Text="Vẽ vùng tìm trọ"
+                                      Command="{Binding StartDrawingCommand}"
+                                      Style="{StaticResource LiquidPrimaryButton}"
+                                      HeightRequest="44"
+                                      Padding="18,0"
+                                      AutomationId="MapStartDrawingButton" />
+
+                    <buttons:SfButton IsVisible="{Binding ShowStartDrawing}"
+                                      Text="{Binding SelectedSortLabel}"
+                                      Clicked="OnSortClicked"
+                                      Style="{StaticResource LiquidGlassButton}"
+                                      HeightRequest="44"
+                                      Padding="15,0"
+                                      FontSize="12.5"
+                                      AutomationId="MapSortButton" />
+
+                    <buttons:SfButton IsVisible="{Binding CanSearchAgain}"
+                                      Text="Tìm lại"
+                                      Command="{Binding SearchCommand}"
+                                      Style="{StaticResource SecondaryActionButton}"
+                                      HeightRequest="44"
+                                      Padding="14,0"
+                                      AutomationId="MapSearchAgainButton" />
+
+                    <HorizontalStackLayout IsVisible="{Binding ShowDrawingTools}" Spacing="8">
+                        <buttons:SfButton Text="Hoàn tác"
+                                          Command="{Binding UndoVertexCommand}"
+                                          Style="{StaticResource LiquidGlassButton}"
+                                          HeightRequest="44"
+                                          Padding="14,0" />
+                        <buttons:SfButton Text="Tìm phòng"
+                                          Command="{Binding FinishDrawingCommand}"
+                                          IsEnabled="{Binding CanFinishDrawing}"
+                                          Style="{StaticResource LiquidPrimaryButton}"
+                                          HeightRequest="44"
+                                          Padding="18,0" />
+                        <buttons:SfButton Text="Hủy"
+                                          Command="{Binding CancelDrawingCommand}"
+                                          Style="{StaticResource LiquidGlassButton}"
+                                          HeightRequest="44"
+                                          Padding="14,0" />
+                    </HorizontalStackLayout>
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+
+            <!-- ==================== RIGHT FLOATING SPECULAR MAP ORBS ==================== -->
+            <VerticalStackLayout Grid.Row="1"
+                                 IsVisible="{Binding ShowFloatingControls}"
+                                 HorizontalOptions="End"
+                                 VerticalOptions="Start"
+                                 Margin="0,10,0,0"
+                                 Spacing="10">
+                <Border x:Name="LocateButton"
+                        Style="{StaticResource LiquidOrbBorder}"
+                        SemanticProperties.Description="Định vị vị trí hiện tại">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnLocateClicked" />
+                    </Border.GestureRecognizers>
+                    <Image Source="locate_icon.png" WidthRequest="19" HeightRequest="19" HorizontalOptions="Center" VerticalOptions="Center" />
+                </Border>
+
+                <Border IsVisible="{Binding HasPolygon}"
+                        Style="{StaticResource LiquidOrbBorder}"
+                        SemanticProperties.Description="Căn giữa vùng đã vẽ">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnFocusAreaClicked" />
+                    </Border.GestureRecognizers>
+                    <Image Source="focus_area.png" WidthRequest="19" HeightRequest="19" HorizontalOptions="Center" VerticalOptions="Center" />
+                </Border>
+            </VerticalStackLayout>
+
+            <!-- ==================== BOTTOM LIQUID GLASS SHEETS & CAROUSELS ==================== -->
+            <VerticalStackLayout Grid.Row="2" Spacing="10" MaximumWidthRequest="680">
+
+                <!-- Empty / Error State Glass Card -->
+                <Border IsVisible="{Binding ShowSearchState}"
+                        Style="{StaticResource LiquidGlassCard}"
+                        Padding="16,14">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" VerticalOptions="Center">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="{Binding SearchStateTitle}" Style="{StaticResource CardTitle}" FontSize="14.5" />
+                            <Label Text="{Binding SearchStateHint}" Style="{StaticResource Caption}" FontSize="12" />
+                        </VerticalStackLayout>
+                        <buttons:SfButton Grid.Column="1"
+                                          IsVisible="{Binding ShowSearchError}"
+                                          Text="Thử lại"
+                                          Command="{Binding SearchCommand}"
+                                          Style="{StaticResource SecondaryActionButton}"
+                                          HeightRequest="40" />
+                    </Grid>
+                </Border>
+
+                <!-- Selected Listing Liquid Glass Preview Panel -->
+                <Border x:Name="PreviewPanel"
+                        IsVisible="{Binding ShowPreviewCard}"
+                        Style="{StaticResource LiquidGlassCard}"
+                        Padding="14">
+                    <Grid ColumnDefinitions="82,*,Auto" ColumnSpacing="12" VerticalOptions="Center">
+                        <Border Grid.Column="0"
+                                WidthRequest="82"
+                                HeightRequest="82"
+                                StrokeShape="RoundRectangle 16"
+                                StrokeThickness="0"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
+                            <Image Source="{Binding SelectedListing.PhotoSource}" Aspect="AspectFill" />
+                        </Border>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
+                            <VerticalStackLayout.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenSelectedListingCommand}" />
+                            </VerticalStackLayout.GestureRecognizers>
+                            <Label Text="{Binding SelectedListing.Title}" Style="{StaticResource CardTitle}" FontSize="14.5" MaxLines="1" LineBreakMode="TailTruncation" />
+                            <Label Text="{Binding SelectedListing.DistanceText}" Style="{StaticResource Caption}" FontSize="11.5" />
+                            <Label Text="{Binding SelectedListing.RentText}"
+                                   FontFamily="FontBold"
+                                   FontSize="15.5"
+                                   TextColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Column="2" Spacing="6" VerticalOptions="Center">
+                            <buttons:SfButton Text="Xem"
+                                              Command="{Binding OpenSelectedListingCommand}"
+                                              Style="{StaticResource LiquidPrimaryButton}"
+                                              HeightRequest="38"
+                                              MinimumHeightRequest="38"
+                                              Padding="14,0" />
+                            <buttons:SfButton Text="Đóng"
+                                              Command="{Binding ClearSelectionCommand}"
+                                              Style="{StaticResource GhostSfButton}"
+                                              HeightRequest="32"
+                                              MinimumHeightRequest="32"
+                                              FontSize="12" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+
+                <!-- Horizontal Result Glass Carousel -->
+                <ContentView x:Name="ResultsPanel" IsVisible="{Binding HasResults}">
+                    <CollectionView x:Name="ResultCards"
+                                    ItemsSource="{Binding Listings}"
+                                    SelectionMode="Single"
+                                    SelectedItem="{Binding SelectedListing}"
+                                    HeightRequest="96">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Horizontal" ItemSpacing="10" />
+                        </CollectionView.ItemsLayout>
                         <CollectionView.ItemTemplate>
                             <DataTemplate x:DataType="models:MapListingItem">
-                                <Border WidthRequest="260" Margin="0,0,10,0" Padding="8" StrokeShape="RoundRectangle 16" BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
-                                    <VisualStateManager.VisualStateGroups>
-                                        <VisualStateGroup Name="CommonStates"><VisualState Name="Normal" /><VisualState Name="Selected"><VisualState.Setters><Setter Property="Stroke" Value="{StaticResource Accent}" /></VisualState.Setters></VisualState></VisualStateGroup>
-                                    </VisualStateManager.VisualStateGroups>
-                                    <Grid ColumnDefinitions="76,*" ColumnSpacing="10">
-                                        <Border StrokeThickness="0" StrokeShape="RoundRectangle 12"><Image Source="{Binding PhotoSource}" Aspect="AspectFill" /></Border>
-                                        <VerticalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
-                                            <Label Text="{Binding RentText}" FontFamily="OpenSansSemibold" TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" FontSize="14" MaxLines="1" LineBreakMode="TailTruncation" />
-                                            <Label Text="{Binding Title}" FontFamily="OpenSansSemibold" FontSize="12" MaxLines="2" LineBreakMode="TailTruncation" />
+                                <Border WidthRequest="248"
+                                        Style="{StaticResource LiquidFloatingPanel}"
+                                        StrokeShape="RoundRectangle 20"
+                                        Padding="10">
+                                    <Grid ColumnDefinitions="68,*" ColumnSpacing="10" VerticalOptions="Center">
+                                        <Border Grid.Column="0" WidthRequest="68" HeightRequest="68" StrokeShape="RoundRectangle 14" StrokeThickness="0">
+                                            <Image Source="{Binding PhotoSource}" Aspect="AspectFill" />
+                                        </Border>
+                                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                            <Label Text="{Binding Title}" FontFamily="FontSemiBold" FontSize="13" MaxLines="1" LineBreakMode="TailTruncation" />
+                                            <Label Text="{Binding RentText}"
+                                                   FontFamily="FontBold"
+                                                   FontSize="13.5"
+                                                   TextColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}" />
                                             <Label Text="{Binding AreaText}" Style="{StaticResource Caption}" FontSize="11" />
                                         </VerticalStackLayout>
                                     </Grid>
@@ -148,134 +257,85 @@
                             </DataTemplate>
                         </CollectionView.ItemTemplate>
                     </CollectionView>
-                </Grid>
-            </cards:SfCardView>
-        </VerticalStackLayout>
-        <!-- Saved Areas Sheet -->
-        <Grid VerticalOptions="End" HorizontalOptions="Fill" Margin="16,0,16,24">
-            <VerticalStackLayout HorizontalOptions="Fill" MaximumWidthRequest="480">
-                <cards:SfCardView x:Name="SavedPanel" Style="{StaticResource MapPanel}"
-                                  Padding="18,12,18,16" MaximumHeightRequest="360"
-                                  IsVisible="{Binding IsSavedPanelOpen}" AutomationId="PolygonSavedPanel">
-                    <ScrollView VerticalScrollBarVisibility="Default">
-                        <VerticalStackLayout Spacing="12">
-                            <BoxView WidthRequest="38" HeightRequest="4" CornerRadius="2" HorizontalOptions="Center"
-                                     Color="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}" />
-                            <Grid ColumnDefinitions="*,Auto">
-                                <Label Text="Khu vực đã lưu" Style="{StaticResource SectionTitle}" FontSize="17" VerticalOptions="Center" />
-                                <buttons:SfButton Grid.Column="1" Text="×" Command="{Binding ToggleSavedAreasCommand}" Style="{StaticResource IconActionButton}"
-                                                  FontSize="22" Padding="0" WidthRequest="48" HeightRequest="48" MinimumHeightRequest="48" CornerRadius="14"
-                                                  SemanticProperties.Description="Đóng khu vực đã lưu" />
-                            </Grid>
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                <inputLayout:SfTextInputLayout Grid.Column="0" Hint="Đặt tên cho vùng này">
-                                    <Entry Text="{Binding NewAreaName}" MaxLength="60" AutomationId="PolygonAreaName"
-                                           FontSize="13" MinimumHeightRequest="42" SemanticProperties.Description="Tên cho khu vực đã vẽ" />
-                                </inputLayout:SfTextInputLayout>
-                                <buttons:SfButton Grid.Column="1" Text="Lưu" Command="{Binding SaveAreaCommand}" AutomationId="SavePolygonArea"
-                                                  IsEnabled="{Binding CanSaveCurrentArea}" Style="{StaticResource MapAction}" WidthRequest="72"
-                                                  VerticalOptions="Center" />
-                            </Grid>
-                            <Border Stroke="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}"
-                                    BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}"
-                                    StrokeShape="RoundRectangle 14" Padding="10,0"
-                                    IsVisible="{Binding HasSavedAreas}">
-                                <Picker ItemsSource="{Binding SavedAreas}" Title="Chọn khu vực đã lưu"
-                                        ItemDisplayBinding="{Binding Name, x:DataType=models:SavedAreaSearch}"
-                                        SelectedItem="{Binding SelectedSavedArea}" AutomationId="SavedPolygonPicker"
-                                        FontSize="12.5" MinimumHeightRequest="42" />
-                            </Border>
-                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8" IsVisible="{Binding HasSavedAreas}">
-                                <buttons:SfButton Text="Áp dụng" Command="{Binding ApplySavedAreaCommand}" AutomationId="RestorePolygonArea"
-                                                  IsEnabled="{Binding HasSelectedSavedArea}" Style="{StaticResource MapAction}" />
-                                <buttons:SfButton Grid.Column="1" Text="Xóa" Clicked="OnDeleteSavedAreaClicked" AutomationId="DeletePolygonArea"
-                                                  IsEnabled="{Binding HasSelectedSavedArea}" Style="{StaticResource DangerSoftSfButton}" />
-                            </Grid>
-                            <Border BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}"
-                                    StrokeThickness="0" StrokeShape="RoundRectangle 14"
-                                    Padding="12" IsVisible="{Binding HasSelectedSavedArea}">
-                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                    <VerticalStackLayout Spacing="2">
-                                        <Label Text="Thông báo phòng mới" FontFamily="OpenSansSemibold" FontSize="13" />
-                                        <Label Text="{Binding AlertStateText}" Style="{StaticResource Caption}" FontSize="11"
-                                               MaxLines="2" AutomationId="SavedAreaAlertState" />
-                                    </VerticalStackLayout>
-                                    <buttons:SfButton Grid.Column="1" Text="{Binding AlertToggleText}" Command="{Binding ToggleSavedAreaAlertCommand}"
-                                                      IsEnabled="{Binding CanToggleAlert}" Style="{StaticResource MapAction}"
-                                                      FontSize="11.5" WidthRequest="78" VerticalOptions="Center" AutomationId="ToggleSavedAreaAlert" />
-                                </Grid>
-                            </Border>
-                            <Label Text="Khu vực được lưu trên thiết bị; bật thông báo để nhận phòng mới trong vùng."
-                                   Style="{StaticResource Caption}" FontSize="11" />
-                            <Label Text="Chưa có khu vực đã lưu. Vẽ một vùng trên bản đồ, đặt tên rồi nhấn Lưu để tìm lại nhanh hơn." Style="{StaticResource Caption}" FontSize="12">
-                                <Label.Triggers><DataTrigger TargetType="Label" Binding="{Binding HasSavedAreas}" Value="True"><Setter Property="IsVisible" Value="False" /></DataTrigger></Label.Triggers>
-                            </Label>
-                            <Label Text="{Binding StatusMessage}" Style="{StaticResource Caption}" FontSize="12" MaxLines="3" AutomationId="SavedAreaFeedback" />
-                        </VerticalStackLayout>
-                    </ScrollView>
-                </cards:SfCardView>
-            </VerticalStackLayout>
-        </Grid>
+                </ContentView>
 
-        <!-- Notifications Sheet -->
-        <Grid VerticalOptions="End" HorizontalOptions="Fill" Margin="16,0,16,24">
-            <VerticalStackLayout HorizontalOptions="Fill" MaximumWidthRequest="480">
-                <cards:SfCardView x:Name="NotificationsPanel" Style="{StaticResource MapPanel}" Padding="18,12,18,16"
-                                  IsVisible="{Binding IsNotificationsPanelOpen}" AutomationId="NotificationsPanel">
-                    <VerticalStackLayout Spacing="10">
-                        <BoxView WidthRequest="38" HeightRequest="4" CornerRadius="2" HorizontalOptions="Center"
-                                 Color="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}" />
-                        <Grid ColumnDefinitions="*,Auto">
-                            <Label Text="{Binding NotificationsTitle}" Style="{StaticResource SectionTitle}" FontSize="17" VerticalOptions="Center" />
-                            <buttons:SfButton Grid.Column="1" Text="×" Command="{Binding ToggleNotificationsCommand}" Style="{StaticResource IconActionButton}"
-                                              FontSize="22" Padding="0" WidthRequest="48" HeightRequest="48" MinimumHeightRequest="48" CornerRadius="14"
-                                              SemanticProperties.Description="Đóng thông báo" />
+                <!-- Saved Areas Liquid Glass Sheet -->
+                <Border x:Name="SavedPanel"
+                        IsVisible="{Binding IsSavedPanelOpen}"
+                        Style="{StaticResource LiquidGlassCard}"
+                        Padding="18">
+                    <VerticalStackLayout Spacing="12">
+                        <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                            <Label Text="Khu vực tìm kiếm đã lưu" Style="{StaticResource SectionTitle}" />
+                            <buttons:SfButton Grid.Column="1" Text="Đóng" Command="{Binding ToggleSavedAreasCommand}" Style="{StaticResource GhostSfButton}" />
                         </Grid>
-                        <progressBar:SfLinearProgressBar IsIndeterminate="True" IsVisible="{Binding IsNotificationsBusy}" />
-                        <CollectionView ItemsSource="{Binding Notifications}" HeightRequest="220" AutomationId="NotificationsList">
-                            <CollectionView.EmptyView>
-                              <ContentView>
-                                <Label Text="Chưa có thông báo nào. Bật thông báo cho một khu vực đã lưu để nhận phòng mới."
-                                       Style="{StaticResource Caption}" FontSize="12" HorizontalTextAlignment="Center"
-                                       VerticalTextAlignment="Center" Margin="0,28">
-                                    <Label.Triggers><DataTrigger TargetType="Label" Binding="{Binding IsNotificationsBusy}" Value="True"><Setter Property="IsVisible" Value="False" /></DataTrigger></Label.Triggers>
-                                </Label>
-                              </ContentView>
-                            </CollectionView.EmptyView>
+
+                        <Grid IsVisible="{Binding HasPolygon}" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <inputLayout:SfTextInputLayout Grid.Column="0" Hint="Đặt tên vùng hiện tại">
+                                <Entry Text="{Binding NewAreaName}" />
+                            </inputLayout:SfTextInputLayout>
+                            <buttons:SfButton Grid.Column="1"
+                                              Text="Lưu"
+                                              Command="{Binding SaveAreaCommand}"
+                                              IsEnabled="{Binding CanSaveCurrentArea}"
+                                              Style="{StaticResource LiquidPrimaryButton}"
+                                              VerticalOptions="Center" />
+                        </Grid>
+
+                        <CollectionView ItemsSource="{Binding SavedAreas}"
+                                        SelectionMode="Single"
+                                        SelectedItem="{Binding SelectedSavedArea}"
+                                        MaximumHeightRequest="150">
                             <CollectionView.ItemTemplate>
-                                <DataTemplate x:DataType="models:MapNotificationItem">
-                                    <cards:SfCardView Padding="12" Margin="0,0,0,8"
-                                                      Background="{AppThemeBinding Light={StaticResource SoftSurfaceBrush}, Dark={StaticResource SoftSurfaceDarkBrush}}"
-                                                      BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}"
-                                                      BorderWidth="0" CornerRadius="14"
-                                                      IndicatorColor="{StaticResource Accent}" IndicatorPosition="Left" IndicatorThickness="3">
-                                        <VerticalStackLayout Spacing="3">
-                                            <Label Text="{Binding Title}" FontFamily="OpenSansSemibold" FontSize="13"
-                                                   MaxLines="2" LineBreakMode="TailTruncation" />
-                                            <Label Text="{Binding Body}" Style="{StaticResource Caption}" FontSize="11.5"
-                                                   MaxLines="3" LineBreakMode="TailTruncation" />
-                                            <Label Text="{Binding TimeText}" Style="{StaticResource Caption}" FontSize="10.5" />
+                                <DataTemplate x:DataType="models:SavedAreaSearch">
+                                    <Border Style="{StaticResource SubtleCard}" Margin="0,0,0,6" Padding="12,9">
+                                        <VerticalStackLayout Spacing="2">
+                                            <Label Text="{Binding Name}" FontFamily="FontSemiBold" FontSize="13.5" />
+                                            <Label Text="{Binding DetailText}" Style="{StaticResource Caption}" FontSize="11.5" />
                                         </VerticalStackLayout>
-                                    </cards:SfCardView>
+                                    </Border>
                                 </DataTemplate>
                             </CollectionView.ItemTemplate>
                         </CollectionView>
-                        <Label Text="{Binding StatusMessage}" Style="{StaticResource Caption}" FontSize="12" MaxLines="2" />
+
+                        <Grid IsVisible="{Binding HasSelectedSavedArea}" ColumnDefinitions="*,*,Auto" ColumnSpacing="8">
+                            <buttons:SfButton Grid.Column="0" Text="Áp dụng" Command="{Binding ApplySavedAreaCommand}" Style="{StaticResource LiquidPrimaryButton}" HeightRequest="42" />
+                            <buttons:SfButton Grid.Column="1" Text="{Binding AlertToggleText}" Command="{Binding ToggleSavedAreaAlertCommand}" IsEnabled="{Binding CanToggleAlert}" Style="{StaticResource LiquidGlassButton}" HeightRequest="42" />
+                            <buttons:SfButton Grid.Column="2" Text="Xóa" Command="{Binding DeleteSavedAreaCommand}" Style="{StaticResource DangerActionButton}" HeightRequest="42" />
+                        </Grid>
                     </VerticalStackLayout>
-                </cards:SfCardView>
+                </Border>
+
+                <!-- Notifications Liquid Glass Sheet -->
+                <Border x:Name="NotificationsPanel"
+                        IsVisible="{Binding IsNotificationsPanelOpen}"
+                        Style="{StaticResource LiquidGlassCard}"
+                        Padding="18">
+                    <VerticalStackLayout Spacing="10">
+                        <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                            <Label Text="{Binding NotificationsTitle}" Style="{StaticResource SectionTitle}" />
+                            <buttons:SfButton Grid.Column="1" Text="Đóng" Command="{Binding ToggleNotificationsCommand}" Style="{StaticResource GhostSfButton}" />
+                        </Grid>
+                        <CollectionView ItemsSource="{Binding Notifications}" MaximumHeightRequest="160">
+                            <CollectionView.EmptyView>
+                                <Label Text="Chưa có thông báo phòng mới trong vùng bạn theo dõi." Style="{StaticResource Caption}" Padding="0,8" />
+                            </CollectionView.EmptyView>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="models:MapNotificationItem">
+                                    <Border Style="{StaticResource SubtleCard}" Margin="0,0,0,6" Padding="12,9">
+                                        <VerticalStackLayout Spacing="2">
+                                            <Label Text="{Binding Title}" FontFamily="FontSemiBold" FontSize="13" />
+                                            <Label Text="{Binding Body}" Style="{StaticResource Caption}" FontSize="12" />
+                                            <Label Text="{Binding TimeText}" Style="{StaticResource Caption}" FontSize="10.5" />
+                                        </VerticalStackLayout>
+                                    </Border>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
+                </Border>
+
             </VerticalStackLayout>
         </Grid>
-
-      </Grid>
-      <!-- Dedicated row prevents toolbar, preview and Shell navigation from overlapping. -->
-      <Border Grid.Row="1" StrokeThickness="0" StrokeShape="RoundRectangle 0" Padding="16,10" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
-        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
-            <buttons:SfButton Text="Vẽ khu vực" Command="{Binding StartDrawingCommand}" IsVisible="{Binding ShowStartDrawing}" Style="{StaticResource MapAction}" AutomationId="StartPolygonDrawing" />
-            <buttons:SfButton Text="Hoàn tác" Command="{Binding UndoVertexCommand}" IsVisible="{Binding ShowDrawingTools}" IsEnabled="{Binding HasDraft}" Style="{StaticResource MapSoftAction}" AutomationId="UndoPolygonVertex" />
-            <buttons:SfButton Grid.Column="1" Text="Tìm phòng" Command="{Binding FinishDrawingCommand}" IsVisible="{Binding ShowDrawingTools}" IsEnabled="{Binding CanFinishDrawing}" Style="{StaticResource MapAction}" AutomationId="FinishPolygonDrawing" />
-            <buttons:SfButton Grid.Column="1" Text="Tìm lại" Command="{Binding SearchCommand}" IsVisible="{Binding ShowStartDrawing}" IsEnabled="{Binding CanSearchAgain}" Style="{StaticResource MapSoftAction}" AutomationId="RetryPolygonSearch" />
-            <buttons:SfButton Grid.Column="2" Text="Xóa vùng" Command="{Binding CancelDrawingCommand}" IsEnabled="{Binding HasDraft}" Style="{StaticResource DestructiveActionButton}" FontSize="13" Padding="8,0" AutomationId="ClearPolygonArea" />
-        </Grid>
-      </Border>
     </Grid>
 </ContentPage>

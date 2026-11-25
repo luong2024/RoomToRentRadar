@@ -3,16 +3,17 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:RoomToRentRadar.ViewModels"
              xmlns:models="clr-namespace:RoomToRentRadar.Models"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Controls"
              xmlns:buttons="clr-namespace:Syncfusion.Maui.Toolkit.Buttons;assembly=Syncfusion.Maui.Toolkit"
              x:Class="RoomToRentRadar.Views.ProfilePage"
              x:DataType="vm:ProfileViewModel"
              Title="Tài khoản"
-             SafeAreaEdges="All">
+             SafeAreaEdges="Container">
     <ContentPage.Resources>
         <DataTemplate x:Key="ProfileInfoRowTemplate" x:DataType="models:ProfileInfoRow">
             <Grid ColumnDefinitions="*,Auto" Padding="0,6" ColumnSpacing="14">
                 <Label Text="{Binding Label}" Style="{StaticResource Caption}" FontSize="13" VerticalOptions="Center" />
-                <Label Grid.Column="1" Text="{Binding Value}" FontFamily="OpenSansSemibold" FontSize="13"
+                <Label Grid.Column="1" Text="{Binding Value}" FontFamily="FontSemiBold" FontSize="13"
                        HorizontalTextAlignment="End" VerticalOptions="Center" LineBreakMode="WordWrap"
                        MaximumWidthRequest="240"
                        TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
@@ -20,27 +21,28 @@
         </DataTemplate>
 
         <DataTemplate x:Key="ProfileMenuItemTemplate" x:DataType="models:ProfileMenuItem">
-            <Border Padding="12,10" StrokeShape="RoundRectangle 14" StrokeThickness="0"
+            <Border Padding="12,10" StrokeShape="RoundRectangle 16" StrokeThickness="0"
                     BackgroundColor="Transparent" AutomationId="{Binding AutomationId}">
                 <Border.GestureRecognizers>
                     <TapGestureRecognizer Command="{Binding Command}" />
                 </Border.GestureRecognizers>
                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
-                    <Border WidthRequest="38" HeightRequest="38" StrokeThickness="0" StrokeShape="RoundRectangle 12"
-                            VerticalOptions="Center"
-                            BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}">
+                    <Border WidthRequest="40" HeightRequest="40" StrokeThickness="1"
+                            Stroke="{AppThemeBinding Light={StaticResource GlassSpecularRimLight}, Dark={StaticResource GlassSpecularRimDark}}"
+                            StrokeShape="RoundRectangle 14" VerticalOptions="Center"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource BrandTint}, Dark={StaticResource BrandTintDark}}">
                         <Image Source="{Binding Icon}" WidthRequest="19" HeightRequest="19"
                                HorizontalOptions="Center" VerticalOptions="Center" />
                     </Border>
                     <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
                         <HorizontalStackLayout Spacing="6">
-                            <Label Text="{Binding Title}" FontFamily="OpenSansSemibold" FontSize="14"
+                            <Label Text="{Binding Title}" FontFamily="FontSemiBold" FontSize="14"
                                    VerticalOptions="Center"
                                    TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                            <Border IsVisible="{Binding IsComingSoon}" Padding="7,1" StrokeThickness="0"
+                            <Border IsVisible="{Binding IsComingSoon}" Padding="7,2" StrokeThickness="0"
                                     StrokeShape="RoundRectangle 8" VerticalOptions="Center"
                                     BackgroundColor="{AppThemeBinding Light={StaticResource WarmSoft}, Dark={StaticResource WarmSoftDark}}">
-                                <Label Text="Sắp ra mắt" FontFamily="OpenSansSemibold" FontSize="9.5"
+                                <Label Text="Sắp ra mắt" FontFamily="FontSemiBold" FontSize="9.5"
                                        TextColor="{AppThemeBinding Light={StaticResource WarmAccent}, Dark=#F2C48F}" />
                             </Border>
                         </HorizontalStackLayout>
@@ -54,91 +56,106 @@
 
         <DataTemplate x:Key="ProfileVerificationTemplate" x:DataType="models:ProfileVerificationItem">
             <Grid ColumnDefinitions="*,Auto" Padding="0,7" ColumnSpacing="10">
-                <Label Text="{Binding Title}" FontSize="13.5" VerticalOptions="Center" />
-                <Border Grid.Column="1" IsVisible="{Binding IsVerified}" Padding="9,3" StrokeThickness="0"
+                <Label Text="{Binding Title}" FontFamily="FontMedium" FontSize="13.5" VerticalOptions="Center" />
+                <Border Grid.Column="1" IsVisible="{Binding IsVerified}" Padding="10,3" StrokeThickness="0"
                         StrokeShape="RoundRectangle 10" VerticalOptions="Center"
                         BackgroundColor="{AppThemeBinding Light={StaticResource AvailableBg}, Dark={StaticResource AvailableBgDark}}">
-                    <Label Text="Đã xác thực" FontFamily="OpenSansSemibold" FontSize="10.5"
+                    <Label Text="Đã xác thực" FontFamily="FontSemiBold" FontSize="10.5"
                            TextColor="{AppThemeBinding Light={StaticResource Available}, Dark={StaticResource AvailableDark}}" />
                 </Border>
-                <Border Grid.Column="1" IsVisible="{Binding IsPending}" Padding="9,3" StrokeThickness="0"
+                <Border Grid.Column="1" IsVisible="{Binding IsPending}" Padding="10,3" StrokeThickness="0"
                         StrokeShape="RoundRectangle 10" VerticalOptions="Center"
                         BackgroundColor="{AppThemeBinding Light={StaticResource WarmSoft}, Dark={StaticResource WarmSoftDark}}">
-                    <Label Text="Đang chờ duyệt" FontFamily="OpenSansSemibold" FontSize="10.5"
+                    <Label Text="Đang chờ duyệt" FontFamily="FontSemiBold" FontSize="10.5"
                            TextColor="{AppThemeBinding Light={StaticResource WarmAccent}, Dark=#F2C48F}" />
                 </Border>
-                <Border Grid.Column="1" IsVisible="{Binding IsUnverified}" Padding="9,3" StrokeThickness="0"
+                <Border Grid.Column="1" IsVisible="{Binding IsUnverified}" Padding="10,3" StrokeThickness="0"
                         StrokeShape="RoundRectangle 10" VerticalOptions="Center"
                         BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
-                    <Label Text="Chưa xác thực" FontFamily="OpenSansSemibold" FontSize="10.5"
+                    <Label Text="Chưa xác thực" FontFamily="FontSemiBold" FontSize="10.5"
                            TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
                 </Border>
             </Grid>
         </DataTemplate>
     </ContentPage.Resources>
 
-    <Grid RowDefinitions="Auto,*" RowSpacing="0"
-          MaximumWidthRequest="1120" HorizontalOptions="Fill">
-        <!-- Header -->
-        <Border StrokeShape="Rectangle" StrokeThickness="0"
-                BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
-            <VerticalStackLayout Spacing="0">
-                <Grid Padding="16,10,10,10" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4">
-                    <VerticalStackLayout Spacing="2" VerticalOptions="Center">
-                        <Label Text="Tài khoản" Style="{StaticResource ScreenTitle}" FontSize="22"
-                               SemanticProperties.HeadingLevel="Level1" />
-                        <Label Text="Hồ sơ và cài đặt của bạn" Style="{StaticResource Caption}" FontSize="12" />
-                    </VerticalStackLayout>
-                    <ImageButton Grid.Column="1" Source="icon_bell.png" Style="{StaticResource IconImageButton}"
-                                 Command="{Binding ShowNotificationsCommand}"
-                                 AutomationId="ProfileNotificationsButton"
-                                 SemanticProperties.Description="Thông báo" />
-                    <ImageButton Grid.Column="2" Source="icon_settings.png" Style="{StaticResource IconImageButton}"
-                                 Command="{Binding OpenSettingsCommand}"
-                                 AutomationId="ProfileSettingsButton"
-                                 SemanticProperties.Description="Cài đặt tài khoản" />
-                </Grid>
-                <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}" />
+    <Grid>
+        <!-- 0. AMBIENT LIQUID LIGHT FIELD -->
+        <controls:LiquidBackdropView />
+
+        <Grid RowDefinitions="Auto,*" RowSpacing="0"
+              MaximumWidthRequest="1120" HorizontalOptions="Fill">
+            <!-- Floating Liquid Glass Header -->
+            <ContentView Padding="16,10,16,6">
+                <Border Style="{StaticResource LiquidFloatingPanel}" Padding="16,10">
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                        <VerticalStackLayout Spacing="1" VerticalOptions="Center">
+                            <Label Text="Tài khoản" Style="{StaticResource ScreenTitle}" FontSize="21"
+                                   SemanticProperties.HeadingLevel="Level1" />
+                            <Label Text="Hồ sơ và cài đặt của bạn" Style="{StaticResource Caption}" FontSize="11.5" />
+                        </VerticalStackLayout>
+                        <Border Grid.Column="1" Style="{StaticResource LiquidOrbBorder}"
+                                AutomationId="ProfileNotificationsButton"
+                                SemanticProperties.Description="Thông báo">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding ShowNotificationsCommand}" />
+                            </Border.GestureRecognizers>
+                            <Image Source="icon_bell.png" WidthRequest="19" HeightRequest="19"
+                                   HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+                        <Border Grid.Column="2" Style="{StaticResource LiquidOrbBorder}"
+                                AutomationId="ProfileSettingsButton"
+                                SemanticProperties.Description="Cài đặt tài khoản">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenSettingsCommand}" />
+                            </Border.GestureRecognizers>
+                            <Image Source="icon_settings.png" WidthRequest="19" HeightRequest="19"
+                                   HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+                    </Grid>
+                </Border>
+            </ContentView>
+
+            <!-- Loading -->
+            <VerticalStackLayout Grid.Row="1" IsVisible="{Binding IsLoadingState}" Spacing="12"
+                                 VerticalOptions="Center" HorizontalOptions="Center" Padding="24">
+                <ActivityIndicator IsRunning="{Binding IsLoadingState}"
+                                   Color="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}" />
+                <Label Text="Đang tải hồ sơ…" Style="{StaticResource Caption}" FontSize="13" />
             </VerticalStackLayout>
-        </Border>
 
-        <!-- Loading -->
-        <VerticalStackLayout Grid.Row="1" IsVisible="{Binding IsLoadingState}" Spacing="12"
-                             VerticalOptions="Center" HorizontalOptions="Center" Padding="24">
-            <ActivityIndicator IsRunning="{Binding IsLoadingState}" Color="{StaticResource Accent}" />
-            <Label Text="Đang tải hồ sơ…" Style="{StaticResource Caption}" FontSize="13" />
-        </VerticalStackLayout>
+            <!-- Signed out -->
+            <ScrollView Grid.Row="1" Padding="16,16,16,116" IsVisible="{Binding IsSignedOutState}">
+                <Border Style="{StaticResource LiquidGlassCard}" Padding="24,28" VerticalOptions="Start" MaximumWidthRequest="460" HorizontalOptions="Fill">
+                    <VerticalStackLayout Spacing="14">
+                        <Label Text="CẦN ĐĂNG NHẬP" Style="{StaticResource Eyebrow}"
+                               TextColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}" />
+                        <Label Text="Đăng nhập để xem hồ sơ" FontSize="22" FontFamily="FontBold" />
+                        <Label Text="Thông tin tài khoản của bạn sẽ hiển thị tại đây sau khi đăng nhập."
+                               Style="{StaticResource Caption}" FontSize="13.5" LineHeight="1.4" />
+                        <buttons:SfButton Text="Đăng nhập" Command="{Binding SignInCommand}" HorizontalOptions="Fill"
+                                          Style="{StaticResource LiquidPrimaryButton}"
+                                          AutomationId="ProfileSignIn" />
+                    </VerticalStackLayout>
+                </Border>
+            </ScrollView>
 
-        <!-- Signed out -->
-        <ScrollView Grid.Row="1" Padding="16,20" IsVisible="{Binding IsSignedOutState}">
-            <Border Padding="24,28" StrokeShape="RoundRectangle 22" VerticalOptions="Start" MaximumWidthRequest="460" HorizontalOptions="Fill">
-                <VerticalStackLayout Spacing="14">
-                    <Label Text="CẦN ĐĂNG NHẬP" Style="{StaticResource Eyebrow}"
-                           TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
-                    <Label Text="Đăng nhập để xem hồ sơ" FontSize="22" FontFamily="OpenSansSemibold" />
-                    <Label Text="Thông tin tài khoản của bạn sẽ hiển thị tại đây sau khi đăng nhập."
-                           Style="{StaticResource Caption}" FontSize="13.5" LineHeight="1.35" />
-                    <buttons:SfButton Text="Đăng nhập" Command="{Binding SignInCommand}" HorizontalOptions="Fill"
-                                      AutomationId="ProfileSignIn" />
-                </VerticalStackLayout>
-            </Border>
-        </ScrollView>
+            <!-- Error -->
+            <ScrollView Grid.Row="1" Padding="16,16,16,116" IsVisible="{Binding IsErrorState}">
+                <Border Style="{StaticResource LiquidGlassCard}" Padding="24,28" VerticalOptions="Start" MaximumWidthRequest="460" HorizontalOptions="Fill">
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="Chưa tải được hồ sơ" FontSize="22" FontFamily="FontBold" />
+                        <Label Text="{Binding Message}" Style="{StaticResource Caption}" FontSize="13.5" LineHeight="1.4" />
+                        <buttons:SfButton Text="Thử lại" Command="{Binding LoadCommand}" HorizontalOptions="Start"
+                                          Style="{StaticResource LiquidPrimaryButton}"
+                                          AutomationId="ProfileRetry" />
+                    </VerticalStackLayout>
+                </Border>
+            </ScrollView>
 
-        <!-- Error -->
-        <ScrollView Grid.Row="1" Padding="16,20" IsVisible="{Binding IsErrorState}">
-            <Border Padding="24,28" StrokeShape="RoundRectangle 22" VerticalOptions="Start" MaximumWidthRequest="460" HorizontalOptions="Fill">
-                <VerticalStackLayout Spacing="12">
-                    <Label Text="Chưa tải được hồ sơ" FontSize="22" FontFamily="OpenSansSemibold" />
-                    <Label Text="{Binding Message}" Style="{StaticResource Caption}" FontSize="13.5" LineHeight="1.35" />
-                    <buttons:SfButton Text="Thử lại" Command="{Binding LoadCommand}" HorizontalOptions="Start"
-                                      AutomationId="ProfileRetry" />
-                </VerticalStackLayout>
-            </Border>
-        </ScrollView>
-
-        <!-- Content -->
-        <ScrollView Grid.Row="1" IsVisible="{Binding IsContentState}">
-            <Grid Padding="16,16,16,28" MaximumWidthRequest="1080" HorizontalOptions="Fill">
+            <!-- Content -->
+            <ScrollView Grid.Row="1" IsVisible="{Binding IsContentState}">
+                <Grid Padding="16,10,16,116" MaximumWidthRequest="1080" HorizontalOptions="Fill">
                 <Grid x:Name="ProfileColumns" ColumnDefinitions="*,*" RowDefinitions="Auto,Auto"
                       ColumnSpacing="16" RowSpacing="14">
                     <VisualStateManager.VisualStateGroups>
@@ -179,7 +196,7 @@
                                     <Grid WidthRequest="76" HeightRequest="76" VerticalOptions="Center">
                                         <Border StrokeThickness="0" StrokeShape="RoundRectangle 38"
                                                 BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}">
-                                            <Label Text="{Binding Initials}" FontFamily="OpenSansSemibold" FontSize="27"
+                                            <Label Text="{Binding Initials}" FontFamily="FontSemiBold" FontSize="27"
                                                    HorizontalOptions="Center" VerticalOptions="Center"
                                                    TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}"
                                                    SemanticProperties.Description="Ảnh đại diện chữ cái" />
@@ -192,19 +209,19 @@
                                         </Border>
                                     </Grid>
                                     <VerticalStackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
-                                        <Label Text="{Binding DisplayName}" FontFamily="OpenSansSemibold" FontSize="19"
+                                        <Label Text="{Binding DisplayName}" FontFamily="FontSemiBold" FontSize="19"
                                                SemanticProperties.HeadingLevel="Level2"
                                                AutomationId="ProfileDisplayNameLabel" />
                                         <HorizontalStackLayout Spacing="6">
                                             <Border Padding="9,3" StrokeThickness="0" StrokeShape="RoundRectangle 10"
                                                     BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}">
-                                                <Label Text="{Binding RoleText}" FontFamily="OpenSansSemibold" FontSize="10.5"
+                                                <Label Text="{Binding RoleText}" FontFamily="FontSemiBold" FontSize="10.5"
                                                        TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}"
                                                        AutomationId="ProfileRoleChip" />
                                             </Border>
                                             <Border Padding="9,3" StrokeThickness="0" StrokeShape="RoundRectangle 10"
                                                     BackgroundColor="{AppThemeBinding Light={StaticResource AvailableBg}, Dark={StaticResource AvailableBgDark}}">
-                                                <Label Text="Email đã xác thực" FontFamily="OpenSansSemibold" FontSize="10.5"
+                                                <Label Text="Email đã xác thực" FontFamily="FontSemiBold" FontSize="10.5"
                                                        TextColor="{AppThemeBinding Light={StaticResource Available}, Dark={StaticResource AvailableDark}}" />
                                             </Border>
                                         </HorizontalStackLayout>
@@ -308,7 +325,7 @@
                                     <Border Padding="12,10" StrokeThickness="0" StrokeShape="RoundRectangle 14"
                                             BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
                                         <VerticalStackLayout Spacing="1">
-                                            <Label Text="{Binding TotalRooms}" FontFamily="OpenSansSemibold" FontSize="22"
+                                            <Label Text="{Binding TotalRooms}" FontFamily="FontSemiBold" FontSize="22"
                                                    TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}"
                                                    AutomationId="ProfileTotalRooms" />
                                             <Label Text="Tổng số phòng" Style="{StaticResource Caption}" FontSize="11.5" />
@@ -317,7 +334,7 @@
                                     <Border Grid.Column="1" Padding="12,10" StrokeThickness="0" StrokeShape="RoundRectangle 14"
                                             BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
                                         <VerticalStackLayout Spacing="1">
-                                            <Label Text="{Binding AvailableRooms}" FontFamily="OpenSansSemibold" FontSize="22"
+                                            <Label Text="{Binding AvailableRooms}" FontFamily="FontSemiBold" FontSize="22"
                                                    TextColor="{AppThemeBinding Light={StaticResource Available}, Dark={StaticResource AvailableDark}}" />
                                             <Label Text="Còn trống" Style="{StaticResource Caption}" FontSize="11.5" />
                                         </VerticalStackLayout>
@@ -325,7 +342,7 @@
                                     <Border Grid.Row="1" Padding="12,10" StrokeThickness="0" StrokeShape="RoundRectangle 14"
                                             BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
                                         <VerticalStackLayout Spacing="1">
-                                            <Label Text="{Binding OccupiedRooms}" FontFamily="OpenSansSemibold" FontSize="22"
+                                            <Label Text="{Binding OccupiedRooms}" FontFamily="FontSemiBold" FontSize="22"
                                                    TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
                                             <Label Text="Đang thuê" Style="{StaticResource Caption}" FontSize="11.5" />
                                         </VerticalStackLayout>
@@ -333,7 +350,7 @@
                                     <Border Grid.Row="1" Grid.Column="1" Padding="12,10" StrokeThickness="0" StrokeShape="RoundRectangle 14"
                                             BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
                                         <VerticalStackLayout Spacing="1">
-                                            <Label Text="{Binding PendingRooms}" FontFamily="OpenSansSemibold" FontSize="22"
+                                            <Label Text="{Binding PendingRooms}" FontFamily="FontSemiBold" FontSize="22"
                                                    TextColor="{AppThemeBinding Light={StaticResource WarmAccent}, Dark=#F2C48F}" />
                                             <Label Text="Chờ duyệt" Style="{StaticResource Caption}" FontSize="11.5" />
                                         </VerticalStackLayout>
@@ -353,7 +370,7 @@
                                 <HorizontalStackLayout Spacing="6">
                                     <Image Source="icon_rating_star.png" WidthRequest="20" HeightRequest="20"
                                            VerticalOptions="Center" />
-                                    <Label Text="{Binding AverageRatingText}" FontFamily="OpenSansSemibold" FontSize="26"
+                                    <Label Text="{Binding AverageRatingText}" FontFamily="FontSemiBold" FontSize="26"
                                            VerticalOptions="Center" AutomationId="ProfileAverageRating" />
                                     <Label Text="/ 5" Style="{StaticResource Caption}" FontSize="13"
                                            VerticalOptions="End" Margin="0,0,0,5" />
@@ -395,7 +412,7 @@
                                                    HorizontalOptions="Center" VerticalOptions="Center" />
                                         </Border>
                                         <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
-                                            <Label Text="Cài đặt tài khoản" FontFamily="OpenSansSemibold" FontSize="14"
+                                            <Label Text="Cài đặt tài khoản" FontFamily="FontSemiBold" FontSize="14"
                                                    TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
                                             <Label Text="Thông báo, quyền riêng tư và bảo mật"
                                                    Style="{StaticResource Caption}" FontSize="12" />
@@ -415,5 +432,6 @@
                 </Grid>
             </Grid>
         </ScrollView>
+        </Grid>
     </Grid>
 </ContentPage>

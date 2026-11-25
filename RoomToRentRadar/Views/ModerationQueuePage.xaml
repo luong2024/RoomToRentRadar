@@ -3,12 +3,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:RoomToRentRadar.ViewModels"
              xmlns:models="clr-namespace:RoomToRentRadar.Models"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Controls"
              xmlns:buttons="clr-namespace:Syncfusion.Maui.Toolkit.Buttons;assembly=Syncfusion.Maui.Toolkit"
              xmlns:progressBar="clr-namespace:Syncfusion.Maui.Toolkit.ProgressBar;assembly=Syncfusion.Maui.Toolkit"
              x:Class="RoomToRentRadar.Views.ModerationQueuePage"
              x:DataType="vm:ModerationQueueViewModel"
              Title="Kiểm duyệt"
-             SafeAreaEdges="All">
+             SafeAreaEdges="Container">
     <ContentPage.Resources>
         <Color x:Key="WarmAccentDark">#F2B872</Color>
         <Color x:Key="HeroPriceScrim">#D9152430</Color>
@@ -18,37 +19,29 @@
         <SolidColorBrush x:Key="AvailableBgDarkBrush" Color="{StaticResource AvailableBgDark}" />
     </ContentPage.Resources>
 
-    <Grid RowDefinitions="Auto,Auto,*" RowSpacing="0" HorizontalOptions="Fill">
-        <!-- Row 0: Full-Width Executive Admin Header -->
-        <Border StrokeShape="Rectangle" StrokeThickness="0" HorizontalOptions="Fill"
-                BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
-            <VerticalStackLayout Spacing="0" HorizontalOptions="Fill">
-                <Grid Padding="20,14" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12"
-                      MaximumWidthRequest="1020" HorizontalOptions="Fill">
-                    <Border WidthRequest="42" HeightRequest="42" Padding="9" StrokeThickness="0"
-                            StrokeShape="RoundRectangle 13" VerticalOptions="Center"
-                            BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}">
-                        <Image Source="radar_mark.png" WidthRequest="24" HeightRequest="24" />
-                    </Border>
-                    <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
-                        <Label Text="TRUNG TÂM KIỂM DUYỆT · ADMIN CONSOLE" Style="{StaticResource Eyebrow}"
-                               TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
-                        <Label Text="Phê duyệt phòng cho thuê" Style="{StaticResource ScreenTitle}" FontSize="21"
-                               SemanticProperties.HeadingLevel="Level1" />
-                    </VerticalStackLayout>
-                    <buttons:SfButton Grid.Column="2" Text="Làm mới" Command="{Binding LoadCommand}"
-                                      Style="{StaticResource SoftSfButton}" VerticalOptions="Center"
-                                      HeightRequest="42" Padding="16,0"
-                                      AutomationId="ModerationRefresh" />
-                    <buttons:SfButton Grid.Column="3" Text="Đăng xuất" Command="{Binding SignOutCommand}"
-                                      IsVisible="{Binding CanSignOut}"
-                                      Style="{StaticResource OutlineSfButton}" VerticalOptions="Center"
-                                      HeightRequest="42" Padding="16,0"
-                                      AutomationId="ModerationSignOut" />
-                </Grid>
-                <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}" />
-            </VerticalStackLayout>
-        </Border>
+    <Grid>
+        <controls:LiquidBackdropView />
+
+        <Grid RowDefinitions="Auto,Auto,*" RowSpacing="0" HorizontalOptions="Fill">
+            <!-- Floating Liquid Glass Executive Header -->
+            <ContentView Padding="16,10,16,6">
+                <Border Style="{StaticResource LiquidFloatingPanel}" Padding="14,10" MaximumWidthRequest="1020">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                        <Image Source="radar_mark.png" WidthRequest="36" HeightRequest="36" VerticalOptions="Center" />
+                        <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
+                            <Label Text="KIỂM DUYỆT · ADMIN" Style="{StaticResource Eyebrow}"
+                                   TextColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}" />
+                            <Label Text="Phê duyệt phòng trọ" Style="{StaticResource ScreenTitle}" FontSize="19"
+                                   SemanticProperties.HeadingLevel="Level1" />
+                        </VerticalStackLayout>
+                        <buttons:SfButton Grid.Column="2" Text="Đăng xuất" Command="{Binding SignOutCommand}"
+                                          IsVisible="{Binding CanSignOut}"
+                                          Style="{StaticResource OutlineSfButton}" VerticalOptions="Center"
+                                          HeightRequest="40" MinimumHeightRequest="40" Padding="14,0" FontSize="12.5"
+                                          AutomationId="ModerationSignOut" />
+                    </Grid>
+                </Border>
+            </ContentView>
 
         <!-- Row 1: Filter Toolbar & Status Banner -->
         <VerticalStackLayout Grid.Row="1" Padding="20,12,20,8" Spacing="10"
@@ -59,7 +52,7 @@
                     IsVisible="{Binding HasMessage}" StrokeThickness="1"
                     Stroke="{StaticResource AvailableBorder}"
                     BackgroundColor="{AppThemeBinding Light={StaticResource AvailableBg}, Dark={StaticResource AvailableBgDark}}">
-                <Label Text="{Binding Message}" FontFamily="OpenSansSemibold" FontSize="12.5"
+                <Label Text="{Binding Message}" FontFamily="FontSemiBold" FontSize="12.5"
                        TextColor="{AppThemeBinding Light={StaticResource Available}, Dark={StaticResource AvailableDark}}"
                        SemanticProperties.Description="Thông báo kiểm duyệt" />
             </Border>
@@ -106,7 +99,7 @@
                         BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}">
                     <Label Text="{Binding QueueSummaryText}"
                            AutomationId="ModerationQueueSummary"
-                           FontFamily="OpenSansSemibold" FontSize="12"
+                           FontFamily="FontSemiBold" FontSize="12"
                            TextColor="{AppThemeBinding Light={StaticResource AccentPressed}, Dark={StaticResource AccentDark}}" />
                 </Border>
             </Grid>
@@ -125,7 +118,7 @@
                 <VerticalStackLayout Spacing="14">
                     <Label Text="CẦN ĐĂNG NHẬP" Style="{StaticResource Eyebrow}"
                            TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
-                    <Label Text="Đăng nhập để duyệt tin" FontSize="22" FontFamily="OpenSansSemibold" />
+                    <Label Text="Đăng nhập để duyệt tin" FontSize="22" FontFamily="FontSemiBold" />
                     <Label Text="Hàng đợi kiểm duyệt chỉ dành cho điều hành viên và quản trị viên."
                            Style="{StaticResource Caption}" FontSize="13.5" LineHeight="1.35" />
                     <buttons:SfButton Text="Đăng nhập" Command="{Binding SignInCommand}" HorizontalOptions="Fill"
@@ -140,7 +133,7 @@
                 <VerticalStackLayout Spacing="12">
                     <Label Text="KHÔNG CÓ QUYỀN TRUY CẬP" Style="{StaticResource Eyebrow}"
                            TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
-                    <Label Text="Tài khoản của bạn không thể kiểm duyệt" FontSize="22" FontFamily="OpenSansSemibold" />
+                    <Label Text="Tài khoản của bạn không thể kiểm duyệt" FontSize="22" FontFamily="FontSemiBold" />
                     <Label Text="Tính năng này dành cho tài khoản điều hành viên hoặc quản trị viên. Hãy đăng nhập bằng tài khoản phù hợp."
                            Style="{StaticResource Caption}" FontSize="13.5" LineHeight="1.35" />
                 </VerticalStackLayout>
@@ -151,7 +144,7 @@
         <ScrollView Grid.Row="2" Padding="20" IsVisible="{Binding IsErrorState}">
             <Border Padding="24,28" StrokeShape="RoundRectangle 22" VerticalOptions="Start" MaximumWidthRequest="460" HorizontalOptions="Fill">
                 <VerticalStackLayout Spacing="12">
-                    <Label Text="Chưa tải được hàng đợi" FontSize="22" FontFamily="OpenSansSemibold" />
+                    <Label Text="Chưa tải được hàng đợi" FontSize="22" FontFamily="FontSemiBold" />
                     <Label Text="{Binding Message}" Style="{StaticResource Caption}" FontSize="13.5" LineHeight="1.35" />
                     <buttons:SfButton Text="Thử lại" Command="{Binding LoadCommand}" HorizontalOptions="Start" />
                 </VerticalStackLayout>
@@ -166,15 +159,19 @@
                             Padding="14" StrokeThickness="0" StrokeShape="RoundRectangle 18" HorizontalOptions="Center">
                         <Image Source="radar_mark.png" WidthRequest="28" HeightRequest="28" />
                     </Border>
-                    <Label Text="{Binding EmptyTitleText}" FontFamily="OpenSansSemibold" FontSize="17" HorizontalTextAlignment="Center" />
+                    <Label Text="{Binding EmptyTitleText}" FontFamily="FontSemiBold" FontSize="17" HorizontalTextAlignment="Center" />
                     <Label Text="{Binding EmptySubtitleText}" Style="{StaticResource Caption}" FontSize="13" HorizontalTextAlignment="Center" />
                 </VerticalStackLayout>
             </Border>
         </ScrollView>
 
-        <!-- Row 2F: Executive Moderation Cards (ScrollView + BindableLayout prevents WinUI 3 CollectionView clipping) -->
-        <ScrollView Grid.Row="2" IsVisible="{Binding IsContentState}">
-            <VerticalStackLayout Padding="20,6,20,28" Spacing="18"
+        <!-- Row 2F: Executive Moderation Cards with Pull-to-Refresh -->
+        <RefreshView Grid.Row="2"
+                     IsVisible="{Binding IsContentState}"
+                     Refreshing="OnRefreshing"
+                     RefreshColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}">
+        <ScrollView>
+            <VerticalStackLayout Padding="20,6,20,116" Spacing="18"
                                  MaximumWidthRequest="1020" HorizontalOptions="Fill">
                 <VerticalStackLayout Spacing="18" BindableLayout.ItemsSource="{Binding Items}">
                     <BindableLayout.ItemTemplate>
@@ -201,7 +198,7 @@
                                                         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource AvailableBg}, Dark={StaticResource AvailableBgDark}}" />
                                                     </DataTrigger>
                                                 </Border.Triggers>
-                                                <Label Text="{Binding StatusText}" FontFamily="OpenSansSemibold" FontSize="12"
+                                                <Label Text="{Binding StatusText}" FontFamily="FontSemiBold" FontSize="12"
                                                        TextColor="{AppThemeBinding Light={StaticResource WarmAccent}, Dark={StaticResource WarmAccentDark}}">
                                                     <Label.Triggers>
                                                         <DataTrigger TargetType="Label" Binding="{Binding IsPublished}" Value="True">
@@ -214,7 +211,7 @@
                                             <Border Grid.Column="1" Padding="10,4" StrokeThickness="0" StrokeShape="RoundRectangle 10"
                                                     VerticalOptions="Center"
                                                     BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}">
-                                                <Label Text="{Binding RoomTypeBadgeText}" FontFamily="OpenSansSemibold" FontSize="12"
+                                                <Label Text="{Binding RoomTypeBadgeText}" FontFamily="FontSemiBold" FontSize="12"
                                                        TextColor="{AppThemeBinding Light={StaticResource AccentPressed}, Dark={StaticResource AccentDark}}" />
                                             </Border>
 
@@ -247,14 +244,14 @@
                                                     <Border Margin="12" Padding="12,6" StrokeThickness="0" StrokeShape="RoundRectangle 10"
                                                             HorizontalOptions="Start" VerticalOptions="End"
                                                             BackgroundColor="{StaticResource HeroPriceScrim}">
-                                                        <Label Text="{Binding PriceText}" FontFamily="OpenSansSemibold" FontSize="15" TextColor="White" />
+                                                        <Label Text="{Binding PriceText}" FontFamily="FontSemiBold" FontSize="15" TextColor="White" />
                                                     </Border>
 
                                                     <Border Margin="12" Padding="10,5" StrokeThickness="0" StrokeShape="RoundRectangle 10"
                                                             HorizontalOptions="End" VerticalOptions="Start"
                                                             BackgroundColor="{StaticResource HeroCountScrim}">
                                                         <Label Text="{Binding PhotoCountText, StringFormat='📷 {0}'}"
-                                                               FontFamily="OpenSansSemibold" FontSize="11.5" TextColor="White" />
+                                                               FontFamily="FontSemiBold" FontSize="11.5" TextColor="White" />
                                                     </Border>
                                                 </Grid>
                                             </Border>
@@ -282,7 +279,7 @@
                                                                 BackgroundColor="{StaticResource GalleryMoreScrim}"
                                                                 StrokeThickness="0" StrokeShape="RoundRectangle 12">
                                                             <Label Text="{Binding MoreThanThreePhotosText}"
-                                                                   FontFamily="OpenSansSemibold" FontSize="14" TextColor="White"
+                                                                   FontFamily="FontSemiBold" FontSize="14" TextColor="White"
                                                                    HorizontalOptions="Center" VerticalOptions="Center" />
                                                         </Border>
                                                     </Grid>
@@ -292,21 +289,21 @@
 
                                         <!-- B. Title & Quick Spec Strip -->
                                         <VerticalStackLayout Spacing="6">
-                                            <Label Text="{Binding Title}" FontFamily="OpenSansSemibold" FontSize="19"
+                                            <Label Text="{Binding Title}" FontFamily="FontSemiBold" FontSize="19"
                                                    CharacterSpacing="-0.3"
                                                    TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
 
                                             <HorizontalStackLayout Spacing="12">
                                                 <HorizontalStackLayout Spacing="5" VerticalOptions="Center">
                                                     <Image Source="area_icon.png" WidthRequest="15" HeightRequest="15" VerticalOptions="Center" />
-                                                    <Label Text="{Binding AreaBadgeText}" FontFamily="OpenSansSemibold" FontSize="13"
+                                                    <Label Text="{Binding AreaBadgeText}" FontFamily="FontSemiBold" FontSize="13"
                                                            VerticalOptions="Center"
                                                            TextColor="{AppThemeBinding Light={StaticResource BodyInk}, Dark={StaticResource InkDark}}" />
                                                 </HorizontalStackLayout>
 
                                                 <HorizontalStackLayout Spacing="5" VerticalOptions="Center">
                                                     <Image Source="bed_icon.png" WidthRequest="15" HeightRequest="15" VerticalOptions="Center" />
-                                                    <Label Text="{Binding BedroomsBadgeText}" FontFamily="OpenSansSemibold" FontSize="13"
+                                                    <Label Text="{Binding BedroomsBadgeText}" FontFamily="FontSemiBold" FontSize="13"
                                                            VerticalOptions="Center"
                                                            TextColor="{AppThemeBinding Light={StaticResource BodyInk}, Dark={StaticResource InkDark}}" />
                                                 </HorizontalStackLayout>
@@ -332,7 +329,7 @@
                                                                    HorizontalOptions="Center" VerticalOptions="Center" />
                                                         </Border>
                                                         <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
-                                                            <Label Text="{Binding LandlordNameDisplay}" FontFamily="OpenSansSemibold" FontSize="14"
+                                                            <Label Text="{Binding LandlordNameDisplay}" FontFamily="FontSemiBold" FontSize="14"
                                                                    MaxLines="1" LineBreakMode="TailTruncation"
                                                                    TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
                                                             <Label Text="{Binding LandlordPhoneDisplay}" Style="{StaticResource Caption}" FontSize="12.5"
@@ -352,7 +349,7 @@
                                                         <Grid ColumnDefinitions="14,*" ColumnSpacing="6">
                                                             <Image Source="location_pin.png" WidthRequest="14" HeightRequest="14"
                                                                    VerticalOptions="Start" Margin="0,2,0,0" />
-                                                            <Label Grid.Column="1" Text="{Binding Address}" FontFamily="OpenSansSemibold" FontSize="13.5"
+                                                            <Label Grid.Column="1" Text="{Binding Address}" FontFamily="FontSemiBold" FontSize="13.5"
                                                                    MaxLines="2" LineBreakMode="TailTruncation"
                                                                    TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
                                                         </Grid>
@@ -377,33 +374,34 @@
                                                 Stroke="{AppThemeBinding Light={StaticResource SubtleLine}, Dark={StaticResource LineDark}}"
                                                 BackgroundColor="{AppThemeBinding Light={StaticResource Canvas}, Dark={StaticResource SurfaceElevatedDark}}">
                                             <VerticalStackLayout Spacing="4">
-                                                <Label Text="Mô tả chi tiết từ chủ trọ" FontFamily="OpenSansSemibold" FontSize="12"
+                                                <Label Text="Mô tả chi tiết từ chủ trọ" FontFamily="FontSemiBold" FontSize="12"
                                                        TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
                                                 <Label Text="{Binding Description}" Style="{StaticResource BodyText}" FontSize="13.5"
                                                        MaxLines="4" LineBreakMode="TailTruncation" LineHeight="1.35" />
                                             </VerticalStackLayout>
                                         </Border>
 
-                                        <!-- E. Action Footer -->
-                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" IsVisible="{Binding IsPending}">
+                                        <!-- E. Action Footer (stacked cleanly so guidance text never wraps vertically on phones) -->
+                                        <VerticalStackLayout Spacing="10" IsVisible="{Binding IsPending}">
                                             <Label Text="Kiểm tra kỹ hình ảnh, giá thuê và vị trí trước khi xuất bản công khai."
-                                                   Style="{StaticResource Caption}" FontSize="12" VerticalOptions="Center" />
-                                            <buttons:SfButton Grid.Column="1" Text="✓ Phê duyệt &amp; Đăng công khai"
+                                                   Style="{StaticResource Caption}" FontSize="12.5" LineHeight="1.35" />
+                                            <buttons:SfButton Text="✓ Phê duyệt &amp; Đăng công khai"
                                                               Background="{StaticResource AvailableBrush}"
                                                               TextColor="White"
+                                                              HorizontalOptions="Fill"
                                                               HeightRequest="46" MinimumHeightRequest="46"
-                                                              Padding="22,0" CornerRadius="13"
+                                                              Padding="18,0" CornerRadius="16"
                                                               AutomationId="ModerationApprove"
                                                               Command="{Binding ApproveCommand, Source={RelativeSource AncestorType={x:Type vm:ModerationQueueViewModel}}, x:DataType=vm:ModerationQueueViewModel}"
                                                               CommandParameter="{Binding .}" />
-                                        </Grid>
+                                        </VerticalStackLayout>
 
                                         <Border IsVisible="{Binding IsPublished}"
                                                 Padding="14,10" StrokeThickness="1" StrokeShape="RoundRectangle 12"
                                                 Stroke="{StaticResource AvailableBorder}"
                                                 BackgroundColor="{AppThemeBinding Light={StaticResource AvailableBg}, Dark={StaticResource AvailableBgDark}}">
                                             <Label Text="✓ Đã phê duyệt hoàn tất — Phòng đang hiển thị công khai và trạng thái bên chủ trọ đã hoàn thành"
-                                                   FontFamily="OpenSansSemibold" FontSize="13"
+                                                   FontFamily="FontSemiBold" FontSize="13"
                                                    HorizontalTextAlignment="Center"
                                                    TextColor="{AppThemeBinding Light={StaticResource Available}, Dark={StaticResource AvailableDark}}" />
                                         </Border>
@@ -420,5 +418,7 @@
                                   AutomationId="ModerationLoadMore" />
             </VerticalStackLayout>
         </ScrollView>
+        </RefreshView>
+        </Grid>
     </Grid>
 </ContentPage>
