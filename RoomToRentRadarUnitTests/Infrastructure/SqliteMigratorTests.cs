@@ -264,7 +264,7 @@ public class SqliteMigratorTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(applied, Is.EqualTo(new[] { 2, 3, 4 }));
+            Assert.That(applied, Is.EqualTo(new[] { 2, 3, 4, 5 }));
             Assert.That(ReadScalarLong(connection, "SELECT COUNT(1) FROM Users;"), Is.EqualTo(1));
             Assert.That(ReadScalarLong(connection, "SELECT COUNT(1) FROM UserRefreshTokens;"), Is.EqualTo(1));
             Assert.That(ReadScalarText(connection, "SELECT SelectedCampusId FROM Users WHERE Id = 'user-old';"), Is.EqualTo("ICTU"));
