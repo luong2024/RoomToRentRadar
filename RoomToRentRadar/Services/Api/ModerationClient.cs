@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using RoomToRentRadar.Shared.Listings;
 using RoomToRentRadar.Shared.Moderation;
 using RoomToRentRadar.Shared.Serialization;
 
@@ -7,12 +8,20 @@ namespace RoomToRentRadar.Services.Api;
 
 public sealed class ModerationClient(HttpClient httpClient) : IModerationClient
 {
-    public async Task<ModerationListingQueueDto> GetPendingListingsAsync(
+    public Task<ModerationListingQueueDto> GetPendingListingsAsync(
+        int limit = 20,
+        string? cursor = null,
+        CancellationToken cancellationToken = default)
+        => GetListingsAsync(ListingStatus.PendingReview, limit, cursor, cancellationToken);
+
+    public async Task<ModerationListingQueueDto> GetListingsAsync(
+        ListingStatus status,
         int limit = 20,
         string? cursor = null,
         CancellationToken cancellationToken = default)
     {
-        var url = $"api/v1/moderation/listings?status=pending_review&limit={limit}";
+        var wireStatus = ListingStatusWire.ToWireValue(status);
+        var url = $"api/v1/moderation/listings?status={Uri.EscapeDataString(wireStatus)}&limit={limit}";
         if (!string.IsNullOrEmpty(cursor))
         {
             url += $"&cursor={Uri.EscapeDataString(cursor)}";

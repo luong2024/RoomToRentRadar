@@ -102,27 +102,95 @@ public sealed class ModerationQueueRepository(AppDbContext dbContext) : IModerat
             .AsNoTracking()
             .Where(listing => listing.Status == status);
 
-        if (cursor is not null)
+        if (status == ListingStatus.Published)
         {
-            var createdAt = cursor.CreatedAt;
-            var listingId = cursor.ListingId;
-            listings = listings.Where(listing =>
-                listing.CreatedAt > createdAt
-                || (listing.CreatedAt == createdAt && listing.Id.CompareTo(listingId) > 0));
+            if (cursor is not null)
+            {
+                var updatedAt = cursor.CreatedAt;
+                var listingId = cursor.ListingId;
+                listings = listings.Where(listing =>
+                    listing.UpdatedAt < updatedAt
+                    || (listing.UpdatedAt == updatedAt && listing.Id.CompareTo(listingId) < 0));
+            }
+
+            listings = listings
+                .OrderByDescending(listing => listing.UpdatedAt)
+                .ThenByDescending(listing => listing.Id);
+        }
+        else
+        {
+            if (cursor is not null)
+            {
+                var createdAt = cursor.CreatedAt;
+                var listingId = cursor.ListingId;
+                listings = listings.Where(listing =>
+                    listing.CreatedAt > createdAt
+                    || (listing.CreatedAt == createdAt && listing.Id.CompareTo(listingId) > 0));
+            }
+
+            listings = listings
+                .OrderBy(listing => listing.CreatedAt)
+                .ThenBy(listing => listing.Id);
         }
 
-        return await listings
-            .OrderBy(listing => listing.CreatedAt)
-            .ThenBy(listing => listing.Id)
+        var page = await listings
             .Take(take)
+            .ToListAsync(cancellationToken);
+
+        if (page.Count == 0)
+        {
+            return [];
+        }
+
+        var listingIds = page.Select(listing => listing.Id).ToList();
+        var photos = await dbContext.ListingPhotos
+            .AsNoTracking()
+            .Where(photo => listingIds.Contains(photo.ListingId))
+            .OrderByDescending(photo => photo.IsCover)
+            .ThenBy(photo => photo.SortOrder)
+            .ThenBy(photo => photo.Id)
+            .Select(photo => new ListingPhotoDto(
+                photo.Id,
+                photo.ListingId,
+                photo.Url,
+                photo.ThumbUrl,
+                photo.Width,
+                photo.Height,
+                photo.Kind,
+                photo.Alt,
+                photo.SortOrder,
+                photo.IsCover))
+            .ToListAsync(cancellationToken);
+
+        var photosByListing = photos
+            .GroupBy(photo => photo.ListingId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<ListingPhotoDto>)group.ToList());
+
+        return page
             .Select(listing => new ModerationListingDto(
                 listing.Id,
                 listing.Title,
                 listing.OwnerId,
                 listing.Status,
                 listing.CreatedAt,
-                listing.UpdatedAt))
-            .ToListAsync(cancellationToken);
+                listing.UpdatedAt,
+                listing.Description,
+                listing.Price,
+                listing.Deposit,
+                listing.AreaM2,
+                listing.RoomType,
+                listing.Bedrooms,
+                listing.Address,
+                listing.Lat,
+                listing.Lng,
+                listing.LandlordName,
+                listing.LandlordPhone,
+                photosByListing.TryGetValue(listing.Id, out var listingPhotos)
+                    ? listingPhotos
+                    : []))
+            .ToList();
     }
 
     public Task<ModerationReportDetailDto?> GetReportAsync(

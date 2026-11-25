@@ -237,7 +237,7 @@ root (`AddDataAccess`, `AddUseCases`, `AddInfrastructure`).
   one listing become `landlord` (they keep access to listing management and photo upload), all other
   legacy accounts become `student`. The `Down` migration merges both roles back to `user`.
 - Authorization policies live in `Features/Auth/AuthPolicies.cs` and rely on the role claim issued by
-  the JWT handler. `Landlord` guards listing management (`api/v1/listings` create/update/unpublish)
+  the JWT handler. `Landlord` guards listing management (`api/v1/listings` create/read/update/publish/unpublish/delete)
   and photo upload; `ModeratorOrAdmin` guards `api/v1/moderation/*`. Rejected calls return 401/403
   with a `ProblemDetails` `code`.
 - The mobile moderation queue uses `GET /api/v1/moderation/listings?status=pending_review`

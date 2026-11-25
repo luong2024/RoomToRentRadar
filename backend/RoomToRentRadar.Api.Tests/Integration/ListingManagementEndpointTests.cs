@@ -13,6 +13,8 @@ using RoomToRentRadar.Ports.Models.Photos;
 using RoomToRentRadar.Api.Tests.Infrastructure;
 using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.Shared.Listings;
+using RoomToRentRadar.Shared.Moderation;
+using RoomToRentRadar.Shared.Reports;
 using RoomToRentRadar.Shared.Serialization;
 
 namespace RoomToRentRadar.Api.Tests.Integration;
@@ -616,6 +618,451 @@ public sealed class ListingManagementEndpointTests
         var problem = await ReadProblemAsync(response, HttpStatusCode.BadRequest);
         Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo(ListingWriteProblemFactory.InvalidPhoto));
         Assert.That(await OwnerListingCountAsync(), Is.Zero);
+    }
+
+    [Test]
+    public async Task Publish_HiddenListingByOwner_TransitionsToPendingReviewAndBumpsVersion()
+    {
+        var token = await AccessTokenAsync();
+        var created = await CreateListingAsync(token);
+
+        using var unpublish = await SendAsync(
+            HttpMethod.Post,
+            $"/api/v1/listings/{created.Id}/unpublish",
+            content: null,
+            token);
+        Assert.That(unpublish.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        using var first = await SendAsync(
+            HttpMethod.Post,
+            $"/api/v1/listings/{created.Id}/publish",
+            content: null,
+            token);
+        Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var detail = await ReadDetailAsync(first);
+        Assert.That(detail.Status, Is.EqualTo(ListingStatus.PendingReview));
+
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var stored = await dbContext.Listings.AsNoTracking().SingleAsync(x => x.Id == created.Id);
+            Assert.Multiple(() =>
+            {
+                Assert.That(stored.Status, Is.EqualTo(ListingStatus.PendingReview));
+                Assert.That(stored.Version, Is.EqualTo(2));
+            });
+        }
+
+        using var second = await SendAsync(
+            HttpMethod.Post,
+            $"/api/v1/listings/{created.Id}/publish",
+            content: null,
+            token);
+        Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await ReadDetailAsync(second)).Status, Is.EqualTo(ListingStatus.PendingReview));
+
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var stored = await dbContext.Listings.AsNoTracking().SingleAsync(x => x.Id == created.Id);
+            Assert.That(stored.Version, Is.EqualTo(2));
+        }
+    }
+
+    [Test]
+    public async Task Publish_RemovedListing_ReturnsInvalidListingTransition()
+    {
+        var listingId = TestListingsSeed.IdFor(24);
+        var ownerId = await DemoUserIdAsync();
+        await AssignOwnerAsync(listingId, ownerId);
+
+        using var response = await SendAsync(
+            HttpMethod.Post,
+            $"/api/v1/listings/{listingId}/publish",
+            content: null,
+            await AccessTokenAsync());
+
+        var problem = await ReadProblemAsync(response, HttpStatusCode.Conflict);
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                problem.GetProperty("code").GetString(),
+                Is.EqualTo(ListingWriteProblemFactory.InvalidListingTransition));
+            Assert.That(
+                problem.GetProperty("detail").GetString(),
+                Is.EqualTo("A removed listing cannot be modified."));
+        });
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var stored = await dbContext.Listings.AsNoTracking()
+            .SingleAsync(x => x.Id == listingId);
+        Assert.That(stored.Status, Is.EqualTo(ListingStatus.Removed));
+    }
+
+    [Test]
+    public async Task Publish_ByNonOwner_ReturnsNotFound()
+    {
+        var token = await AccessTokenAsync();
+        var created = await CreateListingAsync(token);
+        using var unpublish = await SendAsync(
+            HttpMethod.Post,
+            $"/api/v1/listings/{created.Id}/unpublish",
+            content: null,
+            token);
+        Assert.That(unpublish.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        var otherToken = await SeedSecondUserAndLoginAsync();
+        using var response = await SendAsync(
+            HttpMethod.Post,
+            $"/api/v1/listings/{created.Id}/publish",
+            content: null,
+            otherToken);
+
+        var problem = await ReadProblemAsync(response, HttpStatusCode.NotFound);
+        Assert.That(
+            problem.GetProperty("code").GetString(),
+            Is.EqualTo(ListingWriteProblemFactory.ListingNotFound));
+    }
+
+    [Test]
+    public async Task Update_RemovedListing_ReturnsInvalidListingTransition()
+    {
+        var listingId = TestListingsSeed.IdFor(24);
+        var ownerId = await DemoUserIdAsync();
+        await AssignOwnerAsync(listingId, ownerId);
+
+        using var form = CreateForm(
+            DefaultFields(title: "Revived room"),
+            [(TestImageFactory.CreateJpeg(), "image/jpeg", "extra.jpg")]);
+        using var response = await SendAsync(
+            HttpMethod.Put,
+            $"/api/v1/listings/{listingId}",
+            form,
+            await AccessTokenAsync());
+
+        var problem = await ReadProblemAsync(response, HttpStatusCode.Conflict);
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                problem.GetProperty("code").GetString(),
+                Is.EqualTo(ListingWriteProblemFactory.InvalidListingTransition));
+            Assert.That(
+                problem.GetProperty("detail").GetString(),
+                Is.EqualTo("A removed listing cannot be modified."));
+            Assert.That(StoredFileCount(listingId), Is.Zero);
+        });
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var stored = await dbContext.Listings.AsNoTracking()
+            .SingleAsync(x => x.Id == listingId);
+        Assert.That(stored.Status, Is.EqualTo(ListingStatus.Removed));
+    }
+
+    [Test]
+    public async Task Delete_Anonymous_ReturnsUnauthorizedProblem()
+    {
+        using var response = await SendAsync(
+            HttpMethod.Delete,
+            $"/api/v1/listings/{TestListingsSeed.IdFor(1)}",
+            content: null,
+            token: null);
+
+        var problem = await ReadProblemAsync(response, HttpStatusCode.Unauthorized);
+        Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo("unauthorized"));
+    }
+
+    [Test]
+    public async Task Delete_AsStudent_ReturnsForbidden()
+    {
+        const string email = "student@example.test";
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await TestUsersSeed.SeedAdditionalAsync(
+                dbContext,
+                Guid.NewGuid(),
+                email,
+                UserRole.Student,
+                "Student Tester");
+        }
+
+        var studentToken = await LoginAsync(email, TestUsersSeed.Password);
+        using var response = await SendAsync(
+            HttpMethod.Delete,
+            $"/api/v1/listings/{TestListingsSeed.IdFor(1)}",
+            content: null,
+            studentToken);
+
+        var problem = await ReadProblemAsync(response, HttpStatusCode.Forbidden);
+        Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo("forbidden"));
+    }
+
+    [Test]
+    public async Task Delete_ByNonOwner_ReturnsNotFoundAndLeavesListingIntact()
+    {
+        var created = await CreateListingAsync(await AccessTokenAsync());
+        var otherToken = await SeedSecondUserAndLoginAsync();
+
+        using var response = await SendAsync(
+            HttpMethod.Delete,
+            $"/api/v1/listings/{created.Id}",
+            content: null,
+            otherToken);
+
+        var problem = await ReadProblemAsync(response, HttpStatusCode.NotFound);
+        Assert.That(
+            problem.GetProperty("code").GetString(),
+            Is.EqualTo(ListingWriteProblemFactory.ListingNotFound));
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var exists = await dbContext.Listings.AnyAsync(x => x.Id == created.Id);
+        Assert.Multiple(() =>
+        {
+            Assert.That(exists, Is.True);
+            Assert.That(StoredFileCount(created.Id), Is.EqualTo(6));
+        });
+    }
+
+    [Test]
+    public async Task Delete_UnknownListing_ReturnsNotFound()
+    {
+        using var response = await SendAsync(
+            HttpMethod.Delete,
+            $"/api/v1/listings/{Guid.NewGuid()}",
+            content: null,
+            await AccessTokenAsync());
+
+        var problem = await ReadProblemAsync(response, HttpStatusCode.NotFound);
+        Assert.That(
+            problem.GetProperty("code").GetString(),
+            Is.EqualTo(ListingWriteProblemFactory.ListingNotFound));
+    }
+
+    [Test]
+    public async Task Delete_OwnedListingWithoutAuditLogs_HardDeletesRowPhotosAndFiles()
+    {
+        var token = await AccessTokenAsync();
+        var created = await CreateListingAsync(token);
+        Assert.That(StoredFileCount(created.Id), Is.EqualTo(6));
+
+        using var deleteResponse = await SendAsync(
+            HttpMethod.Delete,
+            $"/api/v1/listings/{created.Id}",
+            content: null,
+            token);
+
+        Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var listingExists = await dbContext.Listings.AnyAsync(x => x.Id == created.Id);
+            var photoCount = await dbContext.ListingPhotos.CountAsync(x => x.ListingId == created.Id);
+            Assert.Multiple(() =>
+            {
+                Assert.That(listingExists, Is.False);
+                Assert.That(photoCount, Is.Zero);
+                Assert.That(StoredFileCount(created.Id), Is.Zero);
+            });
+        }
+
+        using var mineResponse = await SendAsync(HttpMethod.Get, "/api/v1/listings/mine", null, token);
+        Assert.That(mineResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var mine = await mineResponse.Content.ReadFromJsonAsync<List<ManagedListingDto>>(ApiJson.Options);
+        Assert.That(mine, Is.Empty);
+
+        using var publicDetail = await _client.GetAsync($"/api/v1/listings/{created.Id}");
+        Assert.That(publicDetail.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+    }
+
+    [Test]
+    public async Task Delete_OwnedApprovedListingWithModerationAuditLog_SucceedsPreservesAuditLogAndRemovesFromOwnerAndPublic()
+    {
+        const string moderatorEmail = "moderator@example.test";
+        const string studentEmail = "student@example.test";
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await TestUsersSeed.SeedAdditionalAsync(
+                dbContext,
+                Guid.NewGuid(),
+                moderatorEmail,
+                UserRole.Moderator,
+                "Moderator Tester");
+            await TestUsersSeed.SeedAdditionalAsync(
+                dbContext,
+                Guid.NewGuid(),
+                studentEmail,
+                UserRole.Student,
+                "Student Tester");
+        }
+
+        var ownerToken = await AccessTokenAsync();
+        var created = await CreateListingAsync(ownerToken);
+
+        var moderatorToken = await LoginAsync(moderatorEmail, TestUsersSeed.Password);
+        using var approveResponse = await SendAsync(
+            HttpMethod.Post,
+            $"/api/v1/moderation/listings/{created.Id}/approve",
+            content: null,
+            moderatorToken);
+        Assert.That(approveResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+        Assert.That(await SearchIdsAsync(), Does.Contain(created.Id));
+
+        var studentToken = await LoginAsync(studentEmail, TestUsersSeed.Password);
+        using var favResponse = await SendAsync(
+            HttpMethod.Put,
+            $"/api/v1/favourites/{created.Id}",
+            content: null,
+            studentToken);
+        Assert.That(favResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+        using var deleteResponse = await SendAsync(
+            HttpMethod.Delete,
+            $"/api/v1/listings/{created.Id}",
+            content: null,
+            ownerToken);
+        Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var auditCount = await dbContext.ModerationAuditLogs.CountAsync(x => x.ListingId == created.Id);
+            var photoCount = await dbContext.ListingPhotos.CountAsync(x => x.ListingId == created.Id);
+            var favouriteCount = await dbContext.ListingFavourites.CountAsync(x => x.ListingId == created.Id);
+            var storedListing = await dbContext.Listings.AsNoTracking().SingleAsync(x => x.Id == created.Id);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(auditCount, Is.EqualTo(1));
+                Assert.That(photoCount, Is.Zero);
+                Assert.That(favouriteCount, Is.Zero);
+                Assert.That(storedListing.OwnerId, Is.Null);
+                Assert.That(storedListing.Status, Is.EqualTo(ListingStatus.Removed));
+                Assert.That(StoredFileCount(created.Id), Is.Zero);
+            });
+        }
+
+        using var mineResponse = await SendAsync(HttpMethod.Get, "/api/v1/listings/mine", null, ownerToken);
+        Assert.That(mineResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var mine = await mineResponse.Content.ReadFromJsonAsync<List<ManagedListingDto>>(ApiJson.Options);
+        Assert.That(mine, Is.Empty);
+
+        using var manageResponse = await SendAsync(
+            HttpMethod.Get,
+            $"/api/v1/listings/{created.Id}/manage",
+            content: null,
+            ownerToken);
+        var manageProblem = await ReadProblemAsync(manageResponse, HttpStatusCode.NotFound);
+        Assert.That(
+            manageProblem.GetProperty("code").GetString(),
+            Is.EqualTo(ListingWriteProblemFactory.ListingNotFound));
+
+        Assert.That(await SearchIdsAsync(), Does.Not.Contain(created.Id));
+
+        using var publicDetail = await _client.GetAsync($"/api/v1/listings/{created.Id}");
+        Assert.That(publicDetail.StatusCode, Is.EqualTo(HttpStatusCode.Gone));
+    }
+
+    [Test]
+    public async Task Delete_ApprovedListingWithActiveReport_DismissesReportClearsPiiAndPreservesAuditLogs()
+    {
+        const string moderatorEmail = "moderator@example.test";
+        const string studentEmail = "student@example.test";
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await TestUsersSeed.SeedAdditionalAsync(
+                dbContext,
+                Guid.NewGuid(),
+                moderatorEmail,
+                UserRole.Moderator,
+                "Moderator Tester");
+            await TestUsersSeed.SeedAdditionalAsync(
+                dbContext,
+                Guid.NewGuid(),
+                studentEmail,
+                UserRole.Student,
+                "Student Tester");
+        }
+
+        var ownerToken = await AccessTokenAsync();
+        var fields = DefaultFields()
+            .Concat(
+            [
+                ("landlord_name", "Secret Landlord"),
+                ("landlord_phone", "0901234567")
+            ])
+            .ToArray();
+        var created = await CreateListingAsync(ownerToken, fields: fields);
+
+        var moderatorToken = await LoginAsync(moderatorEmail, TestUsersSeed.Password);
+        using var approveResponse = await SendAsync(
+            HttpMethod.Post,
+            $"/api/v1/moderation/listings/{created.Id}/approve",
+            content: null,
+            moderatorToken);
+        Assert.That(approveResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+        var studentToken = await LoginAsync(studentEmail, TestUsersSeed.Password);
+        using var reportContent = JsonContent.Create(
+            new CreateListingReportRequest { Reason = "spam", Details = "Suspicious price" },
+            options: ApiJson.Options);
+        using var reportResponse = await SendAsync(
+            HttpMethod.Post,
+            $"/api/v1/listings/{created.Id}/reports",
+            reportContent,
+            studentToken);
+        Assert.That(reportResponse.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+        var createdReport = await reportResponse.Content.ReadFromJsonAsync<CreateListingReportResponse>(ApiJson.Options);
+        Assert.That(createdReport, Is.Not.Null);
+
+        using var claimResponse = await SendAsync(
+            HttpMethod.Post,
+            $"/api/v1/moderation/reports/{createdReport!.Id}/claim",
+            content: null,
+            moderatorToken);
+        Assert.That(claimResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+        using var deleteResponse = await SendAsync(
+            HttpMethod.Delete,
+            $"/api/v1/listings/{created.Id}",
+            content: null,
+            ownerToken);
+        Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var auditCount = await dbContext.ModerationAuditLogs.CountAsync(x => x.ListingId == created.Id);
+            var storedReport = await dbContext.ListingReports.AsNoTracking().SingleAsync(x => x.Id == createdReport.Id);
+            var storedListing = await dbContext.Listings.AsNoTracking().SingleAsync(x => x.Id == created.Id);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(auditCount, Is.EqualTo(2));
+                Assert.That(storedReport.Status, Is.EqualTo(ListingReportStatus.Dismissed));
+                Assert.That(storedReport.ClaimedByUserId, Is.Null);
+                Assert.That(storedReport.ClaimedUntilUtc, Is.Null);
+                Assert.That(storedListing.OwnerId, Is.Null);
+                Assert.That(storedListing.Status, Is.EqualTo(ListingStatus.Removed));
+                Assert.That(storedListing.LandlordName, Is.Empty);
+                Assert.That(storedListing.LandlordPhone, Is.Empty);
+            });
+        }
+
+        using var queueResponse = await SendAsync(
+            HttpMethod.Get,
+            "/api/v1/moderation/reports",
+            content: null,
+            moderatorToken);
+        Assert.That(queueResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var queue = await queueResponse.Content.ReadFromJsonAsync<ModerationReportQueueDto>(ApiJson.Options);
+        Assert.That(queue, Is.Not.Null);
+        Assert.That(queue!.Items.Select(x => x.ListingId), Does.Not.Contain(created.Id));
     }
 
     private static (string Name, string Value)[] DefaultFields(

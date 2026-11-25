@@ -4,21 +4,23 @@
              xmlns:vm="clr-namespace:RoomToRentRadar.ViewModels"
              xmlns:models="clr-namespace:RoomToRentRadar.Models"
              xmlns:buttons="clr-namespace:Syncfusion.Maui.Toolkit.Buttons;assembly=Syncfusion.Maui.Toolkit"
-             xmlns:cards="clr-namespace:Syncfusion.Maui.Toolkit.Cards;assembly=Syncfusion.Maui.Toolkit"
-             xmlns:chips="clr-namespace:Syncfusion.Maui.Toolkit.Chips;assembly=Syncfusion.Maui.Toolkit"
              xmlns:progressBar="clr-namespace:Syncfusion.Maui.Toolkit.ProgressBar;assembly=Syncfusion.Maui.Toolkit"
-             xmlns:pullToRefresh="clr-namespace:Syncfusion.Maui.Toolkit.PullToRefresh;assembly=Syncfusion.Maui.Toolkit"
              x:Class="RoomToRentRadar.Views.MyListingsPage"
              x:DataType="vm:MyListingsViewModel"
              Title="Tin của tôi"
              SafeAreaEdges="All">
-    <Grid RowDefinitions="Auto,Auto,*" RowSpacing="0"
-          MaximumWidthRequest="960" HorizontalOptions="Fill">
-        <!-- 8.1 White-First Screen Header -->
-        <Border StrokeShape="Rectangle" StrokeThickness="0"
+    <ContentPage.Resources>
+        <Color x:Key="WarmAccentDark">#F2B872</Color>
+        <SolidColorBrush x:Key="DangerSoftDarkBrush" Color="{StaticResource DangerSoftDark}" />
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,Auto,*" RowSpacing="0" HorizontalOptions="Fill">
+        <!-- 8.1 Full-Width White-First Screen Header -->
+        <Border StrokeShape="Rectangle" StrokeThickness="0" HorizontalOptions="Fill"
                 BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
-            <VerticalStackLayout Spacing="0">
-                <Grid Padding="16,14" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <VerticalStackLayout Spacing="0" HorizontalOptions="Fill">
+                <Grid Padding="16,14" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8"
+                      MaximumWidthRequest="960" HorizontalOptions="Fill">
                     <VerticalStackLayout Spacing="2" VerticalOptions="Center">
                         <Label Text="Tin của tôi" Style="{StaticResource ScreenTitle}" FontSize="22"
                                SemanticProperties.HeadingLevel="Level1" />
@@ -26,19 +28,24 @@
                     </VerticalStackLayout>
                     <buttons:SfButton Grid.Column="1" Text="+ Đăng tin" Command="{Binding CreateCommand}"
                                       IsVisible="{Binding IsAuthenticated}" VerticalOptions="Center"
-                                      HeightRequest="44" WidthRequest="104" Padding="10,0" />
-                    <buttons:SfButton Grid.Column="2" Text="Đăng xuất" Command="{Binding SignOutCommand}"
+                                      HeightRequest="42" Padding="12,0" />
+                    <buttons:SfButton Grid.Column="2" Text="Làm mới" Command="{Binding LoadCommand}"
                                       IsVisible="{Binding IsAuthenticated}" Style="{StaticResource SoftSfButton}"
-                                      VerticalOptions="Center" HeightRequest="44" WidthRequest="96" Padding="8,0"
+                                      VerticalOptions="Center" HeightRequest="42" Padding="12,0"
+                                      AutomationId="MyListingsRefresh" />
+                    <buttons:SfButton Grid.Column="3" Text="Đăng xuất" Command="{Binding SignOutCommand}"
+                                      IsVisible="{Binding IsAuthenticated}" Style="{StaticResource OutlineSfButton}"
+                                      VerticalOptions="Center" HeightRequest="42" Padding="10,0"
                                       AutomationId="MyListingsSignOut" />
                 </Grid>
                 <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}" />
             </VerticalStackLayout>
         </Border>
 
-        <!-- Progress & Error / Status Bar -->
-        <VerticalStackLayout Grid.Row="1" Padding="16,8,16,0" Spacing="8">
-            <progressBar:SfLinearProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" />
+        <!-- Progress, Status Banner & Dashboard Filter Bar -->
+        <VerticalStackLayout Grid.Row="1" Padding="16,8,16,0" Spacing="8"
+                             MaximumWidthRequest="960" HorizontalOptions="Fill">
+            <progressBar:SfLinearProgressBar IsIndeterminate="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
             <Border Padding="14,10" StrokeShape="RoundRectangle 14" IsVisible="{Binding IsAuthenticated}">
                 <Border.Triggers>
                     <DataTrigger TargetType="Border" Binding="{Binding Message}" Value="">
@@ -52,6 +59,41 @@
                                       Style="{StaticResource SoftSfButton}" WidthRequest="88" />
                 </Grid>
             </Border>
+            <ContentView IsVisible="{Binding IsAuthenticated}">
+                <VerticalStackLayout Spacing="8" Padding="0,2,0,4" IsVisible="{Binding HasAnyListings}">
+                    <Label Text="{Binding DashboardSummaryText}"
+                           Style="{StaticResource Caption}"
+                           FontSize="12.5"
+                           AutomationId="MyListingsDashboardSummary" />
+                    <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                        <HorizontalStackLayout Spacing="8"
+                                               BindableLayout.ItemsSource="{Binding StatusFilters}"
+                                               AutomationId="MyListingsStatusFilters">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="models:OwnedListingFilterOption">
+                                    <buttons:SfButton Text="{Binding DisplayText}"
+                                                      Command="{Binding SelectCommand}"
+                                                      Style="{StaticResource OutlineSfButton}"
+                                                      HeightRequest="38"
+                                                      MinimumHeightRequest="38"
+                                                      Padding="14,0"
+                                                      FontSize="12.5"
+                                                      CornerRadius="19">
+                                        <buttons:SfButton.Triggers>
+                                            <DataTrigger TargetType="buttons:SfButton" Binding="{Binding IsSelected}" Value="True">
+                                                <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource AccentSoftBrush}, Dark={StaticResource AccentSoftDarkBrush}}" />
+                                                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource AccentPressed}, Dark={StaticResource AccentDark}}" />
+                                                <Setter Property="Stroke" Value="{StaticResource AccentBrush}" />
+                                                <Setter Property="StrokeThickness" Value="1.5" />
+                                            </DataTrigger>
+                                        </buttons:SfButton.Triggers>
+                                    </buttons:SfButton>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </HorizontalStackLayout>
+                    </ScrollView>
+                </VerticalStackLayout>
+            </ContentView>
         </VerticalStackLayout>
 
         <!-- 8.2 Dedicated Logged-Out Experience (Shown only when IsAuthenticated == False) -->
@@ -62,14 +104,11 @@
                 </DataTrigger>
             </ScrollView.Triggers>
             <Border Padding="24,28" StrokeShape="RoundRectangle 22" VerticalOptions="Start" MaximumWidthRequest="460" HorizontalOptions="Fill">
-                <Border.Shadow>
-                    <Shadow Brush="{StaticResource InkBrush}" Offset="0,6" Radius="16" Opacity="0.06" />
-                </Border.Shadow>
                 <VerticalStackLayout Spacing="16" HorizontalOptions="Fill">
                     <Border WidthRequest="56" HeightRequest="56" Padding="12" StrokeThickness="0"
                             BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}"
                             StrokeShape="RoundRectangle 16" HorizontalOptions="Start">
-                        <Image Source="radar_mark.png" />
+                        <Image Source="radar_mark.png" WidthRequest="32" HeightRequest="32" />
                     </Border>
                     <VerticalStackLayout Spacing="6">
                         <Label Text="DÀNH CHO CHỦ PHÒNG" Style="{StaticResource Eyebrow}"
@@ -85,74 +124,148 @@
             </Border>
         </ScrollView>
 
-        <!-- 8.3 & 8.4 Authenticated Listings Collection with Dedicated Empty State -->
-        <pullToRefresh:SfPullToRefresh Grid.Row="2" IsRefreshing="{Binding IsBusy}" RefreshCommand="{Binding LoadCommand}"
-                                       IsVisible="{Binding IsAuthenticated}" Padding="16,10,16,12">
-            <pullToRefresh:SfPullToRefresh.PullableContent>
-                <CollectionView ItemsSource="{Binding Listings}" SelectionMode="None">
-                    <CollectionView.EmptyView>
-                        <ContentView>
-                        <Border Padding="24,28" Margin="0,8" VerticalOptions="Start" StrokeShape="RoundRectangle 22">
-                            <VerticalStackLayout Spacing="12" HorizontalOptions="Center">
-                                <Border BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}"
-                                        Padding="14" StrokeThickness="0" StrokeShape="RoundRectangle 18" HorizontalOptions="Center">
-                                    <Image Source="radar_mark.png" WidthRequest="28" HeightRequest="28" />
-                                </Border>
-                                <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
-                                <Label Text="Bạn chưa có tin đăng nào" FontFamily="OpenSansSemibold" FontSize="17" HorizontalTextAlignment="Center">
-                                    <Label.Triggers>
-                                        <DataTrigger TargetType="Label" Binding="{Binding IsBusy}" Value="True">
-                                            <Setter Property="Text" Value="Đang tải tin của bạn…" />
-                                        </DataTrigger>
-                                        <DataTrigger TargetType="Label" Binding="{Binding Message}" Value="Không thể tải tin của bạn. Kiểm tra kết nối và thử lại.">
-                                            <Setter Property="Text" Value="Chưa tải được tin đăng" />
-                                        </DataTrigger>
-                                    </Label.Triggers>
-                                </Label>
-                                <Label Text="Tạo tin cho thuê với ảnh đẹp và thông tin rõ ràng để người thuê dễ tìm thấy phòng."
-                                       Style="{StaticResource Caption}" FontSize="13" HorizontalTextAlignment="Center">
-                                    <Label.Triggers>
-                                        <DataTrigger TargetType="Label" Binding="{Binding IsBusy}" Value="True">
-                                            <Setter Property="IsVisible" Value="False" />
-                                        </DataTrigger>
-                                        <DataTrigger TargetType="Label" Binding="{Binding Message}" Value="Không thể tải tin của bạn. Kiểm tra kết nối và thử lại.">
-                                            <Setter Property="Text" Value="Kiểm tra kết nối, sau đó bấm Tải lại ở phía trên." />
-                                        </DataTrigger>
-                                    </Label.Triggers>
-                                </Label>
-                                <buttons:SfButton Text="+ Đăng tin đầu tiên" Command="{Binding CreateCommand}"
-                                                  HorizontalOptions="Center" WidthRequest="190" Margin="0,4,0,0" />
-                            </VerticalStackLayout>
+        <!-- 8.3 & 8.4 Authenticated Listings ScrollView + BindableLayout (Prevents WinUI 3 Card Clipping) -->
+        <ScrollView Grid.Row="2" IsVisible="{Binding IsAuthenticated}">
+            <VerticalStackLayout Padding="16,10,16,24" Spacing="12"
+                                 MaximumWidthRequest="960" HorizontalOptions="Fill">
+                <Border Padding="24,28" Margin="0,4" VerticalOptions="Start" StrokeShape="RoundRectangle 22"
+                        IsVisible="{Binding ShowEmptyState}">
+                    <VerticalStackLayout Spacing="12" HorizontalOptions="Center">
+                        <Border BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}"
+                                Padding="14" StrokeThickness="0" StrokeShape="RoundRectangle 18" HorizontalOptions="Center">
+                            <Image Source="radar_mark.png" WidthRequest="28" HeightRequest="28" />
                         </Border>
-                        </ContentView>
-                    </CollectionView.EmptyView>
-                    <CollectionView.ItemTemplate>
+                        <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
+                        <Label Text="Bạn chưa có tin đăng nào" FontFamily="OpenSansSemibold" FontSize="17" HorizontalTextAlignment="Center">
+                            <Label.Triggers>
+                                <DataTrigger TargetType="Label" Binding="{Binding IsFilteredEmpty}" Value="True">
+                                    <Setter Property="Text" Value="Không có tin nào ở trạng thái này" />
+                                </DataTrigger>
+                                <DataTrigger TargetType="Label" Binding="{Binding IsBusy}" Value="True">
+                                    <Setter Property="Text" Value="Đang tải tin của bạn…" />
+                                </DataTrigger>
+                                <DataTrigger TargetType="Label" Binding="{Binding Message}" Value="Không thể tải tin của bạn. Kiểm tra kết nối và thử lại.">
+                                    <Setter Property="Text" Value="Chưa tải được tin đăng" />
+                                </DataTrigger>
+                            </Label.Triggers>
+                        </Label>
+                        <Label Text="Tạo tin cho thuê với ảnh đẹp và thông tin rõ ràng để người thuê dễ tìm thấy phòng."
+                               Style="{StaticResource Caption}" FontSize="13" HorizontalTextAlignment="Center">
+                            <Label.Triggers>
+                                <DataTrigger TargetType="Label" Binding="{Binding IsFilteredEmpty}" Value="True">
+                                    <Setter Property="Text" Value="Chọn bộ lọc khác ở phía trên để xem các tin đăng còn lại của bạn." />
+                                </DataTrigger>
+                                <DataTrigger TargetType="Label" Binding="{Binding IsBusy}" Value="True">
+                                    <Setter Property="IsVisible" Value="False" />
+                                </DataTrigger>
+                                <DataTrigger TargetType="Label" Binding="{Binding Message}" Value="Không thể tải tin của bạn. Kiểm tra kết nối và thử lại.">
+                                    <Setter Property="Text" Value="Kiểm tra kết nối, sau đó bấm Tải lại ở phía trên." />
+                                </DataTrigger>
+                            </Label.Triggers>
+                        </Label>
+                        <buttons:SfButton Text="+ Đăng tin đầu tiên" Command="{Binding CreateCommand}"
+                                          IsVisible="{Binding NoOwnedListings}"
+                                          HorizontalOptions="Center" WidthRequest="190" Margin="0,4,0,0" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <VerticalStackLayout Spacing="12" BindableLayout.ItemsSource="{Binding Listings}">
+                    <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="models:OwnedListingItem">
-                            <cards:SfCardView Padding="16" Margin="0,0,0,12" Style="{StaticResource ElevatedCard}"
-                                              IndicatorColor="{StaticResource Accent}" IndicatorPosition="Left" IndicatorThickness="4">
-                                <VerticalStackLayout Spacing="10">
-                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                        <Label Text="{Binding PriceText}" FontFamily="OpenSansSemibold" FontSize="18"
-                                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}"
-                                               VerticalOptions="Center" />
-                                        <chips:SfChip Grid.Column="1" Text="{Binding StatusText}" Style="{StaticResource AccentSfChip}" IsEnabled="False" />
+                            <Border Padding="16" StrokeThickness="1" StrokeShape="RoundRectangle 18"
+                                    Stroke="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+                                <Border.Triggers>
+                                    <DataTrigger TargetType="Border" Binding="{Binding IsPublished}" Value="True">
+                                        <Setter Property="Stroke" Value="{StaticResource AvailableBorder}" />
+                                    </DataTrigger>
+                                </Border.Triggers>
+                                <VerticalStackLayout Spacing="12">
+                                    <Grid ColumnDefinitions="96,*" ColumnSpacing="12">
+                                        <Border WidthRequest="96" HeightRequest="84" Padding="0" StrokeThickness="0"
+                                                StrokeShape="RoundRectangle 14" VerticalOptions="Start"
+                                                BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
+                                            <Grid WidthRequest="96" HeightRequest="84">
+                                                <Image Source="{Binding FallbackIllustration}" WidthRequest="96" HeightRequest="84" Aspect="AspectFill"
+                                                       SemanticProperties.Description="Hình đại diện mặc định khi chưa có ảnh phòng" />
+                                                <Image Source="{Binding CoverThumbnailUrl}" WidthRequest="96" HeightRequest="84" Aspect="AspectFill"
+                                                       IsVisible="{Binding HasCoverThumbnail}"
+                                                       SemanticProperties.Description="Ảnh bìa phòng cho thuê" />
+                                            </Grid>
+                                        </Border>
+                                        <VerticalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                <Label Text="{Binding PriceText}" FontFamily="OpenSansSemibold" FontSize="17"
+                                                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}"
+                                                       VerticalOptions="Center" MaxLines="1" LineBreakMode="TailTruncation" />
+                                                <Border Grid.Column="1" Padding="10,4" StrokeThickness="0" StrokeShape="RoundRectangle 12"
+                                                        VerticalOptions="Center"
+                                                        BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}">
+                                                    <Border.Triggers>
+                                                        <DataTrigger TargetType="Border" Binding="{Binding IsPendingReview}" Value="True">
+                                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource WarmSoft}, Dark={StaticResource WarmSoftDark}}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger TargetType="Border" Binding="{Binding IsPublished}" Value="True">
+                                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource AvailableBg}, Dark={StaticResource AvailableBgDark}}" />
+                                                        </DataTrigger>
+                                                    </Border.Triggers>
+                                                    <Label Text="{Binding StatusText}" FontFamily="OpenSansSemibold" FontSize="11.5"
+                                                           TextColor="{AppThemeBinding Light={StaticResource AccentPressed}, Dark={StaticResource AccentDark}}">
+                                                        <Label.Triggers>
+                                                            <DataTrigger TargetType="Label" Binding="{Binding IsPendingReview}" Value="True">
+                                                                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource WarmAccent}, Dark={StaticResource WarmAccentDark}}" />
+                                                            </DataTrigger>
+                                                            <DataTrigger TargetType="Label" Binding="{Binding IsPublished}" Value="True">
+                                                                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Available}, Dark={StaticResource AvailableDark}}" />
+                                                            </DataTrigger>
+                                                        </Label.Triggers>
+                                                    </Label>
+                                                </Border>
+                                            </Grid>
+                                            <Label Text="{Binding Title}" Style="{StaticResource CardTitle}"
+                                                   MaxLines="2" LineBreakMode="TailTruncation" />
+                                            <Label Text="{Binding RoomSummaryText}" Style="{StaticResource Caption}"
+                                                   FontSize="12.5" MaxLines="1" LineBreakMode="TailTruncation" />
+                                        </VerticalStackLayout>
                                     </Grid>
-                                    <Label Text="{Binding Title}" Style="{StaticResource CardTitle}"
-                                           MaxLines="2" LineBreakMode="TailTruncation" />
                                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6">
                                         <Image Source="location_pin.png" WidthRequest="14" HeightRequest="14" VerticalOptions="Start" Margin="0,2,0,0" />
-                                        <Label Grid.Column="1" Text="{Binding Address}" Style="{StaticResource Caption}" MaxLines="2" LineBreakMode="TailTruncation" />
+                                        <Label Grid.Column="1" Text="{Binding Address}" Style="{StaticResource Caption}"
+                                               MaxLines="2" LineBreakMode="TailTruncation" />
                                     </Grid>
-                                    <buttons:SfButton Text="Chỉnh sửa &amp; quản lý tin  →"
-                                                      Style="{StaticResource SoftSfButton}"
-                                                      Command="{Binding EditCommand, Source={RelativeSource AncestorType={x:Type vm:MyListingsViewModel}}, x:DataType=vm:MyListingsViewModel}"
-                                                      CommandParameter="{Binding .}" />
+                                    <HorizontalStackLayout Spacing="8">
+                                        <buttons:SfButton Text="Chỉnh sửa"
+                                                          Style="{StaticResource SoftSfButton}"
+                                                          IsVisible="{Binding CanEdit}"
+                                                          HeightRequest="40" MinimumHeightRequest="40" Padding="14,0" FontSize="13" CornerRadius="12"
+                                                          Command="{Binding EditCommand, Source={RelativeSource AncestorType={x:Type vm:MyListingsViewModel}}, x:DataType=vm:MyListingsViewModel}"
+                                                          CommandParameter="{Binding .}" />
+                                        <buttons:SfButton Text="Đăng lại"
+                                                          Style="{StaticResource OutlineSfButton}"
+                                                          IsVisible="{Binding CanPublish}"
+                                                          HeightRequest="40" MinimumHeightRequest="40" Padding="14,0" FontSize="13" CornerRadius="12"
+                                                          Command="{Binding PublishCommand, Source={RelativeSource AncestorType={x:Type vm:MyListingsViewModel}}, x:DataType=vm:MyListingsViewModel}"
+                                                          CommandParameter="{Binding .}" />
+                                        <buttons:SfButton Text="Gỡ đăng"
+                                                          Style="{StaticResource OutlineSfButton}"
+                                                          IsVisible="{Binding CanUnpublish}"
+                                                          HeightRequest="40" MinimumHeightRequest="40" Padding="14,0" FontSize="13" CornerRadius="12"
+                                                          Command="{Binding UnpublishCommand, Source={RelativeSource AncestorType={x:Type vm:MyListingsViewModel}}, x:DataType=vm:MyListingsViewModel}"
+                                                          CommandParameter="{Binding .}" />
+                                        <buttons:SfButton Text="Xóa"
+                                                          Style="{StaticResource DangerSoftSfButton}"
+                                                          TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+                                                          Background="{AppThemeBinding Light={StaticResource DangerSoftBrush}, Dark={StaticResource DangerSoftDarkBrush}}"
+                                                          HeightRequest="40" MinimumHeightRequest="40" Padding="14,0" FontSize="13" CornerRadius="12"
+                                                          Command="{Binding DeleteCommand, Source={RelativeSource AncestorType={x:Type vm:MyListingsViewModel}}, x:DataType=vm:MyListingsViewModel}"
+                                                          CommandParameter="{Binding .}" />
+                                    </HorizontalStackLayout>
                                 </VerticalStackLayout>
-                            </cards:SfCardView>
+                            </Border>
                         </DataTemplate>
-                    </CollectionView.ItemTemplate>
-                </CollectionView>
-            </pullToRefresh:SfPullToRefresh.PullableContent>
-        </pullToRefresh:SfPullToRefresh>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
     </Grid>
 </ContentPage>

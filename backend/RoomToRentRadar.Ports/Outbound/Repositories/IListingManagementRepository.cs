@@ -25,4 +25,16 @@ public interface IListingManagementRepository
     void Add(Listing listing);
 
     void AddPhotoRange(IReadOnlyList<ListingPhoto> photos);
+
+    Task<bool> HasModerationAuditLogsAsync(
+        Guid listingId,
+        CancellationToken cancellationToken);
+
+    Task CleanupExternalReferencesAsync(
+        Guid listingId,
+        CancellationToken cancellationToken);
+
+    void Remove(Listing listing);
+
+    void RemovePhotoRange(IEnumerable<ListingPhoto> photos);
 }

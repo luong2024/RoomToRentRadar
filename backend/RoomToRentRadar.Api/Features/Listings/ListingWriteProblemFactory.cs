@@ -83,7 +83,7 @@ public static class ListingWriteProblemFactory
         InvalidListingTransition,
         StatusCodes.Status409Conflict,
         "Invalid listing transition",
-        "A removed listing cannot be unpublished.");
+        "A removed listing cannot be modified.");
 
     private static ProblemDetails Create(string code, int status, string title, string detail)
     {

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Services;
@@ -29,7 +30,8 @@ public class ListingEditorViewModelTests
     public async Task SaveCommand_ValidNewListing_ShowsPendingReviewAndReplacesSelectionsWithSavedPhotos()
     {
         var client = new FakeClient();
-        var viewModel = CreateViewModel(client);
+        var navigation = new FakeNavigationService();
+        var viewModel = CreateViewModel(client, navigation: navigation);
         PopulateForm(viewModel);
         AddPhotos(viewModel);
 
@@ -46,6 +48,7 @@ public class ListingEditorViewModelTests
             Assert.That(viewModel.CanUnpublish, Is.True);
             Assert.That(viewModel.IsBusy, Is.False);
             Assert.That(_temporaryPhotos.All(path => !File.Exists(path)), Is.True);
+            Assert.That(navigation.GoBackCalls, Is.EqualTo(1));
         });
     }
 
@@ -116,7 +119,8 @@ public class ListingEditorViewModelTests
     public async Task LoadCommand_ExistingListing_PopulatesFormAndSaveRetainsExistingPhotos()
     {
         var client = new FakeClient();
-        var viewModel = CreateViewModel(client);
+        var navigation = new FakeNavigationService();
+        var viewModel = CreateViewModel(client, navigation: navigation);
         viewModel.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = client.Saved.Id.ToString() });
 
         await viewModel.LoadCommand.ExecuteAsync(null);
@@ -141,6 +145,7 @@ public class ListingEditorViewModelTests
             Assert.That(client.UpdateCalls, Is.EqualTo(1));
             Assert.That(client.LastSubmission!.Title, Is.EqualTo("Updated room"));
             Assert.That(client.LastSubmission.Photos, Is.Empty);
+            Assert.That(navigation.GoBackCalls, Is.EqualTo(1));
         });
     }
 
@@ -374,15 +379,225 @@ public class ListingEditorViewModelTests
         Assert.That(viewModel.Message, Is.Empty);
     }
 
+    [Test]
+    public async Task PublishCommand_HiddenListing_TransitionsToPendingReviewAndEnablesUnpublish()
+    {
+        // Arrange
+        var client = new FakeClient();
+        client.Saved = client.Saved with { Status = ListingStatus.Hidden };
+        var viewModel = CreateViewModel(client);
+        viewModel.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = client.Saved.Id.ToString() });
+        await viewModel.LoadCommand.ExecuteAsync(null);
+
+        // Act
+        await viewModel.PublishCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(client.PublishCalls, Is.EqualTo(1));
+            Assert.That(viewModel.StatusText, Is.EqualTo(ListingStatusText.For(ListingStatus.PendingReview)));
+            Assert.That(viewModel.CanPublish, Is.False);
+            Assert.That(viewModel.CanUnpublish, Is.True);
+            Assert.That(viewModel.CanSave, Is.True);
+            Assert.That(viewModel.Message, Is.EqualTo("Đã gửi duyệt lại tin đăng. Tin đang chờ duyệt trước khi hiển thị công khai."));
+            Assert.That(viewModel.IsBusy, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task DeleteCommand_ConfirmationDeclined_DoesNotCallApiOrNavigateBack()
+    {
+        // Arrange
+        var client = new FakeClient();
+        var alerts = new FakeAlertPrompt { ConfirmResult = false };
+        var navigation = new FakeNavigationService();
+        var viewModel = CreateViewModel(client, alerts: alerts, navigation: navigation);
+        viewModel.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = client.Saved.Id.ToString() });
+        await viewModel.LoadCommand.ExecuteAsync(null);
+
+        // Act
+        await viewModel.DeleteCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(alerts.ConfirmCalls, Is.EqualTo(1));
+            Assert.That(client.DeleteCalls, Is.Zero);
+            Assert.That(navigation.GoBackCalls, Is.Zero);
+            Assert.That(viewModel.IsBusy, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task DeleteCommand_Confirmed_DeletesListingCleansTemporaryPhotosAndNavigatesBack()
+    {
+        // Arrange
+        var client = new FakeClient();
+        var alerts = new FakeAlertPrompt { ConfirmResult = true };
+        var navigation = new FakeNavigationService();
+        var viewModel = CreateViewModel(client, alerts: alerts, navigation: navigation);
+        viewModel.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = client.Saved.Id.ToString() });
+        await viewModel.LoadCommand.ExecuteAsync(null);
+        AddPhotos(viewModel);
+
+        // Act
+        await viewModel.DeleteCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(alerts.ConfirmCalls, Is.EqualTo(1));
+            Assert.That(client.DeleteCalls, Is.EqualTo(1));
+            Assert.That(navigation.GoBackCalls, Is.EqualTo(1));
+            Assert.That(viewModel.SelectedPhotos, Is.Empty);
+            Assert.That(_temporaryPhotos.All(path => !File.Exists(path)), Is.True);
+            Assert.That(viewModel.Message, Is.EqualTo("Đã xóa tin đăng."));
+            Assert.That(viewModel.IsBusy, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task LoadCommand_RemovedListing_DisablesSavingPublishingAndUnpublishing()
+    {
+        // Arrange
+        var client = new FakeClient();
+        client.Saved = client.Saved with { Status = ListingStatus.Removed };
+        var alerts = new FakeAlertPrompt { ConfirmResult = true };
+        var viewModel = CreateViewModel(client, alerts: alerts);
+        viewModel.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = client.Saved.Id.ToString() });
+
+        // Act
+        await viewModel.LoadCommand.ExecuteAsync(null);
+        await viewModel.SaveCommand.ExecuteAsync(null);
+        await viewModel.PublishCommand.ExecuteAsync(null);
+        await viewModel.UnpublishCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewModel.StatusText, Is.EqualTo(ListingStatusText.For(ListingStatus.Removed)));
+            Assert.That(viewModel.CanSave, Is.False);
+            Assert.That(viewModel.CanSaveListing, Is.False);
+            Assert.That(viewModel.SaveCommand.CanExecute(null), Is.False);
+            Assert.That(viewModel.CanPublish, Is.False);
+            Assert.That(viewModel.CanUnpublish, Is.False);
+            Assert.That(client.UpdateCalls, Is.Zero);
+            Assert.That(client.PublishCalls, Is.Zero);
+            Assert.That(client.UnpublishCalls, Is.Zero);
+            Assert.That(alerts.ConfirmCalls, Is.Zero);
+        });
+    }
+
+    [Test]
+    public async Task UseCurrentLocationCommand_Success_PopulatesSixDecimalCoordinatesShowsAccuracyAndRaisesResolvedEvent()
+    {
+        var previousCulture = CultureInfo.CurrentCulture;
+        try
+        {
+            // Arrange
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("vi-VN");
+            var locationService = new FakeDeviceLocationService
+            {
+                Result = new DeviceLocationResult(DeviceLocationStatus.Success, 10.7768894, 106.7008062, 12.4)
+            };
+            var viewModel = CreateViewModel(new FakeClient(), locationService: locationService);
+            viewModel.LatitudeField.Error = "Vĩ độ không hợp lệ.";
+            viewModel.LongitudeField.Error = "Kinh độ không hợp lệ.";
+            var resolvedCoordinates = new List<(double Latitude, double Longitude)>();
+            viewModel.CurrentLocationResolved += (_, coordinates) => resolvedCoordinates.Add(coordinates);
+
+            // Act
+            await viewModel.UseCurrentLocationCommand.ExecuteAsync(null);
+
+            // Assert
+            Assert.Multiple(() =>
+            {
+                Assert.That(locationService.GetLocationCalls, Is.EqualTo(1));
+                Assert.That(locationService.OpenSettingsCalls, Is.Zero);
+                Assert.That(viewModel.LatitudeField.Text, Is.EqualTo("10.776889"));
+                Assert.That(viewModel.LongitudeField.Text, Is.EqualTo("106.700806"));
+                Assert.That(viewModel.LatitudeField.Error, Is.Empty);
+                Assert.That(viewModel.LongitudeField.Error, Is.Empty);
+                Assert.That(viewModel.LocationStatusMessage, Is.EqualTo("Đã chọn vị trí hiện tại (độ chính xác ±12 m)."));
+                Assert.That(resolvedCoordinates, Is.EqualTo(new[] { (10.7768894, 106.7008062) }));
+                Assert.That(viewModel.IsLocating, Is.False);
+            });
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previousCulture;
+        }
+    }
+
+    [Test]
+    public async Task UseCurrentLocationCommand_LocationDisabledAndConfirmed_PromptsAndOpensLocationSettings()
+    {
+        // Arrange
+        var locationService = new FakeDeviceLocationService
+        {
+            Result = new DeviceLocationResult(DeviceLocationStatus.LocationDisabled)
+        };
+        var alerts = new FakeAlertPrompt { ConfirmResult = true };
+        var viewModel = CreateViewModel(new FakeClient(), alerts: alerts, locationService: locationService);
+
+        // Act
+        await viewModel.UseCurrentLocationCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(locationService.GetLocationCalls, Is.EqualTo(1));
+            Assert.That(alerts.ConfirmCalls, Is.EqualTo(1));
+            Assert.That(alerts.LastConfirmTitle, Is.EqualTo("Bật định vị GPS?"));
+            Assert.That(locationService.OpenSettingsCalls, Is.EqualTo(1));
+            Assert.That(viewModel.LocationStatusMessage, Is.EqualTo("GPS / Dịch vụ vị trí đang tắt. Hãy bật Vị trí rồi bấm định vị lại."));
+            Assert.That(viewModel.LatitudeField.Text, Is.Empty);
+            Assert.That(viewModel.LongitudeField.Text, Is.Empty);
+            Assert.That(viewModel.IsLocating, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task UseCurrentLocationCommand_PermissionDeniedAndDeclined_ShowsMessageWithoutOpeningSettings()
+    {
+        // Arrange
+        var locationService = new FakeDeviceLocationService
+        {
+            Result = new DeviceLocationResult(DeviceLocationStatus.PermissionDenied)
+        };
+        var alerts = new FakeAlertPrompt { ConfirmResult = false };
+        var viewModel = CreateViewModel(new FakeClient(), alerts: alerts, locationService: locationService);
+
+        // Act
+        await viewModel.UseCurrentLocationCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(locationService.GetLocationCalls, Is.EqualTo(1));
+            Assert.That(alerts.ConfirmCalls, Is.EqualTo(1));
+            Assert.That(alerts.LastConfirmTitle, Is.EqualTo("Cấp quyền Vị trí?"));
+            Assert.That(locationService.OpenSettingsCalls, Is.Zero);
+            Assert.That(viewModel.LocationStatusMessage, Is.EqualTo("Chưa có quyền truy cập vị trí chính xác. Cấp quyền Vị trí trong Cài đặt rồi thử lại."));
+            Assert.That(viewModel.LatitudeField.Text, Is.Empty);
+            Assert.That(viewModel.LongitudeField.Text, Is.Empty);
+            Assert.That(viewModel.IsLocating, Is.False);
+        });
+    }
+
     private static ListingEditorViewModel CreateViewModel(
         FakeClient client,
         bool signedIn = true,
-        FakeAlertPrompt? alerts = null)
+        FakeAlertPrompt? alerts = null,
+        FakeNavigationService? navigation = null,
+        FakeDeviceLocationService? locationService = null)
         => new(
             client,
             new AuthService(null!, new FakeTokenStore(signedIn)),
-            new FakeNavigationService(),
-            alerts ?? new FakeAlertPrompt());
+            navigation ?? new FakeNavigationService(),
+            alerts ?? new FakeAlertPrompt(),
+            locationService);
 
     private static void PopulateForm(ListingEditorViewModel viewModel)
     {
@@ -418,6 +633,8 @@ public class ListingEditorViewModelTests
 
     private sealed class FakeNavigationService : INavigationService
     {
+        public int GoBackCalls { get; private set; }
+
         public Task GoToListingEditorAsync(Guid? listingId = null) => Task.CompletedTask;
         public Task GoToRoomDetailAsync(Guid listingId) => Task.CompletedTask;
         public Task GoToLoginAsync() => Task.CompletedTask;
@@ -425,13 +642,18 @@ public class ListingEditorViewModelTests
         public Task GoToRoleRootAsync(AppUserRole? role) => Task.CompletedTask;
         public Task GoToDirectionsAsync(double destinationLat, double destinationLng, double? originLat, double? originLng) => Task.CompletedTask;
         public Task GoToComparisonAsync() => Task.CompletedTask;
-        public Task GoBackAsync() => Task.CompletedTask;
+        public Task GoBackAsync()
+        {
+            GoBackCalls++;
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeAlertPrompt : IAlertPrompt
     {
         public bool ConfirmResult { get; set; } = true;
         public int ConfirmCalls { get; private set; }
+        public string? LastConfirmTitle { get; private set; }
 
         public Task ShowAsync(
             string title,
@@ -448,7 +670,28 @@ public class ListingEditorViewModelTests
             CancellationToken cancellationToken = default)
         {
             ConfirmCalls++;
+            LastConfirmTitle = title;
             return Task.FromResult(ConfirmResult);
+        }
+    }
+
+    private sealed class FakeDeviceLocationService : IDeviceLocationService
+    {
+        public DeviceLocationResult Result { get; set; } = new(DeviceLocationStatus.Success, 10.776889, 106.700806, 8);
+        public bool OpenSettingsResult { get; set; } = true;
+        public int GetLocationCalls { get; private set; }
+        public int OpenSettingsCalls { get; private set; }
+
+        public Task<DeviceLocationResult> GetCurrentLocationAsync(CancellationToken cancellationToken = default)
+        {
+            GetLocationCalls++;
+            return Task.FromResult(Result);
+        }
+
+        public Task<bool> OpenLocationSettingsAsync()
+        {
+            OpenSettingsCalls++;
+            return Task.FromResult(OpenSettingsResult);
         }
     }
 
@@ -456,16 +699,20 @@ public class ListingEditorViewModelTests
     {
         public int CreateCalls { get; private set; }
         public int UpdateCalls { get; private set; }
+        public int PublishCalls { get; private set; }
         public int UnpublishCalls { get; private set; }
+        public int DeleteCalls { get; private set; }
         public int HouseRulesCalls { get; private set; }
         public ListingFormSubmission? LastSubmission { get; private set; }
         public UpdateHouseRulesRequest? LastHouseRulesRequest { get; private set; }
         public Exception? CreateError { get; set; }
         public Exception? LoadError { get; set; }
+        public Exception? PublishError { get; set; }
+        public Exception? DeleteError { get; set; }
         public Exception? HouseRulesError { get; set; }
         public Func<CancellationToken, Task<ManagedListingDto>>? CreateOverride { get; set; }
         public Func<CancellationToken, Task<ManagedListingDto>>? LoadOverride { get; set; }
-        public ManagedListingDto Saved { get; } = CreateListing();
+        public ManagedListingDto Saved { get; set; } = CreateListing();
         public HouseRulesDto? HouseRules { get; private set; }
 
         public FakeClient()
@@ -489,10 +736,24 @@ public class ListingEditorViewModelTests
             LastSubmission = form;
             return Task.FromResult(Saved);
         }
+        public Task<ManagedListingDto> PublishAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            PublishCalls++;
+            return PublishError is { } error
+                ? Task.FromException<ManagedListingDto>(error)
+                : Task.FromResult(Saved with { Status = ListingStatus.PendingReview });
+        }
         public Task<ManagedListingDto> UnpublishAsync(Guid id, CancellationToken cancellationToken = default)
         {
             UnpublishCalls++;
             return Task.FromResult(Saved with { Status = ListingStatus.Hidden });
+        }
+        public Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            DeleteCalls++;
+            return DeleteError is { } error
+                ? Task.FromException(error)
+                : Task.CompletedTask;
         }
         public Task<HouseRulesDto> UpdateHouseRulesAsync(
             Guid id, UpdateHouseRulesRequest request, CancellationToken cancellationToken = default)
