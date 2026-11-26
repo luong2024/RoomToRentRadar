@@ -10,8 +10,6 @@ public class RoomDetailModel
     public double AreaSquareMeters { get; set; }
     public string RoomType { get; set; } = "Private room";
     public string Address { get; set; } = string.Empty;
-    public double? Latitude { get; set; }
-    public double? Longitude { get; set; }
     public ListingStatus Status { get; set; } = ListingStatus.Available;
     public DateTime? LastUpdated { get; set; }
 
