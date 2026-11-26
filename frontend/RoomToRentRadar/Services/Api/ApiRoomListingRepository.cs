@@ -74,13 +74,28 @@ namespace RoomToRentRadar.Services.Api
 
                 return CloneRooms(rooms);
             }
-            catch (Exception ex) when ((ex is HttpRequestException { StatusCode: null } or TaskCanceledException) && cached is not null)
+            catch (Exception ex) when (IsNetworkFailure(ex))
             {
-                // Offline or backend not running: keep showing the last page we had instead of an empty screen.
-                _logger.LogWarning(ex, "API unreachable; showing cached page for {Path}.", path);
-                return CloneRooms(cached!.Rooms);
+                if (cached is not null)
+                {
+                    // Offline or backend not running: keep showing the last page we had instead of an empty screen.
+                    _logger.LogWarning(ex, "API unreachable; showing cached page for {Path}.", path);
+                    return CloneRooms(cached.Rooms);
+                }
+
+                if (ex is HttpRequestException)
+                {
+                    throw;
+                }
+
+                // Android's AndroidMessageHandler raises WebException/IOException instead of HttpRequestException;
+                // normalize it so callers only need to handle HttpRequestException.
+                throw new HttpRequestException("Không kết nối được máy chủ.", ex);
             }
         }
+
+        private static bool IsNetworkFailure(Exception ex) =>
+            ex is HttpRequestException { StatusCode: null } or TaskCanceledException or WebException or IOException;
 
         private async Task<string?> ReadErrorMessageAsync(HttpResponseMessage response)
         {
