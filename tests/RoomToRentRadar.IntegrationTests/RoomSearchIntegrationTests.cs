@@ -384,4 +384,136 @@ public class RoomSearchIntegrationTests
         Assert.That(problem, Is.Not.Null);
         Assert.That(problem!.Detail, Does.Contain("PageNumber"));
     }
+
+    [Test]
+    public async Task SearchRooms_WithCombinedFilters_ShouldReturnFilteredPagedResultAndActiveFilters()
+    {
+        // Arrange
+        var repo = _factory.RoomRepository;
+        repo.Upsert(new Room
+        {
+            Id = "t043-match",
+            Title = "Phòng Studio T04.3 Chuẩn",
+            Price = 2_500_000m,
+            Area = 25.0,
+            Address = "Đường Z115, Thái Nguyên",
+            Latitude = 21.5860,
+            Longitude = 105.8080,
+            Status = RoomStatus.Available,
+            IsVerified = true,
+            RoomType = "studio",
+            Amenities = ["wifi", "aircon"],
+            ThumbnailUrl = "https://cdn.example.com/t043-match.jpg"
+        });
+        repo.Upsert(new Room
+        {
+            Id = "t043-wrong-price",
+            Title = "Phòng Studio Quá Đắt",
+            Price = 5_000_000m,
+            Area = 25.0,
+            Address = "Đường Z115, Thái Nguyên",
+            Latitude = 21.5860,
+            Longitude = 105.8080,
+            Status = RoomStatus.Available,
+            IsVerified = true,
+            RoomType = "studio",
+            Amenities = ["wifi", "aircon"]
+        });
+
+        // Act
+        var response = await _client.GetAsync(
+            "/api/rooms?minPrice=2000000&maxPrice=3000000&minArea=20&roomType=studio&amenities=wifi&amenities=aircon&latitude=21.5852&longitude=105.8073&radiusInKm=3&sortBy=price_asc&pageNumber=1&pageSize=10");
+
+        // Assert
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var result = await response.Content.ReadFromJsonAsync<SearchRoomsResult>();
+        Assert.That(result, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result!.TotalCount, Is.EqualTo(1));
+            Assert.That(result.Items, Has.Count.EqualTo(1));
+            Assert.That(result.Items[0].Id, Is.EqualTo("t043-match"));
+            Assert.That(result.Items[0].Price, Is.EqualTo(2_500_000m));
+            Assert.That(result.Items[0].RoomType, Is.EqualTo("studio"));
+            Assert.That(result.Items[0].Amenities, Does.Contain("wifi").And.Contain("aircon"));
+            Assert.That(result.ActiveFilters, Is.Not.Empty);
+        });
+    }
+
+    [Test]
+    public async Task SearchRooms_AC4_WhenClearFilters_ShouldRestoreFullCatalog()
+    {
+        // Arrange
+        var repo = _factory.RoomRepository;
+        repo.Upsert(new Room { Id = "ac4-r1", Title = "Phòng 1", Price = 1_500_000m, Area = 18, Status = RoomStatus.Available, IsVerified = true, RoomType = "private" });
+        repo.Upsert(new Room { Id = "ac4-r2", Title = "Phòng 2", Price = 4_500_000m, Area = 32, Status = RoomStatus.Available, IsVerified = true, RoomType = "studio" });
+
+        // Act 1: Apply narrow filter
+        var filteredResponse = await _client.GetAsync("/api/rooms?minPrice=4000000");
+        Assert.That(filteredResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var filteredResult = await filteredResponse.Content.ReadFromJsonAsync<SearchRoomsResult>();
+
+        // Act 2: Clear filters (call without filter query params)
+        var clearedResponse = await _client.GetAsync("/api/rooms");
+        Assert.That(clearedResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var clearedResult = await clearedResponse.Content.ReadFromJsonAsync<SearchRoomsResult>();
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(filteredResult!.TotalCount, Is.EqualTo(1));
+            Assert.That(clearedResult!.TotalCount, Is.EqualTo(2));
+            Assert.That(clearedResult.ActiveFilters, Is.Empty);
+        });
+    }
+
+    [Test]
+    public async Task SearchRooms_HttpApiBenchmark_500RoomsWithCombinedFilters_Under2000ms()
+    {
+        // Arrange: Seed 500 rooms into InMemoryRoomRepository behind ASP.NET Core HTTP pipeline
+        var repo = _factory.RoomRepository;
+        var random = new Random(42);
+        for (var i = 1; i <= 500; i++)
+        {
+            repo.Upsert(new Room
+            {
+                Id = $"http-bench-{i:D4}",
+                Title = $"Phòng trọ sinh viên #{i}",
+                Description = "Phòng trọ gần ICTU",
+                Price = 1_500_000m + random.Next(0, 30) * 100_000m,
+                Area = 18.0 + random.Next(0, 20),
+                Address = $"Số {i} Đường Z115",
+                Latitude = 21.5852 + (random.NextDouble() - 0.5) * 0.1,
+                Longitude = 105.8073 + (random.NextDouble() - 0.5) * 0.1,
+                Status = RoomStatus.Available,
+                IsVerified = true,
+                RoomType = i % 2 == 0 ? "private" : "studio",
+                Amenities = ["wifi", "aircon"]
+            });
+        }
+
+        const string url = "/api/rooms?keyword=sinh%20viên&minPrice=1800000&maxPrice=3500000&minArea=20&maxArea=35&latitude=21.5852&longitude=105.8073&radiusInKm=5&amenities=wifi&sortBy=price_asc&pageNumber=1&pageSize=20";
+
+        // Warm-up
+        var warmup = await _client.GetAsync(url);
+        Assert.That(warmup.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        // Measure 10 HTTP requests
+        var timingsMs = new List<double>(10);
+        var sw = new System.Diagnostics.Stopwatch();
+        for (var r = 0; r < 10; r++)
+        {
+            sw.Restart();
+            var res = await _client.GetAsync(url);
+            sw.Stop();
+            Assert.That(res.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            timingsMs.Add(sw.Elapsed.TotalMilliseconds);
+        }
+
+        timingsMs.Sort();
+        var p95 = timingsMs[(int)Math.Ceiling(timingsMs.Count * 0.95) - 1];
+        TestContext.Out.WriteLine($"HTTP GET /api/rooms (500 rooms, In-Memory): Min={timingsMs[0]:F2}ms, Avg={timingsMs.Average():F2}ms, Max={timingsMs[^1]:F2}ms, P95={p95:F2}ms");
+
+        Assert.That(p95, Is.LessThanOrEqualTo(2000.0));
+    }
 }
