@@ -138,34 +138,31 @@ public sealed class LandlordListingsController(IListingModerationService moderat
             return authError!;
         }
 
-        List<IFormFile> uploads = [.. photos ?? [], .. files ?? []];
-        var flags = is360 ?? [];
-        var streams = new List<Stream>(uploads.Count);
+        // RequestValidationException → 400 do RequestValidationExceptionFilter xử lý.
+        var items = ToUploadItems([.. photos ?? [], .. files ?? []], is360 ?? []);
         try
         {
-            var items = new List<PhotoUploadItem>(uploads.Count);
-            for (var i = 0; i < uploads.Count; i++)
-            {
-                var stream = uploads[i].OpenReadStream();
-                streams.Add(stream);
-                items.Add(new PhotoUploadItem(uploads[i].FileName, uploads[i].Length, stream, i < flags.Count && flags[i]));
-            }
-
             var created = await landlordListingService.CreateAsync(landlordId, request, items, cancellationToken);
             return CreatedAtAction(nameof(GetMyListing), new { listingId = created.Id }, created);
         }
-        catch (RequestValidationException ex)
-        {
-            return ValidationProblem(new ValidationProblemDetails(ex.Errors));
-        }
         finally
         {
-            foreach (var stream in streams)
+            foreach (var item in items)
             {
-                await stream.DisposeAsync();
+                await item.Content.DisposeAsync();
             }
         }
     }
+
+    /// <summary>Ghép file với cờ <c>is360</c> cùng vị trí (thiếu cờ = false).</summary>
+    private static List<PhotoUploadItem> ToUploadItems(IReadOnlyList<IFormFile> uploads, IReadOnlyList<bool> is360Flags) =>
+        uploads
+            .Select((file, i) => new PhotoUploadItem(
+                file.FileName,
+                file.Length,
+                file.OpenReadStream(),
+                i < is360Flags.Count && is360Flags[i]))
+            .ToList();
 
     /// <summary>US08 T08.2 — chi tiết một tin của chủ trọ (mọi trạng thái, kèm ảnh); tin của người khác =&gt; 404.</summary>
     [HttpGet("{listingId}")]
@@ -185,7 +182,7 @@ public sealed class LandlordListingsController(IListingModerationService moderat
 
         var listing = await landlordListingService.GetAsync(landlordId, listingId, cancellationToken);
         return listing is null
-            ? Problem(detail: $"Listing '{listingId}' was not found.", statusCode: StatusCodes.Status404NotFound, title: "Không tìm thấy phòng")
+            ? Problem(detail: $"Không tìm thấy tin đăng '{listingId}'.", statusCode: StatusCodes.Status404NotFound, title: "Không tìm thấy phòng")
             : Ok(listing);
     }
 }
