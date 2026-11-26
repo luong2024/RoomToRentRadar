@@ -12,7 +12,7 @@ namespace RoomToRentRadar.Features.Rooms
         {
             // T02.2 (Hieu): the frontend reads rooms from the backend Web API (GET /api/rooms, ETag cache) instead of
             // the local SQLite RoomListingRepository of T02.1, which now runs inside the backend (Docker).
-            // Methods not yet implemented by T03.2/T05.2/T09.1 fall back to the in-memory ICTU sample data.
+            // Methods not yet implemented by T03.2/T05.2/T09.1 raise a clear "chưa có API" error (no fake data).
             services.AddSingleton<IRoomListingRepository, RoomToRentRadar.Services.Api.ApiRoomListingRepository>();
 
             // T02.2 (Hieu): listing screen with room cards and infinite scroll.
