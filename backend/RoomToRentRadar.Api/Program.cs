@@ -47,7 +47,7 @@ builder.Services.AddSingleton<IAuthService, AuthService>();
 builder.AddJwtAuth();
 
 // T02.1 (Thuy): real SQLite room listings (overrides InMemoryRoomListingRepository).
-// Partial methods not yet implemented by T03.1/T05.1/T09.2 still fall back to the in-memory base class.
+// Partial methods not yet implemented by T05.1/T09.2 still fall back to the in-memory base class.
 builder.Services.AddSingleton<IRoomListingRepository, RoomListingRepository>();
 
 var app = builder.Build();
@@ -73,7 +73,6 @@ app.MapControllers();
 // ISOLATED FEATURE ENDPOINT MODULES (LOCKED COMPOSITION ROOT)
 // Legacy Minimal API endpoints; each task migrates its file to Controllers/<Feature>Controller.cs.
 // ============================================================================
-app.MapRoomDetailEndpoints();
 app.MapPhotoGalleryEndpoints();
 app.MapRoomSearchEndpoints();
 app.MapRoomPublishEndpoints();
