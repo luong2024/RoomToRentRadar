@@ -64,12 +64,14 @@ public class SearchDatasetSeederTests
         var dataset = SearchDatasetSeeder.CreatePerformanceDataset();
         using var factory = new SearchTestFactory();
         factory.Seed(dataset);
+        factory.SeedPhotos(dataset);
 
         var expectation = SearchOracle.Search(dataset, new RoomSearchRequest(PageSize: 20));
 
         Assert.Multiple(() =>
         {
             Assert.That(factory.QueryScalar("SELECT COUNT(1) FROM Rooms;"), Is.EqualTo(1200));
+            Assert.That(factory.QueryScalar("SELECT COUNT(1) FROM RoomPhotos;"), Is.EqualTo(3600));
             Assert.That(expectation.TotalCount, Is.EqualTo(1000), "BR-LST-06: 200 noise rows must never be visible.");
         });
     }

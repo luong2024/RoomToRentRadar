@@ -252,6 +252,8 @@ public static class SearchDatasetSeeder
 
     // ---- Insertion --------------------------------------------------------
 
+    public static string ExpectedCoverThumbPath(string roomId) => $"rooms/{roomId}/cover-t.jpg";
+
     public static void Seed(SqliteConnection connection, IReadOnlyList<SeedRoom> rooms)
     {
         ArgumentNullException.ThrowIfNull(connection);
@@ -260,6 +262,21 @@ public static class SearchDatasetSeeder
         using var transaction = connection.BeginTransaction();
         InsertLandlords(connection, transaction, rooms);
         InsertRooms(connection, transaction, rooms);
+        transaction.Commit();
+    }
+
+    /// <summary>
+    /// Seeds three <c>RoomPhotos</c> rows per room (one <c>Panorama</c> at <c>SortOrder = 0</c> plus two
+    /// <c>Standard</c> photos at <c>SortOrder = 1, 2</c>) so query-plan and 1,000-room benchmarks exercise
+    /// the correlated <c>CoverThumbPath</c> subquery (BR-MED-05) against realistic photo density.
+    /// </summary>
+    public static void SeedPhotos(SqliteConnection connection, IReadOnlyList<SeedRoom> rooms)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        ArgumentNullException.ThrowIfNull(rooms);
+
+        using var transaction = connection.BeginTransaction();
+        InsertRoomPhotos(connection, transaction, rooms);
         transaction.Commit();
     }
 
@@ -357,6 +374,57 @@ public static class SearchDatasetSeeder
             lastUpdatedAtUtc.Value = room.PublishedAtUtc.HasValue
                 ? room.PublishedAtUtc.Value.ToString("O", CultureInfo.InvariantCulture)
                 : CreatedAtUtc;
+            command.ExecuteNonQuery();
+        }
+    }
+
+    private static void InsertRoomPhotos(SqliteConnection connection, SqliteTransaction transaction, IReadOnlyList<SeedRoom> rooms)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            INSERT OR IGNORE INTO RoomPhotos (
+                Id, RoomId, UploadedByUserId, Kind, ContentType, SizeBytes, Width, Height,
+                OriginalPath, MediumPath, ThumbPath, SortOrder, CreatedAtUtc, AttachedAtUtc
+            ) VALUES (
+                @id, @roomId, @uploadedByUserId, @kind, 'image/jpeg', 65536, 1280, 720,
+                @path, @path, @thumbPath, @sortOrder, @createdAtUtc, @createdAtUtc
+            );
+            """;
+
+        var id = command.Parameters.Add("@id", SqliteType.Text);
+        var roomId = command.Parameters.Add("@roomId", SqliteType.Text);
+        var uploadedByUserId = command.Parameters.Add("@uploadedByUserId", SqliteType.Text);
+        var kind = command.Parameters.Add("@kind", SqliteType.Text);
+        var path = command.Parameters.Add("@path", SqliteType.Text);
+        var thumbPath = command.Parameters.Add("@thumbPath", SqliteType.Text);
+        var sortOrder = command.Parameters.Add("@sortOrder", SqliteType.Integer);
+        command.Parameters.AddWithValue("@createdAtUtc", CreatedAtUtc);
+
+        foreach (var room in rooms)
+        {
+            roomId.Value = room.Id;
+            uploadedByUserId.Value = room.LandlordId;
+
+            id.Value = $"{room.Id}-p0-pano";
+            kind.Value = "Panorama";
+            path.Value = $"rooms/{room.Id}/pano-m.jpg";
+            thumbPath.Value = $"rooms/{room.Id}/pano-t.jpg";
+            sortOrder.Value = 0;
+            command.ExecuteNonQuery();
+
+            id.Value = $"{room.Id}-p1-cover";
+            kind.Value = "Standard";
+            path.Value = $"rooms/{room.Id}/cover-m.jpg";
+            thumbPath.Value = ExpectedCoverThumbPath(room.Id);
+            sortOrder.Value = 1;
+            command.ExecuteNonQuery();
+
+            id.Value = $"{room.Id}-p2-extra";
+            kind.Value = "Standard";
+            path.Value = $"rooms/{room.Id}/extra-m.jpg";
+            thumbPath.Value = $"rooms/{room.Id}/extra-t.jpg";
+            sortOrder.Value = 2;
             command.ExecuteNonQuery();
         }
     }
@@ -642,6 +710,12 @@ public sealed class SearchTestFactory : IDisposable
     {
         using var lease = OpenConnection();
         SearchDatasetSeeder.Seed(lease.Connection, rooms);
+    }
+
+    public void SeedPhotos(IReadOnlyList<SeedRoom> rooms)
+    {
+        using var lease = OpenConnection();
+        SearchDatasetSeeder.SeedPhotos(lease.Connection, rooms);
     }
 
     public long QueryScalar(string sql)

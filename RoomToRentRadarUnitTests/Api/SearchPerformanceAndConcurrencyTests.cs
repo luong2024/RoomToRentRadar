@@ -36,6 +36,7 @@ public class SearchPerformanceAndConcurrencyTests
         _dataset = SearchDatasetSeeder.CreatePerformanceDataset();
         _memoryFactory = new SearchTestFactory();
         _memoryFactory.Seed(_dataset);
+        _memoryFactory.SeedPhotos(_dataset);
 
         var services = new ServiceCollection();
         services.AddSingleton<ISessionStore>(new InMemorySessionStore());
@@ -200,6 +201,7 @@ public class SearchPerformanceAndConcurrencyTests
     {
         using var fileFactory = new SearchTestFactory(useFileDatabase: true);
         fileFactory.Seed(_dataset);
+        fileFactory.SeedPhotos(_dataset);
 
         var requests = new List<RoomSearchRequest>();
         foreach (var campusId in new string?[] { null, "ICTU", "TNUT", "TNUE", "TUAF" })
@@ -281,6 +283,18 @@ public class SearchPerformanceAndConcurrencyTests
                 SearchApiClient.SearchUrl(request));
             Assert.That(page.Items.Select(item => item.GetProperty("isVerified").GetBoolean()), Is.All.True,
                 SearchApiClient.SearchUrl(request));
+            Assert.That(
+                page.Items.All(item =>
+                {
+                    var id = item.GetProperty("id").GetString()!;
+                    var coverThumbUrl = item.GetProperty("coverThumbUrl").GetString();
+                    return coverThumbUrl is not null &&
+                           coverThumbUrl.EndsWith(
+                               "/" + SearchDatasetSeeder.ExpectedCoverThumbPath(id),
+                               StringComparison.Ordinal);
+                }),
+                Is.True,
+                $"BR-MED-05: coverThumbUrl must resolve the Standard cover photo for {SearchApiClient.SearchUrl(request)}.");
         });
     }
 

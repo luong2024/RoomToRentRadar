@@ -29,6 +29,49 @@ public sealed class SqliteRoomSearchReadModel : IRoomSearchReadModel
     {
         ArgumentNullException.ThrowIfNull(filter);
 
+        var conn = _dbContext.CreateOpenConnection();
+        try
+        {
+            await using var cmd = CreateCandidateQueryCommand(conn, filter);
+
+            var candidates = new List<RoomSearchCandidate>();
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+            {
+                candidates.Add(new RoomSearchCandidate(
+                    Id: reader.GetString(0),
+                    Title: reader.GetString(1),
+                    MonthlyRentVnd: reader.GetInt64(2),
+                    AreaM2: reader.GetDouble(3),
+                    RoomType: Enum.Parse<RoomType>(reader.GetString(4), ignoreCase: false),
+                    Status: Enum.Parse<ListingStatus>(reader.GetString(5), ignoreCase: false),
+                    IsVerified: reader.GetInt64(6) != 0,
+                    CoverThumbPath: reader.IsDBNull(7) ? null : reader.GetString(7),
+                    Latitude: reader.GetDouble(8),
+                    Longitude: reader.GetDouble(9),
+                    PublishedAtUtc: reader.IsDBNull(10)
+                        ? null
+                        : DateTime.Parse(reader.GetString(10), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
+                    Furnishing: reader.IsDBNull(11) ? null : ParseFurnishing(reader.GetString(11))));
+            }
+
+            return candidates;
+        }
+        finally
+        {
+            ReleaseConnection(conn);
+        }
+    }
+
+    /// <summary>
+    /// Builds the parameterised candidate query command (shared with <c>EXPLAIN QUERY PLAN</c> tests so
+    /// query-plan assertions always run against the exact SQL produced at runtime).
+    /// </summary>
+    internal static SqliteCommand CreateCandidateQueryCommand(SqliteConnection conn, RoomSearchQueryFilter filter)
+    {
+        ArgumentNullException.ThrowIfNull(conn);
+        ArgumentNullException.ThrowIfNull(filter);
+
         var sql = new StringBuilder("""
             SELECT r.Id, r.Title, r.MonthlyRentVnd, r.AreaM2, r.RoomType, r.Status,
                    (r.VerifiedAtUtc IS NOT NULL) AS IsVerified,
@@ -46,11 +89,9 @@ public sealed class SqliteRoomSearchReadModel : IRoomSearchReadModel
         // BR-LST-06 / T04.3: only append conditions that are actually requested. The previous
         // "(@Param IS NULL OR r.Column >= @Param)" shape prevented SQLite from pushing the range into
         // IX_Rooms_Status_Rent / IX_Rooms_Status_Lat_Lng (full table scan on Rooms).
-        var conn = _dbContext.CreateOpenConnection();
+        var cmd = conn.CreateCommand();
         try
         {
-            await using var cmd = conn.CreateCommand();
-
             if (filter.MinRentVnd is { } minRentVnd)
             {
                 sql.Append("\n  AND r.MonthlyRentVnd >= @MinRent");
@@ -114,33 +155,12 @@ public sealed class SqliteRoomSearchReadModel : IRoomSearchReadModel
             }
 
             cmd.CommandText = sql.ToString();
-
-            var candidates = new List<RoomSearchCandidate>();
-            await using var reader = await cmd.ExecuteReaderAsync(ct);
-            while (await reader.ReadAsync(ct))
-            {
-                candidates.Add(new RoomSearchCandidate(
-                    Id: reader.GetString(0),
-                    Title: reader.GetString(1),
-                    MonthlyRentVnd: reader.GetInt64(2),
-                    AreaM2: reader.GetDouble(3),
-                    RoomType: Enum.Parse<RoomType>(reader.GetString(4), ignoreCase: false),
-                    Status: Enum.Parse<ListingStatus>(reader.GetString(5), ignoreCase: false),
-                    IsVerified: reader.GetInt64(6) != 0,
-                    CoverThumbPath: reader.IsDBNull(7) ? null : reader.GetString(7),
-                    Latitude: reader.GetDouble(8),
-                    Longitude: reader.GetDouble(9),
-                    PublishedAtUtc: reader.IsDBNull(10)
-                        ? null
-                        : DateTime.Parse(reader.GetString(10), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
-                    Furnishing: reader.IsDBNull(11) ? null : ParseFurnishing(reader.GetString(11))));
-            }
-
-            return candidates;
+            return cmd;
         }
-        finally
+        catch
         {
-            ReleaseConnection(conn);
+            cmd.Dispose();
+            throw;
         }
     }
 
