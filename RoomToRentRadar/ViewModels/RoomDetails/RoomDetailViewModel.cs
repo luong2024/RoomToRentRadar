@@ -25,8 +25,8 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     private readonly ITravelTimeService? _travelTimeService;
     private bool _travelPageActive = true;
 
-    [ObservableProperty] public partial string DestinationLatitude { get; set; } = "21.5852";
-    [ObservableProperty] public partial string DestinationLongitude { get; set; } = "105.8073";
+    [ObservableProperty] public partial string DestinationLatitude { get; set; } = string.Empty;
+    [ObservableProperty] public partial string DestinationLongitude { get; set; } = string.Empty;
     [ObservableProperty] public partial bool IsTravelInfoLoading { get; set; }
     [ObservableProperty] public partial string TravelInfoMessage { get; set; } = "Choose a destination to calculate travel information.";
     [ObservableProperty] public partial string DistanceText { get; set; } = string.Empty;
@@ -34,6 +34,19 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
 
     partial void OnDestinationLatitudeChanged(string value) => CancelTravelInfo();
     partial void OnDestinationLongitudeChanged(string value) => CancelTravelInfo();
+
+    public string DestinationCoordinates =>
+        string.IsNullOrEmpty(DestinationLatitude) || string.IsNullOrEmpty(DestinationLongitude)
+            ? "No destination selected"
+            : $"Destination: {DestinationLatitude}, {DestinationLongitude}";
+
+    public async Task SelectDestinationAsync(double latitude, double longitude)
+    {
+        DestinationLatitude = latitude.ToString("F6", CultureInfo.InvariantCulture);
+        DestinationLongitude = longitude.ToString("F6", CultureInfo.InvariantCulture);
+        OnPropertyChanged(nameof(DestinationCoordinates));
+        await LoadTravelInfoAsync();
+    }
     private (string RoomId, long SessionEpoch, Guid? UserId)? _loadedFavoriteStatus;
 
     [ObservableProperty]
@@ -150,7 +163,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         IsTravelInfoLoading = false;
         DistanceText = string.Empty;
         TravelTimeText = string.Empty;
-        TravelInfoMessage = "Select Calculate to update travel information.";
+        TravelInfoMessage = "Choose a destination on the map.";
     }
 
     public void PauseTravelInfo()
@@ -170,7 +183,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
             !double.TryParse(DestinationLatitude, NumberStyles.Float, CultureInfo.InvariantCulture, out var lat) ||
             !double.TryParse(DestinationLongitude, NumberStyles.Float, CultureInfo.InvariantCulture, out var lon))
         {
-            TravelInfoMessage = "Location unavailable. Enter valid destination coordinates.";
+            TravelInfoMessage = "Choose a destination on the map.";
             return;
         }
 
@@ -192,6 +205,14 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
             TravelInfoMessage = info.IsFallback ? "Straight-line distance" : "Driving route distance";
         }
         catch (OperationCanceledException) when (current.IsCancellationRequested) { }
+        catch (Exception ex)
+        {
+            if (ReferenceEquals(_travelCts, current))
+            {
+                TravelInfoMessage = "Unable to calculate travel information.";
+                _errorHandler.HandleError(ex);
+            }
+        }
         finally
         {
             if (ReferenceEquals(_travelCts, current))

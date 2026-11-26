@@ -27,6 +27,47 @@ public class RoomDetailViewModelTests
     }
 
     [Test]
+    public async Task SelectDestinationAsync_UsesRoomAsOriginAndDisplaysSelectedCoordinates()
+    {
+        var travel = new Mock<ITravelTimeService>();
+        travel.Setup(s => s.GetAsync("room-01", 21.5, 105.8, 21.6, 105.9, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TravelInfo(3.4, 10, false));
+        _viewModel = new RoomDetailViewModel(_serviceMock.Object, _errorHandlerMock.Object, _sessionServiceMock.Object, travelTimeService: travel.Object)
+        {
+            Room = new RoomDetailModel { Id = "room-01", Latitude = 21.5, Longitude = 105.8 }
+        };
+
+        await _viewModel.SelectDestinationAsync(21.6, 105.9);
+
+        Assert.That(_viewModel.DestinationCoordinates, Is.EqualTo("Destination: 21.600000, 105.900000"));
+        Assert.That(_viewModel.DistanceText, Is.EqualTo("3.4 km"));
+        Assert.That(_viewModel.TravelTimeText, Is.EqualTo("~10 min driving"));
+        travel.VerifyAll();
+    }
+
+    [Test]
+    public async Task SelectDestinationAsync_OlderRequestCompletesLast_KeepsNewestResult()
+    {
+        var first = new TaskCompletionSource<TravelInfo?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var travel = new Mock<ITravelTimeService>();
+        travel.Setup(s => s.GetAsync("room-01", 21.5, 105.8, 21.6, 105.9, It.IsAny<CancellationToken>())).Returns(first.Task);
+        travel.Setup(s => s.GetAsync("room-01", 21.5, 105.8, 21.7, 105.9, It.IsAny<CancellationToken>())).ReturnsAsync(new TravelInfo(5, null, true));
+        _viewModel = new RoomDetailViewModel(_serviceMock.Object, _errorHandlerMock.Object, _sessionServiceMock.Object, travelTimeService: travel.Object)
+        {
+            Room = new RoomDetailModel { Id = "room-01", Latitude = 21.5, Longitude = 105.8 }
+        };
+
+        var oldRequest = _viewModel.SelectDestinationAsync(21.6, 105.9);
+        await _viewModel.SelectDestinationAsync(21.7, 105.9);
+        first.SetResult(new TravelInfo(3.4, 10, false));
+        await oldRequest;
+
+        Assert.That(_viewModel.DestinationCoordinates, Is.EqualTo("Destination: 21.700000, 105.900000"));
+        Assert.That(_viewModel.DistanceText, Is.EqualTo("5.0 km"));
+        Assert.That(_viewModel.TravelTimeText, Is.EqualTo("Travel time unavailable"));
+    }
+
+    [Test]
     public async Task AC1_LoadRoomDetails_ShouldPopulateAllFields()
     {
         // Arrange
