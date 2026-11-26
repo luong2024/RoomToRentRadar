@@ -6,6 +6,7 @@
     xmlns:sf="clr-namespace:Syncfusion.Maui.Toolkit.SegmentedControl;assembly=Syncfusion.Maui.Toolkit"
     xmlns:home="clr-namespace:RoomToRentRadar.Features.Home"
     xmlns:auth="clr-namespace:RoomToRentRadar.Features.Auth"
+    xmlns:rooms="clr-namespace:RoomToRentRadar.Features.Rooms"
     Shell.FlyoutBehavior="Flyout"
     Title="RoomToRentRadar - ICTU">
 
@@ -25,6 +26,14 @@
     <!-- ========================================================================= -->
 
     <!-- [ZONE 2: LAM MINH HIEU - T02.2 RoomListPage, T06.1 RoomMapPage, T07.2 FavoritesPage, T11.1 RoomComparePage] -->
+    <!-- T02.2: route "room-list-menu" (not "room-list") because "room-list" is already registered in RoomsFeatureModule. -->
+    <ShellContent
+        Title="Danh sách phòng"
+        Icon="{StaticResource IconProjects}"
+        ContentTemplate="{DataTemplate rooms:RoomListPage}"
+        Route="room-list-menu"
+        SemanticProperties.Description="Danh sách phòng trọ đã xác thực"
+        SemanticProperties.Hint="Khám phá phòng trọ quanh ICTU"/>
 
     <!-- [ZONE 1: LEAD DEV NGUYEN DANG QUANG - T09.1 PublishListingPage] -->
 

@@ -1,3 +1,5 @@
+using CommunityToolkit.Maui;
+
 namespace RoomToRentRadar.Features.Rooms
 {
     /// <summary>
@@ -8,10 +10,13 @@ namespace RoomToRentRadar.Features.Rooms
     {
         public static IServiceCollection AddRoomsFeature(this IServiceCollection services)
         {
-            // T02.1: Register real SQLite repository (partial classes for T03.1, T05.1, T09.2 fallback to InMemory)
-            services.AddSingleton<IRoomListingRepository, RoomListingRepository>();
+            // T02.2 (Hieu): the frontend reads rooms from the backend Web API (GET /api/rooms, ETag cache) instead of
+            // the local SQLite RoomListingRepository of T02.1, which now runs inside the backend (Docker).
+            // Methods not yet implemented by T03.2/T05.2/T09.1 raise a clear "chưa có API" error (no fake data).
+            services.AddSingleton<IRoomListingRepository, RoomToRentRadar.Services.Api.ApiRoomListingRepository>();
 
-            // T02.2 (Hieu):  services.AddTransientWithShellRoute<RoomListPage, RoomListPageModel>(Constants.Routes.RoomList);
+            // T02.2 (Hieu): listing screen with room cards and infinite scroll.
+            services.AddTransientWithShellRoute<RoomListPage, RoomListPageModel>(Constants.Routes.RoomList);
             // T03.2 (Nam):   services.AddTransientWithShellRoute<RoomDetailPage, RoomDetailPageModel>(Constants.Routes.RoomDetail);
             // T04.2 (Hieu):  services.AddTransientWithShellRoute<PhotoGallery360Page, PhotoGallery360PageModel>(Constants.Routes.RoomGallery360);
             // T05.2 (Nam):   services.AddTransientWithShellRoute<RoomFilterModalPage, RoomFilterPageModel>(Constants.Routes.RoomFilter);
