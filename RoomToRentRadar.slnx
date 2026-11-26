@@ -1,10 +1,14 @@
 <Solution>
-  <Project Path="RoomToRentRadar.Core/RoomToRentRadar.Core.csproj" />
-  <Project Path="RoomToRentRadar.Infrastructure/RoomToRentRadar.Infrastructure.csproj" />
-  <Project Path="RoomToRentRadar.Api/RoomToRentRadar.Api.csproj" />
-  <Project Path="RoomToRentRadar/RoomToRentRadar.csproj">
-    <Deploy Solution="Debug|*" />
-  </Project>
-  <Project Path="RoomToRentRadarUIAppiumTests/RoomToRentRadarUIAppiumTests.csproj" />
-  <Project Path="RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj" />
+  <Folder Name="/backend/">
+    <Project Path="backend/RoomToRentRadar.Core/RoomToRentRadar.Core.csproj" />
+    <Project Path="backend/RoomToRentRadar.Infrastructure/RoomToRentRadar.Infrastructure.csproj" />
+    <Project Path="backend/RoomToRentRadar.Api/RoomToRentRadar.Api.csproj" />
+    <Project Path="backend/RoomToRentRadarUnitTests/RoomToRentRadarUnitTests.csproj" />
+  </Folder>
+  <Folder Name="/frontend/">
+    <Project Path="frontend/RoomToRentRadar/RoomToRentRadar.csproj">
+      <Deploy Solution="Debug|*" />
+    </Project>
+    <Project Path="frontend/RoomToRentRadarUIAppiumTests/RoomToRentRadarUIAppiumTests.csproj" />
+  </Folder>
 </Solution>

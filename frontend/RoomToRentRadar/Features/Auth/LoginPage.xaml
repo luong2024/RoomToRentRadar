@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- US01 / T01.2: sign-in screen. Logic lives in AuthPageModel (validation AC1, friendly errors AC4). -->
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:auth="clr-namespace:RoomToRentRadar.Features.Auth"
+             x:Class="RoomToRentRadar.Features.Auth.LoginPage"
+             x:DataType="auth:AuthPageModel"
+             Title="Đăng nhập">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="16" MaximumWidthRequest="480">
+
+            <VerticalStackLayout Spacing="4" Margin="0,16,0,8">
+                <Label Text="RoomToRentRadar" FontSize="26" FontAttributes="Bold"
+                       TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDarkText}}" />
+                <Label Text="Đăng nhập để lưu phòng yêu thích, nhận thông báo và liên hệ chủ trọ." FontSize="14" Opacity="0.8" />
+            </VerticalStackLayout>
+
+            <Border Padding="18" StrokeThickness="1" StrokeShape="RoundRectangle 12">
+                <VerticalStackLayout Spacing="12">
+
+                    <Label Text="Email" FontAttributes="Bold" />
+                    <Entry Text="{Binding Email}"
+                           Placeholder="sinhvien@ictu.edu.vn"
+                           Keyboard="Email"
+                           IsSpellCheckEnabled="False"
+                           IsTextPredictionEnabled="False"
+                           ReturnType="Next"
+                           AutomationId="LoginEmailEntry"
+                           SemanticProperties.Description="Email đăng nhập" />
+
+                    <Label Text="Mật khẩu" FontAttributes="Bold" />
+                    <Entry Text="{Binding Password}"
+                           Placeholder="Ít nhất 6 ký tự"
+                           IsPassword="True"
+                           ReturnType="Done"
+                           ReturnCommand="{Binding LoginCommand}"
+                           AutomationId="LoginPasswordEntry"
+                           SemanticProperties.Description="Mật khẩu" />
+
+                    <!-- AC4: friendly error message (local validation or API response) -->
+                    <Border IsVisible="{Binding HasError}" Padding="12,8" StrokeThickness="0" StrokeShape="RoundRectangle 8"
+                            BackgroundColor="{AppThemeBinding Light=#FDECEA, Dark=#5C1F1A}">
+                        <Label Text="{Binding ErrorMessage}"
+                               TextColor="{AppThemeBinding Light=#B3261E, Dark=#F2B8B5}"
+                               AutomationId="LoginErrorLabel" />
+                    </Border>
+
+                    <Grid>
+                        <Button Text="Đăng nhập"
+                                Command="{Binding LoginCommand}"
+                                AutomationId="LoginButton"
+                                SemanticProperties.Hint="Đăng nhập bằng email và mật khẩu" />
+                        <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
+                                           HorizontalOptions="End" Margin="0,0,12,0"
+                                           Color="{StaticResource White}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <HorizontalStackLayout HorizontalOptions="Center" Spacing="4">
+                <Label Text="Chưa có tài khoản?" VerticalOptions="Center" />
+                <Button Text="Đăng ký"
+                        Command="{Binding GoToRegisterCommand}"
+                        BackgroundColor="Transparent"
+                        TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDarkText}}"
+                        FontAttributes="Bold"
+                        Padding="4,0"
+                        AutomationId="GoToRegisterButton" />
+            </HorizontalStackLayout>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

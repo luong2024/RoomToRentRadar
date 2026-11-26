@@ -14,21 +14,23 @@ description: Enforces strict file-editing boundaries, bounded contexts, and diff
 Trước khi gõ bất kỳ dòng code nào, Agent phải tự xác định danh sách các file/thư mục thuộc "Safe Zone" và "No-Touch Zone" dựa theo `.agent/skills/scrum-task-routing-and-git-branching/SKILL.md`:
 
 - **Safe Zone (Được phép sửa theo đúng Mã Task):**
-  - `RoomToRentRadar/Features/<FeatureName>/...` (gồm Page, PageModel và `<FeatureName>FeatureModule.cs`)
-  - `RoomToRentRadar.Infrastructure/Repositories/...` hoặc `Services/...` thuộc đúng Mã Task
-  - `RoomToRentRadar.Api/Endpoints/<Task>Endpoints.cs` thuộc đúng Mã Task Backend
-  - `RoomToRentRadarUnitTests/<FeatureName>Tests.cs`
+  - `frontend/RoomToRentRadar/Features/<FeatureName>/...` (gồm Page, PageModel và `<FeatureName>FeatureModule.cs`)
+  - `backend/RoomToRentRadar.Infrastructure/Repositories/...` hoặc `Services/...` thuộc đúng Mã Task
+  - `backend/RoomToRentRadar.Api/Controllers/<Feature>Controller.cs` và `backend/RoomToRentRadar.Api/Models/<Feature>Models.cs` thuộc đúng Mã Task Backend
+  - `frontend/RoomToRentRadar/Services/Api/Api<...>.cs`: client HTTP gọi backend, thuộc đúng Mã Task Frontend
+  - `backend/RoomToRentRadarUnitTests/<FeatureName>Tests.cs`
 - **No-Touch Zone (Chỉ đọc, CẤM sửa nếu không có lệnh của `@architect`):**
-  - 🔒 `RoomToRentRadar.Core/*` (`Models/`, `Abstractions/`, `Constants.cs`)
-  - 🔒 `RoomToRentRadar.Infrastructure/Persistence/*` (`RentalDatabaseService.cs`, `DatabaseSchema.cs`, `IctuSeedData.cs`)
-  - 🔒 `RoomToRentRadar.Api/Program.cs` (ánh xạ HTTP route phải đặt trong `RoomToRentRadar.Api/Endpoints/<Task>Endpoints.cs`)
-  - 🔒 `RoomToRentRadar/MauiProgram.cs` (đăng ký DI/Route phải đặt trong `<FeatureName>FeatureModule.cs`)
-  - 🔒 Cấu hình CI/CD, `.githooks/`, `.csproj`, NuGet packages.
+  - 🔒 `backend/RoomToRentRadar.Core/*` (`Models/`, `Abstractions/`, `Constants.cs`)
+  - 🔒 `backend/RoomToRentRadar.Infrastructure/Persistence/*` (`RentalDatabaseService.cs`, `DatabaseSchema.cs`, `IctuSeedData.cs`)
+  - 🔒 `backend/RoomToRentRadar.Api/Program.cs` (HTTP route đặt trong `backend/RoomToRentRadar.Api/Controllers/<Feature>Controller.cs`; `MapControllers()` tự nhận Controller mới)
+  - 🔒 `backend/RoomToRentRadar.Api/Endpoints/*Endpoints.cs` (Minimal API cũ: không thêm route mới, chỉ chuyển sang Controller)
+  - 🔒 `frontend/RoomToRentRadar/MauiProgram.cs` (đăng ký DI/Route phải đặt trong `<FeatureName>FeatureModule.cs`)
+  - 🔒 Cấu hình CI/CD, `.githooks/`, `.csproj`, NuGet packages, Docker (`Dockerfile`, `.dockerignore`, `docker-compose.yml`, `.env.example`).
 
 ### Bước 2: Quy Tắc "Hỏi Trước Khi Sửa Vùng Chung"
 Nếu trong quá trình giải quyết task, Agent nhận thấy **bắt buộc** phải thay đổi một file trong No-Touch Zone:
 1. **DỪNG LẠI NGAY LẬP TỨC.**
-2. Báo cáo cho Scrum Master (`@Duc-Nguyen-Github`) hoặc Tech Lead (`@quangtldc0301`) lý do tại sao cần sửa file chung.
+2. Báo cáo cho Scrum Master kiêm Tech Lead (`@quangtldc0301`) lý do tại sao cần sửa file chung.
 3. Chỉ thực hiện sau khi có sự chấp thuận.
 
 ### Bước 3: Kiểm Soát Git Diff Trước Khi Kết Thúc
@@ -38,4 +40,4 @@ git status --short
 git diff --stat
 ```
 - Đảm bảo không có file nào nằm ngoài phạm vi task.
-- Đảm bảo không có thay đổi trong `RoomToRentRadar.Core/`, `Persistence/` hay `MauiProgram.cs`.
+- Đảm bảo không có thay đổi trong `backend/RoomToRentRadar.Core/`, `Persistence/`, `Api/Program.cs` hay `MauiProgram.cs`.

@@ -3,7 +3,7 @@
 # Group 5 Pre-Commit Guardrail (Enforced automatically for all Developers & AI Agents)
 # 1. Blocks direct commits on `main` (ZERO TOLERANCE for everyone).
 # 2. Blocks direct commits on `group-5` for developers/agents; allows Merge commits
-#    or explicit Gatekeeper commits (@Duc-Nguyen-Github / @quangtldc0301).
+#    or explicit Gatekeeper commits (@quangtldc0301).
 # 3. Blocks accidental edits to locked Core/Database/MauiProgram files from feature
 #    branches (`feature/group-5/T01.1`..`T13.2`).
 # ============================================================================
@@ -22,14 +22,14 @@ fi
 
 # RULE 2: Protect `group-5` from direct feature commits by developers
 if [ "$branch" = "group-5" ]; then
-    if [ -f ".git/MERGE_HEAD" ] || [ "${ALLOW_GROUP5_INTEGRATION:-0}" = "1" ] || [ "$git_user" = "Duc-Nguyen-Github" ] || [ "$git_user" = "quangtldc0301" ]; then
+    if [ -f ".git/MERGE_HEAD" ] || [ "${ALLOW_GROUP5_INTEGRATION:-0}" = "1" ] || [ "$git_user" = "quangtldc0301" ]; then
         echo "[Group-5 Gatekeeper] Cho phép commit tích hợp trên 'group-5' bởi Gatekeeper ($git_user)."
     else
         echo "============================================================================" >&2
         echo "[CHẶN COMMIT] CẤM commit trực tiếp task lên nhánh tích hợp 'group-5'!" >&2
         echo "Mọi thành viên & AI Agent phải tạo nhánh riêng từ 'group-5':" >&2
         echo "  git checkout -b feature/group-5/Txx.x-ten-task" >&2
-        echo "(Chỉ Scrum Master Duc-Nguyen-Github / Lead quangtldc0301 mới được tích hợp vào group-5)" >&2
+        echo "(Chỉ Scrum Master kiêm Lead quangtldc0301 mới được tích hợp vào group-5)" >&2
         echo "============================================================================" >&2
         exit 1
     fi
@@ -42,17 +42,17 @@ case "$branch" in
         ;;
     feature/group-5/T*)
         if [ "${ALLOW_ARCHITECT_EDIT:-0}" != "1" ]; then
-            locked_changes="$(git diff --cached --name-only | grep -E '^(RoomToRentRadar\.Core/Models/|RoomToRentRadar\.Core/Abstractions/|RoomToRentRadar\.Infrastructure/Persistence/|RoomToRentRadar/MauiProgram\.cs$|RoomToRentRadar\.Api/Program\.cs$)' || true)"
+            locked_changes="$(git diff --cached --name-only | grep -E '^(backend/RoomToRentRadar\.Core/Models/|backend/RoomToRentRadar\.Core/Abstractions/|backend/RoomToRentRadar\.Infrastructure/Persistence/|frontend/RoomToRentRadar/MauiProgram\.cs$|backend/RoomToRentRadar\.Api/Program\.cs$)' || true)"
             if [ -n "$locked_changes" ]; then
                 echo "============================================================================" >&2
                 echo "[CHẶN COMMIT - VI PHẠM VÙNG CẤM @architect]" >&2
                 echo "Nhánh '$branch' đang cố sửa các file khung xương đã khóa:" >&2
                 echo "$locked_changes" >&2
                 echo "" >&2
-                echo "- Không sửa Models/Interfaces trong RoomToRentRadar.Core" >&2
+                echo "- Không sửa Models/Interfaces trong backend/RoomToRentRadar.Core" >&2
                 echo "- Không sửa RentalDatabaseService / DatabaseSchema / IctuSeedData" >&2
-                echo "- Không sửa MauiProgram.cs hoặc RoomToRentRadar.Api/Program.cs" >&2
-                echo "  (Hãy sửa trong Features/<Feature>/<Feature>FeatureModule.cs hoặc RoomToRentRadar.Api/Endpoints/*Endpoints.cs)" >&2
+                echo "- Không sửa frontend/RoomToRentRadar/MauiProgram.cs hoặc backend/RoomToRentRadar.Api/Program.cs" >&2
+                echo "  (Hãy sửa trong Features/<Feature>/<Feature>FeatureModule.cs hoặc backend/RoomToRentRadar.Api/Controllers/<Feature>Controller.cs)" >&2
                 echo "============================================================================" >&2
                 exit 1
             fi

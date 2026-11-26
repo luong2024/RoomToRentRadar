@@ -10,12 +10,12 @@
 ## Checklist Bắt Buộc Trước Khi Gửi PR (Developer & AI Agent)
 
 - [ ] **Đứng đúng nhánh:** `git branch --show-current` có dạng `feature/group-5/Txx.x-...`
-- [ ] **Đúng phạm vi file (Strict Bounded Context):** `git diff --stat origin/group-5` chỉ chứa các file thuộc Task ID này, KHÔNG sửa `RoomToRentRadar.Core/` hay `RentalDatabaseService.cs`
+- [ ] **Đúng phạm vi file (Strict Bounded Context):** `git diff --stat origin/group-5` chỉ chứa các file thuộc Task ID này, KHÔNG sửa `backend/RoomToRentRadar.Core/` hay `RentalDatabaseService.cs`
 - [ ] **Không sửa `MauiProgram.cs`:** Đăng ký DI & Route trong `Features/<Feature>/<Feature>FeatureModule.cs`
 - [ ] **Build thành công 0 lỗi:** `dotnet build RoomToRentRadar.slnx`
-- [ ] **Toàn bộ Unit Tests PASS:** `dotnet test RoomToRentRadarUnitTests`
+- [ ] **Toàn bộ Unit Tests PASS:** `dotnet test backend/RoomToRentRadarUnitTests`
 - [ ] **Đã chạy thử thực tế màn hình/chức năng** trên máy (đính kèm ảnh chụp màn hình bên dưới nếu là Task UI)
 
 ## Bằng chứng chạy thử (Screenshot / Log)
 
-*(Dán ảnh màn hình hoặc kết quả chạy thử vào đây trước khi nhờ `@Duc-Nguyen-Github` hoặc `@quangtldc0301` bấm Merge)*
+*(Dán ảnh màn hình hoặc kết quả chạy thử vào đây trước khi nhờ `@quangtldc0301` bấm Merge)*
