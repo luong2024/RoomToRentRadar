@@ -49,6 +49,8 @@ public sealed class RoomDetailService : IRoomDetailService
         Bedrooms = dto.Bedrooms,
         Bathrooms = dto.Bathrooms,
         Address = dto.Address,
+        Latitude = dto.Latitude,
+        Longitude = dto.Longitude,
         Status = status,
         LastUpdated = dto.LastUpdatedDate,
         IsVerified = dto.IsVerified,
