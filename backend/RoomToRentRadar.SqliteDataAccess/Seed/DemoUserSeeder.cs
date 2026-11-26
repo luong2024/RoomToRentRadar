@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using RoomToRentRadar.Domain.Entities;
 using RoomToRentRadar.Ports.Outbound.Services;
+using RoomToRentRadar.Shared.Auth;
 
 namespace RoomToRentRadar.SqliteDataAccess.Seed;
 
@@ -23,16 +24,16 @@ public static class DemoUserSeeder
         var email = configuration[EmailKey]?.Trim();
         var password = configuration[PasswordKey];
         var displayName = configuration[DisplayNameKey]?.Trim();
-        var role = UserRole.User;
+        var role = UserRole.Student;
         var configuredRole = configuration[RoleKey]?.Trim();
         if (!string.IsNullOrEmpty(configuredRole)
             && !UserRoleWire.TryParse(configuredRole.ToLowerInvariant(), out role))
         {
             logger.LogWarning(
-                "Ignoring {RoleKey} value {ConfiguredRole}; falling back to the user role.",
+                "Ignoring {RoleKey} value {ConfiguredRole}; falling back to the student role.",
                 RoleKey,
                 configuredRole);
-            role = UserRole.User;
+            role = UserRole.Student;
         }
 
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))

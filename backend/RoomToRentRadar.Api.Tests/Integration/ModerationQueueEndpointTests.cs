@@ -258,7 +258,7 @@ public sealed class ModerationQueueEndpointTests
                     DisplayName = $"Bulk Reporter {index}",
                     PasswordHash = hash,
                     PasswordSalt = salt,
-                    Role = UserRole.User,
+                    Role = UserRole.Student,
                     CreatedAt = BaseTime
                 });
                 dbContext.ListingReports.Add(new ListingReport

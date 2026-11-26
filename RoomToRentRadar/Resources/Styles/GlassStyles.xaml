@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                    xmlns:buttons="clr-namespace:Syncfusion.Maui.Toolkit.Buttons;assembly=Syncfusion.Maui.Toolkit">
+
+    <!-- =======================================================================
+         GLASSSTYLES.XAML — CORE LIQUID GLASS SURFACES, SPECULAR RIMS & CONTROLS
+         Optical meniscus gradients, diagonal rim highlights, and diffused depth
+         ======================================================================= -->
+
+    <!-- 1. Optical Specular Rim Brushes (Bright top-left catchlight -> soft bottom-right edge) -->
+    <LinearGradientBrush x:Key="GlassSpecularRimLight" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#FFFFFFFF" Offset="0.0" />
+        <GradientStop Color="#99FFFFFF" Offset="0.42" />
+        <GradientStop Color="#B8C5D6EB" Offset="1.0" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="GlassSpecularRimDark" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#70FFFFFF" Offset="0.0" />
+        <GradientStop Color="#22FFFFFF" Offset="0.48" />
+        <GradientStop Color="#4538BDF8" Offset="1.0" />
+    </LinearGradientBrush>
+
+    <!-- 2. Liquid Glass Surface Fill Brushes (Frosted optical density to soften underlying text) -->
+    <LinearGradientBrush x:Key="GlassSurfaceFillLight" StartPoint="0,0" EndPoint="0.3,1">
+        <GradientStop Color="#F5FFFFFF" Offset="0.0" />
+        <GradientStop Color="#EAF2F8FF" Offset="1.0" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="GlassSurfaceFillDark" StartPoint="0,0" EndPoint="0.3,1">
+        <GradientStop Color="#ED182640" Offset="0.0" />
+        <GradientStop Color="#E30E182B" Offset="1.0" />
+    </LinearGradientBrush>
+
+    <!-- 3. High-Readability Frosted Porcelain Card Brush -->
+    <LinearGradientBrush x:Key="GlassCardFillLight" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#F4FFFFFF" Offset="0.0" />
+        <GradientStop Color="#DFF4F8FF" Offset="1.0" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="GlassCardFillDark" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#E616233A" Offset="0.0" />
+        <GradientStop Color="#CC101A2C" Offset="1.0" />
+    </LinearGradientBrush>
+
+    <!-- 4. Active Liquid Sapphire-Cyan Jewel Brush -->
+    <LinearGradientBrush x:Key="LiquidSapphireBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#0A6CFF" Offset="0.0" />
+        <GradientStop Color="#0088FF" Offset="0.55" />
+        <GradientStop Color="#06B6D4" Offset="1.0" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="LiquidSapphireDarkBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#2589FF" Offset="0.0" />
+        <GradientStop Color="#0EA5E9" Offset="0.6" />
+        <GradientStop Color="#22D3EE" Offset="1.0" />
+    </LinearGradientBrush>
+
+    <!-- 5. Floating Liquid Glass Capsule / Search Bar -->
+    <Style x:Key="LiquidSearchCapsule" TargetType="Border">
+        <Setter Property="StrokeShape" Value="RoundRectangle 24" />
+        <Setter Property="StrokeThickness" Value="1.3" />
+        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource GlassSpecularRimLight}, Dark={StaticResource GlassSpecularRimDark}}" />
+        <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource GlassSurfaceFillLight}, Dark={StaticResource GlassSurfaceFillDark}}" />
+        <Setter Property="Shadow">
+            <Setter.Value>
+                <Shadow Brush="#190B2545" Offset="0,10" Radius="24" Opacity="0.12" />
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 6. Floating Liquid Glass Panel (Top Bars, Map Consoles, Floating Docks) -->
+    <Style x:Key="LiquidFloatingPanel" TargetType="Border">
+        <Setter Property="StrokeShape" Value="RoundRectangle 26" />
+        <Setter Property="StrokeThickness" Value="1.3" />
+        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource GlassSpecularRimLight}, Dark={StaticResource GlassSpecularRimDark}}" />
+        <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource GlassSurfaceFillLight}, Dark={StaticResource GlassSurfaceFillDark}}" />
+        <Setter Property="Shadow">
+            <Setter.Value>
+                <Shadow Brush="#1F091E3A" Offset="0,12" Radius="28" Opacity="0.14" />
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 7. Liquid Glass Hero Card (Property Cards, Auth Glass Panels) -->
+    <Style x:Key="LiquidGlassCard" TargetType="Border">
+        <Setter Property="StrokeShape" Value="RoundRectangle 26" />
+        <Setter Property="StrokeThickness" Value="1.25" />
+        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource GlassSpecularRimLight}, Dark={StaticResource GlassSpecularRimDark}}" />
+        <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource GlassCardFillLight}, Dark={StaticResource GlassCardFillDark}}" />
+        <Setter Property="Padding" Value="18" />
+        <Setter Property="Shadow">
+            <Setter.Value>
+                <Shadow Brush="#180B2545" Offset="0,10" Radius="24" Opacity="0.10" />
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 8. Calm Reading Section Card (Used for dense detail info so glass is never overused) -->
+    <Style x:Key="CalmReadingCard" TargetType="Border">
+        <Setter Property="StrokeShape" Value="RoundRectangle 22" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource SubtleLine}, Dark={StaticResource LineDark}}" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#F7FFFFFF, Dark=#E8121D31}" />
+        <Setter Property="Padding" Value="18" />
+        <Setter Property="Shadow">
+            <Setter.Value>
+                <Shadow Brush="#120B2545" Offset="0,6" Radius="16" Opacity="0.06" />
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 9. Liquid Glass Circular Orb Button (44x44 Specular Floating Icon Button) -->
+    <Style x:Key="LiquidOrbBorder" TargetType="Border">
+        <Setter Property="WidthRequest" Value="44" />
+        <Setter Property="HeightRequest" Value="44" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 22" />
+        <Setter Property="StrokeThickness" Value="1.25" />
+        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource GlassSpecularRimLight}, Dark={StaticResource GlassSpecularRimDark}}" />
+        <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource GlassSurfaceFillLight}, Dark={StaticResource GlassSurfaceFillDark}}" />
+        <Setter Property="Shadow">
+            <Setter.Value>
+                <Shadow Brush="#1A0B2545" Offset="0,6" Radius="14" Opacity="0.12" />
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 10. Liquid Glass Filter Chip -->
+    <Style x:Key="LiquidFilterChip" TargetType="Border">
+        <Setter Property="Padding" Value="15,9" />
+        <Setter Property="MinimumHeightRequest" Value="42" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 21" />
+        <Setter Property="StrokeThickness" Value="1.2" />
+        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource GlassSpecularRimLight}, Dark={StaticResource GlassSpecularRimDark}}" />
+        <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource GlassSurfaceFillLight}, Dark={StaticResource GlassSurfaceFillDark}}" />
+        <Setter Property="Shadow">
+            <Setter.Value>
+                <Shadow Brush="#120B2545" Offset="0,4" Radius="10" Opacity="0.07" />
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 11. Liquid Segmented Control Track -->
+    <Style x:Key="LiquidSegmentedTrack" TargetType="Border">
+        <Setter Property="Padding" Value="4" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 18" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource SubtleLine}, Dark={StaticResource LineDark}}" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#CCF5FF, Dark=#132036}" />
+    </Style>
+
+    <!-- 12. Luminous Liquid Primary Action Button -->
+    <Style x:Key="LiquidPrimaryButton" TargetType="buttons:SfButton">
+        <Setter Property="FontFamily" Value="FontSemiBold" />
+        <Setter Property="FontSize" Value="14.5" />
+        <Setter Property="CornerRadius" Value="24" />
+        <Setter Property="HeightRequest" Value="50" />
+        <Setter Property="MinimumHeightRequest" Value="44" />
+        <Setter Property="MinimumWidthRequest" Value="44" />
+        <Setter Property="Padding" Value="22,0" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="Stroke" Value="#55FFFFFF" />
+        <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource LiquidSapphireBrush}, Dark={StaticResource LiquidSapphireDarkBrush}}" />
+        <Setter Property="TextColor" Value="#FFFFFF" />
+        <Setter Property="VisualStateManager.VisualStateGroups">
+            <VisualStateGroupList>
+                <VisualStateGroup x:Name="CommonStates">
+                    <VisualState x:Name="Normal">
+                        <VisualState.Setters>
+                            <Setter Property="Scale" Value="1" />
+                            <Setter Property="Opacity" Value="1" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="Pressed">
+                        <VisualState.Setters>
+                            <Setter Property="Scale" Value="0.97" />
+                            <Setter Property="Opacity" Value="0.90" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="Disabled">
+                        <VisualState.Setters>
+                            <Setter Property="Opacity" Value="0.45" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateGroupList>
+        </Setter>
+    </Style>
+
+    <!-- 13. Translucent Liquid Glass Secondary Button -->
+    <Style x:Key="LiquidGlassButton" TargetType="buttons:SfButton">
+        <Setter Property="FontFamily" Value="FontSemiBold" />
+        <Setter Property="FontSize" Value="13.5" />
+        <Setter Property="CornerRadius" Value="22" />
+        <Setter Property="HeightRequest" Value="46" />
+        <Setter Property="MinimumHeightRequest" Value="44" />
+        <Setter Property="MinimumWidthRequest" Value="44" />
+        <Setter Property="Padding" Value="18,0" />
+        <Setter Property="StrokeThickness" Value="1.2" />
+        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource SubtleLine}, Dark={StaticResource StrongLineDark}}" />
+        <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource GlassSurfaceFillLight}, Dark={StaticResource GlassSurfaceFillDark}}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+    </Style>
+
+</ResourceDictionary>

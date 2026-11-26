@@ -1,94 +1,139 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:viewModels="clr-namespace:RoomToRentRadar.ViewModels"
+             xmlns:vm="clr-namespace:RoomToRentRadar.ViewModels"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Controls"
              xmlns:buttons="clr-namespace:Syncfusion.Maui.Toolkit.Buttons;assembly=Syncfusion.Maui.Toolkit"
              xmlns:inputLayout="clr-namespace:Syncfusion.Maui.Toolkit.TextInputLayout;assembly=Syncfusion.Maui.Toolkit"
-             xmlns:progressBar="clr-namespace:Syncfusion.Maui.Toolkit.ProgressBar;assembly=Syncfusion.Maui.Toolkit"
              x:Class="RoomToRentRadar.Views.LoginPage"
-             x:DataType="viewModels:LoginViewModel"
+             x:DataType="vm:LoginViewModel"
              Title="Đăng nhập"
-             Shell.NavBarIsVisible="True"
-             SafeAreaEdges="All">
-    <ContentPage.Resources>
-        <Style x:Key="LoginEntry" TargetType="Entry">
-            <Setter Property="FontSize" Value="14" />
-            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-            <Setter Property="PlaceholderColor" Value="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
-            <Setter Property="BackgroundColor" Value="Transparent" />
-            <Setter Property="MinimumHeightRequest" Value="46" />
-        </Style>
-    </ContentPage.Resources>
-    <ScrollView>
-        <VerticalStackLayout x:Name="LoginContent" Padding="24,28,24,28" Spacing="24"
-                             MaximumWidthRequest="460" HorizontalOptions="Fill">
-            <!-- Brand Intro -->
-            <VerticalStackLayout Spacing="12">
-                <Border WidthRequest="64" HeightRequest="64" Padding="13" StrokeThickness="0"
-                        BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}"
-                        StrokeShape="RoundRectangle 20" HorizontalOptions="Start">
-                    <Image Source="radar_mark.png" SemanticProperties.Description="Room Radar" />
-                </Border>
-                <Label Text="KẾT NỐI VỚI CHỦ PHÒNG" Style="{StaticResource Eyebrow}"
-                       TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
-                <Label Text="Một bước nữa,&#10;gần nơi ở mới hơn." FontSize="28" FontFamily="OpenSansSemibold"
-                       CharacterSpacing="-0.6" LineHeight="1.12" SemanticProperties.HeadingLevel="Level1" />
-                <Label Text="Đăng nhập để xem số điện thoại, lưu khu vực yêu thích và quản lý tin cho thuê của bạn."
-                       Style="{StaticResource Caption}" FontSize="14" LineHeight="1.35" />
-            </VerticalStackLayout>
+             Shell.TabBarIsVisible="False"
+             SafeAreaEdges="Container">
 
-            <!-- Login Form Card -->
-            <Border Padding="22,24" StrokeShape="RoundRectangle 22">
-                <Border.Shadow>
-                    <Shadow Brush="{StaticResource InkBrush}" Offset="0,4" Radius="12" Opacity="0.05" />
-                </Border.Shadow>
-                <VerticalStackLayout Spacing="16">
-                    <inputLayout:SfTextInputLayout Hint="Email" ShowHelperText="False">
-                        <Entry Text="{Binding Email}" Keyboard="Email" ReturnType="Next"
-                               IsSpellCheckEnabled="False" IsTextPredictionEnabled="False"
-                               Placeholder="ban@example.com" ClearButtonVisibility="WhileEditing"
-                               AutomationId="LoginEmail" SemanticProperties.Description="Địa chỉ email"
-                               Style="{StaticResource LoginEntry}" />
-                    </inputLayout:SfTextInputLayout>
+    <Grid>
+        <!-- Ambient Liquid Glass Light Field -->
+        <controls:LiquidBackdropView />
 
-                    <inputLayout:SfTextInputLayout Hint="Mật khẩu" EnablePasswordVisibilityToggle="True">
-                        <Entry Text="{Binding Password}" IsPassword="True" ReturnType="Go"
-                               ReturnCommand="{Binding SignInCommand}" Placeholder="Nhập mật khẩu của bạn"
-                               AutomationId="LoginPassword" SemanticProperties.Description="Mật khẩu"
-                               Style="{StaticResource LoginEntry}" />
-                    </inputLayout:SfTextInputLayout>
+        <ScrollView>
+            <VerticalStackLayout x:Name="LoginContent"
+                                 Padding="20,14,20,24"
+                                 Spacing="18"
+                                 MaximumWidthRequest="460">
 
-                    <Border IsVisible="{Binding HasError}" Padding="14,10" StrokeThickness="0"
-                            StrokeShape="RoundRectangle 14"
-                            BackgroundColor="{AppThemeBinding Light={StaticResource DangerSoft}, Dark={StaticResource DangerSoftDark}}">
-                        <Label Text="{Binding ErrorMessage}"
-                               TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
-                               FontSize="12" FontFamily="OpenSansSemibold" />
+                <!-- Top Bar -->
+                <Grid ColumnDefinitions="Auto,*,Auto" VerticalOptions="Center">
+                    <Border Grid.Column="0"
+                            Style="{StaticResource LiquidOrbBorder}"
+                            AutomationId="LoginBackButton">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding CancelCommand}" />
+                        </Border.GestureRecognizers>
+                        <Image Source="back_icon.png" WidthRequest="18" HeightRequest="18" HorizontalOptions="Center" VerticalOptions="Center" />
                     </Border>
 
-                    <progressBar:SfLinearProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" />
+                    <HorizontalStackLayout Grid.Column="1" Spacing="8" HorizontalOptions="Center" VerticalOptions="Center">
+                        <Image Source="radar_mark.png" WidthRequest="30" HeightRequest="30" />
+                        <Label Text="Room Radar" FontFamily="FontBold" FontSize="17" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
 
-                    <Grid HeightRequest="50">
-                        <buttons:SfButton Text="Đăng nhập" Command="{Binding SignInCommand}" IsEnabled="{Binding IsNotBusy}"
-                                          AutomationId="LoginSignIn" HorizontalOptions="Fill" Padding="40,0"
-                                          SemanticProperties.Description="Đăng nhập"
-                                          SemanticProperties.Hint="Đăng nhập để xem liên hệ của chủ phòng">
-                            <buttons:SfButton.Triggers>
-                                <DataTrigger TargetType="buttons:SfButton" Binding="{Binding IsBusy}" Value="True">
-                                    <Setter Property="Text" Value="Đang đăng nhập…" />
-                                </DataTrigger>
-                            </buttons:SfButton.Triggers>
-                        </buttons:SfButton>
-                        <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" InputTransparent="True"
-                                           HorizontalOptions="End" WidthRequest="20" HeightRequest="20" Margin="0,0,14,0" Color="{StaticResource Muted}" />
-                    </Grid>
-                </VerticalStackLayout>
-            </Border>
+                    <BoxView Grid.Column="2" WidthRequest="44" Color="Transparent" />
+                </Grid>
 
-            <buttons:SfButton Text="←  Quay lại phòng đang xem" Command="{Binding CancelCommand}"
-                              Style="{StaticResource GhostSfButton}" HorizontalOptions="Center"
-                              SemanticProperties.Description="Hủy đăng nhập"
-                              SemanticProperties.Hint="Quay lại trang thông tin phòng" />
-        </VerticalStackLayout>
-    </ScrollView>
+                <!-- Compact Single Heading (Fits one screen without scrolling!) -->
+                <Label Text="Đăng nhập" Style="{StaticResource DisplayTitle}" FontSize="27" />
+
+                <!-- Liquid Glass Auth Surface -->
+                <Border Style="{StaticResource LiquidGlassCard}" Padding="20">
+                    <VerticalStackLayout Spacing="16">
+
+                        <!-- Liquid Glass Segmented Role Switcher -->
+                        <Border Style="{StaticResource LiquidSegmentedTrack}">
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="4">
+                                <Border Grid.Column="0"
+                                        Padding="10,10"
+                                        StrokeShape="RoundRectangle 14"
+                                        StrokeThickness="0"
+                                        BackgroundColor="Transparent"
+                                        AutomationId="LoginStudentTab">
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding IsStudent}" Value="True">
+                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#FFFFFF, Dark=#223554}" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding SelectStudentCommand}" />
+                                    </Border.GestureRecognizers>
+                                    <VerticalStackLayout Spacing="1" HorizontalOptions="Center">
+                                        <Label Text="Sinh viên" FontFamily="FontBold" FontSize="13.5" HorizontalTextAlignment="Center" />
+                                        <Label Text="Tìm &amp; lưu phòng" Style="{StaticResource Caption}" FontSize="11" HorizontalTextAlignment="Center" />
+                                    </VerticalStackLayout>
+                                </Border>
+
+                                <Border Grid.Column="1"
+                                        Padding="10,10"
+                                        StrokeShape="RoundRectangle 14"
+                                        StrokeThickness="0"
+                                        BackgroundColor="Transparent"
+                                        AutomationId="LoginLandlordTab">
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding IsLandlord}" Value="True">
+                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#FFFFFF, Dark=#223554}" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding SelectLandlordCommand}" />
+                                    </Border.GestureRecognizers>
+                                    <VerticalStackLayout Spacing="1" HorizontalOptions="Center">
+                                        <Label Text="Chủ phòng" FontFamily="FontBold" FontSize="13.5" HorizontalTextAlignment="Center" />
+                                        <Label Text="Quản lý tin đăng" Style="{StaticResource Caption}" FontSize="11" HorizontalTextAlignment="Center" />
+                                    </VerticalStackLayout>
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <inputLayout:SfTextInputLayout Hint="Địa chỉ email"
+                                                       HasError="{Binding HasEmailError}"
+                                                       ErrorText="{Binding EmailError}">
+                            <Entry Text="{Binding Email}"
+                                   Keyboard="Email"
+                                   ReturnType="Next"
+                                   AutomationId="LoginEmailEntry" />
+                        </inputLayout:SfTextInputLayout>
+
+                        <inputLayout:SfTextInputLayout Hint="Mật khẩu"
+                                                       EnablePasswordVisibilityToggle="True"
+                                                       HasError="{Binding HasPasswordError}"
+                                                       ErrorText="{Binding PasswordError}">
+                            <Entry Text="{Binding Password}"
+                                   IsPassword="True"
+                                   ReturnType="Go"
+                                   ReturnCommand="{Binding SignInCommand}"
+                                   AutomationId="LoginPasswordEntry" />
+                        </inputLayout:SfTextInputLayout>
+
+                        <Label IsVisible="{Binding HasError}"
+                               Text="{Binding ErrorMessage}"
+                               FontFamily="FontSemiBold"
+                               FontSize="12.5"
+                               TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+
+                        <buttons:SfButton Text="Đăng nhập"
+                                          Command="{Binding SignInCommand}"
+                                          IsEnabled="{Binding IsNotBusy}"
+                                          Style="{StaticResource LiquidPrimaryButton}"
+                                          AutomationId="LoginSubmitButton" />
+
+                    </VerticalStackLayout>
+                </Border>
+
+                <buttons:SfButton Text="Chưa có tài khoản? Tạo tài khoản mới"
+                                  Command="{Binding GoToRegisterCommand}"
+                                  Style="{StaticResource GhostSfButton}"
+                                  HorizontalOptions="Center"
+                                  AutomationId="LoginGoToRegisterButton" />
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
 </ContentPage>

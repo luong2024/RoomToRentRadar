@@ -1,841 +1,630 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:RoomToRentRadar.ViewModels"
-             xmlns:views="clr-namespace:RoomToRentRadar.Controls"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Controls"
              xmlns:buttons="clr-namespace:Syncfusion.Maui.Toolkit.Buttons;assembly=Syncfusion.Maui.Toolkit"
-             xmlns:sheet="clr-namespace:Syncfusion.Maui.Toolkit.BottomSheet;assembly=Syncfusion.Maui.Toolkit"
-             xmlns:input="clr-namespace:Syncfusion.Maui.Toolkit.TextInputLayout;assembly=Syncfusion.Maui.Toolkit"
-             xmlns:shimmer="clr-namespace:Syncfusion.Maui.Toolkit.Shimmer;assembly=Syncfusion.Maui.Toolkit"
-             xmlns:refresh="clr-namespace:Syncfusion.Maui.Toolkit.PullToRefresh;assembly=Syncfusion.Maui.Toolkit"
-    x:Class="RoomToRentRadar.Views.HomePage"
-    x:Name="HomeRoot"
-    x:DataType="vm:HomeViewModel"
-    Title="Room Radar"
-    SafeAreaEdges="All">
-    <ContentPage.Resources>
-        <ResourceDictionary>
-            <Style x:Key="FilterEntry"
-                TargetType="Entry">
-                <Setter Property="FontSize"
-                    Value="15" />
-                <Setter Property="MinimumHeightRequest"
-                    Value="48" />
-                <Setter Property="BackgroundColor"
-                    Value="Transparent" />
-                <Setter Property="TextColor"
-                    Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-            </Style>
-            <DataTemplate x:Key="FilterChipTemplate"
-                x:DataType="vm:FilterChip">
-                <buttons:SfButton Text="{Binding Label}"
-                    Command="{Binding SelectCommand}" SemanticProperties.Description="{Binding AccessibilityLabel}"
-                    Style="{StaticResource OutlineActionButton}"
-                    Margin="0,0,8,8"
-                    Padding="14,0"
-                    HeightRequest="44"
-                    MinimumHeightRequest="44"
-                    FontSize="13"
-                    CornerRadius="13">
-                    <buttons:SfButton.Triggers>
-                        <DataTrigger TargetType="buttons:SfButton"
-                            Binding="{Binding IsSelected}"
-                            Value="True">
-                            <Setter Property="Background"
-                                Value="{AppThemeBinding Light={StaticResource AccentSoftBrush}, Dark={StaticResource AccentSoftDarkBrush}}" />
-                            <Setter Property="Stroke"
-                                Value="{StaticResource AccentBrush}" />
-                            <Setter Property="StrokeThickness"
-                                Value="1.5" />
-                        </DataTrigger>
-                    </buttons:SfButton.Triggers>
-                </buttons:SfButton>
-            </DataTemplate>
-            <DataTemplate x:Key="ActiveFilterChipTemplate"
-                x:DataType="vm:FilterSummaryChip">
-                <buttons:SfButton Text="{Binding DisplayLabel}"
-                    Command="{Binding RemoveCommand}"
-                    SemanticProperties.Description="{Binding AccessibilityLabel}"
-                    Style="{StaticResource SecondaryActionButton}"
-                    Margin="0,0,8,0"
-                    HeightRequest="44"
-                    MinimumHeightRequest="44"
-                    FontSize="12.5"
-                    Padding="12,0"
-                    CornerRadius="14" />
-            </DataTemplate>
+             xmlns:bottomSheet="clr-namespace:Syncfusion.Maui.Toolkit.BottomSheet;assembly=Syncfusion.Maui.Toolkit"
+             xmlns:inputLayout="clr-namespace:Syncfusion.Maui.Toolkit.TextInputLayout;assembly=Syncfusion.Maui.Toolkit"
+             xmlns:progressBar="clr-namespace:Syncfusion.Maui.Toolkit.ProgressBar;assembly=Syncfusion.Maui.Toolkit"
+             x:Class="RoomToRentRadar.Views.HomePage"
+             x:Name="PageRoot"
+             x:DataType="vm:HomeViewModel"
+             Title="Khám phá"
+             SafeAreaEdges="Container">
 
-            <!-- Category tiles mirror the reference: label + photo thumbnail -->
-            <DataTemplate x:Key="CategoryTileTemplate"
-                x:DataType="vm:FilterChip">
-                <Border StrokeThickness="1"
-                    Stroke="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}"
-                    StrokeShape="RoundRectangle 16"
-                    BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}"
-                    WidthRequest="158"
-                    HeightRequest="66"
-                    Padding="0"
-                    SemanticProperties.Description="{Binding AccessibilityLabel}">
-                    <Border.GestureRecognizers>
-                        <TapGestureRecognizer Command="{Binding SelectCommand}" />
-                    </Border.GestureRecognizers>
-                    <Border.Triggers>
-                        <DataTrigger TargetType="Border"
-                            Binding="{Binding IsSelected}"
-                            Value="True">
-                            <Setter Property="Stroke"
-                                Value="{StaticResource AccentBrush}" />
-                            <Setter Property="StrokeThickness"
-                                Value="2" />
-                            <Setter Property="BackgroundColor"
-                                Value="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}" />
-                        </DataTrigger>
-                    </Border.Triggers>
-                    <Grid ColumnDefinitions="*,50"
-                        Padding="14,8,8,8"
-                        ColumnSpacing="8">
-                        <VerticalStackLayout Spacing="1"
-                            VerticalOptions="Center">
-                            <Label Text="{Binding Label}"
-                                FontFamily="OpenSansSemibold"
-                                FontSize="13.5"
-                                MaxLines="1"
-                                LineBreakMode="TailTruncation"
-                                TextColor="{AppThemeBinding Light={StaticResource BodyInk}, Dark={StaticResource InkDark}}" />
-                            <Label Text="Xem phòng"
-                                FontSize="10.5"
-                                TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+    <Grid>
+        <!-- 0. AMBIENT LIQUID LIGHT FIELD BACKDROP -->
+        <controls:LiquidBackdropView />
+
+        <!-- 1. MAIN EXPLORE & DISCOVERY STREAM (FULL-VIEWPORT FOR 60/120 FPS ZERO-RELAYOUT SCROLLING) -->
+        <Grid IsClippedToBounds="True">
+
+            <!-- ==================== VIRTUALIZED LIQUID GLASS COLLECTION STREAM ==================== -->
+            <RefreshView IsRefreshing="{Binding IsRefreshing}"
+                         Command="{Binding RefreshCommand}"
+                         RefreshColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}">
+
+                <CollectionView ItemsSource="{Binding Listings}"
+                                SelectionMode="None"
+                                Scrolled="OnListingsScrolled"
+                                RemainingItemsThreshold="4"
+                                RemainingItemsThresholdReachedCommand="{Binding LoadMoreCommand}">
+
+                    <CollectionView.ItemsLayout>
+                        <GridItemsLayout Orientation="Vertical"
+                                         Span="{OnIdiom Phone=1, Tablet=2, Desktop=2}"
+                                         VerticalItemSpacing="16"
+                                         HorizontalItemSpacing="16" />
+                    </CollectionView.ItemsLayout>
+
+                    <!-- TOP SPACER MATCHING FLOATING LIQUID GLASS HEADER + ACTIVE FILTERS + SECTION HEADING -->
+                    <CollectionView.Header>
+                        <VerticalStackLayout Padding="16,158,16,12" Spacing="12">
+
+                            <!-- 1. Active Filter Summary Glass Pills -->
+                            <ScrollView Orientation="Horizontal"
+                                        HorizontalScrollBarVisibility="Never"
+                                        IsVisible="{Binding HasActiveFilters}">
+                                <HorizontalStackLayout Spacing="8">
+                                    <HorizontalStackLayout BindableLayout.ItemsSource="{Binding ActiveFilterChips}" Spacing="8">
+                                        <BindableLayout.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:FilterSummaryChip">
+                                                <Border Padding="12,6"
+                                                        StrokeShape="RoundRectangle 999"
+                                                        StrokeThickness="1"
+                                                        Stroke="#99FFFFFF"
+                                                        BackgroundColor="{AppThemeBinding Light={StaticResource BrandTint}, Dark={StaticResource BrandTintDark}}">
+                                                    <Border.GestureRecognizers>
+                                                        <TapGestureRecognizer Command="{Binding RemoveCommand}" />
+                                                    </Border.GestureRecognizers>
+                                                    <Label Text="{Binding DisplayLabel}"
+                                                           FontFamily="FontSemiBold"
+                                                           FontSize="12"
+                                                           TextColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </BindableLayout.ItemTemplate>
+                                    </HorizontalStackLayout>
+
+                                    <buttons:SfButton Text="Xóa lọc"
+                                                      Command="{Binding ClearFiltersCommand}"
+                                                      Style="{StaticResource GhostSfButton}"
+                                                      HeightRequest="34"
+                                                      MinimumHeightRequest="34"
+                                                      FontSize="12.5" />
+                                </HorizontalStackLayout>
+                            </ScrollView>
+
+                            <!-- 4. Section Heading & Results Count -->
+                            <Grid ColumnDefinitions="*,Auto" VerticalOptions="End" Margin="2,2,2,0">
+                                <Label Grid.Column="0"
+                                       Text="Phòng trọ đề xuất"
+                                       Style="{StaticResource SectionTitle}"
+                                       FontSize="18.5" />
+                                <Label Grid.Column="1"
+                                       Text="{Binding ResultsText}"
+                                       Style="{StaticResource Caption}"
+                                       VerticalOptions="Center" />
+                            </Grid>
+
+                            <!-- 5. Frosted Skeleton Loading Cards -->
+                            <VerticalStackLayout IsVisible="{Binding ShowLoadingState}" Spacing="14">
+                                <controls:SkeletonPropertyCard />
+                                <controls:SkeletonPropertyCard />
+                            </VerticalStackLayout>
+
+                            <!-- 6. Error State -->
+                            <controls:StateFeedbackView IsVisible="{Binding HasError}"
+                                                        IconSource="close_icon.png"
+                                                        EyebrowText="KẾT NỐI TẠM GIÁN ĐOẠN"
+                                                        TitleText="Chưa tải được danh sách phòng"
+                                                        SubtitleText="{Binding ErrorMessage}"
+                                                        ActionText="Thử tải lại"
+                                                        ActionCommand="{Binding RetryCommand}" />
+
+                            <!-- 7. Empty State -->
+                            <controls:StateFeedbackView IsVisible="{Binding ShowEmptyState}"
+                                                        IconSource="search_icon.png"
+                                                        EyebrowText="KHÔNG TÌM THẤY PHÒNG"
+                                                        TitleText="Chưa có phòng phù hợp bộ lọc"
+                                                        SubtitleText="{Binding EmptyMessage}"
+                                                        ActionText="Đặt lại bộ lọc"
+                                                        ActionCommand="{Binding ClearFiltersCommand}" />
                         </VerticalStackLayout>
-                        <Border Grid.Column="1"
-                            StrokeThickness="0"
-                            StrokeShape="RoundRectangle 11"
-                            WidthRequest="50"
-                            HeightRequest="50"
-                            Padding="0">
-                            <Image Source="{Binding ImageSource}"
-                                Aspect="AspectFill" />
+                    </CollectionView.Header>
+
+                    <!-- LIQUID GLASS PROPERTY CARD ITEM -->
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="vm:HomeListingItem">
+                            <ContentView Padding="16,0">
+                                <controls:HomePropertyCard
+                                    OpenCommand="{Binding OpenListingCommand, Source={RelativeSource AncestorType={x:Type vm:HomeViewModel}}, x:DataType=vm:HomeViewModel}"
+                                    CompareCommand="{Binding ToggleCompareCommand, Source={RelativeSource AncestorType={x:Type vm:HomeViewModel}}, x:DataType=vm:HomeViewModel}" />
+                            </ContentView>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+
+                    <CollectionView.Footer>
+                        <VerticalStackLayout Padding="16,8,16,116" Spacing="8">
+                            <ActivityIndicator IsRunning="{Binding IsLoadingMore}"
+                                               IsVisible="{Binding IsLoadingMore}"
+                                               Color="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}"
+                                               HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+                    </CollectionView.Footer>
+
+                </CollectionView>
+            </RefreshView>
+
+            <!-- ==================== GPU-COMPOSITED FLOATING LIQUID GLASS STICKY HEADER ==================== -->
+            <Grid x:Name="StickyHeaderContainer"
+                  VerticalOptions="Start"
+                  InputTransparent="True"
+                  CascadeInputTransparent="False">
+
+                <!-- Soft Frosted Top Scrim (high optical density prevents text bleed-through when header reveals mid-scroll) -->
+                <BoxView x:Name="HeaderGlassScrim"
+                         InputTransparent="True"
+                         Color="{AppThemeBinding Light=#F4EDF4FD, Dark=#F2091222}" />
+
+                <VerticalStackLayout Padding="16,8,16,8"
+                                     Spacing="0"
+                                     InputTransparent="True"
+                                     CascadeInputTransparent="False">
+
+                    <!-- Compact Brand & Theme Row (glides & dissolves 1:1 with scroll finger on GPU) -->
+                    <Grid x:Name="BrandUtilityRow"
+                          HeightRequest="49"
+                          Padding="0,0,0,9"
+                          ColumnDefinitions="Auto,*,Auto"
+                          ColumnSpacing="10"
+                          VerticalOptions="Center">
+                        <Border Grid.Column="0"
+                                WidthRequest="40"
+                                HeightRequest="40"
+                                StrokeShape="RoundRectangle 20"
+                                StrokeThickness="1.2"
+                                Stroke="{AppThemeBinding Light={StaticResource GlassSpecularRimLight}, Dark={StaticResource GlassSpecularRimDark}}"
+                                Padding="0"
+                                BackgroundColor="#FFFFFF"
+                                VerticalOptions="Center">
+                            <Border.Shadow>
+                                <Shadow Brush="{AppThemeBinding Light={StaticResource GlassShadowLight}, Dark={StaticResource GlassShadowDark}}"
+                                        Offset="0,4" Radius="10" Opacity="0.18" />
+                            </Border.Shadow>
+                            <Image Source="radar_mark.png"
+                                   WidthRequest="40"
+                                   HeightRequest="40"
+                                   Aspect="AspectFill"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center" />
+                        </Border>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                            <Label Text="Room Radar"
+                                   FontFamily="FontBold"
+                                   FontSize="16.5"
+                                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                            <Label Text="Phòng trọ chuẩn gần giảng đường"
+                                   Style="{StaticResource Caption}"
+                                   FontSize="11"
+                                   MaxLines="1"
+                                   LineBreakMode="TailTruncation" />
+                        </VerticalStackLayout>
+
+                        <!-- Specular Glass Dark/Light Mode Orb -->
+                        <Border Grid.Column="2"
+                                Style="{StaticResource LiquidOrbBorder}"
+                                WidthRequest="40"
+                                HeightRequest="40"
+                                StrokeShape="RoundRectangle 20"
+                                AutomationId="HomeThemeToggleButton"
+                                SemanticProperties.Description="Chuyển chế độ Sáng hoặc Tối">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnThemeToggleTapped" />
+                            </Border.GestureRecognizers>
+                            <Image Source="theme_icon.png"
+                                   WidthRequest="18"
+                                   HeightRequest="18"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center" />
                         </Border>
                     </Grid>
-                </Border>
-            </DataTemplate>
 
-            <DataTemplate x:Key="RecommendationCardTemplate"
-                x:DataType="vm:HomeListingItem">
-                <ContentView WidthRequest="252">
-                    <ContentView.GestureRecognizers>
-                        <TapGestureRecognizer
-                            Command="{Binding BindingContext.OpenListingCommand, Source={x:Reference HomeRoot}}"
-                            CommandParameter="{Binding .}" />
-                    </ContentView.GestureRecognizers>
-                    <views:HomePropertyCard
-                        CompareCommand="{Binding BindingContext.ToggleCompareCommand, Source={x:Reference HomeRoot}}" />
-                </ContentView>
-            </DataTemplate>
-
-            <DataTemplate x:Key="ListingRowTemplate"
-                x:DataType="vm:HomeListingItem">
-                <Border Margin="8,0,8,10"
-                    Padding="10"
-                    StrokeThickness="0"
-                    StrokeShape="RoundRectangle 18"
-                    SemanticProperties.Description="{Binding Title}">
-                    <Border.Shadow>
-                        <Shadow Brush="{StaticResource InkBrush}" Offset="0,5" Radius="16" Opacity="0.05" />
-                    </Border.Shadow>
-                    <Border.GestureRecognizers>
-                        <TapGestureRecognizer
-                            Command="{Binding BindingContext.OpenListingCommand, Source={x:Reference HomeRoot}}"
-                            CommandParameter="{Binding .}" />
-                    </Border.GestureRecognizers>
-                    <Grid ColumnDefinitions="96,*,Auto"
-                        ColumnSpacing="10">
-                        <Border StrokeThickness="0"
-                            StrokeShape="RoundRectangle 13"
-                            WidthRequest="96"
-                            HeightRequest="88"
-                            Padding="0">
-                            <Grid BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
-                                <Image Source="{Binding Illustration}"
-                                    Aspect="AspectFill"
-                                    SemanticProperties.Description="Hình minh họa khi chưa có ảnh phòng" />
-                                <Image Source="{Binding PhotoSource}"
-                                    IsVisible="{Binding HasCoverPhoto}"
-                                    Aspect="AspectFill"
-                                    SemanticProperties.Description="Ảnh phòng trọ" />
+                    <!-- Sticky Liquid Glass Search Capsule (centers smoothly on GPU) + Filter Orb (dissolves on scroll) -->
+                    <Grid ColumnDefinitions="*,Auto"
+                          Margin="0,0,0,9"
+                          InputTransparent="True"
+                          CascadeInputTransparent="False">
+                        <Border x:Name="HomeSearchCapsule"
+                                Grid.Column="0"
+                                Style="{StaticResource LiquidSearchCapsule}"
+                                Padding="14,0"
+                                HeightRequest="48"
+                                Margin="0,0,10,0"
+                                AutomationId="HomeSearchTrigger">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenSearchCommand}" />
+                            </Border.GestureRecognizers>
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" VerticalOptions="Center">
+                                <Image Grid.Column="0"
+                                       Source="search_icon.png"
+                                       WidthRequest="18"
+                                       HeightRequest="18"
+                                       VerticalOptions="Center" />
+                                <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                                    <Label Text="{Binding SearchDisplayText}"
+                                           FontFamily="FontSemiBold"
+                                           FontSize="13.5"
+                                           MaxLines="1"
+                                           LineBreakMode="TailTruncation"
+                                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                    <Label Text="Chọn trường đại học · đo bán kính"
+                                           Style="{StaticResource Caption}"
+                                           FontSize="10.5"
+                                           MaxLines="1"
+                                           LineBreakMode="TailTruncation" />
+                                </VerticalStackLayout>
                             </Grid>
                         </Border>
-                        <VerticalStackLayout Grid.Column="1"
-                            Spacing="3"
-                            VerticalOptions="Center">
-                            <Label Text="{Binding Title}"
-                                FontFamily="OpenSansSemibold"
-                                FontSize="15.5"
-                                CharacterSpacing="-0.2"
-                                MaxLines="1"
-                                LineBreakMode="TailTruncation"
-                                TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                            <Label Text="{Binding Address}"
-                                FontSize="12"
-                                MaxLines="1"
-                                LineBreakMode="TailTruncation"
-                                TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
-                            <Label Margin="0,4,0,0">
-                                <Label.FormattedText>
-                                    <FormattedString>
-                                        <Span Text="{Binding PriceText}"
-                                            FontSize="16"
-                                            FontFamily="OpenSansSemibold"
-                                            TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                                        <Span Text=" / tháng"
-                                            FontSize="11"
-                                            TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
-                                    </FormattedString>
-                                </Label.FormattedText>
-                            </Label>
-                        </VerticalStackLayout>
-                        <Border Grid.Column="2"
-                            WidthRequest="36"
-                            HeightRequest="36"
-                            Padding="0"
-                            VerticalOptions="Center"
-                            StrokeThickness="0"
-                            StrokeShape="RoundRectangle 18"
-                            BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}"
-                            AutomationId="HomeRowCompare"
-                            SemanticProperties.Description="Thêm hoặc bỏ phòng khỏi bảng so sánh">
+
+                        <!-- Specular Liquid Glass Filter Trigger (dissolves smoothly as you scroll) -->
+                        <Border x:Name="HomeFilterOrb"
+                                Grid.Column="1"
+                                Style="{StaticResource LiquidSearchCapsule}"
+                                WidthRequest="48"
+                                HeightRequest="48"
+                                AutomationId="HomeFilterTrigger"
+                                SemanticProperties.Description="{Binding FilterButtonText}">
                             <Border.Triggers>
-                                <DataTrigger TargetType="Border"
-                                    Binding="{Binding IsCompared}"
-                                    Value="True">
-                                    <Setter Property="BackgroundColor"
-                                        Value="{StaticResource Accent}" />
+                                <DataTrigger TargetType="Border" Binding="{Binding HasActiveFilters}" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource LiquidSapphireBrush}" />
                                 </DataTrigger>
                             </Border.Triggers>
                             <Border.GestureRecognizers>
-                                <TapGestureRecognizer
-                                    Command="{Binding BindingContext.ToggleCompareCommand, Source={x:Reference HomeRoot}}"
-                                    CommandParameter="{Binding .}" />
+                                <TapGestureRecognizer Command="{Binding ToggleFilterPanelCommand}" />
                             </Border.GestureRecognizers>
-                            <Image Source="compare_icon.png"
-                                WidthRequest="18"
-                                HeightRequest="18"
-                                HorizontalOptions="Center"
-                                VerticalOptions="Center"
-                                InputTransparent="True">
-                                <Image.Triggers>
-                                    <DataTrigger TargetType="Image"
-                                        Binding="{Binding IsCompared}"
-                                        Value="True">
-                                        <Setter Property="Source"
-                                            Value="compare_icon_light.png" />
-                                    </DataTrigger>
-                                </Image.Triggers>
-                            </Image>
-                        </Border>
-                    </Grid>
-                </Border>
-            </DataTemplate>
-        </ResourceDictionary>
-    </ContentPage.Resources>
-    <sheet:SfBottomSheet x:Name="FilterSheet"
-        IsOpen="{Binding IsFilterPanelOpen, Mode=TwoWay}"
-        AllowedState="FullExpanded"
-        FullExpandedRatio="0.94"
-        IsModal="True"
-        ShowGrabber="True"
-        GrabberWidth="40"
-        GrabberHeight="4"
-        GrabberAreaHeight="20"
-        EnableSwiping="True"
-        SwipeFromHeaderOnly="True"
-        CollapseOnOverlayTap="True"
-        CornerRadius="26,26,0,0"
-        ContentPadding="0"
-        AnimationDuration="200"
-        Background="{AppThemeBinding Light={StaticResource SurfaceBrush}, Dark={StaticResource SurfaceDarkBrush}}">
-        <sheet:SfBottomSheet.Content>
-            <Grid RowDefinitions="Auto,*,Auto">
-                <VerticalStackLayout BackgroundColor="{AppThemeBinding Light={StaticResource Canvas}, Dark={StaticResource CanvasDark}}"
-                    Spacing="0">
-                    <!-- Reference header: brand mark, centered location, user avatar -->
-                    <Grid x:Name="TopBar"
-                        Padding="20,12,20,2"
-                        ColumnDefinitions="Auto,*,Auto"
-                        ColumnSpacing="10"
-                        MaximumWidthRequest="1280"
-                        HorizontalOptions="Fill">
-                        <Border WidthRequest="44"
-                            HeightRequest="44"
-                            Padding="5"
-                            StrokeThickness="0"
-                            StrokeShape="RoundRectangle 15"
-                            VerticalOptions="Center">
-                            <Image Source="radar_mark.png" />
-                        </Border>
-                        <Grid Grid.Column="2"
-                            WidthRequest="44"
-                            HeightRequest="44"
-                            VerticalOptions="Center">
-                            <Border StrokeThickness="0"
-                                StrokeShape="RoundRectangle 22"
-                                BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}">
-                                <Label Text="RR"
-                                    FontFamily="OpenSansSemibold"
-                                    FontSize="13"
-                                    TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}"
-                                    HorizontalTextAlignment="Center"
-                                    VerticalTextAlignment="Center" />
-                            </Border>
-                            <Border WidthRequest="11"
-                                HeightRequest="11"
-                                Margin="0,1,0,0"
-                                StrokeThickness="0"
-                                StrokeShape="RoundRectangle 6"
-                                HorizontalOptions="End"
-                                VerticalOptions="Start"
-                                BackgroundColor="{StaticResource Accent}" />
-                        </Grid>
-                    </Grid>
-                    <VerticalStackLayout x:Name="HomeChrome"
-                        Padding="20,8,20,8"
-                        Spacing="8"
-                        MaximumWidthRequest="1280"
-                        HorizontalOptions="Fill">
-                        <Grid ColumnDefinitions="*,Auto"
-                            ColumnSpacing="10">
-                            <buttons:SfButton Command="{Binding OpenSearchCommand}"
-                                Style="{StaticResource OutlineActionButton}"
-                                HeightRequest="52"
-                                CornerRadius="16"
-                                Padding="16,0"
-                                AutomationId="OpenHomeSearch"
-                                SemanticProperties.Description="Tìm phòng gần trường đại học">
-                                <buttons:SfButton.Content>
-                                    <DataTemplate x:DataType="vm:HomeViewModel">
-                                        <Grid ColumnDefinitions="22,*"
-                                            ColumnSpacing="10"
-                                            InputTransparent="True">
-                                            <Image Source="search_icon.png"
-                                                WidthRequest="22"
-                                                HeightRequest="22"
-                                                VerticalOptions="Center"
-                                                HorizontalOptions="Center" />
-                                            <Label Grid.Column="1"
-                                                Text="{Binding SearchDisplayText}"
-                                                FontSize="14"
-                                                VerticalOptions="Center"
-                                                MaxLines="1"
-                                                LineBreakMode="TailTruncation"
-                                                TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
-                                        </Grid>
-                                    </DataTemplate>
-                                </buttons:SfButton.Content>
-                            </buttons:SfButton>
-                            <buttons:SfButton Grid.Column="1"
-                                Command="{Binding ToggleFilterPanelCommand}"
-                                Style="{StaticResource OutlineActionButton}"
-                                WidthRequest="52"
-                                HeightRequest="52"
-                                CornerRadius="16"
-                                Padding="0"
-                                AutomationId="ToggleFilters"
-                                SemanticProperties.Description="{Binding FilterButtonText}">
-                                <buttons:SfButton.Content>
-                                    <DataTemplate x:DataType="vm:HomeViewModel">
-                                        <Grid InputTransparent="True"
-                                            WidthRequest="40"
-                                            HeightRequest="40">
-                                            <Image Source="filter_icon.png"
-                                                WidthRequest="23"
-                                                HeightRequest="23" />
-                                            <Border IsVisible="{Binding HasActiveFilters}"
-                                                BackgroundColor="{StaticResource Accent}"
-                                                StrokeThickness="0"
-                                                StrokeShape="RoundRectangle 8"
-                                                HorizontalOptions="End"
-                                                VerticalOptions="Start"
-                                                WidthRequest="16"
-                                                HeightRequest="16"
-                                                Margin="0"
-                                                Padding="0">
-                                                <Label Text="{Binding ActiveFilterCount}"
-                                                    FontSize="9"
-                                                    FontFamily="OpenSansSemibold"
-                                                    TextColor="White"
-                                                    HorizontalTextAlignment="Center"
-                                                    VerticalTextAlignment="Center" />
-                                            </Border>
-                                        </Grid>
-                                    </DataTemplate>
-                                </buttons:SfButton.Content>
-                            </buttons:SfButton>
-                        </Grid>
-                        <ScrollView Orientation="Horizontal"
-                            HorizontalScrollBarVisibility="Never"
-                            IsVisible="{Binding HasActiveFilters}">
-                            <HorizontalStackLayout AutomationId="HomeActiveFilters"
-                                BindableLayout.ItemsSource="{Binding ActiveFilterChips}"
-                                BindableLayout.ItemTemplate="{StaticResource ActiveFilterChipTemplate}" />
-                        </ScrollView>
-                        <Grid ColumnDefinitions="*,Auto"
-                            ColumnSpacing="8">
-                            <VerticalStackLayout Spacing="1"
-                                VerticalOptions="Center">
-                                <Label Text="Khám phá phòng trọ"
-                                    Style="{StaticResource SectionTitle}"
-                                    FontSize="18" />
-                                <Label Text="{Binding ResultsText}"
-                                    AutomationId="HomeResultCount"
-                                    Style="{StaticResource Caption}"
-                                    FontSize="12"
-                                    MaxLines="1"
-                                    LineBreakMode="TailTruncation" />
-                            </VerticalStackLayout>
-                            <buttons:SfButton Grid.Column="1"
-                                Text="Xóa lọc"
-                                Command="{Binding ClearFiltersCommand}"
-                                IsVisible="{Binding HasActiveFilters}"
-                                AutomationId="ClearFilters"
-                                Style="{StaticResource TextActionButton}"
-                                Padding="10,0" />
-                        </Grid>
-                    </VerticalStackLayout>
-                </VerticalStackLayout>
-                <Grid Grid.Row="1">
-                    <refresh:SfPullToRefresh x:Name="ListingRefresh"
-                        IsRefreshing="{Binding IsRefreshing}"
-                        RefreshCommand="{Binding RefreshCommand}"
-                        Margin="20,0,6,0"
-                        MaximumWidthRequest="1280"
-                        HorizontalOptions="Fill">
-                        <refresh:SfPullToRefresh.PullableContent>
-                            <ScrollView x:Name="ListingsView"
-                                Scrolled="OnListingsScrolled">
-                                <VerticalStackLayout Padding="0,2,14,16"
-                                    Spacing="16"
-                                    MaximumWidthRequest="720"
-                                    HorizontalOptions="Fill">
-                                    <!-- Category tiles -->
-                                    <ScrollView Orientation="Horizontal"
-                                        HorizontalScrollBarVisibility="Never"
-                                        Margin="0,0,-14,0">
-                                        <HorizontalStackLayout Spacing="10"
-                                            BindableLayout.ItemsSource="{Binding RoomTypeChips}"
-                                            BindableLayout.ItemTemplate="{StaticResource CategoryTileTemplate}" />
-                                    </ScrollView>
-
-                                    <!-- Recommendations carousel -->
-                                    <VerticalStackLayout Spacing="12"
-                                        IsVisible="{Binding HasListings}">
-                                        <Label Text="Gợi ý cho bạn"
-                                            Style="{StaticResource SectionTitle}"
-                                            FontSize="19" />
-                                        <ScrollView Orientation="Horizontal"
-                                            HorizontalScrollBarVisibility="Never"
-                                            Margin="0,0,-14,0">
-                                            <HorizontalStackLayout Spacing="12"
-                                                Padding="0,0,0,2"
-                                                BindableLayout.ItemsSource="{Binding Listings}"
-                                                BindableLayout.ItemTemplate="{StaticResource RecommendationCardTemplate}" />
-                                        </ScrollView>
-                                    </VerticalStackLayout>
-
-                                    <!-- New listings -->
-                                    <VerticalStackLayout Spacing="2"
-                                        IsVisible="{Binding HasListings}">
-                                        <Label Text="Phòng mới đăng"
-                                            Style="{StaticResource SectionTitle}"
-                                            FontSize="19" />
-                                    </VerticalStackLayout>
-
-                                    <VerticalStackLayout Spacing="2"
-                                        BindableLayout.ItemsSource="{Binding Listings}"
-                                        BindableLayout.ItemTemplate="{StaticResource ListingRowTemplate}" />
-
-                                    <ActivityIndicator IsRunning="{Binding IsLoadingMore}"
-                                        IsVisible="{Binding IsLoadingMore}"
-                                        HeightRequest="32" />
-                                    <buttons:SfButton Text="Xem thêm phòng"
-                                        Command="{Binding LoadMoreCommand}"
-                                        IsVisible="{Binding CanLoadMore}"
-                                        Style="{StaticResource OutlineActionButton}"
-                                        HorizontalOptions="Center"
-                                        Padding="28,0" />
-
-                                    <ContentView IsVisible="{Binding ShowEmptyState}"
-                                        AutomationId="HomeEmptyState">
-                                        <Border Padding="24,36"
-                                            StrokeShape="RoundRectangle 22">
-                                            <VerticalStackLayout Spacing="12"
-                                                HorizontalOptions="Center"
-                                                MaximumWidthRequest="340">
-                                                <Border Padding="16"
-                                                    StrokeThickness="0"
-                                                    StrokeShape="RoundRectangle 22"
-                                                    BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}"
-                                                    HorizontalOptions="Center">
-                                                    <Image Source="search_icon.png"
-                                                        WidthRequest="30"
-                                                        HeightRequest="30" />
-                                                </Border>
-                                                <Label Text="Chưa có phòng phù hợp"
-                                                    FontFamily="OpenSansSemibold"
-                                                    FontSize="18"
-                                                    HorizontalTextAlignment="Center" />
-                                                <Label Text="{Binding EmptyMessage}"
-                                                    AutomationId="HomeEmptyMessage"
-                                                    Style="{StaticResource Caption}"
-                                                    HorizontalTextAlignment="Center" />
-                                                <buttons:SfButton Text="Điều chỉnh bộ lọc"
-                                                    Command="{Binding ToggleFilterPanelCommand}"
-                                                    Style="{StaticResource SecondaryActionButton}" />
-                                            </VerticalStackLayout>
-                                        </Border>
-                                    </ContentView>
-                                </VerticalStackLayout>
-                            </ScrollView>
-                        </refresh:SfPullToRefresh.PullableContent>
-                    </refresh:SfPullToRefresh>
-                    <VerticalStackLayout IsVisible="{Binding ShowLoadingState}"
-                        Padding="20,8"
-                        Spacing="12"
-                        InputTransparent="True">
-                        <shimmer:SfShimmer IsActive="{Binding ShowLoadingState}"
-                            Type="Feed"
-                            HeightRequest="320" />
-                        <Label Text="Đang tìm không gian phù hợp…"
-                            Style="{StaticResource Caption}"
-                            HorizontalTextAlignment="Center" />
-                    </VerticalStackLayout>
-                </Grid>
-                <Border Grid.Row="2"
-                    IsVisible="{Binding HasError}"
-                    Margin="20,6,20,10"
-                    Padding="14,12"
-                    StrokeShape="RoundRectangle 16">
-                    <Grid ColumnDefinitions="*,Auto"
-                        ColumnSpacing="10">
-                        <VerticalStackLayout Spacing="3"
-                            VerticalOptions="Center">
-                            <Label Text="Chưa tải được kết quả"
-                                FontFamily="OpenSansSemibold"
-                                FontSize="14" />
-                            <Label Text="{Binding ErrorMessage}"
-                                Style="{StaticResource Caption}"
-                                FontSize="12" />
-                        </VerticalStackLayout>
-                        <buttons:SfButton Grid.Column="1"
-                            Text="Thử lại"
-                            Command="{Binding RetryCommand}"
-                            Style="{StaticResource SecondaryActionButton}"
-                            Padding="14,0" />
-                    </Grid>
-                </Border>
-                <VerticalStackLayout Grid.Row="1"
-                    Grid.RowSpan="2"
-                    Padding="16,0,16,14"
-                    Spacing="6"
-                    VerticalOptions="End"
-                    HorizontalOptions="Center"
-                    IsVisible="{Binding ShowComparisonBar}"
-                    ZIndex="6">
-                    <Border IsVisible="{Binding HasCompareHint}"
-                        Padding="12,7"
-                        HorizontalOptions="Center"
-                        StrokeThickness="0"
-                        StrokeShape="RoundRectangle 12"
-                        BackgroundColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}">
-                        <Label Text="{Binding CompareHint}"
-                            FontSize="11.5"
-                            TextColor="{AppThemeBinding Light={StaticResource Canvas}, Dark={StaticResource CanvasDark}}" />
-                    </Border>
-                    <buttons:SfButton Text="{Binding ComparisonBarText}"
-                        Command="{Binding OpenComparisonCommand}"
-                        Style="{StaticResource PrimaryActionButton}"
-                        HeightRequest="46"
-                        CornerRadius="23"
-                        Padding="22,0"
-                        AutomationId="OpenComparison"
-                        SemanticProperties.Description="Mở bảng so sánh phòng" />
-                </VerticalStackLayout>
-                <Grid Grid.RowSpan="3"
-                    IsVisible="{Binding IsSearchOpen}"
-                    RowDefinitions="Auto,Auto,*"
-                    BackgroundColor="{AppThemeBinding Light={StaticResource Canvas}, Dark={StaticResource CanvasDark}}"
-                    Padding="16,8">
-                    <Grid ColumnDefinitions="Auto,*,Auto"
-                        ColumnSpacing="8">
-                        <buttons:SfButton Text="‹"
-                            Command="{Binding CloseSearchCommand}"
-                            Style="{StaticResource IconActionButton}"
-                            FontSize="28"
-                            SemanticProperties.Description="Đóng tìm kiếm" />
-                        <Border x:Name="SearchInputBorder"
-                            Grid.Column="1"
-                            StrokeShape="RoundRectangle 16"
-                            Padding="12,0"
-                            MinimumHeightRequest="54">
-                            <Grid ColumnDefinitions="22,*"
-                                ColumnSpacing="8">
-                                <Image Source="search_icon.png"
-                                    WidthRequest="22"
-                                    HeightRequest="22"
-                                    VerticalOptions="Center"
-                                    HorizontalOptions="Center" />
-                                <Entry x:Name="CampusSearchEntry"
-                                    Grid.Column="1"
-                                    Text="{Binding SearchQuery}"
-                                    Placeholder="Tên trường đại học"
-                                    ReturnType="Search"
-                                    ReturnCommand="{Binding SubmitSearchCommand}"
-                                    FontSize="15"
-                                    VerticalOptions="Center"
-                                    BackgroundColor="Transparent"
-                                    Focused="OnSearchFocused"
-                                    Unfocused="OnSearchUnfocused"
-                                    SemanticProperties.Description="Nhập tên trường trong danh sách để tìm phòng gần trường" />
+                            <Grid>
+                                <Image Source="filter_icon.png"
+                                       WidthRequest="19"
+                                       HeightRequest="19"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center" />
+                                <Border IsVisible="{Binding HasActiveFilters}"
+                                        HorizontalOptions="End"
+                                        VerticalOptions="Start"
+                                        Margin="4"
+                                        WidthRequest="18"
+                                        HeightRequest="18"
+                                        StrokeShape="RoundRectangle 9"
+                                        StrokeThickness="0"
+                                        BackgroundColor="#FFFFFF">
+                                    <Label Text="{Binding ActiveFilterCount}"
+                                           FontFamily="FontBold"
+                                           FontSize="10"
+                                           TextColor="{StaticResource Brand}"
+                                           HorizontalOptions="Center"
+                                           VerticalOptions="Center" />
+                                </Border>
                             </Grid>
                         </Border>
-                        <buttons:SfButton Grid.Column="2"
-                            Command="{Binding ClearSearchQueryCommand}"
-                            Style="{StaticResource IconActionButton}"
-                            IsVisible="{Binding HasSearchQuery}"
-                            SemanticProperties.Description="Xóa nội dung tìm kiếm">
+                    </Grid>
+
+                    <!-- Liquid Glass Category Filter Chips (dissolves smoothly on scroll, returns when pulling back to top) -->
+                    <ScrollView x:Name="CategoryChipsScroll"
+                                Orientation="Horizontal"
+                                HorizontalScrollBarVisibility="Never">
+                        <HorizontalStackLayout BindableLayout.ItemsSource="{Binding RoomTypeChips}" Spacing="8" Padding="0,1">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="vm:FilterChip">
+                                    <Border Style="{StaticResource LiquidFilterChip}" Padding="10,6">
+                                        <Border.Triggers>
+                                            <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
+                                                <Setter Property="Background" Value="{StaticResource LiquidSapphireBrush}" />
+                                                <Setter Property="Stroke" Value="#A8FFFFFF" />
+                                            </DataTrigger>
+                                        </Border.Triggers>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnChipTapped" Command="{Binding SelectCommand}" />
+                                        </Border.GestureRecognizers>
+
+                                        <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                                            <Border WidthRequest="22"
+                                                    HeightRequest="22"
+                                                    StrokeShape="RoundRectangle 11"
+                                                    StrokeThickness="0"
+                                                    BackgroundColor="Transparent"
+                                                    VerticalOptions="Center">
+                                                <Border.Triggers>
+                                                    <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
+                                                        <Setter Property="BackgroundColor" Value="#EBFFFFFF" />
+                                                    </DataTrigger>
+                                                </Border.Triggers>
+                                                <Image Source="{Binding ImageSource}"
+                                                       WidthRequest="13"
+                                                       HeightRequest="13"
+                                                       HorizontalOptions="Center"
+                                                       VerticalOptions="Center" />
+                                            </Border>
+                                            <Label Text="{Binding Label}"
+                                                   FontFamily="FontSemiBold"
+                                                   FontSize="12.5"
+                                                   VerticalOptions="Center"
+                                                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}">
+                                                <Label.Triggers>
+                                                    <DataTrigger TargetType="Label" Binding="{Binding IsSelected}" Value="True">
+                                                        <Setter Property="TextColor" Value="#FFFFFF" />
+                                                    </DataTrigger>
+                                                </Label.Triggers>
+                                            </Label>
+                                        </HorizontalStackLayout>
+                                    </Border>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </HorizontalStackLayout>
+                    </ScrollView>
+
+                    <progressBar:SfLinearProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" />
+                </VerticalStackLayout>
+            </Grid>
+
+            <!-- ==================== PROGRESSIVE FROSTED BOTTOM MIST VEIL (SOFTENS TEXT BEHIND FLOATING TABBAR) ==================== -->
+            <BoxView VerticalOptions="End"
+                     HeightRequest="108"
+                     InputTransparent="True">
+                <BoxView.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="Transparent" Offset="0.0" />
+                        <GradientStop Color="{AppThemeBinding Light=#B8EDF4FD, Dark=#C4080E1A}" Offset="0.52" />
+                        <GradientStop Color="{AppThemeBinding Light=#F2F2F6FC, Dark=#F2080E1A}" Offset="1.0" />
+                    </LinearGradientBrush>
+                </BoxView.Background>
+            </BoxView>
+
+            <!-- ==================== FLOATING LIQUID GLASS COMPARISON DOCK ==================== -->
+            <VerticalStackLayout VerticalOptions="End"
+                                 HorizontalOptions="Center"
+                                 Margin="18,0,18,106"
+                                 Spacing="8">
+
+                <Border IsVisible="{Binding HasCompareHint}"
+                        Style="{StaticResource LiquidFloatingPanel}"
+                        Padding="16,10"
+                        HorizontalOptions="Center">
+                    <Label Text="{Binding CompareHint}"
+                           FontFamily="FontSemiBold"
+                           FontSize="12.5"
+                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                </Border>
+
+                <Border IsVisible="{Binding ShowComparisonBar}"
+                        Style="{StaticResource LiquidFloatingPanel}"
+                        Padding="16,10"
+                        HorizontalOptions="Center"
+                        AutomationId="HomeComparisonBar">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding OpenComparisonCommand}" />
+                    </Border.GestureRecognizers>
+                    <HorizontalStackLayout Spacing="12" VerticalOptions="Center">
+                        <Border WidthRequest="34"
+                                HeightRequest="34"
+                                StrokeShape="RoundRectangle 17"
+                                StrokeThickness="0"
+                                Background="{StaticResource LiquidSapphireBrush}">
+                            <Image Source="compare_icon_light.png" WidthRequest="16" HeightRequest="16" HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+                        <VerticalStackLayout Spacing="0" VerticalOptions="Center">
+                            <Label Text="{Binding ComparisonBarText}"
+                                   FontFamily="FontBold"
+                                   FontSize="13.5"
+                                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                            <Label Text="Chạm để đối chiếu chi tiết"
+                                   Style="{StaticResource Caption}"
+                                   FontSize="11" />
+                        </VerticalStackLayout>
+                        <Image Source="chevron_right.png" WidthRequest="16" HeightRequest="16" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+
+        </Grid>
+
+        <!-- 2. LIQUID GLASS CAMPUS SEARCH MODAL OVERLAY -->
+        <Grid IsVisible="{Binding IsSearchOpen}"
+              BackgroundColor="{StaticResource Scrim}"
+              Padding="16,20">
+            <Border Style="{StaticResource LiquidGlassCard}"
+                    VerticalOptions="Start"
+                    MaximumWidthRequest="520"
+                    Padding="18">
+                <VerticalStackLayout Spacing="14">
+                    <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="TÌM GẦN GIẢNG ĐƯỜNG" Style="{StaticResource Eyebrow}" />
+                            <Label Text="Chọn trường đại học của bạn" Style="{StaticResource SectionTitle}" />
+                        </VerticalStackLayout>
+                        <buttons:SfButton Grid.Column="1"
+                                          Style="{StaticResource IconCircleButton}"
+                                          Command="{Binding CloseSearchCommand}"
+                                          AutomationId="HomeCloseSearchButton">
                             <buttons:SfButton.Content>
-                                <DataTemplate x:DataType="vm:HomeViewModel">
-                                    <Image Source="close_icon.png"
-                                        WidthRequest="22"
-                                        HeightRequest="22"
-                                        InputTransparent="True" />
+                                <DataTemplate>
+                                    <Image Source="close_icon.png" WidthRequest="16" HeightRequest="16" HorizontalOptions="Center" VerticalOptions="Center" />
                                 </DataTemplate>
                             </buttons:SfButton.Content>
                         </buttons:SfButton>
                     </Grid>
-                    <VerticalStackLayout Grid.Row="1"
-                        Padding="8,24,8,12"
-                        Spacing="5">
-                        <Label Text="Tìm phòng gần trường"
-                            Style="{StaticResource SectionTitle}" />
-                        <Label Text="Chọn trường để xem phòng lân cận. Các bộ lọc khác được giữ nguyên."
-                            Style="{StaticResource Caption}" />
+
+                    <inputLayout:SfTextInputLayout Hint="Nhập tên trường (Bách Khoa, KHTN, CNTT...)">
+                        <Entry Text="{Binding SearchQuery}"
+                               ReturnType="Search"
+                               ReturnCommand="{Binding SubmitSearchCommand}"
+                               AutomationId="HomeSearchEntry" />
+                    </inputLayout:SfTextInputLayout>
+
+                    <Label IsVisible="{Binding HasNoSuggestions}"
+                           Text="Không tìm thấy cơ sở khớp từ khóa."
+                           Style="{StaticResource Caption}" />
+
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding CampusSuggestions}" Spacing="8">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:CampusOption">
+                                <Border Style="{StaticResource SubtleCard}" Padding="14,12">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding SelectSearchCampusCommand, Source={RelativeSource AncestorType={x:Type vm:HomeViewModel}}, x:DataType=vm:HomeViewModel}"
+                                                              CommandParameter="{Binding .}" />
+                                    </Border.GestureRecognizers>
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" VerticalOptions="Center">
+                                        <Image Grid.Column="0" Source="location_pin.png" WidthRequest="16" HeightRequest="16" />
+                                        <Label Grid.Column="1"
+                                               Text="{Binding Name}"
+                                               FontFamily="FontSemiBold"
+                                               FontSize="14" />
+                                        <Image Grid.Column="2" Source="chevron_right.png" WidthRequest="15" HeightRequest="15" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
                     </VerticalStackLayout>
-                    <ScrollView Grid.Row="2">
-                        <VerticalStackLayout Padding="4,0,4,24"
-                            Spacing="10">
-                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding CampusSuggestions}"
-                                Spacing="10">
-                                <BindableLayout.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:CampusOption">
-                                        <buttons:SfButton Margin="4,0,4,10"
-                                            Padding="16,12"
-                                            HeightRequest="76"
-                                            CornerRadius="16"
-                                            Style="{StaticResource OutlineActionButton}"
-                                            CommandParameter="{Binding}"
-                                            Command="{Binding SelectSearchCampusCommand, Source={RelativeSource AncestorType={x:Type vm:HomeViewModel}}, x:DataType=vm:HomeViewModel}"
-                                            SemanticProperties.Description="{Binding Name, StringFormat='Tìm phòng gần trường {0}'}">
-                                            <buttons:SfButton.Content>
-                                                <DataTemplate x:DataType="vm:CampusOption">
-                                                    <Grid ColumnDefinitions="24,*,20"
-                                                        ColumnSpacing="12"
-                                                        InputTransparent="True">
-                                                        <Image Source="location_pin.png"
-                                                            WidthRequest="24"
-                                                            HeightRequest="24" />
-                                                        <VerticalStackLayout Grid.Column="1"
-                                                            Spacing="3"
-                                                            VerticalOptions="Center">
-                                                            <Label Text="{Binding Name}"
-                                                                FontFamily="OpenSansSemibold"
-                                                                FontSize="15" />
-                                                            <Label Text="Trường đại học · Tìm phòng lân cận"
-                                                                Style="{StaticResource Caption}"
-                                                                FontSize="12" />
-                                                        </VerticalStackLayout>
-                                                        <Image Grid.Column="2"
-                                                            Source="chevron_right.png"
-                                                            WidthRequest="20"
-                                                            HeightRequest="20" />
-                                                    </Grid>
-                                                </DataTemplate>
-                                            </buttons:SfButton.Content>
-                                        </buttons:SfButton>
-                                    </DataTemplate>
-                                </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+
+        <!-- 3. LIQUID GLASS FILTER BOTTOM SHEET -->
+        <bottomSheet:SfBottomSheet x:Name="FilterBottomSheet"
+                                   HalfExpandedRatio="0.76"
+                                   FullExpandedRatio="0.92"
+                                   CornerRadius="28,28,0,0"
+                                   ShowGrabber="True"
+                                   Background="{AppThemeBinding Light=#F7FBFF, Dark=#121E33}">
+            <bottomSheet:SfBottomSheet.BottomSheetContent>
+                <Grid RowDefinitions="Auto,*,Auto" Padding="20,8,20,20" RowSpacing="14">
+
+                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="BỘ LỌC THÔNG MINH" Style="{StaticResource Eyebrow}" />
+                            <Label Text="Tinh chỉnh khoảng giá &amp; vị trí" Style="{StaticResource SectionTitle}" />
+                        </VerticalStackLayout>
+                        <buttons:SfButton Grid.Column="1"
+                                          Text="Đặt lại"
+                                          Command="{Binding ResetDraftCommand}"
+                                          Style="{StaticResource GhostSfButton}" />
+                    </Grid>
+
+                    <ScrollView Grid.Row="1">
+                        <VerticalStackLayout Spacing="18" Padding="0,4,0,12">
+
+                            <!-- Price Quick Chips + Inputs -->
+                            <VerticalStackLayout Spacing="10">
+                                <Label Text="Khoảng giá thuê (triệu đồng / tháng)" FontFamily="FontSemiBold" FontSize="13.5" />
+                                <FlexLayout BindableLayout.ItemsSource="{Binding PriceChips}" Wrap="Wrap">
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:FilterChip">
+                                            <Border Style="{StaticResource LiquidFilterChip}" Margin="0,0,8,8" Padding="14,8">
+                                                <Border.Triggers>
+                                                    <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
+                                                        <Setter Property="Background" Value="{StaticResource LiquidSapphireBrush}" />
+                                                    </DataTrigger>
+                                                </Border.Triggers>
+                                                <Border.GestureRecognizers>
+                                                    <TapGestureRecognizer Command="{Binding SelectCommand}" />
+                                                </Border.GestureRecognizers>
+                                                <Label Text="{Binding Label}" FontFamily="FontSemiBold" FontSize="12.5">
+                                                    <Label.Triggers>
+                                                        <DataTrigger TargetType="Label" Binding="{Binding IsSelected}" Value="True">
+                                                            <Setter Property="TextColor" Value="#FFFFFF" />
+                                                        </DataTrigger>
+                                                    </Label.Triggers>
+                                                </Label>
+                                            </Border>
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </FlexLayout>
+
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                                    <inputLayout:SfTextInputLayout Grid.Column="0" Hint="Từ (triệu)">
+                                        <Entry Text="{Binding PriceMinText}" Keyboard="Numeric" />
+                                    </inputLayout:SfTextInputLayout>
+                                    <inputLayout:SfTextInputLayout Grid.Column="1" Hint="Đến (triệu)">
+                                        <Entry Text="{Binding PriceMaxText}" Keyboard="Numeric" />
+                                    </inputLayout:SfTextInputLayout>
+                                </Grid>
                             </VerticalStackLayout>
-                            <VerticalStackLayout IsVisible="{Binding HasNoSuggestions}"
-                                Padding="24,36"
-                                Spacing="10">
-                                <Label Text="Chưa tìm thấy trường"
-                                    Style="{StaticResource SectionTitle}"
-                                    HorizontalTextAlignment="Center" />
-                                <Label Text="Thử tên trường khác trong danh sách, hoặc khám phá khu vực trên bản đồ."
-                                    Style="{StaticResource Caption}"
-                                    HorizontalTextAlignment="Center" />
-                                <buttons:SfButton Text="Khám phá bản đồ"
-                                    Clicked="OnOpenMapClicked"
-                                    Style="{StaticResource SecondaryActionButton}" />
+
+                            <!-- Area Range -->
+                            <VerticalStackLayout Spacing="10">
+                                <Label Text="Diện tích phòng (m²)" FontFamily="FontSemiBold" FontSize="13.5" />
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                                    <inputLayout:SfTextInputLayout Grid.Column="0" Hint="Tối thiểu m²">
+                                        <Entry Text="{Binding AreaMinText}" Keyboard="Numeric" />
+                                    </inputLayout:SfTextInputLayout>
+                                    <inputLayout:SfTextInputLayout Grid.Column="1" Hint="Tối đa m²">
+                                        <Entry Text="{Binding AreaMaxText}" Keyboard="Numeric" />
+                                    </inputLayout:SfTextInputLayout>
+                                </Grid>
                             </VerticalStackLayout>
+
+                            <!-- Campus & Distance -->
+                            <VerticalStackLayout Spacing="10">
+                                <Label Text="Trường đại học" FontFamily="FontSemiBold" FontSize="13.5" />
+                                <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                                    <HorizontalStackLayout BindableLayout.ItemsSource="{Binding CampusChips}" Spacing="8">
+                                        <BindableLayout.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:FilterChip">
+                                                <Border Style="{StaticResource LiquidFilterChip}" Padding="14,8">
+                                                    <Border.Triggers>
+                                                        <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
+                                                            <Setter Property="Background" Value="{StaticResource LiquidSapphireBrush}" />
+                                                        </DataTrigger>
+                                                    </Border.Triggers>
+                                                    <Border.GestureRecognizers>
+                                                        <TapGestureRecognizer Command="{Binding SelectCommand}" />
+                                                    </Border.GestureRecognizers>
+                                                    <Label Text="{Binding Label}" FontFamily="FontSemiBold" FontSize="12.5">
+                                                        <Label.Triggers>
+                                                            <DataTrigger TargetType="Label" Binding="{Binding IsSelected}" Value="True">
+                                                                <Setter Property="TextColor" Value="#FFFFFF" />
+                                                            </DataTrigger>
+                                                        </Label.Triggers>
+                                                    </Label>
+                                                </Border>
+                                            </DataTemplate>
+                                        </BindableLayout.ItemTemplate>
+                                    </HorizontalStackLayout>
+                                </ScrollView>
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Spacing="10">
+                                <Label Text="Bán kính tới trường" FontFamily="FontSemiBold" FontSize="13.5" />
+                                <HorizontalStackLayout BindableLayout.ItemsSource="{Binding DistanceChips}" Spacing="8">
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:FilterChip">
+                                            <Border Style="{StaticResource LiquidFilterChip}" Padding="14,8">
+                                                <Border.Triggers>
+                                                    <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
+                                                        <Setter Property="Background" Value="{StaticResource LiquidSapphireBrush}" />
+                                                    </DataTrigger>
+                                                </Border.Triggers>
+                                                <Border.GestureRecognizers>
+                                                    <TapGestureRecognizer Command="{Binding SelectCommand}" />
+                                                </Border.GestureRecognizers>
+                                                <Label Text="{Binding Label}" FontFamily="FontSemiBold" FontSize="12.5">
+                                                    <Label.Triggers>
+                                                        <DataTrigger TargetType="Label" Binding="{Binding IsSelected}" Value="True">
+                                                            <Setter Property="TextColor" Value="#FFFFFF" />
+                                                        </DataTrigger>
+                                                    </Label.Triggers>
+                                                </Label>
+                                            </Border>
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </HorizontalStackLayout>
+                            </VerticalStackLayout>
+
+                            <Label IsVisible="{Binding HasFilterError}"
+                                   Text="{Binding FilterError}"
+                                   FontFamily="FontSemiBold"
+                                   FontSize="12.5"
+                                   TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+
                         </VerticalStackLayout>
                     </ScrollView>
-                </Grid>
-            </Grid>
-        </sheet:SfBottomSheet.Content>
-        <sheet:SfBottomSheet.BottomSheetContent>
-            <Grid x:Name="FilterPanel"
-                RowDefinitions="Auto,*,Auto"
-                SafeAreaEdges="All">
-                <Grid Padding="20,0,16,12"
-                    ColumnDefinitions="*,Auto">
-                    <VerticalStackLayout Spacing="3"
-                        VerticalOptions="Center">
-                        <Label Text="Bộ lọc"
-                            Style="{StaticResource ScreenTitle}" />
-                        <Label Text="Tùy chỉnh không gian sống của bạn"
-                            Style="{StaticResource Caption}" />
-                    </VerticalStackLayout>
-                    <buttons:SfButton Grid.Column="1"
-                        Command="{Binding ToggleFilterPanelCommand}"
-                        Style="{StaticResource IconActionButton}"
-                        SemanticProperties.Description="Đóng bộ lọc, bỏ thay đổi chưa áp dụng">
-                        <buttons:SfButton.Content>
-                            <DataTemplate x:DataType="vm:HomeViewModel">
-                                <Image Source="close_icon.png"
-                                    WidthRequest="22"
-                                    HeightRequest="22"
-                                    InputTransparent="True" />
-                            </DataTemplate>
-                        </buttons:SfButton.Content>
-                    </buttons:SfButton>
-                </Grid>
-                <ScrollView Grid.Row="1">
-                    <VerticalStackLayout Padding="20,4,20,20"
-                        Spacing="22">
-                        <VerticalStackLayout Spacing="10">
-                            <Label Text="Ngân sách mỗi tháng"
-                                Style="{StaticResource SectionTitle}" />
-                            <Label Text="Triệu đồng / tháng"
-                                Style="{StaticResource Caption}"
-                                FontSize="12" />
-                            <FlexLayout Wrap="Wrap"
-                                BindableLayout.ItemsSource="{Binding PriceChips}"
-                                BindableLayout.ItemTemplate="{StaticResource FilterChipTemplate}" />
-                            <Grid ColumnDefinitions="*,*"
-                                ColumnSpacing="12">
-                                <input:SfTextInputLayout Hint="Tối thiểu"
-                                    HelperText="Triệu đồng">
-                                    <Entry Text="{Binding PriceMinText}"
-                                        Keyboard="Numeric"
-                                        Style="{StaticResource FilterEntry}"
-                                        Placeholder="Không giới hạn"
-                                        SemanticProperties.Description="Giá thuê tối thiểu, triệu đồng" />
-                                </input:SfTextInputLayout>
-                                <input:SfTextInputLayout Grid.Column="1"
-                                    Hint="Tối đa"
-                                    HelperText="Triệu đồng">
-                                    <Entry Text="{Binding PriceMaxText}"
-                                        Keyboard="Numeric"
-                                        Style="{StaticResource FilterEntry}"
-                                        Placeholder="Không giới hạn"
-                                        SemanticProperties.Description="Giá thuê tối đa, triệu đồng" />
-                                </input:SfTextInputLayout>
-                            </Grid>
-                        </VerticalStackLayout>
-                        <BoxView HeightRequest="1"
-                            Color="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}" />
-                        <VerticalStackLayout Spacing="12">
-                            <Label Text="Diện tích (m²)"
-                                Style="{StaticResource SectionTitle}" />
-                            <Grid ColumnDefinitions="*,*"
-                                ColumnSpacing="12">
-                                <input:SfTextInputLayout Hint="Tối thiểu"
-                                    HelperText="m²">
-                                    <Entry Text="{Binding AreaMinText}"
-                                        Keyboard="Numeric"
-                                        Style="{StaticResource FilterEntry}"
-                                        Placeholder="Không giới hạn"
-                                        SemanticProperties.Description="Diện tích tối thiểu, mét vuông" />
-                                </input:SfTextInputLayout>
-                                <input:SfTextInputLayout Grid.Column="1"
-                                    Hint="Tối đa"
-                                    HelperText="m²">
-                                    <Entry Text="{Binding AreaMaxText}"
-                                        Keyboard="Numeric"
-                                        Style="{StaticResource FilterEntry}"
-                                        Placeholder="Không giới hạn"
-                                        SemanticProperties.Description="Diện tích tối đa, mét vuông" />
-                                </input:SfTextInputLayout>
-                            </Grid>
-                        </VerticalStackLayout>
-                        <BoxView HeightRequest="1"
-                            Color="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}" />
-                        <VerticalStackLayout Spacing="12">
-                            <Label Text="Loại phòng"
-                                Style="{StaticResource SectionTitle}" />
-                            <FlexLayout Wrap="Wrap"
-                                BindableLayout.ItemsSource="{Binding RoomTypeChips}"
-                                BindableLayout.ItemTemplate="{StaticResource FilterChipTemplate}" />
-                        </VerticalStackLayout>
-                        <BoxView HeightRequest="1"
-                            Color="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}" />
-                        <VerticalStackLayout Spacing="10">
-                            <Label Text="Gần trường của bạn"
-                                Style="{StaticResource SectionTitle}" />
-                            <FlexLayout Wrap="Wrap"
-                                BindableLayout.ItemsSource="{Binding CampusChips}"
-                                BindableLayout.ItemTemplate="{StaticResource FilterChipTemplate}" />
-                            <Label Text="Khoảng cách tối đa"
-                                FontFamily="OpenSansSemibold"
-                                FontSize="13" />
-                            <FlexLayout Wrap="Wrap"
-                                IsEnabled="{Binding IsDistanceEnabled}"
-                                BindableLayout.ItemsSource="{Binding DistanceChips}"
-                                BindableLayout.ItemTemplate="{StaticResource FilterChipTemplate}">
-                                <FlexLayout.Triggers>
-                                    <DataTrigger TargetType="FlexLayout"
-                                        Binding="{Binding IsDistanceEnabled}"
-                                        Value="False">
-                                        <Setter Property="Opacity"
-                                            Value="0.45" />
-                                    </DataTrigger>
-                                </FlexLayout.Triggers>
-                            </FlexLayout>
-                            <Label Text="Chọn trường để lọc theo khoảng cách đường chim bay."
-                                Style="{StaticResource Caption}"
-                                FontSize="12" />
-                        </VerticalStackLayout>
-                        <Border IsVisible="{Binding HasFilterError}"
-                            Padding="12"
-                            StrokeThickness="0"
-                            StrokeShape="RoundRectangle 12"
-                            BackgroundColor="{StaticResource DangerSoft}">
-                            <Label Text="{Binding FilterError}"
-                                FontSize="13"
-                                TextColor="{StaticResource Danger}"
-                                SemanticProperties.Description="{Binding FilterError}" />
-                        </Border>
-                    </VerticalStackLayout>
-                </ScrollView>
-                <Border Grid.Row="2"
-                    StrokeShape="Rectangle"
-                    Padding="20,12,20,16"
-                    StrokeThickness="0">
-                    <Grid ColumnDefinitions="Auto,*"
-                        ColumnSpacing="16">
-                        <buttons:SfButton Text="Xóa bộ lọc"
-                            Command="{Binding ResetDraftCommand}"
-                            Style="{StaticResource TextActionButton}"
-                            Padding="4,0"
-                            SemanticProperties.Description="Đặt lại lựa chọn. Nhấn xem kết quả để áp dụng" />
+
+                    <Grid Grid.Row="2" ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                        <buttons:SfButton Grid.Column="0"
+                                          Text="Đóng"
+                                          Command="{Binding ToggleFilterPanelCommand}"
+                                          Style="{StaticResource LiquidGlassButton}" />
                         <buttons:SfButton Grid.Column="1"
-                            Text="Xem kết quả"
-                            Command="{Binding ApplyFiltersCommand}"
-                            Style="{StaticResource PrimaryActionButton}"
-                            SemanticProperties.Description="Áp dụng bộ lọc và xem kết quả"
-                            AutomationId="ApplyHomeFilters" />
+                                          Text="Áp dụng bộ lọc"
+                                          Command="{Binding ApplyFiltersCommand}"
+                                          Style="{StaticResource LiquidPrimaryButton}"
+                                          AutomationId="HomeApplyFiltersButton" />
                     </Grid>
-                </Border>
-            </Grid>
-        </sheet:SfBottomSheet.BottomSheetContent>
-    </sheet:SfBottomSheet>
+                </Grid>
+            </bottomSheet:SfBottomSheet.BottomSheetContent>
+        </bottomSheet:SfBottomSheet>
+
+    </Grid>
 </ContentPage>

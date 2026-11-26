@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RoomToRentRadar.Domain.Entities;
+using RoomToRentRadar.Shared.Auth;
 using RoomToRentRadar.Shared.Listings;
 using RoomToRentRadar.Shared.Moderation;
 using RoomToRentRadar.Shared.Reports;

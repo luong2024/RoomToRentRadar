@@ -1,9 +1,5 @@
-using RoomToRentRadar.Services;
-using RoomToRentRadar.Services.Auth;
-using RoomToRentRadar.Services.ErrorHandling;
-using RoomToRentRadar.Services.Interactions;
-using RoomToRentRadar.Services.Navigation;
-using RoomToRentRadar.Services.Storage;
+using System.Net;
+using RoomToRentRadar.Models;
 using RoomToRentRadar.Services.Api;
 using RoomToRentRadar.Shared.Auth;
 
@@ -11,7 +7,15 @@ namespace RoomToRentRadar.Services.Auth;
 
 public sealed class AuthService(IApiClient apiClient, ITokenStore tokenStore)
 {
-    public async Task<bool> SignInAsync(
+    public AppUserRole? CurrentRole { get; private set; }
+
+    public string? CurrentDisplayName { get; private set; }
+
+    public bool IsSignedIn => CurrentRole is not null;
+
+    public event EventHandler? SessionChanged;
+
+    public async Task SignInAsync(
         string email,
         string password,
         CancellationToken cancellationToken = default)
@@ -19,11 +23,30 @@ public sealed class AuthService(IApiClient apiClient, ITokenStore tokenStore)
         var response = await apiClient.LoginAsync(new LoginRequest(email, password), cancellationToken);
         if (response is null)
         {
-            return false;
+            throw new ApiException(
+                HttpStatusCode.Unauthorized,
+                "The email or password is incorrect.",
+                "invalid_credentials");
         }
 
-        await tokenStore.SaveAsync(response.AccessToken, response.ExpiresAt, cancellationToken);
-        return true;
+        await ApplySessionAsync(response, cancellationToken);
+    }
+
+    public Task<RegisterChallengeResponse> BeginRegistrationAsync(
+        RegisterRequest request,
+        CancellationToken cancellationToken = default)
+        => apiClient.BeginRegistrationAsync(request, cancellationToken);
+
+    public async Task VerifyRegistrationAsync(
+        Guid challengeId,
+        string code,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await apiClient.VerifyRegistrationAsync(
+            new VerifyRegistrationRequest(challengeId, code),
+            cancellationToken);
+
+        await ApplySessionAsync(response, cancellationToken);
     }
 
     public async Task<bool> EnsureSignedInAsync(CancellationToken cancellationToken = default)
@@ -32,6 +55,10 @@ public sealed class AuthService(IApiClient apiClient, ITokenStore tokenStore)
         {
             if (await tokenStore.GetAccessTokenAsync(cancellationToken) is not null)
             {
+                // Sessions stored before roles existed belong to the old user role,
+                // which is now the student role.
+                CurrentRole ??= await tokenStore.GetRoleAsync(cancellationToken) ?? AppUserRole.Student;
+                SessionChanged?.Invoke(this, EventArgs.Empty);
                 return true;
             }
 
@@ -41,7 +68,7 @@ public sealed class AuthService(IApiClient apiClient, ITokenStore tokenStore)
                 return false;
             }
 
-            await tokenStore.SaveAsync(response.AccessToken, response.ExpiresAt, cancellationToken);
+            await ApplySessionAsync(response, cancellationToken);
             return true;
         }
         catch (Exception)
@@ -49,6 +76,24 @@ public sealed class AuthService(IApiClient apiClient, ITokenStore tokenStore)
             // Automatic sign-in is best effort; the app must still start when the API is unreachable.
             return false;
         }
+    }
+
+    public async Task<AppUserRole?> GetCurrentRoleAsync(CancellationToken cancellationToken = default)
+    {
+        if (CurrentRole is { } role)
+        {
+            return role;
+        }
+
+        if (!await IsSignedInAsync(cancellationToken))
+        {
+            return null;
+        }
+
+        // Sessions stored before roles existed belong to the old user role,
+        // which is now the student role.
+        CurrentRole = await tokenStore.GetRoleAsync(cancellationToken) ?? AppUserRole.Student;
+        return CurrentRole;
     }
 
     public async Task SignOutAsync(CancellationToken cancellationToken = default)
@@ -64,9 +109,35 @@ public sealed class AuthService(IApiClient apiClient, ITokenStore tokenStore)
         finally
         {
             await tokenStore.ClearAsync(cancellationToken);
+            CurrentRole = null;
+            CurrentDisplayName = null;
+            SessionChanged?.Invoke(this, EventArgs.Empty);
         }
+    }
+
+    public void UpdateCurrentDisplayName(string? displayName)
+    {
+        var normalized = string.IsNullOrWhiteSpace(displayName) ? null : displayName.Trim();
+        if (normalized == CurrentDisplayName)
+        {
+            return;
+        }
+
+        CurrentDisplayName = normalized;
+        SessionChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public async Task<bool> IsSignedInAsync(CancellationToken cancellationToken = default)
         => await tokenStore.GetAccessTokenAsync(cancellationToken) is not null;
+
+    private async Task ApplySessionAsync(LoginResponse response, CancellationToken cancellationToken)
+    {
+        var role = AppUserRoleWire.TryParse(response.Role) ?? AppUserRole.Student;
+        await tokenStore.SaveAsync(response.AccessToken, response.ExpiresAt, role, cancellationToken);
+        CurrentRole = role;
+        CurrentDisplayName = string.IsNullOrWhiteSpace(response.DisplayName)
+            ? null
+            : response.DisplayName.Trim();
+        SessionChanged?.Invoke(this, EventArgs.Empty);
+    }
 }

@@ -1,36 +1,57 @@
-using RoomToRentRadar.Services;
-using RoomToRentRadar.Services.Auth;
-using RoomToRentRadar.Services.ErrorHandling;
-using RoomToRentRadar.Services.Interactions;
-using RoomToRentRadar.Services.Navigation;
-using RoomToRentRadar.Services.Storage;
+using Microsoft.Maui.ApplicationModel;
 
 namespace RoomToRentRadar.Services.Interactions;
 
 public sealed class ShellAlertPrompt : IAlertPrompt
 {
-    public Task ShowAsync(
+    internal static SemaphoreSlim DialogSemaphore { get; } = new(1, 1);
+
+    public async Task ShowAsync(
         string title,
         string message,
         string dismissText = "OK",
         CancellationToken cancellationToken = default)
-        => MainThread.InvokeOnMainThreadAsync(async () =>
+    {
+        await DialogSemaphore.WaitAsync(cancellationToken);
+        try
         {
-            if (Shell.Current is Shell shell)
-                await shell.DisplayAlertAsync(title, message, dismissText);
-        });
+            await MainThread.InvokeOnMainThreadAsync(async () =>
+            {
+                if (Shell.Current is Shell shell)
+                {
+                    await shell.DisplayAlertAsync(title, message, dismissText);
+                }
+            });
+        }
+        finally
+        {
+            DialogSemaphore.Release();
+        }
+    }
 
-    public Task<bool> ConfirmAsync(
+    public async Task<bool> ConfirmAsync(
         string title,
         string message,
         string acceptText,
         string cancelText,
         CancellationToken cancellationToken = default)
-        => MainThread.InvokeOnMainThreadAsync(async () =>
+    {
+        await DialogSemaphore.WaitAsync(cancellationToken);
+        try
         {
-            if (Shell.Current is Shell shell)
-                return await shell.DisplayAlertAsync(title, message, acceptText, cancelText);
+            return await MainThread.InvokeOnMainThreadAsync(async () =>
+            {
+                if (Shell.Current is Shell shell)
+                {
+                    return await shell.DisplayAlertAsync(title, message, acceptText, cancelText);
+                }
 
-            return false;
-        });
+                return false;
+            });
+        }
+        finally
+        {
+            DialogSemaphore.Release();
+        }
+    }
 }

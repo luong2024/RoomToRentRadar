@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RoomToRentRadar.Api.Features.Auth;
 using RoomToRentRadar.Ports.Inbound;
 using RoomToRentRadar.Ports.Models.Listings;
 using RoomToRentRadar.Ports.Models.Photos;
@@ -10,14 +11,13 @@ using RoomToRentRadar.Shared.Listings;
 namespace RoomToRentRadar.Api.Features.Listings;
 
 [ApiController]
-[Authorize]
+[Authorize(Policy = AuthPolicies.Landlord)]
 [Route("api/v1/listings")]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden, "application/problem+json")]
 public sealed class ListingManagementController(
     IListingManagementUseCase listingManagementUseCase,
     IHouseRulesUseCase houseRulesUseCase) : ControllerBase
 {
-    private const int MinimumPhotosOnCreate = 3;
-
     [HttpGet("mine")]
     [ProducesResponseType(typeof(IReadOnlyList<ManagedListingDto>), StatusCodes.Status200OK, "application/json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
@@ -44,7 +44,7 @@ public sealed class ListingManagementController(
     {
         if (!ListingWriteValidator.TryValidate(
                 form,
-                MinimumPhotosOnCreate,
+                PhotoUploadLimits.MinimumPhotosPerListing,
                 requireCoordinates: true,
                 out var input,
                 out var validationProblem))
@@ -156,6 +156,24 @@ public sealed class ListingManagementController(
         return result.IsSuccess ? Ok(result.Value) : ToProblem(result.Error!);
     }
 
+    [HttpPost("{id:guid}/publish")]
+    [ProducesResponseType(typeof(ManagedListingDto), StatusCodes.Status200OK, "application/json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError, "application/problem+json")]
+    public async Task<ActionResult<ManagedListingDto>> PublishListing(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var result = await listingManagementUseCase.PublishAsync(
+            CurrentUserId,
+            id,
+            cancellationToken);
+
+        return result.IsSuccess ? Ok(result.Value) : ToProblem(result.Error!);
+    }
+
     [HttpPost("{id:guid}/unpublish")]
     [ProducesResponseType(typeof(ManagedListingDto), StatusCodes.Status200OK, "application/json")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
@@ -172,6 +190,23 @@ public sealed class ListingManagementController(
             cancellationToken);
 
         return result.IsSuccess ? Ok(result.Value) : ToProblem(result.Error!);
+    }
+
+    [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/problem+json")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError, "application/problem+json")]
+    public async Task<IActionResult> DeleteListing(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var error = await listingManagementUseCase.DeleteAsync(
+            CurrentUserId,
+            id,
+            cancellationToken);
+
+        return error is null ? NoContent() : ToProblem(error);
     }
 
     private static ListingWriteCommand ToCommand(ListingWriteInput input) => new(
@@ -215,6 +250,8 @@ public sealed class ListingManagementController(
     private static ProblemDetails ToProblemDetails(ListingWriteError error) => error.Code switch
     {
         ListingWriteErrorCodes.NotFound => ListingWriteProblemFactory.NotFoundProblem(),
+        ListingWriteErrorCodes.TooFewPhotos => ListingWriteProblemFactory.TooFewPhotosProblem(
+            PhotoUploadLimits.MinimumPhotosPerListing),
         ListingWriteErrorCodes.InvalidPhoto => ListingWriteProblemFactory.InvalidPhotoProblem(),
         ListingWriteErrorCodes.PhotoLimitExceeded => ListingWriteProblemFactory.PhotoLimitExceededProblem(),
         ListingWriteErrorCodes.InvalidListingTransition => ListingWriteProblemFactory.InvalidListingTransitionProblem(),

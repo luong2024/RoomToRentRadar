@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.ViewModels"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Controls"
+             xmlns:buttons="clr-namespace:Syncfusion.Maui.Toolkit.Buttons;assembly=Syncfusion.Maui.Toolkit"
+             xmlns:inputLayout="clr-namespace:Syncfusion.Maui.Toolkit.TextInputLayout;assembly=Syncfusion.Maui.Toolkit"
+             x:Class="RoomToRentRadar.Views.RegisterPage"
+             x:DataType="vm:RegisterViewModel"
+             Title="Tạo tài khoản"
+             Shell.TabBarIsVisible="False"
+             SafeAreaEdges="Container">
+
+    <Grid>
+        <controls:LiquidBackdropView />
+
+        <ScrollView>
+            <VerticalStackLayout x:Name="RegisterContent"
+                                 Padding="20,14,20,24"
+                                 Spacing="14"
+                                 MaximumWidthRequest="460">
+
+                <!-- Top Bar -->
+                <Grid ColumnDefinitions="Auto,*,Auto" VerticalOptions="Center">
+                    <Border Grid.Column="0"
+                            Style="{StaticResource LiquidOrbBorder}"
+                            AutomationId="RegisterBackButton">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding BackCommand}" />
+                        </Border.GestureRecognizers>
+                        <Image Source="back_icon.png" WidthRequest="18" HeightRequest="18" HorizontalOptions="Center" VerticalOptions="Center" />
+                    </Border>
+
+                    <HorizontalStackLayout Grid.Column="1" Spacing="8" HorizontalOptions="Center" VerticalOptions="Center">
+                        <Image Source="radar_mark.png" WidthRequest="30" HeightRequest="30" />
+                        <Label Text="Room Radar" FontFamily="FontBold" FontSize="17" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+
+                    <BoxView Grid.Column="2" WidthRequest="44" Color="Transparent" />
+                </Grid>
+
+                <Label Text="Tạo tài khoản" Style="{StaticResource DisplayTitle}" FontSize="26" />
+
+                <Border Style="{StaticResource LiquidGlassCard}" Padding="18">
+                    <VerticalStackLayout Spacing="12">
+
+                        <!-- Liquid Glass Segmented Role Switcher -->
+                        <Border Style="{StaticResource LiquidSegmentedTrack}">
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="4">
+                                <Border Grid.Column="0"
+                                        Padding="10,9"
+                                        StrokeShape="RoundRectangle 14"
+                                        StrokeThickness="0"
+                                        BackgroundColor="Transparent"
+                                        AutomationId="RegisterStudentTab">
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding IsStudent}" Value="True">
+                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#FFFFFF, Dark=#223554}" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding SelectStudentCommand}" />
+                                    </Border.GestureRecognizers>
+                                    <Label Text="Sinh viên" FontFamily="FontBold" FontSize="13.5" HorizontalTextAlignment="Center" />
+                                </Border>
+
+                                <Border Grid.Column="1"
+                                        Padding="10,9"
+                                        StrokeShape="RoundRectangle 14"
+                                        StrokeThickness="0"
+                                        BackgroundColor="Transparent"
+                                        AutomationId="RegisterLandlordTab">
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding IsLandlord}" Value="True">
+                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#FFFFFF, Dark=#223554}" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding SelectLandlordCommand}" />
+                                    </Border.GestureRecognizers>
+                                    <Label Text="Chủ phòng" FontFamily="FontBold" FontSize="13.5" HorizontalTextAlignment="Center" />
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <inputLayout:SfTextInputLayout Hint="Họ và tên hiển thị"
+                                                       HasError="{Binding HasDisplayNameError}"
+                                                       ErrorText="{Binding DisplayNameError}">
+                            <Entry Text="{Binding DisplayName}" AutomationId="RegisterDisplayNameEntry" />
+                        </inputLayout:SfTextInputLayout>
+
+                        <inputLayout:SfTextInputLayout Hint="Địa chỉ email"
+                                                       HasError="{Binding HasEmailError}"
+                                                       ErrorText="{Binding EmailError}">
+                            <Entry Text="{Binding Email}" Keyboard="Email" AutomationId="RegisterEmailEntry" />
+                        </inputLayout:SfTextInputLayout>
+
+                        <inputLayout:SfTextInputLayout Hint="Mật khẩu"
+                                                       EnablePasswordVisibilityToggle="True"
+                                                       HasError="{Binding HasPasswordError}"
+                                                       ErrorText="{Binding PasswordError}">
+                            <Entry Text="{Binding Password}" IsPassword="True" AutomationId="RegisterPasswordEntry" />
+                        </inputLayout:SfTextInputLayout>
+
+                        <!-- Password Strength Glass Pills -->
+                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6">
+                            <Border Grid.Column="0" Padding="8,5" StrokeShape="RoundRectangle 10" StrokeThickness="0" BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
+                                <Border.Triggers>
+                                    <DataTrigger TargetType="Border" Binding="{Binding HasMinPasswordLength}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource AvailableTint}, Dark={StaticResource AvailableTintDark}}" />
+                                    </DataTrigger>
+                                </Border.Triggers>
+                                <Label Text="≥ 8 ký tự" FontFamily="FontSemiBold" FontSize="11" HorizontalTextAlignment="Center" />
+                            </Border>
+
+                            <Border Grid.Column="1" Padding="8,5" StrokeShape="RoundRectangle 10" StrokeThickness="0" BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
+                                <Border.Triggers>
+                                    <DataTrigger TargetType="Border" Binding="{Binding HasPasswordLetter}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource AvailableTint}, Dark={StaticResource AvailableTintDark}}" />
+                                    </DataTrigger>
+                                </Border.Triggers>
+                                <Label Text="Có chữ cái" FontFamily="FontSemiBold" FontSize="11" HorizontalTextAlignment="Center" />
+                            </Border>
+
+                            <Border Grid.Column="2" Padding="8,5" StrokeShape="RoundRectangle 10" StrokeThickness="0" BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
+                                <Border.Triggers>
+                                    <DataTrigger TargetType="Border" Binding="{Binding HasPasswordDigit}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource AvailableTint}, Dark={StaticResource AvailableTintDark}}" />
+                                    </DataTrigger>
+                                </Border.Triggers>
+                                <Label Text="Có chữ số" FontFamily="FontSemiBold" FontSize="11" HorizontalTextAlignment="Center" />
+                            </Border>
+                        </Grid>
+
+                        <inputLayout:SfTextInputLayout Hint="Nhập lại mật khẩu"
+                                                       EnablePasswordVisibilityToggle="True"
+                                                       HasError="{Binding HasConfirmPasswordError}"
+                                                       ErrorText="{Binding ConfirmPasswordError}">
+                            <Entry Text="{Binding ConfirmPassword}"
+                                   IsPassword="True"
+                                   ReturnType="Go"
+                                   ReturnCommand="{Binding RegisterCommand}"
+                                   AutomationId="RegisterConfirmPasswordEntry" />
+                        </inputLayout:SfTextInputLayout>
+
+                        <Label IsVisible="{Binding HasError}"
+                               Text="{Binding ErrorMessage}"
+                               FontFamily="FontSemiBold"
+                               FontSize="12.5"
+                               TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+
+                        <buttons:SfButton Text="Tạo tài khoản"
+                                          Command="{Binding RegisterCommand}"
+                                          IsEnabled="{Binding IsNotBusy}"
+                                          Style="{StaticResource LiquidPrimaryButton}"
+                                          AutomationId="RegisterSubmitButton" />
+
+                    </VerticalStackLayout>
+                </Border>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

@@ -1,6 +1,7 @@
 using RoomToRentRadar.Ports.Inbound;
 using RoomToRentRadar.Ports.Models.Moderation;
 using RoomToRentRadar.Ports.Outbound.Repositories;
+using RoomToRentRadar.Shared.Listings;
 using RoomToRentRadar.Shared.Moderation;
 using RoomToRentRadar.Shared.Pagination;
 
@@ -122,8 +123,10 @@ public sealed class ModerationQueueService(IModerationQueueRepository queueRepos
     }
 
     /// <summary>
-    /// Lists listings for one status, oldest first, so moderators see the
-    /// longest-waiting pending-review listings before approving them.
+    /// Lists listings for one status: <see cref="ListingStatus.Published"/> orders by
+    /// <c>UpdatedAt DESC, Id DESC</c> so newly approved listings appear first, while
+    /// <see cref="ListingStatus.PendingReview"/> and other statuses order by
+    /// <c>CreatedAt ASC, Id ASC</c> for FIFO review.
     /// </summary>
     public async Task<ModerationListingQueueDto> GetListingQueueAsync(
         ModerationListingQueueQuery query,
@@ -146,8 +149,11 @@ public sealed class ModerationQueueService(IModerationQueueRepository queueRepos
         if (hasMore && rows.Count > 0)
         {
             var last = rows[^1];
+            var sortTimestamp = query.Status == ListingStatus.Published
+                ? last.UpdatedAt
+                : last.CreatedAt;
             nextCursor = ModerationListingQueueCursorCodec.Encode(
-                last.Status, last.CreatedAt, last.Id);
+                last.Status, sortTimestamp, last.Id);
         }
 
         return new ModerationListingQueueDto(

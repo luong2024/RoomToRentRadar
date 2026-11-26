@@ -95,6 +95,18 @@ public sealed class ListingManagementService(
             return ListingWriteResult<ManagedListingDto>.Failure(ListingWriteErrorCodes.NotFound);
         }
 
+        if (listing.Status == ListingStatus.Removed)
+        {
+            return ListingWriteResult<ManagedListingDto>.Failure(
+                ListingWriteErrorCodes.InvalidListingTransition);
+        }
+
+        if (listing.Photos.Count + command.Photos.Count < PhotoUploadLimits.MinimumPhotosPerListing)
+        {
+            return ListingWriteResult<ManagedListingDto>.Failure(
+                ListingWriteErrorCodes.TooFewPhotos);
+        }
+
         if (listing.Photos.Count + command.Photos.Count > PhotoUploadLimits.MaxPhotosPerListing)
         {
             return ListingWriteResult<ManagedListingDto>.Failure(
@@ -144,6 +156,35 @@ public sealed class ListingManagementService(
         }
     }
 
+    public async Task<ListingWriteResult<ManagedListingDto>> PublishAsync(
+        Guid ownerId,
+        Guid listingId,
+        CancellationToken cancellationToken)
+    {
+        var listing = await repository.FindOwnedAsync(ownerId, listingId, cancellationToken);
+
+        if (listing is null)
+        {
+            return ListingWriteResult<ManagedListingDto>.Failure(ListingWriteErrorCodes.NotFound);
+        }
+
+        if (listing.Status == ListingStatus.Removed)
+        {
+            return ListingWriteResult<ManagedListingDto>.Failure(
+                ListingWriteErrorCodes.InvalidListingTransition);
+        }
+
+        if (listing.Status is ListingStatus.Hidden or ListingStatus.Draft)
+        {
+            listing.Status = ListingStatus.PendingReview;
+            listing.UpdatedAt = DateTime.UtcNow;
+            listing.Version++;
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
+        return ListingWriteResult<ManagedListingDto>.Success(ToManaged(listing));
+    }
+
     public async Task<ListingWriteResult<ManagedListingDto>> UnpublishAsync(
         Guid ownerId,
         Guid listingId,
@@ -171,6 +212,49 @@ public sealed class ListingManagementService(
         }
 
         return ListingWriteResult<ManagedListingDto>.Success(ToManaged(listing));
+    }
+
+    public async Task<ListingWriteError?> DeleteAsync(
+        Guid ownerId,
+        Guid listingId,
+        CancellationToken cancellationToken)
+    {
+        var listing = await repository.FindOwnedAsync(ownerId, listingId, cancellationToken);
+
+        if (listing is null)
+        {
+            return new ListingWriteError(ListingWriteErrorCodes.NotFound);
+        }
+
+        var photoIds = listing.Photos.Select(photo => photo.Id).ToList();
+
+        await using (var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken))
+        {
+            await repository.CleanupExternalReferencesAsync(listingId, cancellationToken);
+
+            if (await repository.HasModerationAuditLogsAsync(listingId, cancellationToken))
+            {
+                listing.OwnerId = null;
+                listing.LandlordName = string.Empty;
+                listing.LandlordPhone = string.Empty;
+                listing.Status = ListingStatus.Removed;
+                listing.UpdatedAt = DateTime.UtcNow;
+                listing.Version++;
+                repository.RemovePhotoRange(listing.Photos.ToList());
+                await unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+            else
+            {
+                repository.Remove(listing);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+
+            await transaction.CommitAsync(cancellationToken);
+        }
+
+        DeleteWritten(listingId, photoIds);
+
+        return null;
     }
 
     public async Task<ManagedListingDto?> GetManagedAsync(

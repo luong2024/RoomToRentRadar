@@ -23,7 +23,9 @@ public sealed class PhotoProcessor : IPhotoProcessor
 
         using var data = SKData.CreateCopy(content);
         using var codec = SKCodec.Create(data);
-        if (codec is null || codec.FrameCount > 1)
+        if (codec is null
+            || codec.FrameCount > 1
+            || codec.EncodedFormat is not (SKEncodedImageFormat.Jpeg or SKEncodedImageFormat.Png))
         {
             return false;
         }

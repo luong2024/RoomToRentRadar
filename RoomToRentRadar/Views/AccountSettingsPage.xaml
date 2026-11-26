@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.ViewModels"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Controls"
+             xmlns:buttons="clr-namespace:Syncfusion.Maui.Toolkit.Buttons;assembly=Syncfusion.Maui.Toolkit"
+             x:Class="RoomToRentRadar.Views.AccountSettingsPage"
+             x:DataType="vm:AccountSettingsViewModel"
+             Title="Cài đặt tài khoản"
+             Shell.NavBarIsVisible="False"
+             Shell.TabBarIsVisible="False"
+             SafeAreaEdges="Container">
+    <ContentPage.Resources>
+        <Style x:Key="SettingsRowTitle" TargetType="Label">
+            <Setter Property="FontFamily" Value="FontSemiBold" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+        </Style>
+        <Style x:Key="SettingsRowCaption" TargetType="Label" BasedOn="{StaticResource Caption}">
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style x:Key="SettingsIconTile" TargetType="Border">
+            <Setter Property="WidthRequest" Value="40" />
+            <Setter Property="HeightRequest" Value="40" />
+            <Setter Property="StrokeThickness" Value="1" />
+            <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource GlassSpecularRimLight}, Dark={StaticResource GlassSpecularRimDark}}" />
+            <Setter Property="StrokeShape" Value="RoundRectangle 14" />
+            <Setter Property="VerticalOptions" Value="Center" />
+            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource BrandTint}, Dark={StaticResource BrandTintDark}}" />
+        </Style>
+    </ContentPage.Resources>
+
+    <Grid>
+        <controls:LiquidBackdropView />
+
+        <Grid RowDefinitions="Auto,*" RowSpacing="0"
+              MaximumWidthRequest="1120" HorizontalOptions="Fill">
+            <!-- Floating Liquid Glass Header -->
+            <ContentView Padding="16,10,16,6">
+                <Border Style="{StaticResource LiquidFloatingPanel}" Padding="12,10">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                        <Border Style="{StaticResource LiquidOrbBorder}"
+                                AutomationId="SettingsBack"
+                                SemanticProperties.Description="Quay lại trang tài khoản">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding GoBackCommand}" />
+                            </Border.GestureRecognizers>
+                            <Image Source="back_icon.png" WidthRequest="18" HeightRequest="18"
+                                   HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
+                            <Label Text="Cài đặt tài khoản" Style="{StaticResource ScreenTitle}" FontSize="19"
+                                   SemanticProperties.HeadingLevel="Level1" />
+                            <Label Text="Thông báo, quyền riêng tư và bảo mật" Style="{StaticResource Caption}" FontSize="11.5" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+            </ContentView>
+
+        <!-- Loading -->
+        <VerticalStackLayout Grid.Row="1" IsVisible="{Binding IsLoadingState}" Spacing="12"
+                             VerticalOptions="Center" HorizontalOptions="Center" Padding="24">
+            <ActivityIndicator IsRunning="{Binding IsLoadingState}" Color="{StaticResource Accent}" />
+            <Label Text="Đang tải cài đặt…" Style="{StaticResource Caption}" FontSize="13" />
+        </VerticalStackLayout>
+
+        <!-- Signed out -->
+        <ScrollView Grid.Row="1" Padding="16,20" IsVisible="{Binding IsSignedOutState}">
+            <Border Padding="24,28" StrokeShape="RoundRectangle 22" VerticalOptions="Start" MaximumWidthRequest="460" HorizontalOptions="Fill">
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="CẦN ĐĂNG NHẬP" Style="{StaticResource Eyebrow}"
+                           TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
+                    <Label Text="Đăng nhập để xem cài đặt" FontSize="22" FontFamily="FontSemiBold" />
+                    <Label Text="Bạn cần đăng nhập trước khi thay đổi cài đặt tài khoản."
+                           Style="{StaticResource Caption}" FontSize="13.5" LineHeight="1.35" />
+                    <buttons:SfButton Text="Đăng nhập" Command="{Binding SignInCommand}" HorizontalOptions="Fill"
+                                      AutomationId="SettingsSignIn" />
+                </VerticalStackLayout>
+            </Border>
+        </ScrollView>
+
+        <!-- Error -->
+        <ScrollView Grid.Row="1" Padding="16,20" IsVisible="{Binding IsErrorState}">
+            <Border Padding="24,28" StrokeShape="RoundRectangle 22" VerticalOptions="Start" MaximumWidthRequest="460" HorizontalOptions="Fill">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Chưa tải được cài đặt" FontSize="22" FontFamily="FontSemiBold" />
+                    <Label Text="{Binding Message}" Style="{StaticResource Caption}" FontSize="13.5" LineHeight="1.35" />
+                    <buttons:SfButton Text="Thử lại" Command="{Binding LoadCommand}" HorizontalOptions="Start"
+                                      AutomationId="SettingsRetry" />
+                </VerticalStackLayout>
+            </Border>
+        </ScrollView>
+
+        <!-- Content -->
+        <ScrollView Grid.Row="1" IsVisible="{Binding IsContentState}">
+            <VerticalStackLayout Padding="16,16,16,28" Spacing="14" MaximumWidthRequest="760" HorizontalOptions="Fill">
+                <!-- Account -->
+                <Border Padding="16,14" StrokeShape="RoundRectangle 20">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Tài khoản" Style="{StaticResource SectionTitle}" FontSize="16" />
+                        <Label Text="{Binding Email}" FontSize="14" FontFamily="FontSemiBold"
+                               AutomationId="SettingsEmail"
+                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                        <Label Text="Email dùng để đăng nhập và nhận thông báo quan trọng."
+                               Style="{StaticResource Caption}" FontSize="11.5" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Notifications -->
+                <Border Padding="16,14" StrokeShape="RoundRectangle 20">
+                    <VerticalStackLayout Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="Thông báo" Style="{StaticResource SectionTitle}" FontSize="16" />
+                            <Label Grid.Column="1" Text="Lưu trên thiết bị" Style="{StaticResource Eyebrow}"
+                                   VerticalOptions="Center" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="0,6">
+                            <VerticalStackLayout Spacing="1" VerticalOptions="Center">
+                                <Label Text="Thông báo đẩy" Style="{StaticResource SettingsRowTitle}" />
+                                <Label Text="Nhận cập nhật về tài khoản và tin đăng" Style="{StaticResource SettingsRowCaption}" />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1" IsToggled="{Binding NotificationsEnabled}" VerticalOptions="Center"
+                                    OnColor="{StaticResource Accent}" AutomationId="SettingsNotifications"
+                                    SemanticProperties.Description="Thông báo đẩy" />
+                        </Grid>
+                        <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource SubtleLine}, Dark={StaticResource LineDark}}" />
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="0,6">
+                            <VerticalStackLayout Spacing="1" VerticalOptions="Center">
+                                <Label Text="Phòng mới phù hợp" Style="{StaticResource SettingsRowTitle}" />
+                                <Label Text="Gợi ý phòng mới theo nhu cầu thuê của bạn" Style="{StaticResource SettingsRowCaption}" />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1" IsToggled="{Binding NewListingsEnabled}" VerticalOptions="Center"
+                                    OnColor="{StaticResource Accent}" AutomationId="SettingsNewListings"
+                                    SemanticProperties.Description="Thông báo phòng mới phù hợp" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Privacy -->
+                <Border Padding="16,14" StrokeShape="RoundRectangle 20">
+                    <VerticalStackLayout Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="Quyền riêng tư" Style="{StaticResource SectionTitle}" FontSize="16" />
+                            <Label Grid.Column="1" Text="Lưu trên thiết bị" Style="{StaticResource Eyebrow}"
+                                   VerticalOptions="Center" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="0,6">
+                            <VerticalStackLayout Spacing="1" VerticalOptions="Center">
+                                <Label Text="Hiển thị số điện thoại" Style="{StaticResource SettingsRowTitle}" />
+                                <Label Text="Cho phép người khác xem số điện thoại trong hồ sơ" Style="{StaticResource SettingsRowCaption}" />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1" IsToggled="{Binding ShowPhoneEnabled}" VerticalOptions="Center"
+                                    OnColor="{StaticResource Accent}" AutomationId="SettingsShowPhone"
+                                    SemanticProperties.Description="Hiển thị số điện thoại" />
+                        </Grid>
+                        <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource SubtleLine}, Dark={StaticResource LineDark}}" />
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="0,6">
+                            <VerticalStackLayout Spacing="1" VerticalOptions="Center">
+                                <Label Text="Cho phép nhắn tin" Style="{StaticResource SettingsRowTitle}" />
+                                <Label Text="Người thuê và chủ phòng có thể liên hệ qua tin nhắn" Style="{StaticResource SettingsRowCaption}" />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1" IsToggled="{Binding AllowMessagesEnabled}" VerticalOptions="Center"
+                                    OnColor="{StaticResource Accent}" AutomationId="SettingsAllowMessages"
+                                    SemanticProperties.Description="Cho phép nhắn tin" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Security -->
+                <Border Padding="10,8" StrokeShape="RoundRectangle 20">
+                    <VerticalStackLayout Spacing="0">
+                        <Label Text="Bảo mật" Style="{StaticResource SectionTitle}" FontSize="16"
+                               Padding="8,8,8,4" />
+                        <Border Padding="12,10" StrokeThickness="0" StrokeShape="RoundRectangle 14"
+                                BackgroundColor="Transparent" AutomationId="SettingsChangePassword">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding ChangePasswordCommand}" />
+                            </Border.GestureRecognizers>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                <Border Style="{StaticResource SettingsIconTile}">
+                                    <Image Source="icon_shield.png" WidthRequest="19" HeightRequest="19"
+                                           HorizontalOptions="Center" VerticalOptions="Center" />
+                                </Border>
+                                <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
+                                    <HorizontalStackLayout Spacing="6">
+                                        <Label Text="Đổi mật khẩu" Style="{StaticResource SettingsRowTitle}" VerticalOptions="Center" />
+                                        <Border Padding="7,1" StrokeThickness="0" StrokeShape="RoundRectangle 8"
+                                                VerticalOptions="Center"
+                                                BackgroundColor="{AppThemeBinding Light={StaticResource WarmSoft}, Dark={StaticResource WarmSoftDark}}">
+                                            <Label Text="Sắp ra mắt" FontFamily="FontSemiBold" FontSize="9.5"
+                                                   TextColor="{AppThemeBinding Light={StaticResource WarmAccent}, Dark=#F2C48F}" />
+                                        </Border>
+                                    </HorizontalStackLayout>
+                                    <Label Text="Cập nhật mật khẩu đăng nhập" Style="{StaticResource SettingsRowCaption}" />
+                                </VerticalStackLayout>
+                                <Image Grid.Column="2" Source="chevron_right.png" WidthRequest="16" HeightRequest="16"
+                                       VerticalOptions="Center" Opacity="0.55" />
+                            </Grid>
+                        </Border>
+                        <Border Padding="12,10" StrokeThickness="0" StrokeShape="RoundRectangle 14"
+                                BackgroundColor="Transparent" AutomationId="SettingsSecurity">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding AccountSecurityCommand}" />
+                            </Border.GestureRecognizers>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                <Border Style="{StaticResource SettingsIconTile}">
+                                    <Image Source="icon_settings.png" WidthRequest="19" HeightRequest="19"
+                                           HorizontalOptions="Center" VerticalOptions="Center" />
+                                </Border>
+                                <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
+                                    <HorizontalStackLayout Spacing="6">
+                                        <Label Text="Bảo mật tài khoản" Style="{StaticResource SettingsRowTitle}" VerticalOptions="Center" />
+                                        <Border Padding="7,1" StrokeThickness="0" StrokeShape="RoundRectangle 8"
+                                                VerticalOptions="Center"
+                                                BackgroundColor="{AppThemeBinding Light={StaticResource WarmSoft}, Dark={StaticResource WarmSoftDark}}">
+                                            <Label Text="Sắp ra mắt" FontFamily="FontSemiBold" FontSize="9.5"
+                                                   TextColor="{AppThemeBinding Light={StaticResource WarmAccent}, Dark=#F2C48F}" />
+                                        </Border>
+                                    </HorizontalStackLayout>
+                                    <Label Text="Xác thực hai lớp và thiết bị đăng nhập" Style="{StaticResource SettingsRowCaption}" />
+                                </VerticalStackLayout>
+                                <Image Grid.Column="2" Source="chevron_right.png" WidthRequest="16" HeightRequest="16"
+                                       VerticalOptions="Center" Opacity="0.55" />
+                            </Grid>
+                        </Border>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Support -->
+                <Border Padding="10,8" StrokeShape="RoundRectangle 20">
+                    <VerticalStackLayout Spacing="0">
+                        <Label Text="Hỗ trợ" Style="{StaticResource SectionTitle}" FontSize="16"
+                               Padding="8,8,8,4" />
+                        <Border Padding="12,10" StrokeThickness="0" StrokeShape="RoundRectangle 14"
+                                BackgroundColor="Transparent" AutomationId="SettingsHelp">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding HelpCenterCommand}" />
+                            </Border.GestureRecognizers>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                <Border Style="{StaticResource SettingsIconTile}">
+                                    <Image Source="icon_chat.png" WidthRequest="19" HeightRequest="19"
+                                           HorizontalOptions="Center" VerticalOptions="Center" />
+                                </Border>
+                                <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
+                                    <HorizontalStackLayout Spacing="6">
+                                        <Label Text="Trung tâm trợ giúp" Style="{StaticResource SettingsRowTitle}" VerticalOptions="Center" />
+                                        <Border Padding="7,1" StrokeThickness="0" StrokeShape="RoundRectangle 8"
+                                                VerticalOptions="Center"
+                                                BackgroundColor="{AppThemeBinding Light={StaticResource WarmSoft}, Dark={StaticResource WarmSoftDark}}">
+                                            <Label Text="Sắp ra mắt" FontFamily="FontSemiBold" FontSize="9.5"
+                                                   TextColor="{AppThemeBinding Light={StaticResource WarmAccent}, Dark=#F2C48F}" />
+                                        </Border>
+                                    </HorizontalStackLayout>
+                                    <Label Text="Câu hỏi thường gặp và hướng dẫn sử dụng" Style="{StaticResource SettingsRowCaption}" />
+                                </VerticalStackLayout>
+                                <Image Grid.Column="2" Source="chevron_right.png" WidthRequest="16" HeightRequest="16"
+                                       VerticalOptions="Center" Opacity="0.55" />
+                            </Grid>
+                        </Border>
+                        <Border Padding="12,10" StrokeThickness="0" StrokeShape="RoundRectangle 14"
+                                BackgroundColor="Transparent" AutomationId="SettingsReport">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding ReportProblemCommand}" />
+                            </Border.GestureRecognizers>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                <Border Style="{StaticResource SettingsIconTile}">
+                                    <Image Source="icon_requests.png" WidthRequest="19" HeightRequest="19"
+                                           HorizontalOptions="Center" VerticalOptions="Center" />
+                                </Border>
+                                <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
+                                    <HorizontalStackLayout Spacing="6">
+                                        <Label Text="Báo cáo sự cố" Style="{StaticResource SettingsRowTitle}" VerticalOptions="Center" />
+                                        <Border Padding="7,1" StrokeThickness="0" StrokeShape="RoundRectangle 8"
+                                                VerticalOptions="Center"
+                                                BackgroundColor="{AppThemeBinding Light={StaticResource WarmSoft}, Dark={StaticResource WarmSoftDark}}">
+                                            <Label Text="Sắp ra mắt" FontFamily="FontSemiBold" FontSize="9.5"
+                                                   TextColor="{AppThemeBinding Light={StaticResource WarmAccent}, Dark=#F2C48F}" />
+                                        </Border>
+                                    </HorizontalStackLayout>
+                                    <Label Text="Gửi phản hồi về lỗi bạn gặp phải" Style="{StaticResource SettingsRowCaption}" />
+                                </VerticalStackLayout>
+                                <Image Grid.Column="2" Source="chevron_right.png" WidthRequest="16" HeightRequest="16"
+                                       VerticalOptions="Center" Opacity="0.55" />
+                            </Grid>
+                        </Border>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Danger zone -->
+                <Border Padding="10,8" StrokeShape="RoundRectangle 20">
+                    <VerticalStackLayout Spacing="0">
+                        <Label Text="Vùng nguy hiểm" Style="{StaticResource SectionTitle}" FontSize="16"
+                               Padding="8,8,8,4" />
+                        <Border Padding="12,10" StrokeThickness="0" StrokeShape="RoundRectangle 14"
+                                BackgroundColor="Transparent" AutomationId="SettingsDeleteAccount">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding DeleteAccountCommand}" />
+                            </Border.GestureRecognizers>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                <Border Style="{StaticResource SettingsIconTile}"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource DangerSoft}, Dark={StaticResource DangerSoftDark}}">
+                                    <Image Source="icon_shield.png" WidthRequest="19" HeightRequest="19"
+                                           HorizontalOptions="Center" VerticalOptions="Center" />
+                                </Border>
+                                <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
+                                    <Label Text="Xóa tài khoản" Style="{StaticResource SettingsRowTitle}"
+                                           TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                                    <Label Text="Chưa hỗ trợ trong bản demo" Style="{StaticResource SettingsRowCaption}" />
+                                </VerticalStackLayout>
+                                <Image Grid.Column="2" Source="chevron_right.png" WidthRequest="16" HeightRequest="16"
+                                       VerticalOptions="Center" Opacity="0.55" />
+                            </Grid>
+                        </Border>
+                    </VerticalStackLayout>
+                </Border>
+
+                <buttons:SfButton Text="Đăng xuất" Command="{Binding SignOutCommand}"
+                                  Style="{StaticResource DangerSoftSfButton}" HorizontalOptions="Fill"
+                                  AutomationId="SettingsSignOut"
+                                  SemanticProperties.Description="Đăng xuất khỏi tài khoản" />
+            </VerticalStackLayout>
+        </ScrollView>
+        </Grid>
+    </Grid>
+</ContentPage>

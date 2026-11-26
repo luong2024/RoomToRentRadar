@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:RoomToRentRadar.ViewModels"
              xmlns:models="clr-namespace:RoomToRentRadar.Models"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Controls"
              xmlns:buttons="clr-namespace:Syncfusion.Maui.Toolkit.Buttons;assembly=Syncfusion.Maui.Toolkit"
              xmlns:cards="clr-namespace:Syncfusion.Maui.Toolkit.Cards;assembly=Syncfusion.Maui.Toolkit"
              xmlns:chips="clr-namespace:Syncfusion.Maui.Toolkit.Chips;assembly=Syncfusion.Maui.Toolkit"
@@ -13,16 +14,18 @@
              x:Class="RoomToRentRadar.Views.ListingEditorPage"
              x:DataType="vm:ListingEditorViewModel"
              Title="{Binding PageTitle}"
-             Shell.NavBarIsVisible="True"
-             SafeAreaEdges="All">
+             Shell.NavBarIsVisible="False"
+             Shell.TabBarIsVisible="False"
+             SafeAreaEdges="Container">
     <ContentPage.Resources>
+        <SolidColorBrush x:Key="DangerSoftDarkBrush" Color="{StaticResource DangerSoftDark}" />
         <Style x:Key="FieldError" TargetType="Label">
             <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
             <Setter Property="FontSize" Value="12" />
             <Setter Property="Margin" Value="4,0,0,0" />
         </Style>
         <Style x:Key="SectionLabel" TargetType="Label">
-            <Setter Property="FontFamily" Value="OpenSansSemibold" />
+            <Setter Property="FontFamily" Value="FontSemiBold" />
             <Setter Property="FontSize" Value="13" />
             <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
         </Style>
@@ -45,51 +48,79 @@
         </Style>
     </ContentPage.Resources>
 
-    <Grid RowDefinitions="*,Auto">
-    <ScrollView>
-        <VerticalStackLayout Padding="20,16,20,36" Spacing="16" MaximumWidthRequest="740" HorizontalOptions="Fill">
-            <!-- Header Summary Card -->
-            <cards:SfCardView Padding="18" Style="{StaticResource ElevatedCard}"
-                              IndicatorColor="{StaticResource Accent}" IndicatorPosition="Top" IndicatorThickness="4">
-                <VerticalStackLayout Spacing="10">
-                    <VerticalStackLayout Spacing="8">
-                        <Label Text="{Binding PageTitle}" FontSize="24" FontFamily="OpenSansSemibold" CharacterSpacing="-0.4"
-                               SemanticProperties.HeadingLevel="Level1" VerticalOptions="Center" />
-                        <chips:SfChip Text="{Binding StatusText}" HorizontalOptions="Start" Style="{StaticResource AccentSfChip}"
-                                      IsEnabled="False" VerticalOptions="Center" />
-                    </VerticalStackLayout>
-                    <Label Text="{Binding Message}" AutomationId="ListingFormMessage" Style="{StaticResource Caption}" FontSize="13">
-                        <Label.Triggers>
-                            <DataTrigger TargetType="Label" Binding="{Binding Message}" Value="">
-                                <Setter Property="IsVisible" Value="False" />
-                            </DataTrigger>
-                        </Label.Triggers>
-                    </Label>
-                    <VerticalStackLayout Spacing="8">
-                        <buttons:SfButton Text="Đăng nhập để lưu tin" Command="{Binding SignInCommand}">
-                            <buttons:SfButton.Triggers>
-                                <DataTrigger TargetType="buttons:SfButton" Binding="{Binding IsAuthenticated}" Value="True">
+    <Grid>
+        <controls:LiquidBackdropView />
+        <Grid RowDefinitions="Auto,*,Auto">
+            <!-- Floating Liquid Glass Header (high-contrast Ink/InkDark title, no duplicate NavBar) -->
+            <ContentView Grid.Row="0" Padding="16,10,16,6">
+                <Border Style="{StaticResource LiquidFloatingPanel}" Padding="12,10" MaximumWidthRequest="740">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                        <Border Grid.Column="0"
+                                Style="{StaticResource LiquidOrbBorder}"
+                                SemanticProperties.Description="Quay lại">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnBackTapped" />
+                            </Border.GestureRecognizers>
+                            <Image Source="back_icon.png" WidthRequest="18" HeightRequest="18"
+                                   HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+                        <Label Grid.Column="1"
+                               Text="{Binding PageTitle}"
+                               Style="{StaticResource ScreenTitle}"
+                               FontSize="19"
+                               VerticalOptions="Center"
+                               MaxLines="1"
+                               LineBreakMode="TailTruncation"
+                               SemanticProperties.HeadingLevel="Level1" />
+                        <chips:SfChip Grid.Column="2"
+                                      Text="{Binding StatusText}"
+                                      Style="{StaticResource AccentSfChip}"
+                                      IsEnabled="False"
+                                      VerticalOptions="Center" />
+                    </Grid>
+                </Border>
+            </ContentView>
+
+            <ScrollView Grid.Row="1">
+                    <VerticalStackLayout Padding="16,8,16,32" Spacing="14" MaximumWidthRequest="740" HorizontalOptions="Fill">
+                        <!-- Status / Sign-in Banner (only shown when needed; pull down to refresh) -->
+                        <Border Style="{StaticResource LiquidGlassCard}" Padding="14,12">
+                            <Border.Triggers>
+                                <MultiTrigger TargetType="Border">
+                                    <MultiTrigger.Conditions>
+                                        <BindingCondition Binding="{Binding IsAuthenticated}" Value="True" />
+                                        <BindingCondition Binding="{Binding Message}" Value="" />
+                                    </MultiTrigger.Conditions>
                                     <Setter Property="IsVisible" Value="False" />
-                                </DataTrigger>
-                            </buttons:SfButton.Triggers>
-                        </buttons:SfButton>
-                        <buttons:SfButton Text="Tải lại" Command="{Binding LoadCommand}" Style="{StaticResource SoftSfButton}" />
-                    </VerticalStackLayout>
-                    <progressBar:SfLinearProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" />
-                </VerticalStackLayout>
-            </cards:SfCardView>
+                                </MultiTrigger>
+                            </Border.Triggers>
+                            <VerticalStackLayout Spacing="10">
+                                <Label Text="{Binding Message}" AutomationId="ListingFormMessage" Style="{StaticResource Caption}" FontSize="13">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding Message}" Value="">
+                                            <Setter Property="IsVisible" Value="False" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                                <buttons:SfButton Text="Đăng nhập để lưu tin" Command="{Binding SignInCommand}">
+                                    <buttons:SfButton.Triggers>
+                                        <DataTrigger TargetType="buttons:SfButton" Binding="{Binding IsAuthenticated}" Value="True">
+                                            <Setter Property="IsVisible" Value="False" />
+                                        </DataTrigger>
+                                    </buttons:SfButton.Triggers>
+                                </buttons:SfButton>
+                            </VerticalStackLayout>
+                        </Border>
 
             <!-- Step 01: Basic Info -->
-            <Border Padding="18" StrokeThickness="0" StrokeShape="RoundRectangle 22"
+            <Border Padding="18" StrokeThickness="1" StrokeShape="RoundRectangle 22"
+                    Stroke="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}"
                     BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
-                <Border.Shadow>
-                    <Shadow Brush="{StaticResource InkBrush}" Offset="0,6" Radius="18" Opacity="0.06" />
-                </Border.Shadow>
                 <VerticalStackLayout Spacing="14" IsEnabled="{Binding IsNotBusy}">
                     <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
                         <Border WidthRequest="28" HeightRequest="28" StrokeThickness="0" StrokeShape="RoundRectangle 10"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}">
-                            <Label Text="01" FontSize="11" FontFamily="OpenSansSemibold"
+                            <Label Text="01" FontSize="11" FontFamily="FontSemiBold"
                                    TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}"
                                    HorizontalTextAlignment="Center" VerticalTextAlignment="Center" />
                         </Border>
@@ -155,28 +186,84 @@
             </Border>
 
             <!-- Step 02: Location -->
-            <Border Padding="18" StrokeThickness="0" StrokeShape="RoundRectangle 22"
+            <Border Padding="18" StrokeThickness="1" StrokeShape="RoundRectangle 22"
+                    Stroke="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}"
                     BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
-                <Border.Shadow>
-                    <Shadow Brush="{StaticResource InkBrush}" Offset="0,6" Radius="18" Opacity="0.06" />
-                </Border.Shadow>
-                <VerticalStackLayout Spacing="12">
+                <VerticalStackLayout Spacing="12" IsEnabled="{Binding IsNotBusy}">
                     <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
                         <Border WidthRequest="28" HeightRequest="28" StrokeThickness="0" StrokeShape="RoundRectangle 10"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}">
-                            <Label Text="02" FontSize="11" FontFamily="OpenSansSemibold"
+                            <Label Text="02" FontSize="11" FontFamily="FontSemiBold"
                                    TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}"
                                    HorizontalTextAlignment="Center" VerticalTextAlignment="Center" />
                         </Border>
                         <Label Text="Vị trí phòng" Style="{StaticResource SectionTitle}" FontSize="16" VerticalOptions="Center" />
                     </HorizontalStackLayout>
 
-                    <Label Text="Chạm bản đồ để đặt vị trí phòng. Có thể nhập tọa độ bên dưới nếu bản đồ không tải được."
+                    <Label Text="Chạm bản đồ, dùng GPS hiện tại hoặc nhập tọa độ bên dưới để đặt vị trí phòng chính xác."
                            Style="{StaticResource HelperLabel}" />
+
+                    <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+                        <buttons:SfButton Text="📍 Dùng vị trí hiện tại (GPS)"
+                                          Command="{Binding UseCurrentLocationCommand}"
+                                          IsEnabled="{Binding CanUseCurrentLocation}"
+                                          Style="{StaticResource SoftSfButton}"
+                                          HeightRequest="42"
+                                          MinimumHeightRequest="42"
+                                          Padding="14,0"
+                                          FontSize="13"
+                                          CornerRadius="13"
+                                          AutomationId="ListingUseCurrentLocation"
+                                          SemanticProperties.Description="Lấy tọa độ GPS hiện tại của thiết bị">
+                            <buttons:SfButton.Triggers>
+                                <DataTrigger TargetType="buttons:SfButton" Binding="{Binding IsLocating}" Value="True">
+                                    <Setter Property="Text" Value="Đang định vị GPS…" />
+                                </DataTrigger>
+                            </buttons:SfButton.Triggers>
+                        </buttons:SfButton>
+                        <ActivityIndicator IsRunning="{Binding IsLocating}"
+                                           IsVisible="{Binding IsLocating}"
+                                           WidthRequest="18"
+                                           HeightRequest="18"
+                                           VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+
                     <Border StrokeShape="RoundRectangle 18" StrokeThickness="1"
                             Stroke="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}" Padding="0">
-                        <maps:MapControl x:Name="LocationMap" HeightRequest="260" SemanticProperties.Description="Bản đồ chọn vị trí phòng" />
+                        <Grid HeightRequest="260">
+                            <maps:MapControl x:Name="LocationMap" SemanticProperties.Description="Bản đồ chọn vị trí phòng" />
+                            <ImageButton Source="locate_icon.png"
+                                         Command="{Binding UseCurrentLocationCommand}"
+                                         IsEnabled="{Binding CanUseCurrentLocation}"
+                                         Style="{StaticResource IconImageButton}"
+                                         WidthRequest="44"
+                                         HeightRequest="44"
+                                         MinimumWidthRequest="44"
+                                         MinimumHeightRequest="44"
+                                         Padding="11"
+                                         HorizontalOptions="End"
+                                         VerticalOptions="End"
+                                         Margin="12"
+                                         AutomationId="ListingMapLocateButton"
+                                         SemanticProperties.Description="Định vị vị trí hiện tại trên bản đồ">
+                                <ImageButton.Shadow>
+                                    <Shadow Brush="{StaticResource InkBrush}" Offset="0,3" Radius="10" Opacity="0.14" />
+                                </ImageButton.Shadow>
+                            </ImageButton>
+                        </Grid>
                     </Border>
+
+                    <Label Text="{Binding LocationStatusMessage}"
+                           AutomationId="ListingLocationStatus"
+                           Style="{StaticResource Caption}"
+                           FontSize="12.5"
+                           TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}">
+                        <Label.Triggers>
+                            <DataTrigger TargetType="Label" Binding="{Binding LocationStatusMessage}" Value="">
+                                <Setter Property="IsVisible" Value="False" />
+                            </DataTrigger>
+                        </Label.Triggers>
+                    </Label>
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
                         <VerticalStackLayout Spacing="4">
                             <inputLayout:SfTextInputLayout Hint="Vĩ độ">
@@ -197,16 +284,14 @@
             </Border>
 
             <!-- Step 03: Photos -->
-            <Border Padding="18" StrokeThickness="0" StrokeShape="RoundRectangle 22"
+            <Border Padding="18" StrokeThickness="1" StrokeShape="RoundRectangle 22"
+                    Stroke="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}"
                     BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
-                <Border.Shadow>
-                    <Shadow Brush="{StaticResource InkBrush}" Offset="0,6" Radius="18" Opacity="0.06" />
-                </Border.Shadow>
-                <VerticalStackLayout Spacing="12">
+                <VerticalStackLayout Spacing="12" IsEnabled="{Binding IsNotBusy}">
                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
                         <Border WidthRequest="28" HeightRequest="28" StrokeThickness="0" StrokeShape="RoundRectangle 10"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}">
-                            <Label Text="03" FontSize="11" FontFamily="OpenSansSemibold"
+                            <Label Text="03" FontSize="11" FontFamily="FontSemiBold"
                                    TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}"
                                    HorizontalTextAlignment="Center" VerticalTextAlignment="Center" />
                         </Border>
@@ -238,46 +323,47 @@
                         </BindableLayout.ItemTemplate>
                     </VerticalStackLayout>
 
-                    <FlexLayout BindableLayout.ItemsSource="{Binding SelectedPhotos}" Wrap="Wrap" Direction="Row"
-                                AlignItems="Start" AutomationId="SelectedPhotoGrid">
-                        <BindableLayout.ItemTemplate>
-                            <DataTemplate x:DataType="models:SelectedListingPhoto">
-                                <VerticalStackLayout WidthRequest="104" Margin="0,0,10,10" Spacing="4">
-                                    <Grid HeightRequest="84">
-                                        <Border StrokeThickness="0" StrokeShape="RoundRectangle 12"
-                                                BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
-                                            <Image Source="{Binding Path}" Aspect="AspectFill"
-                                                   SemanticProperties.Description="Ảnh mới được chọn" />
-                                        </Border>
-                                        <buttons:SfButton Text="×" Command="{Binding RemoveCommand}"
-                                                          Style="{StaticResource DangerSoftSfButton}"
-                                                          WidthRequest="28" HeightRequest="28"
-                                                          MinimumWidthRequest="28" MinimumHeightRequest="28"
-                                                          Padding="0" FontSize="14"
-                                                          HorizontalOptions="End" VerticalOptions="Start" Margin="0,4,4,0"
-                                                          SemanticProperties.Description="Bỏ ảnh đã chọn" />
-                                    </Grid>
-                                    <Label Text="{Binding FileName}" FontSize="11" LineBreakMode="TailTruncation"
-                                           HorizontalTextAlignment="Center" />
-                                </VerticalStackLayout>
-                            </DataTemplate>
-                        </BindableLayout.ItemTemplate>
-                    </FlexLayout>
+                    <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never" AutomationId="SelectedPhotoGrid">
+                        <HorizontalStackLayout Spacing="10" BindableLayout.ItemsSource="{Binding SelectedPhotos}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="models:SelectedListingPhoto">
+                                    <VerticalStackLayout WidthRequest="104" Spacing="4">
+                                        <Grid WidthRequest="104" HeightRequest="84">
+                                            <Border WidthRequest="104" HeightRequest="84" Padding="0" StrokeThickness="0" StrokeShape="RoundRectangle 12"
+                                                    BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
+                                                <Image Source="{Binding Path}" WidthRequest="104" HeightRequest="84" Aspect="AspectFill"
+                                                       SemanticProperties.Description="Ảnh mới được chọn" />
+                                            </Border>
+                                            <buttons:SfButton Text="×" Command="{Binding RemoveCommand}"
+                                                              Style="{StaticResource DangerSoftSfButton}"
+                                                              TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+                                                              Background="{AppThemeBinding Light={StaticResource DangerSoftBrush}, Dark={StaticResource DangerSoftDarkBrush}}"
+                                                              WidthRequest="28" HeightRequest="28"
+                                                              MinimumWidthRequest="28" MinimumHeightRequest="28"
+                                                              Padding="0" FontSize="14"
+                                                              HorizontalOptions="End" VerticalOptions="Start" Margin="0,4,4,0"
+                                                              SemanticProperties.Description="Bỏ ảnh đã chọn" />
+                                        </Grid>
+                                        <Label Text="{Binding FileName}" FontSize="11" MaxLines="1" LineBreakMode="TailTruncation"
+                                               HorizontalTextAlignment="Center" />
+                                    </VerticalStackLayout>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </HorizontalStackLayout>
+                    </ScrollView>
                 </VerticalStackLayout>
             </Border>
 
             <!-- Step 04: Optional Description -->
-            <Border Padding="14,12" StrokeThickness="0" StrokeShape="RoundRectangle 22"
+            <Border Padding="14,12" StrokeThickness="1" StrokeShape="RoundRectangle 22"
+                    Stroke="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}"
                     BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
-                <Border.Shadow>
-                    <Shadow Brush="{StaticResource InkBrush}" Offset="0,6" Radius="18" Opacity="0.06" />
-                </Border.Shadow>
-                <expander:SfExpander IsExpanded="True">
+                <expander:SfExpander IsExpanded="True" IsEnabled="{Binding IsNotBusy}">
                     <expander:SfExpander.Header>
                         <HorizontalStackLayout Spacing="10" Padding="4,6" VerticalOptions="Center">
                             <Border WidthRequest="28" HeightRequest="28" StrokeThickness="0" StrokeShape="RoundRectangle 10"
                                     BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}">
-                                <Label Text="04" FontSize="11" FontFamily="OpenSansSemibold"
+                                <Label Text="04" FontSize="11" FontFamily="FontSemiBold"
                                        TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}"
                                        HorizontalTextAlignment="Center" VerticalTextAlignment="Center" />
                             </Border>
@@ -297,18 +383,16 @@
             </Border>
 
             <!-- Step 05: House Rules (edit mode only) -->
-            <Border Padding="18" StrokeThickness="0" StrokeShape="RoundRectangle 22"
+            <Border Padding="18" StrokeThickness="1" StrokeShape="RoundRectangle 22"
                     IsVisible="{Binding IsEditMode}"
+                    Stroke="{AppThemeBinding Light={StaticResource Line}, Dark={StaticResource LineDark}}"
                     BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}"
                     AutomationId="HouseRulesEditor">
-                <Border.Shadow>
-                    <Shadow Brush="{StaticResource InkBrush}" Offset="0,6" Radius="18" Opacity="0.06" />
-                </Border.Shadow>
                 <VerticalStackLayout Spacing="14" IsEnabled="{Binding IsNotBusy}">
                     <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
                         <Border WidthRequest="28" HeightRequest="28" StrokeThickness="0" StrokeShape="RoundRectangle 10"
                                 BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}">
-                            <Label Text="05" FontSize="11" FontFamily="OpenSansSemibold"
+                            <Label Text="05" FontSize="11" FontFamily="FontSemiBold"
                                    TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}"
                                    HorizontalTextAlignment="Center" VerticalTextAlignment="Center" />
                         </Border>
@@ -381,12 +465,12 @@
 
         </VerticalStackLayout>
     </ScrollView>
-    <Border Grid.Row="1" Padding="20,12,20,16" StrokeShape="Rectangle" StrokeThickness="0"
+    <Border Grid.Row="2" Padding="20,12,20,16" StrokeShape="Rectangle" StrokeThickness="0"
             IsVisible="{Binding IsAuthenticated}" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" MaximumWidthRequest="740" HorizontalOptions="Fill">
+        <Grid RowDefinitions="Auto,Auto" RowSpacing="8" MaximumWidthRequest="740" HorizontalOptions="Fill">
             <Grid HeightRequest="50">
                 <buttons:SfButton Text="Lưu tin đăng" Command="{Binding SaveCommand}" AutomationId="ListingSave"
-                                  IsEnabled="{Binding IsNotBusy}" Padding="32,0">
+                                  IsEnabled="{Binding CanSaveListing}" HorizontalOptions="Fill" Padding="16,0">
                     <buttons:SfButton.Triggers>
                         <DataTrigger TargetType="buttons:SfButton" Binding="{Binding IsBusy}" Value="True">
                             <Setter Property="Text" Value="Đang xử lý…" />
@@ -394,11 +478,27 @@
                     </buttons:SfButton.Triggers>
                 </buttons:SfButton>
                 <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" InputTransparent="True"
-                                   HorizontalOptions="End" WidthRequest="20" HeightRequest="20" Margin="0,0,12,0" Color="{StaticResource Muted}" />
+                                   HorizontalOptions="End" WidthRequest="20" HeightRequest="20" Margin="0,0,14,0"
+                                   Color="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
             </Grid>
-            <buttons:SfButton Grid.Column="1" Text="Gỡ tin" Command="{Binding UnpublishCommand}" IsVisible="{Binding CanUnpublish}"
-                              IsEnabled="{Binding IsNotBusy}" AutomationId="ListingUnpublish" Style="{StaticResource DestructiveActionButton}" />
+            <HorizontalStackLayout Grid.Row="1" Spacing="8" HorizontalOptions="End" IsVisible="{Binding IsEditMode}">
+                <buttons:SfButton Text="Đăng lại" Command="{Binding PublishCommand}" IsVisible="{Binding CanPublish}"
+                                  IsEnabled="{Binding IsNotBusy}" AutomationId="ListingPublish"
+                                  Style="{StaticResource SoftSfButton}" HeightRequest="44" MinimumHeightRequest="44"
+                                  Padding="16,0" />
+                <buttons:SfButton Text="Gỡ tin" Command="{Binding UnpublishCommand}" IsVisible="{Binding CanUnpublish}"
+                                  IsEnabled="{Binding IsNotBusy}" AutomationId="ListingUnpublish"
+                                  Style="{StaticResource OutlineSfButton}" HeightRequest="44" MinimumHeightRequest="44"
+                                  Padding="16,0" />
+                <buttons:SfButton Text="Xóa tin" Command="{Binding DeleteCommand}" IsVisible="{Binding IsEditMode}"
+                                  IsEnabled="{Binding CanDeleteWhenIdle}" AutomationId="ListingDelete"
+                                  Style="{StaticResource DestructiveActionButton}"
+                                  TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+                                  Background="{AppThemeBinding Light={StaticResource DangerSoftBrush}, Dark={StaticResource DangerSoftDarkBrush}}"
+                                  HeightRequest="44" MinimumHeightRequest="44" Padding="16,0" />
+            </HorizontalStackLayout>
         </Grid>
     </Border>
+        </Grid>
     </Grid>
 </ContentPage>

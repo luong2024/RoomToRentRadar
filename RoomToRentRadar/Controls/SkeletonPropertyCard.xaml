@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:shimmer="clr-namespace:Syncfusion.Maui.Toolkit.Shimmer;assembly=Syncfusion.Maui.Toolkit"
+             x:Class="RoomToRentRadar.Controls.SkeletonPropertyCard">
+
+    <Border Style="{StaticResource LiquidGlassCard}" Padding="0" HeightRequest="306">
+        <shimmer:SfShimmer IsActive="True" BackgroundColor="Transparent">
+            <shimmer:SfShimmer.CustomView>
+                <VerticalStackLayout Spacing="12" BackgroundColor="Transparent">
+                    <BoxView HeightRequest="196"
+                             CornerRadius="24,24,0,0"
+                             Color="{AppThemeBinding Light=#DDE8F7, Dark=#182742}" />
+                    <VerticalStackLayout Padding="16,4,16,14" Spacing="10">
+                        <HorizontalStackLayout Spacing="8">
+                            <BoxView WidthRequest="68" HeightRequest="22" CornerRadius="10" Color="{AppThemeBinding Light=#DDE8F7, Dark=#182742}" />
+                            <BoxView WidthRequest="68" HeightRequest="22" CornerRadius="10" Color="{AppThemeBinding Light=#DDE8F7, Dark=#182742}" />
+                        </HorizontalStackLayout>
+                        <BoxView HeightRequest="18" CornerRadius="8" Color="{AppThemeBinding Light=#DDE8F7, Dark=#182742}" />
+                        <BoxView WidthRequest="210" HorizontalOptions="Start" HeightRequest="14" CornerRadius="6" Color="{AppThemeBinding Light=#DDE8F7, Dark=#182742}" />
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </shimmer:SfShimmer.CustomView>
+            <BoxView HeightRequest="296" Opacity="0" />
+        </shimmer:SfShimmer>
+    </Border>
+</ContentView>

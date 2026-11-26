@@ -163,7 +163,20 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(FavouriteGlyph))]
+    [NotifyPropertyChangedFor(nameof(FavouriteIconSource))]
     public partial bool IsFavourite { get; set; }
+
+    [ObservableProperty]
+    public partial string PriceDisplayText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string DepositDisplayText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string AreaDisplayText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string SecurityDisplayText { get; set; } = string.Empty;
 
     public RoomDetailViewModel(
         IApiClient apiClient,
@@ -211,6 +224,10 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     public bool IsTabBarVisible => !Report.IsOpen;
 
     public string FavouriteGlyph => IsFavourite ? "♥" : "♡";
+
+    public string FavouriteIconSource => IsFavourite ? "heart_filled.png" : "heart_outline.png";
+
+    public bool HasDescription => !string.IsNullOrWhiteSpace(Listing?.Description);
 
     private void OnReportPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
@@ -299,6 +316,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
                         ?? throw new InvalidOperationException("The listing detail response was empty.");
                     ShowDetail(detail);
                     State = RoomDetailState.Content;
+                    await LoadCoverPhotoAsync(listingId, cancellationToken);
                     await RefreshFavouriteStateAsync(listingId, cancellationToken);
                     await RefreshContactAsync(cancellationToken);
                     await LoadGalleryAsync(listingId, cancellationToken);
@@ -518,12 +536,37 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         };
         BedroomsText = detail.Bedrooms > 0 ? $"{detail.Bedrooms} PN" : "Studio";
         PhotoSource = $"room_{detail.Id.ToByteArray()[0] % 3 + 1}.png";
+        var vi = CultureInfo.GetCultureInfo("vi-VN");
+        PriceDisplayText = $"{detail.Price.ToString("N0", vi)} đ";
+        DepositDisplayText = detail.Deposit > 0 ? $"{detail.Deposit.ToString("N0", vi)} đ" : "Thỏa thuận";
+        AreaDisplayText = $"{detail.AreaM2.ToString("0.#", vi)} m²";
+        var sec = RoomSecurityScore.Calculate(detail.Amenities);
+        SecurityDisplayText = $"{sec.Score}/100 · {sec.Band}";
+        OnPropertyChanged(nameof(HasDescription));
         AmenityDisplayLabels = detail.Amenities
             .Select(code => VietnameseAmenityLabelsByCode.TryGetValue(code, out var label) ? label : code.ToString())
             .ToList();
         Rules = detail.Rules.ToList();
         HouseRules = detail.HouseRules;
         LandlordPhone = string.Empty;
+    }
+
+    private async Task LoadCoverPhotoAsync(Guid listingId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var photos = await _apiClient.GetListingPhotosAsync(listingId, cancellationToken);
+            var cover = photos.FirstOrDefault(photo => photo.IsCover) ?? photos.FirstOrDefault();
+            var resolved = Helpers.MediaUrlResolver.Resolve(cover?.Url ?? cover?.ThumbUrl);
+            if (!string.IsNullOrWhiteSpace(resolved))
+            {
+                PhotoSource = resolved;
+            }
+        }
+        catch (Exception)
+        {
+            // Keep the bundled illustration fallback if photo metadata cannot be loaded.
+        }
     }
 
     private async Task RefreshFavouriteStateAsync(Guid listingId, CancellationToken cancellationToken)

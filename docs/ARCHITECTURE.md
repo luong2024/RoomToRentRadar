@@ -51,7 +51,9 @@ RoomToRentRadar/
 │   ├── Auth/             Authentication, token store, HTTP handler
 │   ├── ErrorHandling/    IErrorHandler implementations
 │   ├── Interactions/     Alerts, snackbars, undo
+│   ├── Media/            Device media picking (profile avatar)
 │   ├── Navigation/       Shell navigation abstraction
+│   ├── Profile/          Session-scoped profile details store
 │   ├── Storage/          Local preference stores
 │   └── ...               App services (favourites, comparison, security score)
 ├── Validations/          Form and photo validation
@@ -97,6 +99,28 @@ Create a folder only when it contains code. Do not add empty layers.
 - Routes are declared in `AppRoutes` (`Constants/`) and registered in the `AppShell` constructor
   when they are not root shell content.
 - Pass parameters to the ViewModel with `IQueryAttributable`, not to the page.
+- Registration is two-step on the client too: `RegisterPage` starts the challenge and navigates to
+  `OtpVerificationPage` with the challenge id and email. After sign-in or a verified registration the
+  app calls `INavigationService.GoToRoleRootAsync(role)`:
+  Student → `//home`, Landlord → `//my-listings`, Moderator/Admin → `//moderation`.
+- `AppShell` shows the `MyListings` tab only for Landlord, the `Moderation` tab only for
+  Moderator/Admin, and the `Profile` (`Tài khoản`) tab for every role. It observes
+  `AuthService.SessionChanged` and only touches tab visibility on the main thread.
+- The Home account button opens the Profile tab when signed in and the login page when signed out.
+  `ProfilePage` loads through `IProfileClient` (`GET /api/v1/auth/me`) and shows signed-out and error
+  states of its own.
+- The Profile tab is role-adaptive: Students see personal and rental-need information, Landlords see
+  business details, verification, room stats and reputation, and staff see account identity plus the
+  settings entry point. Sections the API does not expose yet read from `IProfileDetailsStore`
+  (in-memory, per session, seeded per user) and are captioned as illustrative data.
+- `EditProfilePage` (`AppRoutes.EditProfile`) is opened from the Profile tab for Students and
+  Landlords. It saves the display name through `PUT /api/v1/auth/me` and the remaining form fields
+  through `IProfileDetailsStore`; the avatar is chosen from the device gallery via `IAvatarPicker`
+  and copied under `FileSystem.AppDataDirectory`.
+- `AccountSettingsPage` (`AppRoutes.AccountSettings`) hosts notification/privacy toggles persisted in
+  `IProfileDetailsStore`, placeholder rows for features not shipped yet, and the real sign-out.
+- "Phòng yêu thích" opens the Favourites tab and "Tin đăng của tôi" opens My Listings; the remaining
+  profile menu entries are coming-soon alerts.
 
 ### 3.5 API communication
 
@@ -105,6 +129,11 @@ Create a folder only when it contains code. Do not add empty layers.
   Android emulator. Android debug builds allow cleartext traffic for local development.
 - Request/response types come from `RoomToRentRadar.Shared`.
 - Failures are reported through `IErrorHandler`; do not show alerts from ViewModels.
+- `AuthService` owns the session: it stores the token and role through `ITokenStore`
+  (`AppUserRole`), exposes `CurrentRole` and `CurrentDisplayName`, and raises `SessionChanged`. ViewModels
+  read the role from the service, never from secure storage directly. Sessions stored before roles
+  existed are treated as Student. After a profile rename `EditProfileViewModel` calls
+  `UpdateCurrentDisplayName` so the cached name stays in sync; the Profile tab also refreshes it on load.
 
 ### 3.6 Theming and layout
 
@@ -130,7 +159,7 @@ backend/
 ├── RoomToRentRadar.SqliteDataAccess/  EF Core adapter: AppDbContext, configurations, migrations,
 │                                      repositories, seeding; references Domain + Ports + Shared
 ├── RoomToRentRadar.Infrastructure/    External adapters: photo storage/processing, tokens, routing,
-│                                      background worker; references Ports
+│                                      background worker; references Ports + Shared
 └── RoomToRentRadar.Api/               Inbound HTTP adapter + composition root
     ├── Features/<Feature>/            Controllers, request validators, ProblemDetails factories
     ├── Configuration/                 MVC/JSON, OpenAPI, CORS and reverse-proxy extensions
@@ -151,6 +180,10 @@ root (`AddDataAccess`, `AddUseCases`, `AddInfrastructure`).
   Repositories own EF queries, `ExecuteUpdateAsync` conditional updates and include graphs.
 - Validation limits (max lengths, upload caps) live once in `Ports/Models/<Area>` (for example
   `ListingLimits`, `PhotoUploadLimits`) and are shared by API validators and EF configurations.
+  `Shared/Auth/AccountRules` is the deliberate exception: the mobile client cannot reference
+  `Ports`, so every registration limit (email/display name/password lengths, OTP length, lifetime,
+  attempts and the hash/salt column lengths) lives in `Shared` and is shared by the API validator,
+  EF configurations and the mobile form.
 - Multi-write operations use `IUnitOfWork.BeginTransactionAsync`; the port exposes
   `CommitAsync` and async disposal so use cases stay storage-agnostic.
 
@@ -173,6 +206,65 @@ root (`AddDataAccess`, `AddUseCases`, `AddInfrastructure`).
 - OpenAPI is generated by the built-in .NET 10 support; Swagger UI is only a viewer.
 - Schema changes use EF Core migrations. Never use `EnsureCreated`.
 - Development startup applies migrations and seeds sample data; this is a documented exception.
+
+### 4.4 Authentication, roles and authorization
+
+- Roles are `student`, `landlord`, `moderator` and `admin`. The `UserRole` enum and its
+  `UserRoleWire` values live once in `Shared/Auth` (like `ListingStatus`); the `users` CHECK
+  constraint, EF converters, the token role claim, `AccountRules` and the mobile `AppUserRoleWire`
+  all derive from that single source.
+- Registration is a two-step, email-verified flow for `student` and `landlord` only; moderator and
+  admin accounts are provisioned out of band. `POST /api/v1/auth/register` validates email
+  format/length, display name length and a password of 8-128 characters containing letters and
+  digits (`RegistrationValidator`/`AccountRules`), hashes the password, generates a 6-digit OTP,
+  stores both hashes in a `registration_challenges` row (10-minute lifetime, 5 attempts) and emails
+  the code. A new registration for the same email first deletes that email's previous challenge, and
+  expired challenge rows are pruned on the same path. It returns 202 with `RegisterChallengeResponse`;
+  duplicate emails return 409 `email_already_registered`, including a concurrent insert caught by the
+  unique-index handling, and a failed email hand-off returns 502 `email_delivery_failed` after the
+  challenge is removed.
+- `POST /api/v1/auth/register/verify` checks the challenge and OTP, creates the user, starts a
+  session and returns `LoginResponse` so the client can redirect by role. Wrong codes consume an
+  attempt atomically in the repository (`UPDATE ... WHERE attempt_count < 5`), so parallel
+  submissions cannot exceed the cap. Unknown/expired challenges return 400 `invalid_otp_challenge`,
+  a wrong code returns 400 `invalid_otp` with an `attempts_remaining` extension, exhaustion returns
+  429 `otp_attempts_exceeded`, and an email that was registered in the meantime returns 409 after
+  the challenge is deleted. The user insert, session insert and challenge delete run in one
+  transaction. The challenge row stores only PBKDF2 hashes of the password and OTP.
+- Email delivery goes through the `IEmailSender` port. `Auth:Email:Smtp` configures host, port,
+  STARTTLS, timeout (default 8s, kept below the mobile client's 15s), credentials and from-address
+  (`System.Net.Mail`, no extra package); outside Development a missing host fails startup, and so
+  does STARTTLS disabled together with credentials. Development without SMTP falls back to
+  `FileEmailSender`, writing `.eml` files under `<ContentRoot>/outbox` (gitignored) and logging only
+  the path — never the OTP.
+- `POST /api/v1/auth/login` issues an HS256-signed JWT access token (7-day expiry) carrying the user
+  id, email, display name and role claims. The JwtBearer handler validates signature, issuer,
+  audience and lifetime on every request. Each token is bound to a server-side `auth_sessions` row
+  (stored as a SHA-256 hash) that is checked after signature validation, so logout still revokes
+  access immediately.
+- The signing key comes from `Auth:Token:SigningKey` (user-secrets or the
+  `Auth__Token__SigningKey` environment variable). Missing keys fail startup outside Development;
+  Development falls back to a per-process key.
+- Passwords are stored as PBKDF2-SHA256 (100k iterations, 16-byte salt, fixed-time comparison)
+  through `IPasswordHasher`.
+- `POST /api/v1/auth/register` and `/login` share a fixed-window per-IP rate limit
+  (`Auth:RateLimitPerMinute`, default 10); `/register/verify` has its own bucket
+  (`Auth:VerifyRateLimitPerMinute`, default 20) so code retries do not consume the login/register
+  budget. Exceeded requests answer 429 `auth_rate_limited` with a `Retry-After` header.
+- Migration `AddStudentAndLandlordRoles` replaces the legacy `user` role: accounts that own at least
+  one listing become `landlord` (they keep access to listing management and photo upload), all other
+  legacy accounts become `student`. The `Down` migration merges both roles back to `user`.
+- Authorization policies live in `Features/Auth/AuthPolicies.cs` and rely on the role claim issued by
+  the JWT handler. `Landlord` guards listing management (`api/v1/listings` create/read/update/publish/unpublish/delete)
+  and photo upload; `ModeratorOrAdmin` guards `api/v1/moderation/*`. Rejected calls return 401/403
+  with a `ProblemDetails` `code`.
+- The mobile moderation queue uses `GET /api/v1/moderation/listings?status=pending_review`
+  (cursor paginated) and `POST /api/v1/moderation/listings/{id}/approve`.
+- `GET /api/v1/auth/me` returns the signed-in account as `UserProfileDto` (user id, email, display
+  name, role, created at). `PUT /api/v1/auth/me` updates only the display name, trimmed and validated
+  with `AccountRules` (required, at most 120 characters). Both endpoints require `[Authorize]`:
+  missing/invalid tokens return 401, an invalid name returns 400 `invalid_display_name`, and a token
+  whose user row no longer exists returns 404 `profile_not_found`.
 
 ## 5. Testing
 

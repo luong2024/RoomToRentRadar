@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using RoomToRentRadar.Infrastructure.Auth;
 using RoomToRentRadar.Infrastructure.BackgroundJobs;
+using RoomToRentRadar.Infrastructure.Email;
 using RoomToRentRadar.Infrastructure.Photos;
 using RoomToRentRadar.Infrastructure.Travel;
 using RoomToRentRadar.Ports.Models.SavedSearches;
@@ -19,6 +20,11 @@ public static class InfrastructureServiceCollectionExtensions
     {
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<ITokenGenerator, TokenGenerator>();
+        services.AddSingleton<IOtpGenerator, OtpGenerator>();
+        services.AddSingleton<IEmailSender>(serviceProvider =>
+            serviceProvider.GetRequiredService<SmtpEmailOptions>().IsConfigured
+                ? ActivatorUtilities.CreateInstance<SmtpEmailSender>(serviceProvider)
+                : ActivatorUtilities.CreateInstance<FileEmailSender>(serviceProvider));
 
         services.AddSingleton(serviceProvider => PhotoStorageOptions.Resolve(
             configuration[PhotoStorageOptions.ConfigKey],

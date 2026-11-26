@@ -651,6 +651,78 @@ namespace RoomToRentRadar.SqliteDataAccess.Migrations
                     b.ToTable("notifications", (string)null);
                 });
 
+            modelBuilder.Entity("RoomToRentRadar.Domain.Entities.RegistrationChallenge", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("id");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("attempt_count");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("display_name");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("email");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("expires_at");
+
+                    b.Property<string>("OtpHash")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("otp_hash");
+
+                    b.Property<string>("OtpSalt")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("otp_salt");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("password_hash");
+
+                    b.Property<string>("PasswordSalt")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("password_salt");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("role");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .HasDatabaseName("ix_registration_challenges_email");
+
+                    b.ToTable("registration_challenges", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_registration_challenges_role", "role IN ('student', 'landlord')");
+                        });
+                });
+
             modelBuilder.Entity("RoomToRentRadar.Domain.Entities.SavedSearch", b =>
                 {
                     b.Property<Guid>("Id")
@@ -780,7 +852,7 @@ namespace RoomToRentRadar.SqliteDataAccess.Migrations
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
                         .HasColumnType("TEXT")
-                        .HasDefaultValue("user")
+                        .HasDefaultValue("student")
                         .HasColumnName("role");
 
                     b.HasKey("Id");
@@ -791,7 +863,7 @@ namespace RoomToRentRadar.SqliteDataAccess.Migrations
 
                     b.ToTable("users", null, t =>
                         {
-                            t.HasCheckConstraint("ck_users_role", "role IN ('user', 'moderator', 'admin')");
+                            t.HasCheckConstraint("ck_users_role", "role IN ('student', 'landlord', 'moderator', 'admin')");
                         });
                 });
 

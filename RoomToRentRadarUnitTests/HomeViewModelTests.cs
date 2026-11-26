@@ -1,3 +1,4 @@
+﻿using RoomToRentRadar.Models;
 using RoomToRentRadar.Services;
 using RoomToRentRadar.Services.Auth;
 using RoomToRentRadar.Services.ErrorHandling;
@@ -541,6 +542,44 @@ public partial class HomeViewModelTests
         });
     }
 
+    [Test]
+    public async Task OpenAuth_NavigatesToLoginScreen()
+    {
+        var navigation = new FakeNavigationService();
+        var viewModel = new HomeViewModel(
+            new FakeApiClient(),
+            new FakeErrorHandler(),
+            navigation,
+            new RoomComparisonStore());
+
+        await viewModel.OpenAuthCommand.ExecuteAsync(null);
+
+        Assert.That(navigation.LoginNavigationCount, Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task OpenAuth_WhenSignedIn_NavigatesToProfile()
+    {
+        var navigation = new FakeNavigationService();
+        var tokenStore = new FakeTokenStore { AccessToken = "test-token", Role = AppUserRole.Student };
+        var authService = new AuthService(new FakeApiClient(), tokenStore);
+        await authService.EnsureSignedInAsync();
+        var viewModel = new HomeViewModel(
+            new FakeApiClient(),
+            new FakeErrorHandler(),
+            navigation,
+            new RoomComparisonStore(),
+            authService);
+
+        await viewModel.OpenAuthCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(navigation.ProfileNavigationCount, Is.EqualTo(1));
+            Assert.That(navigation.LoginNavigationCount, Is.Zero);
+        });
+    }
+
     private static ListingSearchResultDto CreatePage(
         string? nextCursor,
         params ListingSummaryDto[] items)
@@ -629,6 +668,16 @@ public partial class HomeViewModelTests
         public Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The home screen does not sign in.");
 
+        public Task<RegisterChallengeResponse> BeginRegistrationAsync(
+            RegisterRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The home screen does not register accounts.");
+
+        public Task<LoginResponse> VerifyRegistrationAsync(
+            VerifyRegistrationRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The home screen does not register accounts.");
+
         public Task<LoginResponse?> DemoLoginAsync(CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The home screen does not sign in.");
 
@@ -670,6 +719,37 @@ public partial class HomeViewModelTests
         }
     }
 
+    private sealed class FakeTokenStore : ITokenStore
+    {
+        public string? AccessToken { get; set; }
+
+        public AppUserRole? Role { get; set; }
+
+        public Task<string?> GetAccessTokenAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(AccessToken);
+
+        public Task<AppUserRole?> GetRoleAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(Role);
+
+        public Task SaveAsync(
+            string accessToken,
+            DateTime expiresAt,
+            AppUserRole role,
+            CancellationToken cancellationToken = default)
+        {
+            AccessToken = accessToken;
+            Role = role;
+            return Task.CompletedTask;
+        }
+
+        public Task ClearAsync(CancellationToken cancellationToken = default)
+        {
+            AccessToken = null;
+            Role = null;
+            return Task.CompletedTask;
+        }
+    }
+
     private sealed class FakeNavigationService : INavigationService
     {
         public Task GoToListingEditorAsync(Guid? listingId = null) => Task.CompletedTask;
@@ -687,7 +767,27 @@ public partial class HomeViewModelTests
                 : Task.CompletedTask;
         }
 
-        public Task GoToLoginAsync() => Task.CompletedTask;
+        public int LoginNavigationCount { get; private set; }
+
+        public Task GoToLoginAsync()
+        {
+            LoginNavigationCount++;
+            return Exception is { } exception
+                ? Task.FromException(exception)
+                : Task.CompletedTask;
+        }
+
+        public int ProfileNavigationCount { get; private set; }
+
+        public Task GoToProfileAsync()
+        {
+            ProfileNavigationCount++;
+            return Task.CompletedTask;
+        }
+
+        public Task GoToRegisterAsync() => Task.CompletedTask;
+
+        public Task GoToRoleRootAsync(RoomToRentRadar.Models.AppUserRole? role) => Task.CompletedTask;
 
         public Task GoToDirectionsAsync(
             double destinationLat,

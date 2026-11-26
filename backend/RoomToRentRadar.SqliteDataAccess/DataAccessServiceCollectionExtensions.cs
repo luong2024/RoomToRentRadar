@@ -24,6 +24,7 @@ public static class DataAccessServiceCollectionExtensions
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IAuthSessionRepository, AuthSessionRepository>();
+        services.AddScoped<IRegistrationChallengeRepository, RegistrationChallengeRepository>();
         services.AddScoped<IListingLookupRepository, ListingLookupRepository>();
         services.AddScoped<IListingFavouriteRepository, ListingFavouriteRepository>();
         services.AddScoped<IListingPhotoRepository, ListingPhotoRepository>();

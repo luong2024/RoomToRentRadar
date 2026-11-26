@@ -1258,6 +1258,16 @@ public class RoomDetailViewModelTests
         public Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The room detail screen does not sign in.");
 
+        public Task<RegisterChallengeResponse> BeginRegistrationAsync(
+            RegisterRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The room detail screen does not register accounts.");
+
+        public Task<LoginResponse> VerifyRegistrationAsync(
+            VerifyRegistrationRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The room detail screen does not register accounts.");
+
         public Task<LoginResponse?> DemoLoginAsync(CancellationToken cancellationToken = default)
             => throw new NotSupportedException("The room detail screen does not sign in.");
 
@@ -1471,6 +1481,10 @@ public class RoomDetailViewModelTests
             GoToLoginCount++;
             return Task.CompletedTask;
         }
+
+        public Task GoToRegisterAsync() => Task.CompletedTask;
+
+        public Task GoToRoleRootAsync(RoomToRentRadar.Models.AppUserRole? role) => Task.CompletedTask;
 
         public Task GoToDirectionsAsync(
             double destinationLat,

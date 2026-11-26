@@ -15,6 +15,9 @@ public interface IApiClient
 
     Task<ListingDetailFetchResult> GetListingDetailAsync(Guid id, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<ListingPhotoDto>> GetListingPhotosAsync(Guid id, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<ListingPhotoDto>>([]);
+
     Task<IReadOnlyList<ListingSummaryDto>> GetSimilarListingsAsync(
         Guid id,
         int limit = 4,
@@ -26,6 +29,14 @@ public interface IApiClient
 
     Task<LoginResponse?> LoginAsync(
         LoginRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<RegisterChallengeResponse> BeginRegistrationAsync(
+        RegisterRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<LoginResponse> VerifyRegistrationAsync(
+        VerifyRegistrationRequest request,
         CancellationToken cancellationToken = default);
 
     Task<LoginResponse?> DemoLoginAsync(CancellationToken cancellationToken = default);

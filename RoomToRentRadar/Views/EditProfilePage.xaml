@@ -1,0 +1,400 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.ViewModels"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Controls"
+             xmlns:buttons="clr-namespace:Syncfusion.Maui.Toolkit.Buttons;assembly=Syncfusion.Maui.Toolkit"
+             xmlns:inputLayout="clr-namespace:Syncfusion.Maui.Toolkit.TextInputLayout;assembly=Syncfusion.Maui.Toolkit"
+             xmlns:progressBar="clr-namespace:Syncfusion.Maui.Toolkit.ProgressBar;assembly=Syncfusion.Maui.Toolkit"
+             x:Class="RoomToRentRadar.Views.EditProfilePage"
+             x:DataType="vm:EditProfileViewModel"
+             Title="Chỉnh sửa hồ sơ"
+             Shell.NavBarIsVisible="False"
+             Shell.TabBarIsVisible="False"
+             SafeAreaEdges="Container">
+    <ContentPage.Resources>
+        <Style x:Key="ProfileFieldEntry" TargetType="Entry">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+            <Setter Property="PlaceholderColor" Value="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+            <Setter Property="BackgroundColor" Value="Transparent" />
+            <Setter Property="MinimumHeightRequest" Value="46" />
+        </Style>
+        <Style x:Key="FieldCaption" TargetType="Label" BasedOn="{StaticResource Caption}">
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+    </ContentPage.Resources>
+
+    <Grid>
+        <controls:LiquidBackdropView />
+
+        <Grid RowDefinitions="Auto,*" RowSpacing="0">
+            <!-- Floating Liquid Glass Header -->
+            <ContentView Padding="16,10,16,6">
+                <Border Style="{StaticResource LiquidFloatingPanel}" Padding="12,10">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                        <Border Style="{StaticResource LiquidOrbBorder}"
+                                AutomationId="EditProfileBack"
+                                SemanticProperties.Description="Quay lại trang tài khoản">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding CancelCommand}" />
+                            </Border.GestureRecognizers>
+                            <Image Source="back_icon.png" WidthRequest="18" HeightRequest="18"
+                                   HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
+                            <Label Text="Chỉnh sửa hồ sơ" Style="{StaticResource ScreenTitle}" FontSize="19"
+                                   SemanticProperties.HeadingLevel="Level1" />
+                            <Label Text="Cập nhật thông tin hiển thị của bạn" Style="{StaticResource Caption}" FontSize="11.5" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+            </ContentView>
+
+        <!-- Loading -->
+        <VerticalStackLayout Grid.Row="1" IsVisible="{Binding IsLoadingState}" Spacing="12"
+                             VerticalOptions="Center" HorizontalOptions="Center" Padding="24">
+            <ActivityIndicator IsRunning="{Binding IsLoadingState}" Color="{StaticResource Accent}" />
+            <Label Text="Đang tải hồ sơ…" Style="{StaticResource Caption}" FontSize="13" />
+        </VerticalStackLayout>
+
+        <!-- Signed out -->
+        <ScrollView Grid.Row="1" Padding="16,20" IsVisible="{Binding IsSignedOutState}">
+            <Border Padding="24,28" StrokeShape="RoundRectangle 22" VerticalOptions="Start" MaximumWidthRequest="460" HorizontalOptions="Fill">
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="CẦN ĐĂNG NHẬP" Style="{StaticResource Eyebrow}"
+                           TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource AccentDark}}" />
+                    <Label Text="Đăng nhập để chỉnh sửa hồ sơ" FontSize="22" FontFamily="FontSemiBold" />
+                    <Label Text="Bạn cần đăng nhập trước khi cập nhật thông tin cá nhân."
+                           Style="{StaticResource Caption}" FontSize="13.5" LineHeight="1.35" />
+                    <buttons:SfButton Text="Đăng nhập" Command="{Binding SignInCommand}" HorizontalOptions="Fill"
+                                      AutomationId="EditProfileSignIn" />
+                </VerticalStackLayout>
+            </Border>
+        </ScrollView>
+
+        <!-- Error -->
+        <ScrollView Grid.Row="1" Padding="16,20" IsVisible="{Binding IsErrorState}">
+            <Border Padding="24,28" StrokeShape="RoundRectangle 22" VerticalOptions="Start" MaximumWidthRequest="460" HorizontalOptions="Fill">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Chưa tải được hồ sơ" FontSize="22" FontFamily="FontSemiBold" />
+                    <Label Text="{Binding Message}" Style="{StaticResource Caption}" FontSize="13.5" LineHeight="1.35" />
+                    <buttons:SfButton Text="Thử lại" Command="{Binding LoadCommand}" HorizontalOptions="Start"
+                                      AutomationId="EditProfileRetry" />
+                </VerticalStackLayout>
+            </Border>
+        </ScrollView>
+
+        <!-- Content -->
+        <ScrollView Grid.Row="1" IsVisible="{Binding IsContentState}">
+            <VerticalStackLayout Padding="16,16,16,28" Spacing="14" MaximumWidthRequest="760" HorizontalOptions="Fill">
+                <progressBar:SfLinearProgressBar IsIndeterminate="True" IsVisible="{Binding IsSaving}" />
+
+                <!-- Avatar -->
+                <Border Padding="16,18" StrokeShape="RoundRectangle 20">
+                    <VerticalStackLayout Spacing="10">
+                        <Grid HorizontalOptions="Center">
+                            <Grid WidthRequest="96" HeightRequest="96">
+                                <Border StrokeThickness="0" StrokeShape="RoundRectangle 48"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource AccentSoftDark}}">
+                                    <Image Source="person_icon.png" WidthRequest="42" HeightRequest="42"
+                                           HorizontalOptions="Center" VerticalOptions="Center"
+                                           SemanticProperties.Description="Ảnh đại diện mặc định" />
+                                </Border>
+                                <Border IsVisible="{Binding HasAvatar}" StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 48" Padding="0">
+                                    <Image Source="{Binding AvatarPath}" Aspect="AspectFill"
+                                           AutomationId="EditProfileAvatar"
+                                           SemanticProperties.Description="Ảnh đại diện của bạn" />
+                                </Border>
+                            </Grid>
+                        </Grid>
+                        <buttons:SfButton Text="Đổi ảnh đại diện" Command="{Binding PickAvatarCommand}"
+                                          Style="{StaticResource SoftSfButton}" HorizontalOptions="Center"
+                                          HeightRequest="42" MinimumHeightRequest="42" Padding="18,0" FontSize="12.5"
+                                          AutomationId="EditProfileAvatarButton" />
+                        <Label Text="Ảnh được lưu trên thiết bị trong bản demo này."
+                               Style="{StaticResource Caption}" FontSize="11.5" HorizontalTextAlignment="Center" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Staff accounts have no personal profile to edit -->
+                <Border Padding="20,18" StrokeShape="RoundRectangle 20" IsVisible="{Binding IsStaff}">
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="Không có hồ sơ cá nhân" Style="{StaticResource SectionTitle}" FontSize="16" />
+                        <Label Text="Trang này dành cho sinh viên và chủ phòng. Tài khoản kiểm duyệt viên hoặc quản trị viên không có hồ sơ cá nhân để chỉnh sửa."
+                               Style="{StaticResource Caption}" FontSize="13" LineHeight="1.35" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Student personal info -->
+                <Border Padding="16,14" StrokeShape="RoundRectangle 20" IsVisible="{Binding IsStudent}">
+                    <VerticalStackLayout Spacing="10">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="Thông tin cá nhân" Style="{StaticResource SectionTitle}" FontSize="16" />
+                            <Label Grid.Column="1" Text="Dữ liệu minh họa" Style="{StaticResource Eyebrow}"
+                                   VerticalOptions="Center" />
+                        </Grid>
+
+                        <VerticalStackLayout Spacing="3">
+                            <inputLayout:SfTextInputLayout Hint="Họ và tên *" ShowHelperText="False"
+                                                           HasError="{Binding HasFullNameError}">
+                                <Entry Text="{Binding FullName}" MaxLength="120" ClearButtonVisibility="WhileEditing"
+                                       Placeholder="Nhập họ tên của bạn"
+                                       AutomationId="EditProfileFullName"
+                                       SemanticProperties.Description="Họ và tên"
+                                       Style="{StaticResource ProfileFieldEntry}" />
+                            </inputLayout:SfTextInputLayout>
+                            <Label Text="{Binding FullNameError}" IsVisible="{Binding HasFullNameError}"
+                                   FontSize="12" AutomationId="EditProfileFullNameError"
+                                   TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="3">
+                            <inputLayout:SfTextInputLayout Hint="Số điện thoại *" ShowHelperText="False"
+                                                           HasError="{Binding HasPhoneError}">
+                                <Entry Text="{Binding Phone}" Keyboard="Telephone" MaxLength="15"
+                                       Placeholder="VD: 0901234567"
+                                       AutomationId="EditProfilePhone"
+                                       SemanticProperties.Description="Số điện thoại"
+                                       Style="{StaticResource ProfileFieldEntry}" />
+                            </inputLayout:SfTextInputLayout>
+                            <Label Text="{Binding PhoneError}" IsVisible="{Binding HasPhoneError}"
+                                   FontSize="12" AutomationId="EditProfilePhoneError"
+                                   TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Ngày sinh" Style="{StaticResource FieldCaption}" />
+                            <Border Padding="10,0" MinimumHeightRequest="52" StrokeShape="RoundRectangle 13">
+                                <DatePicker Date="{Binding DateOfBirth}" Format="dd/MM/yyyy"
+                                            AutomationId="EditProfileDob"
+                                            SemanticProperties.Description="Ngày sinh" />
+                            </Border>
+                            <Label Text="{Binding DateOfBirthError}" IsVisible="{Binding HasDateOfBirthError}"
+                                   FontSize="12" AutomationId="EditProfileDobError"
+                                   TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Giới tính" Style="{StaticResource FieldCaption}" />
+                            <Border Padding="10,0" MinimumHeightRequest="52" StrokeShape="RoundRectangle 13">
+                                <Picker ItemsSource="{Binding GenderOptions}" SelectedItem="{Binding Gender}"
+                                        Title="Chọn giới tính" AutomationId="EditProfileGender"
+                                        SemanticProperties.Description="Giới tính" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <inputLayout:SfTextInputLayout Hint="Trường đại học" ShowHelperText="False">
+                            <Entry Text="{Binding University}" MaxLength="120" ClearButtonVisibility="WhileEditing"
+                                   Placeholder="VD: Đại học Bách khoa TP.HCM"
+                                   AutomationId="EditProfileUniversity"
+                                   SemanticProperties.Description="Trường đại học"
+                                   Style="{StaticResource ProfileFieldEntry}" />
+                        </inputLayout:SfTextInputLayout>
+
+                        <inputLayout:SfTextInputLayout Hint="Chuyên ngành" ShowHelperText="False">
+                            <Entry Text="{Binding Major}" MaxLength="120" ClearButtonVisibility="WhileEditing"
+                                   Placeholder="VD: Khoa học máy tính"
+                                   AutomationId="EditProfileMajor"
+                                   SemanticProperties.Description="Chuyên ngành"
+                                   Style="{StaticResource ProfileFieldEntry}" />
+                        </inputLayout:SfTextInputLayout>
+
+                        <inputLayout:SfTextInputLayout Hint="Năm học" ShowHelperText="False">
+                            <Entry Text="{Binding AcademicYear}" MaxLength="40" ClearButtonVisibility="WhileEditing"
+                                   Placeholder="VD: Năm 3"
+                                   AutomationId="EditProfileAcademicYear"
+                                   SemanticProperties.Description="Năm học"
+                                   Style="{StaticResource ProfileFieldEntry}" />
+                        </inputLayout:SfTextInputLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Student rental needs -->
+                <Border Padding="16,14" StrokeShape="RoundRectangle 20" IsVisible="{Binding IsStudent}">
+                    <VerticalStackLayout Spacing="10">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="Nhu cầu thuê phòng" Style="{StaticResource SectionTitle}" FontSize="16" />
+                            <Label Grid.Column="1" Text="Dữ liệu minh họa" Style="{StaticResource Eyebrow}"
+                                   VerticalOptions="Center" />
+                        </Grid>
+
+                        <inputLayout:SfTextInputLayout Hint="Ngân sách" ShowHelperText="False">
+                            <Entry Text="{Binding Budget}" MaxLength="60" ClearButtonVisibility="WhileEditing"
+                                   Placeholder="VD: 3 – 5 triệu/tháng"
+                                   AutomationId="EditProfileBudget"
+                                   SemanticProperties.Description="Ngân sách thuê"
+                                   Style="{StaticResource ProfileFieldEntry}" />
+                        </inputLayout:SfTextInputLayout>
+
+                        <inputLayout:SfTextInputLayout Hint="Khu vực mong muốn" ShowHelperText="False">
+                            <Entry Text="{Binding PreferredLocation}" MaxLength="120" ClearButtonVisibility="WhileEditing"
+                                   Placeholder="VD: Quận 10, TP.HCM"
+                                   AutomationId="EditProfileLocation"
+                                   SemanticProperties.Description="Khu vực mong muốn"
+                                   Style="{StaticResource ProfileFieldEntry}" />
+                        </inputLayout:SfTextInputLayout>
+
+                        <inputLayout:SfTextInputLayout Hint="Loại phòng" ShowHelperText="False">
+                            <Entry Text="{Binding RoomType}" MaxLength="60" ClearButtonVisibility="WhileEditing"
+                                   Placeholder="VD: Phòng trọ"
+                                   AutomationId="EditProfileRoomType"
+                                   SemanticProperties.Description="Loại phòng"
+                                   Style="{StaticResource ProfileFieldEntry}" />
+                        </inputLayout:SfTextInputLayout>
+
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Ngày dọn vào" Style="{StaticResource FieldCaption}" />
+                            <Border Padding="10,0" MinimumHeightRequest="52" StrokeShape="RoundRectangle 13">
+                                <DatePicker Date="{Binding MoveInDate}" Format="dd/MM/yyyy"
+                                            AutomationId="EditProfileMoveIn"
+                                            SemanticProperties.Description="Ngày dọn vào" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <inputLayout:SfTextInputLayout Hint="Thời hạn thuê" ShowHelperText="False">
+                            <Entry Text="{Binding RentalDuration}" MaxLength="60" ClearButtonVisibility="WhileEditing"
+                                   Placeholder="VD: 6 – 12 tháng"
+                                   AutomationId="EditProfileDuration"
+                                   SemanticProperties.Description="Thời hạn thuê"
+                                   Style="{StaticResource ProfileFieldEntry}" />
+                        </inputLayout:SfTextInputLayout>
+
+                        <inputLayout:SfTextInputLayout Hint="Số người ở" ShowHelperText="False">
+                            <Entry Text="{Binding Occupants}" MaxLength="40" ClearButtonVisibility="WhileEditing"
+                                   Placeholder="VD: 1 người"
+                                   AutomationId="EditProfileOccupants"
+                                   SemanticProperties.Description="Số người ở"
+                                   Style="{StaticResource ProfileFieldEntry}" />
+                        </inputLayout:SfTextInputLayout>
+
+                        <inputLayout:SfTextInputLayout Hint="Yêu cầu giới tính" ShowHelperText="False">
+                            <Entry Text="{Binding GenderPreference}" MaxLength="60" ClearButtonVisibility="WhileEditing"
+                                   Placeholder="VD: Không yêu cầu"
+                                   AutomationId="EditProfileGenderPreference"
+                                   SemanticProperties.Description="Yêu cầu giới tính"
+                                   Style="{StaticResource ProfileFieldEntry}" />
+                        </inputLayout:SfTextInputLayout>
+
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="0,6">
+                            <VerticalStackLayout Spacing="1" VerticalOptions="Center">
+                                <Label Text="Nuôi thú cưng" FontFamily="FontSemiBold" FontSize="13.5" />
+                                <Label Text="Thông tin để chủ phòng cân nhắc" Style="{StaticResource Caption}" FontSize="11.5" />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1" IsToggled="{Binding HasPets}" VerticalOptions="Center"
+                                    OnColor="{StaticResource Accent}" AutomationId="EditProfilePets"
+                                    SemanticProperties.Description="Nuôi thú cưng" />
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="0,6">
+                            <VerticalStackLayout Spacing="1" VerticalOptions="Center">
+                                <Label Text="Hút thuốc" FontFamily="FontSemiBold" FontSize="13.5" />
+                                <Label Text="Bạn có hút thuốc không?" Style="{StaticResource Caption}" FontSize="11.5" />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1" IsToggled="{Binding IsSmoker}" VerticalOptions="Center"
+                                    OnColor="{StaticResource Accent}" AutomationId="EditProfileSmoking"
+                                    SemanticProperties.Description="Hút thuốc" />
+                        </Grid>
+
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Giới thiệu" Style="{StaticResource FieldCaption}" />
+                            <Border Padding="12,8" StrokeShape="RoundRectangle 13">
+                                <Editor Text="{Binding Introduction}" Placeholder="Giới thiệu ngắn về bản thân..."
+                                        AutoSize="TextChanges" HeightRequest="110" MaxLength="500"
+                                        BackgroundColor="Transparent"
+                                        AutomationId="EditProfileIntroduction"
+                                        SemanticProperties.Description="Giới thiệu bản thân" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Landlord business info -->
+                <Border Padding="16,14" StrokeShape="RoundRectangle 20" IsVisible="{Binding IsLandlord}">
+                    <VerticalStackLayout Spacing="10">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="Thông tin chủ phòng" Style="{StaticResource SectionTitle}" FontSize="16" />
+                            <Label Grid.Column="1" Text="Dữ liệu minh họa" Style="{StaticResource Eyebrow}"
+                                   VerticalOptions="Center" />
+                        </Grid>
+
+                        <VerticalStackLayout Spacing="3">
+                            <inputLayout:SfTextInputLayout Hint="Họ và tên *" ShowHelperText="False"
+                                                           HasError="{Binding HasFullNameError}">
+                                <Entry Text="{Binding FullName}" MaxLength="120" ClearButtonVisibility="WhileEditing"
+                                       Placeholder="Nhập họ tên của bạn"
+                                       AutomationId="EditProfileFullName"
+                                       SemanticProperties.Description="Họ và tên"
+                                       Style="{StaticResource ProfileFieldEntry}" />
+                            </inputLayout:SfTextInputLayout>
+                            <Label Text="{Binding FullNameError}" IsVisible="{Binding HasFullNameError}"
+                                   FontSize="12" AutomationId="EditProfileFullNameError"
+                                   TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="3">
+                            <inputLayout:SfTextInputLayout Hint="Số điện thoại *" ShowHelperText="False"
+                                                           HasError="{Binding HasPhoneError}">
+                                <Entry Text="{Binding Phone}" Keyboard="Telephone" MaxLength="15"
+                                       Placeholder="VD: 0901234567"
+                                       AutomationId="EditProfilePhone"
+                                       SemanticProperties.Description="Số điện thoại"
+                                       Style="{StaticResource ProfileFieldEntry}" />
+                            </inputLayout:SfTextInputLayout>
+                            <Label Text="{Binding PhoneError}" IsVisible="{Binding HasPhoneError}"
+                                   FontSize="12" AutomationId="EditProfilePhoneError"
+                                   TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                        </VerticalStackLayout>
+
+                        <inputLayout:SfTextInputLayout Hint="Tên cơ sở / nhà trọ" ShowHelperText="False">
+                            <Entry Text="{Binding BusinessName}" MaxLength="120" ClearButtonVisibility="WhileEditing"
+                                   Placeholder="VD: Nhà trọ Bình An"
+                                   AutomationId="EditProfileBusinessName"
+                                   SemanticProperties.Description="Tên cơ sở"
+                                   Style="{StaticResource ProfileFieldEntry}" />
+                        </inputLayout:SfTextInputLayout>
+
+                        <inputLayout:SfTextInputLayout Hint="Địa chỉ liên hệ" ShowHelperText="False">
+                            <Entry Text="{Binding ContactAddress}" MaxLength="160" ClearButtonVisibility="WhileEditing"
+                                   Placeholder="VD: 12 Hòa Hảo, Quận 10, TP.HCM"
+                                   AutomationId="EditProfileAddress"
+                                   SemanticProperties.Description="Địa chỉ liên hệ"
+                                   Style="{StaticResource ProfileFieldEntry}" />
+                        </inputLayout:SfTextInputLayout>
+
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Giới thiệu" Style="{StaticResource FieldCaption}" />
+                            <Border Padding="12,8" StrokeShape="RoundRectangle 13">
+                                <Editor Text="{Binding Introduction}" Placeholder="Giới thiệu về cơ sở cho thuê..."
+                                        AutoSize="TextChanges" HeightRequest="110" MaxLength="500"
+                                        BackgroundColor="Transparent"
+                                        AutomationId="EditProfileIntroduction"
+                                        SemanticProperties.Description="Giới thiệu cơ sở" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <Label Text="Trạng thái xác minh do hệ thống quản lý và không thể chỉnh sửa tại đây."
+                               Style="{StaticResource Caption}" FontSize="11.5" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border Padding="14,10" StrokeShape="RoundRectangle 14"
+                        IsVisible="{Binding HasMessage}" StrokeThickness="0"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource DangerSoft}, Dark={StaticResource DangerSoftDark}}">
+                    <Label Text="{Binding Message}" FontSize="12.5" AutomationId="EditProfileMessage"
+                           TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                </Border>
+
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="10" IsVisible="{Binding CanEditProfile}">
+                    <buttons:SfButton Text="Hủy" Command="{Binding CancelCommand}"
+                                      Style="{StaticResource OutlineSfButton}"
+                                      AutomationId="EditProfileCancel" />
+                    <buttons:SfButton Grid.Column="1" Text="Lưu thay đổi" Command="{Binding SaveCommand}"
+                                      AutomationId="EditProfileSave" />
+                </Grid>
+            </VerticalStackLayout>
+        </ScrollView>
+        </Grid>
+    </Grid>
+</ContentPage>

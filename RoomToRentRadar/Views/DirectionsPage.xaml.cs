@@ -1,14 +1,24 @@
 using System.Globalization;
+using Microsoft.Maui.ApplicationModel;
 using RoomToRentRadar.Helpers;
-using RoomToRentRadar.Services;
 
 namespace RoomToRentRadar.Views;
 
 public partial class DirectionsPage : ContentPage, IQueryAttributable
 {
+    private static readonly string[] AppSchemes =
+        ["intent:", "geo:", "market:", "tel:", "mailto:", "sms:", "whatsapp:"];
+
+    private double? _destLat;
+    private double? _destLng;
+    private double? _origLat;
+    private double? _origLng;
+
     public DirectionsPage()
     {
         InitializeComponent();
+        DirectionsWebView.Navigating += OnNavigating;
+        DirectionsWebView.Navigated += OnNavigated;
     }
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
@@ -16,19 +26,32 @@ public partial class DirectionsPage : ContentPage, IQueryAttributable
         if (!TryReadCoordinate(query, "to_lat", out var destinationLat)
             || !TryReadCoordinate(query, "to_lng", out var destinationLng))
         {
+            DirectionsWebView.IsVisible = false;
+            ErrorBanner.IsVisible = true;
+            OpenExternalMapsButton.IsEnabled = false;
+            RouteSubtitleLabel.Text = "Không xác định được tọa độ";
             return;
         }
 
-        double? originLat = TryReadCoordinate(query, "from_lat", out var fromLat) ? fromLat : null;
-        double? originLng = TryReadCoordinate(query, "from_lng", out var fromLng) ? fromLng : null;
+        _destLat = destinationLat;
+        _destLng = destinationLng;
+        _origLat = TryReadCoordinate(query, "from_lat", out var fromLat) ? fromLat : null;
+        _origLng = TryReadCoordinate(query, "from_lng", out var fromLng) ? fromLng : null;
 
-        MapWebView.Source = new HtmlWebViewSource
+        ErrorBanner.IsVisible = false;
+        DirectionsWebView.IsVisible = true;
+        OpenExternalMapsButton.IsEnabled = true;
+        RouteSubtitleLabel.Text = _origLat.HasValue && _origLng.HasValue
+            ? "Lộ trình từ trường học tới phòng trọ"
+            : "Bản đồ vị trí phòng trọ";
+
+        DirectionsWebView.Source = new HtmlWebViewSource
         {
             Html = DirectionsUrlBuilder.BuildPage(
                 destinationLat,
                 destinationLng,
-                originLat,
-                originLng),
+                _origLat,
+                _origLng),
         };
     }
 
@@ -44,8 +67,30 @@ public partial class DirectionsPage : ContentPage, IQueryAttributable
                 out value);
     }
 
-    private static readonly string[] AppSchemes =
-        ["intent:", "geo:", "market:", "tel:", "mailto:", "sms:", "whatsapp:"];
+    private async void OnBackClicked(object? sender, EventArgs e)
+    {
+        if (Shell.Current is { } shell)
+        {
+            await shell.GoToAsync("..");
+        }
+    }
+
+    private async void OnOpenExternalMapsClicked(object? sender, EventArgs e)
+    {
+        if (_destLat is not { } dLat || _destLng is not { } dLng)
+            return;
+
+        try
+        {
+            var url = _origLat is { } oLat && _origLng is { } oLng
+                ? string.Create(CultureInfo.InvariantCulture, $"https://www.google.com/maps/dir/?api=1&origin={oLat},{oLng}&destination={dLat},{dLng}")
+                : string.Create(CultureInfo.InvariantCulture, $"https://www.google.com/maps/search/?api=1&query={dLat},{dLng}");
+            await Launcher.Default.OpenAsync(new Uri(url));
+        }
+        catch
+        {
+        }
+    }
 
     private void OnNavigating(object? sender, WebNavigatingEventArgs e)
     {
@@ -53,16 +98,10 @@ public partial class DirectionsPage : ContentPage, IQueryAttributable
             && AppSchemes.Any(scheme => url.StartsWith(scheme, StringComparison.OrdinalIgnoreCase)))
         {
             e.Cancel = true;
-            return;
         }
-
-        SetLoading(true);
     }
 
-    private void OnNavigated(object? sender, WebNavigatedEventArgs e) => SetLoading(false);
-
-    private void SetLoading(bool isLoading)
+    private void OnNavigated(object? sender, WebNavigatedEventArgs e)
     {
-        LoadingPanel.IsVisible = isLoading;
     }
 }
