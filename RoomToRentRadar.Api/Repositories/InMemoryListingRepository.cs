@@ -74,8 +74,7 @@ public sealed class InMemoryListingRepository : IListingRepository, ILandlordLis
             IReadOnlyList<ListingDocument> items = _canonical
                 .Where(l =>
                     string.Equals(l.CampusId, campusId, StringComparison.OrdinalIgnoreCase)
-                    && string.Equals(l.Status, "Available", StringComparison.OrdinalIgnoreCase)
-                    && l.IsVerified)
+                    && l.IsPublic())
                 .ToList();
 
             return Task.FromResult(items);

@@ -1,3 +1,4 @@
+using RoomToRentRadar.Api.Services.Geo;
 using RoomToRentRadar.Api.Models;
 
 namespace RoomToRentRadar.Api.Services.SavedSearches;
@@ -32,6 +33,6 @@ public static class SavedSearchMatcher
         }
 
         return search.Polygon is not { Count: > 0 } polygon
-               || SpatialSearchService.IsInside(listing.Location.Coordinates, polygon);
+               || GeoPolygon.Contains(polygon, listing.Location.Coordinates);
     }
 }

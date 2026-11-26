@@ -1,3 +1,5 @@
+using RoomToRentRadar.Api.Services.Geo;
+using RoomToRentRadar.Api.Services.Mapping;
 using RoomToRentRadar.Api.Models;
 using RoomToRentRadar.Api.Repositories;
 using RoomToRentRadar.Shared.Dtos;
@@ -107,7 +109,7 @@ public sealed class SavedSearchService(
             .Where(l => SavedSearchMatcher.Matches(doc, l))
             .OrderBy(l => l.DistanceMeters)
             .ThenBy(l => l.Rent)
-            .Select(SpatialSearchService.ToPin)
+            .Select(ListingPinMapper.ToPin)
             .ToList();
 
         return new SavedSearchMatchesDto { SavedSearchId = doc.Id, TotalCount = items.Count, Items = items };
@@ -141,13 +143,13 @@ public sealed class SavedSearchService(
         IReadOnlyList<double[]>? polygon = null;
         if (request.Polygon is { Count: > 0 })
         {
-            try
+            if (GeoPolygon.TryNormalize(request.Polygon, out var ring, out var polygonError))
             {
-                polygon = SpatialSearchService.Normalize(request.Polygon);
+                polygon = ring;
             }
-            catch (ArgumentException ex)
+            else
             {
-                errors["polygon"] = [ex.Message];
+                errors[GeoPolygon.FieldName] = [polygonError];
             }
         }
 

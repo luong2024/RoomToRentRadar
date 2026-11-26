@@ -8,10 +8,10 @@ public sealed class SpatialSearchRequestDto
 {
     public List<double[]> Polygon { get; set; } = [];
 
-    /// <summary>distance (mặc định) | rent/price | rent_desc/price_desc | area</summary>
-    public string SortBy { get; set; } = "distance";
+    /// <summary>Xem <see cref="ListingSortKeys"/> (mặc định distance).</summary>
+    public string SortBy { get; set; } = ListingSortKeys.Default;
 
-    public string CampusId { get; set; } = "ictu-main";
+    public string CampusId { get; set; } = CampusIds.Default;
 }
 
 public sealed class SpatialSearchPinDto

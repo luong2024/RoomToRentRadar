@@ -24,15 +24,7 @@ public sealed class ListingsController(
         [FromServices] ISpatialSearchService spatialSearchService,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            return Ok(await spatialSearchService.SearchInPolygonAsync(request, cancellationToken));
-        }
-        catch (ArgumentException ex)
-        {
-            ModelState.AddModelError("polygon", ex.Message);
-            return ValidationProblem(ModelState);
-        }
+        return Ok(await spatialSearchService.SearchInPolygonAsync(request, cancellationToken));
     }
 
     /// <summary>GET /api/v1/listings?pageNumber=1&amp;pageSize=10&amp;sortBy=distance|rent|area&amp;isAscending=true (US01 T01.1)</summary>
