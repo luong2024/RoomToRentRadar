@@ -251,11 +251,14 @@ public class SearchRoomsUseCaseTests
     [Test]
     public async Task ExecuteAsync_WithMaxDistance_ComputesBoundingBoxAroundCampus()
     {
-        // ADR-006: deltaLat = km / 110.574; deltaLng = km / (111.320 * cos(lat))
+        // ADR-006: deltaLat = km / 110.574; deltaLng = km / (111.320 * cos(lat)).
+        // T04.3 / BR-SRCH-03: scale by 1.002 (Haversine radius constant gap + meridian convergence) and pad
+        // by the 0.05 km rounding window so rooms that round into range are not dropped by the prefilter.
         await _sut.ExecuteAsync(new RoomSearchRequest(MaxDistanceKm: 2.0));
 
-        var deltaLat = 2.0 / 110.574;
-        var deltaLng = 2.0 / (111.320 * Math.Cos(21.5851 * Math.PI / 180.0));
+        var paddedDistanceKm = 2.0 * 1.002 + 0.05;
+        var deltaLat = paddedDistanceKm / 110.574;
+        var deltaLng = paddedDistanceKm / (111.320 * Math.Cos(21.5851 * Math.PI / 180.0));
 
         Assert.That(_capturedFilter, Is.Not.Null);
         Assert.Multiple(() =>
@@ -264,6 +267,30 @@ public class SearchRoomsUseCaseTests
             Assert.That(_capturedFilter.MaxLat, Is.EqualTo(21.5851 + deltaLat).Within(1e-9));
             Assert.That(_capturedFilter.MinLng, Is.EqualTo(105.8066 - deltaLng).Within(1e-9));
             Assert.That(_capturedFilter.MaxLng, Is.EqualTo(105.8066 + deltaLng).Within(1e-9));
+        });
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WithMaxAllowedDistance_BoundingBoxCoversEastAndWestRoundingBoundary()
+    {
+        const double kmPerHaversineDegree = 6371.0 * Math.PI / 180.0;
+        var eastWestDeltaLng = 50.04 / (kmPerHaversineDegree * Math.Cos(Ictu.Latitude * Math.PI / 180.0));
+        var eastLng = Ictu.Longitude + eastWestDeltaLng;
+        var westLng = Ictu.Longitude - eastWestDeltaLng;
+
+        await _sut.ExecuteAsync(new RoomSearchRequest(MaxDistanceKm: RoomSearchRequest.MaxDistanceKmAllowed));
+
+        Assert.That(_capturedFilter, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(HaversineDistanceCalculator.CalculateDistanceKm(Ictu.Latitude, Ictu.Longitude, Ictu.Latitude, eastLng),
+                Is.EqualTo(50.0));
+            Assert.That(HaversineDistanceCalculator.CalculateDistanceKm(Ictu.Latitude, Ictu.Longitude, Ictu.Latitude, westLng),
+                Is.EqualTo(50.0));
+            Assert.That(_capturedFilter!.MaxLng, Is.GreaterThan(eastLng),
+                "Due-East room at 50.04 km (rounds to 50.0 km) must remain inside the SQL bounding box.");
+            Assert.That(_capturedFilter.MinLng, Is.LessThan(westLng),
+                "Due-West room at 50.04 km (rounds to 50.0 km) must remain inside the SQL bounding box.");
         });
     }
 
