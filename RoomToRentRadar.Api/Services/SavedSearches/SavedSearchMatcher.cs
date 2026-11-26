@@ -1,5 +1,6 @@
-using RoomToRentRadar.Api.Services.Geo;
 using RoomToRentRadar.Api.Models;
+using RoomToRentRadar.Api.Services.Geo;
+using RoomToRentRadar.Api.Services.Mapping;
 
 namespace RoomToRentRadar.Api.Services.SavedSearches;
 
@@ -9,30 +10,22 @@ namespace RoomToRentRadar.Api.Services.SavedSearches;
 /// </summary>
 public static class SavedSearchMatcher
 {
-    public static bool IsPublic(ListingDocument listing) =>
-        string.Equals(listing.Status, "Available", StringComparison.OrdinalIgnoreCase) && listing.IsVerified;
+    public static bool Matches(SavedSearchDocument search, ListingDocument listing) =>
+        listing.IsPublic()
+        && string.Equals(search.CampusId, listing.CampusId, StringComparison.OrdinalIgnoreCase)
+        && MatchesFilters(search, listing)
+        && MatchesPolygon(search, listing);
 
-    public static bool Matches(SavedSearchDocument search, ListingDocument listing)
-    {
-        if (!IsPublic(listing)
-            || !string.Equals(search.CampusId, listing.CampusId, StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
+    private static bool MatchesFilters(SavedSearchDocument search, ListingDocument listing) =>
+        (search.MinRent is not { } minRent || listing.Rent >= minRent)
+        && (search.MaxRent is not { } maxRent || listing.Rent <= maxRent)
+        && (search.MinArea is not { } minArea || listing.Area >= minArea)
+        && (search.MaxArea is not { } maxArea || listing.Area <= maxArea)
+        && (search.MaxDistanceMeters is not { } maxDistance || listing.DistanceMeters <= maxDistance)
+        && (string.IsNullOrWhiteSpace(search.RoomType)
+            || string.Equals(search.RoomType, listing.RoomType, StringComparison.OrdinalIgnoreCase));
 
-        if (search.MinRent is { } minRent && listing.Rent < minRent) return false;
-        if (search.MaxRent is { } maxRent && listing.Rent > maxRent) return false;
-        if (search.MinArea is { } minArea && listing.Area < minArea) return false;
-        if (search.MaxArea is { } maxArea && listing.Area > maxArea) return false;
-        if (search.MaxDistanceMeters is { } maxDistance && listing.DistanceMeters > maxDistance) return false;
-
-        if (!string.IsNullOrWhiteSpace(search.RoomType)
-            && !string.Equals(search.RoomType, listing.RoomType, StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        return search.Polygon is not { Count: > 0 } polygon
-               || GeoPolygon.Contains(polygon, listing.Location.Coordinates);
-    }
+    private static bool MatchesPolygon(SavedSearchDocument search, ListingDocument listing) =>
+        search.Polygon is not { Count: > 0 } polygon
+        || GeoPolygon.Contains(polygon, listing.Location.Coordinates);
 }
