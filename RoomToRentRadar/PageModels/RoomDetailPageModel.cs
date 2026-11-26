@@ -10,6 +10,7 @@ namespace RoomToRentRadar.PageModels;
 public class RoomDetailPageModel : INotifyPropertyChanged
 {
     private readonly RoomService _roomService;
+    private readonly ModalErrorHandler _errorHandler;
     private int _roomId = 1;
     private RoomDetailDto _room = new();
     private bool _isAuthenticated;
@@ -17,9 +18,11 @@ public class RoomDetailPageModel : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public RoomDetailPageModel(RoomService roomService)
+    public RoomDetailPageModel(RoomService roomService, ModalErrorHandler errorHandler)
     {
         _roomService = roomService;
+        _errorHandler = errorHandler;
+
         UnlockContactCommand = new Command(async () => await OnUnlockContactAsync());
         CallLandlordCommand = new Command(OnCallLandlord);
         CopyPhoneCommand = new Command(async () => await OnCopyPhoneAsync());
@@ -63,9 +66,8 @@ public class RoomDetailPageModel : INotifyPropertyChanged
 
     public bool IsGuest => !IsAuthenticated;
     public bool IsRoomUnavailable => !string.Equals(Room.Status, "Available", StringComparison.OrdinalIgnoreCase);
-    public string StatusText => IsRoomUnavailable ? "Đã cho thuê / Không khả dụng" : "Còn phòng";
+    public string StatusText => IsRoomUnavailable ? "Unavailable" : "Available";
 
-    // AC4: Che số điện thoại với khách, hiển thị đầy đủ khi đã đăng nhập
     public string DisplayLandlordPhone => IsAuthenticated
         ? Room.LandlordPhone
         : MaskPhoneNumber(Room.LandlordPhone);
@@ -96,6 +98,10 @@ public class RoomDetailPageModel : INotifyPropertyChanged
             await RefreshAuthStateAsync();
             Room = await _roomService.GetRoomDetailAsync(roomId);
         }
+        catch (Exception ex)
+        {
+            _errorHandler.HandleError(ex);
+        }
         finally
         {
             IsBusy = false;
@@ -111,21 +117,49 @@ public class RoomDetailPageModel : INotifyPropertyChanged
 
     private static async Task OnUnlockContactAsync()
     {
-        // Điều hướng sang màn hình Login của Task T01.2
-        await Shell.Current.GoToAsync("LoginPage");
+        if (Shell.Current is not null)
+        {
+            await Shell.Current.GoToAsync("login");
+        }
     }
 
     private void OnCallLandlord()
     {
-        if (IsAuthenticated && PhoneDialer.Default.IsSupported && !string.IsNullOrWhiteSpace(Room.LandlordPhone))
-            PhoneDialer.Default.Open(Room.LandlordPhone);
+        try
+        {
+            if (IsAuthenticated && PhoneDialer.Default.IsSupported && !string.IsNullOrWhiteSpace(Room.LandlordPhone))
+            {
+                PhoneDialer.Default.Open(Room.LandlordPhone);
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorHandler.HandleError(ex);
+        }
     }
 
     private async Task OnCopyPhoneAsync()
     {
-        if (!IsAuthenticated || string.IsNullOrWhiteSpace(Room.LandlordPhone)) return;
-        await Clipboard.Default.SetTextAsync(Room.LandlordPhone);
-        await Shell.Current.DisplayAlert("Đã sao chép", $"Số điện thoại {Room.LandlordPhone} đã được lưu vào bộ nhớ tạm.", "OK");
+        if (!IsAuthenticated || string.IsNullOrWhiteSpace(Room.LandlordPhone))
+            return;
+
+        try
+        {
+            await Clipboard.Default.SetTextAsync(Room.LandlordPhone);
+            await AppShell.DisplayToastAsync($"Copied {Room.LandlordPhone}");
+
+            if (Shell.Current is not null)
+            {
+                await Shell.Current.DisplayAlertAsync(
+                    "Copied",
+                    $"Phone number {Room.LandlordPhone} has been copied to clipboard.",
+                    "OK");
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorHandler.HandleError(ex);
+        }
     }
 
     protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)

@@ -42,7 +42,8 @@ namespace RoomToRentRadar
     		builder.Logging.AddDebug();
     		builder.Services.AddLogging(configure => configure.AddDebug());
 #endif
-
+            builder.Services.AddSingleton<RoomService>();
+            builder.Services.AddTransientWithShellRoute<RoomDetailPage, RoomDetailPageModel>("room-detail");
             builder.Services.AddSingleton<ProjectRepository>();
             builder.Services.AddSingleton<TaskRepository>();
             builder.Services.AddSingleton<CategoryRepository>();
