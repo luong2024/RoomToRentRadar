@@ -1,3 +1,5 @@
+using RoomToRentRadar.Api.Services.Mapping;
+using RoomToRentRadar.Api.Services.Time;
 using RoomToRentRadar.Api.Repositories;
 using RoomToRentRadar.Shared.Dtos;
 
@@ -25,28 +27,22 @@ public sealed class SavedSearchAlertRules(
 {
     public const int MaxAlertsPerDay = 3;
 
-    /// <summary>Bộ đếm reset lúc 00:00 giờ Việt Nam (UTC+7, không có DST).</summary>
-    public static readonly TimeSpan VietnamOffset = TimeSpan.FromHours(7);
-
-    public static DateOnly TodayInVietnam(TimeProvider timeProvider) =>
-        DateOnly.FromDateTime(timeProvider.GetUtcNow().ToOffset(VietnamOffset).DateTime);
-
     public async Task<IReadOnlyList<SavedSearchAlertDto>> GetAlertCandidatesAsync(
         string listingId,
         CancellationToken cancellationToken = default)
     {
         var listing = await listingRepository.GetByIdAsync(listingId, cancellationToken);
-        if (listing is null || !SavedSearchMatcher.IsPublic(listing))
+        if (listing is null || !listing.IsPublic())
         {
             return [];
         }
 
-        var today = TodayInVietnam(timeProvider);
+        var today = timeProvider.GetVietnamToday();
         var searches = await repository.GetAlertEnabledAsync(cancellationToken);
 
         return searches
             .Where(s => !s.AlertedListingIds.Contains(listing.Id))
-            .Select(s => (Search: s, SentToday: s.AlertCounterDate == today ? s.AlertsSentToday : 0))
+            .Select(s => (Search: s, SentToday: s.AlertsSentOn(today)))
             .Where(x => x.SentToday < MaxAlertsPerDay && SavedSearchMatcher.Matches(x.Search, listing))
             .Select(x => new SavedSearchAlertDto
             {
@@ -67,7 +63,7 @@ public sealed class SavedSearchAlertRules(
             alert.UserId,
             alert.SavedSearchId,
             alert.ListingId,
-            TodayInVietnam(timeProvider),
+            timeProvider.GetVietnamToday(),
             MaxAlertsPerDay,
             timeProvider.GetUtcNow(),
             cancellationToken);

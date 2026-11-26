@@ -43,15 +43,8 @@ public sealed class SavedSearchesController(ISavedSearchService savedSearchServi
     public async Task<ActionResult<SavedSearchDto>> Create([FromBody] SaveSearchRequestDto request, CancellationToken cancellationToken)
     {
         if (!ControllerIdentityHelper.TryResolveUserId(this, out var userId, out var authError)) return authError!;
-        try
-        {
-            var created = await savedSearchService.CreateAsync(userId, request, cancellationToken);
-            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
-        }
-        catch (RequestValidationException ex)
-        {
-            return ValidationProblem(new ValidationProblemDetails(ex.Errors));
-        }
+        var created = await savedSearchService.CreateAsync(userId, request, cancellationToken);
+        return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
     [HttpPut("{id}")]
@@ -63,15 +56,8 @@ public sealed class SavedSearchesController(ISavedSearchService savedSearchServi
     public async Task<ActionResult<SavedSearchDto>> Update(string id, [FromBody] SaveSearchRequestDto request, CancellationToken cancellationToken)
     {
         if (!ControllerIdentityHelper.TryResolveUserId(this, out var userId, out var authError)) return authError!;
-        try
-        {
-            var updated = await savedSearchService.UpdateAsync(userId, id, request, cancellationToken);
-            return updated is null ? NotFoundProblem(id) : Ok(updated);
-        }
-        catch (RequestValidationException ex)
-        {
-            return ValidationProblem(new ValidationProblemDetails(ex.Errors));
-        }
+        var updated = await savedSearchService.UpdateAsync(userId, id, request, cancellationToken);
+        return updated is null ? NotFoundProblem(id) : Ok(updated);
     }
 
     /// <summary>PATCH /api/v1/saved-searches/{id}/alerts — bật/tắt thông báo.</summary>
@@ -114,6 +100,6 @@ public sealed class SavedSearchesController(ISavedSearchService savedSearchServi
 
     private ObjectResult NotFoundProblem(string id) => Problem(
         title: "Không tìm thấy tìm kiếm đã lưu",
-        detail: $"Saved search '{id}' was not found.",
+        detail: $"Không tìm thấy tìm kiếm đã lưu '{id}'.",
         statusCode: StatusCodes.Status404NotFound);
 }

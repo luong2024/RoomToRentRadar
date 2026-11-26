@@ -1,6 +1,8 @@
 using FluentAssertions;
 using RoomToRentRadar.Api.Repositories;
 using Xunit;
+using RoomToRentRadar.Api.Services;
+using RoomToRentRadar.Api.Services.Geo;
 using ApiSpatial = RoomToRentRadar.Api.Services.SpatialSearchService;
 using Request = RoomToRentRadar.Shared.Dtos.SpatialSearchRequestDto;
 
@@ -53,13 +55,13 @@ public class SpatialSearchServiceTests
     {
         var act = () => _sut.SearchInPolygonAsync(new Request { Polygon = [[105.80, 21.58], [105.81, 21.58]] });
 
-        await act.Should().ThrowAsync<ArgumentException>();
+        await act.Should().ThrowAsync<RequestValidationException>();
     }
 
     [Fact]
     public void Normalize_OpenRing_AutoClosesFirstPoint()
     {
-        var ring = ApiSpatial.Normalize([[105.80, 21.58], [105.81, 21.58], [105.81, 21.59]]);
+        var ring = GeoPolygon.Normalize([[105.80, 21.58], [105.81, 21.58], [105.81, 21.59]]);
 
         ring.Should().HaveCount(4);
         ring[^1].Should().Equal(ring[0]);
@@ -76,23 +78,23 @@ public class SpatialSearchServiceTests
     [Fact]
     public void Normalize_DuplicatePointsOnly_Throws()
     {
-        var act = () => ApiSpatial.Normalize([[105.80, 21.58], [105.80, 21.58], [105.81, 21.58], [105.80, 21.58]]);
+        var act = () => GeoPolygon.Normalize([[105.80, 21.58], [105.80, 21.58], [105.81, 21.58], [105.80, 21.58]]);
 
-        act.Should().Throw<ArgumentException>();
+        act.Should().Throw<RequestValidationException>();
     }
 
     [Fact]
     public void Normalize_InvalidCoordinate_Throws()
     {
-        var act = () => ApiSpatial.Normalize([[200, 21.58], [105.81, 21.58], [105.81, 21.59]]);
+        var act = () => GeoPolygon.Normalize([[200, 21.58], [105.81, 21.58], [105.81, 21.59]]);
 
-        act.Should().Throw<ArgumentException>();
+        act.Should().Throw<RequestValidationException>();
     }
 
     [Fact]
     public void IsInside_PointOutside_ReturnsFalse()
     {
-        ApiSpatial.IsInside([106.0, 22.0], CampusBox).Should().BeFalse();
-        ApiSpatial.IsInside([105.8066, 21.5850], CampusBox).Should().BeTrue();
+        GeoPolygon.Contains(CampusBox, [106.0, 22.0]).Should().BeFalse();
+        GeoPolygon.Contains(CampusBox, [105.8066, 21.5850]).Should().BeTrue();
     }
 }
