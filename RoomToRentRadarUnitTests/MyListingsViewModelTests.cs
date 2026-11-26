@@ -110,6 +110,22 @@ public class MyListingsViewModelTests
     }
 
     [Test]
+    public async Task ManagePhotosCommand_NavigatesToThePhotoManagerOfTheListing()
+    {
+        // Arrange
+        var navigation = new FakeNavigationService();
+        var viewModel = CreateViewModel(new FakeListingManagementClient(), SignedInLandlord(), navigation: navigation);
+        var item = new OwnedListingItem(CreateListing("Phòng A", ListingStatus.Published));
+
+        // Act
+        await viewModel.ManagePhotosCommand.ExecuteAsync(item);
+        await viewModel.ManagePhotosCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.That(navigation.PhotoManagerListingIds, Is.EqualTo(new[] { item.Id }));
+    }
+
+    [Test]
     public async Task PublishCommand_HiddenListing_TransitionsToPendingReviewAndUpdatesCounts()
     {
         // Arrange
@@ -532,12 +548,19 @@ public class MyListingsViewModelTests
     private sealed class FakeNavigationService : INavigationService
     {
         public List<Guid?> EditorListingIds { get; } = [];
+        public List<Guid> PhotoManagerListingIds { get; } = [];
         public List<AppUserRole?> RoleRootRoles { get; } = [];
         public int GoToLoginCalls { get; private set; }
 
         public Task GoToListingEditorAsync(Guid? listingId = null)
         {
             EditorListingIds.Add(listingId);
+            return Task.CompletedTask;
+        }
+
+        public Task GoToListingPhotoManagerAsync(Guid listingId)
+        {
+            PhotoManagerListingIds.Add(listingId);
             return Task.CompletedTask;
         }
 

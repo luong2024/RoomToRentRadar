@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:RoomToRentRadar.ViewModels"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Controls"
+             xmlns:buttons="clr-namespace:Syncfusion.Maui.Toolkit.Buttons;assembly=Syncfusion.Maui.Toolkit"
+             x:Class="RoomToRentRadar.Views.ListingPhotoManagerPage"
+             x:DataType="vm:ListingPhotoManagerViewModel"
+             Title="Thư viện ảnh tin đăng"
+             Shell.NavBarIsVisible="False"
+             Shell.TabBarIsVisible="False"
+             SafeAreaEdges="Container">
+
+    <Grid>
+        <controls:LiquidBackdropView />
+
+        <Grid RowDefinitions="Auto,*">
+            <!-- Floating Liquid Glass Header -->
+            <ContentView Padding="16,10,16,6">
+                <Border Style="{StaticResource LiquidFloatingPanel}" Padding="12,10">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                        <Border Style="{StaticResource LiquidOrbBorder}"
+                                AutomationId="PhotoManagerBack"
+                                SemanticProperties.Description="Quay lại danh sách tin">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding GoBackCommand}" />
+                            </Border.GestureRecognizers>
+                            <Image Source="back_icon.png" WidthRequest="18" HeightRequest="18"
+                                   HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
+                            <Label Text="Thư viện ảnh tin đăng" Style="{StaticResource ScreenTitle}" FontSize="19"
+                                   SemanticProperties.HeadingLevel="Level1" />
+                            <Label Text="Tải ảnh thường và ảnh 360° cho phòng của bạn"
+                                   Style="{StaticResource Caption}" FontSize="11.5" />
+                        </VerticalStackLayout>
+                        <Border Grid.Column="2" Style="{StaticResource StatusBadge}" VerticalOptions="Center">
+                            <Label Text="{Binding PhotoCountText}" FontFamily="FontSemiBold" FontSize="11.5"
+                                   TextColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}" />
+                        </Border>
+                    </Grid>
+                </Border>
+            </ContentView>
+
+            <ScrollView Grid.Row="1" Padding="16,10,16,24">
+                <VerticalStackLayout Spacing="14" MaximumWidthRequest="760" HorizontalOptions="Fill">
+
+                    <!-- Upload actions -->
+                    <Border Style="{StaticResource LiquidGlassCard}" Padding="18,16">
+                        <VerticalStackLayout Spacing="12">
+                            <Label Text="Thêm ảnh vào thư viện" Style="{StaticResource SectionTitle}" FontSize="16" />
+                            <Label Text="{Binding UploadHintText}" Style="{StaticResource Caption}" LineHeight="1.35" />
+
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                <buttons:SfButton Text="Chọn ảnh thường"
+                                                  Command="{Binding PickPhotosCommand}"
+                                                  Style="{StaticResource LiquidPrimaryButton}"
+                                                  HeightRequest="44"
+                                                  AutomationId="PhotoManagerPickPhotos"
+                                                  SemanticProperties.Description="Tải lên ảnh thường từ thiết bị" />
+                                <buttons:SfButton Grid.Column="1"
+                                                  Text="Thêm ảnh 360°"
+                                                  Command="{Binding PickPanoramaCommand}"
+                                                  Style="{StaticResource SecondaryActionButton}"
+                                                  HeightRequest="44"
+                                                  AutomationId="PhotoManagerPickPanorama"
+                                                  SemanticProperties.Description="Tải lên ảnh toàn cảnh 360 độ từ thiết bị" />
+                            </Grid>
+
+                            <ActivityIndicator IsRunning="{Binding IsUploading}"
+                                               IsVisible="{Binding IsUploading}"
+                                               Color="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}"
+                                               HorizontalOptions="Start" />
+
+                            <Label IsVisible="{Binding HasError}"
+                                   Text="{Binding ErrorMessage}"
+                                   FontFamily="FontSemiBold"
+                                   FontSize="12.5"
+                                   TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+                                   AutomationId="PhotoManagerError" />
+
+                            <Label IsVisible="{Binding HasStatus}"
+                                   Text="{Binding StatusMessage}"
+                                   FontFamily="FontSemiBold"
+                                   FontSize="12.5"
+                                   TextColor="{AppThemeBinding Light={StaticResource Available}, Dark={StaticResource AvailableDark}}"
+                                   AutomationId="PhotoManagerStatus" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- Loading -->
+                    <ActivityIndicator IsRunning="{Binding IsLoading}"
+                                       IsVisible="{Binding IsLoading}"
+                                       Color="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}"
+                                       HorizontalOptions="Center"
+                                       Margin="0,18" />
+
+                    <!-- Photos -->
+                    <Border IsVisible="{Binding HasPhotos}" Style="{StaticResource CalmReadingCard}" Padding="16">
+                        <VerticalStackLayout Spacing="10">
+                            <Label Text="Ảnh hiện có" Style="{StaticResource SectionTitle}" FontSize="16" />
+                            <Label Text="Chạm vào ảnh để xem toàn màn hình; ảnh 360° mở trình xem toàn cảnh."
+                                   Style="{StaticResource Caption}" FontSize="11.5" />
+
+                            <FlexLayout BindableLayout.ItemsSource="{Binding Photos}"
+                                        Direction="Row" Wrap="Wrap" JustifyContent="Start">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:GalleryPhotoItem">
+                                        <Border WidthRequest="104" HeightRequest="104" Margin="0,0,10,10" Padding="0"
+                                                StrokeThickness="0" StrokeShape="RoundRectangle 14"
+                                                BackgroundColor="{AppThemeBinding Light={StaticResource SoftSurface}, Dark={StaticResource SoftSurfaceDark}}">
+                                            <Border.GestureRecognizers>
+                                                <TapGestureRecognizer
+                                                    Command="{Binding OpenPhotoCommand, Source={RelativeSource AncestorType={x:Type vm:ListingPhotoManagerViewModel}}, x:DataType=vm:ListingPhotoManagerViewModel}"
+                                                    CommandParameter="{Binding .}" />
+                                            </Border.GestureRecognizers>
+                                            <Grid>
+                                                <Image Source="{Binding ThumbSource}" Aspect="AspectFill"
+                                                       SemanticProperties.Description="{Binding AccessibleDescription}"
+                                                       SemanticProperties.Hint="Mở ảnh trong trình xem toàn màn hình" />
+                                                <Border Margin="5" Padding="6,2"
+                                                        HorizontalOptions="End" VerticalOptions="End"
+                                                        StrokeThickness="0" StrokeShape="RoundRectangle 6"
+                                                        BackgroundColor="#CC152430"
+                                                        IsVisible="{Binding IsPanorama}">
+                                                    <Label Text="360°" FontSize="9" FontFamily="OpenSansSemibold" TextColor="White" />
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </FlexLayout>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- Empty state -->
+                    <Border IsVisible="{Binding IsEmpty}" Style="{StaticResource CalmReadingCard}" Padding="20">
+                        <VerticalStackLayout Spacing="8">
+                            <Image Source="room_1.png" HeightRequest="92" Aspect="AspectFit"
+                                   SemanticProperties.Description="Minh họa phòng chưa có ảnh" />
+                            <Label Text="Tin đăng chưa có ảnh" Style="{StaticResource CardTitle}"
+                                   HorizontalTextAlignment="Center" />
+                            <Label Text="Chọn ảnh thường hoặc ảnh 360° ở phía trên để bắt đầu xây dựng thư viện ảnh."
+                                   Style="{StaticResource Caption}" LineHeight="1.35"
+                                   HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+            </ScrollView>
+        </Grid>
+
+        <!-- Full-screen lightbox + 360° viewer -->
+        <controls:PhotoLightboxOverlay BindingContext="{Binding Lightbox}" />
+    </Grid>
+</ContentPage>

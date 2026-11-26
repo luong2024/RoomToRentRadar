@@ -90,6 +90,7 @@ public static class ServiceCollectionExtensions
         });
         services.AddSingleton<IProfileDetailsStore, InMemoryProfileDetailsStore>();
         services.AddSingleton<IAvatarPicker, MediaPickerAvatarPicker>();
+        services.AddSingleton<IListingPhotoPicker, ListingPhotoPicker>();
         services.AddSingleton<IErrorHandler, ModalErrorHandler>();
         services.AddSingleton<IPreferences>(Preferences.Default);
         services.AddSingleton<ICampusSelectionStore, PreferencesCampusSelectionStore>();
@@ -141,6 +142,8 @@ public static class ServiceCollectionExtensions
         services.AddTransient<AccountSettingsPage>();
         services.AddTransient<ListingEditorViewModel>();
         services.AddTransient<ListingEditorPage>();
+        services.AddTransient<ListingPhotoManagerViewModel>();
+        services.AddTransient<ListingPhotoManagerPage>();
         services.AddTransient<MapSearchViewModel>();
         services.AddTransient<MapSearchPage>();
         return services;

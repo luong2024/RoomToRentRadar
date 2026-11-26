@@ -25,6 +25,7 @@ public partial class AppShell : Shell
         ModerationTab.ContentTemplate = new DataTemplate(() => services.GetRequiredService<ModerationQueuePage>());
         ProfileTab.ContentTemplate = new DataTemplate(() => services.GetRequiredService<ProfilePage>());
         Routing.RegisterRoute(AppRoutes.ListingEditor, typeof(ListingEditorPage));
+        Routing.RegisterRoute(AppRoutes.ListingPhotoManager, typeof(ListingPhotoManagerPage));
         Routing.RegisterRoute(AppRoutes.RoomDetail, typeof(RoomDetailPage));
         Routing.RegisterRoute(AppRoutes.Login, typeof(LoginPage));
         Routing.RegisterRoute(AppRoutes.Register, typeof(RegisterPage));

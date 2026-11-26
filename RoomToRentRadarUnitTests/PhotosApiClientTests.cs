@@ -176,6 +176,100 @@ public class PhotosApiClientTests
         });
     }
 
+    [Test]
+    public async Task UploadPhotosAsync_WhenCreated_PostsMultipartWithKindAndReturnsPhotos()
+    {
+        string? body = null;
+        string? contentTypeHeader = null;
+        var handler = new RecordingHandler(request =>
+        {
+            body = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            contentTypeHeader = request.Content.Headers.ContentType?.MediaType;
+            return new HttpResponseMessage(HttpStatusCode.Created)
+            {
+                Content = new StringContent(PhotosJson, Encoding.UTF8, "application/json")
+            };
+        });
+        var client = CreateClient(handler);
+        var files = new[]
+        {
+            new ListingPhotoUpload("panorama.jpg", "image/jpeg", () => Task.FromResult<Stream>(new MemoryStream([0xFF, 0xD8, 0xFF])))
+        };
+
+        var result = await client.UploadPhotosAsync(ListingId, files, ListingPhotoKind.Panorama);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(handler.Methods[0], Is.EqualTo(HttpMethod.Post));
+            Assert.That(handler.RequestUris[0].AbsolutePath, Is.EqualTo($"/api/v1/listings/{ListingId}/photos"));
+            Assert.That(contentTypeHeader, Is.EqualTo("multipart/form-data"));
+            Assert.That(body, Does.Contain("name=kind"));
+            Assert.That(body, Does.Contain("panorama"));
+            Assert.That(body, Does.Contain("name=files; filename=panorama.jpg"));
+            Assert.That(body, Does.Contain("Content-Type: image/jpeg"));
+            Assert.That(result.Outcome, Is.EqualTo(ListingPhotosUploadOutcome.Uploaded));
+            Assert.That(result.Photos, Has.Count.EqualTo(2));
+            Assert.That(result.Photos[1].Kind, Is.EqualTo(ListingPhotoKind.Panorama));
+        });
+    }
+
+    [Test]
+    public async Task UploadPhotosAsync_WhenDefaultKind_SendsPhotoKind()
+    {
+        string? body = null;
+        var handler = new RecordingHandler(request =>
+        {
+            body = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            return new HttpResponseMessage(HttpStatusCode.Created)
+            {
+                Content = new StringContent("[]", Encoding.UTF8, "application/json")
+            };
+        });
+        var client = CreateClient(handler);
+        var files = new[]
+        {
+            new ListingPhotoUpload("room.png", "image/png", () => Task.FromResult<Stream>(new MemoryStream([137, 80, 78, 71])))
+        };
+
+        var result = await client.UploadPhotosAsync(ListingId, files, ListingPhotoKind.Photo);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(body, Does.Contain("photo"));
+            Assert.That(result.Outcome, Is.EqualTo(ListingPhotosUploadOutcome.Uploaded));
+            Assert.That(result.Photos, Is.Empty);
+        });
+    }
+
+    [TestCase(HttpStatusCode.Unauthorized, ListingPhotosUploadOutcome.Unauthorized)]
+    [TestCase(HttpStatusCode.Forbidden, ListingPhotosUploadOutcome.Forbidden)]
+    [TestCase(HttpStatusCode.NotFound, ListingPhotosUploadOutcome.ListingNotFound)]
+    [TestCase(HttpStatusCode.Gone, ListingPhotosUploadOutcome.ListingUnavailable)]
+    [TestCase(HttpStatusCode.BadRequest, ListingPhotosUploadOutcome.InvalidPhoto)]
+    [TestCase(HttpStatusCode.Conflict, ListingPhotosUploadOutcome.PhotoLimitExceeded)]
+    [TestCase(HttpStatusCode.RequestEntityTooLarge, ListingPhotosUploadOutcome.PhotoTooLarge)]
+    [TestCase(HttpStatusCode.UnsupportedMediaType, ListingPhotosUploadOutcome.UnsupportedType)]
+    [TestCase(HttpStatusCode.InternalServerError, ListingPhotosUploadOutcome.Failed)]
+    public async Task UploadPhotosAsync_WhenTheServerRejects_MapsTheStatusToAnOutcome(
+        HttpStatusCode statusCode,
+        ListingPhotosUploadOutcome expected)
+    {
+        var handler = new RecordingHandler(_ => new HttpResponseMessage(statusCode));
+        var client = CreateClient(handler);
+        var files = new[]
+        {
+            new ListingPhotoUpload("room.jpg", "image/jpeg", () => Task.FromResult<Stream>(new MemoryStream([0xFF, 0xD8, 0xFF])))
+        };
+
+        var result = await client.UploadPhotosAsync(ListingId, files, ListingPhotoKind.Photo);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Outcome, Is.EqualTo(expected));
+            Assert.That(result.Photos, Is.Empty);
+        });
+    }
+
     private static PhotosApiClient CreateClient(HttpMessageHandler handler)
         => new(new HttpClient(handler) { BaseAddress = new Uri("http://localhost:5080/") });
 

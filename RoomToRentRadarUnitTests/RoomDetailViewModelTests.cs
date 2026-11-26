@@ -1325,6 +1325,13 @@ public class RoomDetailViewModelTests
                 : Task.FromResult(Result);
         }
 
+        public Task<ListingPhotosUploadResult> UploadPhotosAsync(
+            Guid listingId,
+            IReadOnlyList<ListingPhotoUpload> files,
+            ListingPhotoKind kind,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("The room detail screen does not upload photos.");
+
         public Task<byte[]?> GetMediaBytesAsync(
             string absoluteUrl,
             CancellationToken cancellationToken = default)

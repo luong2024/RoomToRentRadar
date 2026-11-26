@@ -35,7 +35,7 @@ public sealed class MediaEndpointTests
         await using var scope = _factory.Services.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await TestListingsSeed.SeedAsync(dbContext);
-        var owner = await TestUsersSeed.SeedAsync(dbContext);
+        var owner = await TestUsersSeed.SeedAsync(dbContext, UserRole.Landlord);
         await dbContext.Listings.ExecuteUpdateAsync(
             setters => setters.SetProperty(listing => listing.OwnerId, owner.Id));
         _token = await LoginAsync();

@@ -109,6 +109,10 @@ public partial class MyListingsViewModel : ObservableObject
     private Task EditAsync(OwnedListingItem? item)
         => item is { CanEdit: true } ? _navigation.GoToListingEditorAsync(item.Id) : Task.CompletedTask;
 
+    [RelayCommand]
+    private Task ManagePhotosAsync(OwnedListingItem? item)
+        => item is null ? Task.CompletedTask : _navigation.GoToListingPhotoManagerAsync(item.Id);
+
     [RelayCommand(AllowConcurrentExecutions = false)]
     private async Task SignOutAsync(CancellationToken cancellationToken)
     {
