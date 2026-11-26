@@ -1,4 +1,5 @@
 using RoomToRentRadar.Api;
+using RoomToRentRadar.Api.Filters;
 using RoomToRentRadar.Api.Repositories;
 using RoomToRentRadar.Api.Services;
 using RoomToRentRadar.Api.Services.Landlord;
@@ -28,7 +29,7 @@ builder.Services.AddScoped<ISavedSearchService, SavedSearchService>();
 builder.Services.AddScoped<ISavedSearchAlertRules, SavedSearchAlertRules>();
 builder.Services.AddScoped<ILandlordListingService, LandlordListingService>();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options => options.Filters.Add<RequestValidationExceptionFilter>());
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
