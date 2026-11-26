@@ -2,7 +2,6 @@ using RoomToRentRadar.Api.Models;
 using RoomToRentRadar.Api.Repositories;
 using RoomToRentRadar.Api.Services.Photos;
 using RoomToRentRadar.Shared.Dtos;
-using SharedPhotoDto = RoomToRentRadar.Shared.Photos.PhotoDto;
 
 namespace RoomToRentRadar.Api.Services.Landlord;
 
@@ -31,61 +30,42 @@ public sealed class LandlordListingService(
     IPhotoService photoService,
     TimeProvider timeProvider) : ILandlordListingService
 {
+    private const string ListingIdPrefix = "room-";
+    private const int ListingIdRandomLength = 12;
+    private const int InitialHouseRulesVersion = 1;
+
     public async Task<LandlordListingDto> CreateAsync(
         string landlordId,
         CreateListingRequestDto request,
         IReadOnlyList<PhotoUploadItem> photos,
         CancellationToken cancellationToken = default)
     {
-        var errors = ListingCreationRules.Validate(request);
-        foreach (var (key, value) in ListingCreationRules.ValidatePhotos(photos.Select(p => (p.FileName, p.Length)).ToList()))
-        {
-            errors[key] = value;
-        }
-
-        if (errors.Count > 0)
-        {
-            throw new RequestValidationException(errors);
-        }
+        Validate(request, photos);
 
         var listing = BuildDocument(landlordId, request, timeProvider.GetUtcNow());
         await landlordRepository.AddAsync(listing, cancellationToken);
-
-        try
-        {
-            await photoService.UploadAsync(listing.Id, photos, cancellationToken);
-        }
-        catch (PhotoValidationException ex)
-        {
-            await landlordRepository.RemoveAsync(listing.Id, CancellationToken.None);
-            throw RequestValidationException.For("photos", ex.Message);
-        }
-        catch
-        {
-            await landlordRepository.RemoveAsync(listing.Id, CancellationToken.None);
-            throw;
-        }
+        await UploadPhotosOrRollbackAsync(listing.Id, photos, cancellationToken);
 
         var saved = await listingRepository.GetByIdAsync(listing.Id, cancellationToken) ?? listing;
-        return ToDto(saved);
+        return LandlordListingMapper.ToDto(saved);
     }
 
     public async Task<LandlordListingDto?> GetAsync(string landlordId, string id, CancellationToken cancellationToken = default)
     {
         var listing = await listingRepository.GetByIdAsync(id, cancellationToken);
-        return listing is not null && string.Equals(listing.Landlord.Id, landlordId, StringComparison.OrdinalIgnoreCase)
-            ? ToDto(listing)
+        return listing is not null && IsOwnedBy(listing, landlordId)
+            ? LandlordListingMapper.ToDto(listing)
             : null;
     }
 
     public static ListingDocument BuildDocument(string landlordId, CreateListingRequestDto request, DateTimeOffset now)
     {
-        var campusId = string.IsNullOrWhiteSpace(request.CampusId) ? "ictu-main" : request.CampusId.Trim();
+        var campusId = CampusIds.OrDefault(request.CampusId);
         double[] point = [request.Longitude, request.Latitude]; // GeoJSON: [lng, lat]
 
         return new ListingDocument
         {
-            Id = $"room-{Guid.NewGuid():N}"[..17],
+            Id = NewListingId(),
             CampusId = campusId,
             Title = request.Title.Trim(),
             Description = request.Description.Trim(),
@@ -98,68 +78,75 @@ public sealed class LandlordListingService(
             RoomType = request.RoomType.Trim(),
             Address = request.Address.Trim(),
             Location = new GeoJsonPoint { Coordinates = point },
-            DistanceMeters = Math.Round(CampusLocations.HaversineMeters(CampusLocations.Get(campusId), point)),
+            DistanceMeters = Math.Round(CampusLocations.DistanceFromCampusMeters(campusId, point)),
             Amenities = ListingCreationRules.NormalizeAmenities(request.Amenities),
-            HouseRules = new HouseRulesDocument
-            {
-                Version = 1,
-                UpdatedAt = now,
-                QuietHours = request.QuietHours?.Trim() ?? string.Empty,
-                GuestPolicy = request.GuestPolicy?.Trim() ?? string.Empty,
-                CookingRules = request.CookingRules?.Trim() ?? string.Empty,
-                ParkingRules = request.ParkingRules?.Trim() ?? string.Empty
-            },
-            Landlord = new LandlordDocument
-            {
-                Id = landlordId,
-                Name = request.ContactName.Trim(),
-                Phone = ListingCreationRules.NormalizePhone(request.ContactPhone)
-            },
+            HouseRules = BuildHouseRules(request, now),
+            Landlord = BuildLandlord(landlordId, request),
             CreatedAt = now,
             UpdatedAt = now
         };
     }
 
-    public static LandlordListingDto ToDto(ListingDocument l)
-    {
-        var photos = l.Photos.OrderBy(p => p.Order).Select(p => new SharedPhotoDto
-        {
-            Id = p.Id,
-            Url = p.Url,
-            ThumbnailUrl = p.ThumbnailUrl,
-            Is360 = p.Is360,
-            Order = p.Order,
-            Width = p.Width,
-            Height = p.Height,
-            SizeBytes = p.SizeBytes
-        }).ToList();
+    /// <summary>Id ngắn dạng <c>room-xxxxxxxxxxxx</c> (12 ký tự hex ngẫu nhiên).</summary>
+    public static string NewListingId() =>
+        ListingIdPrefix + Guid.NewGuid().ToString("N")[..ListingIdRandomLength];
 
-        return new LandlordListingDto
+    private static void Validate(CreateListingRequestDto request, IReadOnlyList<PhotoUploadItem> photos)
+    {
+        var errors = ListingCreationRules.Validate(request);
+        var photoErrors = ListingCreationRules.ValidatePhotos(photos.Select(p => (p.FileName, p.Length)).ToList());
+        foreach (var (field, messages) in photoErrors)
         {
-            Id = l.Id,
-            CampusId = l.CampusId,
-            Title = l.Title,
-            Description = l.Description,
-            Status = l.Status,
-            StatusLabel = ListingStatusLabels.ToLabel(l.Status),
-            ModerationStatus = l.ModerationStatus,
-            IsVerified = l.IsVerified,
-            Rent = l.Rent,
-            Deposit = l.Deposit,
-            Area = l.Area,
-            RoomType = l.RoomType,
-            Address = l.Address,
-            Longitude = l.Location.Coordinates.ElementAtOrDefault(0),
-            Latitude = l.Location.Coordinates.ElementAtOrDefault(1),
-            DistanceMeters = l.DistanceMeters,
-            Amenities = [.. l.Amenities],
-            ContactName = l.Landlord.Name,
-            ContactPhone = l.Landlord.Phone,
-            PhotoCount = photos.Count,
-            CoverPhotoUrl = photos.Select(p => p.ThumbnailUrl is { Length: > 0 } t ? t : p.Url).FirstOrDefault() ?? string.Empty,
-            Photos = photos,
-            CreatedAt = l.CreatedAt,
-            UpdatedAt = l.UpdatedAt
-        };
+            errors[field] = messages;
+        }
+
+        if (errors.Count > 0)
+        {
+            throw new RequestValidationException(errors);
+        }
     }
+
+    /// <summary>Upload thất bại (kể cả lỗi hạ tầng) thì xóa tin vừa tạo để không còn tin thiếu ảnh.</summary>
+    private async Task UploadPhotosOrRollbackAsync(
+        string listingId,
+        IReadOnlyList<PhotoUploadItem> photos,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await photoService.UploadAsync(listingId, photos, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            await landlordRepository.RemoveAsync(listingId, CancellationToken.None);
+            if (ex is PhotoValidationException photoError)
+            {
+                throw RequestValidationException.For("photos", photoError.Message);
+            }
+
+            throw;
+        }
+    }
+
+    private static bool IsOwnedBy(ListingDocument listing, string landlordId) =>
+        string.Equals(listing.Landlord.Id, landlordId, StringComparison.OrdinalIgnoreCase);
+
+    private static HouseRulesDocument BuildHouseRules(CreateListingRequestDto request, DateTimeOffset now) => new()
+    {
+        Version = InitialHouseRulesVersion,
+        UpdatedAt = now,
+        QuietHours = TrimOrEmpty(request.QuietHours),
+        GuestPolicy = TrimOrEmpty(request.GuestPolicy),
+        CookingRules = TrimOrEmpty(request.CookingRules),
+        ParkingRules = TrimOrEmpty(request.ParkingRules)
+    };
+
+    private static LandlordDocument BuildLandlord(string landlordId, CreateListingRequestDto request) => new()
+    {
+        Id = landlordId,
+        Name = request.ContactName.Trim(),
+        Phone = ListingCreationRules.NormalizePhone(request.ContactPhone)
+    };
+
+    private static string TrimOrEmpty(string? value) => value?.Trim() ?? string.Empty;
 }

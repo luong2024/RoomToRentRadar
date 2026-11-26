@@ -3,6 +3,7 @@ using RoomToRentRadar.Api.Models;
 using RoomToRentRadar.Api.Repositories;
 using RoomToRentRadar.Api.Services;
 using RoomToRentRadar.Api.Services.SavedSearches;
+using RoomToRentRadar.Api.Services.Time;
 using RoomToRentRadar.Shared.Dtos;
 using Xunit;
 
@@ -181,6 +182,6 @@ public class SavedSearchTests
     {
         var lateUtc = new ManualTimeProvider(new DateTimeOffset(2026, 11, 25, 17, 30, 0, TimeSpan.Zero)); // 00:30 ngày 26 giờ VN
 
-        SavedSearchAlertRules.TodayInVietnam(lateUtc).Should().Be(new DateOnly(2026, 11, 26));
+        lateUtc.GetVietnamToday().Should().Be(new DateOnly(2026, 11, 26));
     }
 }

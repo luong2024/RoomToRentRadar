@@ -24,15 +24,7 @@ public sealed class ListingsController(
         [FromServices] ISpatialSearchService spatialSearchService,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            return Ok(await spatialSearchService.SearchInPolygonAsync(request, cancellationToken));
-        }
-        catch (ArgumentException ex)
-        {
-            ModelState.AddModelError("polygon", ex.Message);
-            return ValidationProblem(ModelState);
-        }
+        return Ok(await spatialSearchService.SearchInPolygonAsync(request, cancellationToken));
     }
 
     /// <summary>GET /api/v1/listings?pageNumber=1&amp;pageSize=10&amp;sortBy=distance|rent|area&amp;isAscending=true (US01 T01.1)</summary>
@@ -68,11 +60,8 @@ public sealed class ListingsController(
         var isAuthenticated = User.Identity?.IsAuthenticated == true;
         var detail = await listingDetailService.GetByIdAsync(id, isAuthenticated, cancellationToken);
 
-        if (detail is null)
-        {
-            return NotFound(new { message = $"Listing '{id}' was not found." });
-        }
-
-        return Ok(detail);
+        return detail is null
+            ? NotFound(new { message = $"Không tìm thấy phòng '{id}'." })
+            : Ok(detail);
     }
 }
