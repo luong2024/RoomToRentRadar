@@ -689,4 +689,118 @@ public class RoomDetailViewModelTests
             Assert.That(alerts[0].Cancel, Is.Null);
         });
     }
+
+    [Test]
+    public async Task ReportListingAsync_WhenUnauthenticated_PromptsAndNavigatesToAuth()
+    {
+        var navigatedRoutes = new List<string>();
+        _sessionServiceMock.SetupGet(session => session.IsAuthenticated).Returns(false);
+
+        _viewModel = new RoomDetailViewModel(
+            _serviceMock.Object,
+            _errorHandlerMock.Object,
+            _sessionServiceMock.Object,
+            navigateAsync: route =>
+            {
+                navigatedRoutes.Add(route);
+                return Task.CompletedTask;
+            },
+            displayAlertAsync: (_, _, _, _) => Task.FromResult(true))
+        {
+            Room = new RoomDetailModel { Id = "room-01", Title = "Cozy Studio", Status = ListingStatus.Available }
+        };
+
+        await _viewModel.ReportListingAsync();
+
+        Assert.That(navigatedRoutes, Is.EqualTo(new[] { $"//{RoomToRentRadar.Core.Constants.AppRoutes.Login}" }));
+    }
+
+    [Test]
+    public async Task ReportListingAsync_WhenDialogCancelled_DoesNotSubmitReport()
+    {
+        _sessionServiceMock.SetupGet(session => session.IsAuthenticated).Returns(true);
+        var reportService = new Mock<IListingReportService>();
+
+        _viewModel = new RoomDetailViewModel(
+            _serviceMock.Object,
+            _errorHandlerMock.Object,
+            _sessionServiceMock.Object,
+            listingReportService: reportService.Object,
+            openReportDialogAsync: (_, _) => Task.FromResult<ReportListingDialogResult?>(null))
+        {
+            Room = new RoomDetailModel { Id = "room-01", Title = "Cozy Studio", Status = ListingStatus.Available }
+        };
+
+        await _viewModel.ReportListingAsync();
+
+        reportService.Verify(
+            s => s.SubmitReportAsync(It.IsAny<string>(), It.IsAny<ReportReasonCode>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        Assert.That(_viewModel.HasSubmittedReport, Is.False);
+    }
+
+    [Test]
+    public async Task ReportListingAsync_WhenSubmittedSuccessfully_MarksReportedAndShowsConfirmationToast()
+    {
+        _sessionServiceMock.SetupGet(session => session.IsAuthenticated).Returns(true);
+        var reportService = new Mock<IListingReportService>();
+        reportService
+            .Setup(s => s.SubmitReportAsync("room-01", ReportReasonCode.InaccurateInfo, "Wrong price", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SubmitListingReportResult.Success("rep-01", "Pending", DateTimeOffset.UtcNow));
+
+        var feedback = new Mock<IFavoriteFeedbackService>();
+
+        _viewModel = new RoomDetailViewModel(
+            _serviceMock.Object,
+            _errorHandlerMock.Object,
+            _sessionServiceMock.Object,
+            favoriteFeedbackService: feedback.Object,
+            listingReportService: reportService.Object,
+            openReportDialogAsync: (_, _) => Task.FromResult<ReportListingDialogResult?>(
+                new ReportListingDialogResult(ReportReasonCode.InaccurateInfo, "Wrong price")))
+        {
+            Room = new RoomDetailModel { Id = "room-01", Title = "Cozy Studio", Status = ListingStatus.Available }
+        };
+
+        await _viewModel.ReportListingAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_viewModel.HasSubmittedReport, Is.True);
+            Assert.That(_viewModel.CanReportListing, Is.False);
+            Assert.That(_viewModel.IsReportSubmitting, Is.False);
+        });
+        feedback.Verify(
+            f => f.ShowMessageAsync("Thank you. Your report has been submitted for moderation review."),
+            Times.Once);
+    }
+
+    [Test]
+    public async Task ReportListingAsync_WhenDuplicate_MarksReportedAndShowsDuplicateFeedback()
+    {
+        _sessionServiceMock.SetupGet(session => session.IsAuthenticated).Returns(true);
+        var reportService = new Mock<IListingReportService>();
+        reportService
+            .Setup(s => s.SubmitReportAsync("room-01", ReportReasonCode.DuplicateListing, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SubmitListingReportResult.Failure("You have already reported this listing.", isDuplicate: true));
+
+        var feedback = new Mock<IFavoriteFeedbackService>();
+
+        _viewModel = new RoomDetailViewModel(
+            _serviceMock.Object,
+            _errorHandlerMock.Object,
+            _sessionServiceMock.Object,
+            favoriteFeedbackService: feedback.Object,
+            listingReportService: reportService.Object,
+            openReportDialogAsync: (_, _) => Task.FromResult<ReportListingDialogResult?>(
+                new ReportListingDialogResult(ReportReasonCode.DuplicateListing, null)))
+        {
+            Room = new RoomDetailModel { Id = "room-01", Title = "Cozy Studio", Status = ListingStatus.Available }
+        };
+
+        await _viewModel.ReportListingAsync();
+
+        Assert.That(_viewModel.HasSubmittedReport, Is.True);
+        feedback.Verify(f => f.ShowMessageAsync("You have already reported this listing."), Times.Once);
+    }
 }

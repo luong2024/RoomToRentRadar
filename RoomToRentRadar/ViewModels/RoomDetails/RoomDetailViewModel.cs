@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Globalization;
 using RoomToRentRadar.Core.Constants;
 using RoomToRentRadar.Core.Interfaces;
 using RoomToRentRadar.Models.RoomDetails;
@@ -17,7 +18,22 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     private readonly Func<string, string, string, string?, Task<bool>>? _displayAlertAsync;
     private readonly IFavouritesService? _favouritesService;
     private readonly IFavoriteFeedbackService? _favoriteFeedbackService;
+    private readonly IListingReportService? _listingReportService;
+    private readonly Func<string, string, Task<ReportListingDialogResult?>>? _openReportDialogAsync;
     private CancellationTokenSource? _loadCts;
+    private CancellationTokenSource? _travelCts;
+    private readonly ITravelTimeService? _travelTimeService;
+    private bool _travelPageActive = true;
+
+    [ObservableProperty] public partial string DestinationLatitude { get; set; } = "21.5852";
+    [ObservableProperty] public partial string DestinationLongitude { get; set; } = "105.8073";
+    [ObservableProperty] public partial bool IsTravelInfoLoading { get; set; }
+    [ObservableProperty] public partial string TravelInfoMessage { get; set; } = "Choose a destination to calculate travel information.";
+    [ObservableProperty] public partial string DistanceText { get; set; } = string.Empty;
+    [ObservableProperty] public partial string TravelTimeText { get; set; } = string.Empty;
+
+    partial void OnDestinationLatitudeChanged(string value) => CancelTravelInfo();
+    partial void OnDestinationLongitudeChanged(string value) => CancelTravelInfo();
     private (string RoomId, long SessionEpoch, Guid? UserId)? _loadedFavoriteStatus;
 
     [ObservableProperty]
@@ -25,6 +41,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanToggleFavorite))]
+    [NotifyPropertyChangedFor(nameof(CanReportListing))]
     public partial bool IsBusy { get; set; }
 
     [ObservableProperty]
@@ -60,7 +77,20 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanToggleFavorite))]
+    [NotifyPropertyChangedFor(nameof(CanReportListing))]
     public partial RoomDetailModel? Room { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanReportListing))]
+    public partial bool IsReportSubmitting { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanReportListing))]
+    public partial bool HasSubmittedReport { get; set; }
+
+    public bool CanReportListing => !IsBusy && !IsReportSubmitting && !HasSubmittedReport && Room is not null;
+
+    internal Func<string, string, Task<ReportListingDialogResult?>>? ReportDialogHandler { get; set; }
 
     [ObservableProperty]
     public partial List<SimilarRoomModel> SimilarRooms { get; set; } = [];
@@ -96,7 +126,10 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         Func<string, Task>? navigateAsync = null,
         Func<string, string, string, string?, Task<bool>>? displayAlertAsync = null,
         IFavouritesService? favouritesService = null,
-        IFavoriteFeedbackService? favoriteFeedbackService = null)
+        IFavoriteFeedbackService? favoriteFeedbackService = null,
+        IListingReportService? listingReportService = null,
+        Func<string, string, Task<ReportListingDialogResult?>>? openReportDialogAsync = null,
+        ITravelTimeService? travelTimeService = null)
     {
         _roomDetailService = roomDetailService ?? throw new ArgumentNullException(nameof(roomDetailService));
         _errorHandler = errorHandler ?? throw new ArgumentNullException(nameof(errorHandler));
@@ -105,6 +138,69 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         _displayAlertAsync = displayAlertAsync;
         _favouritesService = favouritesService;
         _favoriteFeedbackService = favoriteFeedbackService;
+        _listingReportService = listingReportService;
+        _openReportDialogAsync = openReportDialogAsync;
+        _travelTimeService = travelTimeService;
+    }
+
+    public void CancelTravelInfo()
+    {
+        var previous = Interlocked.Exchange(ref _travelCts, null);
+        previous?.Cancel();
+        IsTravelInfoLoading = false;
+        DistanceText = string.Empty;
+        TravelTimeText = string.Empty;
+        TravelInfoMessage = "Select Calculate to update travel information.";
+    }
+
+    public void PauseTravelInfo()
+    {
+        _travelPageActive = false;
+        CancelTravelInfo();
+    }
+
+    public void ResumeTravelInfo() => _travelPageActive = true;
+
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    public async Task LoadTravelInfoAsync()
+    {
+        CancelTravelInfo();
+        var room = Room;
+        if (room is null || _travelTimeService is null ||
+            !double.TryParse(DestinationLatitude, NumberStyles.Float, CultureInfo.InvariantCulture, out var lat) ||
+            !double.TryParse(DestinationLongitude, NumberStyles.Float, CultureInfo.InvariantCulture, out var lon))
+        {
+            TravelInfoMessage = "Location unavailable. Enter valid destination coordinates.";
+            return;
+        }
+
+        var current = new CancellationTokenSource();
+        _travelCts = current;
+        IsTravelInfoLoading = true;
+        TravelInfoMessage = "Calculating travel time...";
+        try
+        {
+            var info = await _travelTimeService.GetAsync(room.Id, room.Latitude, room.Longitude, lat, lon, current.Token);
+            if (current.IsCancellationRequested || !ReferenceEquals(_travelCts, current) || !ReferenceEquals(Room, room)) return;
+            if (info is null)
+            {
+                TravelInfoMessage = "Location unavailable. Unable to calculate distance.";
+                return;
+            }
+            DistanceText = $"{info.DistanceKm:0.0} km";
+            TravelTimeText = info.IsFallback ? "Travel time unavailable" : $"~{info.DurationMinutes} min driving";
+            TravelInfoMessage = info.IsFallback ? "Straight-line distance" : "Driving route distance";
+        }
+        catch (OperationCanceledException) when (current.IsCancellationRequested) { }
+        finally
+        {
+            if (ReferenceEquals(_travelCts, current))
+            {
+                _travelCts = null;
+                IsTravelInfoLoading = false;
+            }
+            current.Dispose();
+        }
     }
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
@@ -131,6 +227,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
     [RelayCommand(AllowConcurrentExecutions = true)]
     public async Task LoadRoomDetailsAsync()
     {
+        CancelTravelInfo();
         var currentCts = new CancellationTokenSource();
         var previousCts = Interlocked.Exchange(ref _loadCts, currentCts);
         previousCts?.Cancel();
@@ -188,6 +285,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
             Title = room.Title;
             IsFavorite = false;
             FavoriteErrorMessage = string.Empty;
+            HasSubmittedReport = false;
             if (_sessionService.IsAuthenticated && _favouritesService is not null)
             {
                 var sessionEpoch = _sessionService.SessionEpoch;
@@ -229,6 +327,7 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
 
             // Similar rooms are included in the detail response. An empty list is a valid API result.
             SimilarRooms = room.SimilarRooms ?? [];
+            if (_travelPageActive) await LoadTravelInfoAsync();
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
@@ -444,6 +543,101 @@ public partial class RoomDetailViewModel : ObservableObject, IQueryAttributable
         {
             PhoneDialer.Default.Open(phoneNumber);
         }
+    }
+
+    [RelayCommand(AllowConcurrentExecutions = false)]
+    public async Task ReportListingAsync()
+    {
+        if (Room is not { } room || IsBusy || IsReportSubmitting || HasSubmittedReport)
+        {
+            return;
+        }
+
+        if (!_sessionService.IsAuthenticated)
+        {
+            var signIn = await DisplayAlertAsync(
+                "Sign in required",
+                "Please sign in to report this listing.",
+                "Sign in",
+                "Cancel");
+            if (signIn)
+            {
+                await NavigateAsync($"//{AppRoutes.Login}");
+            }
+
+            return;
+        }
+
+        var dialogHandler = _openReportDialogAsync ?? ReportDialogHandler;
+        if (dialogHandler is null)
+        {
+            return;
+        }
+
+        ReportListingDialogResult? dialogResult;
+        try
+        {
+            dialogResult = await dialogHandler(room.Id, room.Title);
+        }
+        catch (Exception ex)
+        {
+            _errorHandler.HandleError(ex);
+            return;
+        }
+
+        if (dialogResult is null || _listingReportService is null)
+        {
+            return;
+        }
+
+        IsReportSubmitting = true;
+        try
+        {
+            var result = await _listingReportService.SubmitReportAsync(
+                room.Id,
+                dialogResult.Reason,
+                dialogResult.Note);
+
+            if (result.IsSuccess)
+            {
+                HasSubmittedReport = true;
+                await ShowFeedbackAsync(
+                    "Report submitted",
+                    "Thank you. Your report has been submitted for moderation review.");
+                return;
+            }
+
+            if (result.IsDuplicate)
+            {
+                HasSubmittedReport = true;
+            }
+
+            await ShowFeedbackAsync(
+                "Report could not be submitted",
+                result.ErrorMessage ?? "Unable to submit report right now. Please try again.");
+        }
+        catch (Exception ex)
+        {
+            _errorHandler.HandleError(ex);
+            await ShowFeedbackAsync(
+                "Report could not be submitted",
+                "Unable to submit report right now. Please try again.");
+        }
+        finally
+        {
+            IsReportSubmitting = false;
+        }
+    }
+
+    private async Task ShowFeedbackAsync(string title, string message)
+    {
+        if (_favoriteFeedbackService is not null)
+        {
+            await _favoriteFeedbackService.ShowMessageAsync(message);
+            return;
+        }
+
+        await DisplayAlertAsync(title, message, "OK", null);
     }
 
     [RelayCommand]
