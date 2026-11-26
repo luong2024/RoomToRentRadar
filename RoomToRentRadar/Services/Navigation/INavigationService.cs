@@ -29,6 +29,8 @@ public interface INavigationService
 
     Task GoToListingEditorAsync(Guid? listingId = null);
 
+    Task GoToListingPhotoManagerAsync(Guid listingId) => Task.CompletedTask;
+
     Task GoToDirectionsAsync(
         double destinationLat,
         double destinationLng,

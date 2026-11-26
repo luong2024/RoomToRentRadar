@@ -104,6 +104,11 @@ public static class DatabaseSeeder
         RoomType.House
     ];
 
+    public static IReadOnlyList<Guid> GetSampleListingIds() =>
+        Enumerable.Range(0, SampleCount)
+            .Select(index => CreateDeterministicGuid($"sample-listing-{index}"))
+            .ToArray();
+
     public static async Task<bool> SeedSampleAsync(AppDbContext dbContext, CancellationToken cancellationToken = default)
     {
         if (await dbContext.Listings.AnyAsync(cancellationToken))

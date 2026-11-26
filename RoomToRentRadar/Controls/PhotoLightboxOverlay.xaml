@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewModels="clr-namespace:RoomToRentRadar.ViewModels"
+             xmlns:controls="clr-namespace:RoomToRentRadar.Controls"
+             xmlns:buttons="clr-namespace:Syncfusion.Maui.Toolkit.Buttons;assembly=Syncfusion.Maui.Toolkit"
+             xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Converters;assembly=CommunityToolkit.Maui"
+             x:Class="RoomToRentRadar.Controls.PhotoLightboxOverlay"
+             x:DataType="viewModels:PhotoLightboxViewModel"
+             AutomationId="PhotoLightboxOverlay">
+
+    <ContentView.Resources>
+        <!-- App.xaml does not declare a shared inverted-bool converter. -->
+        <toolkit:InvertedBoolConverter x:Key="InvertedBoolConverter" />
+    </ContentView.Resources>
+
+    <!-- Single full-screen layer: the header and footer are overlaid on top of the
+         photo instead of using Grid rows. Row-based layout let the photo's natural
+         height inflate the grid and push the footer off-screen on Windows.
+         The overlay is hidden with Opacity instead of IsVisible: collapsing it and
+         showing it again left the star-sized photo cell measured at zero width.
+         Opacity/InputTransparent are toggled from code-behind: bindings on the
+         layout were not applied reliably on Windows, leaving the closed overlay
+         swallowing every tap on the page behind it. -->
+    <Grid x:Name="OverlayRoot"
+          BackgroundColor="#F20B1016"
+          Opacity="0"
+          InputTransparent="True"
+          CascadeInputTransparent="True">
+
+        <!-- Normal photo viewport. The image binds straight to the view model: a
+             ContentView-hopping BindingContext left the Image unmeasured (0x0) on Windows. -->
+        <Image x:Name="PhotoImage"
+               Source="{Binding CurrentFullSource}"
+               Aspect="AspectFit"
+               Margin="0,64,0,80"
+               IsVisible="{Binding IsPanoramaMode, Converter={StaticResource InvertedBoolConverter}}"
+               SemanticProperties.Description="{Binding AltText}">
+            <Image.GestureRecognizers>
+                <SwipeGestureRecognizer Direction="Left" Command="{Binding NextCommand}" />
+                <SwipeGestureRecognizer Direction="Right" Command="{Binding PreviousCommand}" />
+            </Image.GestureRecognizers>
+        </Image>
+
+        <!-- 360° viewport, only mounted for panorama photos. -->
+        <controls:Panorama360View x:Name="PanoramaHost"
+                                  Margin="0,64,0,80"
+                                  Photo="{Binding CurrentPhoto}"
+                                  IsVisible="{Binding IsPanoramaMode}" />
+
+        <!-- Off-screen host that warms the neighbouring images in the URI cache.
+             It stays laid out (1x1, transparent) so the image handlers actually
+             create and start fetching. -->
+        <Grid x:Name="PreloadHost"
+              HeightRequest="1" WidthRequest="1" Opacity="0"
+              InputTransparent="True"
+              HorizontalOptions="Start" VerticalOptions="Start" />
+
+        <!-- Header: close, counter, panorama badge -->
+        <Grid Padding="16,14,16,8" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"
+              VerticalOptions="Start" ZIndex="10">
+            <ImageButton Source="close_icon.png"
+                         Command="{Binding CloseCommand}"
+                         AutomationId="PhotoLightboxClose"
+                         WidthRequest="44" HeightRequest="44"
+                         MinimumWidthRequest="44" MinimumHeightRequest="44"
+                         Padding="13" CornerRadius="22"
+                         BackgroundColor="#33FFFFFF"
+                         SemanticProperties.Description="Đóng thư viện ảnh"
+                         SemanticProperties.Hint="Quay lại trang chi tiết phòng" />
+
+            <Label Grid.Column="1"
+                   Text="{Binding CounterText}"
+                   AutomationId="PhotoLightboxCounter"
+                   FontSize="14" FontFamily="OpenSansSemibold"
+                   TextColor="#F2FFFFFF"
+                   HorizontalTextAlignment="Center" VerticalTextAlignment="Center" />
+
+            <Border Grid.Column="2" Padding="10,5" VerticalOptions="Center"
+                    StrokeThickness="0" StrokeShape="RoundRectangle 9"
+                    BackgroundColor="#33FFFFFF"
+                    IsVisible="{Binding IsPanoramaMode}">
+                <Label Text="360°" FontSize="11" FontFamily="OpenSansSemibold" TextColor="White" />
+            </Border>
+        </Grid>
+
+        <!-- Footer: previous / next -->
+        <HorizontalStackLayout x:Name="FooterHost" Spacing="12"
+                               HorizontalOptions="Center" VerticalOptions="End"
+                               Margin="0,0,0,20" ZIndex="10">
+            <buttons:SfButton Text="Trước"
+                              Command="{Binding PreviousCommand}"
+                              Style="{StaticResource SoftSfButton}"
+                              MinimumWidthRequest="132"
+                              AutomationId="PhotoLightboxPrevious"
+                              SemanticProperties.Description="Xem ảnh trước đó"
+                              SemanticProperties.Hint="Chuyển sang ảnh phía trước trong thư viện" />
+            <buttons:SfButton Text="Sau"
+                              Command="{Binding NextCommand}"
+                              Style="{StaticResource SoftSfButton}"
+                              MinimumWidthRequest="132"
+                              AutomationId="PhotoLightboxNext"
+                              SemanticProperties.Description="Xem ảnh tiếp theo"
+                              SemanticProperties.Hint="Chuyển sang ảnh phía sau trong thư viện" />
+        </HorizontalStackLayout>
+    </Grid>
+</ContentView>

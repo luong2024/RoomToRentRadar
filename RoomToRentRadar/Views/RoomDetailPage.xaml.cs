@@ -23,11 +23,29 @@ public partial class RoomDetailPage : ContentPage
         TravelSection.BindingContext = _travelViewModel = travelViewModel;
         ReportBottomSheet.BindingContext = viewModel.Report;
         ReportBottomSheet.StateChanged += OnReportBottomSheetStateChanged;
+#if WINDOWS
+        Loaded += OnPageLoadedForKeyboard;
+        Unloaded += OnPageUnloadedForKeyboard;
+#endif
+    }
+
+    protected override bool OnBackButtonPressed()
+    {
+        if (_viewModel.Lightbox.IsOpen)
+        {
+            _viewModel.Lightbox.CloseCommand.Execute(null);
+            return true;
+        }
+
+        return base.OnBackButtonPressed();
     }
 
     protected override void OnAppearing()
     {
         base.OnAppearing();
+#if WINDOWS
+        AttachWindowsKeyboard();
+#endif
         if (!_observing)
         {
             _observing = true;
@@ -113,6 +131,9 @@ public partial class RoomDetailPage : ContentPage
         DetailContent.CancelAnimations();
         DetailContent.Opacity = 1;
         DetailContent.TranslationY = 0;
+#if WINDOWS
+        DetachWindowsKeyboard();
+#endif
         base.OnDisappearing();
     }
 
@@ -161,4 +182,76 @@ public partial class RoomDetailPage : ContentPage
             try { await Clipboard.Default.SetTextAsync(phone); } catch { }
         }
     }
+
+#if WINDOWS
+    private Microsoft.UI.Xaml.UIElement? _keyboardRoot;
+    private Microsoft.UI.Xaml.Input.KeyEventHandler? _keyboardHandler;
+
+    private void OnPageLoadedForKeyboard(object? sender, EventArgs e) => AttachWindowsKeyboard();
+
+    private void OnPageUnloadedForKeyboard(object? sender, EventArgs e) => DetachWindowsKeyboard();
+
+    private void AttachWindowsKeyboard()
+    {
+        if (_keyboardRoot is not null || _keyboardHandler is not null)
+            return;
+
+        if (Window?.Handler?.PlatformView is not Microsoft.UI.Xaml.Window nativeWindow
+            || nativeWindow.Content is not Microsoft.UI.Xaml.UIElement root)
+        {
+            return;
+        }
+
+        var keyHandler = new Microsoft.UI.Xaml.Input.KeyEventHandler(OnWindowsKeyDown);
+        _keyboardHandler = keyHandler;
+        _keyboardRoot = root;
+
+        // handledEventsToo keeps the shortcuts working when a focused child
+        // (for example the carousel) already consumed the key.
+        root.AddHandler(
+            Microsoft.UI.Xaml.UIElement.KeyDownEvent,
+            keyHandler,
+            handledEventsToo: true);
+    }
+
+    private void DetachWindowsKeyboard()
+    {
+        var root = _keyboardRoot;
+        var handler = _keyboardHandler;
+
+        _keyboardRoot = null;
+        _keyboardHandler = null;
+
+        if (root is null || handler is null)
+            return;
+
+        root.RemoveHandler(Microsoft.UI.Xaml.UIElement.KeyDownEvent, handler);
+    }
+
+    private void OnWindowsKeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
+    {
+        if (!_viewModel.Lightbox.IsOpen)
+            return;
+
+        switch (e.Key)
+        {
+            case Windows.System.VirtualKey.Left:
+                if (_viewModel.Lightbox.PreviousCommand.CanExecute(null))
+                    _viewModel.Lightbox.PreviousCommand.Execute(null);
+                e.Handled = true;
+                break;
+
+            case Windows.System.VirtualKey.Right:
+                if (_viewModel.Lightbox.NextCommand.CanExecute(null))
+                    _viewModel.Lightbox.NextCommand.Execute(null);
+                e.Handled = true;
+                break;
+
+            case Windows.System.VirtualKey.Escape:
+                _viewModel.Lightbox.CloseCommand.Execute(null);
+                e.Handled = true;
+                break;
+        }
+    }
+#endif
 }

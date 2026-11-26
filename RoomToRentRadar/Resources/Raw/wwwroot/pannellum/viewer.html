@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>360 viewer</title>
+  <!-- Absolute paths: the HybridWebView serves this page at the virtual host root,
+       so relative URLs would resolve to /pannellum.js instead of /pannellum/. -->
+  <link rel="stylesheet" href="/pannellum/pannellum.css" />
+  <style>
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #101114; overflow: hidden; }
+    #viewer { width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <div id="viewer"></div>
+  <!-- MAUI 10 moved the JS bridge into this script; window.HybridWebView is
+       undefined without it, which silently disables every host notification. -->
+  <script src="_framework/hybridwebview.js"></script>
+  <script src="/pannellum/pannellum.js"></script>
+  <script>
+    (function () {
+      var viewer = null;
+
+      function notify(type, message) {
+        try {
+          if (window.HybridWebView && window.HybridWebView.SendRawMessage) {
+            window.HybridWebView.SendRawMessage(JSON.stringify({ type: type, message: message || '' }));
+          }
+        } catch (e) {
+          // The bridge is unavailable; the host falls back after its timeout.
+        }
+      }
+
+      window.setPanorama = function (dataUrl) {
+        try {
+          window.disposeViewer();
+          viewer = pannellum.viewer('viewer', {
+            type: 'equirectangular',
+            panorama: dataUrl,
+            autoLoad: true,
+            showControls: true,
+            compass: false,
+            showFullscreenCtrl: true,
+            hfov: 100,
+            minHfov: 45,
+            maxHfov: 120
+          });
+          viewer.on('load', function () { notify('ready'); });
+          viewer.on('error', function (message) { notify('error', message); });
+        } catch (e) {
+          notify('error', String(e));
+        }
+      };
+
+      window.disposeViewer = function () {
+        try {
+          if (viewer) {
+            viewer.destroy();
+          }
+        } catch (e) {
+          // Ignore teardown errors; the WebView is being closed anyway.
+        }
+        viewer = null;
+      };
+
+      window.addEventListener('error', function (event) {
+        notify('error', event && event.message ? event.message : 'script error');
+      });
+
+      notify('viewer-ready');
+    })();
+  </script>
+</body>
+</html>

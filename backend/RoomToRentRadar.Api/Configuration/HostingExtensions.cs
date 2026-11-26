@@ -6,6 +6,7 @@ namespace RoomToRentRadar.Api.Configuration;
 public static class HostingExtensions
 {
     public const string DevelopmentCorsPolicy = "Development";
+    public const string MediaCorsPolicy = "Media";
 
     public static IServiceCollection AddDevelopmentCors(this IServiceCollection services)
     {
@@ -15,6 +16,20 @@ public static class HostingExtensions
                 .AllowAnyOrigin()
                 .AllowAnyHeader()
                 .AllowAnyMethod());
+        });
+        return services;
+    }
+
+    public static IServiceCollection AddMediaCors(this IServiceCollection services)
+    {
+        // Photos are embedded by web clients too, so /media is readable cross-origin
+        // even outside Development; nothing else on the API is.
+        services.AddCors(options =>
+        {
+            options.AddPolicy(MediaCorsPolicy, policy => policy
+                .AllowAnyOrigin()
+                .AllowAnyHeader()
+                .WithMethods(HttpMethods.Get, HttpMethods.Head));
         });
         return services;
     }

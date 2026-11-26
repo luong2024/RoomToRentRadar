@@ -86,6 +86,9 @@ public sealed class ShellNavigationService : INavigationService
             listingId is { } id ? $"{AppRoutes.ListingEditor}?id={id}" : AppRoutes.ListingEditor,
             DefaultAnimate);
 
+    public Task GoToListingPhotoManagerAsync(Guid listingId)
+        => NavigateAsync($"{AppRoutes.ListingPhotoManager}?id={listingId}", DefaultAnimate);
+
     public Task GoToDirectionsAsync(
         double destinationLat,
         double destinationLng,

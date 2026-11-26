@@ -26,6 +26,8 @@ public static class AppRoutes
 
     public const string ListingEditor = "listing-editor";
 
+    public const string ListingPhotoManager = "listing-photo-manager";
+
     public const string Directions = "directions";
 
     public const string Comparison = "compare";
