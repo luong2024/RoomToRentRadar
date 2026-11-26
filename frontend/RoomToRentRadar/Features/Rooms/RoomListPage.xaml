@@ -106,55 +106,86 @@
                 </Border>
             </Grid>
 
-            <!-- Sorting Chips (US02 AC1: DistanceAsc default) -->
+            <!-- Sorting chips (US02 AC1: DistanceAsc is the default). Keys match GET /api/rooms;
+                 the chip of the current SelectedSortBy is highlighted by a DataTrigger. -->
             <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
                 <HorizontalStackLayout Spacing="8">
-                    <!-- DistanceAsc (Default) -->
+                    <HorizontalStackLayout.Resources>
+                        <Style x:Key="SortChip" TargetType="Button">
+                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSecondaryBackground}}" />
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}" />
+                            <Setter Property="FontSize" Value="12" />
+                            <Setter Property="CornerRadius" Value="16" />
+                            <Setter Property="HeightRequest" Value="32" />
+                            <Setter Property="Padding" Value="12, 0" />
+                        </Style>
+                    </HorizontalStackLayout.Resources>
+
                     <Button Text="📍 Gần ICTU nhất"
+                            Style="{StaticResource SortChip}"
                             Command="{Binding ChangeSortByCommand}"
                             CommandParameter="DistanceAsc"
-                            BackgroundColor="{StaticResource Primary}"
-                            TextColor="{StaticResource White}"
-                            FontSize="12"
-                            FontAttributes="Bold"
-                            CornerRadius="16"
-                            HeightRequest="32"
-                            Padding="12, 0" />
+                            AutomationId="SortDistanceButton">
+                        <Button.Triggers>
+                            <DataTrigger TargetType="Button" Binding="{Binding SelectedSortBy}" Value="DistanceAsc">
+                                <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
+                                <Setter Property="TextColor" Value="{StaticResource White}" />
+                                <Setter Property="FontAttributes" Value="Bold" />
+                            </DataTrigger>
+                        </Button.Triggers>
+                    </Button>
 
-                    <!-- RentAsc -->
                     <Button Text="💰 Giá thấp nhất"
+                            Style="{StaticResource SortChip}"
                             Command="{Binding ChangeSortByCommand}"
-                            CommandParameter="RentAsc"
-                            BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSecondaryBackground}}"
-                            TextColor="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}"
-                            FontSize="12"
-                            CornerRadius="16"
-                            HeightRequest="32"
-                            Padding="12, 0" />
+                            CommandParameter="PriceAsc"
+                            AutomationId="SortPriceAscButton">
+                        <Button.Triggers>
+                            <DataTrigger TargetType="Button" Binding="{Binding SelectedSortBy}" Value="PriceAsc">
+                                <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
+                                <Setter Property="TextColor" Value="{StaticResource White}" />
+                                <Setter Property="FontAttributes" Value="Bold" />
+                            </DataTrigger>
+                        </Button.Triggers>
+                    </Button>
 
-                    <!-- RentDesc -->
                     <Button Text="💎 Giá cao nhất"
+                            Style="{StaticResource SortChip}"
                             Command="{Binding ChangeSortByCommand}"
-                            CommandParameter="RentDesc"
-                            BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSecondaryBackground}}"
-                            TextColor="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}"
-                            FontSize="12"
-                            CornerRadius="16"
-                            HeightRequest="32"
-                            Padding="12, 0" />
-
-                    <!-- AreaDesc -->
-                    <Button Text="📐 Diện tích rộng"
-                            Command="{Binding ChangeSortByCommand}"
-                            CommandParameter="AreaDesc"
-                            BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSecondaryBackground}}"
-                            TextColor="{AppThemeBinding Light={StaticResource DarkOnLightBackground}, Dark={StaticResource LightOnDarkBackground}}"
-                            FontSize="12"
-                            CornerRadius="16"
-                            HeightRequest="32"
-                            Padding="12, 0" />
+                            CommandParameter="PriceDesc"
+                            AutomationId="SortPriceDescButton">
+                        <Button.Triggers>
+                            <DataTrigger TargetType="Button" Binding="{Binding SelectedSortBy}" Value="PriceDesc">
+                                <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
+                                <Setter Property="TextColor" Value="{StaticResource White}" />
+                                <Setter Property="FontAttributes" Value="Bold" />
+                            </DataTrigger>
+                        </Button.Triggers>
+                    </Button>
                 </HorizontalStackLayout>
             </ScrollView>
+
+            <!-- Load/navigation error with retry (instead of silently showing an empty list) -->
+            <Border IsVisible="{Binding HasError}"
+                    Padding="12,8"
+                    StrokeThickness="0"
+                    StrokeShape="RoundRectangle 10"
+                    BackgroundColor="{AppThemeBinding Light=#FDECEA, Dark=#5C1F1A}">
+                <Grid ColumnDefinitions="*, Auto" ColumnSpacing="8">
+                    <Label Text="{Binding ErrorMessage}"
+                           TextColor="{AppThemeBinding Light=#B3261E, Dark=#F2B8B5}"
+                           VerticalOptions="Center"
+                           AutomationId="RoomListErrorLabel" />
+                    <Button Grid.Column="1"
+                            Text="Thử lại"
+                            Command="{Binding LoadRoomsCommand}"
+                            FontSize="12"
+                            HeightRequest="32"
+                            Padding="12,0"
+                            CornerRadius="16"
+                            AutomationId="RoomListRetryButton" />
+                </Grid>
+            </Border>
 
         </VerticalStackLayout>
 
@@ -176,11 +207,11 @@
                                    FontSize="40"
                                    TextColor="{StaticResource Gray400}"
                                    HorizontalOptions="Center" />
-                            <Label Text="Không tìm thấy phòng trọ phù hợp"
+                            <Label Text="Chưa có phòng trọ nào"
                                    Style="{StaticResource Title3}"
                                    FontAttributes="Bold"
                                    HorizontalTextAlignment="Center" />
-                            <Label Text="Vui lòng thử đổi từ khóa tìm kiếm hoặc sắp xếp lại danh sách."
+                            <Label Text="Hiện chưa có phòng trọ đã xác minh còn trống quanh ICTU. Vui lòng quay lại sau."
                                    FontSize="14"
                                    TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}"
                                    HorizontalTextAlignment="Center" />
