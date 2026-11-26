@@ -10,6 +10,7 @@
     xmlns:roomViews="clr-namespace:RoomToRentRadar.Views.RoomListings"
     xmlns:profileViews="clr-namespace:RoomToRentRadar.Views.Profile"
     xmlns:mapViews="clr-namespace:RoomToRentRadar.Views.MapSearch"
+    xmlns:routes="clr-namespace:RoomToRentRadar.Core.Constants"
     Title="{loc:Translate App_Name}"
     FlyoutBackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtle}, Dark={StaticResource DesktopRailBackgroundDark}}"
     FlyoutVerticalScrollMode="{OnPlatform WinUI=Disabled, Default=Auto}"
@@ -213,7 +214,7 @@
         Title="Map Search"
         ContentTemplate="{DataTemplate mapViews:MapSearchPage}"
         Icon="{StaticResource IconNavMap}"
-        Route="map"
+        Route="{x:Static routes:AppRoutes.MapSearch}"
         SemanticProperties.Description="Search room listings on map"
         SemanticProperties.Hint="Navigate to map to draw search area" />
 

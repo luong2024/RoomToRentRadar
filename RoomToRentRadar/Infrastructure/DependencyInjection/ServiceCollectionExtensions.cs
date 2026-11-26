@@ -7,6 +7,7 @@ using RoomToRentRadar.Services.RoomDetails;
 using RoomToRentRadar.ViewModels.RoomDetails;
 using RoomToRentRadar.Views.RoomDetails;
 using RoomToRentRadar.Services.RoomListings;
+using RoomToRentRadar.Services.MapSearch;
 using RoomToRentRadar.ViewModels.RoomListings;
 using RoomToRentRadar.Views.RoomListings;
 using RoomToRentRadar.Services.Profile;
@@ -86,8 +87,10 @@ public static class ServiceCollectionExtensions
 
         services.AddTransient<RoomDetailViewModel>();
         services.AddTransient<RoomDetailPage>();
+        services.AddSingleton(_ => new SavedMapAreaStore(
+            Path.Combine(FileSystem.AppDataDirectory, "saved-map-areas.json")));
         services.AddTransient<RoomToRentRadar.ViewModels.MapSearch.MapSearchViewModel>();
-        services.AddTransient<RoomToRentRadar.Views.MapSearch.MapSearchPage>();
+        // Shell owns the Map Search page so its draft survives the sign-in round trip.
         services.AddTransient<ICreateListingService, CreateListingService>();
         services.AddTransient<CreateListingViewModel>();
         services.AddTransient<CreateListingPage>();

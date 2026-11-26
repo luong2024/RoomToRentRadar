@@ -25,6 +25,7 @@ public class RouteGuardServiceTests
     [TestCase("//" + AppRoutes.Home)]
     [TestCase(AppRoutes.RoomListings)]
     [TestCase("//" + AppRoutes.RoomListings)]
+    [TestCase("//" + AppRoutes.MapSearch)]
     [TestCase(AppRoutes.RoomDetails)]
     [TestCase("rooms/details?roomId=123")]
     [TestCase("//rooms?search=ictu&priceMax=2000000")]
@@ -287,6 +288,7 @@ public class RouteGuardServiceTests
 
     [TestCase("//booking?roomId=42", "//booking?roomId=42")]
     [TestCase("profile", "//profile")]
+    [TestCase("//" + AppRoutes.MapSearch, "//" + AppRoutes.MapSearch)]
     [TestCase("//roommates?campus=ictu", "//roommates?campus=ictu")]
     [TestCase("rooms/details?id=room-1", "rooms/details?id=room-1")]
     [TestCase("//booking?filter=a%2Fb&nested=%252F", "//booking?filter=a%2Fb&nested=%252F")]

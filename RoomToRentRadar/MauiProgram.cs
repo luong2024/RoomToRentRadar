@@ -28,6 +28,10 @@ namespace RoomToRentRadar
                 .ConfigureSyncfusionToolkit()
                 .ConfigureMauiHandlers(handlers =>
                 {
+#if ANDROID
+                    handlers.AddHandler<Views.MapSearch.MapSearchMap, Views.MapSearch.MapSearchMapHandler>();
+                    handlers.AddHandler<Views.MapSearch.RoomPricePin, Views.MapSearch.RoomPricePinHandler>();
+#endif
 #if WINDOWS
                     Microsoft.Maui.Controls.Handlers.Items.CollectionViewHandler.Mapper.AppendToMapping("KeyboardAccessibleCollectionView", (handler, view) =>
                     {
