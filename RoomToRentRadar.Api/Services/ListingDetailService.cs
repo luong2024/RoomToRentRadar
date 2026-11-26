@@ -1,5 +1,6 @@
 using RoomToRentRadar.Api.Models;
 using RoomToRentRadar.Api.Repositories;
+using RoomToRentRadar.Api.Services.Mapping;
 using RoomToRentRadar.Shared.Dtos;
 
 namespace RoomToRentRadar.Api.Services;
@@ -10,37 +11,37 @@ public sealed class ListingDetailService(IListingRepository repository) : IListi
     public const string UnavailableMessage =
         "Phòng này hiện không còn trống. Dưới đây là một số phòng tương tự đang Available.";
 
+    /// <summary>Số phòng tương tự gợi ý khi phòng không còn trống.</summary>
+    public const int SimilarRoomsCount = 3;
+
     public async Task<ListingDetailDto?> GetByIdAsync(
         string id,
         bool isAuthenticated,
         CancellationToken cancellationToken = default)
     {
         var listing = await repository.GetByIdAsync(id, cancellationToken);
-        // US08 AC2: tin chưa được duyệt (PendingReview / Rejected) hoặc đã xóa mềm không hiển thị công khai;
-        // chủ trọ xem tin của mình qua GET /api/v1/landlord/listings/{id}.
-        if (listing is null
-            || !string.Equals(listing.ModerationStatus, ListingModerationStatus.Approved, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(listing.Status, ListingAvailabilityStatus.Archived, StringComparison.OrdinalIgnoreCase))
+        if (listing is null || !IsPubliclyVisible(listing))
         {
             return null;
         }
 
-        var isAvailable = string.Equals(listing.Status, "Available", StringComparison.OrdinalIgnoreCase);
-        IReadOnlyList<ListingCardDto> similarRooms = [];
-        string? unavailableMessage = null;
-
-        if (!isAvailable)
+        if (listing.IsAvailable())
         {
-            unavailableMessage = UnavailableMessage;
-            var candidates = await repository.GetSimilarCandidatesAsync(
-                listing.CampusId,
-                listing.Id,
-                cancellationToken);
-            similarRooms = PickTopSimilar(listing, candidates, take: 3);
+            return MapDetail(listing, isAuthenticated, isAvailable: true, unavailableMessage: null, similarRooms: []);
         }
 
-        return MapDetail(listing, isAuthenticated, isAvailable, unavailableMessage, similarRooms);
+        var candidates = await repository.GetSimilarCandidatesAsync(listing.CampusId, listing.Id, cancellationToken);
+        var similarRooms = PickTopSimilar(listing, candidates, SimilarRoomsCount);
+        return MapDetail(listing, isAuthenticated, isAvailable: false, UnavailableMessage, similarRooms);
     }
+
+    /// <summary>
+    /// US08 AC2: tin chưa được duyệt (PendingReview / Rejected) hoặc đã xóa mềm không hiển thị công khai;
+    /// chủ trọ xem tin của mình qua GET /api/v1/landlord/listings/{id}.
+    /// </summary>
+    private static bool IsPubliclyVisible(ListingDocument listing) =>
+        string.Equals(listing.ModerationStatus, ListingModerationStatus.Approved, StringComparison.OrdinalIgnoreCase)
+        && !string.Equals(listing.Status, ListingAvailabilityStatus.Archived, StringComparison.OrdinalIgnoreCase);
 
     internal static IReadOnlyList<ListingCardDto> PickTopSimilar(
         ListingDocument source,
@@ -52,7 +53,7 @@ public sealed class ListingDetailService(IListingRepository repository) : IListi
             .ThenBy(c => Math.Abs(c.Rent - source.Rent))
             .ThenBy(c => Math.Abs(c.Area - source.Area))
             .Take(take)
-            .Select(ToCard)
+            .Select(ListingCardMapper.ToCard)
             .ToList();
     }
 
@@ -115,20 +116,4 @@ public sealed class ListingDetailService(IListingRepository repository) : IListi
             listing.UpdatedAt,
             similarRooms);
     }
-
-    private static ListingCardDto ToCard(ListingDocument listing)
-        => new()
-        {
-            Id = listing.Id,
-            CampusId = listing.CampusId,
-            Title = listing.Title,
-            Rent = listing.Rent,
-            Area = listing.Area,
-            DistanceMeters = listing.DistanceMeters,
-            RoomType = listing.RoomType,
-            Address = listing.Address,
-            ThumbnailUrl = listing.Photos.OrderBy(p => p.Order).Select(p => p.Url).FirstOrDefault() ?? string.Empty,
-            Status = listing.Status,
-            IsVerified = listing.IsVerified
-        };
 }
