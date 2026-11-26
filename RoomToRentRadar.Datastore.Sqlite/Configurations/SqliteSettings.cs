@@ -23,4 +23,10 @@ public sealed class SqliteSettings
     /// <c>DemoData:Accounts</c>) to be inserted idempotently on schema initialization.
     /// </summary>
     public IReadOnlyList<SeedAccount> SeedAccounts { get; set; } = Array.Empty<SeedAccount>();
+
+    /// <summary>
+    /// Development photos attached to demo rooms that have none. Effective only together with
+    /// <see cref="SeedDemoRooms"/> and <see cref="SeedExtendedDemoData"/>.
+    /// </summary>
+    public IReadOnlyList<SeedPhoto> SeedPhotos { get; set; } = Array.Empty<SeedPhoto>();
 }

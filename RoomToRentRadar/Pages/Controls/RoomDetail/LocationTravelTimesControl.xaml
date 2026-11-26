@@ -35,12 +35,17 @@
                         HorizontalOptions="Center"
                         VerticalOptions="Center"
                         Shadow="{StaticResource Elevation1Shadow}">
-                    <Label Text="{x:Static fonts:FluentUI.location_20_regular}"
-                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                           FontSize="20"
-                           TextColor="White"
-                           HorizontalTextAlignment="Center"
-                           VerticalTextAlignment="Center" />
+                    <Image WidthRequest="20"
+                           HeightRequest="20"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center">
+                        <Image.Source>
+                            <FontImageSource Glyph="{x:Static fonts:FluentUI.location_20_regular}"
+                                             FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                             Size="20"
+                                             Color="White" />
+                        </Image.Source>
+                    </Image>
                 </Border>
             </Grid>
 
@@ -67,12 +72,15 @@
                        FontSize="{StaticResource FontSizeCaption}"
                        TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
 
-                <!-- 3. Commute Times 3-Column Grid -->
-                <Grid ColumnDefinitions="*, *, *"
+                <!-- 3. Commute Times 3-Column Grid Layout -->
+                <Grid x:Name="CommuteGrid"
+                      ColumnDefinitions="*, *, *"
                       ColumnSpacing="8"
                       Margin="0,8,0,0"
                       IsVisible="{Binding HasTravelTimes}"
-                      BindableLayout.ItemsSource="{Binding CommuteTimes}">
+                      BindableLayout.ItemsSource="{Binding CommuteTimes}"
+                      ChildAdded="OnCommuteGridChildAdded"
+                      ChildRemoved="OnCommuteGridChildRemoved">
                     <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="models:CommuteModeItem">
                             <Border StrokeShape="RoundRectangle 8"
@@ -81,11 +89,16 @@
                                     BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSubtleLight}, Dark={StaticResource SurfaceSubtleDark}}"
                                     Padding="6,10">
                                 <VerticalStackLayout Spacing="3" HorizontalOptions="Center">
-                                    <Label Text="{Binding IconGlyph}"
-                                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
-                                           FontSize="20"
-                                           TextColor="{AppThemeBinding Light={StaticResource ActionAccentLight}, Dark={StaticResource ActionAccentDark}}"
-                                           HorizontalTextAlignment="Center" />
+                                    <Image WidthRequest="20"
+                                           HeightRequest="20"
+                                           HorizontalOptions="Center">
+                                        <Image.Source>
+                                            <FontImageSource Glyph="{Binding IconGlyph}"
+                                                             FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                                                             Size="20"
+                                                             Color="{AppThemeBinding Light={StaticResource ActionAccentLight}, Dark={StaticResource ActionAccentDark}}" />
+                                        </Image.Source>
+                                    </Image>
                                     <Label Text="{Binding TimeFormatted}"
                                            FontFamily="{StaticResource FontFamilySemibold}"
                                            FontSize="{StaticResource FontSizeBodyMedium}"

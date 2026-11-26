@@ -1,0 +1,137 @@
+{
+  "photos": [
+    {
+      "key": "boarding-01",
+      "group": "BoardingRoom",
+      "width": 1280,
+      "height": 853,
+      "mediumSizeBytes": 97655
+    },
+    {
+      "key": "boarding-02",
+      "group": "BoardingRoom",
+      "width": 1280,
+      "height": 853,
+      "mediumSizeBytes": 64272
+    },
+    {
+      "key": "boarding-03",
+      "group": "BoardingRoom",
+      "width": 1280,
+      "height": 853,
+      "mediumSizeBytes": 102203
+    },
+    {
+      "key": "boarding-04",
+      "group": "BoardingRoom",
+      "width": 1280,
+      "height": 853,
+      "mediumSizeBytes": 61536
+    },
+    {
+      "key": "boarding-05",
+      "group": "BoardingRoom",
+      "width": 1280,
+      "height": 853,
+      "mediumSizeBytes": 60969
+    },
+    {
+      "key": "boarding-06",
+      "group": "BoardingRoom",
+      "width": 1280,
+      "height": 853,
+      "mediumSizeBytes": 123831
+    },
+    {
+      "key": "dormitory-01",
+      "group": "Dormitory",
+      "width": 1280,
+      "height": 853,
+      "mediumSizeBytes": 191462
+    },
+    {
+      "key": "dormitory-02",
+      "group": "Dormitory",
+      "width": 1280,
+      "height": 853,
+      "mediumSizeBytes": 141646
+    },
+    {
+      "key": "apartment-01",
+      "group": "MiniApartment",
+      "width": 1280,
+      "height": 853,
+      "mediumSizeBytes": 134939
+    },
+    {
+      "key": "apartment-02",
+      "group": "MiniApartment",
+      "width": 1280,
+      "height": 853,
+      "mediumSizeBytes": 105298
+    },
+    {
+      "key": "apartment-03",
+      "group": "MiniApartment",
+      "width": 1280,
+      "height": 853,
+      "mediumSizeBytes": 109812
+    },
+    {
+      "key": "apartment-04",
+      "group": "MiniApartment",
+      "width": 1280,
+      "height": 853,
+      "mediumSizeBytes": 106935
+    },
+    {
+      "key": "apartment-05",
+      "group": "MiniApartment",
+      "width": 1280,
+      "height": 853,
+      "mediumSizeBytes": 164289
+    },
+    {
+      "key": "house-01",
+      "group": "WholeHouse",
+      "width": 1280,
+      "height": 853,
+      "mediumSizeBytes": 120620
+    },
+    {
+      "key": "house-02",
+      "group": "WholeHouse",
+      "width": 1280,
+      "height": 853,
+      "mediumSizeBytes": 120364
+    },
+    {
+      "key": "house-03",
+      "group": "WholeHouse",
+      "width": 1280,
+      "height": 853,
+      "mediumSizeBytes": 119632
+    },
+    {
+      "key": "bathroom-01",
+      "group": "Bathroom",
+      "width": 1280,
+      "height": 853,
+      "mediumSizeBytes": 145240
+    },
+    {
+      "key": "bathroom-02",
+      "group": "Bathroom",
+      "width": 1280,
+      "height": 853,
+      "mediumSizeBytes": 133677
+    },
+    {
+      "key": "bathroom-03",
+      "group": "Bathroom",
+      "width": 1280,
+      "height": 853,
+      "mediumSizeBytes": 70087
+    }
+  ]
+}

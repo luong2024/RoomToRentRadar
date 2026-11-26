@@ -7,7 +7,6 @@ using RoomToRentRadar.Client.Adapters.Mocks;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.PageModels;
 using RoomToRentRadar.Ports.Contracts.Requests.Rooms;
-using RoomToRentRadar.Ports.Contracts.Responses.Auth;
 using RoomToRentRadar.Resources.Strings;
 using RoomToRentRadar.Services.Navigation.Core;
 using RoomToRentRadar.Services.Search.Core;
@@ -155,9 +154,7 @@ public class SearchPerformanceAndConcurrencyTests
         var filters = new FiltersPageModel(_gateway, store, navigation, TimeSpan.FromMilliseconds(50));
         await filters.InitializeAsync();
 
-        var sessionStore = Substitute.For<ISessionStore>();
-        sessionStore.GetCachedUserProfileAsync().Returns((UserProfileDto?)null);
-        var landing = new MainLandingPageModel(_gateway, sessionStore, navigation, store);
+        var landing = new MainLandingPageModel(_gateway, navigation, store);
         await landing.InitializeAsync();
 
         var criteria = new RoomSearchRequest(

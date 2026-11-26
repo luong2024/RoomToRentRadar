@@ -1391,6 +1391,7 @@ components:
         longitude: { type: number }
         publishedAtUtc: { type: [string, 'null'], format: date-time }
         isFavourite: { type: boolean, description: false for anonymous callers }
+        furnishing: { oneOf: [ { $ref: '#/components/schemas/Furnishing' }, { type: 'null' } ] }
     PagedRoomCards:
       allOf:
         - $ref: '#/components/schemas/PageMeta'

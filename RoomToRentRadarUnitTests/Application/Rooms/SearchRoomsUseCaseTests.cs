@@ -5,6 +5,7 @@ using RoomToRentRadar.Domain.Exceptions;
 using RoomToRentRadar.Domain.Services;
 using RoomToRentRadar.Ports.Contracts.Requests.Rooms;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
+using RoomToRentRadar.Ports.Outbound.ExternalServices;
 using RoomToRentRadar.Ports.Outbound.Repositories;
 
 namespace RoomToRentRadarUnitTests.Application.Rooms;
@@ -45,7 +46,7 @@ public class SearchRoomsUseCaseTests
     {
         _campusRepository = Substitute.For<ICampusRepository>();
         _readModel = Substitute.For<IRoomSearchReadModel>();
-        _sut = new SearchRoomsUseCase(_campusRepository, _readModel);
+        _sut = new SearchRoomsUseCase(_campusRepository, _readModel, Substitute.For<IPhotoStoragePort>());
         _capturedFilter = null;
 
         _campusRepository.GetDefaultCampusAsync(Arg.Any<CancellationToken>()).Returns(Ictu);
@@ -79,7 +80,7 @@ public class SearchRoomsUseCaseTests
             RoomType: roomType,
             Status: ListingStatus.Available,
             IsVerified: true,
-            CoverThumbUrl: null,
+            CoverThumbPath: null,
             Latitude: latitude,
             Longitude: longitude,
             PublishedAtUtc: publishedAtUtc);
@@ -528,13 +529,41 @@ public class SearchRoomsUseCaseTests
         await _readModel.Received(1).QueryCandidatesAsync(Arg.Any<RoomSearchQueryFilter>(), cts.Token);
     }
 
+    // ----------------------------------------------------------------- T00.10: cover photo and furnishing
+
+    [Test]
+    public async Task ExecuteAsync_CoverStorageKey_BecomesPublicUrl_AndFurnishingIsPassedThrough()
+    {
+        var storage = Substitute.For<IPhotoStoragePort>();
+        storage.GetPublicUrl("seed/rooms/a-thumb.jpg").Returns("https://media.test/a-thumb.jpg");
+        var withCover = Candidates[0] with { CoverThumbPath = "seed/rooms/a-thumb.jpg", Furnishing = Furnishing.Full };
+        _readModel.QueryCandidatesAsync(Arg.Any<RoomSearchQueryFilter>(), Arg.Any<CancellationToken>())
+            .Returns(new[] { withCover, Candidates[2] });
+
+        var result = await new SearchRoomsUseCase(_campusRepository, _readModel, storage)
+            .ExecuteAsync(new RoomSearchRequest());
+
+        var covered = result.Items.Single(i => i.Id == withCover.Id);
+        var bare = result.Items.Single(i => i.Id == Candidates[2].Id);
+        Assert.Multiple(() =>
+        {
+            Assert.That(covered.CoverThumbUrl, Is.EqualTo("https://media.test/a-thumb.jpg"));
+            Assert.That(covered.Furnishing, Is.EqualTo(Furnishing.Full));
+            Assert.That(bare.CoverThumbUrl, Is.Null);
+            Assert.That(bare.Furnishing, Is.Null);
+        });
+        storage.Received(1).GetPublicUrl(Arg.Any<string>());
+    }
+
     [Test]
     public void Constructor_WithNullDependency_ThrowsArgumentNullException()
     {
         Assert.Multiple(() =>
         {
-            Assert.Throws<ArgumentNullException>(() => new SearchRoomsUseCase(null!, _readModel));
-            Assert.Throws<ArgumentNullException>(() => new SearchRoomsUseCase(_campusRepository, null!));
+            var storage = Substitute.For<IPhotoStoragePort>();
+            Assert.Throws<ArgumentNullException>(() => new SearchRoomsUseCase(null!, _readModel, storage));
+            Assert.Throws<ArgumentNullException>(() => new SearchRoomsUseCase(_campusRepository, null!, storage));
+            Assert.Throws<ArgumentNullException>(() => new SearchRoomsUseCase(_campusRepository, _readModel, null!));
         });
     }
 }

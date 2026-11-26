@@ -2,7 +2,7 @@ using System.Windows.Input;
 
 namespace RoomToRentRadar.Pages.Controls.Search;
 
-/// <summary>Filters button with active-count badge, Sort selector and the {N} rooms line (Explore).</summary>
+/// <summary>Filters button with active-count badge, Sort selector and Map view button (SCR-HOME-01).</summary>
 public partial class ExploreFilterBarControl : ContentView
 {
     public ExploreFilterBarControl()
@@ -31,11 +31,11 @@ public partial class ExploreFilterBarControl : ContentView
     public static readonly BindableProperty SortButtonDescriptionProperty = BindableProperty.Create(
         nameof(SortButtonDescription), typeof(string), typeof(ExploreFilterBarControl), string.Empty);
 
-    public static readonly BindableProperty ResultCountTextProperty = BindableProperty.Create(
-        nameof(ResultCountText), typeof(string), typeof(ExploreFilterBarControl), string.Empty);
+    public static readonly BindableProperty MapDescriptionProperty = BindableProperty.Create(
+        nameof(MapDescription), typeof(string), typeof(ExploreFilterBarControl), string.Empty);
 
-    public static readonly BindableProperty VerifiedOnlySuffixTextProperty = BindableProperty.Create(
-        nameof(VerifiedOnlySuffixText), typeof(string), typeof(ExploreFilterBarControl), string.Empty);
+    public static readonly BindableProperty OpenMapCommandProperty = BindableProperty.Create(
+        nameof(OpenMapCommand), typeof(ICommand), typeof(ExploreFilterBarControl));
 
     public static readonly BindableProperty OpenFiltersCommandProperty = BindableProperty.Create(
         nameof(OpenFiltersCommand), typeof(ICommand), typeof(ExploreFilterBarControl));
@@ -79,16 +79,16 @@ public partial class ExploreFilterBarControl : ContentView
         set => SetValue(SortButtonDescriptionProperty, value);
     }
 
-    public string ResultCountText
+    public string MapDescription
     {
-        get => (string)GetValue(ResultCountTextProperty);
-        set => SetValue(ResultCountTextProperty, value);
+        get => (string)GetValue(MapDescriptionProperty);
+        set => SetValue(MapDescriptionProperty, value);
     }
 
-    public string VerifiedOnlySuffixText
+    public ICommand? OpenMapCommand
     {
-        get => (string)GetValue(VerifiedOnlySuffixTextProperty);
-        set => SetValue(VerifiedOnlySuffixTextProperty, value);
+        get => (ICommand?)GetValue(OpenMapCommandProperty);
+        set => SetValue(OpenMapCommandProperty, value);
     }
 
     public ICommand? OpenFiltersCommand

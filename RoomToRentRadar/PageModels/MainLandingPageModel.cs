@@ -1,14 +1,17 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RoomToRentRadar.Client.Adapters.Abstractions;
 using RoomToRentRadar.PageModels.Base;
 using RoomToRentRadar.Pages.Controls.Cards.Models;
-using RoomToRentRadar.Ports.Contracts.Requests.Rooms;
+using RoomToRentRadar.Ports.Contracts.Common;
+using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
 using RoomToRentRadar.Resources.Strings;
 using RoomToRentRadar.Services.Navigation.Core;
 using RoomToRentRadar.Services.Search.Core;
+using ViewState = RoomToRentRadar.PageModels.Base.ViewState;
 
 namespace RoomToRentRadar.PageModels;
 
@@ -37,12 +40,29 @@ internal sealed class WeakCriteriaSubscription
     }
 }
 
+/// <summary>
+/// SCR-HOME-01 Explore list (US01): verified rooms sorted by distance from the selected campus, loaded
+/// 20 per page (BR-SRCH-05).
+/// </summary>
 public partial class MainLandingPageModel : BasePageModel
 {
+    private const int PageSize = 20;
+
     private readonly IRoomGateway _roomGateway;
-    private readonly ISessionStore _sessionStore;
     private readonly INavigationService _navigation;
     private readonly ISearchCriteriaStore _searchCriteriaStore;
+
+    // The loaded results, kept so cards can be rebuilt in another language (US15).
+    private readonly List<RoomCardDto> _loadedRooms = [];
+    private readonly HashSet<string> _loadedIds = new(StringComparer.Ordinal);
+
+    // Criteria of the list on screen: further pages must belong to it even if a newer reload failed.
+    private RoomSearchCriteria? _loadedCriteria;
+    private int _loadedPage;
+    private bool _hasMorePages;
+
+    // Changes whenever the list is being replaced, so late results for the old list are dropped.
+    private int _listVersion;
 
     public ObservableCollection<RoomCardDisplayModel> Rooms { get; } = [];
 
@@ -58,19 +78,35 @@ public partial class MainLandingPageModel : BasePageModel
     public partial bool HasActiveFilters { get; set; }
 
     [ObservableProperty]
-    public partial string WelcomeMessage { get; set; } = "Welcome to RoomToRentRadar!";
+    [NotifyPropertyChangedFor(nameof(CampusChipDescription))]
+    public partial string CampusName { get; set; } = "ICTU";
+
+    /// <summary>Unread dot on the bell; stays off until notifications supply data (T07.3).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NotificationsDescription))]
+    public partial bool HasUnreadNotifications { get; set; }
+
+    /// <summary>Rooms picked for comparison; the tray stays hidden until selection exists (T10.x).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCompareSelection))]
+    [NotifyPropertyChangedFor(nameof(CompareCountText))]
+    public partial int CompareCount { get; set; }
 
     [ObservableProperty]
-    public partial string UserDisplayName { get; set; } = "Student";
+    public partial bool IsLoadingMore { get; set; }
 
     [ObservableProperty]
-    public partial string UserRole { get; set; } = "Guest";
+    public partial bool IsLoadMoreFailed { get; set; }
 
-    [ObservableProperty]
-    public partial string UserEmail { get; set; } = string.Empty;
+    public bool HasCompareSelection => CompareCount > 0;
 
-    [ObservableProperty]
-    public partial bool IsUserSignedIn { get; set; } = false;
+    /// <summary>
+    /// First load failed with nothing to show. The page draws this itself with a filled button: the shared
+    /// error card's outline button is unreadable on a light surface.
+    /// </summary>
+    public bool IsLoadFailed => State == ViewState.Error && !HasContent;
+
+    public bool IsBodyVisible => !IsLoadFailed;
 
     public string ExploreErrorTitleText => AppResources.GetString("Explore_Error_Title");
     public string ExploreEmptyTitleText => AppResources.GetString("Explore_Empty_Title");
@@ -97,6 +133,31 @@ public partial class MainLandingPageModel : BasePageModel
 
     public string VerifiedOnlySuffixText => AppResources.GetString("Explore_VerifiedOnlySuffix");
 
+    public string NearText => AppResources.GetString("Explore_Near");
+
+    public string CampusChipDescription => string.Format(
+        CultureInfo.CurrentCulture,
+        AppResources.GetString("Explore_CampusChipDescription"),
+        CampusName);
+
+    public string NotificationsDescription => AppResources.GetString(
+        HasUnreadNotifications ? "Explore_NotificationsUnreadDescription" : "Explore_NotificationsDescription");
+
+    public string MapDescription => AppResources.GetString("Explore_MapDescription");
+
+    public string SaveSearchText => AppResources.GetString("Explore_SaveSearch");
+
+    public string CompareCountText => string.Format(
+        CultureInfo.CurrentCulture,
+        AppResources.GetString("Explore_CompareCount"),
+        CompareCount);
+
+    public string CompareNowText => AppResources.GetString("Explore_CompareNow");
+
+    public string LoadMoreErrorText => AppResources.GetString("Explore_LoadMoreError");
+
+    public string RetryText => AppResources.GetString("State_Retry");
+
     public string CurrentSortLabel => _searchCriteriaStore.Current.EffectiveSort switch
     {
         "price_asc" => AppResources.GetString("Sort_PriceAsc_Short"),
@@ -105,24 +166,27 @@ public partial class MainLandingPageModel : BasePageModel
         _ => AppResources.GetString("Sort_Distance_Short")
     };
 
-#if DEBUG
-    public bool IsDebugMode => true;
-#else
-    public bool IsDebugMode => false;
-#endif
-
     public MainLandingPageModel(
         IRoomGateway roomGateway,
-        ISessionStore sessionStore,
         INavigationService navigation,
         ISearchCriteriaStore? searchCriteriaStore = null)
     {
         _roomGateway = roomGateway ?? throw new ArgumentNullException(nameof(roomGateway));
-        _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
         _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
         _searchCriteriaStore = searchCriteriaStore ?? new SearchCriteriaStore();
         _ = new WeakCriteriaSubscription(this, _searchCriteriaStore);
         RefreshFilterState();
+    }
+
+    protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+
+        if (e.PropertyName is nameof(State) or nameof(HasContent))
+        {
+            OnPropertyChanged(nameof(IsLoadFailed));
+            OnPropertyChanged(nameof(IsBodyVisible));
+        }
     }
 
     protected override void OnLanguageChanged()
@@ -138,33 +202,84 @@ public partial class MainLandingPageModel : BasePageModel
         OnPropertyChanged(nameof(ResultCountText));
         OnPropertyChanged(nameof(VerifiedOnlySuffixText));
         OnPropertyChanged(nameof(CurrentSortLabel));
+        OnPropertyChanged(nameof(NearText));
+        OnPropertyChanged(nameof(CampusChipDescription));
+        OnPropertyChanged(nameof(NotificationsDescription));
+        OnPropertyChanged(nameof(MapDescription));
+        OnPropertyChanged(nameof(SaveSearchText));
+        OnPropertyChanged(nameof(CompareCountText));
+        OnPropertyChanged(nameof(CompareNowText));
+        OnPropertyChanged(nameof(LoadMoreErrorText));
+        OnPropertyChanged(nameof(RetryText));
         RefreshFilterState();
+
+        for (var index = 0; index < _loadedRooms.Count; index++)
+        {
+            Rooms[index] = ToCard(_loadedRooms[index]);
+        }
     }
 
-    public async Task InitializeAsync()
-    {
-        var user = await _sessionStore.GetCachedUserProfileAsync();
-        if (user != null)
-        {
-            UserDisplayName = !string.IsNullOrWhiteSpace(user.FullName) ? user.FullName : user.Email;
-            UserRole = user.Role;
-            UserEmail = user.Email;
-            WelcomeMessage = $"Welcome back, {UserDisplayName}!";
-            IsUserSignedIn = true;
-        }
-        else
-        {
-            UserDisplayName = "Guest";
-            UserRole = "Explorer";
-            WelcomeMessage = "Welcome to RoomToRentRadar!";
-            IsUserSignedIn = false;
-        }
-
-        await RunAsync(LoadRoomsAsync);
-    }
+    /// <summary>
+    /// Called whenever the screen appears. Coming back to an up-to-date list keeps it and its scroll
+    /// position; criteria changes reload through the store.
+    /// </summary>
+    public Task InitializeAsync() =>
+        State == ViewState.Content && _searchCriteriaStore.Current.IsEquivalentTo(_loadedCriteria)
+            ? Task.CompletedTask
+            : RunAsync(LoadRoomsAsync);
 
     [RelayCommand]
     private Task RefreshAsync() => RunAsync(LoadRoomsAsync, isRefresh: true);
+
+    [RelayCommand]
+    private async Task LoadMoreAsync()
+    {
+        // After a failure only the Retry button asks again, so scrolling cannot loop on an error.
+        if (!_hasMorePages || IsLoadingMore || IsLoading || IsRefreshing || IsLoadMoreFailed
+            || _loadedCriteria is null)
+        {
+            return;
+        }
+
+        var version = _listVersion;
+        var pageNumber = _loadedPage + 1;
+        IsLoadingMore = true;
+        try
+        {
+            var page = await _roomGateway.SearchRoomsAsync(
+                _loadedCriteria.ToRoomSearchRequest(pageNumber, PageSize));
+            if (version == _listVersion)
+            {
+                Append(page, pageNumber);
+            }
+        }
+        catch (Exception)
+        {
+            if (version == _listVersion)
+            {
+                IsLoadMoreFailed = true;
+            }
+        }
+        finally
+        {
+            if (version == _listVersion)
+            {
+                IsLoadingMore = false;
+            }
+        }
+    }
+
+    [RelayCommand]
+    private Task RetryLoadMoreAsync()
+    {
+        if (!IsLoadMoreFailed)
+        {
+            return Task.CompletedTask;
+        }
+
+        IsLoadMoreFailed = false;
+        return LoadMoreAsync();
+    }
 
     [RelayCommand]
     private Task ClearFiltersAsync()
@@ -204,31 +319,101 @@ public partial class MainLandingPageModel : BasePageModel
             await SortSheetRequested();
     }
 
+    [RelayCommand]
+    private async Task ViewRoomDetailsAsync(string? roomId)
+    {
+        if (string.IsNullOrWhiteSpace(roomId))
+        {
+            return;
+        }
+
+        var route = $"{AppRoutes.RoomDetail}?roomId={Uri.EscapeDataString(roomId)}";
+        // The campus of the list on screen, so the detail measures from the same place as the card.
+        var campusId = (_loadedCriteria ?? _searchCriteriaStore.Current).CampusId;
+        if (!string.IsNullOrWhiteSpace(campusId))
+        {
+            route += $"&campusId={Uri.EscapeDataString(campusId)}";
+        }
+
+        await _navigation.GoToAsync(route);
+    }
+
+    [RelayCommand]
+    private Task OpenCampusAsync() => _navigation.GoToAsync(AppRoutes.AccountCampus);
+
+    [RelayCommand]
+    private Task OpenNotificationsAsync() => OpenForSignedInUserAsync(AppRoutes.Notifications);
+
+    [RelayCommand]
+    private Task SaveSearchAsync() => OpenForSignedInUserAsync(AppRoutes.SavedSearches);
+
+    [RelayCommand]
+    private Task OpenMapAsync() => _navigation.GoToTabAsync(AppRoutes.Map);
+
+    [RelayCommand]
+    private Task OpenCompareAsync() => _navigation.GoToAsync(AppRoutes.Compare);
+
+    // BR-AUTH-07: guests are asked to sign in first and come back to Explore.
+    private async Task OpenForSignedInUserAsync(string route)
+    {
+        if (await _navigation.RequireSignInAsync("//" + AppRoutes.Explore))
+        {
+            await _navigation.GoToAsync(route);
+        }
+    }
+
     private async Task<bool> LoadRoomsAsync()
     {
-        var page = await _roomGateway.SearchRoomsAsync(
-            _searchCriteriaStore.Current.ToRoomSearchRequest(pageNumber: 1, pageSize: 20));
+        _listVersion++;
+        IsLoadingMore = false;
+        var criteria = _searchCriteriaStore.Current;
 
-        TotalRoomCount = page.TotalCount;
+        var page = await _roomGateway.SearchRoomsAsync(criteria.ToRoomSearchRequest(pageNumber: 1, PageSize));
 
+        _listVersion++;
+        _loadedCriteria = criteria;
+        _loadedRooms.Clear();
+        _loadedIds.Clear();
         Rooms.Clear();
-        foreach (var dto in page.Items)
-        {
-            Rooms.Add(new RoomCardDisplayModel
-            {
-                Id = dto.Id,
-                Title = dto.Title,
-                PricePerMonth = dto.MonthlyRentVnd,
-                AreaSquareMeters = dto.AreaM2,
-                DistanceMeters = dto.DistanceKm * 1000,
-                ThumbnailUrl = dto.CoverThumbUrl ?? string.Empty,
-                IsVerified = dto.IsVerified,
-                IsBookmarked = dto.IsFavourite
-            });
-        }
+        IsLoadingMore = false;
+        IsLoadMoreFailed = false;
+        Append(page, pageNumber: 1);
 
         return Rooms.Count > 0;
     }
+
+    private void Append(PagedResult<RoomCardDto> page, int pageNumber)
+    {
+        foreach (var dto in page.Items)
+        {
+            // Listings can move between pages while scrolling; show each room once.
+            if (_loadedIds.Add(dto.Id))
+            {
+                _loadedRooms.Add(dto);
+                Rooms.Add(ToCard(dto));
+            }
+        }
+
+        _loadedPage = pageNumber;
+        _hasMorePages = page.Items.Count > 0 && (long)pageNumber * PageSize < page.TotalCount;
+        TotalRoomCount = page.TotalCount;
+    }
+
+    private RoomCardDisplayModel ToCard(RoomCardDto dto) => new()
+    {
+        Id = dto.Id,
+        Title = dto.Title,
+        PricePerMonth = dto.MonthlyRentVnd,
+        AreaSquareMeters = dto.AreaM2,
+        DistanceMeters = dto.DistanceKm * 1000,
+        ThumbnailUrl = dto.CoverThumbUrl ?? string.Empty,
+        IsVerified = dto.IsVerified,
+        IsBookmarked = dto.IsFavourite,
+        RoomType = dto.RoomType,
+        Furnishing = dto.Furnishing,
+        CampusName = _loadedCriteria?.CampusDisplayName ?? CampusName,
+        Language = AppResources.Culture?.Name ?? string.Empty
+    };
 
     internal void OnCriteriaChanged(RoomSearchCriteria criteria)
     {
@@ -241,6 +426,7 @@ public partial class MainLandingPageModel : BasePageModel
         var criteria = _searchCriteriaStore.Current;
         ActiveFilterCount = criteria.ActiveFilterCount;
         HasActiveFilters = criteria.HasActiveFilters;
+        CampusName = criteria.CampusDisplayName;
 
         ActiveFilterChips.Clear();
         foreach (var chip in ActiveFilterChipBuilder.Build(criteria))
@@ -254,17 +440,4 @@ public partial class MainLandingPageModel : BasePageModel
 
     partial void OnTotalRoomCountChanged(int value) =>
         OnPropertyChanged(nameof(ResultCountText));
-
-    [RelayCommand]
-    private async Task SignOutAsync()
-    {
-        await _sessionStore.ClearSessionAsync();
-        await _navigation.SignOutToGuestAsync();
-    }
-
-    [RelayCommand]
-    private async Task OpenUiCatalogAsync()
-    {
-        await _navigation.GoToAsync("//uicatalog");
-    }
 }

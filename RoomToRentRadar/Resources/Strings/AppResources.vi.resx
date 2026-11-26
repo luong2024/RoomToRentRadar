@@ -273,6 +273,12 @@
   <data name="RoomDetail_Title" xml:space="preserve">
     <value>Chi tiết phòng</value>
   </data>
+  <data name="RoomDetail_Description" xml:space="preserve">
+    <value>Mô tả phòng</value>
+  </data>
+  <data name="RoomDetail_NoPhotos" xml:space="preserve">
+    <value>Chưa có ảnh cho tin đăng này</value>
+  </data>
   <data name="RoomDetail_360View" xml:space="preserve">
     <value>Xem 360°</value>
   </data>
@@ -300,8 +306,17 @@
   <data name="RoomDetail_UpdatedYesterday" xml:space="preserve">
     <value>Cập nhật hôm qua</value>
   </data>
+  <data name="RoomDetail_RelativeToday" xml:space="preserve">
+    <value>hôm nay</value>
+  </data>
+  <data name="RoomDetail_RelativeYesterday" xml:space="preserve">
+    <value>hôm qua</value>
+  </data>
+  <data name="RoomDetail_RelativeDaysAgo" xml:space="preserve">
+    <value>{0} ngày trước</value>
+  </data>
   <data name="RoomDetail_PerMonth" xml:space="preserve">
-    <value>/ tháng</value>
+    <value>/tháng</value>
   </data>
   <data name="RoomDetail_Deposit" xml:space="preserve">
     <value>Tiền cọc {0} ({1})</value>
@@ -388,13 +403,13 @@
     <value>Gửi xe máy</value>
   </data>
   <data name="RoomDetail_PerKwh" xml:space="preserve">
-    <value>{0} đ / kWh</value>
+    <value>{0} / kWh</value>
   </data>
   <data name="RoomDetail_PerPerson" xml:space="preserve">
-    <value>{0} đ / người</value>
+    <value>{0} / người</value>
   </data>
   <data name="RoomDetail_PerM3" xml:space="preserve">
-    <value>{0} đ / m³</value>
+    <value>{0} / m³</value>
   </data>
   <data name="RoomDetail_Included" xml:space="preserve">
     <value>Đã bao gồm</value>
@@ -410,6 +425,18 @@
   </data>
   <data name="RoomDetail_EstimateNote" xml:space="preserve">
     <value>Dự tính: 100 kWh điện, 1 người nước.</value>
+  </data>
+  <data name="RoomDetail_OtherFeesFormat" xml:space="preserve">
+    <value>Phí khác: {0}</value>
+  </data>
+  <data name="RoomDetail_ShortMillionFormat" xml:space="preserve">
+    <value>{0} tr</value>
+  </data>
+  <data name="RoomDetail_ShortThousandFormat" xml:space="preserve">
+    <value>{0}k</value>
+  </data>
+  <data name="RoomDetail_ShortPerMonthFormat" xml:space="preserve">
+    <value>{0}/tháng</value>
   </data>
   <data name="RoomDetail_Amenities" xml:space="preserve">
     <value>Tiện ích</value>
@@ -467,6 +494,12 @@
   </data>
   <data name="Amenity_Window" xml:space="preserve">
     <value>Cửa sổ</value>
+  </data>
+  <data name="Amenity_Elevator" xml:space="preserve">
+    <value>Thang máy</value>
+  </data>
+  <data name="Amenity_DryingArea" xml:space="preserve">
+    <value>Khu phơi đồ</value>
   </data>
   <data name="RoomDetail_Safety" xml:space="preserve">
     <value>An toàn &amp; An ninh</value>
@@ -533,6 +566,30 @@
   </data>
   <data name="HouseRule_ParkingYard" xml:space="preserve">
     <value>Xe để trong sân, 1 xe/phòng</value>
+  </data>
+  <data name="HouseRule_ParkingUnavailable" xml:space="preserve">
+    <value>Không có chỗ để xe</value>
+  </data>
+  <data name="HouseRule_Pets" xml:space="preserve">
+    <value>Thú cưng</value>
+  </data>
+  <data name="HouseRule_PetsAllowed" xml:space="preserve">
+    <value>Cho phép</value>
+  </data>
+  <data name="HouseRule_PetsNotAllowed" xml:space="preserve">
+    <value>Không cho phép</value>
+  </data>
+  <data name="HouseRule_Smoking" xml:space="preserve">
+    <value>Hút thuốc</value>
+  </data>
+  <data name="HouseRule_SmokingAllowed" xml:space="preserve">
+    <value>Cho phép</value>
+  </data>
+  <data name="HouseRule_SmokingNotAllowed" xml:space="preserve">
+    <value>Không cho phép</value>
+  </data>
+  <data name="HouseRule_OtherRules" xml:space="preserve">
+    <value>Quy định khác</value>
   </data>
   <data name="RoomDetail_GettingToCampus" xml:space="preserve">
     <value>Đến {0} · {1} km</value>
@@ -608,6 +665,9 @@
   </data>
   <data name="RoomDetail_BackToExplore" xml:space="preserve">
     <value>Quay lại Khám phá</value>
+  </data>
+  <data name="RoomDetail_DebugPreviewUnavailable" xml:space="preserve">
+    <value>Debug: Xem thử phòng đã thuê (Ảnh 2)</value>
   </data>
 
   <!-- Placeholder screens (T00.15): shared PlaceholderPage titles, "Coming in" and id text -->
@@ -920,6 +980,31 @@
   <data name="Common_Cancel" xml:space="preserve">
     <value>Huỷ</value>
   </data>
+  <data name="Date_Today" xml:space="preserve"><value>Hôm nay</value></data>
+  <data name="Date_Yesterday" xml:space="preserve"><value>Hôm qua</value></data>
+  <data name="Date_DaysAgo" xml:space="preserve"><value>{0} ngày trước</value></data>
+  <data name="Catalog_Title" xml:space="preserve"><value>8. ĐỊNH DẠNG THEO NGÔN NGỮ</value></data>
+  <data name="Catalog_Description" xml:space="preserve"><value>Xem trước định dạng với dữ liệu gốc và ngôn ngữ ứng dụng hiện tại.</value></data>
+  <data name="Catalog_SelectVietnamese" xml:space="preserve"><value>Xem trước định dạng tiếng Việt (vi-VN)</value></data>
+  <data name="Catalog_SelectEnglish" xml:space="preserve"><value>Xem trước định dạng tiếng Anh (en-US)</value></data>
+  <data name="Catalog_Vietnamese" xml:space="preserve"><value>Tiếng Việt (vi-VN)</value></data>
+  <data name="Catalog_English" xml:space="preserve"><value>English (en-US)</value></data>
+  <data name="Catalog_UseApp" xml:space="preserve"><value>Dùng ngôn ngữ ứng dụng</value></data>
+  <data name="Catalog_ResetHint" xml:space="preserve"><value>Đặt lại bản xem trước theo ngôn ngữ hiện tại của ứng dụng</value></data>
+  <data name="Catalog_Currency" xml:space="preserve"><value>Tiền tệ</value></data>
+  <data name="Catalog_Number" xml:space="preserve"><value>Số</value></data>
+  <data name="Catalog_Date" xml:space="preserve"><value>Ngày</value></data>
+  <data name="Catalog_Time" xml:space="preserve"><value>Giờ</value></data>
+  <data name="Catalog_Area" xml:space="preserve"><value>Diện tích</value></data>
+  <data name="Catalog_Distance" xml:space="preserve"><value>Khoảng cách</value></data>
+  <data name="Catalog_Room" xml:space="preserve"><value>Xem trước thông tin phòng mẫu</value></data>
+  <data name="Catalog_Rent" xml:space="preserve"><value>Giá thuê mỗi tháng</value></data>
+  <data name="Catalog_Status" xml:space="preserve"><value>Ứng dụng: {0}  ·  Xem trước: {1}</value></data>
+  <data name="Catalog_Following" xml:space="preserve"><value>Chế độ: Theo ngôn ngữ ứng dụng</value></data>
+  <data name="Catalog_Override" xml:space="preserve"><value>Chế độ: Chọn ngôn ngữ xem trước</value></data>
+  <data name="Catalog_Input" xml:space="preserve"><value>Đầu vào:</value></data>
+  <data name="Catalog_PreviewFeedback" xml:space="preserve"><value>Đang xem trước {0} (ngôn ngữ ứng dụng vẫn là {1}).</value></data>
+  <data name="Catalog_FollowFeedback" xml:space="preserve"><value>Đang dùng ngôn ngữ ứng dụng ({0}).</value></data>
   <!-- Campus picker SCR-ACC-02 (T13.4) -->
   <data name="Campus_Title" xml:space="preserve">
     <value>Tính khoảng cách từ</value>
@@ -953,5 +1038,66 @@
   </data>
   <data name="Campus_Empty_Message" xml:space="preserve">
     <value>Vui lòng thử lại sau.</value>
+  </data>
+  <!-- Explore list SCR-HOME-01 and room card (T01.2) -->
+  <data name="Card_Distance" xml:space="preserve">
+    <value>{0} km tới {1}</value>
+  </data>
+  <data name="Card_Furnishing_Full" xml:space="preserve">
+    <value>Có nội thất</value>
+  </data>
+  <data name="Card_Furnishing_Basic" xml:space="preserve">
+    <value>Nội thất cơ bản</value>
+  </data>
+  <data name="Card_Furnishing_Unfurnished" xml:space="preserve">
+    <value>Không nội thất</value>
+  </data>
+  <data name="Card_Verified" xml:space="preserve">
+    <value>Đã xác minh</value>
+  </data>
+  <data name="Card_Compare" xml:space="preserve">
+    <value>So sánh</value>
+  </data>
+  <data name="Card_SaveDescription" xml:space="preserve">
+    <value>Lưu phòng: {0}</value>
+  </data>
+  <data name="Explore_Near" xml:space="preserve">
+    <value>Gần</value>
+  </data>
+  <data name="Explore_CampusChipDescription" xml:space="preserve">
+    <value>Đổi cơ sở. Khoảng cách đang tính từ {0}</value>
+  </data>
+  <data name="Explore_NotificationsDescription" xml:space="preserve">
+    <value>Thông báo</value>
+  </data>
+  <data name="Explore_NotificationsUnreadDescription" xml:space="preserve">
+    <value>Thông báo, có tin chưa đọc</value>
+  </data>
+  <data name="Explore_MapDescription" xml:space="preserve">
+    <value>Xem bản đồ</value>
+  </data>
+  <data name="Explore_SaveSearch" xml:space="preserve">
+    <value>Lưu tìm kiếm</value>
+  </data>
+  <data name="Explore_CompareCount" xml:space="preserve">
+    <value>So sánh ({0})</value>
+  </data>
+  <data name="Explore_CompareNow" xml:space="preserve">
+    <value>So sánh ngay</value>
+  </data>
+  <data name="Explore_LoadMoreError" xml:space="preserve">
+    <value>Không tải thêm được phòng.</value>
+  </data>
+  <data name="Price_ShortWithUnit" xml:space="preserve">
+    <value>{0}</value>
+  </data>
+  <data name="Price_FullWithUnit" xml:space="preserve">
+    <value>{0} ₫</value>
+  </data>
+  <data name="RoomDetail_UpdatedOn" xml:space="preserve">
+    <value>Cập nhật {0}</value>
+  </data>
+  <data name="RoomDetail_RelativeOnDate" xml:space="preserve">
+    <value>ngày {0}</value>
   </data>
 </root>

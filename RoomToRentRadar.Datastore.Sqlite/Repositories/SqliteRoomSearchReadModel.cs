@@ -32,8 +32,10 @@ public sealed class SqliteRoomSearchReadModel : IRoomSearchReadModel
         var sql = new StringBuilder("""
             SELECT r.Id, r.Title, r.MonthlyRentVnd, r.AreaM2, r.RoomType, r.Status,
                    (r.VerifiedAtUtc IS NOT NULL) AS IsVerified,
-                   NULL AS CoverThumbUrl,
-                   r.Latitude, r.Longitude, r.PublishedAtUtc
+                   (SELECT p.ThumbPath FROM RoomPhotos p
+                    WHERE p.RoomId = r.Id AND p.Kind = 'Standard'
+                    ORDER BY p.SortOrder, p.Id LIMIT 1) AS CoverThumbPath,
+                   r.Latitude, r.Longitude, r.PublishedAtUtc, r.Furnishing
             FROM Rooms r
             INNER JOIN Users u ON u.Id = r.LandlordId
             WHERE r.Status = 'Available'
@@ -125,12 +127,13 @@ public sealed class SqliteRoomSearchReadModel : IRoomSearchReadModel
                     RoomType: Enum.Parse<RoomType>(reader.GetString(4), ignoreCase: false),
                     Status: Enum.Parse<ListingStatus>(reader.GetString(5), ignoreCase: false),
                     IsVerified: reader.GetInt64(6) != 0,
-                    CoverThumbUrl: reader.IsDBNull(7) ? null : reader.GetString(7),
+                    CoverThumbPath: reader.IsDBNull(7) ? null : reader.GetString(7),
                     Latitude: reader.GetDouble(8),
                     Longitude: reader.GetDouble(9),
                     PublishedAtUtc: reader.IsDBNull(10)
                         ? null
-                        : DateTime.Parse(reader.GetString(10), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)));
+                        : DateTime.Parse(reader.GetString(10), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
+                    Furnishing: reader.IsDBNull(11) ? null : ParseFurnishing(reader.GetString(11))));
             }
 
             return candidates;
@@ -140,6 +143,12 @@ public sealed class SqliteRoomSearchReadModel : IRoomSearchReadModel
             ReleaseConnection(conn);
         }
     }
+
+    // Furnishing is stored as the enum name; an unknown legacy value is reported as "not stated".
+    private static Furnishing? ParseFurnishing(string value) =>
+        Enum.TryParse<Furnishing>(value, ignoreCase: true, out var furnishing) && Enum.IsDefined(furnishing)
+            ? furnishing
+            : null;
 
     private void ReleaseConnection(SqliteConnection conn)
     {

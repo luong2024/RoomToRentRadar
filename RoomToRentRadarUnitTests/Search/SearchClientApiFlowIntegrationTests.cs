@@ -7,7 +7,6 @@ using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.PageModels;
 using RoomToRentRadar.PageModels.Base;
 using RoomToRentRadar.Ports.Contracts.Requests.Rooms;
-using RoomToRentRadar.Ports.Contracts.Responses.Auth;
 using RoomToRentRadar.Ports.Contracts.Responses.Campuses;
 using RoomToRentRadar.Resources.Strings;
 using RoomToRentRadar.Services.Navigation.Core;
@@ -320,12 +319,8 @@ public class SearchClientApiFlowIntegrationTests
     private FiltersPageModel CreateFilters(ISearchCriteriaStore store, TimeSpan? debounce = null) =>
         new(_gateway, store, Substitute.For<INavigationService>(), debounce ?? TimeSpan.FromMilliseconds(50));
 
-    private MainLandingPageModel CreateLanding(ISearchCriteriaStore store)
-    {
-        var sessionStore = Substitute.For<ISessionStore>();
-        sessionStore.GetCachedUserProfileAsync().Returns((UserProfileDto?)null);
-        return new MainLandingPageModel(_gateway, sessionStore, Substitute.For<INavigationService>(), store);
-    }
+    private MainLandingPageModel CreateLanding(ISearchCriteriaStore store) =>
+        new(_gateway, Substitute.For<INavigationService>(), store);
 
     private IAppSession SubstituteSession() => Substitute.For<IAppSession>();
 

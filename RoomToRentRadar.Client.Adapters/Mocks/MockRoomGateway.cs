@@ -26,6 +26,15 @@ public sealed class MockRoomGateway : IRoomGateway
     private const double BusDurationFactor = 1.6;
     private const int BusOverheadSeconds = 600;
 
+    // Mirrors the Rented demo seed row (seed-da-thue in RoomSeedData) for SCR-ROOM-01-UNAVAILABLE preview without polluting SampleRooms.All.
+    private static readonly SampleRoom RentedSeedRoom = new(
+        "seed-da-thue", "Nhà trọ đã thuê",
+        "Phòng đã cho thuê, chủ nhà chưa cập nhật trạng thái.",
+        RoomType.BoardingRoom, 1_400_000L, 1_400_000L, 17d, 2, Furnishing.Basic, new DateOnly(2026, 11, 1),
+        "Tổ 9", "Đồng Quang", "TP. Thái Nguyên", 21.5862, 105.8072,
+        3_500L, 50_000L, WaterPriceUnit.PerPerson, 100_000L, 50_000L, null,
+        true, new DateTime(2026, 11, 1, 8, 36, 0, DateTimeKind.Utc), new DateTime(2026, 11, 1, 8, 6, 0, DateTimeKind.Utc));
+
     public Task<PagedResult<RoomCardDto>> SearchRoomsAsync(RoomSearchRequest request, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -74,10 +83,10 @@ public sealed class MockRoomGateway : IRoomGateway
     public Task<RoomDetailDto> GetRoomDetailAsync(string roomId, string? campusId = null, CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
-        var room = FindRoom(roomId);
+        var (room, status) = FindDetailRoom(roomId);
         var campus = ResolveCampus(campusId);
         var detail = new RoomDetailDto(
-            room.Id, room.Title, room.Description, room.RoomType, ListingStatus.Available, true,
+            room.Id, room.Title, room.Description, room.RoomType, status, true,
             room.MonthlyRentVnd, room.DepositVnd, room.AreaM2, room.MaxOccupants, room.Furnishing, room.AvailableFrom,
             new AddressDto(room.AddressLine, room.Ward, room.District),
             new GeoPointDto(room.Latitude, room.Longitude),
@@ -86,10 +95,12 @@ public sealed class MockRoomGateway : IRoomGateway
                 room.ElectricityPriceVndPerKwh, room.WaterPriceVnd, room.WaterPriceUnit,
                 room.InternetFeeVnd, room.ParkingFeeVnd, room.OtherFeesNote, EstimatedMonthlyTotal(room)),
             AmenitiesFor(room),
-            new SafetyDto(SafetyScore(room), room.IsSafetyVerified,
-                [SafetyFeature.Cctv, SafetyFeature.SecureEntrance, SafetyFeature.WellLitAccess]),
-            null,
-            Array.Empty<PhotoDto>(),
+            new SafetyDto(
+                SafetyScore(room),
+                room.IsSafetyVerified,
+                SafetyFeaturesFor(room)),
+            HouseRulesFor(room),
+            PhotosFor(room),
             new LandlordContactDto("seed-landlord", "Seed Landlord", true,
                 new DateTime(2026, 11, 1, 8, 0, 0, DateTimeKind.Utc), null, null),
             false,
@@ -101,7 +112,7 @@ public sealed class MockRoomGateway : IRoomGateway
     public Task<IReadOnlyList<RoomCardDto>> GetSimilarRoomsAsync(string roomId, string? campusId = null, CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
-        var room = FindRoom(roomId);
+        var (room, _) = FindDetailRoom(roomId);
         var campus = ResolveCampus(campusId);
         var similar = SampleRooms.All
             .Where(candidate => candidate.Id != room.Id)
@@ -117,7 +128,7 @@ public sealed class MockRoomGateway : IRoomGateway
 
     public Task<TravelTimesDto> GetRoomTravelTimesAsync(string roomId, string? campusId = null, CancellationToken ct = default)
     {
-        var room = FindRoom(roomId);
+        var (room, _) = FindDetailRoom(roomId);
         var campus = ResolveCampus(campusId);
         var distanceKm = Distance(campus, room);
         var effectiveKm = Math.Max(0.2, distanceKm);
@@ -204,7 +215,7 @@ public sealed class MockRoomGateway : IRoomGateway
     private static RoomCardDto ToCard(RankedRoom match) => new(
         match.Room.Id, match.Room.Title, match.Room.MonthlyRentVnd, match.Room.AreaM2, match.Room.RoomType,
         match.DistanceKm, true, ListingStatus.Available, null, match.Room.Latitude, match.Room.Longitude,
-        match.Room.PublishedAtUtc, false);
+        match.Room.PublishedAtUtc, false, match.Room.Furnishing);
 
     // Ruling 21: only null means the default sort; "" / blanks / wrong case are INVALID_SORT_OPTION.
     private static string NormalizeSort(string? sort)
@@ -275,6 +286,11 @@ public sealed class MockRoomGateway : IRoomGateway
         SampleRooms.Find(roomId)
             ?? throw new ApiException($"Room with ID '{roomId}' not found.", HttpStatusCode.NotFound, ProblemCodes.RoomNotFound);
 
+    private static (SampleRoom Room, ListingStatus Status) FindDetailRoom(string roomId) =>
+        string.Equals(roomId.Trim(), RentedSeedRoom.Id, StringComparison.Ordinal)
+            ? (RentedSeedRoom, ListingStatus.Rented)
+            : (FindRoom(roomId), ListingStatus.Available);
+
     private static double Distance(CampusDto campus, SampleRoom room) =>
         HaversineDistanceCalculator.CalculateDistanceKm(campus.Latitude, campus.Longitude, room.Latitude, room.Longitude);
 
@@ -292,11 +308,69 @@ public sealed class MockRoomGateway : IRoomGateway
         return amenities;
     }
 
-    private static int SafetyScore(SampleRoom room) => room.IsSafetyVerified ? 80 : 60;
+    private static IReadOnlyList<SafetyFeature> SafetyFeaturesFor(SampleRoom room) => room.IsSafetyVerified
+        ? [SafetyFeature.Cctv, SafetyFeature.SecureEntrance, SafetyFeature.WellLitAccess]
+        : [SafetyFeature.SecureEntrance];
 
-    // Fixed mock estimate: rent plus the flat monthly fees; metered usage is not simulated.
-    private static long EstimatedMonthlyTotal(SampleRoom room) =>
-        room.MonthlyRentVnd + room.InternetFeeVnd + room.ParkingFeeVnd + room.WaterPriceVnd;
+    private static int SafetyScore(SampleRoom room) => SafetyFeaturesFor(room).Count;
+
+    private static HouseRulesDto HouseRulesFor(SampleRoom room) => new(
+        QuietHoursStart: "22:00",
+        QuietHoursEnd: "06:00",
+        CurfewTime: "23:00",
+        GuestPolicy: GuestPolicy.DaytimeOnly,
+        GuestPolicyNote: "Báo trước cho chủ nhà khi có khách",
+        CookingPolicy: room.RoomType == RoomType.Dormitory ? CookingPolicy.SharedKitchenOnly : CookingPolicy.Allowed,
+        ParkingAvailable: true,
+        ParkingRules: "Khu vực để xe tầng 1 có camera giám sát",
+        PetsAllowed: false,
+        SmokingAllowed: false,
+        OtherRules: "Giữ vệ sinh chung",
+        VersionNumber: 1,
+        UpdatedAtUtc: room.PublishedAtUtc
+    );
+
+    private static IReadOnlyList<PhotoDto> PhotosFor(SampleRoom room) =>
+    [
+        new(
+            $"{room.Id}-photo-1",
+            PhotoKind.Standard,
+            "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=400&q=70",
+            "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1600&q=85",
+            1600, 1200, 0),
+        new(
+            $"{room.Id}-photo-2",
+            PhotoKind.Standard,
+            "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=400&q=70",
+            "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1600&q=85",
+            1600, 1200, 1),
+        new(
+            $"{room.Id}-photo-3",
+            PhotoKind.Panorama,
+            "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=400&q=70",
+            "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1600&q=85",
+            2048, 1024, 2)
+    ];
+
+    // BR-LST-03: estimated monthly total = rent + 100 kWh electricity + water (4 m³, 1 × per person, or 0 if included) + internet + parking.
+    private static long EstimatedMonthlyTotal(SampleRoom room)
+    {
+        long waterCost = room.WaterPriceUnit switch
+        {
+            WaterPriceUnit.PerPerson => room.WaterPriceVnd,
+            WaterPriceUnit.Included => 0L,
+            _ => 4L * room.WaterPriceVnd
+        };
+
+        return room.MonthlyRentVnd
+            + (100L * room.ElectricityPriceVndPerKwh)
+            + waterCost
+            + room.InternetFeeVnd
+            + room.ParkingFeeVnd;
+    }
 
     private static bool Contains(IReadOnlyList<GeoPointDto> polygon, double latitude, double longitude)
     {

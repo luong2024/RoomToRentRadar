@@ -2,40 +2,99 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:RoomToRentRadar.PageModels"
-             xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
-             xmlns:inputs="clr-namespace:RoomToRentRadar.Pages.Controls.Inputs"
              xmlns:nav="clr-namespace:RoomToRentRadar.Pages.Controls.Navigation"
              xmlns:feedback="clr-namespace:RoomToRentRadar.Pages.Controls.Feedback"
+             xmlns:common="clr-namespace:RoomToRentRadar.Pages.Controls.Common"
              xmlns:cards="clr-namespace:RoomToRentRadar.Pages.Controls.Cards"
              xmlns:cardmodels="clr-namespace:RoomToRentRadar.Pages.Controls.Cards.Models"
              xmlns:search="clr-namespace:RoomToRentRadar.Pages.Controls.Search"
+             xmlns:fonts="clr-namespace:Fonts"
              x:Class="RoomToRentRadar.Pages.MainLandingPage"
              x:DataType="vm:MainLandingPageModel"
              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCanvasLight}, Dark={StaticResource SurfaceCanvasDark}}">
 
-    <Grid RowDefinitions="Auto, *, Auto">
-        <!-- Top App Bar -->
-        <common:PageHeaderBar Grid.Row="0"
-                               Title="RoomToRentRadar"
-                               Subtitle="ICTU Student Rentals"
-                               CanGoBack="False" />
+    <!-- SCR-HOME-01: layout follows the approved design export (Explore.dc.html). -->
+    <Grid RowDefinitions="Auto, Auto, *, Auto" RowSpacing="0">
 
-        <Grid Grid.Row="1" RowDefinitions="Auto, *" RowSpacing="0">
-            <!-- US04 AC3: filters bar, active chips & result count stay visible in every state -->
-            <VerticalStackLayout Grid.Row="0"
-                                 Padding="{StaticResource ScreenMargin}"
-                                 Spacing="8"
+        <!-- Header: campus chip, notifications, filters / sort / map, active filter chips -->
+        <Grid Grid.Row="0"
+              RowDefinitions="Auto, 1"
+              BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}">
+            <VerticalStackLayout Padding="16,10,16,12"
+                                 Spacing="10"
                                  MaximumWidthRequest="640">
+                <Grid ColumnDefinitions="*, Auto">
+                    <HorizontalStackLayout Spacing="6"
+                                           HeightRequest="48"
+                                           HorizontalOptions="Start"
+                                           SemanticProperties.Description="{Binding CampusChipDescription}">
+                        <HorizontalStackLayout.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding OpenCampusCommand}" />
+                        </HorizontalStackLayout.GestureRecognizers>
+                        <Label Text="{x:Static fonts:FluentUI.location_20_regular}"
+                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                               FontSize="20"
+                               VerticalOptions="Center"
+                               AutomationProperties.IsInAccessibleTree="False"
+                               TextColor="{AppThemeBinding Light={StaticResource ActionSecondaryLight}, Dark={StaticResource TextBrandDark}}" />
+                        <Label Text="{Binding NearText}"
+                               FontSize="13"
+                               VerticalOptions="Center"
+                               AutomationProperties.IsInAccessibleTree="False"
+                               TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                        <Label Text="{Binding CampusName}"
+                               FontFamily="{StaticResource FontFamilySemibold}"
+                               FontSize="17"
+                               FontAttributes="Bold"
+                               VerticalOptions="Center"
+                               AutomationProperties.IsInAccessibleTree="False"
+                               TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}" />
+                        <Label Text="{x:Static fonts:FluentUI.chevron_down_20_regular}"
+                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                               FontSize="18"
+                               VerticalOptions="Center"
+                               AutomationProperties.IsInAccessibleTree="False"
+                               TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}" />
+                    </HorizontalStackLayout>
+
+                    <Grid Grid.Column="1"
+                          WidthRequest="48"
+                          HeightRequest="48"
+                          SemanticProperties.Description="{Binding NotificationsDescription}">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding OpenNotificationsCommand}" />
+                        </Grid.GestureRecognizers>
+                        <Label Text="{x:Static fonts:FluentUI.alert_24_regular}"
+                               FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                               FontSize="24"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center"
+                               AutomationProperties.IsInAccessibleTree="False"
+                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                        <Border IsVisible="{Binding HasUnreadNotifications}"
+                                Padding="0"
+                                WidthRequest="11"
+                                HeightRequest="11"
+                                Margin="0,10,10,0"
+                                HorizontalOptions="End"
+                                VerticalOptions="Start"
+                                StrokeThickness="2"
+                                StrokeShape="RoundRectangle 6"
+                                Stroke="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource StatusDangerLight}, Dark={StaticResource StatusDangerDark}}" />
+                    </Grid>
+                </Grid>
+
                 <search:ExploreFilterBarControl ActiveFilterCount="{Binding ActiveFilterCount}"
                                                 HasActiveFilters="{Binding HasActiveFilters}"
                                                 CurrentSortLabel="{Binding CurrentSortLabel}"
                                                 FiltersButtonText="{Binding FiltersButtonText}"
                                                 FiltersButtonDescription="{Binding FiltersButtonDescription}"
                                                 SortButtonDescription="{Binding SortButtonDescription}"
-                                                ResultCountText="{Binding ResultCountText}"
-                                                VerifiedOnlySuffixText="{Binding VerifiedOnlySuffixText}"
+                                                MapDescription="{Binding MapDescription}"
                                                 OpenFiltersCommand="{Binding OpenFiltersCommand}"
-                                                OpenSortCommand="{Binding OpenSortCommand}" />
+                                                OpenSortCommand="{Binding OpenSortCommand}"
+                                                OpenMapCommand="{Binding OpenMapCommand}" />
 
                 <search:ActiveFilterChipsControl Chips="{Binding ActiveFilterChips}"
                                                  HasActiveFilters="{Binding HasActiveFilters}"
@@ -43,8 +102,57 @@
                                                  ClearAllCommand="{Binding ClearFiltersCommand}"
                                                  ClearAllText="{Binding ClearAllText}" />
             </VerticalStackLayout>
+            <BoxView Grid.Row="1"
+                     Color="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}" />
+        </Grid>
 
-            <feedback:StateView Grid.Row="1"
+        <!-- US04 AC3: the result count stays visible in every state -->
+        <Grid Grid.Row="1"
+              ColumnDefinitions="*, Auto"
+              Padding="16,4,16,0"
+              MaximumWidthRequest="640">
+            <HorizontalStackLayout VerticalOptions="Center">
+                <Label Text="{Binding ResultCountText}"
+                       FontFamily="{StaticResource FontFamilySemibold}"
+                       FontSize="{StaticResource FontSizeBodyMedium}"
+                       FontAttributes="Bold"
+                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                <Label Text="{Binding VerifiedOnlySuffixText}"
+                       FontSize="{StaticResource FontSizeBodyMedium}"
+                       TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+            </HorizontalStackLayout>
+            <HorizontalStackLayout Grid.Column="1"
+                                   Spacing="4"
+                                   HeightRequest="48"
+                                   Padding="4,0,0,0"
+                                   SemanticProperties.Description="{Binding SaveSearchText}">
+                <HorizontalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding SaveSearchCommand}" />
+                </HorizontalStackLayout.GestureRecognizers>
+                <Label Text="{x:Static fonts:FluentUI.star_16_regular}"
+                       FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                       FontSize="16"
+                       VerticalOptions="Center"
+                       AutomationProperties.IsInAccessibleTree="False"
+                       TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}" />
+                <Label Text="{Binding SaveSearchText}"
+                       FontFamily="{StaticResource FontFamilySemibold}"
+                       FontSize="13"
+                       VerticalOptions="Center"
+                       AutomationProperties.IsInAccessibleTree="False"
+                       TextColor="{AppThemeBinding Light={StaticResource TextBrandLight}, Dark={StaticResource TextBrandDark}}" />
+            </HorizontalStackLayout>
+        </Grid>
+
+        <Grid Grid.Row="2">
+            <feedback:EmptyStateView IsVisible="{Binding IsLoadFailed}"
+                                     Title="{Binding ExploreErrorTitleText}"
+                                     Message="{Binding ErrorMessage}"
+                                     IconGlyph="{x:Static fonts:FluentUI.warning_24_regular}"
+                                     ActionText="{Binding RetryText}"
+                                     ActionCommand="{Binding RetryCommand}" />
+
+            <feedback:StateView IsVisible="{Binding IsBodyVisible}"
                                 State="{Binding State}"
                                 HasContent="{Binding HasContent}"
                                 ErrorMessage="{Binding ErrorMessage}"
@@ -56,71 +164,98 @@
                                 EmptyActionCommand="{Binding ClearFiltersCommand}">
                 <RefreshView IsRefreshing="{Binding IsRefreshing}"
                              Command="{Binding RefreshCommand}">
-                    <ScrollView Padding="{StaticResource ScreenMargin}">
-                        <VerticalStackLayout Spacing="20" MaximumWidthRequest="640" HorizontalOptions="Center">
-
-                            <!-- 1. Search Bar -->
-                            <inputs:SearchBarView Placeholder="Search rooms near ICTU, amenities, price..."
-                                                  Margin="0,8,0,0" />
-
-                            <!-- 2. Hero Welcome Card -->
-                            <Border StrokeShape="RoundRectangle 16"
-                                    StrokeThickness="1"
-                                    Stroke="{AppThemeBinding Light={StaticResource BorderSubtleLight}, Dark={StaticResource BorderSubtleDark}}"
-                                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceCardLight}, Dark={StaticResource SurfaceCardDark}}"
-                                    Padding="20"
-                                    Shadow="{StaticResource Elevation2Shadow}">
-                                <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
-                                    <VerticalStackLayout Grid.Column="0" Spacing="4">
-                                        <Label Text="{Binding WelcomeMessage}"
-                                               Style="{StaticResource TextH2}" />
-                                        <Label Text="{Binding UserEmail}"
-                                               Style="{StaticResource TextCaption}"
-                                               TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}"
-                                               IsVisible="{Binding IsUserSignedIn}" />
-                                    </VerticalStackLayout>
-                                    <common:RadaBadge Grid.Column="1"
-                                                      Type="Custom"
-                                                      BadgeColor="{StaticResource ActionAccentLight}"
-                                                      BadgeTextColor="{StaticResource ActionPrimaryLight}"
-                                                      Text="{Binding UserRole}" />
-                                </Grid>
-                            </Border>
-
-                            <!-- 3. Room feed -->
-                            <VerticalStackLayout Spacing="0"
-                                                 BindableLayout.ItemsSource="{Binding Rooms}">
-                                <BindableLayout.ItemTemplate>
-                                    <DataTemplate x:DataType="cardmodels:RoomCardDisplayModel">
-                                        <cards:RoomCardView Room="{Binding}" />
-                                    </DataTemplate>
-                                </BindableLayout.ItemTemplate>
+                    <CollectionView ItemsSource="{Binding Rooms}"
+                                    SelectionMode="None"
+                                    MaximumWidthRequest="640"
+                                    RemainingItemsThreshold="5"
+                                    RemainingItemsThresholdReachedCommand="{Binding LoadMoreCommand}">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Vertical"
+                                               ItemSpacing="14" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.Header>
+                            <Grid HeightRequest="8" />
+                        </CollectionView.Header>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="cardmodels:RoomCardDisplayModel">
+                                <cards:RoomCardView Margin="16,0"
+                                                    Room="{Binding}"
+                                                    DetailsCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:MainLandingPageModel}}, Path=ViewRoomDetailsCommand, x:DataType=vm:MainLandingPageModel}" />
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                        <CollectionView.Footer>
+                            <VerticalStackLayout Padding="16,14" Spacing="10">
+                                <ActivityIndicator IsVisible="{Binding IsLoadingMore}"
+                                                   IsRunning="{Binding IsLoadingMore}"
+                                                   Color="{AppThemeBinding Light={StaticResource ActionPrimaryLight}, Dark={StaticResource ActionAccentDark}}" />
+                                <VerticalStackLayout IsVisible="{Binding IsLoadMoreFailed}" Spacing="8">
+                                    <Label Text="{Binding LoadMoreErrorText}"
+                                           FontSize="{StaticResource FontSizeBodyMedium}"
+                                           HorizontalTextAlignment="Center"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                                    <common:RadaButton Text="{Binding RetryText}"
+                                                       Variant="Primary"
+                                                       ButtonHeight="48"
+                                                       HorizontalOptions="Center"
+                                                       Command="{Binding RetryLoadMoreCommand}" />
+                                </VerticalStackLayout>
+                                <!-- Keeps the last card clear of the floating compare tray -->
+                                <Grid IsVisible="{Binding HasCompareSelection}"
+                                      HeightRequest="60" />
                             </VerticalStackLayout>
-
-                            <!-- 4. Quick Actions & Sign Out -->
-                            <VerticalStackLayout Spacing="12" Margin="0,16,0,32">
-                                <common:RadaButton Text="Sign Out"
-                                                   Variant="Outline"
-                                                   Command="{Binding SignOutCommand}"
-                                                   ButtonHeight="48"
-                                                   HorizontalOptions="Fill" />
-
-                                <common:RadaButton Text="Open UI Design System Catalog"
-                                                   Variant="Ghost"
-                                                   Command="{Binding OpenUiCatalogCommand}"
-                                                   ButtonHeight="44"
-                                                   HorizontalOptions="Center"
-                                                   IsVisible="{Binding IsDebugMode}" />
-                            </VerticalStackLayout>
-
-                        </VerticalStackLayout>
-                    </ScrollView>
+                        </CollectionView.Footer>
+                    </CollectionView>
                 </RefreshView>
             </feedback:StateView>
+
+            <!-- Compare tray (US10): shown once rooms can be picked for comparison -->
+            <!-- Navy in both themes, like the primary button: the allowed pair in ui-ux-spec §3.1.1 -->
+            <Border IsVisible="{Binding HasCompareSelection}"
+                    Margin="16,0,16,12"
+                    HeightRequest="52"
+                    Padding="16,0"
+                    VerticalOptions="End"
+                    MaximumWidthRequest="608"
+                    StrokeThickness="0"
+                    StrokeShape="RoundRectangle 14"
+                    BackgroundColor="{StaticResource ActionPrimaryLight}"
+                    SemanticProperties.Description="{Binding CompareNowText}">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding OpenCompareCommand}" />
+                </Border.GestureRecognizers>
+                <Grid ColumnDefinitions="Auto, Auto, *, Auto, Auto" ColumnSpacing="6">
+                    <Label Text="{x:Static fonts:FluentUI.column_double_compare_20_regular}"
+                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                           FontSize="18"
+                           VerticalOptions="Center"
+                           AutomationProperties.IsInAccessibleTree="False"
+                           TextColor="{StaticResource ActionAccentDark}" />
+                    <Label Grid.Column="1"
+                           Text="{Binding CompareCountText}"
+                           FontSize="{StaticResource FontSizeBodyMedium}"
+                           VerticalOptions="Center"
+                           TextColor="{StaticResource TextInverseLight}" />
+                    <Label Grid.Column="3"
+                           Text="{Binding CompareNowText}"
+                           FontFamily="{StaticResource FontFamilySemibold}"
+                           FontSize="{StaticResource FontSizeBodyMedium}"
+                           FontAttributes="Bold"
+                           VerticalOptions="Center"
+                           AutomationProperties.IsInAccessibleTree="False"
+                           TextColor="{StaticResource TextInverseLight}" />
+                    <Label Grid.Column="4"
+                           Text="{x:Static fonts:FluentUI.chevron_right_16_regular}"
+                           FontFamily="{x:Static fonts:FluentUI.FontFamily}"
+                           FontSize="16"
+                           VerticalOptions="Center"
+                           AutomationProperties.IsInAccessibleTree="False"
+                           TextColor="{StaticResource TextInverseLight}" />
+                </Grid>
+            </Border>
         </Grid>
 
         <!-- Bottom Navigation Bar -->
-        <nav:BottomNavBarControl Grid.Row="2"
+        <nav:BottomNavBarControl Grid.Row="3"
                                  ActiveRoute="explore" />
     </Grid>
 </ContentPage>

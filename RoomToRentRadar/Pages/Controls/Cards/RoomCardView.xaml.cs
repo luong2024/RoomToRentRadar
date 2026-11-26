@@ -1,9 +1,13 @@
 using System.Windows.Input;
-using Fonts;
 using RoomToRentRadar.Pages.Controls.Cards.Models;
 
 namespace RoomToRentRadar.Pages.Controls.Cards;
 
+/// <summary>
+/// Room card of SCR-HOME-01. The heart (US06) and Compare (US10) are drawn here; their behaviour is
+/// supplied by the owning screen through <see cref="BookmarkCommand"/> and <see cref="CompareCommand"/>.
+/// All commands receive the room id.
+/// </summary>
 public partial class RoomCardView : ContentView
 {
     public static readonly BindableProperty RoomProperty =
@@ -16,11 +20,8 @@ public partial class RoomCardView : ContentView
     public static readonly BindableProperty DetailsCommandProperty =
         BindableProperty.Create(nameof(DetailsCommand), typeof(ICommand), typeof(RoomCardView), null);
 
-    public static readonly BindableProperty BookmarkIconGlyphProperty =
-        BindableProperty.Create(nameof(BookmarkIconGlyph), typeof(string), typeof(RoomCardView), FluentUI.heart_20_regular);
-
-    public static readonly BindableProperty BookmarkIconColorProperty =
-        BindableProperty.Create(nameof(BookmarkIconColor), typeof(Color), typeof(RoomCardView), Color.FromArgb("#1E293B"));
+    public static readonly BindableProperty CompareCommandProperty =
+        BindableProperty.Create(nameof(CompareCommand), typeof(ICommand), typeof(RoomCardView), null);
 
     public RoomCardDisplayModel? Room
     {
@@ -40,42 +41,33 @@ public partial class RoomCardView : ContentView
         set => SetValue(DetailsCommandProperty, value);
     }
 
-    public string BookmarkIconGlyph
+    public ICommand? CompareCommand
     {
-        get => (string)GetValue(BookmarkIconGlyphProperty);
-        private set => SetValue(BookmarkIconGlyphProperty, value);
-    }
-
-    public Color BookmarkIconColor
-    {
-        get => (Color)GetValue(BookmarkIconColorProperty);
-        private set => SetValue(BookmarkIconColorProperty, value);
+        get => (ICommand?)GetValue(CompareCommandProperty);
+        set => SetValue(CompareCommandProperty, value);
     }
 
     public RoomCardView()
     {
         InitializeComponent();
-        BindingContext = this;
+        // Bind the inner content to this control; the control's own BindingContext must stay free so that
+        // Room="{Binding}" in a host DataTemplate resolves to the room (otherwise the card stays empty).
+        Content.BindingContext = this;
         UpdateBookmarkState();
     }
 
     private void UpdateBookmarkState()
     {
-        var resources = Microsoft.Maui.Controls.Application.Current?.Resources;
-        BookmarkIconGlyph = FluentUI.heart_20_regular;
+        var saved = Room?.IsBookmarked == true;
+        var light = saved ? "StatusDangerLight" : "TextPrimaryLight";
+        var dark = saved ? "StatusDangerDark" : "TextPrimaryDark";
 
-        if (Room?.IsBookmarked == true)
+        var resources = Microsoft.Maui.Controls.Application.Current?.Resources;
+        if (resources is not null
+            && resources.TryGetValue(light, out var lightColor)
+            && resources.TryGetValue(dark, out var darkColor))
         {
-            BookmarkIconColor = resources != null && resources.TryGetValue("StatusDangerLight", out var dangerColor)
-                ? (Color)dangerColor
-                : Color.FromArgb("#DC2626"); // Red
-        }
-        else
-        {
-            BookmarkIconColor = resources != null && resources.TryGetValue("TextMutedLight", out var mutedColor)
-                ? (Color)mutedColor
-                : Color.FromArgb("#94A3B8"); // Muted
+            HeartGlyph.SetAppThemeColor(Label.TextColorProperty, (Color)lightColor, (Color)darkColor);
         }
     }
 }
-
