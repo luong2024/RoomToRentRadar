@@ -1,0 +1,129 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="RoomToRentRadar.Pages.RoomDetailPage"
+             Title="Room Details">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
+
+            <Border IsVisible="{Binding IsRoomUnavailable}"
+                    BackgroundColor="#FEE2E2"
+                    Stroke="#EF4444"
+                    StrokeShape="RoundRectangle 8"
+                    Padding="12">
+                <Label Text="This room is currently unavailable. Check similar rooms below."
+                       TextColor="#991B1B"
+                       FontAttributes="Bold" />
+            </Border>
+
+            <VerticalStackLayout Spacing="6">
+                <HorizontalStackLayout Spacing="8">
+                    <Border BackgroundColor="#DCFCE7" StrokeThickness="0" StrokeShape="RoundRectangle 6" Padding="8,4"
+                            IsVisible="{Binding Room.IsVerified}">
+                        <Label Text="Verified" TextColor="#166534" FontSize="12" FontAttributes="Bold" />
+                    </Border>
+                    <Border BackgroundColor="#E0F2FE" StrokeThickness="0" StrokeShape="RoundRectangle 6" Padding="8,4">
+                        <Label Text="{Binding StatusText}" TextColor="#075985" FontSize="12" FontAttributes="Bold" />
+                    </Border>
+                </HorizontalStackLayout>
+
+                <Label Text="{Binding Room.Title}" FontSize="20" FontAttributes="Bold" />
+                <Label Text="{Binding Room.Address, StringFormat='Address: {0}'}" FontSize="14" TextColor="#4B5563" />
+                <Label Text="{Binding Room.LastUpdated, StringFormat='Last updated: {0:dd/MM/yyyy}'}" FontSize="12" TextColor="#6B7280" />
+            </VerticalStackLayout>
+
+            <Border Stroke="#E5E7EB" StrokeShape="RoundRectangle 10" Padding="12" BackgroundColor="#F9FAFB">
+                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" RowSpacing="12" ColumnSpacing="12">
+                    <VerticalStackLayout Grid.Row="0" Grid.Column="0">
+                        <Label Text="Monthly Rent" FontSize="12" TextColor="#6B7280" />
+                        <Label Text="{Binding Room.MonthlyRent, StringFormat='{0:N0} VND'}" FontSize="16" FontAttributes="Bold" TextColor="#DC2626" />
+                    </VerticalStackLayout>
+                    <VerticalStackLayout Grid.Row="0" Grid.Column="1">
+                        <Label Text="Deposit" FontSize="12" TextColor="#6B7280" />
+                        <Label Text="{Binding Room.Deposit, StringFormat='{0:N0} VND'}" FontSize="16" FontAttributes="Bold" />
+                    </VerticalStackLayout>
+                    <VerticalStackLayout Grid.Row="1" Grid.Column="0">
+                        <Label Text="Area" FontSize="12" TextColor="#6B7280" />
+                        <Label Text="{Binding Room.Area, StringFormat='{0} m²'}" FontSize="15" FontAttributes="Bold" />
+                    </VerticalStackLayout>
+                    <VerticalStackLayout Grid.Row="1" Grid.Column="1">
+                        <Label Text="Room Type" FontSize="12" TextColor="#6B7280" />
+                        <Label Text="{Binding Room.RoomType}" FontSize="15" FontAttributes="Bold" />
+                    </VerticalStackLayout>
+                </Grid>
+            </Border>
+
+            <VerticalStackLayout Spacing="6">
+                <Label Text="Description" FontSize="16" FontAttributes="Bold" />
+                <Label Text="{Binding Room.Description}" FontSize="14" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="8">
+                <Label Text="Amenities" FontSize="16" FontAttributes="Bold" />
+                <FlexLayout BindableLayout.ItemsSource="{Binding Room.Amenities}" Wrap="Wrap">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="0,0,8,8" Padding="10,6" BackgroundColor="#EEF2FF" StrokeThickness="0" StrokeShape="RoundRectangle 16">
+                                <Label Text="{Binding .}" TextColor="#3730A3" FontSize="13" />
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </FlexLayout>
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="6">
+                <Label Text="House Rules" FontSize="16" FontAttributes="Bold" />
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Room.HouseRules}" Spacing="4">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate>
+                            <Label Text="{Binding ., StringFormat='• {0}'}" FontSize="14" TextColor="#374151" />
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+
+            <Border Stroke="#D1D5DB" StrokeShape="RoundRectangle 10" Padding="14">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Landlord Contact" FontSize="16" FontAttributes="Bold" />
+                    <Label Text="{Binding Room.LandlordName, StringFormat='Landlord: {0}'}" FontSize="14" />
+
+                    <HorizontalStackLayout Spacing="8">
+                        <Label Text="Phone:" FontSize="14" />
+                        <Label Text="{Binding DisplayLandlordPhone}" FontSize="16" FontAttributes="Bold" />
+                    </HorizontalStackLayout>
+
+                    <Button Text="Sign in to view phone number"
+                            IsVisible="{Binding IsGuest}"
+                            Command="{Binding UnlockContactCommand}" />
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10" IsVisible="{Binding IsAuthenticated}">
+                        <Button Grid.Column="0" Text="Call" Command="{Binding CallLandlordCommand}" />
+                        <Button Grid.Column="1" Text="Copy Phone" Command="{Binding CopyPhoneCommand}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <VerticalStackLayout Spacing="8" IsVisible="{Binding IsRoomUnavailable}">
+                <Label Text="Similar Rooms" FontSize="16" FontAttributes="Bold" />
+                <CollectionView ItemsSource="{Binding Room.SimilarRooms}" HeightRequest="120">
+                    <CollectionView.ItemsLayout>
+                        <LinearItemsLayout Orientation="Horizontal" ItemSpacing="10" />
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Border WidthRequest="220" Padding="10" Stroke="#D1D5DB" StrokeShape="RoundRectangle 8">
+                                <VerticalStackLayout Spacing="4">
+                                    <Label Text="{Binding Title}" FontAttributes="Bold" MaxLines="2" LineBreakMode="TailTruncation" />
+                                    <Label Text="{Binding MonthlyRent, StringFormat='{0:N0} VND/mo'}" FontAttributes="Bold" />
+                                    <Label Text="{Binding Address}" FontSize="12" />
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </VerticalStackLayout>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

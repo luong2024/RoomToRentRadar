@@ -1,4 +1,10 @@
 <Solution>
+  <Folder Name="/RoomToRentRadar-group-5/">
+    <Project Path="RoomToRentRadar-group-5/RoomToRentRadar.Api/RoomToRentRadar.Api.csproj" />
+    <Project Path="RoomToRentRadar-group-5/RoomToRentRadar.Core/RoomToRentRadar.Core.csproj" />
+    <Project Path="RoomToRentRadar-group-5/RoomToRentRadar.Infrastructure/RoomToRentRadar.Infrastructure.csproj" />
+  </Folder>
+  <Project Path="d:/Android studio/MauiApp1/MauiApp1.csproj" />
   <Project Path="RoomToRentRadar/RoomToRentRadar.csproj">
     <Deploy Solution="Debug|*" />
   </Project>
