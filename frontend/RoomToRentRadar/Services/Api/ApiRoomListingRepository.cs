@@ -7,21 +7,21 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using RoomToRentRadar.Abstractions.Rooms;
-using RoomToRentRadar.Infrastructure.Fakes;
 
 namespace RoomToRentRadar.Services.Api
 {
     /// <summary>
     /// US02 / T02.2: <see cref="IRoomListingRepository"/> for the MAUI frontend, backed by the backend Web API
     /// (RoomListingController, T02.1) instead of a local SQLite file.
+    /// Depends only on the shared contract in RoomToRentRadar.Core (no backend Infrastructure code).
     /// - ListVerifiedRoomsAsync → GET /api/rooms (AC1 distance sort, AC4 Available + Verified done by the API).
     /// - Caching (US02 "pagination and caching"): each page is kept with its ETag; the next request sends
     ///   If-None-Match and a 304 reuses the cached page (fast reloads, AC3). Without network the last cached
     ///   page is shown instead of an error.
-    /// Partial class: T03.2 (.Detail.cs), T05.2 (.Search.cs) and T09.1 (.Publish.cs) override the other methods
-    /// in their own files. Until then they fall back to the in-memory ICTU sample data of the base class.
+    /// Partial class: T03.2 (.Detail.cs), T05.2 (.Search.cs) and T09.1 (.Publish.cs) add the other API calls in
+    /// their own files and remove the matching "not available yet" stub at the bottom of this file.
     /// </summary>
-    public partial class ApiRoomListingRepository : InMemoryRoomListingRepository
+    public partial class ApiRoomListingRepository : IRoomListingRepository
     {
         private readonly HttpClient _http;
         private readonly ILogger<ApiRoomListingRepository> _logger;
@@ -35,7 +35,7 @@ namespace RoomToRentRadar.Services.Api
             _logger = logger;
         }
 
-        public override async Task<List<RoomListing>> ListVerifiedRoomsAsync(int pageIndex = 0, int pageSize = 20, string sortBy = "DistanceAsc")
+        public async Task<List<RoomListing>> ListVerifiedRoomsAsync(int pageIndex = 0, int pageSize = 20, string sortBy = "DistanceAsc")
         {
             var path = string.Create(CultureInfo.InvariantCulture,
                 $"api/rooms?pageIndex={pageIndex}&pageSize={pageSize}&sortBy={Uri.EscapeDataString(sortBy ?? "DistanceAsc")}");
@@ -138,6 +138,32 @@ namespace RoomToRentRadar.Services.Api
         };
 
         private sealed record CachedPage(EntityTagHeaderValue ETag, IReadOnlyList<RoomListing> Rooms);
+
+        // ---------------------------------------------------------------------------------------------
+        // Not available yet: these API calls belong to other tasks. Each task implements its method in its own
+        // partial file (see the class summary) and deletes the stub below. Until then a clear error is raised
+        // instead of silently returning fake data.
+        // ---------------------------------------------------------------------------------------------
+
+        // T03.2 → ApiRoomListingRepository.Detail.cs (GET /api/rooms/{id}, RoomDetailController of T03.1)
+        public Task<RoomListing?> GetByIdAsync(int roomId) => NotAvailableYet<RoomListing?>("T03.2");
+
+        // T03.2 → ApiRoomListingRepository.Detail.cs (GET /api/rooms/{id}/similar)
+        public Task<List<RoomListing>> GetSimilarRoomsAsync(int excludeRoomId, string ward, decimal targetRent, int limit = 3) =>
+            NotAvailableYet<List<RoomListing>>("T03.2");
+
+        // T05.2 → ApiRoomListingRepository.Search.cs (GET /api/rooms/search, RoomSearchController of T05.1)
+        public Task<List<RoomListing>> SearchAsync(RoomFilterCriteria criteria) => NotAvailableYet<List<RoomListing>>("T05.2");
+
+        // T09.1 → ApiRoomListingRepository.Publish.cs (RoomPublishController of T09.2)
+        public Task<int> SaveListingAsync(RoomListing listing) => NotAvailableYet<int>("T09.1");
+
+        // T09.1 → ApiRoomListingRepository.Publish.cs (RoomPublishController of T09.2)
+        public Task<bool> UpdateStatusAsync(int roomId, string status, bool isVerified) => NotAvailableYet<bool>("T09.1");
+
+        private static Task<T> NotAvailableYet<T>(string taskId) =>
+            Task.FromException<T>(new NotSupportedException(
+                $"Chức năng này chưa có API trên ứng dụng (thuộc task {taskId})."));
     }
 
     // ---- JSON contract of RoomListingController (backend/RoomToRentRadar.Api/Models/RoomListingModels.cs) ----
