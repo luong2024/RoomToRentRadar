@@ -356,21 +356,14 @@ public sealed class MockRoomGateway : IRoomGateway
     ];
 
     // BR-LST-03: estimated monthly total = rent + 100 kWh electricity + water (4 m³, 1 × per person, or 0 if included) + internet + parking.
-    private static long EstimatedMonthlyTotal(SampleRoom room)
-    {
-        long waterCost = room.WaterPriceUnit switch
-        {
-            WaterPriceUnit.PerPerson => room.WaterPriceVnd,
-            WaterPriceUnit.Included => 0L,
-            _ => 4L * room.WaterPriceVnd
-        };
-
-        return room.MonthlyRentVnd
-            + (100L * room.ElectricityPriceVndPerKwh)
-            + waterCost
-            + room.InternetFeeVnd
-            + room.ParkingFeeVnd;
-    }
+    private static long EstimatedMonthlyTotal(SampleRoom room) =>
+        MonthlyCostCalculator.EstimateMonthlyTotalVnd(
+            room.MonthlyRentVnd,
+            room.ElectricityPriceVndPerKwh,
+            room.WaterPriceVnd,
+            room.WaterPriceUnit,
+            room.InternetFeeVnd,
+            room.ParkingFeeVnd);
 
     private static bool Contains(IReadOnlyList<GeoPointDto> polygon, double latitude, double longitude)
     {

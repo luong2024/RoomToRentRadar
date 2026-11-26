@@ -126,14 +126,7 @@ public sealed class RoomsController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(roomId))
         {
-            var invalidProblem = new ProblemDetails
-            {
-                Title = "Invalid room request",
-                Detail = "Room ID cannot be empty or whitespace.",
-                Status = StatusCodes.Status400BadRequest
-            };
-            invalidProblem.Extensions["errorCode"] = "VALIDATION_FAILED";
-            return BadRequest(invalidProblem);
+            return CreateInvalidRoomIdResult();
         }
 
         if (_getRoomDetailUseCase == null)
@@ -144,14 +137,7 @@ public sealed class RoomsController : ControllerBase
         var result = await _getRoomDetailUseCase.ExecuteAsync(roomId, campusId, ct);
         if (result == null)
         {
-            var notFoundProblem = new ProblemDetails
-            {
-                Title = "Room not found",
-                Detail = $"Room listing with ID '{roomId}' was not found.",
-                Status = StatusCodes.Status404NotFound
-            };
-            notFoundProblem.Extensions["errorCode"] = "ROOM_NOT_FOUND";
-            return NotFound(notFoundProblem);
+            return CreateRoomNotFoundResult(roomId);
         }
 
         // Cache ETag adheres strictly to ADR-012 §6 and RFC 9110 §8.8.3:
@@ -221,14 +207,7 @@ public sealed class RoomsController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(roomId))
         {
-            var invalidProblem = new ProblemDetails
-            {
-                Title = "Invalid room request",
-                Detail = "Room ID cannot be empty or whitespace.",
-                Status = StatusCodes.Status400BadRequest
-            };
-            invalidProblem.Extensions["errorCode"] = "VALIDATION_FAILED";
-            return BadRequest(invalidProblem);
+            return CreateInvalidRoomIdResult();
         }
 
         if (_getSimilarRoomsUseCase == null)
@@ -239,17 +218,34 @@ public sealed class RoomsController : ControllerBase
         var similarRooms = await _getSimilarRoomsUseCase.ExecuteAsync(roomId, campusId, ct);
         if (similarRooms == null)
         {
-            var notFoundProblem = new ProblemDetails
-            {
-                Title = "Room not found",
-                Detail = $"Room listing with ID '{roomId}' was not found.",
-                Status = StatusCodes.Status404NotFound
-            };
-            notFoundProblem.Extensions["errorCode"] = "ROOM_NOT_FOUND";
-            return NotFound(notFoundProblem);
+            return CreateRoomNotFoundResult(roomId);
         }
 
         return Ok(similarRooms);
+    }
+
+    private BadRequestObjectResult CreateInvalidRoomIdResult()
+    {
+        var invalidProblem = new ProblemDetails
+        {
+            Title = "Invalid room request",
+            Detail = "Room ID cannot be empty or whitespace.",
+            Status = StatusCodes.Status400BadRequest
+        };
+        invalidProblem.Extensions["errorCode"] = ProblemCodes.ValidationFailed;
+        return BadRequest(invalidProblem);
+    }
+
+    private NotFoundObjectResult CreateRoomNotFoundResult(string roomId)
+    {
+        var notFoundProblem = new ProblemDetails
+        {
+            Title = "Room not found",
+            Detail = $"Room listing with ID '{roomId}' was not found.",
+            Status = StatusCodes.Status404NotFound
+        };
+        notFoundProblem.Extensions["errorCode"] = ProblemCodes.RoomNotFound;
+        return NotFound(notFoundProblem);
     }
 
     /// <summary>

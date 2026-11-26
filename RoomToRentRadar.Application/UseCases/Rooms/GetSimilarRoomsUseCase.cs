@@ -59,22 +59,7 @@ public sealed class GetSimilarRoomsUseCase : IGetSimilarRoomsUseCase
 
         // BR-LST-04a / GUARDRAILS §1.5.6 (anti-IDOR): Available, Rented, Unpublished are viewable by public.
         // PendingReview, Rejected, Suspended return 404 to non-owners/non-admins.
-        if (targetRoom.Status != ListingStatus.Available &&
-            targetRoom.Status != ListingStatus.Rented &&
-            targetRoom.Status != ListingStatus.Unpublished)
-        {
-            var isOwner = _currentUserContext.IsAuthenticated &&
-                          string.Equals(_currentUserContext.UserId, targetRoom.LandlordId, StringComparison.Ordinal);
-            var isAdmin = _currentUserContext.IsAuthenticated &&
-                          string.Equals(_currentUserContext.Role, "Admin", StringComparison.OrdinalIgnoreCase);
-
-            if (!isOwner && !isAdmin)
-            {
-                throw new EntityNotFoundException(
-                    ProblemCodes.RoomNotFound,
-                    $"Room with ID '{roomId}' was not found or is not public.");
-            }
-        }
+        RoomQueryHelper.EnsureViewable(targetRoom, roomId, _currentUserContext);
 
         Campus campus;
         if (string.IsNullOrWhiteSpace(campusId))
