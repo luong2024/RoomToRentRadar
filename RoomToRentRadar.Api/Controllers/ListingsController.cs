@@ -68,11 +68,8 @@ public sealed class ListingsController(
         var isAuthenticated = User.Identity?.IsAuthenticated == true;
         var detail = await listingDetailService.GetByIdAsync(id, isAuthenticated, cancellationToken);
 
-        if (detail is null)
-        {
-            return NotFound(new { message = $"Listing '{id}' was not found." });
-        }
-
-        return Ok(detail);
+        return detail is null
+            ? NotFound(new { message = $"Không tìm thấy phòng '{id}'." })
+            : Ok(detail);
     }
 }

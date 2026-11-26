@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using RoomToRentRadar.Api.Data;
 using RoomToRentRadar.Api.Models;
+using RoomToRentRadar.Api.Services.Mapping;
 using RoomToRentRadar.Shared.Dtos;
 
 namespace RoomToRentRadar.Api.Repositories;
@@ -93,8 +94,7 @@ public sealed class InMemoryListingRepository : IListingRepository, ILandlordLis
                 .Where(l =>
                     string.Equals(l.CampusId, campusId, StringComparison.OrdinalIgnoreCase)
                     && !string.Equals(l.Id, excludeCanonical, StringComparison.OrdinalIgnoreCase)
-                    && string.Equals(l.Status, "Available", StringComparison.OrdinalIgnoreCase)
-                    && l.IsVerified)
+                    && l.IsPublic())
                 .ToList();
 
             return Task.FromResult(items);
