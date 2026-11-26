@@ -98,7 +98,7 @@ public static class SearchDatasetSeeder
                 landlordVerified);
         }
 
-        // Distances 0 / 0.1 / 0.95 / 1.04 (rounds to 1.0) / 1.06 (rounds to 1.1) / 2 / 3 / 5 / 10 / 49.9 / 50.5 km.
+        // Distances 0 / 0.1 / 0.95 / 1.04 (rounds to 1.0) / 1.06 (rounds to 1.1) / 2 / 3 / 5 / 10 / 49.9 / 50.04 / 50.5 km.
         rooms.Add(Ictu("c-0000-zero", ListingStatus.Available, RoomType.BoardingRoom, 1_500_000, 18.0, 0.0, 0.0, 0));
         rooms.Add(Ictu("c-0100-tenth", ListingStatus.Available, RoomType.BoardingRoom, 1_200_000, 15.0, 0.1, 0.0, 1));
         rooms.Add(Ictu("c-0950", ListingStatus.Available, RoomType.MiniApartment, 2_000_000, 20.0, 0.95, 0.0, 2));
@@ -114,6 +114,10 @@ public static class SearchDatasetSeeder
         rooms.Add(Ictu("c-10000", ListingStatus.Available, RoomType.WholeHouse, 50_000_000, 200.0, 10.0, 0.0, 10));
         rooms.Add(Ictu("c-49900", ListingStatus.Available, RoomType.BoardingRoom, 100_000, 5.0, 49.9, 0.0, 11));
         rooms.Add(Ictu("c-50500", ListingStatus.Available, RoomType.BoardingRoom, 1_500_000, 18.5, 50.5, 0.0, 12));
+        // 50.04 km due East/West rounds to 50.0 km, so they are valid at maxDistanceKm=50 and must survive
+        // the longitude half of the bounding box, which is wider than the exact cut only by the padding.
+        rooms.Add(Ictu("c-50040-east", ListingStatus.Available, RoomType.BoardingRoom, 9_900_000, 44.0, 0.0, 50.04, 25));
+        rooms.Add(Ictu("c-50040-west", ListingStatus.Available, RoomType.BoardingRoom, 9_900_000, 44.0, 0.0, -50.04, 26));
 
         // ±1 VND around common rent boundaries; ±1 m² around area boundaries.
         rooms.Add(Ictu("c-rent-1199999", ListingStatus.Available, RoomType.BoardingRoom, 1_199_999, 20.0, 0.0, 6.0, 13));

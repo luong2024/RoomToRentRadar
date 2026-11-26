@@ -45,7 +45,7 @@ public class SearchVisibilityAndAdversarialTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(page.TotalCount, Is.EqualTo(52), "Only Available + verified rooms with verified landlords are public.");
+            Assert.That(page.TotalCount, Is.EqualTo(54), "Only Available + verified rooms with verified landlords are public.");
             Assert.That(page.Ids, Has.None.Matches<string>(id => NoiseIds.Contains(id, StringComparer.Ordinal)));
             Assert.That(page.Ids, Does.Not.Contain("n-avail-null-verified"),
                 "BR-LST-06: an Available row without VerifiedAtUtc must never be exposed by search.");
@@ -61,7 +61,7 @@ public class SearchVisibilityAndAdversarialTests
         Assert.Multiple(() =>
         {
             Assert.That(page.Ids, Has.None.Matches<string>(id => NoiseIds.Contains(id, StringComparer.Ordinal)));
-            Assert.That(page.TotalCount, Is.EqualTo(51), "52 visible rooms minus the one at 50.5 km.");
+            Assert.That(page.TotalCount, Is.EqualTo(53), "54 visible rooms minus the one at 50.5 km.");
         });
     }
 
@@ -202,8 +202,8 @@ public class SearchVisibilityAndAdversarialTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(_factory.QueryScalar("SELECT COUNT(1) FROM Rooms;"), Is.EqualTo(59));
-            Assert.That(page.TotalCount, Is.EqualTo(52));
+            Assert.That(_factory.QueryScalar("SELECT COUNT(1) FROM Rooms;"), Is.EqualTo(61));
+            Assert.That(page.TotalCount, Is.EqualTo(54));
         });
     }
 
@@ -233,6 +233,26 @@ public class SearchVisibilityAndAdversarialTests
         var page = await _factory.Client.GetSearchPageAsync("/api/rooms?maxDistanceKm=1&roomTypes=WholeHouse&pageSize=50");
 
         Assert.That(page.Ids, Does.Not.Contain("c-1060"), "1.06 km rounds to 1.1 km, above the 1 km filter.");
+    }
+
+    [Test]
+    public async Task DistanceBoundary_RoomRoundedToMaxKmEastAndWest_IsIncludedAtMaxKm()
+    {
+        var page = await _factory.Client.GetSearchPageAsync(
+            "/api/rooms?maxDistanceKm=50&minRentVnd=9800000&maxRentVnd=10000000&pageSize=50");
+        var expectation = SearchOracle.Search(
+            _dataset,
+            new RoomSearchRequest(
+                MaxDistanceKm: 50, MinRentVnd: 9_800_000, MaxRentVnd: 10_000_000, PageSize: 50));
+
+        AssertMatchesVisibilityOracle(page, expectation);
+        Assert.Multiple(() =>
+        {
+            Assert.That(page.Ids, Contains.Item("c-50040-east"),
+                "50.04 km due East rounds to 50.0 km; the longitude half-width must not drop it at the widest allowed filter.");
+            Assert.That(page.Ids, Contains.Item("c-50040-west"),
+                "The western edge is symmetric and fails the same way when the box under-covers degrees of longitude.");
+        });
     }
 
     [Test]

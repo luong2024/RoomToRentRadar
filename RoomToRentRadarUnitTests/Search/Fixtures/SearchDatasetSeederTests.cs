@@ -21,8 +21,8 @@ public class SearchDatasetSeederTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(dataset, Has.Count.EqualTo(59));
-            Assert.That(visible, Is.EqualTo(52));
+            Assert.That(dataset, Has.Count.EqualTo(61));
+            Assert.That(visible, Is.EqualTo(54));
             Assert.That(dataset.Count(room => room.Id.StartsWith("n-", StringComparison.Ordinal)), Is.EqualTo(7));
         });
     }
@@ -36,7 +36,7 @@ public class SearchDatasetSeederTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(factory.QueryScalar("SELECT COUNT(1) FROM Rooms;"), Is.EqualTo(59));
+            Assert.That(factory.QueryScalar("SELECT COUNT(1) FROM Rooms;"), Is.EqualTo(61));
             Assert.That(
                 factory.QueryScalar("SELECT COUNT(1) FROM Users WHERE Id IN ('ld-verified', 'ld-unverified');"),
                 Is.EqualTo(2));

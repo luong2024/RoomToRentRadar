@@ -186,7 +186,7 @@ public class SearchClientApiFlowIntegrationTests
             Assert.That(store.Current.HasActiveFilters, Is.False);
             Assert.That(landing.ActiveFilterChips, Is.Empty);
             Assert.That(landing.ActiveFilterCount, Is.Zero);
-            Assert.That(landing.TotalRoomCount, Is.EqualTo(52), "Full public list from TNUT (no distance filter).");
+            Assert.That(landing.TotalRoomCount, Is.EqualTo(54), "Full public list from TNUT (no distance filter).");
         });
     }
 

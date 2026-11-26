@@ -228,7 +228,7 @@ public class SearchFilterCombinationsIntegrationTests
     [Test]
     public async Task Newest_NullPublishedAt_SortsLast()
     {
-        // 52 visible rooms > page size 50, so the last two positions live on page 2.
+        // 54 visible rooms > page size 50, so the last four positions live on page 2.
         var page = await _factory.Client.GetSearchPageAsync("/api/rooms?sort=newest&pageSize=50&pageNumber=2");
         var nullPublishedIds = page.Items
             .Where(item => item.GetProperty("publishedAtUtc").ValueKind == System.Text.Json.JsonValueKind.Null)
@@ -237,7 +237,7 @@ public class SearchFilterCombinationsIntegrationTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(page.Items, Has.Count.EqualTo(2));
+            Assert.That(page.Items, Has.Count.EqualTo(4));
             Assert.That(page.Ids[^1], Is.EqualTo("c-4000-nullpub"),
                 "The only fixture room without PublishedAtUtc must sort last.");
             Assert.That(nullPublishedIds, Is.EqualTo(new[] { "c-4000-nullpub" }));
@@ -358,7 +358,7 @@ public class SearchFilterCombinationsIntegrationTests
     {
         var narrowed = await _factory.Client.GetSearchPageAsync(
             "/api/rooms?campusId=ICTU&minRentVnd=1000000&maxRentVnd=2000000&minAreaM2=15&maxAreaM2=20&maxDistanceKm=1&roomTypes=BoardingRoom&sort=price_asc&pageSize=50");
-        Assert.That(narrowed.TotalCount, Is.LessThan(52), "The filtered query must narrow the default list.");
+        Assert.That(narrowed.TotalCount, Is.LessThan(54), "The filtered query must narrow the default list.");
 
         var cleared = await _factory.Client.GetSearchPageAsync("/api/rooms?campusId=ICTU&pageSize=50");
         var expectation = SearchOracle.Search(_dataset, new RoomSearchRequest(CampusId: "ICTU", PageSize: 50), "ICTU");
@@ -366,7 +366,7 @@ public class SearchFilterCombinationsIntegrationTests
         AssertMatchesOracle(cleared, expectation, 1, 50);
         Assert.Multiple(() =>
         {
-            Assert.That(cleared.TotalCount, Is.EqualTo(52), "Clear filters restores every publicly visible room.");
+            Assert.That(cleared.TotalCount, Is.EqualTo(54), "Clear filters restores every publicly visible room.");
             Assert.That(cleared.Ids, Is.EqualTo(expectation.Page(1, 50).Select(match => match.Id).ToList()));
         });
     }
