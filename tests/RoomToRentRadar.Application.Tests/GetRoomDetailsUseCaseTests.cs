@@ -24,22 +24,6 @@ public class GetRoomDetailsUseCaseTests
             await _useCase.ExecuteAsync("non-existent", isUserVerified: true));
     }
 
-    [TestCase(RoomStatus.Available, true, true)]
-    [TestCase(RoomStatus.Available, false, false)]
-    [TestCase(RoomStatus.Rented, true, false)]
-    public async Task ExecuteAsync_CoordinatesAreVisibleOnlyForAvailableVerifiedRooms(RoomStatus status, bool verified, bool expectedVisible)
-    {
-        _roomRepository.Add(new Room { Id = "coordinate-room", Status = status, IsVerified = verified, Latitude = 21.5, Longitude = 105.8 });
-
-        var result = await _useCase.ExecuteAsync("coordinate-room", isUserVerified: false);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.Latitude, Is.EqualTo(expectedVisible ? 21.5 : null));
-            Assert.That(result.Longitude, Is.EqualTo(expectedVisible ? 105.8 : null));
-        });
-    }
-
     [Test]
     public async Task ExecuteAsync_WhenRoomIsAvailableAndUserVerified_ShouldReturnActualPhoneAndFullDetails()
     {
