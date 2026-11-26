@@ -6,6 +6,7 @@ using NUnit.Framework;
 using RoomToRentRadar.Client.Adapters.Abstractions;
 using RoomToRentRadar.Domain.Enums;
 using RoomToRentRadar.PageModels;
+using RoomToRentRadar.Pages.Controls.RoomDetail.Models;
 using RoomToRentRadar.Ports.Contracts.Responses.Auth;
 using RoomToRentRadar.Ports.Contracts.Responses.Photos;
 using RoomToRentRadar.Ports.Contracts.Responses.Rooms;
@@ -19,6 +20,8 @@ public class RoomDetailPageModelTests
 {
     private IRoomGateway _roomGateway = null!;
     private ISessionStore _sessionStore = null!;
+    private INavigationService _navigation = null!;
+    private IRoomDetailDeviceActions _deviceActions = null!;
     private IFavouriteGateway _favouriteGateway = null!;
     private RoomDetailPageModel _sut = null!;
 
@@ -29,12 +32,14 @@ public class RoomDetailPageModelTests
 
         _roomGateway = Substitute.For<IRoomGateway>();
         _sessionStore = Substitute.For<ISessionStore>();
+        _navigation = Substitute.For<INavigationService>();
+        _deviceActions = Substitute.For<IRoomDetailDeviceActions>();
         _favouriteGateway = Substitute.For<IFavouriteGateway>();
 
         _sessionStore.HasValidTokenAsync().Returns(false);
         _sessionStore.GetCachedUserProfileAsync().Returns((UserProfileDto?)null);
 
-        _sut = new RoomDetailPageModel(_roomGateway, _sessionStore, _favouriteGateway)
+        _sut = new RoomDetailPageModel(_roomGateway, _sessionStore, _navigation, _deviceActions, _favouriteGateway)
         {
             RoomId = "room-test-1",
             CampusId = "ictu",
@@ -380,26 +385,16 @@ public class RoomDetailPageModelTests
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
         await _sut.InitializeAsync();
 
-        bool alertPrompted = false;
-        string? navigatedRoute = null;
-
-        _sut.DisplayAlertOverride = (title, message, accept, cancel) =>
-        {
-            alertPrompted = true;
-            return Task.FromResult(true); // User clicks "Sign In"
-        };
-        _sut.NavigateOverride = route =>
-        {
-            navigatedRoute = route;
-            return Task.CompletedTask;
-        };
+        _deviceActions
+            .DisplayAlertAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+            .Returns(true);
 
         // Act
         await _sut.CallLandlordAsync();
 
         // Assert
-        Assert.That(alertPrompted, Is.True);
-        Assert.That(navigatedRoute, Is.EqualTo("//login"));
+        await _deviceActions.Received(1).DisplayAlertAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+        await _navigation.Received(1).GoToAsync("//login");
     }
 
     [Test]
@@ -423,14 +418,11 @@ public class RoomDetailPageModelTests
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
         await _sut.InitializeAsync();
 
-        string? dialedPhone = null;
-        _sut.PhoneDialerOverride = phone => dialedPhone = phone;
-
         // Act
         await _sut.CallLandlordAsync();
 
         // Assert
-        Assert.That(dialedPhone, Is.EqualTo("0912345678"));
+        await _deviceActions.Received(1).DialPhoneAsync("0912345678");
     }
 
     [Test]
@@ -454,18 +446,11 @@ public class RoomDetailPageModelTests
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
         await _sut.InitializeAsync();
 
-        string? launchedUrl = null;
-        _sut.LauncherOverride = url =>
-        {
-            launchedUrl = url;
-            return Task.CompletedTask;
-        };
-
         // Act
         await _sut.OpenZaloAsync();
 
         // Assert
-        Assert.That(launchedUrl, Is.EqualTo("https://zalo.me/0912345678"));
+        await _deviceActions.Received(1).OpenUriAsync("https://zalo.me/0912345678");
     }
 
     [Test]
@@ -540,35 +525,21 @@ public class RoomDetailPageModelTests
     [Test]
     public async Task SelectSimilarRoomAsync_NavigatesToRoomDetailRoute()
     {
-        // Arrange
-        string? targetRoute = null;
-        _sut.NavigateOverride = route =>
-        {
-            targetRoute = route;
-            return Task.CompletedTask;
-        };
-
         // Act
         await _sut.SelectSimilarRoomAsync("sim-999");
 
         // Assert
-        Assert.That(targetRoute, Is.EqualTo($"{AppRoutes.RoomDetail}?roomId=sim-999&campusId=ictu"));
+        await _navigation.Received(1).GoToAsync($"{AppRoutes.RoomDetail}?roomId=sim-999&campusId=ictu");
     }
 
     [Test]
     public async Task SelectSimilarRoomAsync_WhenCampusIdIsNull_OmitsCampusQueryParameter()
     {
-        string? targetRoute = null;
         _sut.CampusId = null;
-        _sut.NavigateOverride = route =>
-        {
-            targetRoute = route;
-            return Task.CompletedTask;
-        };
 
         await _sut.SelectSimilarRoomAsync("sim-999");
 
-        Assert.That(targetRoute, Is.EqualTo($"{AppRoutes.RoomDetail}?roomId=sim-999"));
+        await _navigation.Received(1).GoToAsync($"{AppRoutes.RoomDetail}?roomId=sim-999");
     }
 
     [Test]
@@ -590,18 +561,11 @@ public class RoomDetailPageModelTests
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
         await _sut.InitializeAsync();
 
-        string? targetRoute = null;
-        _sut.NavigateOverride = route =>
-        {
-            targetRoute = route;
-            return Task.CompletedTask;
-        };
-
         // Act
         await _sut.ReportListingAsync();
 
         // Assert
-        Assert.That(targetRoute, Is.EqualTo("report?roomId=room-test-1"));
+        await _navigation.Received(1).GoToAsync("report?roomId=room-test-1");
     }
 
     [Test]
@@ -883,25 +847,17 @@ public class RoomDetailPageModelTests
     }
 
     [Test]
-    public async Task Open360ViewAsync_WhenTapped_InvokesToastOverride()
+    public async Task Open360ViewAsync_WhenTapped_InvokesDeviceToast()
     {
-        // Arrange
-        string? toastMessage = null;
-        _sut.ToastOverride = msg =>
-        {
-            toastMessage = msg;
-            return Task.CompletedTask;
-        };
-
         // Act
         await _sut.Open360ViewAsync();
 
         // Assert
-        Assert.That(toastMessage, Is.EqualTo(AppResources.GetString("RoomDetail_360View")));
+        await _deviceActions.Received(1).DisplayToastAsync(AppResources.GetString("RoomDetail_360View"));
     }
 
     [Test]
-    public async Task ShareListingAsync_WhenTapped_InvokesShareOverrideWithTitleAndPrice()
+    public async Task ShareListingAsync_WhenTapped_InvokesDeviceShareWithTitleAndPrice()
     {
         // Arrange
         var testRoom = CreateSampleRoom(
@@ -919,37 +875,25 @@ public class RoomDetailPageModelTests
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
         await _sut.InitializeAsync();
 
-        string? sharedText = null;
-        _sut.ShareOverride = text =>
-        {
-            sharedText = text;
-            return Task.CompletedTask;
-        };
-
         // Act
         await _sut.ShareListingAsync();
 
         // Assert
-        Assert.That(sharedText, Does.Contain("Private room with balcony near ICTU"));
-        Assert.That(sharedText, Does.Contain("2,500,000 ₫"));
+        await _deviceActions.Received(1).ShareTextAsync(
+            "Private room with balcony near ICTU",
+            Arg.Is<string>(text =>
+                text.Contains("Private room with balcony near ICTU", StringComparison.Ordinal) &&
+                text.Contains("2,500,000 ₫", StringComparison.Ordinal)));
     }
 
     [Test]
     public async Task GoBackAsync_WhenTapped_NavigatesBack()
     {
-        // Arrange
-        string? backRoute = null;
-        _sut.NavigateOverride = route =>
-        {
-            backRoute = route;
-            return Task.CompletedTask;
-        };
-
         // Act
         await _sut.GoBackAsync();
 
         // Assert
-        Assert.That(backRoute, Is.EqualTo(".."));
+        await _navigation.Received(1).GoBackAsync();
     }
 
     [Test]
@@ -973,18 +917,11 @@ public class RoomDetailPageModelTests
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
         await _sut.InitializeAsync();
 
-        string? messageRoute = null;
-        _sut.NavigateOverride = route =>
-        {
-            messageRoute = route;
-            return Task.CompletedTask;
-        };
-
         // Act
         await _sut.MessageLandlordAsync();
 
         // Assert
-        Assert.That(messageRoute, Is.EqualTo("//messages?roomId=room-test-1&landlordId=landlord-1"));
+        await _navigation.Received(1).GoToAsync("//messages?roomId=room-test-1&landlordId=landlord-1");
     }
 
     [Test]
@@ -1006,18 +943,15 @@ public class RoomDetailPageModelTests
         _roomGateway.GetRoomDetailAsync("room-test-1", "ictu").Returns(testRoom);
         await _sut.InitializeAsync();
 
-        bool alertPrompted = false;
-        _sut.DisplayAlertOverride = (_, _, _, _) =>
-        {
-            alertPrompted = true;
-            return Task.FromResult(false);
-        };
+        _deviceActions
+            .DisplayAlertAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+            .Returns(false);
 
         // Act
         await _sut.MessageLandlordAsync();
 
         // Assert
-        Assert.That(alertPrompted, Is.True);
+        await _deviceActions.Received(1).DisplayAlertAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Test]
@@ -1068,16 +1002,9 @@ public class RoomDetailPageModelTests
     [Test]
     public async Task PreviewUnavailableDemoAsync_NavigatesToRentedSeedRoom()
     {
-        string? capturedRoute = null;
-        _sut.NavigateOverride = route =>
-        {
-            capturedRoute = route;
-            return Task.CompletedTask;
-        };
-
         await _sut.PreviewUnavailableDemoAsync();
 
-        Assert.That(capturedRoute, Is.EqualTo($"{AppRoutes.RoomDetail}?roomId=seed-da-thue&campusId=ictu"));
+        await _navigation.Received(1).GoToAsync($"{AppRoutes.RoomDetail}?roomId=seed-da-thue&campusId=ictu");
     }
 
     [Test]
@@ -1100,26 +1027,16 @@ public class RoomDetailPageModelTests
     public async Task PromptSignInAsync_WhenAccepted_NavigatesToLogin()
     {
         // Arrange
-        bool alertPrompted = false;
-        string? navigatedRoute = null;
-
-        _sut.DisplayAlertOverride = (title, message, accept, cancel) =>
-        {
-            alertPrompted = true;
-            return Task.FromResult(true);
-        };
-        _sut.NavigateOverride = route =>
-        {
-            navigatedRoute = route;
-            return Task.CompletedTask;
-        };
+        _deviceActions
+            .DisplayAlertAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+            .Returns(true);
 
         // Act
         await _sut.PromptSignInAsync();
 
         // Assert
-        Assert.That(alertPrompted, Is.True);
-        Assert.That(navigatedRoute, Is.EqualTo("//login"));
+        await _deviceActions.Received(1).DisplayAlertAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+        await _navigation.Received(1).GoToAsync("//login");
     }
 
     [Test]
@@ -1502,7 +1419,7 @@ public class RoomDetailPageModelTests
             landlordPhone: null);
         _roomGateway.GetRoomDetailAsync("room-test-1", "TNUT").Returns(testRoom);
 
-        using var sut = new RoomDetailPageModel(_roomGateway, _sessionStore, _favouriteGateway)
+        using var sut = new RoomDetailPageModel(_roomGateway, _sessionStore, _navigation, _deviceActions, _favouriteGateway)
         {
             RoomId = "room-test-1",
             CampusId = "TNUT"

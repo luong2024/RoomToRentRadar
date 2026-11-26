@@ -33,6 +33,8 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
 
     private readonly IRoomGateway _roomGateway;
     private readonly ISessionStore _sessionStore;
+    private readonly INavigationService _navigation;
+    private readonly IRoomDetailDeviceActions _deviceActions;
     private readonly IFavouriteGateway? _favouriteGateway;
     private readonly ILogger<RoomDetailPageModel>? _logger;
     private readonly PropertyChangedEventHandler _cultureChangedHandler;
@@ -327,11 +329,15 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
     public RoomDetailPageModel(
         IRoomGateway roomGateway,
         ISessionStore sessionStore,
+        INavigationService navigation,
+        IRoomDetailDeviceActions deviceActions,
         IFavouriteGateway? favouriteGateway = null,
         ILogger<RoomDetailPageModel>? logger = null)
     {
         _roomGateway = roomGateway ?? throw new ArgumentNullException(nameof(roomGateway));
         _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
+        _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
+        _deviceActions = deviceActions ?? throw new ArgumentNullException(nameof(deviceActions));
         _favouriteGateway = favouriteGateway;
         _logger = logger;
 
@@ -731,55 +737,18 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
 
     #endregion
 
-    #region Test Overrides
-
-    public Func<string, Task>? NavigateOverride { get; set; }
-    public Func<string, string, string, string, Task<bool>>? DisplayAlertOverride { get; set; }
-    public Func<string, Task>? ShareOverride { get; set; }
-    public Action<string>? PhoneDialerOverride { get; set; }
-    public Func<string, Task>? LauncherOverride { get; set; }
-    public Func<string, Task>? ToastOverride { get; set; }
-
-    #endregion
-
     #region Action Commands
 
     [RelayCommand]
-    public async Task GoBackAsync()
-    {
-        if (NavigateOverride != null)
-        {
-            await NavigateOverride("..");
-            return;
-        }
-
-#if !UNIT_TESTS
-        if (Shell.Current != null)
-        {
-            await Shell.Current.GoToAsync("..");
-        }
-#endif
-    }
+    public Task GoBackAsync() => _navigation.GoBackAsync();
 
     [RelayCommand]
-    public async Task ShareListingAsync()
+    public Task ShareListingAsync()
     {
-        if (Room == null) return;
+        if (Room == null) return Task.CompletedTask;
         // Shared text leaves the app, so it carries the full amount.
         var text = $"{Room.Title} - {FullMoney(Room.MonthlyRentVnd)} ({AddressFormatted})";
-        if (ShareOverride != null)
-        {
-            await ShareOverride(text);
-            return;
-        }
-
-#if !UNIT_TESTS
-        await Share.Default.RequestAsync(new ShareTextRequest
-        {
-            Title = Room.Title,
-            Text = text
-        });
-#endif
+        return _deviceActions.ShareTextAsync(Room.Title, text);
     }
 
     [RelayCommand]
@@ -812,21 +781,8 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    public async Task Open360ViewAsync()
-    {
-        if (ToastOverride != null)
-        {
-            await ToastOverride(AppResources.GetString("RoomDetail_360View"));
-            return;
-        }
-
-#if !UNIT_TESTS
-        if (Shell.Current != null)
-        {
-            await AppShell.DisplayToastAsync(AppResources.GetString("RoomDetail_360View"));
-        }
-#endif
-    }
+    public Task Open360ViewAsync() =>
+        _deviceActions.DisplayToastAsync(AppResources.GetString("RoomDetail_360View"));
 
     [RelayCommand]
     public void ToggleAllAmenities()
@@ -853,29 +809,18 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
             return;
         }
 
-        if (PhoneDialerOverride != null)
-        {
-            PhoneDialerOverride(LandlordPhoneNumber);
-            return;
-        }
-
-#if !UNIT_TESTS
         try
         {
-            if (PhoneDialer.Default.IsSupported)
-            {
-                PhoneDialer.Default.Open(LandlordPhoneNumber);
-            }
-            else
-            {
-                await Launcher.Default.OpenAsync($"tel:{LandlordPhoneNumber}");
-            }
+            await _deviceActions.DialPhoneAsync(LandlordPhoneNumber);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
             _logger?.LogWarning(ex, "Failed to open phone dialer for room {RoomId}", Room?.Id);
         }
-#endif
     }
 
     [RelayCommand]
@@ -887,22 +832,18 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
             return;
         }
 
-        if (LauncherOverride != null)
-        {
-            await LauncherOverride(LandlordZaloUrl);
-            return;
-        }
-
-#if !UNIT_TESTS
         try
         {
-            await Launcher.Default.OpenAsync(LandlordZaloUrl);
+            await _deviceActions.OpenUriAsync(LandlordZaloUrl);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
             _logger?.LogWarning(ex, "Failed to open Zalo launcher for room {RoomId}", Room?.Id);
         }
-#endif
     }
 
     [RelayCommand]
@@ -914,101 +855,50 @@ public partial class RoomDetailPageModel : ObservableObject, IDisposable
             return;
         }
 
-        var route = $"//messages?roomId={Room?.Id}&landlordId={Room?.Landlord.Id}";
-        if (NavigateOverride != null)
+        if (Room == null)
         {
-            await NavigateOverride(route);
             return;
         }
 
-#if !UNIT_TESTS
-        if (Shell.Current != null && Room != null)
-        {
-            await Shell.Current.GoToAsync(route);
-        }
-#endif
+        var route = $"//messages?roomId={Room.Id}&landlordId={Room.Landlord.Id}";
+        await _navigation.GoToAsync(route);
     }
 
     [RelayCommand]
-    public async Task ReportListingAsync()
+    public Task ReportListingAsync()
     {
-        if (Room == null) return;
-        var route = $"report?roomId={Room.Id}";
-        if (NavigateOverride != null)
-        {
-            await NavigateOverride(route);
-            return;
-        }
-
-#if !UNIT_TESTS
-        if (Shell.Current != null)
-        {
-            await Shell.Current.GoToAsync(route);
-        }
-#endif
+        if (Room == null) return Task.CompletedTask;
+        return _navigation.GoToAsync($"report?roomId={Room.Id}");
     }
 
     [RelayCommand]
     public Task PreviewUnavailableDemoAsync() => SelectSimilarRoomAsync("seed-da-thue");
 
     [RelayCommand]
-    public async Task SelectSimilarRoomAsync(string targetRoomId)
+    public Task SelectSimilarRoomAsync(string targetRoomId)
     {
-        if (string.IsNullOrWhiteSpace(targetRoomId)) return;
+        if (string.IsNullOrWhiteSpace(targetRoomId)) return Task.CompletedTask;
         var route = $"{AppRoutes.RoomDetail}?roomId={Uri.EscapeDataString(targetRoomId)}";
         if (!string.IsNullOrWhiteSpace(CampusId))
         {
             route += $"&campusId={Uri.EscapeDataString(CampusId)}";
         }
-        if (NavigateOverride != null)
-        {
-            await NavigateOverride(route);
-            return;
-        }
 
-#if !UNIT_TESTS
-        if (Shell.Current != null)
-        {
-            await Shell.Current.GoToAsync(route);
-        }
-#endif
+        return _navigation.GoToAsync(route);
     }
 
     [RelayCommand]
     public async Task PromptSignInAsync()
     {
-        bool proceed = false;
-        if (DisplayAlertOverride != null)
-        {
-            proceed = await DisplayAlertOverride(
-                AppResources.GetString("RoomDetail_SignInPromptTitle"),
-                AppResources.GetString("RoomDetail_SignInPromptMessage"),
-                AppResources.GetString("RoomDetail_SignInAction"),
-                AppResources.GetString("Common_Ok"));
-        }
-#if !UNIT_TESTS
-        else if (Shell.Current != null)
-        {
-            proceed = await Shell.Current.DisplayAlertAsync(
-                AppResources.GetString("RoomDetail_SignInPromptTitle"),
-                AppResources.GetString("RoomDetail_SignInPromptMessage"),
-                AppResources.GetString("RoomDetail_SignInAction"),
-                AppResources.GetString("Common_Ok"));
-        }
-#endif
+        bool proceed = await _deviceActions.DisplayAlertAsync(
+            AppResources.GetString("RoomDetail_SignInPromptTitle"),
+            AppResources.GetString("RoomDetail_SignInPromptMessage"),
+            AppResources.GetString("RoomDetail_SignInAction"),
+            AppResources.GetString("Common_Ok"));
 
         if (proceed)
         {
-            if (NavigateOverride != null)
-            {
-                await NavigateOverride("//login");
-            }
-#if !UNIT_TESTS
-            else if (Shell.Current != null)
-            {
-                await Shell.Current.GoToAsync("//login");
-            }
-#endif
+            await _navigation.GoToAsync("//login");
         }
     }
 

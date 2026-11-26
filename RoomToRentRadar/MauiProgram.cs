@@ -5,6 +5,7 @@ using RoomToRentRadar.Client.Adapters;
 using RoomToRentRadar.Client.Adapters.Abstractions;
 using RoomToRentRadar.Client.Adapters.Session;
 using RoomToRentRadar.DeviceAdapters;
+using RoomToRentRadar.Pages.Controls.RoomDetail.Models;
 using RoomToRentRadar.Services;
 using RoomToRentRadar.Services.Navigation;
 using RoomToRentRadar.Services.Navigation.Core;
@@ -51,6 +52,7 @@ namespace RoomToRentRadar
             builder.Services.AddSingleton<ISessionStore, MauiSecureSessionStore>();
             builder.Services.AddSingleton<IAppSession, AppSession>();
             builder.Services.AddSingleton<INavigationService, NavigationService>();
+            builder.Services.AddSingleton<IRoomDetailDeviceActions, MauiRoomDetailDeviceActions>();
             builder.Services.AddSingleton<ISearchCriteriaStore, SearchCriteriaStore>();
             builder.Services.AddSingleton<IPreferencesStore, MauiPreferencesStore>();
             builder.Services.AddSingleton<ICampusSelectionService, CampusSelectionService>();

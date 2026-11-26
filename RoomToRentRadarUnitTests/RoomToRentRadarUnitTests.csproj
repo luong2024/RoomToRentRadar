@@ -38,6 +38,7 @@
     <Compile Include="..\RoomToRentRadar\Resources\Fonts\FluentUI.cs" Link="Resources\Fonts\FluentUI.cs" />
     <Compile Include="..\RoomToRentRadar\Pages\Controls\RoomDetail\Models\RoomDetailModels.cs" Link="Pages\Controls\RoomDetail\Models\RoomDetailModels.cs" />
     <Compile Include="..\RoomToRentRadar\Pages\Controls\RoomDetail\Models\RoomDetailSectionMapper.cs" Link="Pages\Controls\RoomDetail\Models\RoomDetailSectionMapper.cs" />
+    <Compile Include="..\RoomToRentRadar\Pages\Controls\RoomDetail\Models\IRoomDetailDeviceActions.cs" Link="Pages\Controls\RoomDetail\Models\IRoomDetailDeviceActions.cs" />
     <Compile Include="..\RoomToRentRadar\PageModels\RoomDetailPageModel.cs" Link="PageModels\RoomDetailPageModel.cs" />
     <Compile Include="..\RoomToRentRadar\PageModels\AccountPageModel.cs" Link="PageModels\AccountPageModel.cs" />
     <Compile Include="..\RoomToRentRadar\Resources\Strings\AppResources.cs" Link="Resources\Strings\AppResources.cs" />
