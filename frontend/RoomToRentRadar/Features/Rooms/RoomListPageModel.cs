@@ -1,34 +1,46 @@
 using System.Collections.ObjectModel;
+using System.Net.Http;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
-using RoomToRentRadar.Abstractions.Auth;
-using RoomToRentRadar.Abstractions.Favorites;
 using RoomToRentRadar.Abstractions.Rooms;
-using RoomToRentRadar.Data;
 using RoomToRentRadar.Models;
 
 namespace RoomToRentRadar.Features.Rooms
 {
     /// <summary>
-    /// ViewModel for US02 Verified Room Listings Discovery Screen, Room Cards, and Infinite Scroll.
-    /// AC1: Default sorted by distance to ICTU campus (DistanceAsc).
-    /// AC2: Cards show title, monthly rent, area, distance to campus, and verification badge.
-    /// AC3: Pagination / Infinite scroll handling up to 500 listings efficiently.
-    /// AC4: Displays strictly listings with Status = "Available" and IsVerified = true.
-    /// Strictly adheres to Constructor Injection (DIP) without Service Locator anti-patterns.
+    /// US02 / T02.2: verified room listing screen with room cards and infinite scroll.
+    /// AC1: default sort is distance to ICTU (DistanceAsc), done by the API.
+    /// AC2: cards show title, monthly rent, area, distance to campus and the verification badge (RoomCardView).
+    /// AC3: pages of <see cref="PageSize"/> rooms are loaded on demand while scrolling (cached with ETag by
+    ///      ApiRoomListingRepository), so the first screen appears fast even with 500 listings.
+    /// AC4: only Available + Verified rooms, filtered by the API.
+    /// Search (US05) and favourites (US07) live in their own tasks, not on this screen.
     /// </summary>
     public partial class RoomListPageModel : ObservableObject
     {
-        private readonly IRoomListingRepository _listingRepository;
-        private readonly IFavoriteRepository _favoriteRepository;
-        private readonly IAuthService _authService;
-        private readonly RentalDatabaseService? _databaseService;
-        private readonly ILogger<RoomListPageModel>? _logger;
-
         public const int PageSize = 10;
-        private int _currentPage = 0;
+
+        /// <summary>Sort keys accepted by GET /api/rooms (RoomListingController, T02.1).</summary>
+        public const string SortDistanceAsc = "DistanceAsc";
+        public const string SortPriceAsc = "PriceAsc";
+        public const string SortPriceDesc = "PriceDesc";
+
+        private const string LoadErrorMessage =
+            "Không tải được danh sách phòng. Hãy kiểm tra kết nối mạng rồi thử lại.";
+
+        private readonly IRoomListingRepository _listingRepository;
+        private readonly ILogger<RoomListPageModel> _logger;
+
+        // Serializes first-page loads and "load more" so two pages are never appended at the same time.
         private readonly SemaphoreSlim _loadLock = new(1, 1);
+        private int _currentPage;
+
+        public RoomListPageModel(IRoomListingRepository listingRepository, ILogger<RoomListPageModel> logger)
+        {
+            _listingRepository = listingRepository;
+            _logger = logger;
+        }
 
         public ObservableCollection<RoomListing> Rooms { get; } = new();
 
@@ -44,77 +56,53 @@ namespace RoomToRentRadar.Features.Rooms
         [ObservableProperty]
         public partial bool HasMoreItems { get; set; } = true;
 
-        [ObservableProperty]
-        public partial int TotalCount { get; set; }
-
+        /// <summary>True only when the API answered and there is really no room (not on errors).</summary>
         [ObservableProperty]
         public partial bool IsEmpty { get; set; }
 
         [ObservableProperty]
-        public partial string SelectedSortBy { get; set; } = "DistanceAsc"; // DistanceAsc, RentAsc, RentDesc, AreaDesc
+        public partial string SelectedSortBy { get; set; } = SortDistanceAsc;
 
         [ObservableProperty]
-        public partial string SearchKeyword { get; set; } = string.Empty;
+        [NotifyPropertyChangedFor(nameof(HasError))]
+        public partial string? ErrorMessage { get; set; }
 
-        public RoomListPageModel(
-            IRoomListingRepository listingRepository,
-            IFavoriteRepository favoriteRepository,
-            IAuthService authService,
-            RentalDatabaseService? databaseService = null,
-            ILogger<RoomListPageModel>? logger = null)
-        {
-            _listingRepository = listingRepository;
-            _favoriteRepository = favoriteRepository;
-            _authService = authService;
-            _databaseService = databaseService;
-            _logger = logger;
-        }
+        public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
 
-        partial void OnSearchKeywordChanged(string value)
-        {
-            _ = LoadRoomsAsync();
-        }
-
-        private int GetCurrentUserId()
-        {
-            return _authService.CurrentUser?.Id ?? 1;
-        }
-
-        /// <summary>
-        /// US02 AC1, AC3, AC4: Loads initial page of verified, available rooms sorted by distance to ICTU by default.
-        /// </summary>
+        /// <summary>AC1, AC3, AC4: loads the first page with the selected sort (distance by default).</summary>
         [RelayCommand]
         public async Task LoadRoomsAsync()
         {
-            if (IsBusy) return;
+            if (IsBusy)
+            {
+                IsRefreshing = false;
+                return;
+            }
 
             await _loadLock.WaitAsync();
             try
             {
                 IsBusy = true;
+                ErrorMessage = null;
+
+                var rooms = await _listingRepository.ListVerifiedRoomsAsync(0, PageSize, SelectedSortBy);
+
                 _currentPage = 0;
-                HasMoreItems = true;
-
-                var rooms = await FetchRoomsPageAsync(pageIndex: 0, pageSize: PageSize, SelectedSortBy, SearchKeyword);
-
                 Rooms.Clear();
-                foreach (var r in rooms)
+                foreach (var room in rooms)
                 {
-                    Rooms.Add(r);
+                    Rooms.Add(room);
                 }
 
-                TotalCount = Rooms.Count;
+                HasMoreItems = rooms.Count == PageSize;
                 IsEmpty = Rooms.Count == 0;
-                if (rooms.Count < PageSize)
-                {
-                    HasMoreItems = false;
-                }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
             {
-                _logger?.LogError(ex, "Error loading rooms");
-                Rooms.Clear();
-                IsEmpty = true;
+                _logger.LogError(ex, "Could not load the room list.");
+                ErrorMessage = UserMessage(ex);
+                IsEmpty = false; // an error is not "no rooms": show the error with a retry button instead
+                HasMoreItems = false;
             }
             finally
             {
@@ -124,54 +112,42 @@ namespace RoomToRentRadar.Features.Rooms
             }
         }
 
+        /// <summary>Pull-to-refresh.</summary>
         [RelayCommand]
-        public async Task RefreshRoomsAsync()
-        {
-            IsRefreshing = true;
-            await LoadRoomsAsync();
-        }
+        public Task RefreshRoomsAsync() => LoadRoomsAsync();
 
-        /// <summary>
-        /// US02 AC3: Infinite scroll pagination triggered when scrolling near the end of list.
-        /// </summary>
+        /// <summary>AC3: infinite scroll, called by CollectionView when the end of the list is near.</summary>
         [RelayCommand]
         public async Task LoadMoreRoomsAsync()
         {
-            if (IsBusy || IsLoadingMore || !HasMoreItems) return;
+            if (IsBusy || IsLoadingMore || !HasMoreItems || HasError)
+            {
+                return;
+            }
 
             await _loadLock.WaitAsync();
             try
             {
                 IsLoadingMore = true;
-                int nextPage = _currentPage + 1;
+                var nextPage = _currentPage + 1;
+                var rooms = await _listingRepository.ListVerifiedRoomsAsync(nextPage, PageSize, SelectedSortBy);
 
-                var nextRooms = await FetchRoomsPageAsync(pageIndex: nextPage, pageSize: PageSize, SelectedSortBy, SearchKeyword);
-
-                if (nextRooms.Count == 0)
+                _currentPage = nextPage;
+                foreach (var room in rooms)
                 {
-                    HasMoreItems = false;
-                }
-                else
-                {
-                    _currentPage = nextPage;
-                    foreach (var r in nextRooms)
+                    // A room can move between pages if prices/statuses change while scrolling.
+                    if (!Rooms.Any(existing => existing.Id == room.Id))
                     {
-                        if (!Rooms.Any(existing => existing.Id == r.Id))
-                        {
-                            Rooms.Add(r);
-                        }
-                    }
-
-                    TotalCount = Rooms.Count;
-                    if (nextRooms.Count < PageSize)
-                    {
-                        HasMoreItems = false;
+                        Rooms.Add(room);
                     }
                 }
+
+                HasMoreItems = rooms.Count == PageSize;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
             {
-                _logger?.LogError(ex, "Error loading more rooms");
+                // Keep the rooms already shown; the user can pull to refresh.
+                _logger.LogWarning(ex, "Could not load more rooms.");
                 HasMoreItems = false;
             }
             finally
@@ -181,142 +157,46 @@ namespace RoomToRentRadar.Features.Rooms
             }
         }
 
-        /// <summary>
-        /// US02 AC1: Sort options (DistanceAsc is default).
-        /// </summary>
+        /// <summary>AC1: switches between distance (default) and price sorting, then reloads from the first page.</summary>
         [RelayCommand]
         public async Task ChangeSortByAsync(string sortBy)
         {
-            if (SelectedSortBy == sortBy) return;
+            if (sortBy is not (SortDistanceAsc or SortPriceAsc or SortPriceDesc) || SelectedSortBy == sortBy)
+            {
+                return;
+            }
+
             SelectedSortBy = sortBy;
             await LoadRoomsAsync();
         }
 
-        /// <summary>
-        /// Toggles room favorite status and updates local item state immediately.
-        /// </summary>
         [RelayCommand]
-        public async Task ToggleFavoriteAsync(RoomListing? room)
-        {
-            if (room == null) return;
-
-            room.IsFavorite = !room.IsFavorite;
-            int userId = GetCurrentUserId();
-
-            try
-            {
-                await _favoriteRepository.ToggleFavoriteAsync(userId, room.Id);
-
-                string msg = room.IsFavorite
-                    ? $"Đã thêm \"{room.Title}\" vào danh sách yêu thích"
-                    : $"Đã xóa \"{room.Title}\" khỏi danh sách yêu thích";
-                NotifySnackbar(msg);
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Failed to toggle favorite for room {RoomId}", room.Id);
-            }
-        }
+        public Task NavigateToDetailAsync(RoomListing? room) =>
+            room is null ? Task.CompletedTask : NavigateAsync($"{Constants.Routes.RoomDetail}?roomId={room.Id}");
 
         [RelayCommand]
-        public async Task NavigateToDetailAsync(RoomListing? room)
-        {
-            if (room == null) return;
-            try
-            {
-                if (Shell.Current != null)
-                {
-                    await Shell.Current.GoToAsync($"{Constants.Routes.RoomDetail}?roomId={room.Id}");
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Failed to navigate to room detail {RoomId}", room.Id);
-            }
-        }
+        public Task NavigateToFilterAsync() => NavigateAsync(Constants.Routes.RoomFilter);
 
         [RelayCommand]
-        public async Task NavigateToFilterAsync()
+        public Task NavigateToMapAsync() => NavigateAsync(Constants.Routes.RoomMap);
+
+        private async Task NavigateAsync(string route)
         {
             try
             {
-                if (Shell.Current != null)
-                {
-                    await Shell.Current.GoToAsync(Constants.Routes.RoomFilter);
-                }
+                await Shell.Current.GoToAsync(route);
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Failed to navigate to room filter");
+                // Detail/filter/map screens belong to other tasks; until they are registered the route is unknown.
+                _logger.LogWarning(ex, "Navigation to {Route} failed.", route);
+                ErrorMessage = "Màn hình này đang được phát triển.";
             }
         }
 
-        [RelayCommand]
-        public async Task NavigateToMapAsync()
-        {
-            try
-            {
-                if (Shell.Current != null)
-                {
-                    await Shell.Current.GoToAsync(Constants.Routes.RoomMap);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Failed to navigate to room map");
-            }
-        }
-
-        private async Task<List<RoomListing>> FetchRoomsPageAsync(int pageIndex, int pageSize, string sortBy, string keyword)
-        {
-            var result = await _listingRepository.ListVerifiedRoomsAsync(pageIndex, pageSize, sortBy);
-            if (!string.IsNullOrWhiteSpace(keyword))
-            {
-                var kw = keyword.Trim().ToLowerInvariant();
-                result = result.Where(r =>
-                    (r.Title?.ToLowerInvariant().Contains(kw) ?? false) ||
-                    (r.Address?.ToLowerInvariant().Contains(kw) ?? false) ||
-                    (r.Ward?.ToLowerInvariant().Contains(kw) ?? false) ||
-                    (r.RoomType?.ToLowerInvariant().Contains(kw) ?? false)).ToList();
-            }
-
-            await SyncFavoriteStatusesAsync(result);
-            return result;
-        }
-
-        private async Task SyncFavoriteStatusesAsync(List<RoomListing> rooms)
-        {
-            if (rooms.Count == 0) return;
-            int userId = GetCurrentUserId();
-
-            try
-            {
-                var favs = await _favoriteRepository.GetFavoriteRoomsAsync(userId);
-                var favoriteRoomIds = favs.Select(f => f.Id).ToHashSet();
-
-                foreach (var r in rooms)
-                {
-                    r.IsFavorite = favoriteRoomIds.Contains(r.Id);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Failed to sync favorite statuses for user {UserId}", userId);
-            }
-        }
-
-        private static void NotifySnackbar(string message)
-        {
-            try
-            {
-                if (Shell.Current != null)
-                {
-                    _ = AppShell.DisplaySnackbarAsync(message);
-                }
-            }
-            catch
-            {
-            }
-        }
+        private static string UserMessage(Exception ex) =>
+            ex is HttpRequestException { StatusCode: not null } http && !string.IsNullOrWhiteSpace(http.Message)
+                ? http.Message // Vietnamese message from the API (ErrorResponse)
+                : LoadErrorMessage;
     }
 }

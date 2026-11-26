@@ -57,7 +57,7 @@
                 </Border>
             </Grid>
 
-            <!-- Search Bar + Filter Button (US05 Integration) -->
+            <!-- Entry point to the filter screen (search/filters belong to US05 / T05.2, not to this list) -->
             <Grid ColumnDefinitions="*, Auto" ColumnSpacing="10">
                 <Border Grid.Column="0"
                         StrokeShape="RoundRectangle 12"
@@ -66,6 +66,9 @@
                         BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource DarkSecondaryBackground}}"
                         Padding="12, 0"
                         HeightRequest="44">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding NavigateToFilterCommand}" />
+                    </Border.GestureRecognizers>
                     <Grid ColumnDefinitions="Auto, *">
                         <Label Grid.Column="0"
                                Text="{x:Static fonts:FluentUI.search_24_regular}"
@@ -74,12 +77,11 @@
                                TextColor="{StaticResource Gray400}"
                                VerticalOptions="Center"
                                Margin="0, 0, 8, 0" />
-                        <Entry Grid.Column="1"
-                               Text="{Binding SearchKeyword}"
-                               Placeholder="Tìm phòng trọ, đường Z115, phường..."
+                        <Label Grid.Column="1"
+                               Text="Lọc theo giá, diện tích, khoảng cách..."
                                FontSize="14"
-                               VerticalOptions="Center"
-                               ClearButtonVisibility="WhileEditing" />
+                               TextColor="{StaticResource Gray400}"
+                               VerticalOptions="Center" />
                     </Grid>
                 </Border>
 
