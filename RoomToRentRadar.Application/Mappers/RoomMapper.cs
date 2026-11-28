@@ -30,43 +30,17 @@ public static class RoomMapper
             room.Latitude, room.Longitude, campus.Latitude, campus.Longitude);
 
         // BR-LST-03: estimated monthly total = rent + 100 kWh × electricity price + water (4 m³ × price, or 1 × per-person price, or 0 if included) + internet + parking
-        long totalEstimate = room.MonthlyRentVnd;
-        if (room.ElectricityPriceVndPerKwh.HasValue)
-        {
-            totalEstimate += 100L * room.ElectricityPriceVndPerKwh.Value;
-        }
-
-        if (room.WaterPriceVnd.HasValue)
-        {
-            var unit = room.WaterPriceUnit?.Trim();
-            if (string.Equals(unit, "PerPerson", StringComparison.OrdinalIgnoreCase))
-            {
-                // BR-LST-03: 1 × per-person price (estimate for 1 prospective tenant)
-                totalEstimate += 1L * room.WaterPriceVnd.Value;
-            }
-            else if (string.Equals(unit, "Included", StringComparison.OrdinalIgnoreCase))
-            {
-                totalEstimate += 0L;
-            }
-            else // PerCubicMeter or default per BR-LST-03: 4 m³
-            {
-                totalEstimate += 4L * room.WaterPriceVnd.Value;
-            }
-        }
-
-        if (room.InternetFeeVnd.HasValue)
-        {
-            totalEstimate += room.InternetFeeVnd.Value;
-        }
-
-        if (room.ParkingFeeVnd.HasValue)
-        {
-            totalEstimate += room.ParkingFeeVnd.Value;
-        }
-
-        var waterUnit = Enum.TryParse<WaterPriceUnit>(room.WaterPriceUnit, true, out var parsedUnit)
+        var waterUnit = Enum.TryParse<WaterPriceUnit>(room.WaterPriceUnit?.Trim(), true, out var parsedUnit)
             ? parsedUnit
             : WaterPriceUnit.PerCubicMeter;
+
+        var totalEstimate = MonthlyCostCalculator.EstimateMonthlyTotalVnd(
+            room.MonthlyRentVnd,
+            room.ElectricityPriceVndPerKwh,
+            room.WaterPriceVnd,
+            waterUnit,
+            room.InternetFeeVnd,
+            room.ParkingFeeVnd);
 
         var utilities = new UtilitiesView(
             ElectricityPriceVndPerKwh: room.ElectricityPriceVndPerKwh,
